@@ -1,0 +1,42 @@
+{
+  "id": "lane_ddm_gb2_generated_basis_bound_20260909",
+  "name": "gb2 scoped generated-basis lattice bound audit",
+  "phase": 1.0,
+  "level": 0,
+  "gates": {
+    "impl_complete": {
+      "status": false,
+      "evidence": ""
+    },
+    "real_archive_empirical": {
+      "status": false,
+      "evidence": ""
+    },
+    "contest_cuda": {
+      "status": false,
+      "evidence": ""
+    },
+    "contest_cpu": {
+      "status": false,
+      "evidence": ""
+    },
+    "strict_preflight": {
+      "status": false,
+      "evidence": ""
+    },
+    "three_clean_review": {
+      "status": false,
+      "evidence": ""
+    },
+    "memory_entry": {
+      "status": false,
+      "evidence": ""
+    },
+    "deploy_runbook": {
+      "status": false,
+      "evidence": ""
+    }
+  },
+  "notes": "Owner ddm_gb2; closed-form and byte-reader audit only; research_only=true; score_claim=false; private SSD registration for MAIN harvest",
+  "research_only": true
+}

@@ -1,0 +1,367 @@
+{
+  "archive": {
+    "bytes": 180388,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/archive.zip",
+    "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+  },
+  "archive_sections": {
+    "carrier": 18586,
+    "hpac": 11911,
+    "rx1_header": 14,
+    "semantic": 29862,
+    "tail": 119915,
+    "zip_overhead": 100
+  },
+  "argv": [
+    "experiments/ddm_gb2_lattice_bound_audit.py",
+    "--runtime",
+    "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime",
+    "--out",
+    "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit"
+  ],
+  "axis": "[closed-form, constants sourced; exact local bytes, scorer-free]",
+  "base_code_range": [
+    -142,
+    154
+  ],
+  "base_codes_shape": [
+    600,
+    12
+  ],
+  "basis_bits": 98213,
+  "basis_blob_bytes": 12277,
+  "basis_scales": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "basis_symbols": 27648,
+  "body_tail_bytes": 29,
+  "candidate_builds": 0,
+  "cleanup": "Small retained inputs; no deletion, inflation, or scratch bulk.",
+  "coefficient_scales": [
+    0.005224729422479868,
+    0.005467622075229883,
+    0.005400871858000755,
+    0.008356369100511074,
+    0.007224291563034058,
+    0.005270141642540693,
+    0.007709944155067205,
+    0.00503784604370594,
+    0.008611684665083885,
+    0.005425599403679371,
+    0.005216557066887617,
+    0.007675567641854286
+  ],
+  "coefficients_max": [
+    0.7680352330207825,
+    0.699855625629425,
+    0.5994967818260193,
+    0.9609824419021606,
+    0.31786882877349854,
+    0.5955259799957275,
+    0.9174833297729492,
+    0.539049506187439,
+    0.5253127813339233,
+    0.8355423212051392,
+    0.7407510876655579,
+    0.8366369009017944
+  ],
+  "coefficients_min": [
+    -0.6687653660774231,
+    -0.5741003155708313,
+    -0.6265011429786682,
+    -0.30082929134368896,
+    -0.9463821649551392,
+    -0.7009288668632507,
+    -1.0022927522659302,
+    -0.6599578261375427,
+    -1.0936839580535889,
+    -0.43947353959083557,
+    -0.3651590049266815,
+    -1.0899306535720825
+  ],
+  "effective_code_range": [
+    -142,
+    154
+  ],
+  "effective_codes_shape": [
+    600,
+    12
+  ],
+  "effective_unique_pair_vectors": 600,
+  "frontier": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "custody": "local_anchor_record; inspect lane policy before submission",
+    "evidence_grade": "contest-CUDA",
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "role": "competitive_score_to_beat",
+    "score": 0.13791730003757818,
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "source": "our_local_frontier_contest_cuda",
+    "source_kind": "owned_or_banked_local_exact_anchor"
+  },
+  "git_head": "0846da7462e7d7255e125975a0ecc993bcb794df",
+  "metadata_bytes": 40,
+  "minimum_finite_code_step": 0.00503784604370594,
+  "new_scored_pairs": 0,
+  "nonzero_code_count": 7150,
+  "numeric_threads": 1,
+  "overlay_bytes": 0,
+  "overlay_changed_coordinates": 0,
+  "processes": 1,
+  "promotable": false,
+  "research_only": true,
+  "residual_bits": 51430,
+  "restored_basis_300B_reference_not_final_cost": 11977,
+  "restored_carrier_bytes": 18877,
+  "retained": [
+    {
+      "bytes": 17890,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/pointer_start.json",
+      "sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a"
+    },
+    {
+      "bytes": 180388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/archive.zip",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    {
+      "bytes": 180388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/archive_bytes.bin",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    {
+      "bytes": 180288,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/outer.bin",
+      "sha256": "723cd0222e270c0bf2f76b9b89ceeba81629a0b19a363dee59850b19dc912542"
+    },
+    {
+      "bytes": 11911,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/hpac_stream.bin",
+      "sha256": "aadf679f982cf2546554913a00f2c94ffd0161a0ebeac07eaaf96f422a1f1598"
+    },
+    {
+      "bytes": 29862,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/semantic_stream.bin",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "bytes": 18586,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/carrier_stream.bin",
+      "sha256": "144709e4e714527c04fa20b30eda4cf8bc3f54175669247809e96fdb69812212"
+    },
+    {
+      "bytes": 119915,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/section_tail.bin",
+      "sha256": "a41f483a4a5f72871ea2677bc29be916efa1239607cef8719b91b48f6266fa41"
+    },
+    {
+      "bytes": 18625,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/carrier_raw.bin",
+      "sha256": "d1b5e11e2e1d4a8159012b2bbb30d05bf035bf7da7d02ff388656fa29fd502b3"
+    },
+    {
+      "bytes": 18877,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/carrier_body.bin",
+      "sha256": "1acd82e2bd51f3138f3698485c2ced1f92c61da98a3f5e190cfb666ab8af6b18"
+    },
+    {
+      "bytes": 12277,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/basis_blob.bin",
+      "sha256": "a9d037a59950f3a0a95a4d8889927f90402ef2f165f1eb9196084f45906b9475"
+    },
+    {
+      "bytes": 6429,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/rice_payload.bin",
+      "sha256": "1f772171a54702ea508552a7f82e4b944be0ee58198b7b52559c6a5e9601e2e9"
+    },
+    {
+      "bytes": 96,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/scales.bin",
+      "sha256": "28f9c06ec1de4068076445c8006238d5e1f8dfb186bbc366c44209cc16580975"
+    },
+    {
+      "bytes": 152,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/factors.npy",
+      "sha256": "7de7e72d7f00f1716b5e6d49d84e44497d5c15888d09ddeab2ce0a0ad9369623"
+    },
+    {
+      "bytes": 140,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/biases.npy",
+      "sha256": "1e8e1b5789bf9e788de47fb63b8b915e92988e4bb4412128c1a8b6eda5f799aa"
+    },
+    {
+      "bytes": 160,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/lengths.npy",
+      "sha256": "28edef255b36a1ddb3bcf21a3de0bd8cce693ad8da4e2c8f28ef7f4cc136afb1"
+    },
+    {
+      "bytes": 140,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/ks.npy",
+      "sha256": "e056f10a7821974b927121db22de8f78ca7a55dbec4ef3b8a6461fa7d9becb5a"
+    },
+    {
+      "bytes": 40,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/packed_metadata.bin",
+      "sha256": "d1a2247ba3a0735f362dc38647b726d494cfa81f216424207cce8012b475d8f6"
+    },
+    {
+      "bytes": 29,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/body_tail.bin",
+      "sha256": "f7a37aa2b594e7a5da9f1709f014cfc73bdb6f86d2356a9d4ad20d429cde536d"
+    },
+    {
+      "bytes": 28928,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/codes.npy",
+      "sha256": "2a27b7d479ae364e9972b3f57d0f6f4d214a38322645ed3819a3469b012e4e6d"
+    },
+    {
+      "bytes": 28928,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/effective_codes.npy",
+      "sha256": "2a27b7d479ae364e9972b3f57d0f6f4d214a38322645ed3819a3469b012e4e6d"
+    },
+    {
+      "bytes": 28928,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/coefficients_fp32.npy",
+      "sha256": "f515c8889e5fd7b292141459eaf7afc11d74bd1e2bf7bbb3d686a422d31d4eb5"
+    },
+    {
+      "bytes": 27776,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/basis_codes.npy",
+      "sha256": "770f46ef5129d3e1ad973585560b230176281c26dbf7d3a29c276c97b6a4f251"
+    },
+    {
+      "bytes": 224,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/scales_fp32.npy",
+      "sha256": "1c6c9e36b4864af6f68e685331e5211a9b64c7faba2c677b410aa5b4c9f82997"
+    },
+    {
+      "bytes": 34,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/selector.bin",
+      "sha256": "15c256dcb6a6563966b43f51f2616d7f1c03d16e1812a8dcb5d80ceea432ddd0"
+    },
+    {
+      "bytes": 3282,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/FAMILY_TABLE.json",
+      "sha256": "2bec3c15803a4b7988c816cf51922f2f8aeebd909749af108035e49bd1f9be60"
+    },
+    {
+      "bytes": 10688,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/d0ec8980350e8315_ddm_gb2_lattice_bound_audit.py",
+      "sha256": "d0ec8980350e8315399e98e8bf2dc6dad24339eca67e396191f2b2c64ba6d75a",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/landing/experiments/ddm_gb2_lattice_bound_audit.py"
+    },
+    {
+      "bytes": 10040,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/c773e2543f35dd2d_ddm_gb1_pricing_input_audit.py",
+      "sha256": "c773e2543f35dd2df1017d6da11608a20715fb1fe9794dd3e11c2473224b91dc",
+      "source_path": "/Users/adpena/Projects/pact/experiments/ddm_gb1_pricing_input_audit.py"
+    },
+    {
+      "bytes": 39701,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/b7140cf9c042bd13_ddm_up3_carrier_splice.py",
+      "sha256": "b7140cf9c042bd136c58627eb151c81c305ef18fb4e468e1b6edfd093d4891da",
+      "source_path": "/Users/adpena/Projects/pact/experiments/ddm_up3_carrier_splice.py"
+    },
+    {
+      "bytes": 6005,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/7da71a84ce24286b_evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+      "source_path": "/Users/adpena/Projects/pact/upstream/evaluate.py"
+    },
+    {
+      "bytes": 11378,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/68ea239d7333696e_README.md",
+      "sha256": "68ea239d7333696e79716e47a9c4288d2918efbcd8912f78932b0befe0af872b",
+      "source_path": "/Users/adpena/Projects/pact/upstream/README.md"
+    },
+    {
+      "bytes": 13810,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/a3d25a10188684e2_inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/cpr1/inflate.py"
+    },
+    {
+      "bytes": 7353,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/9824bd3f8913e756_carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/cpr1/carrier_codec.py"
+    },
+    {
+      "bytes": 34053,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/residual_archive.py"
+    },
+    {
+      "bytes": 7074,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/7e5d905d42cd0ec6_compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/compensation_overlay.py"
+    },
+    {
+      "bytes": 4964,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/5b0f7e0f30415f77_frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/frame0_selector.py"
+    },
+    {
+      "bytes": 4027,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/7a5717db1464277e_coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/entropy/coefficient_predictor.py"
+    },
+    {
+      "bytes": 4875,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/5e0c03b6b8f03cdf_coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/entropy/coefficient_ar1_codec.py"
+    },
+    {
+      "bytes": 8206,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/48303a4859b26644_carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/carrier_repack.py"
+    },
+    {
+      "bytes": 12468,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/0e79a63602644976_SEAL_ddm_cmp2_sm1_fe1_composed.json",
+      "sha256": "0e79a636026449769ba8da3f33ad6f846545fad8e311283dfd4dad5b42a87bd7",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/SEAL_ddm_cmp2_sm1_fe1_composed.json"
+    },
+    {
+      "bytes": 5435,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/e52d332fdaf4c821_ddm_gb2_generated_basis_unconditional_lattice_bound_20260909.md",
+      "sha256": "e52d332fdaf4c821f171a71b794fe5d1d2796254782edb0d0e0434850f2110e1",
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_gb2_generated_basis_unconditional_lattice_bound_20260909.md"
+    },
+    {
+      "bytes": 16362,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/32ed36d2bcd3e249_ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+      "sha256": "32ed36d2bcd3e249ea6e0d89355410f021eaf662eb181c4903003e352b4361ae",
+      "source_path": "/Users/adpena/Projects/pact/.omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md"
+    }
+  ],
+  "rice_payload_bytes": 6429,
+  "rng_used": false,
+  "runtime": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime",
+  "schema": "ddm_gb2_lattice_bound_audit_v1",
+  "score_claim": false,
+  "searches": 0,
+  "seed": null,
+  "selector_repr": "((SelectorMode(kind=0, a=0, b=0, c=0), SelectorMode(kind=3, a=1, b=0, c=0), SelectorMode(kind=3, a=-1, b=0, c=0), SelectorMode(kind=4, a=1, b=0, c=-1), SelectorMode(kind=5, a=1, b=0, c=0), SelectorMode(kind=5, a=0, b=1, c=0), SelectorMode(kind=6, a=0, b=1, c=0), SelectorMode(kind=6, a=3, b=1, c=0)), array([0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 3, 4, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,\n       0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,\n       0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 0, 0, 0, 0, 0, 0, 0,\n       0, 0, 0, 0, 0, 0], dtype=uint8))",
+  "whole_carrier_300B_target": 18286
+}

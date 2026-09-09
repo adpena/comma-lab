@@ -1,0 +1,32 @@
+[
+  {
+    "source_path": "/Users/adpena/Projects/pact/.omx/research/ddm_de1_description_efficiency_derivation_20260803.md",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/3b947770ea8ee6a1_ddm_de1_description_efficiency_derivation_20260803.md",
+    "bytes": 41556,
+    "sha256": "3b947770ea8ee6a1f0fde8e87b77259790171893a97a622369e8f8aad116213d"
+  },
+  {
+    "source_path": "/Users/adpena/Projects/pact/.omx/research/codex_premise_falsification_mdl_ms_complex_k_lower_bound_20260718T063906Z_codex.md",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/e746d910e6f09fcb_codex_premise_falsification_mdl_ms_complex_k_lower_bound_20260718T063906Z_codex.md",
+    "bytes": 1853,
+    "sha256": "e746d910e6f09fcbb6a2175a2a3bdef6cb90dbd69743c5a00d28a2b734090651"
+  },
+  {
+    "source_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cmp2_compose_sm1_fe1_20260909.md",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/352a3492e14cd760_ddm_cmp2_compose_sm1_fe1_20260909.md",
+    "bytes": 16397,
+    "sha256": "352a3492e14cd7603076352bdefd47cbd6503166d2302df3254f4288485fa3fe"
+  },
+  {
+    "source_path": "/Users/adpena/Projects/pact/upstream/modules.py",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/065961ba97023e39_modules.py",
+    "bytes": 8322,
+    "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+  },
+  {
+    "source_path": "/Users/adpena/Projects/pact/.omx/research/ddm_gs3_gestalt_after_submission_20260903.md",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/0ef5cee7ecd66e73_ddm_gs3_gestalt_after_submission_20260903.md",
+    "bytes": 129151,
+    "sha256": "0ef5cee7ecd66e73443001bd8d1d30b5fd5fbaf12342f28661eaf4ade82dc7b2"
+  }
+]

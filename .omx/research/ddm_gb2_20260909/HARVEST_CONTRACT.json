@@ -1,0 +1,33 @@
+{
+  "schema": "ddm_gb2_harvest_contract_v1",
+  "owner": "MAIN",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "fire_trigger": "harvest of gb2 isolated commits and bundle",
+  "consumer_stores": [
+    ".omx/state/canonical_task_status.jsonl",
+    ".omx/state/canonical_equations_registry.jsonl",
+    ".omx/state/lane_registry.json"
+  ],
+  "base_commit": "50b37c1017da3c85867ed5c1a0357718f1192270",
+  "audit_commit": "fc73d500e9719e09fec347b476ac5ca24deb8822",
+  "source_head_at_input_audit": "0846da7462e7d7255e125975a0ecc993bcb794df",
+  "main_tree_written": false,
+  "shared_index_touched": false,
+  "payload_retention": "SSD_ARTIFACT_MANIFEST.json",
+  "equation_events": "EQUATION_EVENTS.jsonl",
+  "lane_event": "LANE_EVENT.json",
+  "lane_audit_events": "LANE_AUDIT_EVENTS.jsonl",
+  "task_events": "TASK_EVENTS.jsonl",
+  "instructions": [
+    "Import only gb2 memo/audit/evidence files; do not overwrite full shared-state snapshots.",
+    "Replay equation via register_canonical_equation, lane via lane_maturity add-lane/set-field, and task via canonical task writer; event payloads are retained.",
+    "Consume gb1 VALID_BOUND_INPUTS as FOLDED into gb2 vacuous FORMULATION verdict; no family kill and no BUILD from zero.",
+    "Mark ddm_gb2::HARVEST_FORMULATION_CLOSURE completed after verifying all consumers."
+  ],
+  "controls": "CONTROLS.json",
+  "score_claim": false,
+  "new_scorer_pairs": 0,
+  "candidate_builds": 0,
+  "budget_caveat": "m110 absolute d_pose for a new object does not establish this charter S-unit tolerance; proof is invariant and no admission occurs",
+  "expected_source_archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+}

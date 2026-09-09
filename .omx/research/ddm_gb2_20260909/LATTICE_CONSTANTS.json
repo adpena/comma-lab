@@ -1,0 +1,6 @@
+{
+  "reference_rectangular_lattice_covering_radius": 0.011299380194700023,
+  "min_step": 0.00503784604370594,
+  "max_step": 0.008611684665083885,
+  "d_pose_cap_input_precision": "mirror is report-8dp, not unrounded scorer output"
+}

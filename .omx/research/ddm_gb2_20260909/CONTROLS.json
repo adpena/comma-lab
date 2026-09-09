@@ -1,0 +1,96 @@
+{
+  "axis": "[closed-form arithmetic; no new scorer]",
+  "baseline_d_pose_report8dp": 5.05e-06,
+  "baseline_score_recomputed_from_report8dp": 0.13791730003757818,
+  "checks": {
+    "basis_codes_equal": true,
+    "independent_codes_equal": true,
+    "scales_equal": true
+  },
+  "corrupt_manifest_rc": 1,
+  "count_cases": [
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      256,
+      1,
+      1
+    ],
+    [
+      257,
+      1,
+      2
+    ],
+    [
+      600,
+      1,
+      2
+    ],
+    [
+      600,
+      600,
+      0
+    ],
+    [
+      600,
+      3,
+      1
+    ]
+  ],
+  "derived_allowed_d_pose_increase": 1.792208800443992e-07,
+  "derived_d_pose_cap_from_report8dp": 5.229220880044399e-06,
+  "invalid_counts_refused": 4,
+  "net_delta_S_at_300B_saving_and_full_pose_budget": -7.47576859366514e-05,
+  "pose_budget_delta_S": 0.000125,
+  "rate_credit_300B": 0.0001997576859366514,
+  "resume_rc": 0,
+  "retained": [
+    {
+      "bytes": 18888,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/expanded.bin",
+      "sha256": "70f399dee0186f5ff8376c09740f4b96b308132acc523de863d0b10eadba33cd"
+    },
+    {
+      "bytes": 18896,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/cap1.bin",
+      "sha256": "ccaa327d870335be8d49b7b1900f0c48dc0f81c5a3652e972a0ae393dfd8fac3"
+    },
+    {
+      "bytes": 18897,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/cpr1.bin",
+      "sha256": "d73669b769e46e676524c2fc0ab88b1eae2549fe938e20602385c4fca5f69a86"
+    },
+    {
+      "bytes": 52,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/positive.stdout",
+      "sha256": "3175348d50d33ce2658fb1e944b98cafc4c0b7de383db68096bb534ba8bff2a1"
+    },
+    {
+      "bytes": 0,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/positive.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/negative.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 558,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/negative.stderr",
+      "sha256": "c808b62a7d1716272c75f2eba067097787957c30b9425c405b611b67bcbf98e8"
+    },
+    {
+      "bytes": 1598,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/sources/f115fc2b1502b170_contest_auth_eval_cmp2_t4_20260909.json",
+      "sha256": "f115fc2b1502b170ab209784a5c8de747fcdc09f22be223fb2146fe8b416d848",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json"
+    }
+  ],
+  "sufficient_pose_output_frobenius_change": 0.0023717082451262844,
+  "pose_budget_interpretation": "Conditional arithmetic interprets charter S-unit tolerance as allowed increase vs base. m110 actually referred to absolute d_pose on a new small object; no threshold transfer or candidate admission claimed.",
+  "alternative_total_pose_S_cap_implied_d_pose": 1.5625e-09
+}

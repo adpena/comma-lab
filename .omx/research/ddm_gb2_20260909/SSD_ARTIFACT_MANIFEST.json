@@ -1,0 +1,380 @@
+{
+  "schema": "ddm_gb2_ssd_artifacts_v1",
+  "root": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound",
+  "file_count": 74,
+  "bytes": 15710662,
+  "artifacts": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/AUDIT.json",
+      "bytes": 17997,
+      "sha256": "a353b0e6132fc98a4c6d5d7fbcc570bab2e1f4c4238ae0c285076b5b75fbf665"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/FAMILY_TABLE.json",
+      "bytes": 3282,
+      "sha256": "2bec3c15803a4b7988c816cf51922f2f8aeebd909749af108035e49bd1f9be60"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/pointer_start.json",
+      "bytes": 17890,
+      "sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/archive.zip",
+      "bytes": 180388,
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/archive_bytes.bin",
+      "bytes": 180388,
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/basis_blob.bin",
+      "bytes": 12277,
+      "sha256": "a9d037a59950f3a0a95a4d8889927f90402ef2f165f1eb9196084f45906b9475"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/basis_codes.npy",
+      "bytes": 27776,
+      "sha256": "770f46ef5129d3e1ad973585560b230176281c26dbf7d3a29c276c97b6a4f251"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/biases.npy",
+      "bytes": 140,
+      "sha256": "1e8e1b5789bf9e788de47fb63b8b915e92988e4bb4412128c1a8b6eda5f799aa"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/body_tail.bin",
+      "bytes": 29,
+      "sha256": "f7a37aa2b594e7a5da9f1709f014cfc73bdb6f86d2356a9d4ad20d429cde536d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/carrier_body.bin",
+      "bytes": 18877,
+      "sha256": "1acd82e2bd51f3138f3698485c2ced1f92c61da98a3f5e190cfb666ab8af6b18"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/carrier_raw.bin",
+      "bytes": 18625,
+      "sha256": "d1b5e11e2e1d4a8159012b2bbb30d05bf035bf7da7d02ff388656fa29fd502b3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/carrier_stream.bin",
+      "bytes": 18586,
+      "sha256": "144709e4e714527c04fa20b30eda4cf8bc3f54175669247809e96fdb69812212"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/codes.npy",
+      "bytes": 28928,
+      "sha256": "2a27b7d479ae364e9972b3f57d0f6f4d214a38322645ed3819a3469b012e4e6d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/coefficients_fp32.npy",
+      "bytes": 28928,
+      "sha256": "f515c8889e5fd7b292141459eaf7afc11d74bd1e2bf7bbb3d686a422d31d4eb5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/effective_codes.npy",
+      "bytes": 28928,
+      "sha256": "2a27b7d479ae364e9972b3f57d0f6f4d214a38322645ed3819a3469b012e4e6d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/factors.npy",
+      "bytes": 152,
+      "sha256": "7de7e72d7f00f1716b5e6d49d84e44497d5c15888d09ddeab2ce0a0ad9369623"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/hpac_stream.bin",
+      "bytes": 11911,
+      "sha256": "aadf679f982cf2546554913a00f2c94ffd0161a0ebeac07eaaf96f422a1f1598"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/ks.npy",
+      "bytes": 140,
+      "sha256": "e056f10a7821974b927121db22de8f78ca7a55dbec4ef3b8a6461fa7d9becb5a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/lengths.npy",
+      "bytes": 160,
+      "sha256": "28edef255b36a1ddb3bcf21a3de0bd8cce693ad8da4e2c8f28ef7f4cc136afb1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/outer.bin",
+      "bytes": 180288,
+      "sha256": "723cd0222e270c0bf2f76b9b89ceeba81629a0b19a363dee59850b19dc912542"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/packed_metadata.bin",
+      "bytes": 40,
+      "sha256": "d1a2247ba3a0735f362dc38647b726d494cfa81f216424207cce8012b475d8f6"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/rice_payload.bin",
+      "bytes": 6429,
+      "sha256": "1f772171a54702ea508552a7f82e4b944be0ee58198b7b52559c6a5e9601e2e9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/scales.bin",
+      "bytes": 96,
+      "sha256": "28f9c06ec1de4068076445c8006238d5e1f8dfb186bbc366c44209cc16580975"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/scales_fp32.npy",
+      "bytes": 224,
+      "sha256": "1c6c9e36b4864af6f68e685331e5211a9b64c7faba2c677b410aa5b4c9f82997"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/section_tail.bin",
+      "bytes": 119915,
+      "sha256": "a41f483a4a5f72871ea2677bc29be916efa1239607cef8719b91b48f6266fa41"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/selector.bin",
+      "bytes": 34,
+      "sha256": "15c256dcb6a6563966b43f51f2616d7f1c03d16e1812a8dcb5d80ceea432ddd0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/retained/semantic_stream.bin",
+      "bytes": 29862,
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/065961ba97023e39_modules.py",
+      "bytes": 8322,
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/0e79a63602644976_SEAL_ddm_cmp2_sm1_fe1_composed.json",
+      "bytes": 12468,
+      "sha256": "0e79a636026449769ba8da3f33ad6f846545fad8e311283dfd4dad5b42a87bd7"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/0ef5cee7ecd66e73_ddm_gs3_gestalt_after_submission_20260903.md",
+      "bytes": 129151,
+      "sha256": "0ef5cee7ecd66e73443001bd8d1d30b5fd5fbaf12342f28661eaf4ade82dc7b2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/32ed36d2bcd3e249_ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+      "bytes": 16362,
+      "sha256": "32ed36d2bcd3e249ea6e0d89355410f021eaf662eb181c4903003e352b4361ae"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/352a3492e14cd760_ddm_cmp2_compose_sm1_fe1_20260909.md",
+      "bytes": 16397,
+      "sha256": "352a3492e14cd7603076352bdefd47cbd6503166d2302df3254f4288485fa3fe"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/3b947770ea8ee6a1_ddm_de1_description_efficiency_derivation_20260803.md",
+      "bytes": 41556,
+      "sha256": "3b947770ea8ee6a1f0fde8e87b77259790171893a97a622369e8f8aad116213d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/48303a4859b26644_carrier_repack.py",
+      "bytes": 8206,
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+      "bytes": 34053,
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/5b0f7e0f30415f77_frame0_selector.py",
+      "bytes": 4964,
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/5e0c03b6b8f03cdf_coefficient_ar1_codec.py",
+      "bytes": 4875,
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/68ea239d7333696e_README.md",
+      "bytes": 11378,
+      "sha256": "68ea239d7333696e79716e47a9c4288d2918efbcd8912f78932b0befe0af872b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/7a5717db1464277e_coefficient_predictor.py",
+      "bytes": 4027,
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/7da71a84ce24286b_evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/7e5d905d42cd0ec6_compensation_overlay.py",
+      "bytes": 7074,
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/9824bd3f8913e756_carrier_codec.py",
+      "bytes": 7353,
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/a3d25a10188684e2_inflate.py",
+      "bytes": 13810,
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/b7140cf9c042bd13_ddm_up3_carrier_splice.py",
+      "bytes": 39701,
+      "sha256": "b7140cf9c042bd136c58627eb151c81c305ef18fb4e468e1b6edfd093d4891da"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/c773e2543f35dd2d_ddm_gb1_pricing_input_audit.py",
+      "bytes": 10040,
+      "sha256": "c773e2543f35dd2df1017d6da11608a20715fb1fe9794dd3e11c2473224b91dc"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/d0ec8980350e8315_ddm_gb2_lattice_bound_audit.py",
+      "bytes": 10688,
+      "sha256": "d0ec8980350e8315399e98e8bf2dc6dad24339eca67e396191f2b2c64ba6d75a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/e52d332fdaf4c821_ddm_gb2_generated_basis_unconditional_lattice_bound_20260909.md",
+      "bytes": 5435,
+      "sha256": "e52d332fdaf4c821f171a71b794fe5d1d2796254782edb0d0e0434850f2110e1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/e746d910e6f09fcb_codex_premise_falsification_mdl_ms_complex_k_lower_bound_20260718T063906Z_codex.md",
+      "bytes": 1853,
+      "sha256": "e746d910e6f09fcbb6a2175a2a3bdef6cb90dbd69743c5a00d28a2b734090651"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/CONTROLS.json",
+      "bytes": 2933,
+      "sha256": "246de02bba8836bf37290fa2e23381103b366b0b52b07fd67fd81a631b447691"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/LATTICE_CONSTANTS.json",
+      "bytes": 232,
+      "sha256": "f40d0ff935412b1d322db98c7c5f5d02c15acb62b37e8054d2e9ddf606c76a84"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/N600_LATTICE_MEMBERSHIP.json",
+      "bytes": 5733,
+      "sha256": "15bff14e4740dfb3fc551251235b62e0572263da2719e910362d89d06a838c08"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/cap1.bin",
+      "bytes": 18896,
+      "sha256": "ccaa327d870335be8d49b7b1900f0c48dc0f81c5a3652e972a0ae393dfd8fac3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/corrupt_manifest.json",
+      "bytes": 17997,
+      "sha256": "5aeb0858fc083408ac3fafdef49039bf39d1930dc97946800b57aa8f2828bfd0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/cpr1.bin",
+      "bytes": 18897,
+      "sha256": "d73669b769e46e676524c2fc0ab88b1eae2549fe938e20602385c4fca5f69a86"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/expanded.bin",
+      "bytes": 18888,
+      "sha256": "70f399dee0186f5ff8376c09740f4b96b308132acc523de863d0b10eadba33cd"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/negative.stderr",
+      "bytes": 558,
+      "sha256": "c808b62a7d1716272c75f2eba067097787957c30b9425c405b611b67bcbf98e8"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/negative.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/positive.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/positive.stdout",
+      "bytes": 52,
+      "sha256": "3175348d50d33ce2658fb1e944b98cafc4c0b7de383db68096bb534ba8bff2a1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/verification/sources/f115fc2b1502b170_contest_auth_eval_cmp2_t4_20260909.json",
+      "bytes": 1598,
+      "sha256": "f115fc2b1502b170ab209784a5c8de747fcdc09f22be223fb2146fe8b416d848"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/RELEVANT_EQUATIONS.json",
+      "bytes": 43621,
+      "sha256": "112844b7b8881c86d50dc81e7c51234052940a6556a8b510ef5d77fe362593ec"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/SEARCHES.json",
+      "bytes": 2502,
+      "sha256": "61931bf743600ead657bc2a2d6a68d59667361a7174dd26c78c440d437c3c77d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/budget_units.txt",
+      "bytes": 1266,
+      "sha256": "f4a696a365e7978c206f2b1937dc9517aa06be1e77038a72aea8508f96883439"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/budget_units_argv.json",
+      "bytes": 366,
+      "sha256": "ce2ddd7ba39f1ed56d9ded49588cee7a69d4c9b0f3fe8e488535e077c129b2db"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/design.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/design.txt",
+      "bytes": 449,
+      "sha256": "01529ecb29401d627b3d404c1dc27f88adb2bb7b6deb02dc5d3484cb091d5559"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/equations.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/equations.txt",
+      "bytes": 3646482,
+      "sha256": "7fe0a09d912d1ff1f97e4a3191c701f23565e34409ffa1ca4f77c7b34e5fd791"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/index_dag.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/index_dag.txt",
+      "bytes": 9147,
+      "sha256": "87e9ba73c013c1c4e6ce5284f22ce580c5e05854d7d43ae79e8a683faecb4e48"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/research.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/research.txt",
+      "bytes": 10578564,
+      "sha256": "f9a8726a909a58e0f40dad0707073889a5bc723b5096cbb3c3ac4c9a39bb2151"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/tasks.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/tasks.txt",
+      "bytes": 16473,
+      "sha256": "fb2fc58f668a6a6ff89366f5f37663ea6ac5e0554a1abe43d3ca60b5abc3e984"
+    }
+  ],
+  "cleanup": "Retained evidence only. No deletions or source-tree changes. Sparse Git checkout references the existing object database; bundle of new commits will accompany harvest.",
+  "source_video_bytes_measured": 37545489
+}

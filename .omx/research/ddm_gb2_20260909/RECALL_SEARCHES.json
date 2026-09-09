@@ -1,0 +1,90 @@
+[
+  {
+    "label": "research",
+    "argv": [
+      "rg",
+      "-n",
+      "--hidden",
+      "-g",
+      "*.md",
+      "-g",
+      "*.json",
+      "-g",
+      "*.jsonl",
+      "generated.{0,30}(basis|carrier)|carrier.{0,45}(lattice|Voronoi|covering)|Kolmogorov|positioned.subspace|basis.*39.?748",
+      ".omx/research"
+    ],
+    "returncode": 0,
+    "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/research.txt",
+    "bytes": 10578564,
+    "sha256": "f9a8726a909a58e0f40dad0707073889a5bc723b5096cbb3c3ac4c9a39bb2151",
+    "lines": 613
+  },
+  {
+    "label": "design",
+    "argv": [
+      "rg",
+      "-n",
+      "--hidden",
+      "-g",
+      "*.md",
+      "-g",
+      "*SPEC*",
+      "carrier.{0,45}(basis|lattice)|generated.{0,30}basis|Zernike|Gabor|steerable",
+      "docs"
+    ],
+    "returncode": 0,
+    "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/design.txt",
+    "bytes": 449,
+    "sha256": "01529ecb29401d627b3d404c1dc27f88adb2bb7b6deb02dc5d3484cb091d5559",
+    "lines": 1
+  },
+  {
+    "label": "index_dag",
+    "argv": [
+      "rg",
+      "-n",
+      "--hidden",
+      "-g",
+      "CANONICAL_RESEARCH_INDEX*",
+      "-g",
+      "sub015_DAG_*",
+      "carrier.{0,45}(basis|lattice)|generated.{0,30}basis|Zernike|Gabor|steerable",
+      ".omx/research"
+    ],
+    "returncode": 0,
+    "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/index_dag.txt",
+    "bytes": 9147,
+    "sha256": "87e9ba73c013c1c4e6ce5284f22ce580c5e05854d7d43ae79e8a683faecb4e48",
+    "lines": 16
+  },
+  {
+    "label": "tasks",
+    "argv": [
+      "rg",
+      "-n",
+      "generated.{0,30}basis|lattice.{0,30}carrier|ddm_gb[12]|pose.{0,20}budget",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/operator_p0_ledger.jsonl",
+      ".omx/state/lane_registry.json"
+    ],
+    "returncode": 0,
+    "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/tasks.txt",
+    "bytes": 16473,
+    "sha256": "fb2fc58f668a6a6ff89366f5f37663ea6ac5e0554a1abe43d3ca60b5abc3e984",
+    "lines": 19
+  },
+  {
+    "label": "equations",
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "returncode": 0,
+    "stdout_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/recall/equations.txt",
+    "bytes": 3646482,
+    "sha256": "7fe0a09d912d1ff1f97e4a3191c701f23565e34409ffa1ca4f77c7b34e5fd791",
+    "lines": 69735
+  }
+]

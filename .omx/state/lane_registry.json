@@ -97034,6 +97034,335 @@
       "id": "lane_ddm_fe1_frame_embedding_predistortion_20260908",
       "name": "ddm_fe1 per-pair frame-embedding pre-distortion",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "SEAL VALID /SEAL_ddm_fe1_frame_embedding_predistortion_contest_cuda.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_rc2_t4_hpac_semistatic_mixing_20260909",
+      "name": "ddm_rc2_t4_hpac_semistatic_mixing_20260909",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13885056455024844 @ 181,414 B; archive sha c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e; harvest /Volumes/APDataStore/pact/ddm_rc2_t4_hpac_semistatic_mixing_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13885056455024844 @ 181,414 B; archive sha c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e; harvest /Volumes/APDataStore/pact/ddm_rc2_t4_hpac_semistatic_mixing_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13885056455024844 @ 181,414 B; archive sha c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e; harvest /Volumes/APDataStore/pact/ddm_rc2_t4_hpac_semistatic_mixing_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ddm_rw1_renderer_edge_foldback_20260909",
+      "name": "ddm_rw1 boundary-local renderer weight fold-back",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "instrument complete: control byte-exact 0/24,416,064 px; section repack byte-identical 36,130 B; null build byte-identical 181,414 B sha c810c2c7 [empirical:/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/receipts/EXPORT_NULL.json]"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "n600 realized-argmax reach measured on the live body: reach -11.37% at 66 codes; 4 selection rules all positive; discrete realized search 150 evals / 0 accepts / dS 0.0 [empirical:/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/receipts/CODE_SEARCH.json]"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "research_only=true until a candidate archive exists. .omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md; equations anchor rw1_semantic_int4_weight_code_rewrite_marginal_0p0139_bytes_per_code_20260909 on model_section_edit_container_break_fee_v1. Reactivation: experiments/ddm_rw1_FIRE_ORDER.sh step 3 onward once sj1 pass-4 lands"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "experiments/ddm_rw1_FIRE_ORDER.sh + experiments/ddm_rw1_admission_shards.sh; all detached launches via tools/launch_detached_process.py with done-receipts; trainer is --resume-from crash-resumable with stage-encoded checkpoints and the EMA shadow saved"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_rc3_shared_mixer_successor",
+      "name": "RC3 closed-form gated shared model-row mixer",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "SEAL_READY: 181213 B, -201 B, exact retained IHS1 decode and unchanged section census. MAIN owns T4; score_claim=false. Evidence /Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/RESULT.json",
+      "research_only": true
+    },
+    {
+      "id": "ddm_pc2_t4_carrier_scales_resolve_20260909",
+      "name": "ddm_pc2_t4_carrier_scales_resolve_20260909",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13882326433317044 @ 181,373 B; archive sha e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372; harvest /Volumes/APDataStore/pact/ddm_pc2_t4_carrier_scales_resolve_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13882326433317044 @ 181,373 B; archive sha e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372; harvest /Volumes/APDataStore/pact/ddm_pc2_t4_carrier_scales_resolve_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13882326433317044 @ 181,373 B; archive sha e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372; harvest /Volumes/APDataStore/pact/ddm_pc2_t4_carrier_scales_resolve_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/carrier_bytes_buy_a_lattice_point_rank_cut_free_in_span_costly_on_lattice_20260909.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_tc1_token_tail_bound_and_shared_mixer_pricing",
+      "name": "tc1 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md; main faac7396395378726639c3094e98d645c6b51a6a; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_gf2_static_dynamic_generator_form",
+      "name": "gf2 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gf2_static_dynamic_generator_form_20260903.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_gf2_static_dynamic_generator_form_20260903.md; main 30c861062c7f943f23e3fdd9179a866513053756; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_gf3_time_conditioned_factorized_field_closed_form_pricing",
+      "name": "gf3 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gf3_time_conditioned_factorized_field_closed_form_pricing_20260908.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_gf3_time_conditioned_factorized_field_closed_form_pricing_20260908.md; main 14a07fa422e4f815bcf513c499b921c26499f451; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_gb1_generated_carrier_basis_lattice_priced_closed_form",
+      "name": "gb1 September 08/09 consolidation disposition",
+      "phase": 8.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -97069,7 +97398,623 @@
           "evidence": ""
         }
       },
+      "notes": "LANDED-BLOCKED-PRICING; evidence .omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md; main 7e27eb732ea7fa126708fdeb6d36851e1b74713a; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_ane3_residue_fixed_conversion_remeasure",
+      "name": "ane3 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ane3_residue_fixed_conversion_remeasure_20260908.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_ane3_residue_fixed_conversion_remeasure_20260908.md; main d368b06fd2a1b83028d765ea2fdc3a3eba4e3a56; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_cl3c_closer_s18_ladder_registration",
+      "name": "cl3c September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cl3c_closer_20260908.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cl3c_closer_20260908.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_cl3c_closer_20260908.md; main e57f42d32a770b00a44ed9ebba010379d06f469b; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_gov3_metal_occupancy_progress_budget_sum_refuse",
+      "name": "gov3 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gov3_metal_occupancy_progress_budget_sum_refuse_20260908.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_gov3_metal_occupancy_progress_budget_sum_refuse_20260908.md; main 60deb570df8e6757d348accd27b859c1649de42d; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_scg1_seal_contract_inflate_sh_smoke_receipts",
+      "name": "scg1 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_scg1_seal_contract_inflate_sh_smoke_receipts_20260908.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_scg1_seal_contract_inflate_sh_smoke_receipts_20260908.md; main 89f9656f398785b3b5145fda0f0b91da1aca89a7; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_scg2_seal_custody_followon_digest_naming",
+      "name": "scg2 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_scg2_seal_custody_followon_digest_naming_20260909.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_scg2_seal_custody_followon_digest_naming_20260909.md; main c3b4eb70b4878bf8eb621c18409fc6e8ae4aec75; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_ql1_retired_lineage_test_quarantine",
+      "name": "ql1 September 08/09 consolidation disposition",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDED; evidence .omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md; main f1f0abd2786effb533df2263547a082a39136ccf; research_only=true; no new score by cs1"
+    },
+    {
+      "id": "ddm_sj1_t4_token_predistortion_pass4_20260909",
+      "name": "ddm_sj1_t4_token_predistortion_pass4_20260909",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13867171823146562 @ 181,521 B; archive sha b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20; harvest /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass4_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13867171823146562 @ 181,521 B; archive sha b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20; harvest /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass4_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13867171823146562 @ 181,521 B; archive sha b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20; harvest /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass4_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
       "notes": ""
+    },
+    {
+      "id": "ddm_cs1_consolidation_debt_20260909",
+      "name": "CS1 SSD authored-code custody and September wave dispositions",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Apparatus only; code fallback 60937321b713099f6f735c34198c0089f4e8a840 awaits MAIN; no score or SSD writes."
+    },
+    {
+      "id": "ddm_vr3_both_ssds_full_certify_or_block_reclaim",
+      "name": "VR3 certified raw reclaim September wave",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_vr3_both_ssds_full_certify_or_block_reclaim_20260908.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Landed ff1095d49; source/memo inspected by CS1; no CS1 reclaim or SSD mutation."
+    },
+    {
+      "id": "ddm_sm1_semantic_shared_mixer",
+      "name": "SM3R semantic counted shared mixer",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/STAGED.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; scorer-free semantic coder charter 20260909; MAIN owns exact fire",
+      "research_only": true
+    },
+    {
+      "id": "lane_ddm_rp1_rate_directed_predistortion_20260909",
+      "name": "ddm_rp1 rate-directed token pre-distortion (seg-neutral by realized argmax identity, pose re-solved)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "instrument landed: ddm_rp1_rate_rank.py (rank + rank-mixer + pricing mode), ddm_rp1_sizing.py, ddm_rp1_admit.py, ddm_rp1_price.sh. Identity controls PASSED under BOTH coders: HPAC stream sha 0720536b at 120,367 B; tc1 mixer stream sha bc046883 at 119,784 B, byte-identical to cmp1 mixed_0600.envelope"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-CPU advisory] REAL 600-frame tc1-mixer encode of 217 argmax-neutral token changes: 119,752 B vs control 119,784 B = -32 B against a -219.66 B first-order sum; realized/modelled 0.1445, 0.2663 after per-pair selection. Receipts /Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/{rank_mixer/RANK.json,price_partial/enc2/bits_per_frame.npy,n600m/shard0/SIZING.json}"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rp1_rate_directed_token_predistortion_20260909.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_cmp1_t4_rc3_tc1_composed_20260909",
+      "name": "ddm_cmp1_t4_rc3_tc1_composed_20260909",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13817298987557713 @ 180,772 B; archive sha 66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0; harvest /Volumes/APDataStore/pact/ddm_cmp1_t4_rc3_tc1_composed_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13817298987557713 @ 180,772 B; archive sha 66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0; harvest /Volumes/APDataStore/pact/ddm_cmp1_t4_rc3_tc1_composed_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13817298987557713 @ 180,772 B; archive sha 66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0; harvest /Volumes/APDataStore/pact/ddm_cmp1_t4_rc3_tc1_composed_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_cmp2_sm1_fe1_composed",
+      "name": "CMP2 current-base semantic coder composition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Owner ddm_cmp2; byte-only A/B build; MAIN scorer and exact fire; score_claim=false"
+    },
+    {
+      "id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+      "name": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13791730003757818 @ 180,388 B; archive sha 670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc; harvest /Volumes/APDataStore/pact/ddm_cmp2_t4_sm1_semantic_coder_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13791730003757818 @ 180,388 B; archive sha 670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc; harvest /Volumes/APDataStore/pact/ddm_cmp2_t4_sm1_semantic_coder_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13791730003757818 @ 180,388 B; archive sha 670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc; harvest /Volumes/APDataStore/pact/ddm_cmp2_t4_sm1_semantic_coder_20260909/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ddm_bnd1_boundary_representation_20260909",
+      "name": "Boundary representation closed-form pricing",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; charter source-verification and scorer-free census; score_claim=false; no build or scorer authorization inferred"
     }
   ],
   "level_rules": {
@@ -97079,5 +98024,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-09T13:40:59Z"
+  "updated_at": "2026-09-09T22:26:28Z"
 }

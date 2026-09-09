@@ -1,0 +1,146 @@
+[
+  {
+    "K": 6,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "Zernike",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 8,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "Zernike",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 12,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "Zernike",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 6,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "steerable_pyramid",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 8,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "steerable_pyramid",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 12,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "steerable_pyramid",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 6,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "generated_Gabor",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 8,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "generated_Gabor",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  },
+  {
+    "K": 12,
+    "achieved_total_bytes": null,
+    "allowed_seed_bytes_max": 8,
+    "build_admitted": false,
+    "family": "generated_Gabor",
+    "mandatory_seed_bytes": 0,
+    "pose_budget_certified": false,
+    "singleton_counting_floor_bytes": 0,
+    "step_multipliers": [
+      1,
+      0.5,
+      0.125
+    ],
+    "verdict": "VACUOUS_FORMULATION_BOUND"
+  }
+]

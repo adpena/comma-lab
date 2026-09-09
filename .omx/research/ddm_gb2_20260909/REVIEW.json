@@ -1,0 +1,19 @@
+{
+  "python_source": "experiments/ddm_gb2_lattice_bound_audit.py",
+  "sha256": "d0ec8980350e8315399e98e8bf2dc6dad24339eca67e396191f2b2c64ba6d75a",
+  "passes": [
+    {
+      "pass": 1,
+      "scope": "Reader lineage, full population, payload retention, shape/basis zigzag, output confinement; corrected zigzag before audit and before clean pass.",
+      "clean": true
+    },
+    {
+      "pass": 2,
+      "scope": "Finite-cover inequality and units, singleton quantifiers, independent receiver identity, failed hash control, no score/BUILD claims, resume custody.",
+      "clean": true
+    }
+  ],
+  "fresh_agent_review": false,
+  "ruff": "passed",
+  "controls": "CONTROLS.json"
+}
