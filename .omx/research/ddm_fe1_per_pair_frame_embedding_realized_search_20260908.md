@@ -448,6 +448,67 @@ moves the current lattice cannot express. Nothing here says the FiLM axis is dea
 too coarse to fine-tune on.
 
 
+---
+
+## 13. CHARTER-READY — the seg-neutral rate lever (ITEM 5, routed to a rate arm)
+
+MAIN routes this to a codex rate arm. Everything below is measured by this arm and on disk; nothing in it needs
+fe1 to run again.
+
+### The observation that makes it a lever
+
+fe1's admitted candidate is 181,305 B against pc2's 181,373 — **−68 B** — and its seg leg is worth only −1.95e-05
+against a rate leg of −4.53e-05. The 68 bytes are not a property of the 23 repaired cells. They are the edited
+range-coded RC1 payload compressing better than the shipped one under a re-searched brotli container. **If bytes
+can fall from an edit whose distortion value is small, they can fall from an edit whose distortion value is ZERO.**
+
+### The supply, already measured and retained
+
+The n600 search evaluated 18,906 single-code moves through the frozen cpu_torch SegNet argmax on the receiver's own
+render. Of those, **243 moves change the realized flip count by exactly 0** — spread over the pairs, at |step| ≤ 2
+on the shipped 3-bit lattice. Every one is in `search/search_rows_*.jsonl` with its pair, dimension, old code, new
+code and realized flip count, so the candidate set is a `jq` away and costs no SegNet time to rediscover.
+
+A seg-neutral move is also very close to pose-free: it changes the pair's render, so its carrier still wants a
+re-solve, but fe1 measured the re-solve recovering 440×–572,269× stale rises down to a mean pose leg that came out
+NEGATIVE on the admitted set. A neutral-move set should be priced with the same per-pair re-solve, not assumed free.
+
+### The objective
+
+Maximise `−ΔB` over subsets of the 243 neutral moves, where `ΔB` is the EXACT archive byte delta from a real build
+with the container searched over `q ∈ {9,10,11} × lgwin ∈ {16,18,20,22,24} × {ck2, plain}`. Score is
+`ΔS = ΔB · 25/37,545,489 + (pose leg after re-solve)`. There is no seg term by construction — and that is the
+point: this arm can only win, never lose, on the axis that is hardest to win on.
+
+### What is already built and reusable
+
+* `experiments/ddm_fe1_pose_price.py::archive_section_bytes` — the container search, anchored: it reproduces the
+  shipped section byte-identically.
+* `experiments/ddm_fe1_admit_and_build.py::build_candidate_archive` — a real archive build with the null-build
+  identity control and a parse-back that refuses unless the bytes decode to the requested codes with a
+  byte-identical token tail.
+* `experiments/ddm_fe1_admit_and_build.py cmd_pose` — per-pair re-solve with the unmoved-render control.
+* `model_section_edit_container_break_fee_v1` — the rate model to price against.
+
+### Sizing, from this arm's own draws (§6)
+
+Random edit sets moved the searched archive delta over roughly ±25 B, and fe1's ONE non-random set landed at
+**−68 B**. So the lever is worth tens of bytes, and tens of bytes is 1–3× the whole −2e-5 admit bar. A search that
+can evaluate a few hundred subsets — each build is seconds — should beat a single lucky draw.
+
+### PRIOR-LAW PREDICTION for that arm to write down before it runs
+
+fe1 got −68 B from a set it did not choose for bytes. A search that optimises FOR bytes over 243 neutral moves
+should beat that. If a few hundred real builds cannot find a subset below −68 B, then fe1's draw was not luck but
+close to the achievable floor, and the byte spread §6 measured is not exploitable — record that plainly.
+
+### The honest caveat
+
+This is rate engineering on exact deterministic bytes, not a distortion mechanism, and it does not generalise off
+this body: it exists because the semantic section is a range-coded payload under a match-finding compressor
+(§6's domain of validity). A body whose model section is not range-coded owes nothing.
+
+
 ## 12. Verdict
 
 **ADMITTED.** `ddm_fe1_frame_embedding_predistortion`, 181,305 B, sha `a0c33d7b…`, projected S
