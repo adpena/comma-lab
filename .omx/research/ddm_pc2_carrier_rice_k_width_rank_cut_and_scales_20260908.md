@@ -65,7 +65,9 @@ and *"its re-solved d_pose exceeds the bar at every r ≥ 8"*.
 |---|---|---|---|
 | k-field widening cost | ≈ +2 B (2-bit field) | **+3 B** (12 × 4-bit absolute) | corrected, §3 |
 | r = 8 rate saving | −3,316 ± 400 B | **−6,356 B** | **prediction WRONG by 1.92×, in our favour** |
+| r = 8 re-solved d_pose | ≤ 6.5e-06 | **≥ 6.313701e-04** (population floor, 39 pairs) | **prediction WRONG by ≥ 97×** |
 | falsifier "saves < 2,000 B" | — | saved 6,356 B | did not fire |
+| falsifier "d_pose exceeds the bar at every r ≥ 8" | — | 48.9× past the bar at r = 8, 2.8× at r = 11 | **FIRED** |
 
 **Two corrections to the charter's own premise, both structural.**
 
@@ -236,14 +238,24 @@ dimensions and EVALUATION running the exact 12-dimensional receiver path. Every 
 | rung | pairs | subset mean d_pose | x base on the same pairs | projected n600 | x its own break-even |
 |---|---:|---:|---:|---:|---:|
 | r = 11 (drop 1) | 11 | 1.667243e-05 | 3.6x | 1.8197e-05 | **2.8x** |
-| r = 8 (drop 4) | 24 | 1.561259e-04 | 51.5x | 2.6204e-04 | **20.3x** |
+| r = 8 (drop 4) | 39 | 9.713386e-03 | 2,733x | 1.3920e-02 | **1,077x** |
 | r = 8, retained step x1/2 | 8 | 8.399035e-04 | 136.3x | 6.9428e-04 | **57.2x** |
 
-A subset may only REFUSE, never admit (pc1's rule), so these are routing estimates plus the strict
-population floor `d_pose_n600 >= sum(measured)/600`. The r = 8 floor stood at 6.245035e-06 (0.48x of
-its bar) at 24 pairs and three further strided shards are driving it past. The r = 11 row is pruned
-on the charter's own >2x SCOPE rule with its row recorded: a rigorous floor there would cost ~222
-pair-solves to buy a verdict already visible at 2.8x.
+A subset may only REFUSE, never admit (pc1's rule), so the estimates above are for routing and the
+VERDICT rests on the strict population floor `d_pose_n600 >= sum(measured finals)/600`, which no
+unmeasured pair can lower because every per-pair d_pose is non-negative.
+
+**r = 8 is REFUSED on that floor, not on an extrapolation.** Over 39 strided pairs (four shards of a
+stride-25 partition, never a prefix):
+
+    d_pose_n600  >=  0.3788221 / 600  =  6.313701e-04     against a break-even of 1.292442e-05
+
+That is **48.9x past the bar**, and it is a completed argument on the whole population. Solving was
+stopped there: a verdict already decided is not made more decided by more pairs.
+
+The r = 11 row is pruned on the charter's own >2x SCOPE rule with its row recorded. A rigorous floor
+there would cost ~222 pair-solves to buy a verdict already visible at 2.8x, and section 7a says the
+gentler rung cannot be rescued by re-ordering either.
 
 ### 7c. The lattice cure was priced, tried, and does NOT systematically work
 
@@ -308,6 +320,43 @@ the 1.0 form whose pose IS measured. Shrinking the block to 48 B would add anoth
 net -5.84e-05) and is left owed, because it needs a second receiver format change and the -41 B row
 needs none.
 
+### The seal
+
+Smoke PAIR, all four legs, checked with the seal's OWN `tac.candidate_seal._public_smoke_problems`
+rather than a second reading of the contract (`problems: []`):
+
+| leg | role | outcome | seconds | rc |
+|---|---|---|---:|---:|
+| public path (`f26_inflate.inflate_archive`, CPU) | candidate | REACHED_TOKEN_DECODE | 120.0 | — |
+| public path | frontier | REACHED_TOKEN_DECODE | 120.0 | — |
+| `bash inflate.sh` (3-arg contest signature) | candidate | REACHED_CUDA_GATE | 1.8 | 1 |
+| `bash inflate.sh` | frontier | REACHED_CUDA_GATE | 1.4 | 1 |
+
+    SEAL READY
+      /Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/SEAL_ddm_pc2_carrier_kwidth_rankcut.json
+      candidate  ddm_pc2_carrier_kwidth_rankcut  [contest_cuda]  SEAL_VALID
+      archive    181,604 B  sha 6d3717cf8621dbd5d8eb6fbbf7e99f1cb2db1c520088362735fce46cd33bb06a
+      runtime    43 files, 925,422 B, digest 9e96ed4e79b4d0e1…
+      seal sha   3016c8aa11aa5de3ffe748895c23c2f097770d55ec3dfc18c666e3b5700ff934
+      admit bar  net dS < -2e-05 vs contest_cuda 0.13900438 (tolerance 0)
+
+**MAIN fires; I did not dispatch Modal.**
+
+**Two producer defects found and fixed while building that smoke, both worth keeping.**
+
+*The bound trap.* Declaring one number for both the subprocess timeout and
+`public_path_probe_seconds` refuses every timed-out probe, because a timeout records
+`elapsed = timeout + epsilon` and the validator refuses `seconds > bound`. A timeout is the EXPECTED
+outcome of the token-decode leg on a CPU host, so the trap fires on the normal path, not an edge
+case. Probes now run at 0.8x the declared bound.
+
+*The orphan child.* The public-path probe starts a full `inflate_archive`. When its parent died the
+child survived under launchd at ~180% CPU, writing into a temp dir nobody reads — MEASURED at 11m52s
+of orphan runtime before it was killed. Every probe now starts with `start_new_session=True` and the
+bound path `killpg`s the group, so no probe can outlive its caller. The declared bound also dropped
+from 750 s to 150 s: the PASS condition is "no exception within the bound" and every pre-decode stage
+throws fast, so the bound only has to outlast those stages, never the 25-minute decode.
+
 ---
 
 ## 9. The fe1 container law, priced on this arm
@@ -333,30 +382,45 @@ the shipped shape, so the sweep can never buy a moving part for nothing.
   r = 12 rung exists and the base row in section 6 is its start, but the re-solve itself never ran:
   the CPU went to the rank-cut ladder and then to ITEM 1. It stays the most interesting owed item on
   this carrier, because any d_pose it wins costs ZERO bytes and composes with ITEM 1.
-- The r = 8 population floor had not crossed its break-even when this was written (0.48x of the bar at
-  24 pairs). The 20.3x figure is a routing estimate and is labelled as one.
+- Only r = 8 carries a rigorous population floor. r = 11, r = 10 and r = 9 were pruned on estimates
+  (with their rows recorded) once section 7a showed no re-ordering could rescue them.
 - ITEM 1's 48-byte block shrink was not built; only the 41 bytes that need no format change were.
 - The KW1 format is BUILT, controlled and proven, but **it does not ship in this arm's candidate**:
   the only admitted row does not need it. It is a mechanism waiting for its consumer.
 
 ## 11. Owed items
 
-**ITEM A — the zero-byte re-solve (pc1's ITEM 4).** 40-round `refine_pair` over n600 on the ITEM 1
-body. Any gain is pure dS by construction. ~5-7 h at 4 shards.
+### ITEM 1 — the zero-byte re-solve (pc1's own ITEM 4)
 
-**ITEM B — shrink the scales block to 48 B.** Worth another -48 B (net -5.84e-05 composed with
-ITEM 1). Needs one more width parameter through the same three receiver modules KW1 already
-parameterised.
+40-round `refine_pair` over n600 on the ITEM 1 body (`candidate_scales/candidate_runtime`). Any
+d_pose it wins costs ZERO bytes, so its whole dS is negative by construction, and it composes
+additively with the -41 B scales row. The base it starts from is measured (5.0939863022125565e-06).
+~5-7 h at 4 shards. This is the most interesting unmeasured thing left on this carrier.
 
-**ITEM C — a solver whose local move scales with the lattice.** The x1/8 refinement failed as a
-SEARCH (the +-2 polish spans 8x less coefficient distance), not as a representation. A polish radius
-expressed in coefficient units rather than lattice units would decide whether the rank cut's lattice
-cure actually works.
+### ITEM 2 — shrink the scales block from 96 B to 48 B
 
-**ITEM D — the KW1 field's other consumers.** Per-column lattice coarsening was priced here and is
-small (<=1,080 B; the columns' optimal `k` move together, so the wide field buys nothing there). But
-any future carrier edit that puts columns at genuinely different `k` now has a 43-byte block that can
-express it and a receiver that reads both forms.
+Worth another -48 B on top of ITEM 1 (net -5.84e-05 composed). The basis half of the block is dead
+once the basis scales are all 1.0, so the block can carry the twelve coefficient scales alone. Needs
+one more width parameter threaded through the same three receiver modules KW1 already parameterised
+(`rr5_arith_basis.split_carrier_body`, `dx2_cabac_coefficients.packed_ks`,
+`residual_archive._packed_portion` / `_restore_packed_cap1_metadata`), plus its own n600 d_pose.
+
+### ITEM 3 — a solver whose local move scales with the lattice step
+
+The x1/8 retained-lattice refinement failed as a SEARCH, not as a representation: `refine_pair`'s
++-2 polish neighbourhood spans eight times less coefficient distance at that step, and pair 0 landed
+2,500x worse than the plain cut. A polish radius expressed in COEFFICIENT units rather than lattice
+units would decide whether the rank cut's lattice cure actually works, and it is the only route that
+could reopen section 7's FORMULATION-scope refusal.
+
+### ITEM 4 — find the KW1 field's consumer
+
+The format is built, controlled and proven (+3 B, reads both forms, inert on the shipped archive) but
+its only measured consumer — the rank cut — is refused, and per-column lattice coarsening does not
+need it (the columns' optimal `k` move together; priced at <=1,080 B). Any future carrier edit that
+puts columns at genuinely different `k` now has a 43-byte block that can express it. Worth pointing
+at the next carrier lever before that lever is designed around a two-value `k` constraint that no
+longer exists.
 
 ## Frontier
 

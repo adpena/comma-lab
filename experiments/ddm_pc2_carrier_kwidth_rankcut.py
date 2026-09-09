@@ -1397,6 +1397,37 @@ def run_close(args) -> int:
 # --------------------------------------------------------------------------- #
 # The seal's public-entrypoint smoke PAIR
 # --------------------------------------------------------------------------- #
+
+def _run_bounded(argv: list[str], *, timeout_s: float, **kwargs):
+    """``subprocess.run`` that kills the whole PROCESS GROUP on timeout.
+
+    The public-path probe starts a full ``inflate_archive``; if the parent is
+    killed (or the bound fires) while a plain child is running, the child
+    survives as an orphan under launchd, burning ~180% CPU and writing into a
+    temp dir nobody reads.  MEASURED here: one such orphan ran 11m52s after its
+    parent was gone.  ``start_new_session`` puts the child in its own group and
+    ``killpg`` takes the group down with it, so no probe can outlive its caller.
+    """
+    import os
+    import signal
+    import subprocess
+
+    process = subprocess.Popen(
+        argv, start_new_session=True, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()
+        raise
+    return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
+
+
 def _public_path_probe(runtime_root: Path, timeout_s: float = 300.0) -> dict[str, Any]:
     """Run the receiver's own ``f26_inflate.inflate_archive`` on CPU.
 
@@ -1446,10 +1477,9 @@ def _public_path_probe(runtime_root: Path, timeout_s: float = 300.0) -> dict[str
         environment = dict(os.environ, CPR1_RC64_LIBRARY=str(library))
         started = time.time()
         try:
-            done = subprocess.run(
+            done = _run_bounded(
                 [sys.executable, "-c", script, str(runtime_root), scratch],
-                capture_output=True, text=True, timeout=timeout_s,
-                cwd=str(runtime_root), env=environment,
+                timeout_s=timeout_s, cwd=str(runtime_root), env=environment,
             )
         except subprocess.TimeoutExpired:
             return {
@@ -1492,26 +1522,34 @@ def _inflate_sh_smoke(runtime_root: Path, timeout_s: float = 600.0) -> dict[str,
         os.environ,
         PATH=f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}",
     )
+    archive_path = runtime_root / "archive.zip"
     with tempfile.TemporaryDirectory() as scratch:
         scratch_path = Path(scratch)
-        data_dir = scratch_path / "extracted"
+        # The proven idiom: the data dir carries the archive itself AND its
+        # members, and the file list names the source video, not a codec suffix.
+        data_dir = scratch_path / "archive_dir"
         data_dir.mkdir()
-        with zipfile.ZipFile(runtime_root / "archive.zip") as archive:
-            (data_dir / "p").write_bytes(archive.read("p"))
-        file_list = scratch_path / "file_list.txt"
-        file_list.write_text("0.hevc\n", encoding="utf-8")
+        shutil.copyfile(archive_path, data_dir / "archive.zip")
+        with zipfile.ZipFile(archive_path) as archive:
+            for member in archive.namelist():
+                (data_dir / member).write_bytes(archive.read(member))
+        file_list = scratch_path / "list.txt"
+        file_list.write_text("0.mkv\n", encoding="utf-8")
         started = time.time()
         try:
-            done = subprocess.run(
+            done = _run_bounded(
                 [
                     "bash", str(runtime_root / "inflate.sh"),
                     str(data_dir), str(scratch_path / "out"), str(file_list),
                 ],
-                capture_output=True, text=True, timeout=timeout_s,
-                cwd=str(runtime_root), env=environment,
+                timeout_s=timeout_s, cwd=str(runtime_root), env=environment,
             )
         except subprocess.TimeoutExpired:
-            return {"outcome": "TIMEOUT", "seconds": time.time() - started}
+            return {
+                "outcome": "TIMEOUT",
+                "seconds": time.time() - started,
+                "returncode": None,
+            }
     combined = f"{done.stdout}\n{done.stderr}"
     message = ""
     for line in combined.splitlines():
@@ -2103,7 +2141,14 @@ def build_parser() -> argparse.ArgumentParser:
     smoke.add_argument("--out", required=True)
     smoke.add_argument("--candidate-runtime", required=True)
     smoke.add_argument("--frontier-runtime", default=str(POINTER_RUNTIME))
-    smoke.add_argument("--bound-seconds", type=float, default=600.0)
+    smoke.add_argument(
+        "--bound-seconds",
+        type=float,
+        default=150.0,
+        help="declared bound; probes run at 0.8x of it. The PASS condition is "
+        "'no exception within the bound' and every pre-decode stage throws fast, "
+        "so this only has to outlast those stages -- never the 25-minute decode.",
+    )
     smoke.set_defaults(func=run_smoke)
 
     coarsen = sub.add_parser(
