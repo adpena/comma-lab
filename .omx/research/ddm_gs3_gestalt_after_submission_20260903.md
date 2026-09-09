@@ -1027,3 +1027,49 @@ Apparatus: gov3 (Metal occupancy, progress budget, SUM refuse), scg1 + scg2 (str
 **Therefore the live demand is the RATE corner, as the operator's 08-21 binding already said (rate-representation mandatory; archive ≤ ~138 KB).** Rate doors measured today: the tail coder (tc1, −549 B; a richer joint-context mixer is its live hypothesis), the model rows (rc3, −201 B; ≈ 700 B left under the order-1 bound), the carrier (closed on rank/lattice; −7 B left), the container (at optimum; edits are a one-sample lottery, sd 34.8 B — sample, never search), the generator's static/time-conditioned factorizations (closed at pricing; L=10 within 12.8 KB of the cap). Composition of the sealed rate rows (cmp1: ≈ −750 B) is in flight. Untried at the coder level: the semantic renderer section (30,246 B) under the shared-mixer form that paid on the model rows. Untried at the representation level: the cross (born vehicle holds rate at 121,928 B; shipped vehicle holds accuracy) — the one structural composition whose arithmetic reaches the corner, and whose law (m148: a closed leg survives only if another leg changes its object) is exactly what the seg floor now demands.
 
 **Apparatus/day:** four moves' worth of packets, five fallback bundles landed by MAIN (scg1, scg2, rc3, tc1, cs1), the fire-tool import fix, gov3, vr3 (+61 GiB), cs1 (266 blobs certified-or-blocked, 14 arms dispositioned), keeper on astra. Two power-of-attention lessons: a low-battery hibernate cost 12.9 h; a wrong pose base (no overlay, 500× off) was caught by magnitude, not by a gate — the pose-base law is now in memory.
+
+## Addendum 18 (2026-09-09 22:30Z) — "All negative signal and months of research and new research yet to do points to gestalt" (operator)
+
+**Pointer: move 37, S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600].** Gap to sub-0.12: **0.017917**. Rate corner at held distortion: **−26,908.6 B**. Distortion corner at held bytes: closed (∞×). Five moves today, all on the shipped object, none by retraining: 0.13900438 → 0.13791730.
+
+### I. The day's negatives, each with its number and scope
+
+| door | actuator | measured | scope |
+|---|---|---|---|
+| renderer int4 codes | gradient (AdamW) / discrete search over head + blocks.3 | one code-step breaks 240–455 cells; 0 accepts / 150 | FORMULATION (rw1) |
+| renderer fp16 row scales | realized search, 41× finer step | 0 accepts / 400 | FORMULATION (rw1) |
+| renderer sub-fp16 scales | realized search; n600-confirmed | 1 : 22 : 213 (repair : none : damage) on a 120-pair screen; at n600 the one "repair" is **+3 cells** — repairs confirmed at n600 by ANY renderer actuator: **0**; finer steps → no effect, never repair | FORMULATION (rw1) |
+| per-pair FiLM codes (3-bit lattice) | realized search | 18,624 / 18,906 moves worse; 15 pairs → 23 cells → after two pointer moves **nothing survives** | FORMULATION (fe1) |
+| single-cell token moves | pass 5 | 237 cells at a price that decides admission; **89.46 % of the residual explicitly refused ~4×** | capability limit (sj1) |
+| two-cell slide moves | realized + priced | reach 10.8 % of refused cells at 1.14 cells/slide; **17.1 bits/slide vs 11.2** | FORMULATION (sj1) |
+| rate-directed token moves | realized at strict argmax identity | 4.4 % neutral; first-order −220 B → **−32 B real** (0.14×); full pass −217 B | closed to this actuator at scope; a pointer move remains (rp1) |
+| generated carrier basis | closed-form bound | bound construction defective; **blocked honestly, nothing rejected** | design gate (gb1) |
+| rank cut / lattice step | closed-form + paired | rank cut free in span, 4–2,733× on the lattice; ×1/2 step fails paired | FORMULATION (pc2) |
+| time-conditioned generator field | certified bound | every GOP length fails the byte gate; L=10 +12.8 KB over the cap | PRICING (gf3) |
+| byte search over seg-neutral edits | 250 real builds | one-sample lottery, sd 34.8 B; no landscape | FORMULATION (fe1 ITEM 5) |
+| ANE screening | fixed conversion | rates under bar but **0 % ANE** (CPU fallback) | porting item stays closed (ane3) |
+
+And the positives that closed the coder level: rc2/rc3 (model rows −432 B), tc1 (tail −548 B), sm1 (semantic −384 B composed), pc2 (carrier −41 B + a zero-byte re-solve that settled pc1's confound). **Total coder-level rate since move 27: ≈ 3.2 KB against a 26.9 KB demand.**
+
+### II. Placed against the months (the walls that were already there)
+
+- Distortion corner closed on every measured route: sg2b, the wrong-sign accuracy→byte exchange, the round-trip intercept ~140,477 B, gd2's frozen realized-pixel law (August).
+- Temporal context saturated (bd1), MC previous plane (mc1), reordering under a context model, HPAC capacity both directions (cl2/cl3), carrier basis edits ×39,748 (pc1), the born vehicle's persistent partition 62 % data-anchored (md1/md4), the post-hoc render re-aim (ar1), the renderer coupling 170–220 pre-re-solve (rf1/ft1/pr1), embedding prediction (hp4), the jt23 coder axis at 0 B, ld1/ae1/oe1/rr9, the static generator (gf2 certified 3.16× over the ceiling).
+- Refuted today, in the campaign's favour: the coupling wall does NOT transfer to per-pair render changes (fe1: 643–3,053× recovered); the container-break fee is refundable (fe1); the rate side of a renderer rewrite is nearly free (rw1: +177 B for all 12,672 codes).
+
+### III. Where the gap lives — stated as two numbers nobody can search away
+
+1. **Seg: 12,377 cells (after pass 5) ≈ 0.0105 S = 59 % of the gap.** One population: a correct token, a one-pixel boundary displacement on a GT class edge, Lane/Movable, rows 128–319, isolated singletons, knife-edge (damage ∝ sqrt(perturbation), 100–200:1 collateral for every global actuator, 89 % explicitly refused by the only per-cell actuator). No actuator on the shipped object reaches it.
+2. **Rate: −26,909 B.** rp1's census of the tail: ~36 KB is "it was the prediction" flag mass over 117.7 M tokens (0.0024 bits each) — untouchable by any field change; **83 KB sits on the 235,044 tokens (0.199 %) the coder mispredicts**, and those tokens are the boundary population of (1). The coder-level squeeze is done; the field-level squeeze returns 0.14× of first order.
+
+**The two halves are one object: the class boundary.** The renderer places it wrong by one pixel at correct tokens; the coder pays 83 KB to describe where it is. The shipped representation stores the boundary twice (in the token field, expensively) and draws it once (in the renderer, imprecisely), and neither store admits a local move.
+
+### IV. The research program this points to (new research yet to do)
+
+1. **A boundary representation with a spatially selective, sub-pixel actuator.** Not a precision rung, not a pass: a term the receiver draws that (a) is parameterized per boundary segment (position, normal offset, class pair) so a move touches only the cells of that segment, and (b) is coded by the mispredicted-token statistics rp1 censused. Candidates to price closed-form FIRST against both numbers in III: a signed-distance / offset field per class pair in the horizon band (the lane-orbit ~8-dim manifold is the long-tail case); a per-segment displacement side-channel decoded into the token field before rendering; a boundary-aware renderer head that consumes it. The bound to beat: 83 KB of boundary description at ≤ 0.0105 S of boundary error. (Prior: msr1's flow-balance ceiling for boundary-moving actuators, 8.94 % of d_seg at the time; the v8 "argmax = Laguerre → store generators" law; hc1's one binary question — recall all three at charter time.)
+2. **The cross at the representation level** (the-cross memo, m148): the born vehicle holds RATE (121,928 B) with distortion the shipped vehicle proves unreachable; a successor inherits byte feasibility while starting from the shipped distortion regime. The intersection is measured empty at n=3 among small bodies — so the successor is not "a smaller body" but a DIFFERENT DECOMPOSITION: the shipped field minus its boundary description (the 83 KB) plus a generated boundary (1). Price it closed-form on rp1's census before any trainer exists.
+3. **The pose leg is no longer a wall for any of this** (per-pair re-solve, rank 6/6 on all 600 pairs): every candidate representation is admitted per pair through the carrier re-solve, the chain that produced moves 31/32/35.
+4. **Instrument laws to carry into every new arm**: a subset screen is valid only for pair-confined actuators (rw1); a first-order −log2 p is a ranking never a charge (rp1); the pose base is measured on the pointer's own configuration on the arm's instrument (sj1); container deltas of edits into range-coded sections are a lottery — sample, never search (fe1); persist the ledger before any optional dump (rp1); a wrong base 500× off was caught by magnitude, not by a gate (sj1) — add the magnitude gate.
+5. **Still owed at the apparatus level**: gb1's valid lower-bound construction for generated bases; the 182 BLOCKED SSD code rows (cs1); the 26 unreferenced Vertigo raws (vr3 successor at < 50 GiB); the PR #140 swap packet on the operator's confirm (13 moves behind).
+
+The negatives are not a list of failures; they are the coordinates of the one object left to build.
