@@ -1,0 +1,33 @@
+# ddm_bnd2 — bnd1's successor with the premises repaired: price a boundary-SEGMENT code by REAL ENCODE on the SHIPPED field (move 37, 12,614 cells), against the actual 119,784 B tail envelope, with the 21,311 unlocated mispredictions recovered first; the 12-pair draw only if the code wins bytes (charter, 2026-09-10)
+
+Tokens: `[no-triality] [p0-ledger-ok]` · Owner: codex arm (gpt-6-astra, xhigh) · Spawned by MAIN 2026-09-10. Sources: bnd1 (`.omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md` + `.omx/research/ddm_bnd1_20260909/` — census_counts.jsonl, source_audit.json, draw_selection.json, the retained payload manifest; verdict BLOCKED_SOURCE_PREMISES; read its ITEM 1–3 and RECALL EVIDENCE tables in full), gs3 Addendum 18 + its CORRECTION (`5e6f774be`), of1 (`ddm_of1_offset_field_and_flicker_coherence_20260729.md:58–109`: residual within 1 px but mean arclength 2.88, 1.14–3.28 flips per DOF, 18 % contour coverage), the existing `(segment, s, n)` coder (`src/tac/boundary_math/curve_relative_offset_coder.py`, `residual_kit_deshare_curverel_build_20260709.md`: 0.99× horizon / 0.90× Lane, axis-aligned normal), or1 (`ddm_or1_orthogonal_representation_regime_20260826.md:111–143`: row-start address packet 140,377 B vs 113,624 B token stream), tc1 (the shipped tail coder; envelope 119,784 B identity-verified). Axes: bytes `[exact, real encode]`; the draw `[macOS-CPU advisory, sj1 instrument, DALI lineage]`; `score_claim=false`.
+
+## MANDATE
+bnd1 established that the question cannot be answered by a bound: the "83 KB" is attribution inside a 119,784 B envelope and an achieved size bounds entropy from above. The only admissible price is a REAL ENCODE of a fully specified segment grammar on the shipped field, compared with the envelope it displaces. Build the minimal charged grammar — per class-pair polyline (chain code or vertex list), per-segment normal offset in {−1, 0, +1} px, with the contexts along the segment — encode the shipped field's mispredicted-token population through it (twin encodes, byte-identical), keep the remaining tokens under tc1's coder, and report `bytes(segment code) + bytes(residual token stream)` against 119,784 B. of1/or1 predict the address cost wins; measure it, do not assume it.
+
+## PRIOR-LAW PREDICTION (m38)
+- Recovered population: all 235,044 mispredictions located on the shipped field (bnd1 had 213,733); on-edge fraction ≥ 88.99 % holds; segment run-length distribution: median ≤ 3 tokens along the edge (of1's 2.88 px arclength transfers only as a prior — measure it).
+- Price: the segment code + residual stream lands at **≥ 119,784 B** (address cost ≥ the attribution saved); central prediction +5 to +25 KB. The door closes at formulation scope for THIS grammar.
+- **FALSIFIER (the door opens):** a real, twin-verified encode ≤ 114,784 B (≥ 5 KB under the envelope) at unchanged argmax by construction (the segment code reproduces the shipped tokens exactly — a lossless recode) — then run the 12-pair draw (bnd1 ITEM 2, `draw_selection.json`) to price a LOSSY offset move, and write the build charter. If the lossless recode already loses, the lossy draw cannot rescue it: stop, close, name the generator successor (the-cross; gb2).
+
+## SCOPE
+Lossless recode of the shipped field's boundary population first (exact bytes); the lossy draw only on a winning recode. ≤ 2 procs, no Metal, nice 10.
+
+## HARD CONSTRAINTS
+- `upstream/` READ-ONLY. Never write into any live tree (sj1/rp1/gb2/pm2/vr5, cmp2). Your dir `/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/` (Vertigo ≈ 65 GiB; bounded writes; `df -h` first; the serializer fallback needs a 40 GiB reserve — if refused, leave a `landing.patch` + manifest as bnd1 did and say so).
+- Every byte is a real encode on the SHIPPED field (`.omx/state/canonical_frontier_pointer.json` → cmp2 tree's own reader); join every census on the shipped field's hash; no −log2 p sums as prices (m166); no bounds presented as floors.
+- The local SCORER LANE belongs to MAIN, always. Do NOT write who holds it into a charter (the #1210 stale-precondition genus, memo ddm_bz2_bornsmall_capacity_ceiling 2026-08-29).
+- `.py` = 2 visible review passes + ruff; serializer commits w/ post-edit `--expected-content-sha256`; tokens `[no-triality] [p0-ledger-ok]`; NEVER a Co-Authored-By or AI-attribution trailer. Checkpoint `tools/subagent_checkpoint.py --subagent-id ddm_bnd2`.
+
+## PRIOR NEGATIVE SIGNAL
+- bnd1's four DEAD-ENDS (attribution ≠ payload; pass-5 join fails on hash; achieved size is an upper bound; historical actuator ratios do not transfer).
+- of1: short coherent runs; the existing curve-relative coder never beat 1× — do not rediscover it; extend or replace it with a stated reason.
+- or1: address packets cost more than the token stream they index — the address term must be in the price from the first row.
+- rp1: 36 KB flag mass over correctly predicted tokens is untouched by any boundary code; the displaceable part is the mispredicted population's share of the envelope, which you must MEASURE (encode the envelope with the population masked to the model's prediction).
+
+## OPTIMAL FORM
+- Reference form: tc1's bound memo and coder (`faac73963`: real n600 twin encodes, identity control, full container price) and bnd1 (`5e6f774be` correction; its audit as the premise repair). SCOPE reductions: grammar is minimal by declaration (chain code + ternary offsets) — a richer grammar can only add side information, so a loss here is a loss for the family at this addressing scheme; the 12-pair draw is SCOPE (pair-confined). MECHANISM reductions FORBIDDEN: no modelled prices, no subset-n price, no draw before the recode verdict.
+- **PRIOR-LAW PREDICTION (falsifiable):** as above. FALSIFIER: ≤ 114,784 B lossless.
+
+## DELIVERABLE
+Memo `.omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md` with the recovered census, the run-length table, the twin-encode price table vs 119,784 B, verdict; retained payloads with sha; register `boundary_segment_recode_price_v1` via `register_canonical_equation` if a measured row exists, else `# FORMALIZATION_PENDING:` with the reason. Commit via the serializer. End with the live frontier line.
