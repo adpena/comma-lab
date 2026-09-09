@@ -1,0 +1,556 @@
+{
+  "auto_update_on_dispatch_completion": true,
+  "effective_frontier": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "custody": "local_anchor_record; inspect lane policy before submission",
+    "evidence_grade": "contest-CUDA",
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "role": "competitive_score_to_beat",
+    "score": 0.13791730003757818,
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "source": "our_local_frontier_contest_cuda",
+    "source_kind": "owned_or_banked_local_exact_anchor"
+  },
+  "last_refreshed_utc": "2026-09-09T20:34:03.028506+00:00",
+  "our_local_frontier_contest_cpu": {
+    "archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+    "axis": "contest_cpu",
+    "evidence_grade": "[contest-CPU]",
+    "extra": {
+      "architecture_class": "lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712",
+      "archive_bytes": 176564,
+      "archive_id": null,
+      "evidence_grade": null,
+      "evidence_tag": "[contest-CPU]",
+      "label": null,
+      "lane_id": null,
+      "measured_at_utc": "2026-07-12T06:35:14.268665+00:00"
+    },
+    "hardware_substrate": "linux_x86_64_cpu",
+    "lane_id": null,
+    "measured_at_utc": "2026-07-12T06:35:14.268665+00:00",
+    "score": 0.1880443979880752,
+    "source_path": ".omx/state/continual_learning_posterior.json"
+  },
+  "our_local_frontier_contest_cuda": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180388,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
+      "source_receipt_sha256": "14bbd5df8cbefa9d7ce2dc146f165162d37dd19728e0621bcdb07c22d9f17dfe"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "score": 0.13791730003757818,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json"
+  },
+  "pointer_refresh_command": ".venv/bin/python tools/refresh_canonical_frontier.py",
+  "refresh_provenance": {
+    "checkpoint_maturity_refusals": [],
+    "refresh_kind": "local_state",
+    "refreshed_at_utc": "2026-09-09T20:34:03.028717+00:00",
+    "refresher_host": "mac.lan",
+    "refresher_pid": 54254,
+    "scan_stats": {
+      "excluded": 68,
+      "qualifying": 383,
+      "total_anchors": 451
+    }
+  },
+  "schema_version": "canonical_frontier_pointer_v1_20260519",
+  "submitted_pr_number_for_current_frontier": 140,
+  "upstream_leaderboard_snapshot": {
+    "best_entry": {
+      "name": "semantic-pose-HPAC_CPR1_polished",
+      "pr_number": 135,
+      "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/135",
+      "rank": 1,
+      "score": 0.162
+    },
+    "entries": [
+      {
+        "name": "semantic-pose-HPAC_CPR1_polished",
+        "pr_number": 135,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/135",
+        "rank": 1,
+        "score": 0.162
+      },
+      {
+        "name": "cpr1_cbq_matched8",
+        "pr_number": 133,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/133",
+        "rank": 2,
+        "score": 0.166
+      },
+      {
+        "name": "semantic-pose-HPAC_CPR1",
+        "pr_number": 130,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/130",
+        "rank": 3,
+        "score": 0.172
+      },
+      {
+        "name": "rhnerv_latent_polish",
+        "pr_number": 128,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/128",
+        "rank": 4,
+        "score": 0.187
+      },
+      {
+        "name": "qlp_exactgrid",
+        "pr_number": 129,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/129",
+        "rank": 5,
+        "score": 0.19
+      },
+      {
+        "name": "qlp_exactgrid",
+        "pr_number": 127,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/127",
+        "rank": 6,
+        "score": 0.191
+      },
+      {
+        "name": "hnerv_qlp",
+        "pr_number": 125,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/125",
+        "rank": 7,
+        "score": 0.191
+      },
+      {
+        "name": "rhnerv_comma",
+        "pr_number": 112,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/112",
+        "rank": 8,
+        "score": 0.191
+      },
+      {
+        "name": "hnerv_fec6_fixed_huffman_k16",
+        "pr_number": 110,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/110",
+        "rank": 9,
+        "score": 0.192
+      },
+      {
+        "name": "hnerv_ft_microcodec \ud83d\udc51",
+        "pr_number": 101,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/101",
+        "rank": 10,
+        "score": 0.193
+      },
+      {
+        "name": "hnerv_lc_ac \ud83d\udc51",
+        "pr_number": 103,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/103",
+        "rank": 11,
+        "score": 0.195
+      },
+      {
+        "name": "hnerv_lc_v2_scale095_rplus1 \ud83d\udc51",
+        "pr_number": 102,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
+        "rank": 12,
+        "score": 0.195
+      },
+      {
+        "name": "hnerv_lc_v2 \ud83d\udca1",
+        "pr_number": 100,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/100",
+        "rank": 13,
+        "score": 0.195
+      },
+      {
+        "name": "hnerv_muon_finetuned_from_pr95",
+        "pr_number": 98,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/98",
+        "rank": 14,
+        "score": 0.197
+      },
+      {
+        "name": "kitchen_sink",
+        "pr_number": 105,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/105",
+        "rank": 15,
+        "score": 0.198
+      },
+      {
+        "name": "hnerv_muon \ud83d\udca1 \ud83d\udcd6",
+        "pr_number": 95,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+        "rank": 16,
+        "score": 0.199
+      },
+      {
+        "name": "rem2_HNeRV",
+        "pr_number": 96,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/96",
+        "rank": 17,
+        "score": 0.206
+      },
+      {
+        "name": "belt_and_suspenders",
+        "pr_number": 106,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/106",
+        "rank": 18,
+        "score": 0.209
+      },
+      {
+        "name": "vibe_coder_final_boss",
+        "pr_number": 97,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/97",
+        "rank": 19,
+        "score": 0.229
+      },
+      {
+        "name": "apogee",
+        "pr_number": 107,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/107",
+        "rank": 20,
+        "score": 0.229
+      },
+      {
+        "name": "qhnerv_ft_best",
+        "pr_number": 104,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/104",
+        "rank": 21,
+        "score": 0.231
+      },
+      {
+        "name": "hpac_coder_hybrid",
+        "pr_number": 91,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/91",
+        "rank": 22,
+        "score": 0.249
+      },
+      {
+        "name": "adaptive_masking_joint_frame_model",
+        "pr_number": 85,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/85",
+        "rank": 23,
+        "score": 0.258
+      },
+      {
+        "name": "qzs3_range_joint_r258",
+        "pr_number": 92,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/92",
+        "rank": 24,
+        "score": 0.26
+      },
+      {
+        "name": "jas0xf_adversarial_neural_representation \ud83d\udca1",
+        "pr_number": 86,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/86",
+        "rank": 25,
+        "score": 0.274
+      },
+      {
+        "name": "adaptive_range_mask",
+        "pr_number": 84,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/84",
+        "rank": 26,
+        "score": 0.275
+      },
+      {
+        "name": "qrepro \ud83d\udca1",
+        "pr_number": 90,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/90",
+        "rank": 27,
+        "score": 0.28
+      },
+      {
+        "name": "qzs3_range_mask \ud83d\udca1",
+        "pr_number": 81,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/81",
+        "rank": 28,
+        "score": 0.288
+      },
+      {
+        "name": "qpose14_r55_segactions_minp",
+        "pr_number": 79,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/79",
+        "rank": 29,
+        "score": 0.315
+      },
+      {
+        "name": "qzs3_tile_delta_r147",
+        "pr_number": 77,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/77",
+        "rank": 30,
+        "score": 0.315
+      },
+      {
+        "name": "qpose14_qzs3_filmq9g_slsb1_r55",
+        "pr_number": 67,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/67",
+        "rank": 31,
+        "score": 0.316
+      },
+      {
+        "name": "henosis_qz_n3z_r25_clean",
+        "pr_number": 65,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/65",
+        "rank": 32,
+        "score": 0.32
+      },
+      {
+        "name": "flatpup",
+        "pr_number": 93,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/93",
+        "rank": 33,
+        "score": 0.321
+      },
+      {
+        "name": "qpose14",
+        "pr_number": 63,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/63",
+        "rank": 34,
+        "score": 0.325
+      },
+      {
+        "name": "unified_brotli",
+        "pr_number": 64,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/64",
+        "rank": 35,
+        "score": 0.331
+      },
+      {
+        "name": "quantizr \ud83d\udca1",
+        "pr_number": 55,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/55",
+        "rank": 36,
+        "score": 0.333
+      },
+      {
+        "name": "qpose14_poseq6",
+        "pr_number": 76,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/76",
+        "rank": 37,
+        "score": 0.344
+      },
+      {
+        "name": "ph4ntom_drv",
+        "pr_number": 74,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/74",
+        "rank": 38,
+        "score": 0.368
+      },
+      {
+        "name": "fp4_mask_gen",
+        "pr_number": 62,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/62",
+        "rank": 39,
+        "score": 0.375
+      },
+      {
+        "name": "selfcomp",
+        "pr_number": 56,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/56",
+        "rank": 40,
+        "score": 0.382
+      },
+      {
+        "name": "roro_perframe_hnerv",
+        "pr_number": 119,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/119",
+        "rank": 41,
+        "score": 0.481
+      },
+      {
+        "name": "mask2mask \ud83d\udca1",
+        "pr_number": 53,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/53",
+        "rank": 42,
+        "score": 0.602
+      },
+      {
+        "name": "tomasdousek",
+        "pr_number": 71,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/71",
+        "rank": 43,
+        "score": 0.717
+      },
+      {
+        "name": "codex_metric_yshift_av1 \ud83d\udca1",
+        "pr_number": 60,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/60",
+        "rank": 44,
+        "score": 1.236
+      },
+      {
+        "name": "neural_inflate \ud83d\udca1",
+        "pr_number": 49,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/49",
+        "rank": 45,
+        "score": 1.891
+      },
+      {
+        "name": "svtav1_dilated_ren",
+        "pr_number": 58,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/58",
+        "rank": 46,
+        "score": 1.914
+      },
+      {
+        "name": "roi_v2",
+        "pr_number": 48,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/48",
+        "rank": 47,
+        "score": 1.944
+      },
+      {
+        "name": "av1_roi_lanczos_unsharp",
+        "pr_number": 31,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/31",
+        "rank": 48,
+        "score": 1.947
+      },
+      {
+        "name": "svtav1_av1grain_10bit",
+        "pr_number": 51,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/51",
+        "rank": 49,
+        "score": 1.979
+      },
+      {
+        "name": "damir_bearclaw_002 \ud83d\udca1",
+        "pr_number": 30,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/30",
+        "rank": 50,
+        "score": 1.981
+      },
+      {
+        "name": "roi_gop300_c34",
+        "pr_number": 43,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/43",
+        "rank": 51,
+        "score": 2.005
+      },
+      {
+        "name": "v4_qp_aq2_roi \ud83d\udca1",
+        "pr_number": 44,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/44",
+        "rank": 52,
+        "score": 2.02
+      },
+      {
+        "name": "av1_crf31_bicubic",
+        "pr_number": 52,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/52",
+        "rank": 53,
+        "score": 2.033
+      },
+      {
+        "name": "svtav1_cheetah",
+        "pr_number": 24,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/24",
+        "rank": 54,
+        "score": 2.052
+      },
+      {
+        "name": "svtav1_45pct_unsharp20_direct",
+        "pr_number": 27,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/27",
+        "rank": 55,
+        "score": 2.07
+      },
+      {
+        "name": "svtav1_gop360_binomial_unsharp",
+        "pr_number": 26,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/26",
+        "rank": 56,
+        "score": 2.083
+      },
+      {
+        "name": "av1_sharp1_adaptive",
+        "pr_number": 23,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/23",
+        "rank": 57,
+        "score": 2.083
+      },
+      {
+        "name": "svtav1_45pct_unsharp \ud83d\udca1",
+        "pr_number": 20,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/20",
+        "rank": 58,
+        "score": 2.086
+      },
+      {
+        "name": "svtav1_spline_fg22",
+        "pr_number": 37,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/37",
+        "rank": 59,
+        "score": 2.158
+      },
+      {
+        "name": "svt_av1_lanczos_fg",
+        "pr_number": 18,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/18",
+        "rank": 60,
+        "score": 2.2
+      },
+      {
+        "name": "h265_g16_512x384_veryslow",
+        "pr_number": 21,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/21",
+        "rank": 61,
+        "score": 2.553
+      },
+      {
+        "name": "optimized",
+        "pr_number": 22,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/22",
+        "rank": 62,
+        "score": 3.323
+      },
+      {
+        "name": "delta_codec \ud83d\udca1",
+        "pr_number": 61,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/61",
+        "rank": 63,
+        "score": 3.833
+      },
+      {
+        "name": "baseline_fast",
+        "pr_number": null,
+        "pr_url": null,
+        "rank": 64,
+        "score": 4.39
+      },
+      {
+        "name": "damir_bearclaw_003",
+        "pr_number": 39,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/39",
+        "rank": 65,
+        "score": 5.086
+      },
+      {
+        "name": "no_compress",
+        "pr_number": null,
+        "pr_url": null,
+        "rank": 66,
+        "score": 25.0
+      }
+    ],
+    "entry_count": 66,
+    "fetch_status": "ok",
+    "fetched_at_utc": "2026-09-09T20:33:12.723345+00:00",
+    "score_precision": "official_display",
+    "source": "official_leaderboard",
+    "url": "https://comma.ai/leaderboard"
+  },
+  "upstream_leaderboard_snapshot_at_utc": "2026-09-09T20:33:12.723345+00:00"
+}

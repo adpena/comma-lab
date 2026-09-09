@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "rows": 435,
+  "unique_paths": 435,
+  "vr3_successor_rows": 26,
+  "reproducer_passes": 20,
+  "complete_certificates": 0,
+  "reclaimed_bytes": 0,
+  "current_existing_rows": 435,
+  "changed_since_inventory": [],
+  "missing_since_inventory": [],
+  "ledger_sha256": "2fbe57b7a7bcbe410b01abbf7b7214812553c37e7e4288423914f71decc73495",
+  "verified_at_utc": "2026-09-09T22:38:48.631824+00:00"
+}

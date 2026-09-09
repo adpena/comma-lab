@@ -1,0 +1,46 @@
+[
+  {
+    "argv": [
+      "pgrep",
+      "-alf",
+      "ddm_(sj1|rp1|bnd1|cmp2)|inflate|reclaim"
+    ],
+    "at": "2026-09-09T22:33:04.908597+00:00",
+    "returncode": 3,
+    "stdout": "",
+    "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
+  },
+  {
+    "argv": [
+      "ps",
+      "-axo",
+      "pid,ppid,state,command"
+    ],
+    "at": "2026-09-09T22:33:04.913218+00:00",
+    "returncode": null,
+    "error": "PermissionError(1, 'Operation not permitted')"
+  },
+  {
+    "argv": [
+      "lsof",
+      "-nP",
+      "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated/0.raw"
+    ],
+    "at": "2026-09-09T22:33:04.916398+00:00",
+    "returncode": 1,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "df",
+      "-h",
+      "/Volumes/APDataStore/pact",
+      "/Volumes/VertigoDataTier/pact"
+    ],
+    "at": "2026-09-09T22:33:05.022440+00:00",
+    "returncode": 0,
+    "stdout": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk6s1   1.8Ti   1.8Ti    38Gi    98%       1     0  100%   /Volumes/APDataStore\n/dev/disk5s1   1.8Ti   1.8Ti    65Gi    97%    1.5M  683M    0%   /Volumes/VertigoDataTier\n",
+    "stderr": ""
+  }
+]

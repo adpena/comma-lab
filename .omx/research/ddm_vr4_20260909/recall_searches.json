@@ -1,0 +1,58 @@
+[
+  {
+    "scope": "research_index_dag",
+    "query": [
+      "rg",
+      "-n",
+      "-i",
+      "--max-count",
+      "4",
+      "certify.or.block|certified.reclaim|cold.store|storage.*reclaim",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "returncode": 0,
+    "stdout": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:684:**TEACHER STORE BUILT (NO-FAKE, the blocker FEED-w named):** `tools/build_segnet_teacher_logits.py` runs the FROZEN contest SegNet (CPU, EXACT lever-B authority path) over the n600 GT pairs \u2192 full 5-class logits `(600,5,384,512)` fp16 = **1.18 GB** at `$PACT_TIER1/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/` (sha256 41d3ef53\u2026, manifest+rebuild-cmd, certify-or-block disk hygiene, SSD not /tmp). 312s build. NO-FAKE verify: argmax(teacher_logits)==cached gt_segnet_argmax.u8 (disagree 2.4e-5 = fp16-tie boundaries only \u2192 the teacher IS the same frozen authority whose argmax is the d_seg oracle).\n.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:7506:**PAPERS (framing/validation, NOT contest levers).** EdgeBench (arXiv:2512-class, ByteDance) \u2014 env-learning follows log-sigmoid `dx/du=\u03b2\u00b7x(1\u2212x)` (frontier expansion on a fractal latent task graph, R\u00b2=0.998); the SAME front as our witness (Fisher-KPP) at the campaign scale; empirically VALIDATES our anti-forgetfulness spine (+6.9 experience-gain GROWING with horizon; two-tier fast/slow-judge feedback = our through-R/byte-close split; App C eval-hacking = our NO-FAKE classes independently rediscovered). Honest: log-sigmoid is AGGREGATE-only, d_seg is a BOTTLENECK (App D.5 \u2192 plateaus/sum-of-sigmoids) \u2192 do NOT forecast a single run. Gaussian Quant (2512.06609) \u2014 seeded-Gaussian codebook = rule-118-FREE certify-or-block bound; WATCH-ITEM (completes our procedural-codebook equation; not a lever now). Ledgers: `edgebench_scaling_laws_deepdive_*` / `edgebench_freshpass_dynamics_derivation_*` / `gaussian_quant_2512.06609_deepdive_*`.\n.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:17796:revalidation requires certified restoration, and no cold-store destination is recorded.\n.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:22428:  certify-or-block honored; amplitude factors honest 0 (no through-R survival rows).\n",
+    "stderr": ""
+  },
+  {
+    "scope": "design_docs",
+    "query": [
+      "rg",
+      "-n",
+      "-i",
+      "--max-count",
+      "4",
+      "certify.or.block|certified.reclaim|cold.store|storage.*reclaim",
+      "docs"
+    ],
+    "returncode": 0,
+    "stdout": "docs/runbooks/local_disk_reclaim_cadence.md:44:    --dest-root /Volumes/VertigoDataTier/pact/cold_store \\\ndocs/runbooks/local_disk_reclaim_cadence.md:59:  object in the main repo. Copying these to cold store spends destination headroom to store bytes git\n",
+    "stderr": ""
+  },
+  {
+    "scope": "task_ledger",
+    "query": [
+      "rg",
+      "-n",
+      "-i",
+      "--max-count",
+      "4",
+      "certify.or.block|certified.reclaim|cold.store|storage.*reclaim",
+      ".omx/state/canonical_task_status.jsonl"
+    ],
+    "returncode": 0,
+    "stdout": "545:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"codex:ddm_cn5\",\"event_notes\":\"QUEUED-WITH-A-FIRE-ORDER. Current df measured 138060192 KiB free on Vertigo and 710609152 KiB free on APDataStore, so SR2's below-150-GiB trigger is active. Consumer store /Volumes/APDataStore/pact/. Fire only after a read-only owner/liveness census identifies the next inactive family and a machine-readable manifest records source path, bytes, file hashes/tree hash, provenance, cold destination, and symlink plan. Do not select the uncertified regen2 tree or any live solve/terminal directory.\",\"event_timestamp_utc\":\"2026-08-13T17:44:38.816828Z\",\"event_type\":\"registered\",\"owner\":\"storage-custody successor\",\"predicted_cost_usd\":0.0,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_cn5_20260813\",\"source_design_memo\":\".omx/research/ddm_sr2_vertigo_space_reclaim_20260811.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_sr2_vertigo_reclaim_threshold_20260813\",\"test_status\":\"pending\",\"title\":\"Reclaim Vertigo after the 150 GiB free-space threshold re-fired\",\"written_at_utc\":\"2026-08-13T17:44:38.816828Z\",\"written_host\":\"Primary\",\"written_pid\":63991}\n711:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_sr3\",\"event_notes\":\"SR3 consumed #1165 storage input: SA1 and B2E are RECLAIMED_VERIFIED with complete per-file SHA round trips. Live AP free 48109191168 B exceeds the post-CAS W96B trigger 33569378304 B and 36 GiB stop condition. Storage blocker PAID; QUEUED-WITH-A-FIRE-ORDER to MAIN using SEALED_FIRE_ORDER_W96B.json. No aligned training launched by SR3. Evidence: .omx/research/ddm_sr3_ap_certify_compress_reclaim_20260826.md.\",\"event_timestamp_utc\":\"2026-08-26T23:07:27.276980Z\",\"event_type\":\"status_change\",\"owner\":\"MAIN\",\"predicted_cost_usd\":null,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_sr3_20260826\",\"source_design_memo\":\".omx/research/ddm_w96a_aligned_config_renderer_window_20260826.md\",\"started_at_utc\":\"2026-08-26T20:19:40.424445Z\",\"status\":\"in_progress\",\"task_id\":\"ddm_w96a_aligned_config_renderer_window\",\"test_status\":\"green\",\"title\":\"Measure the film-W96 renderer at the aligned expected-flip configuration\",\"written_at_utc\":\"2026-08-26T23:07:27.276980Z\",\"written_host\":\"Primary\",\"written_pid\":14435}\n",
+    "stderr": ""
+  }
+]

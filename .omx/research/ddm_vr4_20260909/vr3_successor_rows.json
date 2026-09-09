@@ -1,0 +1,1829 @@
+[
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T13:13:36.162595+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 3207245,
+    "inventory_rank": 31,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:37.075047+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control/decoded"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1788184463231174740,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control/decoded/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control/decoded/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control/decoded"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:36.992124+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T13:15:16.673022+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 3207336,
+    "inventory_rank": 32,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:37.159904+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/decoded"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1788295125423890240,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/decoded/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/decoded/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/decoded"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:37.075198+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T13:56:04.284538+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2802396,
+    "inventory_rank": 55,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:39.168985+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1787413924662741657,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:39.085011+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "f9e9a169ab308bf829f15f87a19955a2878b04ba6d079190cc0905b27b2c60d6",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:01:24.770064+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2104753,
+    "inventory_rank": 58,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:39.420684+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_full_explicit_curve_k8_inflate_cpu"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1785890715022000915,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_full_explicit_curve_k8_inflate_cpu/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_full_explicit_curve_k8_inflate_cpu/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_full_explicit_curve_k8_inflate_cpu"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:39.336539+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "c8534ce2485c78cf40020f5ab327f7bb32994aa62e296175fc1d26a63d196929",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:35:00.559584+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2656116,
+    "inventory_rank": 76,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:40.928457+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1786636360747565879,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:40.846646+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "7810185baf2033d3b256130e60b173ff4410dffc496a8df2e668a81c2f6e15f3",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:38:44.047754+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2691285,
+    "inventory_rank": 78,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.095249+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1786665347279495791,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.012286+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "a3e7bb83118fe1db2b730edf0004affb468df5056a58fadaee82ef02b8e57163",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:40:25.318502+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2785493,
+    "inventory_rank": 79,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.179841+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1787238519427939348,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.095440+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:42:09.210697+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2785147,
+    "inventory_rank": 80,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.263263+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1787237552396549482,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.180031+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:43:53.287180+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2747054,
+    "inventory_rank": 81,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.349720+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/output"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1786738413948400851,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/output/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/output/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/output"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.263450+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:47:36.718378+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 3205148,
+    "inventory_rank": 83,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.519234+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1788269722990063315,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.434790+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:49:42.958695+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 3205445,
+    "inventory_rank": 84,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.604057+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1788271222575469874,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.519427+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "eeea10c5ee019a08cc319ebb05432e7fe0ce41254be8e54fdbc7e1495bd7b48b",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:51:45.245995+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 3205758,
+    "inventory_rank": 85,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.689901+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1788272682719550483,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.604253+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "2f20ccceaf1dd4127191e65d31154ca36dca54751494f6a8942766ad1e45634c",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T14:53:46.923000+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 3206024,
+    "inventory_rank": 86,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:41.773844+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw",
+      "ancestor:inflated"
+    ],
+    "mtime_ns": 1788273903772097358,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:41.690076+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "a7b008de2528cc3ae37dfc36d6d39053b87aa2cdcef300356f6c4b18e7cd336f",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T15:11:58.084758+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 1258577,
+    "inventory_rank": 96,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:42.726556+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1784479103663183455,
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1/0.raw",
+        "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:42.520993+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T15:14:00.774494+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 1265943,
+    "inventory_rank": 97,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:42.933238+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1784479405766223172,
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2/0.raw",
+        "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:42.726749+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:37:07.157012+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 859834,
+    "inventory_rank": 143,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:46.921301+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780578173395102069,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:46.836547+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "25482a3ebd7c5cd0417091409230f61bcb18e688471e4407e4f6ecdd2abbaef0",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:38:48.780363+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 903838,
+    "inventory_rank": 144,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.005015+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780584542692169685,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:46.921447+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "25482a3ebd7c5cd0417091409230f61bcb18e688471e4407e4f6ecdd2abbaef0",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:40:31.031053+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 907649,
+    "inventory_rank": 145,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.089135+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780621043948116039,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:47.005163+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "25482a3ebd7c5cd0417091409230f61bcb18e688471e4407e4f6ecdd2abbaef0",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:42:20.798961+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 858299,
+    "inventory_rank": 146,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.173484+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780558454649375715,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:47.089282+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "d8272081543fb1aa72e5eb78382b59d5e3d865367b6468405b2088e1d2c84aed",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:44:04.004796+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 858457,
+    "inventory_rank": 147,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.257564+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780559712708955482,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:47.173635+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "212e5d27038ee5cf4a8899d65748b3ecff6e9a42c26376f2db38a58a7a699b2d",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:45:47.494144+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 859865,
+    "inventory_rank": 148,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.342175+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780578179127165638,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:47.257702+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "25482a3ebd7c5cd0417091409230f61bcb18e688471e4407e4f6ecdd2abbaef0",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:47:33.105073+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 853665,
+    "inventory_rank": 149,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.426292+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780529742569430479,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:47.342330+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "582bf0731bbeecf9e5dde2d19108936d338e17f9039ad505fcda1b1891b88f33",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T16:52:46.699186+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 962116,
+    "inventory_rank": 152,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:47.677812+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1780842678130193499,
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay/0.raw",
+        "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:47.594068+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "dd7e265f9d63b503ff4c4d7180f476d038f2e600b30948a184cd4f6737b0ff56",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T17:01:25.179658+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2518222,
+    "inventory_rank": 157,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:48.094095+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1786515860064328861,
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.preselector.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.preselector.raw",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:48.010313+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "5fe6bc2d8779010338f1c32fe267021e931ea2bf7b8e7cdb5cf8d1d37fd69d66",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T17:03:07.585844+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 2518318,
+    "inventory_rank": 158,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:48.178313+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1786515956122519592,
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.raw",
+        "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:48.094281+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "ee4a013d5e8dcefc096b915a1b3371746c4a4919dd7b6c38ea5d92477346071f",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  },
+  {
+    "applied_at_utc": null,
+    "blockers": [
+      "FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+    ],
+    "bytes": 3662409600,
+    "candidate_tag": null,
+    "compression_verdict": "BLOCKED:SR3_CUSTODY_NAMESPACE_OR_NO_PER_TREE_KEEP_UNCOMPRESSED_PROTECTION_LIFT",
+    "device": 16777240,
+    "df_after": {
+      "available_bytes": 73946488832,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T18:16:26.481899+00:00"
+    },
+    "df_before": {
+      "available_bytes": 8023265280,
+      "block_size": 4096,
+      "path": "/Volumes/VertigoDataTier/pact",
+      "sampled_at_utc": "2026-09-09T17:43:29.548919+00:00"
+    },
+    "family": null,
+    "hash_completed_utc": "2026-09-09T17:04:52.181164+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 966361,
+    "inventory_rank": 159,
+    "live_pointer_protected": false,
+    "lsof_plan": {
+      "checked_at_utc": "2026-09-09T17:43:48.263703+00:00",
+      "command": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/frontier_inflate"
+      ],
+      "no_open_descriptors": true,
+      "open_descriptor_rows": [],
+      "returncode": 1
+    },
+    "match_reasons": [
+      "suffix:.raw"
+    ],
+    "mtime_ns": 1781055345743506432,
+    "path": "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/frontier_inflate/0.raw",
+    "planned_verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH",
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/frontier_inflate/0.raw",
+        "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/frontier_inflate"
+      ],
+      "checked_at_utc": "2026-09-09T17:43:48.178501+00:00",
+      "hits": [],
+      "no_repository_reference_hits": true,
+      "scopes": [
+        ".omx",
+        "experiments",
+        "tools",
+        "docs",
+        "src",
+        "reports",
+        "configs",
+        ".ralph",
+        "submissions",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+      ]
+    },
+    "reproducer": null,
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "sha256": "00b479229c97ede3e776846297269f7785285702b8dbf3e5dccc733557da605a",
+    "verdict": "BLOCKED:FULL_CERTIFICATE_NOT_ESTABLISHED_BEFORE_TARGET_BATCH"
+  }
+]

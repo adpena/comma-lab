@@ -1,0 +1,35 @@
+{
+  "axis": "filesystem custody / scorer-free",
+  "score_claim": false,
+  "reclaimed_bytes": 0,
+  "target_bytes": 128849018880,
+  "rows": 435,
+  "raw_candidates": 248,
+  "process_gate": "BLOCKED",
+  "certificate_complete_rows": 0,
+  "reproducer_verified_rows": 20,
+  "roots": {
+    "/Volumes/APDataStore/pact": {
+      "files": 251099,
+      "logical_bytes": 1121821056467,
+      "large_files": 145,
+      "raw_candidates": 107,
+      "inventory_available_bytes": 40521957376,
+      "final_available_bytes": 40527855616,
+      "freed_bytes": 0
+    },
+    "/Volumes/VertigoDataTier/pact": {
+      "files": 1219527,
+      "logical_bytes": 1668192381109,
+      "large_files": 290,
+      "raw_candidates": 141,
+      "inventory_available_bytes": 69755052032,
+      "final_available_bytes": 69753630720,
+      "freed_bytes": 0
+    }
+  },
+  "df_h_after": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk6s1   1.8Ti   1.8Ti    38Gi    98%       1     0  100%   /Volumes/APDataStore\n/dev/disk5s1   1.8Ti   1.8Ti    65Gi    97%    1.5M  681M    0%   /Volumes/VertigoDataTier\n",
+  "scan_errors": [],
+  "at": "2026-09-09T22:36:27.851132+00:00",
+  "ledger_sha256": "2fbe57b7a7bcbe410b01abbf7b7214812553c37e7e4288423914f71decc73495"
+}

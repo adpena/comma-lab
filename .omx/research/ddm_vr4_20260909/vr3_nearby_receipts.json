@@ -1,0 +1,470 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control/decoded/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/control/archive.zip"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/decoded/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/runtime/FX5_BUILD_MANIFEST.json",
+      "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/runtime/inflate.sh",
+      "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/runtime/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_bx1_semantic_primary_full_vehicle_race/treatment_identity_only/decoded/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_ni1_nr1_k32_receiver_distortion/advisory_r1b/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_full_explicit_curve_k8_inflate_cpu/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/bf1_lane_crop_r3_n600_cpu.json",
+      "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_full_explicit_curve_k8_n600_cpu.json",
+      "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/batch_v2.sh",
+      "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/pe1_surgical_generator_pair_waterfill_75kb_n600_cpu.json",
+      "/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch/v2/launch_manifest.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw",
+    "max_directory_depth": 2,
+    "nearby_receipts": []
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw",
+    "max_directory_depth": 2,
+    "nearby_receipts": []
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_composed_r1/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_rr8/advisory_native_r3/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/output/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/receipts/CPU_DECODE_RESULT.json",
+      "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/lifted_submission_cpu/inflate.sh",
+      "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/lifted_submission_cpu/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/retained/cpu_decode/best_rx1/output/.f26_cpu_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p00/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p01/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p02/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/provenance.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/archive.zip",
+      "/Volumes/VertigoDataTier/pact/ddm_sg2b_scmdl_distortion_leg_build/fire_main/p03/work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_serial_receipt.json.receiver.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par2_receipt.json.receiver.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par2_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_serial_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/run_timing_sequence.sh",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/c1_timing_composed.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par1_receipt.json.receiver.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/run_prepare_loop.sh",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate.sh",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/archive.zip",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par1_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/modal_auth_eval_spawn.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/modal_cpu_auth_eval_local_request.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher11/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher5/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher2/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher3/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher4/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher10/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/provenance.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_preflight.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher8/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher6/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher7/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher9/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0038.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0016.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0001.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0005.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0012.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0048.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0002.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0015.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0028.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0011.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0006.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0035.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0022.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0026.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0031.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0008.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0045.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0041.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0046.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0042.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0021.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0036.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0018.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0032.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0025.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0043.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0047.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0024.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0033.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0019.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0037.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0020.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0009.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0030.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0027.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0023.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0034.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0040.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0044.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0007.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0010.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0029.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0014.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0003.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0013.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0004.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0017.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0039.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0049.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_eval/launch_manifest.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_serial_receipt.json.receiver.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par2_receipt.json.receiver.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par2_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_serial_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/run_timing_sequence.sh",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/c1_timing_composed.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par1_receipt.json.receiver.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/run_prepare_loop.sh",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate.sh",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/archive.zip",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflate_par1_receipt.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/modal_auth_eval_spawn.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/modal_cpu_auth_eval_local_request.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher11/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher5/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher2/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher3/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher4/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher10/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/provenance.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/contest_auth_eval.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_preflight.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/inflated_outputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher8/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher6/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher7/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/launcher9/launch_manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0038.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0016.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0001.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0005.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0012.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0048.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0002.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0015.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0028.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0011.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0006.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0035.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0022.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0026.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0031.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0008.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0045.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0041.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0046.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0042.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0021.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0036.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0018.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0032.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0025.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0043.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0047.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0024.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0033.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0019.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0037.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0020.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0009.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0030.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0027.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0023.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0034.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0040.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0044.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0007.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0010.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0029.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0014.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0003.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0013.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0004.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0000.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0017.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0039.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_chunks/chunk-0049.manifest.json",
+      "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_eval/launch_manifest.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/hi_nerv_mlx_receiver_proof.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hinerv_target_region_action_sidecar_backend_action_effects.jsonl",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_short_scorer_smoke_readiness.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/training_artifact.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_birth_fakequant_survival.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hinerv_target_region_action_sidecar_backend_comparison.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/decoder_weight_gradient_saliency.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/receiver_replay_parseback_servo_lift.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_birth_hysteresis.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_target_region_action_parseback_survival.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_hard_region_plan.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_scorer_bootstrap_action_effects.jsonl",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_hard_region_miner_inputs_manifest.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/local_mlx_prefilter_profile.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/nerv_crux_trace_rows.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_birth_action_effects.jsonl",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/telemetry.jsonl",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/receiver_replay_archive_selection/receiver_replay_archive_selection.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/hi_nerv_pair_local_actuator_smoke/hinerv_pair_local_actuator_smoke_pair000000_5aaca907aa74.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/checkpoints/final_epoch000000_20260607T142508Z.meta.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_split_brotli_repack/hinerv_target_region_action_sidecar_backend_action_effects.jsonl",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_split_brotli_repack/hinerv_target_region_action_sidecar_backend_comparison.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_split_brotli_repack/hi_nerv_target_region_action_parseback_survival.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_split_brotli_repack/split_brotli_repack_report.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_split_brotli_repack/archive.zip",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/decoder_weight_waterfill/decoder_weight_waterfill_from_trained_ladder.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/decoder_weight_waterfill/decoder_weight_waterfill_plan_hinerv_np600_ld12_ed12_dc32_mi1fi4_hfg_cnx_lg2c4_cx2k7_int4_mixed_ceil216000.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema_archive_selection.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema/hi_nerv_archive_section_telemetry.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema/hi_nerv_bitstream_preparation.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema/archive.zip",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema/hi_nerv_mlx_live_receiver_export_parity.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/ema/hi_nerv_live_receiver_codec_portfolio_selection.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/live/hi_nerv_archive_section_telemetry.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/live/hi_nerv_bitstream_preparation.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/live/hi_nerv_mlx_exported_state_npz_manifest.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/live/archive.zip",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/live/hi_nerv_mlx_live_receiver_export_parity.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/ema_archive_selection/live/hi_nerv_live_receiver_codec_portfolio_selection.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/hinerv_target_region_action_sidecar_backend_action_effects.jsonl",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/action_effect_validation.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/hinerv_target_region_action_sidecar_backend_comparison.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/hi_nerv_target_region_action_parseback_survival.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/action_effect_validation_rerun.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/tile_brotli_repack_report.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/archive.zip",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/lowering_race_recheck/lowering_verdict.json",
+      "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_tile_brotli_repack/lowering_race_recheck/evaluator_action_lowering_race_report.json"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.preselector.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/10_DECODE.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/30_SELECTOR_PROGRESS.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/20_RENDER_PROGRESS.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/40_INFLATE_RESULT.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/scorer/SCORER_PROGRESS.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/scorer/SCORER_RESULT.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/archive.zip"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/10_DECODE.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/30_SELECTOR_PROGRESS.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/20_RENDER_PROGRESS.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/40_INFLATE_RESULT.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/scorer/SCORER_PROGRESS.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/scorer/SCORER_RESULT.json",
+      "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/archive.zip"
+    ]
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/frontier_inflate/0.raw",
+    "searched_root": "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z",
+    "max_directory_depth": 2,
+    "nearby_receipts": [
+      "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/s2_yuv_channel_split.v1.json",
+      "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/s5a_frame0_hard_quant.v1.json",
+      "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/snerv_branch_b_round2_v3_ingest.v1.json",
+      "/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z/s8_compose_frontier.v1.json"
+    ]
+  }
+]
