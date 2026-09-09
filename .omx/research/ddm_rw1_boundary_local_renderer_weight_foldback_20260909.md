@@ -606,7 +606,15 @@ arm's charter, not a knob here.
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
-- **OWED #1c — the finer grid, and it is the cure the closing measurement names.** The receiver already supports per-tensor depths 2–8
+- **OWED #1c — the finer grid (int4 → depth 5/6): CLOSED BY ARITHMETIC, not by a build.** §8d fitted the damage exponent at
+  **0.073–0.568** across every measured perturbation scale; at 0.5, moving the minimum damage from 72 cells to 1 needs **12.3 extra
+  bits** and a depth change buys **1–2**, leaving 51 or 36 cells — still far above any break-even. Pricing it by real encode would be
+  spending on a lever the exponent refutes. STATUS: `closed-by-derivation`.
+- **OWED #1e — fp32 per-row scales, the one place the arithmetic DOES clear.** +13 mantissa bits = 8,192× finer ⇒ predicted minimum
+  damage **0.8 cells**, below where a steered search can plausibly net a repair. Cost +2 B × 195 rows = **+390 B = 2.597e-04 S = 1.38 %
+  of the gap**, and it needs a RECEIVER change (the parser reads `<f2`). STATUS: `genuinely-deferred-because-receiver-change`; it is a
+  different arm's charter, and the arithmetic above is what that charter should be written against.
+- **OWED #1c-superseded — the finer grid as originally framed.** The receiver already supports per-tensor depths 2–8
   (`ddm_mp2_semantic_receiver._decode_depth_nibbles`), so depth 4 → 5 or 6 on `head.weight` / `blocks.3.{dw,pw}.weight` is a PACKER
   change, not a receiver change, and it halves or quarters the minimum step. Two things must be measured before anything is claimed:
   (a) the RATE of a depth change — §3's law prices *changed* codes at *fixed* depth, and a depth change alters the run length, so it
@@ -614,7 +622,10 @@ arm's charter, not a knob here.
   linearly with the step. If it does, quartering the step takes the cheapest single move from ~240 cells to ~60 — still positive, which
   would mean depth 8+ or nothing. If the 238× spread between the gradient's ends reflects a superlinear response, a half-step could land
   much better. Neither is known. STATUS: `READY`, `EV: high` — one packer change and one probe.
-- **OWED #1d — the same actuator with a SMALLER-THAN-GRID move.** The one thing the int4 grid forbids is a fractional step, but the
+- **OWED #1d — the fp16 SCALES: RUN, and closed at formulation scope** (§8d). 41× finer minimum action, negative rate break-even,
+  91+ realized evaluations, **zero accepts**, floor 6–7 cells on the screen. The actuator is real and the toll is negative; what fails
+  is that a knife-edge population flips under any nudge. Superseded description follows for provenance.
+- **OWED #1d-superseded — the same actuator with a SMALLER-THAN-GRID move.** The one thing the int4 grid forbids is a fractional step, but the
   archive does not: a per-row fp16 SCALE change moves every code in that row by a fraction of a step, and the scales are already
   shipped (390 B across the three tensors). A scale is a continuous knob over a whole row — coarser in reach, finer in amplitude — and it
   is the exact complement of what failed here. Untried. STATUS: `READY`, `EV: high`, and cheap: it reuses this arm's whole chain.
