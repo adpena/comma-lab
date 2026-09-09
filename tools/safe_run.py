@@ -61,6 +61,8 @@ EXIT_TIMEOUT = 124
 EXIT_OOM = 137
 EXIT_SPAWN = 125
 STATUS_RECEIPT_SCHEMA = "safe_run_status_receipt.v1"
+# verified-at-source: .omx/research/ddm_gov3_directive_cooperative_pause_and_stale_instance_20260905.md:88
+PROJECTION_ATTRIBUTION_ERROR_GIB = 5.0
 
 
 def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
@@ -69,8 +71,20 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         ours, cmd = argv[:sep], argv[sep + 1 :]
     else:
         ours, cmd = [], []
-        known_val = {"--rss-mb", "--timeout", "--poll", "--label", "--status-receipt",
-                     "--projected-gib", "--admission-override-rationale"}
+        known_val = {
+            "--rss-mb",
+            "--timeout",
+            "--far-timeout",
+            "--progress-stall-minutes",
+            "--progress-history-jsonl",
+            "--poll",
+            "--label",
+            "--status-receipt",
+            "--child-pidfile",
+            "--projected-gib",
+            "--admission-override-rationale",
+            "--admit-over-projection",
+        }
         known_flag = {"--quiet", "--json", "--skip-admission-gate"}
         i = 0
         while i < len(argv):
@@ -95,6 +109,19 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     p = argparse.ArgumentParser(prog="safe_run.py", add_help=True)
     p.add_argument("--rss-mb", type=int, default=2048)
     p.add_argument("--timeout", type=float, default=30.0)
+    p.add_argument(
+        "--far-timeout",
+        type=float,
+        default=None,
+        help="absolute far ceiling when progress heartbeats are present (at least 3x serial estimate)",
+    )
+    p.add_argument(
+        "--progress-stall-minutes",
+        type=float,
+        default=None,
+        help="kill only after history.jsonl completed_steps stops advancing for this many minutes",
+    )
+    p.add_argument("--progress-history-jsonl", type=Path, default=None)
     p.add_argument("--poll", type=float, default=0.2)
     p.add_argument("--label", default=None)
     p.add_argument(
@@ -127,9 +154,24 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
                         "defaults to --rss-mb/1024.")
     p.add_argument("--admission-override-rationale", default=None,
                    help="operator-verbatim rationale to override a system-admission REFUSE.")
+    p.add_argument(
+        "--admit-over-projection",
+        default=None,
+        metavar="RATIONALE",
+        help="explicit substantive escape for a projection more than 5 GiB above the ceiling",
+    )
     p.add_argument("--skip-admission-gate", action="store_true",
                    help="skip the system admission gate (infra/protection commands only).")
     ns = p.parse_args(ours)
+    if (ns.progress_stall_minutes is None) != (ns.progress_history_jsonl is None):
+        p.error("--progress-stall-minutes and --progress-history-jsonl must be supplied together")
+    if ns.progress_stall_minutes is not None and ns.progress_stall_minutes <= 0:
+        p.error("--progress-stall-minutes must be positive")
+    if ns.far_timeout is not None and ns.far_timeout < ns.timeout:
+        p.error("--far-timeout must be at least --timeout")
+    if ns.admit_over_projection is not None and not _rationale_is_real(ns.admit_over_projection):
+        p.error("--admit-over-projection requires a substantive non-placeholder rationale")
+    ns.projection_override_used = False
     return ns, cmd
 
 
@@ -251,6 +293,64 @@ def _rationale_is_real(s: str | None) -> bool:
     return len(low) >= 8 and low not in ("<reason>", "<rationale>", "placeholder", "tbd", "n/a")
 
 
+def projection_refusal_policy(
+    *,
+    admits: bool,
+    projected_system_used_gib: float | None,
+    adaptive_ceiling_gib: float | None,
+    enforcing: bool,
+    admit_over_projection: str | None,
+) -> dict[str, Any]:
+    """Pure SUM-over-RAM policy, including the hard >5 GiB refusal boundary."""
+    overage = (
+        float(projected_system_used_gib) - float(adaptive_ceiling_gib)
+        if isinstance(projected_system_used_gib, (int, float))
+        and isinstance(adaptive_ceiling_gib, (int, float))
+        else None
+    )
+    hard = bool(not admits and overage is not None and overage > PROJECTION_ATTRIBUTION_ERROR_GIB)
+    supplied = admit_over_projection is not None
+    real_escape = _rationale_is_real(admit_over_projection)
+    if admits:
+        return {"action": "ADMIT", "hard": False, "overage_gib": overage, "override_used": False}
+    if supplied and not real_escape:
+        return {
+            "action": "REFUSE",
+            "hard": hard,
+            "overage_gib": overage,
+            "override_used": False,
+            "reason": "--admit-over-projection rationale is missing or a placeholder",
+        }
+    if real_escape:
+        return {"action": "ADMIT", "hard": hard, "overage_gib": overage, "override_used": True}
+    return {
+        "action": "REFUSE" if (hard or enforcing) else "ADVISORY",
+        "hard": hard,
+        "overage_gib": overage,
+        "override_used": False,
+    }
+
+
+def _latest_completed_steps(path: Path | None) -> int | None:
+    """Last valid completed_steps heartbeat in a possibly-partial JSONL file."""
+    if path is None or not path.is_file():
+        return None
+    latest: int | None = None
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                value = row.get("completed_steps") if isinstance(row, dict) else None
+                if isinstance(value, int) and not isinstance(value, bool):
+                    latest = value
+    except OSError:
+        return None
+    return latest
+
+
 def _system_admission_gate(ns: argparse.Namespace, cmd: list[str]) -> int | None:
     """(review-fix CRITICAL) The SAME system-total admission gate the durable-daemon path runs, so
     that stamping the child as GOVERNED is TRUTHFUL (a real SUM-over-RAM check ran), not a per-
@@ -292,17 +392,41 @@ def _system_admission_gate(ns: argparse.Namespace, cmd: list[str]) -> int | None
         print(f"safe_run.py: WARNING admission read failed ({exc!r}); proceeding.", file=sys.stderr)
         return None
     d = ctx.decision
-    if d.admit:
+    enforcing = gov.admission_enforcing()
+    policy = projection_refusal_policy(
+        admits=bool(d.admit),
+        projected_system_used_gib=getattr(d, "projected_system_used_gib", None),
+        adaptive_ceiling_gib=getattr(d, "adaptive_ceiling_gib", None),
+        enforcing=enforcing,
+        admit_over_projection=ns.admit_over_projection,
+    )
+    if policy["action"] == "ADMIT":
+        if policy["override_used"]:
+            ns.projection_override_used = True
+            print(
+                "safe_run.py: OVER-PROJECTION ADMISSION ESCAPE "
+                f"(operator rationale): {ns.admit_over_projection!r} — proceeding despite: {d.reason}",
+                file=sys.stderr,
+            )
         return None
-    if _rationale_is_real(ns.admission_override_rationale):
+    if policy.get("reason"):
+        print(f"safe_run.py: REFUSED: {policy['reason']}; {d.reason}", file=sys.stderr)
+        return 5
+    if _rationale_is_real(ns.admission_override_rationale) and not policy["hard"]:
         print(f"safe_run.py: ADMISSION OVERRIDE (operator rationale): "
               f"{ns.admission_override_rationale!r} — proceeding despite: {d.reason}", file=sys.stderr)
         return None
-    enforcing = gov.admission_enforcing()
-    print(f"safe_run.py: {'REFUSED' if enforcing else 'WOULD-REFUSE (ADVISORY)'} "
+    action = policy["action"]
+    overage = policy.get("overage_gib")
+    hard_chain = (
+        f"; overage {overage:.1f} GiB > attribution error {PROJECTION_ATTRIBUTION_ERROR_GIB:.1f} GiB"
+        if policy["hard"] and isinstance(overage, (int, float))
+        else ""
+    )
+    print(f"safe_run.py: {'REFUSED' if action == 'REFUSE' else 'WOULD-REFUSE (ADVISORY)'} "
           f"(system admission gate — SUM-over-RAM crash guard): {d.reason} "
-          f"[projected={projected:.1f}GiB]", file=sys.stderr)
-    return 5 if enforcing else None
+          f"[projected={projected:.1f}GiB]{hard_chain}", file=sys.stderr)
+    return 5 if action == "REFUSE" else None
 
 
 # ── governed-admission registry visibility (review-fix HIGH: bare safe_run was invisible) ────────
@@ -410,12 +534,26 @@ def main(argv: list[str]) -> int:
     start_utc = _utc_now()
     status_receipt = _status_receipt_path(ns)
     child_pidfile = _child_pidfile_path(ns, status_receipt)
+    progress_history = (
+        None
+        if ns.progress_history_jsonl is None
+        else ns.progress_history_jsonl.expanduser().resolve(strict=False)
+    )
+    far_timeout = (
+        float(ns.far_timeout)
+        if ns.far_timeout is not None
+        else (float(ns.timeout) * 3.0 if progress_history is not None else float(ns.timeout))
+    )
     peak_kib = 0
     peak_observed = False
     last_sample_ts: str | None = None
     child_pid: int | None = None
     pgid: int | None = None
     kill_action: dict[str, Any] | None = None
+    heartbeat_seen = False
+    last_completed_steps: int | None = None
+    last_progress_monotonic = start
+    last_progress_utc: str | None = None
 
     def _emit_status(status: str, *, exit_code: int | None = None) -> None:
         _write_status_receipt(
@@ -450,6 +588,15 @@ def main(argv: list[str]) -> int:
                 "elapsed_s": round(time.monotonic() - start, 3),
                 "rss_limit_mib": ns.rss_mb,
                 "timeout_s": ns.timeout,
+                "far_timeout_s": far_timeout,
+                "progress_stall_minutes": ns.progress_stall_minutes,
+                "progress_history_jsonl": None if progress_history is None else str(progress_history),
+                "heartbeat_seen": heartbeat_seen,
+                "last_completed_steps": last_completed_steps,
+                "last_progress_utc": last_progress_utc,
+                "admit_over_projection_rationale": ns.admit_over_projection,
+                "projection_override_used": bool(ns.projection_override_used),
+                "projection_attribution_error_gib": PROJECTION_ATTRIBUTION_ERROR_GIB,
                 "poll_s": ns.poll,
                 "peak_rss_observed": peak_observed,
                 "peak_rss_kib": int(peak_kib),
@@ -541,12 +688,33 @@ def main(argv: list[str]) -> int:
             if rc is not None:
                 break
             elapsed = time.monotonic() - start
-            if elapsed > ns.timeout:
-                status = "timeout"
+            now = time.monotonic()
+            observed_steps = _latest_completed_steps(progress_history)
+            if observed_steps is not None and (
+                not heartbeat_seen or last_completed_steps is None or observed_steps > last_completed_steps
+            ):
+                heartbeat_seen = True
+                last_completed_steps = observed_steps
+                last_progress_monotonic = now
+                last_progress_utc = _utc_now()
+            timeout_reason: str | None = None
+            if heartbeat_seen and ns.progress_stall_minutes is not None:
+                if now - last_progress_monotonic > ns.progress_stall_minutes * 60.0:
+                    timeout_reason = "progress_stall"
+                elif elapsed > far_timeout:
+                    timeout_reason = "far_timeout"
+            elif elapsed > ns.timeout:
+                # No heartbeat ever appeared: preserve the pre-gov3 wall-clock behavior exactly.
+                timeout_reason = "timeout"
+            if timeout_reason is not None:
+                status = timeout_reason
                 kill_action = {
-                    "reason": "timeout",
+                    "reason": timeout_reason,
                     "elapsed_s": round(elapsed, 3),
                     "timeout_s": ns.timeout,
+                    "far_timeout_s": far_timeout,
+                    "progress_stall_minutes": ns.progress_stall_minutes,
+                    "last_completed_steps": last_completed_steps,
                     "action": "SIGTERM_then_SIGKILL_process_group",
                 }
                 _emit_status(status, exit_code=EXIT_TIMEOUT)

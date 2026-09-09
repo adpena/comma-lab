@@ -87,6 +87,8 @@ class TestRowFromStatusReceipt:
         assert row.pre_launch_available_gib == pytest.approx(77.609)
         assert row.min_available_while_live_gib == pytest.approx(28.037)
         assert row.system_availability_delta_gib == pytest.approx(49.572, abs=1e-3)
+        assert row.metal_footprint_gib == pytest.approx(49.572, abs=1e-3)
+        assert "ledger:availability_delta/rss>3" in row.metal_occupancy_evidence
         assert row.governed_peak_gib == pytest.approx(49.572, abs=1e-3)
         assert row.attribution_grade == mp.GRADE_SOLE_CELL
 
@@ -195,6 +197,22 @@ class TestLedger:
         found = mp.lookup_family("f", path=ledger)
         assert found["governed_peak_gib"] == pytest.approx(49.572)
         assert found["row_count"] == 3
+
+    def test_lookup_backfills_metal_footprint_from_the_ratio(self, tmp_path):
+        ledger = tmp_path / "l.jsonl"
+        mp.append_row(
+            {
+                "schema": mp.MEASURED_PEAK_SCHEMA,
+                "family": "cl3",
+                "governed_peak_gib": 38.62,
+                "peak_rss_gib": 1.5,
+                "system_availability_delta_gib": 38.62,
+            },
+            ledger,
+        )
+        found = mp.lookup_family("cl3", path=ledger)
+        assert found is not None
+        assert found["metal_footprint_gib"] == pytest.approx(38.62)
 
     def test_lookup_of_an_unknown_family_is_none(self, tmp_path):
         assert mp.lookup_family("never-run", path=tmp_path / "absent.jsonl") is None

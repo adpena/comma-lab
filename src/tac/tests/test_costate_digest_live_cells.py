@@ -106,6 +106,8 @@ class TestSectionLiveCells:
         # 4000 remaining steps at 16/min = 250 min = 4.2 h
         assert "ETA 4.2 h" in body
         assert data["cells"][0]["eta_minutes"] == pytest.approx(250.0)
+        assert data["metal_occupant_names"] == ["cell_x"]
+        assert "Metal occupants: cell_x" in body
 
     def test_reports_the_contention_ratio_and_whether_concurrency_pays(self, digest, monkeypatch):
         rows = [
@@ -136,6 +138,20 @@ class TestSectionLiveCells:
         assert "not a training cell" in "\n".join(lines)
         assert data["live_job_count"] == 1
         assert data["training_cell_count"] == 0
+
+    def test_names_a_non_run_config_metal_occupant(self, digest, monkeypatch):
+        job = _live_cell(
+            cell_id="cl3_trainer",
+            config_path=None,
+            total_steps=None,
+            argv=("python", "cl3.py", "--metal"),
+            metal_evidence=("argv:--metal",),
+            metal_footprint_gib=38.62,
+        )
+        _stub(monkeypatch, digest, cells=[job], rows=[])
+        lines, data = digest.section_live_cells()
+        assert data["metal_occupant_names"] == ["cl3_trainer"]
+        assert "Metal occupant" in "\n".join(lines)
 
     def test_admission_headroom_is_surfaced(self, digest, monkeypatch):
         module = _stub(monkeypatch, digest, cells=[_live_cell()], rows=[])

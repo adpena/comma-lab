@@ -445,8 +445,8 @@ class TestThroughputVerdict:
         assert verdict.evidence == "UNRESOLVED_AT_CONCURRENCY"
         assert "spread" in verdict.reasons[0]
 
-    def test_measurement_override_admits_only_the_evidence_gap(self, tmp_path, monkeypatch):
-        """The ONE named way past the law -- and it never touches the memory leg."""
+    def test_measurement_override_cannot_bypass_the_independent_occupancy_leg(self, tmp_path, monkeypatch):
+        """A throughput measurement override is not permission to violate the one-Metal law."""
         _fixed_basis(monkeypatch, reclaimable=500.0, committed=5.0)
         cell = _training_cell_stub()
         monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [cell])
@@ -458,8 +458,9 @@ class TestThroughputVerdict:
             include_naive_contrast=False,
             concurrency_measurement_override="measure the N=2 window gv1 could not resolve",
         )
-        assert allowed.verdict == "ADMIT"
+        assert allowed.verdict == "REFUSE"
         assert allowed.throughput.evidence == "MEASUREMENT_OVERRIDE"
+        assert allowed.metal is not None and allowed.metal.admits is False
 
     def test_measurement_override_cannot_overturn_a_measured_negative(self, tmp_path, monkeypatch):
         """MEASURED-and-COSTS is a real negative, not a data gap; the override must not touch it."""
@@ -558,8 +559,8 @@ class TestDecision:
         assert decision.throughput.admits is False
         assert decision.verdict == "REFUSE"
 
-    def test_throughput_counts_training_cells_not_every_governed_job(self, tmp_path, monkeypatch):
-        """VACUITY==PASS guard: unrelated live jobs must not inflate the required concurrency.
+    def test_throughput_counts_metal_occupants_not_every_governed_job(self, tmp_path, monkeypatch):
+        """VACUITY==PASS guard: unrelated CPU jobs must not inflate required Metal concurrency.
 
         Two live TRAINING CELLS plus one unrelated job means the candidate would be the 3rd cell,
         so a concurrency-3 ledger row is what matters -- not concurrency 4. Counting every job
@@ -579,7 +580,16 @@ class TestDecision:
         cells = ca.discover_live_cells([tmp_path], process_table=False)
         # One discovered cell; synthesise a second training cell and one non-cell job.
         second = dataclasses.replace(cells[0], cell_id="cell_two", pid=cells[0].pid)
-        job = dataclasses.replace(cells[0], cell_id="a_job", config_path=None, total_steps=None, declared_peak_gib=0.0)
+        job = dataclasses.replace(
+            cells[0],
+            cell_id="a_job",
+            config_path=None,
+            total_steps=None,
+            declared_peak_gib=0.0,
+            argv=(),
+            metal_evidence=(),
+            metal_footprint_gib=None,
+        )
         decision = ca.decide_admission(
             1.0,
             live_cells=[cells[0], second, job],

@@ -48,6 +48,7 @@ _REPO = Path(__file__).resolve().parents[1]
 MEASURED_PEAK_SCHEMA = "measured_peak.v1"
 MEASURED_PEAKS_LEDGER = _REPO / ".omx" / "state" / "measured_peaks.jsonl"
 MEMORY_BLACKBOX = _REPO / ".omx" / "state" / "memory_blackbox.jsonl"
+METAL_FOOTPRINT_RATIO = 3.0
 
 #: Attribution grades, worst to best.  A consumer that cannot tell these apart will read a
 #: confounded number as a clean one, which is how the 2.396 GiB fiction survived three launches.
@@ -73,6 +74,43 @@ _WALK_PRUNE_NAMES = frozenset(
 _WALK_PRUNE_PREFIXES = ("sealed_source_", "stage_", "step_", "shard_")
 _WALK_MAX_DEPTH = 6
 _GIB = 1024.0**3
+
+
+def metal_argv_evidence(argv: Sequence[str]) -> tuple[str, ...]:
+    """Return argv/config evidence that a process is a Metal occupant."""
+    tokens = [str(token).strip().lower() for token in argv]
+    evidence: list[str] = []
+    if "--metal" in tokens:
+        evidence.append("argv:--metal")
+    for index, token in enumerate(tokens):
+        if token == "--device" and index + 1 < len(tokens) and tokens[index + 1] == "mps":
+            evidence.append("argv:--device mps")
+        elif token == "device" and index + 1 < len(tokens) and tokens[index + 1] == "mps":
+            evidence.append("argv:device mps")
+        elif token == "--device=mps":
+            evidence.append("argv:--device=mps")
+    if "run-config" in tokens:
+        evidence.append("argv:run-config-cell")
+    return tuple(dict.fromkeys(evidence))
+
+
+def metal_profile(
+    *,
+    peak_rss_gib: float | None,
+    system_availability_delta_gib: float | None,
+    argv: Sequence[str] = (),
+) -> tuple[float | None, tuple[str, ...]]:
+    """Classify Metal independently from run-config and return its footprint."""
+    evidence = list(metal_argv_evidence(argv))
+    if (
+        peak_rss_gib is not None
+        and peak_rss_gib > 0
+        and system_availability_delta_gib is not None
+        and system_availability_delta_gib / peak_rss_gib > METAL_FOOTPRINT_RATIO
+    ):
+        evidence.append(f"ledger:availability_delta/rss>{METAL_FOOTPRINT_RATIO:g}")
+    deduped = tuple(dict.fromkeys(evidence))
+    return (system_availability_delta_gib if deduped else None), deduped
 
 
 def utc_text(value: dt.datetime | None = None) -> str:
@@ -128,6 +166,8 @@ class MeasuredPeak:
     peak_rss_observed: bool
     declared_peak_gib: float | None
     system_availability_delta_gib: float | None
+    metal_footprint_gib: float | None
+    metal_occupancy_evidence: tuple[str, ...]
     attribution_grade: str
     status: str | None
     exit_code: int | None
@@ -271,12 +311,30 @@ def lookup_family(family: str, *, path: Path | None = None) -> dict[str, Any] | 
     if not rows:
         return None
     best = max(rows, key=lambda row: float(row.get("governed_peak_gib") or 0.0))
+    metal_footprints: list[float] = []
+    for row in rows:
+        explicit = row.get("metal_footprint_gib")
+        if isinstance(explicit, (int, float)):
+            metal_footprints.append(float(explicit))
+            continue
+        inferred, _ = metal_profile(
+            peak_rss_gib=(float(row["peak_rss_gib"]) if isinstance(row.get("peak_rss_gib"), (int, float)) else None),
+            system_availability_delta_gib=(
+                float(row["system_availability_delta_gib"])
+                if isinstance(row.get("system_availability_delta_gib"), (int, float))
+                else None
+            ),
+            argv=row.get("argv") if isinstance(row.get("argv"), list) else (),
+        )
+        if inferred is not None:
+            metal_footprints.append(inferred)
     return {
         "family": family,
         "row_count": len(rows),
         "governed_peak_gib": float(best.get("governed_peak_gib") or 0.0),
         "peak_rss_gib": best.get("peak_rss_gib"),
         "system_availability_delta_gib": best.get("system_availability_delta_gib"),
+        "metal_footprint_gib": max(metal_footprints) if metal_footprints else None,
         "attribution_grade": best.get("attribution_grade"),
         "artifact_gib": max(
             (float(row.get("artifact_gib") or 0.0) for row in rows),
@@ -397,6 +455,11 @@ def row_from_status_receipt(
         output_dir = Path(manifest["output_dir"])
     if output_dir is not None and output_dir.is_dir():
         artifact, truncated = directory_gib(output_dir)
+    metal_footprint_gib, metal_evidence = metal_profile(
+        peak_rss_gib=round(peak_gib, 6),
+        system_availability_delta_gib=None if delta is None else round(delta, 4),
+        argv=[str(item) for item in argv],
+    )
     return MeasuredPeak(
         family=family or family_of(receipt, manifest),
         cell_id=(str(config.get("cell_id")) if isinstance(config, dict) and config.get("cell_id") else None),
@@ -404,6 +467,8 @@ def row_from_status_receipt(
         peak_rss_observed=bool(receipt.get("peak_rss_observed")),
         declared_peak_gib=declared,
         system_availability_delta_gib=None if delta is None else round(delta, 4),
+        metal_footprint_gib=metal_footprint_gib,
+        metal_occupancy_evidence=metal_evidence,
         attribution_grade=grade,
         status=(str(receipt["status"]) if receipt.get("status") else None),
         exit_code=(int(receipt["exit"]) if isinstance(receipt.get("exit"), int) else None),

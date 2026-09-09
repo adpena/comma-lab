@@ -469,6 +469,84 @@ def _measured_artifact_budget_gib(cmd: Sequence[str]) -> tuple[float, str]:
     return FALLBACK_ARTIFACT_BUDGET_GIB, "FALLBACK floor (no measured row for this family)"
 
 
+def _trainer_family(cmd: Sequence[str]) -> str | None:
+    ignored = {"launch_detached_process", "safe_run"}
+    for part in reversed([str(item) for item in cmd]):
+        if part.endswith(".py") and Path(part).stem not in ignored:
+            return Path(part).stem
+    return None
+
+
+def _metal_launch_profile(cmd: Sequence[str]) -> dict[str, Any]:
+    """Manifest-ready Metal classification from argv plus the measured-peak ledger."""
+    tokens = [str(item).strip().lower() for item in cmd]
+    fallback_evidence: list[str] = []
+    if "--metal" in tokens:
+        fallback_evidence.append("argv:--metal")
+    if any(
+        token in {"device", "--device"} and index + 1 < len(tokens) and tokens[index + 1] == "mps"
+        for index, token in enumerate(tokens)
+    ) or "--device=mps" in tokens:
+        fallback_evidence.append("argv:device mps")
+    if "run-config" in tokens:
+        fallback_evidence.append("argv:run-config-cell")
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import measured_peaks
+
+        evidence = list(measured_peaks.metal_argv_evidence([str(item) for item in cmd]))
+        found = measured_peaks.lookup_family(_trainer_family(cmd)) if _trainer_family(cmd) else None
+        footprint = None if not found else found.get("metal_footprint_gib")
+        if isinstance(footprint, (int, float)):
+            evidence.append("ledger:metal_footprint_gib")
+        return {
+            "metal_occupant": bool(evidence),
+            "metal_footprint_gib": float(footprint) if isinstance(footprint, (int, float)) else None,
+            "metal_occupancy_evidence": list(dict.fromkeys(evidence)),
+        }
+    except Exception:
+        return {
+            "metal_occupant": bool(fallback_evidence),
+            "metal_footprint_gib": None,
+            "metal_occupancy_evidence": fallback_evidence,
+        }
+
+
+def _run_progress_contract(
+    cmd: Sequence[str],
+    *,
+    cwd: Path | None = None,
+) -> tuple[Path | None, int | None]:
+    """Return the run's history path and total step count from its authorized run-config."""
+    parts = [str(item) for item in cmd]
+    try:
+        index = parts.index("run-config")
+    except ValueError:
+        return None, None
+    if index + 1 >= len(parts):
+        return None, None
+    config_path = Path(parts[index + 1])
+    if not config_path.is_absolute() and cwd is not None:
+        config_path = cwd / config_path
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    output = config.get("output") if isinstance(config, dict) else None
+    total = config.get("total_steps") if isinstance(config, dict) else None
+    if not isinstance(output, str) or not output:
+        return None, None
+    total_steps = int(total) if isinstance(total, int) and not isinstance(total, bool) and total > 0 else None
+    return Path(output) / "history.jsonl", total_steps
+
+
+def _substantive_rationale(value: str | None) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip().lower()
+    return len(text) >= 8 and text not in {"<reason>", "<rationale>", "placeholder", "tbd", "n/a"}
+
+
 def _storage_waterfall(out: Path, *, cmd: Sequence[str], artifact_budget_gib: float | None) -> dict[str, Any]:
     """Refuse a launch the target volume cannot hold.  Raises :class:`LaunchRefusal` (rc=11)."""
     if artifact_budget_gib is None:
@@ -1095,13 +1173,16 @@ def _derive_resource_budget(
     out: Path,
     cmd: list[str],
     env: dict[str, str],
+    cwd: Path | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     """Build a real safe_run envelope from measured demand and host policy."""
 
+    metal_profile = _metal_launch_profile(cmd)
     if not args.derive_resource_budgets:
         return cmd, {
             "mode": "child_owned",
             "note": "launcher did not invent an RSS or thread limit without measured demand",
+            **metal_profile,
         }
     if "safe_run.py" in " ".join(cmd):
         raise LaunchRefusal(
@@ -1118,12 +1199,18 @@ def _derive_resource_budget(
             rc=10,
             error=f"{type(exc).__name__}: {exc}",
         ) from exc
-    projected_peak_gib = float(args.measured_peak_rss_gib)
+    measured_peak_rss_gib = float(args.measured_peak_rss_gib)
+    metal_footprint_gib = metal_profile.get("metal_footprint_gib")
+    projected_peak_gib = max(
+        measured_peak_rss_gib,
+        float(metal_footprint_gib) if isinstance(metal_footprint_gib, (int, float)) else 0.0,
+    )
     if operator_ceiling_gib <= 0 or projected_peak_gib > operator_ceiling_gib:
         raise LaunchRefusal(
             "measured peak does not fit the canonical operator ceiling",
             rc=10,
-            measured_peak_rss_gib=projected_peak_gib,
+            measured_peak_rss_gib=measured_peak_rss_gib,
+            projected_peak_gib=projected_peak_gib,
             operator_ceiling_gib=operator_ceiling_gib,
         )
     logical_cpus = max(1, os.cpu_count() or 1)
@@ -1134,6 +1221,17 @@ def _derive_resource_budget(
     safe_run = Path(__file__).resolve().with_name("safe_run.py")
     status_receipt = out / "resource_safe_run_status.json"
     child_pidfile = out / "resource_safe_run_child.pid"
+    history_path, total_steps = _run_progress_contract(cmd, cwd=cwd)
+    progress_stall_minutes: float | None = None
+    far_timeout_s = float(args.walltime_cap_s)
+    if history_path is not None and total_steps is not None:
+        serial_seconds_per_step = float(args.walltime_cap_s) / float(total_steps)
+        progress_stall_minutes = (
+            float(args.progress_stall_minutes)
+            if args.progress_stall_minutes is not None
+            else 10.0 * serial_seconds_per_step / 60.0
+        )
+        far_timeout_s = max(float(args.walltime_cap_s) * 3.0, float(args.walltime_cap_s))
     wrapped = [
         sys.executable,
         str(safe_run),
@@ -1147,23 +1245,47 @@ def _derive_resource_budget(
         str(status_receipt),
         "--child-pidfile",
         str(child_pidfile),
-        "--quiet",
-        "--",
-        *cmd,
     ]
+    if history_path is not None and progress_stall_minutes is not None:
+        wrapped.extend(
+            [
+                "--progress-history-jsonl",
+                str(history_path),
+                "--progress-stall-minutes",
+                str(progress_stall_minutes),
+                "--far-timeout",
+                str(far_timeout_s),
+            ]
+        )
+    if args.admit_over_projection is not None:
+        wrapped.extend(["--admit-over-projection", args.admit_over_projection])
+    wrapped.extend(["--quiet", "--", *cmd])
     return wrapped, {
         "mode": "derived_and_enforced",
-        "measured_peak_rss_gib": projected_peak_gib,
+        "measured_peak_rss_gib": measured_peak_rss_gib,
+        "projected_peak_gib": projected_peak_gib,
         "operator_ceiling_gib": operator_ceiling_gib,
         "rss_cap_mib": rss_cap_mib,
         "measured_thread_need": int(args.measured_thread_need),
         "logical_cpus": logical_cpus,
         "thread_budget": thread_budget,
         "thread_environment": {key: env[key] for key in _THREAD_ENV_KEYS},
-        "walltime_cap_s": float(args.walltime_cap_s),
+        "serial_walltime_estimate_s": float(args.walltime_cap_s),
+        "no_heartbeat_timeout_s": float(args.walltime_cap_s),
+        "walltime_cap_s": far_timeout_s,
+        "progress_history_jsonl": None if history_path is None else str(history_path),
+        "progress_stall_minutes": progress_stall_minutes,
+        "progress_stall_derivation": (
+            None
+            if total_steps is None
+            else "10 * (serial_walltime_estimate_s / total_steps) / 60"
+        ),
+        "total_steps": total_steps,
+        "admit_over_projection_rationale": args.admit_over_projection,
         "status_receipt": str(status_receipt),
         "child_pidfile": str(child_pidfile),
         "concurrency_policy": "niceness plus system admission; no artificial abstinence",
+        **metal_profile,
     }
 
 
@@ -1214,6 +1336,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--measured-peak-rss-gib", type=float)
     parser.add_argument("--measured-thread-need", type=int)
     parser.add_argument("--walltime-cap-s", type=float)
+    parser.add_argument(
+        "--progress-stall-minutes",
+        type=float,
+        default=None,
+        help="override the default 10x serial-seconds-per-step progress-stall budget",
+    )
+    parser.add_argument(
+        "--admit-over-projection",
+        default=None,
+        metavar="RATIONALE",
+        help="explicit substantive escape for a projection more than 5 GiB above the ceiling",
+    )
     parser.add_argument("--done-receipt", default=None, metavar="NAME")
     parser.add_argument(
         "--receipt-supersede",
@@ -1258,10 +1392,22 @@ def parse_args() -> argparse.Namespace:
         )
     if not args.derive_resource_budgets and any(value is not None for value in resource_values):
         parser.error("resource measurement flags require --derive-resource-budgets")
+    if not args.derive_resource_budgets and (
+        args.progress_stall_minutes is not None or args.admit_over_projection is not None
+    ):
+        parser.error("progress/projection override flags require --derive-resource-budgets")
     if args.derive_resource_budgets and (
         args.measured_peak_rss_gib <= 0 or args.measured_thread_need <= 0 or args.walltime_cap_s <= 0
     ):
         parser.error("resource measurements and caps must be positive")
+    if args.progress_stall_minutes is not None and args.progress_stall_minutes <= 0:
+        parser.error("--progress-stall-minutes must be positive")
+    if args.admit_over_projection is not None and not _substantive_rationale(args.admit_over_projection):
+        parser.error("--admit-over-projection requires a substantive non-placeholder rationale")
+    if args.derive_resource_budgets and args.progress_stall_minutes is not None:
+        history_path, total_steps = _run_progress_contract(args.cmd, cwd=args.cwd)
+        if history_path is None or total_steps is None:
+            parser.error("--progress-stall-minutes requires a readable run-config with output and total_steps")
     if args.arm_watchers and (args.liveness_config is None or args.quality_config is None):
         parser.error("--arm-watchers requires --liveness-config and --quality-config")
     if args.verify_alive_secs < 0:
@@ -1308,6 +1454,7 @@ def main() -> int:
             out=out,
             cmd=cmd,
             env=env,
+            cwd=cwd,
         )
     except LaunchRefusal as exc:
         return _print_refusal(exc)
@@ -1442,6 +1589,11 @@ def main() -> int:
         "requested_nice": args.nice,
         "actual_nice": None,
         "resource_budget": resource_budget,
+        "metal_occupancy": {
+            "metal_occupant": resource_budget.get("metal_occupant", False),
+            "metal_footprint_gib": resource_budget.get("metal_footprint_gib"),
+            "evidence": resource_budget.get("metal_occupancy_evidence", []),
+        },
         "storage_waterfall": storage,
         "done_receipt_path": str(done_path) if done_path else None,
         "receipt_tombstone": receipt_tombstone,

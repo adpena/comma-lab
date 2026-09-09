@@ -58,6 +58,7 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO / "tools") not in sys.path:
     sys.path.insert(0, str(_REPO / "tools"))
 
+import measured_peaks  # noqa: E402  (tools/ is on sys.path above)
 import mem_basis  # noqa: E402  (tools/ is on sys.path above)
 
 ADMISSION_SCHEMA = "ddm_gv1_cell_admission_decision.v1"
@@ -65,6 +66,13 @@ LIVE_CELL_SCHEMA = "ddm_gv1_live_cell.v1"
 THROUGHPUT_ROW_SCHEMA = "ddm_gv1_metal_contention_row.v1"
 
 CONTENTION_LEDGER = _REPO / ".omx" / "state" / "metal_contention_ledger.jsonl"
+METAL_ADMISSION_TABLE = _REPO / ".omx" / "state" / "metal_admission_table.jsonl"
+METAL_ADMISSION_SEED_TABLE = (
+    _REPO / ".omx" / "research" / "ddm_gov3_metal_admission_table_seed_20260905.jsonl"
+)
+METAL_ADMISSION_WINDOW_SCHEMA = "ddm_gov3_metal_admission_window.v1"
+MIN_DUAL_METAL_FIT_WINDOWS = 3
+MIN_FREE_LOGICAL_CORES_FOR_METAL = 2.0
 
 #: Spike / model-error margin held back on top of every projection.  Matches the margin MAIN used
 #: by hand in the ng3 fire script (``PEAK + 16``) so the apparatus reproduces the operator-blessed
@@ -176,7 +184,11 @@ def process_tree_rss_gib(pid: int) -> float | None:
 
         parent = psutil.Process(pid)
         total = float(parent.memory_info().rss)
-        for child in parent.children(recursive=True):
+        try:
+            children = parent.children(recursive=True)
+        except Exception:
+            children = []
+        for child in children:
             try:
                 total += float(child.memory_info().rss)
             except Exception:
@@ -222,11 +234,19 @@ class LiveCell:
     declared_peak_source: str = "manifest"
     safe_run_pid: int | None = None
     trainer_pid: int | None = None
+    argv: tuple[str, ...] = ()
+    metal_footprint_gib: float | None = None
+    metal_evidence: tuple[str, ...] = ()
 
     @property
     def is_cell(self) -> bool:
         """True when this job is a training cell (a sealed run-config with a step budget)."""
         return self.config_path is not None and bool(self.total_steps)
+
+    @property
+    def is_metal_occupant(self) -> bool:
+        """True for argv/ledger Metal evidence or the legacy run-config cell shape."""
+        return bool(self.metal_evidence) or self.is_cell
 
     @property
     def unrealized_growth_gib(self) -> float:
@@ -267,6 +287,10 @@ class LiveCell:
             "declared_peak_source": self.declared_peak_source,
             "safe_run_pid": self.safe_run_pid,
             "trainer_pid": self.trainer_pid,
+            "argv": list(self.argv),
+            "is_metal_occupant": self.is_metal_occupant,
+            "metal_footprint_gib": self.metal_footprint_gib,
+            "metal_evidence": list(self.metal_evidence),
         }
 
 
@@ -288,6 +312,37 @@ def _config_path_from_argv(argv: Sequence[Any]) -> Path | None:
     if parts and parts[-1].endswith(".json"):
         return Path(parts[-1])
     return None
+
+
+def _family_from_argv(argv: Sequence[Any]) -> str | None:
+    ignored = {"launch_detached_process", "safe_run"}
+    for item in reversed([str(part) for part in argv]):
+        if item.endswith(".py") and Path(item).stem not in ignored:
+            return Path(item).stem
+    return None
+
+
+def _metal_fields(
+    argv: Sequence[Any],
+    budget: Mapping[str, Any] | None = None,
+) -> tuple[float | None, tuple[str, ...]]:
+    """Combine argv, manifest, and measured-ledger evidence for Metal occupancy."""
+    args = tuple(str(part) for part in argv)
+    evidence = list(measured_peaks.metal_argv_evidence(args))
+    footprint: float | None = None
+    if isinstance(budget, Mapping):
+        raw = budget.get("metal_footprint_gib")
+        if isinstance(raw, (int, float)):
+            footprint = float(raw)
+            evidence.append("manifest:metal_footprint_gib")
+        if budget.get("metal_occupant") is True:
+            evidence.append("manifest:metal_occupant")
+    family = _family_from_argv(args)
+    measured = measured_peaks.lookup_family(family) if family else None
+    if isinstance(measured, Mapping) and isinstance(measured.get("metal_footprint_gib"), (int, float)):
+        footprint = max(footprint or 0.0, float(measured["metal_footprint_gib"]))
+        evidence.append("ledger:metal_footprint_gib")
+    return footprint, tuple(dict.fromkeys(evidence))
 
 
 def count_history_steps(run_dir: Path | None) -> int | None:
@@ -325,6 +380,7 @@ def live_cell_from_manifest(manifest_path: Path) -> LiveCell | None:
         declared_peak = 0.0
 
     argv = manifest.get("argv")
+    argv_parts = tuple(str(part) for part in argv) if isinstance(argv, Sequence) else ()
     config_path = _config_path_from_argv(argv) if isinstance(argv, Sequence) else None
     config = _read_json(config_path) if config_path is not None else None
 
@@ -344,6 +400,11 @@ def live_cell_from_manifest(manifest_path: Path) -> LiveCell | None:
         arm_name = config.get("arm_name")
         arm_role = config.get("arm_role")
 
+    metal_footprint, metal_evidence = _metal_fields(argv_parts, budget)
+    declared_source = "manifest"
+    if metal_footprint is not None and metal_footprint > declared_peak:
+        declared_peak = metal_footprint
+        declared_source = "measured_metal_footprint"
     return LiveCell(
         cell_id=cell_id,
         pid=pid,
@@ -358,6 +419,10 @@ def live_cell_from_manifest(manifest_path: Path) -> LiveCell | None:
         arm_name=None if arm_name is None else str(arm_name),
         arm_role=None if arm_role is None else str(arm_role),
         purpose=(str(manifest["purpose"]) if isinstance(manifest.get("purpose"), str) else None),
+        declared_peak_source=declared_source,
+        argv=argv_parts,
+        metal_footprint_gib=metal_footprint,
+        metal_evidence=metal_evidence,
     )
 
 
@@ -483,9 +548,21 @@ def read_process_table() -> list[ProcessRow]:
     fleet).  Both paths swallow per-process permission errors -- another user's process cannot be
     read, and a governed job of ours always can.
     """
+    self_fallback: list[ProcessRow] = []
     try:
         import psutil  # type: ignore
 
+        try:
+            current = psutil.Process(os.getpid())
+            self_fallback = [
+                ProcessRow(
+                    pid=current.pid,
+                    ppid=current.ppid(),
+                    argv=tuple(str(part) for part in current.cmdline()),
+                )
+            ]
+        except Exception:
+            self_fallback = []
         rows: list[ProcessRow] = []
         for proc in psutil.process_iter(["pid", "ppid", "cmdline"]):
             try:
@@ -515,7 +592,7 @@ def read_process_table() -> list[ProcessRow]:
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        return []
+        return self_fallback
     rows = []
     for line in completed.stdout.splitlines():
         parts = line.split()
@@ -526,7 +603,7 @@ def read_process_table() -> list[ProcessRow]:
         except ValueError:
             continue
         rows.append(ProcessRow(pid=pid, ppid=ppid, argv=tuple(parts[2:])))
-    return rows
+    return rows or self_fallback
 
 
 def _is_supervisor(row: ProcessRow) -> bool:
@@ -600,9 +677,11 @@ def live_cells_from_process_table(rows: Sequence[ProcessRow] | None = None) -> l
         # projection.  They can disagree (a hand-edited manifest, an older launcher), and charging
         # the smaller one is exactly the under-reservation that admitted two ~40 GiB Metal cells.
         manifest_peak = 0.0
+        manifest_budget: Mapping[str, Any] = {}
         if isinstance(manifest, dict):
             budget = manifest.get("resource_budget")
             if isinstance(budget, Mapping):
+                manifest_budget = budget
                 try:
                     manifest_peak = float(budget.get("measured_peak_rss_gib") or 0.0)
                 except (TypeError, ValueError):
@@ -670,6 +749,12 @@ def live_cells_from_process_table(rows: Sequence[ProcessRow] | None = None) -> l
         if peak_source == "UNDECLARED" and current_rss is not None:
             declared_peak = current_rss
 
+        all_argv = tuple(part for member in members for part in member.argv)
+        metal_footprint, metal_evidence = _metal_fields(all_argv, manifest_budget)
+        if metal_footprint is not None and metal_footprint > declared_peak:
+            declared_peak = metal_footprint
+            peak_source = "measured_metal_footprint"
+
         cells.append(
             LiveCell(
                 cell_id=cell_id,
@@ -689,6 +774,9 @@ def live_cells_from_process_table(rows: Sequence[ProcessRow] | None = None) -> l
                 declared_peak_source=peak_source,
                 safe_run_pid=None if safe_run is None else safe_run.pid,
                 trainer_pid=None if trainer is None else trainer.pid,
+                argv=all_argv,
+                metal_footprint_gib=metal_footprint,
+                metal_evidence=metal_evidence,
             )
         )
     return sorted(cells, key=lambda cell: (cell.cell_id, cell.pid))
@@ -1212,6 +1300,120 @@ def throughput_verdict(rows: Sequence[Mapping[str, Any]], *, live_count: int) ->
     )
 
 
+def read_metal_admission_rows(path: Path | None = None) -> list[dict[str, Any]]:
+    """Read the append-only admission table; malformed/non-governor rows do not count."""
+    targets = [METAL_ADMISSION_SEED_TABLE, METAL_ADMISSION_TABLE] if path is None else [Path(path)]
+    rows: list[dict[str, Any]] = []
+    for target in targets:
+        if not target.is_file():
+            continue
+        for line in target.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, dict) and row.get("schema") == METAL_ADMISSION_WINDOW_SCHEMA:
+                rows.append(row)
+    return rows
+
+
+def dual_metal_fit_windows(rows: Sequence[Mapping[str, Any]]) -> int:
+    """Count measured windows that explicitly prove two simultaneous Metal occupants fit."""
+    identities = {
+        str(row.get("window_id") or row.get("recorded_utc"))
+        for row in rows
+        if row.get("outcome") == "FIT"
+        and isinstance(row.get("concurrent_metal_occupants"), int)
+        and not isinstance(row.get("concurrent_metal_occupants"), bool)
+        and int(row["concurrent_metal_occupants"]) >= 2
+        and row.get("measured_window") is True
+        and (row.get("window_id") or row.get("recorded_utc"))
+    }
+    return len(identities)
+
+
+@dataclasses.dataclass(frozen=True)
+class MetalOccupancyVerdict:
+    """Independent Metal-occupancy and CPU-feed leg of an admission decision."""
+
+    admits: bool
+    candidate_is_metal: bool
+    live_occupant_count: int
+    live_occupant_names: tuple[str, ...]
+    dual_fit_windows: int
+    required_dual_fit_windows: int
+    required_free_logical_cores: float
+    estimated_free_logical_cores: float | None
+    reasons: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        payload = dataclasses.asdict(self)
+        payload["live_occupant_names"] = list(self.live_occupant_names)
+        payload["reasons"] = list(self.reasons)
+        return payload
+
+
+def metal_occupancy_verdict(
+    live_cells: Sequence[LiveCell],
+    *,
+    candidate_is_metal: bool,
+    admission_rows: Sequence[Mapping[str, Any]],
+    cpu_context: Mapping[str, Any] | None = None,
+) -> MetalOccupancyVerdict:
+    """Apply the one-Metal law and the measured two-free-core feed requirement."""
+    occupants = tuple(cell.cell_id for cell in live_cells if cell.is_metal_occupant)
+    fits = dual_metal_fit_windows(admission_rows)
+    context = dict(cpu_load_context() if cpu_context is None else cpu_context)
+    logical = context.get("logical_cpus")
+    load = context.get("load_avg_1m")
+    free_cores = (
+        max(0.0, float(logical) - float(load))
+        if isinstance(logical, (int, float)) and isinstance(load, (int, float))
+        else None
+    )
+    reasons: list[str] = []
+    if not candidate_is_metal:
+        reasons.append("candidate is CPU-only; the Metal-occupancy leg does not apply")
+    else:
+        if free_cores is None:
+            reasons.append("logical CPU feed is unmeasurable; Metal requires at least two free cores")
+        elif free_cores < MIN_FREE_LOGICAL_CORES_FOR_METAL:
+            reasons.append(
+                f"estimated free logical cores {free_cores:.2f} < Metal minimum "
+                f"{MIN_FREE_LOGICAL_CORES_FOR_METAL:.2f}"
+            )
+        if occupants and fits < MIN_DUAL_METAL_FIT_WINDOWS:
+            reasons.append(
+                f"live Metal occupant(s) {', '.join(occupants)}; admission table has {fits}/"
+                f"{MIN_DUAL_METAL_FIT_WINDOWS} measured dual-Metal FIT windows"
+            )
+        if not reasons:
+            reasons.append(
+                "Metal is unoccupied and the CPU feed is available"
+                if not occupants
+                else f"{fits} measured dual-Metal FIT windows satisfy the concurrency proof floor"
+            )
+    admits = bool(
+        not candidate_is_metal
+        or (
+            free_cores is not None
+            and free_cores >= MIN_FREE_LOGICAL_CORES_FOR_METAL
+            and (not occupants or fits >= MIN_DUAL_METAL_FIT_WINDOWS)
+        )
+    )
+    return MetalOccupancyVerdict(
+        admits=admits,
+        candidate_is_metal=candidate_is_metal,
+        live_occupant_count=len(occupants),
+        live_occupant_names=occupants,
+        dual_fit_windows=fits,
+        required_dual_fit_windows=MIN_DUAL_METAL_FIT_WINDOWS,
+        required_free_logical_cores=MIN_FREE_LOGICAL_CORES_FOR_METAL,
+        estimated_free_logical_cores=free_cores,
+        reasons=tuple(reasons),
+    )
+
+
 # ── the composed decision ───────────────────────────────────────────────────────────────────────
 
 
@@ -1222,6 +1424,7 @@ class AdmissionDecision:
     throughput: ThroughputVerdict
     live_cells: tuple[LiveCell, ...]
     decided_utc: str
+    metal: MetalOccupancyVerdict | None = None
 
     @property
     def admits(self) -> bool:
@@ -1234,6 +1437,7 @@ class AdmissionDecision:
             "decided_utc": self.decided_utc,
             "memory": self.memory.as_dict(),
             "throughput": self.throughput.as_dict(),
+            "metal": None if self.metal is None else self.metal.as_dict(),
             "live_cells": [cell.as_dict() for cell in self.live_cells],
             "live_cell_count": len(self.live_cells),
             "score_claim": False,
@@ -1258,6 +1462,14 @@ class AdmissionDecision:
                 f"{mem.naive_shell_reclaimable_gib:.2f} GiB (decision uses the canonical basis)"
             )
         lines.append(f"  throughput: {thr.evidence} -- {thr.reasons[0] if thr.reasons else 'n/a'}")
+        if self.metal is not None:
+            metal = self.metal
+            names = ", ".join(metal.live_occupant_names) or "NONE"
+            lines.append(
+                f"  Metal   : occupants={names}; dual-fit windows "
+                f"{metal.dual_fit_windows}/{metal.required_dual_fit_windows}; "
+                f"free logical cores={metal.estimated_free_logical_cores} -- {metal.reasons[0]}"
+            )
         for cell in self.live_cells:
             progress = (
                 f"{cell.completed_steps}/{cell.total_steps}"
@@ -1286,6 +1498,9 @@ def decide_admission(
     include_naive_contrast: bool = True,
     walk_roots: bool | None = None,
     concurrency_measurement_override: str | None = None,
+    candidate_is_metal: bool = True,
+    metal_admission_table_path: Path | None = None,
+    cpu_context: Mapping[str, Any] | None = None,
 ) -> AdmissionDecision:
     """Compose the memory and throughput legs into one ADMIT/REFUSE with full arithmetic.
 
@@ -1302,11 +1517,19 @@ def decide_admission(
         ceiling_gib=ceiling_gib,
         include_naive_contrast=include_naive_contrast,
     )
-    # MEMORY charges every live governed job (they all hold RAM). THROUGHPUT counts only TRAINING
-    # CELLS: contention is about cells competing for the Metal, and counting unrelated jobs would
-    # inflate the required concurrency level until no ledger row ever matched, silently making the
-    # throughput leg vacuous ("VACUITY==PASS").
-    contending = sum(1 for cell in cells if cell.is_cell) + 1
+    metal = metal_occupancy_verdict(
+        cells,
+        candidate_is_metal=candidate_is_metal,
+        admission_rows=read_metal_admission_rows(metal_admission_table_path),
+        cpu_context=cpu_context,
+    )
+    # MEMORY charges every live governed job. THROUGHPUT counts independently classified Metal
+    # occupants, not the run-config proxy that missed cl3-style direct trainers.
+    contending = (
+        sum(1 for cell in cells if cell.is_metal_occupant) + 1
+        if candidate_is_metal
+        else 1
+    )
     thr = throughput_verdict(read_contention_rows(ledger_path), live_count=contending)
     if (
         not thr.admits
@@ -1327,11 +1550,12 @@ def decide_admission(
             ),
         )
     return AdmissionDecision(
-        verdict="ADMIT" if (mem.admits and thr.admits) else "REFUSE",
+        verdict="ADMIT" if (mem.admits and metal.admits and thr.admits) else "REFUSE",
         memory=mem,
         throughput=thr,
         live_cells=tuple(cells),
         decided_utc=utc_text(),
+        metal=metal,
     )
 
 
@@ -1364,6 +1588,8 @@ def _cmd_admit(args: argparse.Namespace) -> int:
         ceiling_gib=args.ceiling_gib,
         walk_roots=True if getattr(args, "walk_roots", False) else None,
         concurrency_measurement_override=getattr(args, "concurrency_measurement_override", None),
+        candidate_is_metal=not getattr(args, "cpu_only_candidate", False),
+        metal_admission_table_path=getattr(args, "metal_admission_table", None),
     )
     if args.json:
         print(json.dumps(decision.as_dict(), indent=2, sort_keys=True))
@@ -1398,9 +1624,12 @@ def _cmd_cells(args: argparse.Namespace) -> int:
     if not cells:
         print("live cells: NONE")
         return 0
-    print(f"live governed jobs: {len(cells)} ({sum(1 for c in cells if c.is_cell)} training cells)")
+    print(
+        f"live governed jobs: {len(cells)} ({sum(1 for c in cells if c.is_cell)} training cells; "
+        f"{sum(1 for c in cells if c.is_metal_occupant)} Metal occupants)"
+    )
     for cell in cells:
-        kind = "cell" if cell.is_cell else "job "
+        kind = "Metal" if cell.is_metal_occupant else ("cell" if cell.is_cell else "job ")
         print(
             f"  [{kind}] {cell.cell_id} pid={cell.pid} "
             f"steps={cell.completed_steps}/{cell.total_steps} "
@@ -1488,6 +1717,12 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument("--margin-gib", type=float, default=DEFAULT_MARGIN_GIB)
     admit.add_argument("--ceiling-gib", type=float, default=None)
     admit.add_argument("--ledger", type=Path, default=None)
+    admit.add_argument("--metal-admission-table", type=Path, default=None)
+    admit.add_argument(
+        "--cpu-only-candidate",
+        action="store_true",
+        help="classify the candidate as CPU-only; Metal occupancy and contention do not apply",
+    )
     admit.add_argument("--root", **common_roots)
     admit.add_argument(
         "--walk-roots",

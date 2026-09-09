@@ -339,12 +339,17 @@ def section_live_cells() -> tuple[list[str], dict | None]:
                 "available": True,
                 "live_job_count": 0,
                 "training_cell_count": 0,
+                "metal_occupant_count": 0,
+                "metal_occupant_names": [],
                 "score_claim": False,
                 "actuation": "SENSE_ONLY",
             }
 
+        occupants = [cell for cell in cells if cell.is_metal_occupant]
+        occupant_names = [cell.cell_id for cell in occupants]
         lines = [
-            f"live cells: {len(training)} training cell(s) of {len(cells)} governed job(s)"
+            f"live cells: {len(training)} training cell(s) of {len(cells)} governed job(s); "
+            f"Metal occupants: {', '.join(occupant_names) if occupant_names else 'NONE'}"
         ]
         cell_rows: list[dict] = []
         for cell in cells:
@@ -364,7 +369,8 @@ def section_live_cells() -> tuple[list[str], dict | None]:
             if not cell.is_cell:
                 lines.append(
                     f"  job  {cell.cell_id} pid={cell.pid} "
-                    f"declared_peak={cell.declared_peak_gib:.1f} GiB (not a training cell)"
+                    f"declared_peak={cell.declared_peak_gib:.1f} GiB "
+                    f"({'Metal occupant; ' if cell.is_metal_occupant else ''}not a training cell)"
                 )
                 continue
             progress = (
@@ -375,7 +381,8 @@ def section_live_cells() -> tuple[list[str], dict | None]:
             rate_text = f"{rate:.1f}/min" if rate else "rate unmeasured"
             eta_text = f"ETA {eta_min / 60.0:.1f} h" if eta_min is not None else "ETA unknown"
             lines.append(
-                f"  cell {cell.cell_id} [{cell.arm_role or 'role?'}] {progress} "
+                f"  cell {cell.cell_id} [{'Metal; ' if cell.is_metal_occupant else ''}"
+                f"{cell.arm_role or 'role?'}] {progress} "
                 f"({rate_text}, {eta_text}) peak {cell.declared_peak_gib:.1f} GiB "
                 f"declared / {cell.current_rss_gib or 0.0:.1f} GiB live"
             )
@@ -403,6 +410,8 @@ def section_live_cells() -> tuple[list[str], dict | None]:
             "available": True,
             "live_job_count": len(cells),
             "training_cell_count": len(training),
+            "metal_occupant_count": len(occupants),
+            "metal_occupant_names": occupant_names,
             "cells": cell_rows,
             "admission_probe_peak_gib": probe_peak,
             "admission": decision.as_dict(),
