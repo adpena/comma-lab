@@ -358,6 +358,58 @@ about the same, the surrogate is not steering at all), and `--full-field` accumu
 chunks (~50 s/step) so draw noise stops being a candidate explanation. With 12,672 parameters and a deterministic objective, the
 noise-free gradient is affordable — which is the honest answer to a saturating minibatch drift.
 
+### The random-direction control settles the confound (`receipts/PERTURB.json`)
+
+Random ±1 code changes of the same sizes, two seeded draws each, same n600 realized-argmax path, same null
+(`null_flips_same_path = 12,871`, the +5 device gap):
+
+| codes changed | RANDOM extra flips (2 draws) | TRAINED extra flips | trained is better by | collateral avoided |
+|---:|---|---:|---:|---:|
+| 4 | 640, 1,463 (mean **1,051**) | **493** | **2.13×** | 53.1 % |
+| 18 | 1,707, 2,799 (mean **2,253**) | **847** | **2.66×** | 62.4 % |
+| 66 | 6,418, 5,576 (mean **5,997**) | **1,463** | **4.10×** | **75.6 %** |
+
+**The surrogate IS steering, and its advantage GROWS with the dose** — 2.13× → 2.66× → 4.10×. So the negative reach is NOT "no descent
+direction exists": a random direction of the same size is 4.1× more destructive, and the trained direction avoids **75.6 %** of the
+collateral a random one inflicts.
+
+That converts the arm's verdict from a closure into a **quantified gap**. To break even the search must avoid **100 %** of the
+collateral; it reaches 75.6 % at 66 codes and is still improving with dose. The remaining 1,463 cells are the whole distance between this
+formulation and a candidate. And because the rate is nearly free (66 codes = 17.9 B = 1.19e-05 S), a search that reached ~100 % avoidance
+and then repaired even a few hundred cells would win comfortably.
+
+## 8c. Counting falsifier (a) plainly
+
+The charter's falsifier (a): *"after 3,000 steps at the object's own LR the instrument residual falls < 3 % → widen to all four blocks
+ONCE at the same LR; if still < 3 %, the renderer-weight actuator is closed on this object (formulation scope)."*
+
+**It fired.** The residual did not fall 3 %; it ROSE, monotonically, to −9.6 % at 46 changed codes. Counted plainly: this formulation —
+head + `blocks.3` int4 codes, expected-flip surrogate at annealed τ, minibatch 4, AdamW at lr 2e-3 with the S-linearised pose terms —
+**does not repair the residual. It damages it.** No candidate was built, no admission was run, and no seal exists, because a candidate
+that is worse on seg cannot become better on pose or rate: `dS_seg` alone is +1,238 × 8.477e-07 = **+1.05e-03 S**, which is 52× the
+admission bar in the wrong direction.
+
+**What the charter's prescribed cure does NOT fit.** The widening exists to test "the edge is not reachable through these two layers."
+The measurement says the opposite: the edge is violently reachable — 18 codes move 847 argmax cells. Adding `blocks.2` at the same LR adds
+10,080 more codes to a search that is already oscillating at ~5 % direction persistence; it would spend an hour to answer a question this
+data did not ask, and its most likely result is a larger negative. Recording that the prescribed cure is mis-aimed is not a licence to
+skip it — it is the reason to run the two controls FIRST, because they decide whether widening is even the right axis.
+
+**What the data prescribes instead**, in order:
+
+1. **`perturb-control`** — **RUN, and it answered**: random costs 2.1–4.1× more, so the surrogate IS steering and the finding is about
+   the collateral ratio, not about the existence of a direction (see the table above).
+2. **`--full-field`** (built, ~35 min for 40 steps): the exact n600 gradient, 150 chunks of 4. This removes minibatch draw noise as a
+   candidate explanation for the oscillation. With 12,672 parameters and a deterministic objective there is no reason to accept a 5 %-
+   persistent direction.
+3. Only then, if the noise-free direction still damages, is the actuator closed at `verdict_scope: formulation`, and the widening becomes
+   the last thing to try rather than the first.
+
+**What is NOT closed by this.** The paradigm — *a renderer-weight change admitted per pair through the carrier re-solve* — is untouched.
+Two of its three legs measured favourably before the search failed: the rate leg is nearly free (0.0139 B/code, break-even 0.011 cells per
+code) and the pose leg's structural precondition holds on every pair (rank 6/6, reach 1,892–2,020 codes). The leg that failed is the
+one that picks WHICH codes to move. Per Catalog #307 this is an IMPLEMENTATION-level falsification with the paradigm intact.
+
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach.** Run `experiments/ddm_rw1_FIRE_ORDER.sh` step 3 (MPS, 3,000 steps, batch 4) the moment BOTH gate
