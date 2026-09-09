@@ -378,6 +378,23 @@ collateral; it reaches 75.6 % at 66 codes and is still improving with dose. The 
 formulation and a candidate. And because the rate is nearly free (66 codes = 17.9 B = 1.19e-05 S), a search that reached ~100 % avoidance
 and then repaired even a few hundred cells would win comfortably.
 
+### A design fault the full-field probe exposed on its first step: AdamW is the wrong optimizer for this actuator
+
+The exact-gradient run's very first step moves the latent by **0.0400 code units — exactly `lr`** — and its second step reports a
+byte-identical loss, surrogate, barrier and reach. Both facts are the same fact. The forward is piecewise constant in the latent (the
+STE's round only changes the object when a code crosses ±0.5), and **AdamW normalises per parameter**, so *every* code with a non-zero
+gradient drifts at the same ~`lr` rate regardless of how much that code matters.
+
+That is precisely the wrong dynamics here. The rate law and the collateral measurement both say the same thing: this actuator wants
+**FEW, WELL-CHOSEN** codes to move. A per-parameter-normalised optimiser instead marches all 12,672 toward the rounding boundary together,
+so they cross in a near-simultaneous wave — the sparsity that makes the rate nearly free and keeps the collateral small is destroyed by
+the update rule, not by the objective. Plain SGD moves each code in proportion to its own gradient and preserves exactly that sparsity;
+so does an explicit top-k selection on the accumulated gradient.
+
+This was not visible in the minibatch run because there the drift saturated at ~0.63 and only ~130 codes ever crossed — the noise was
+masking the optimizer's own bias toward density. It is recorded here as a named next-arm change, not as a post-hoc excuse: the run that
+exposed it was launched to answer a different question.
+
 ## 8c. Counting falsifier (a) plainly
 
 The charter's falsifier (a): *"after 3,000 steps at the object's own LR the instrument residual falls < 3 % → widen to all four blocks
@@ -412,13 +429,16 @@ one that picks WHICH codes to move. Per Catalog #307 this is an IMPLEMENTATION-l
 
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
-- **OWED #1 — the reach.** Run `experiments/ddm_rw1_FIRE_ORDER.sh` step 3 (MPS, 3,000 steps, batch 4) the moment BOTH gate
-  conditions hold (0 Metal occupants AND `.omx/tmp/codex_runs/ddm_sj1_pass4_r2.done.done` exists), then steps 4a–4b (render + seg)
-  for the n600 instrument residual. STATUS: `blocked-by-sj1-pass4-receipt` (a NAMED, MEASURED blocker: MAIN's sequencing rule).
-  READY: yes — one command, everything upstream controlled.
+- **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
+- **OWED #1b — close the 24 % collateral gap.** The control (§8b) says the surrogate avoids 75.6 % of a random direction's damage and
+  needs 100 %. Live probe: the exact-n600-gradient run (`--full-field`, 25 steps at lr 0.04, ~21 min) removes the ~5 %-persistence draw
+  noise as an explanation. If the noise-free direction still damages, the actuator is closed at `verdict_scope: formulation` and the
+  charter's widening is the last thing to try; if it turns, the arm is alive and the next question is how far.
+  STATUS: `DOING-NOW`.
 - **OWED #2 — the per-pair recovery on a GLOBAL change.** `FIRE_ORDER` step 4c. Nobody has measured whether the per-pair re-solve
-  keeps fe1's 643–3,053× when all 600 renders move at once; §4 shows the structural precondition holds on every pair.
-  STATUS: blocked-by-OWED-#1.
+  keeps fe1's 643–3,053× when all 600 renders move at once; §4 shows the structural precondition holds on every pair. It was NOT run
+  here because a candidate that is worse on seg cannot be rescued on pose, so spending 1.4 h on it would have been means-hoarding.
+  STATUS: `blocked-by-a-candidate-that-is-not-worse-on-seg`.
 - **OWED #3 — the widening, only if falsifier (a) fires.** `--widened` opens `blocks.2.{dw,pw}.weight` (+10,080 codes, still
   depth 4 and un-pruned). At the measured rate law that is still ~+200 B for a total rewrite. STATUS: conditional.
 - **OWED #4 — the `blocks.*.film` half is out of scope by construction**, because those runs are row-pruned to 2 of 192 rows and
