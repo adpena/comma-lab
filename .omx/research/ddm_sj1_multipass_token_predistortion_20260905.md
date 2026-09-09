@@ -1588,6 +1588,95 @@ the token grid's yield there is 0.74× its own average.**
 
 ---
 
+## 26. PASS 5 — the rate leg, MEASURED on the coder that is actually live
+
+The predecessor pricing script (`experiments/ddm_sj1_successor_price.sh`) encodes through
+the cl2 HPAC receiver copy. That coder was replaced under this arm — move 36 shipped tc1's
+35-weight shared mixer over HPAC and move 37 kept it — so a delta measured there would not
+be this candidate's price. New surface: `experiments/ddm_sj1_pass5_price.py`, which is
+`ddm_cmp1_compose.encode`'s loop re-pointed at the live cmp2 tree and parameterised by the
+field. Receipt `/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/PRICE.json`.
+
+### 26a. The gates, in the order they had to pass
+
+| gate | result |
+|---|---|
+| the live tree's own reader returns the tail this module targets | **119,779 B, sha `ffcd64bd…`** |
+| 2-frame smoke reproduces cmp1's own identity control | **mixed envelope sha `5ceb58cb…`, byte-identical** |
+| **CONTROL: the SHIPPED pass-4 field re-encodes to the shipped tail** | **byte-identical, 119,779 B `ffcd64bd…`** |
+| twin encodes of each field | **byte-identical, both fields** |
+| control archive rebuilt from the re-encoded stream | **180,388 B, sha `670d38d0…` — the live pointer's own bytes** |
+| HPAC cross-check (the superseded coder, free in the same loop) | **120,367 B — rp1's independent control, to the byte** |
+
+The control archive reproducing the live sha is the second identity proof and the one that
+matters: it says the delta below is a delta of the shipped object, not of a nearby rebuild.
+
+### 26b. THE PRICE
+
+| | measured |
+|---|---:|
+| candidate mixed stream | **120,008 B**, sha `5fe9aedb…`, twin byte-identical |
+| candidate archive | **180,617 B**, sha `18cb0d79…` |
+| **exact container delta** | **+229 B** (stream +229 B — identical, the member is ZIP STORE) |
+| tokens changed | 235 across 126 pairs |
+| **bits per changed token** | **7.7957** |
+| break-even | 10.2715 |
+| **price margin** | **1.318×** |
+
+**Against the pre-registration.** §20b projected **7.7203** bits/token on a rising-price
+model; §20e warned the figure was optimistic to the extent pass 5's placements were more
+constrained than pass 4's greedily-chosen ones, and cited §24b's forced-placement writes at
+**1.73×**. **Measured 7.7957 — 1.0098× the projection.** The placement-price caveat did NOT
+bite: pass 5's sites priced like pass 4's greedy ones, not like the slide family's forced
+ones. This is the first rate projection this arm has landed inside 1%, after misses of
+1.417× (pass 4) and 0.757× on margin.
+
+| leg | ΔS |
+|---|---:|
+| rate (+229 B) | **+1.524817e-04** |
+| seg (237 cells) | **−2.009074e-04** |
+| **rate + seg, before any pose** | **−4.842569e-05** |
+| admit bar | −2e-05 |
+| **margin on rate+seg alone** | **2.42×** |
+
+### 26c. Two numbers that are NOT what they look like
+
+**The ideal-vs-realized ratio is a coder-efficiency check, not rp1's coupling.** This loop
+records each encode's own ideal codelength under its own adaptive state: 229.191 B ideal
+against 229 B realized, so RC64's framing costs **−0.19 B** on the delta. That is not the
+same object as rp1's 0.1445 realization ratio, which prices a change under the CONTROL's
+model and then re-encodes. Reporting 0.999 as if it refuted the coupling law would be a
+units-and-level error; it refutes nothing and measures the coder, not the model.
+
+**The per-pair ledger is clean here, and that is worth recording because it need not have
+been.** The two per-frame bit ledgers put **228.925 B of the 229.191 B on the 126 EDITED
+pairs and only 0.266 B on the other 474** — the adaptive spill onto untouched pairs is
+0.12% of the delta. rp1 measured the opposite regime on the saving side, where removing a
+learned surprise re-priced its neighbours and returned 85% of the gain. Adding surprise, at
+this density, stays local. The ledger therefore ranks pairs honestly for the subset sweep —
+though the SELECTED subset is still priced by its own real re-encode, because the sum
+under-charges the container (pass 3: +19.6 B; pass 4: +5.70 B).
+
+### 26d. The pre-registered stop does NOT fire
+
+Written before the number was read
+(`ddm_sj1_pass5_price/DECISION_PREREGISTRATION.json`, with an amendment also written before
+it: the first draft of the stop rule assumed a zero pose leg was the most favourable value
+this vehicle has taken, which is false — pass 4's subset pose leg was a **credit** of
+−3.5258e-05, 1.76× the bar — and the rule as first written was additionally **vacuous**,
+since a best-case subset saving is non-negative by construction and so could never fire).
+
+Corrected rule: stop without spending the pose chain iff the ledger-priced best-case subset
+saving **G < 22.9148 B**, that being the saving pass 4's best-ever subset pose credit would
+still need to reach the bar.
+
+**MEASURED G = 101.171 B** over the 126 selectable pairs (78 of them pay on rate and seg
+alone), 4.4× the stop threshold; and the FULL edited field already nets **+72.80 B** of
+saving, ΔS −4.8426e-05, without any pose leg at all. **The stop does not fire on any
+reading.** The pose chain runs and the Lagrange sweep decides, exactly as §20d planned.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
