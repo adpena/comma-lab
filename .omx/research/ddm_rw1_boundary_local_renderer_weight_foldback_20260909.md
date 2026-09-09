@@ -679,7 +679,7 @@ rel = 1e-05 buy nothing because the render stops responding there.
 **1,080** — the prefix is **13.9 % easier**, a stronger seg prefix bias than the 0.95–0.97× in memory. The verdict is taken on the random
 draw; the prefix number is reported because it was asked for, and labelled.
 
-## 8f. The first repair this arm has ever seen — and the base it moved to
+## 8f. An apparent repair — WITHDRAWN in §8h as a screening artifact (kept for provenance)
 
 Running the realized search **inside the measured productive window** (relative scale moves, not fp16 ULPs) produced the arm's first
 accept: `blocks.3.dw.weight` row 34 at `rel = +3e-05`, screen flips **2,646 → 2,645**, `accepted: true`, at evaluation 28 of a 52-eval
@@ -741,6 +741,43 @@ same ratio.
 **Scored at the operating point** (S 0.13867171823146562, gap 0.018671718): the one repair found is worth `8.477e-07` S = **0.00454 % of
 the gap**; the accompanying 213 damages are worth **+1.806e-04 S = +0.967 %**. There is no configuration of this actuator in which those
 two numbers swap places.
+
+## 8h. CORRECTION — the "first repair" was a screening artifact, and the screen itself is the error
+
+The one accept, confirmed at **n600** (`receipts/SCALE_ACCEPT_N600.json`): `blocks.3.dw.weight` row 34 at `rel = +3e-05`,
+**12,618 → 12,621 = +3 cells, i.e. it DAMAGES.** On the 120-pair screen it measured **−1** (a repair). It repaired one cell inside the
+screen and broke four outside it.
+
+**So §8f's headline is withdrawn: there was no repair.** I reported "the first repair this arm has ever seen" to MAIN on the strength of a
+screen number; the full field says the opposite. Recording that plainly, because a retracted claim that is quietly dropped is worse than
+the original overclaim.
+
+**The methodological error is mine and it is worth more than the retraction.** I inherited the screening pattern from sj1/fe1, where a
+120-pair screen IS a valid acceptance oracle — because a TOKEN move is confined to one pair, so everything outside the screen is provably
+unchanged. **A scale move is GLOBAL over all 600 pairs**, so its effect outside the screen is unobserved, and measured here it was of the
+opposite sign and four times larger. The screening pattern does not transfer from a per-pair actuator to a global one, and I transferred
+it without re-deriving its precondition — the same shape as every constants-are-poison finding in this campaign, committed on a method
+rather than on a number.
+
+**What that does to §8g's table.** The 213 : 22 : 1 distribution is a **screen-level** distribution, and the single case checked at n600
+flipped sign. So the screen is not an oracle for this actuator, and the only trustworthy numbers in the whole scale family are the ones
+measured at n600 directly:
+
+| measured at n600 | cells | ΔS | ΔS / gap |
+|---|---:|---:|---:|
+| fp16 ULP move (sizing, median) | +25 | +2.119e-05 | **+0.113 %** |
+| rel 1e-04 (sizing, median) | +10 | +8.477e-06 | **+0.045 %** |
+| rel 3e-05, the accepted row | **+3** | +2.543e-06 | **+0.0136 %** |
+| rel ≤ 1e-05 (sizing) | 0 | 0 | 0.00 % |
+| **repairs confirmed at n600, any route, any actuator** | **0** | — | — |
+
+The direction of §8g's conclusion is unchanged and is in fact strengthened — every n600-confirmed number for this actuator is ≥ 0, and
+the limit as the step shrinks is *no effect*. What changes is that the conclusion now rests on n600 rows rather than on a screen whose
+validity I had assumed.
+
+**Consequence for any successor:** an actuator that moves all 600 renders must be screened at n600, or not screened at all. At ~35 s per
+n600 evaluation a 768-proposal search costs 7.5 h, which is the real price of searching a global actuator and should be budgeted, not
+discovered.
 
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
