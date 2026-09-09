@@ -36,7 +36,7 @@ RX1 ``reserved`` byte, so the brotli quality, the window size and the interleave
 ENCODER-ONLY choices -- the receiver is never told which were used and its decode path is
 unchanged.  Searching q in {9, 10, 11} x lgwin in {16, 18, 20, 22, 24} x {ck2, plain} and
 shipping the smallest recovers **63.5 B at N = 1** and **47.1 B at N = 72**.  The live body's own
-shape is ``(ck2, 11, 16)``; it is the best shape for the SHIPPED codes and a poor one for any
+shape is ``(ck2, 11, 24)``; it is the best shape for the SHIPPED codes and a poor one for any
 edit of them.
 
 WHY IT MATTERS.  A one-cell seg repair is worth -8.4771e-07 S and one archive byte costs
@@ -81,7 +81,7 @@ LIVE_ARCHIVE_SHA256 = (
 LIVE_ARCHIVE_BYTES = 181_645
 SHIPPED_SEMANTIC_SECTION_BYTES = 30_246
 SHIPPED_RC1_STREAM_BYTES = 31_792
-SHIPPED_CONTAINER_SHAPE = ("ck2", 11, 16)
+SHIPPED_CONTAINER_SHAPE = ("ck2", 11, 24)
 RX1_RESERVED = 0x7A
 
 #: Least-squares fits over N in {1, 2, 5, 10, 25, 50, 72, 100, 150, 200}, ten draws each.

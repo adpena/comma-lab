@@ -116,25 +116,32 @@ def build_candidate_archive(
     codes: np.ndarray,
     carrier_codes: np.ndarray,
     *,
-    runtime_dir: Path = fe1.LIVE_RUNTIME,
+    tree_dir: Path = fe1.LIVE_TREE,
     container_search: bool = True,
     verify: bool = True,
 ) -> dict[str, Any]:
-    """Archive bytes carrying ``codes`` (frame_embed) and ``carrier_codes`` (carrier)."""
+    """Archive bytes carrying ``codes`` (frame_embed) and ``carrier_codes`` (carrier).
+
+    ``tree_dir`` is the TREE ROOT.  Two conventions meet here and mixing them is a real
+    failure mode: ``up3`` wants the root (it reads ``<root>/archive.zip`` and imports the
+    ``runtime`` package from it) while ``jg1``/``fe1`` want the ``runtime/`` package dir.
+    Both are derived from the root here so no caller has to remember which is which.
+    """
+    runtime_dir = Path(tree_dir) / "runtime"
     import brotli
 
-    body = up3.parse_shipped_body(runtime_dir, verify_sha=False)
+    body = up3.parse_shipped_body(tree_dir, verify_sha=False)
     built = up3.build_archive(
         body,
         carrier_codes,
-        runtime_dir=runtime_dir,
+        runtime_dir=tree_dir,
         container_search=container_search,
         verify=verify,
     )
     with zipfile.ZipFile(io.BytesIO(built["archive_bytes"])) as archive:
         outer = archive.read("p")
 
-    ra, _cr, _ar1, _cp = up3._import_runtime(runtime_dir)
+    ra, _cr, _ar1, _cp = up3._import_runtime(tree_dir)
     header = ra.RX1_MODEL_HEADER.unpack_from(outer)
     magic, version, codec, table_mode, reserved, hpac_bytes, semantic_bytes, carrier_bytes = header
     offset = ra.RX1_MODEL_HEADER.size
@@ -155,7 +162,14 @@ def build_candidate_archive(
             shapes[("plain", quality, lgwin)] = brotli.compress(
                 stream, quality=quality, lgwin=lgwin
             )
-    chosen = min(shapes, key=lambda key: (len(shapes[key]), key))
+    # Ties go to the SHIPPED shape.  Two shapes can produce the same NUMBER of bytes and
+    # different bytes (brotli records its window size), so a length-only tie-break would
+    # ship a stream that differs from the pointer's for no reason and break the null-build
+    # identity control that makes every later byte number checkable.
+    chosen = min(
+        shapes,
+        key=lambda key: (len(shapes[key]), key != price.SHIPPED_SHAPE, key),
+    )
     semantic_stream = shapes[chosen]
     reserved = (
         reserved | ra.CK2_RESERVED_SEMANTIC_PLANE2
@@ -207,7 +221,7 @@ def build_candidate_archive(
                 "codes; refusing to return unverified bytes"
             )
         recovered_carrier, _info = up3.parse_back_codes(
-            archive_bytes, runtime_dir=runtime_dir
+            archive_bytes, runtime_dir=tree_dir
         )
         if not np.array_equal(
             np.asarray(recovered_carrier, dtype=np.int64),
@@ -376,7 +390,7 @@ def cmd_admit(args) -> int:
     if not rows:
         raise fe1.Fe1Error("no priced pairs")
     section = fe1.load_semantic_section()
-    body = up3.parse_shipped_body(fe1.LIVE_RUNTIME, verify_sha=False)
+    body = up3.parse_shipped_body(fe1.LIVE_TREE, verify_sha=False)
     live_carrier = np.asarray(body.codes, dtype=np.int32)
     base_pose = float(args.base_mean_d_pose)
     base_leg = math.sqrt(10.0 * base_pose)

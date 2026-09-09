@@ -46,8 +46,12 @@ N_PAIRS = fe1.N_PAIRS
 #: interleave rides in the RX1 ``reserved`` byte, so none of these is transmitted.
 CONTAINER_QUALITIES = (9, 10, 11)
 CONTAINER_LGWINS = (16, 18, 20, 22, 24)
-#: The shape the live body ships (measured: it reproduces the header's 30,246 B).
-SHIPPED_SHAPE = ("ck2", 11, 16)
+#: The shape the live body ships.  Pinned by BYTE identity, not by length: (ck2, 11, 16)
+#: and (ck2, 11, 24) both produce 30,246 B on the shipped codes and they are DIFFERENT
+#: 30,246 bytes -- brotli records the window size in its own header -- so a tie-break that
+#: reads only the length silently ships a different stream.  Only lgwin=24 reproduces the
+#: archive's semantic section byte for byte.
+SHIPPED_SHAPE = ("ck2", 11, 24)
 CAMERA_H, CAMERA_W = jg1.CAMERA_H, jg1.CAMERA_W
 CELL_COUNT = N_PAIRS * fe1.EVAL_H * fe1.EVAL_W
 
