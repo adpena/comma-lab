@@ -33,11 +33,24 @@ echo "== 2. rate law (~35 s; only if the semantic section changed) =="
 echo "${LAUNCH} --output-dir ${WORK}/logs/ratelaw --done-receipt rw1_ratelaw.done --nice 10 --nice-best-effort -- ${PY} ${ARM} rate-law --threads 2"
 
 echo
-echo "== 3. TRAIN — GATED, one Metal occupant (~2 h at 3,000 steps, batch 4) =="
+echo "== 3. TRAIN — GATED, one Metal occupant =="
+cat <<'TRAINNOTE'
+MEASURED cost (25-step MPS compatibility+timing smoke, batch 4, 2 threads, while the
+machine was loaded): 2.17 s/step -> 3,000 steps ~= 1.81 h, plus ten n600 evaluations.
+
+LR, RE-DERIVED against the measured rate law.  The first derivation targeted an O(1)-code
+drift over the horizon (lr = 2/T = 6.7e-4) because the rate was believed expensive.  The
+rate law says a FULL rewrite of all 12,672 codes costs 176.7 B = 139 repaired cells, so an
+O(1) drift is now needlessly timid: at 6.7e-4 the measured drift after 25 steps is 0.0086
+codes (predicted 0.0084, ratio 1.02) and NO code crosses a rounding boundary.  Target an
+O(3)-code drift instead: lr = 2*3/3000 = 2e-3.  The n600 evaluation every 300 steps IS the
+line search -- the best-by-instrument checkpoint is kept, so an ft1-style excursion is
+caught at step 300 rather than at the end.
+TRAINNOTE
 echo "# check the gate first:"
 echo "${PY} ${REPO}/tools/cell_admission.py cells | head -2"
 echo "ls ${REPO}/.omx/tmp/codex_runs/ddm_sj1_pass4_r2.done.done"
-echo "${LAUNCH} --output-dir ${WORK}/logs/train --done-receipt rw1_train.done --nice 10 --nice-best-effort -- ${PY} ${ARM} train --device mps --steps 3000 --batch 4 --eval-every 300 --checkpoint-every 300 --run-dir ${WORK}/runs/foldback --out ${WORK}/receipts/TRAIN.json --threads 3"
+echo "${LAUNCH} --output-dir ${WORK}/logs/train --done-receipt rw1_train.done --nice 10 --nice-best-effort -- ${PY} ${ARM} train --device mps --steps 3000 --batch 4 --lr 2e-3 --eval-every 300 --checkpoint-every 300 --run-dir ${WORK}/runs/foldback --out ${WORK}/receipts/TRAIN.json --threads 3"
 echo "# resumable: add --resume-from ${WORK}/runs/foldback/ckpt.periodic.stepNNNNNN.pt"
 
 echo

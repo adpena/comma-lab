@@ -28,7 +28,9 @@ inverts the charter's own rate premise:
 
 The number the arm exists to buy — the **reach** of the renderer-weight actuator on this object — is **NOT YET MEASURED**. Training is
 gated behind sj1's pass-4 receipt (MAIN's sequencing rule: its five CPU shards starve a Metal cell's host thread). Everything upstream of
-that gate is built, controlled and committed.
+that gate is built, controlled and committed, and the launch cost is measured rather than estimated: a 25-step MPS
+compatibility-and-timing smoke (batch 4, 2 threads, on a loaded machine) runs the whole graph — `functional_call` over the shipped
+renderer, the exact R, SegNet and PoseNet — at **2.17 s/step**, so the 3,000-step run is **≈ 1.81 h** plus ten n600 evaluations.
 
 ---
 
@@ -204,8 +206,15 @@ Because the parameter is the **code**, the LR has a unit: code units per step. A
 run of T steps drifts ≈ `0.5·lr·T` code units. Setting an O(1)-code drift over the horizon gives `lr = 2/T`; at T = 3,000 that is
 **6.7e-4 code units/step**.
 
-Measured in the 30-step CPU smoke: predicted drift `0.5·6.7e-4·30 = 0.01005`, **measured 0.009124** — ratio **0.91**. The derivation
-holds on this vehicle to 9 %, which is the line search, done cheaply and against the actual object.
+Measured twice. 30-step CPU smoke, batch 1: predicted `0.5·6.7e-4·30 = 0.01005`, **measured 0.009124** — ratio **0.91**. 25-step MPS
+smoke, batch 4: predicted `0.5·6.7e-4·25 = 0.008375`, **measured 0.008609** — ratio **1.02**. The derivation holds on this vehicle across
+both devices and both batch shapes, which is the line search, done cheaply and against the actual object.
+
+**Then re-derived against §3.** The O(1)-code target was chosen while the rate was believed expensive. The rate law says a full rewrite
+of all 12,672 codes costs 176.7 B = 139 cells, so an O(1) drift is needlessly timid — at `lr = 6.7e-4` NO code crosses a rounding
+boundary in 25 steps. The launch LR is therefore **2e-3** (an O(3)-code drift over 3,000 steps), and the n600 evaluation every 300 steps
+IS the rest of the line search: the best-by-instrument checkpoint is kept, so an ft1-style excursion is caught at step 300 rather than at
+the end. This is a constant being re-derived when its premise moved, not a knob being turned.
 
 ---
 
