@@ -379,6 +379,34 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.1e-06,
         score_t4=0.13882326433317044,
     ),
+    #: LIVE (MAIN 2026-09-09).  THIS ARM'S pass 4, fired and PROMOTED as pointer move #35:
+    #: lane ddm_sj1_t4_token_predistortion_pass4_20260909, -1.515461e-04 S on +148 B.
+    #: VERIFIED AT SOURCE before this row was written -- the lane's own
+    #: MODAL_REMOTE_RESULT.json reads sha b0ca809c…, 181,521 B, and
+    #: score_recomputed_from_components 0.13867171823146562, and the tree on disk hashes
+    #: to the same sha at the same size.
+    #:
+    #: THE CALIBRATION FLIPPED SIGN.  Projected 0.13867280587520867 -> MEASURED
+    #: 0.13867171823146562, residual **-1.0876e-06**: the first PESSIMISTIC projection of
+    #: the wave, against +5.2748e-06 at move 31 and +4.1619e-06 at move 32.  The band this
+    #: arm carried (+0.0030% to +0.0038%, one-signed) is therefore NOT one-signed, and the
+    #: honest reading is a residual of order 1e-06 to 5e-06 with EITHER sign -- the pose
+    #: print moved 5.049766e-06 (measured here) -> 5.05e-06 (T4), and the seg leg came in
+    #: at 0.00010698 against 0.00010699252 projected, i.e. about ONE cell better.
+    PointerRow(
+        label="sj1_token_predistortion_pass4",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+            "/candidate_pass4/candidate_runtime"
+        ),
+        archive_sha256=(
+            "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+        ),
+        archive_bytes=181_521,
+        d_seg_t4=0.00010698,
+        d_pose_t4=5.05e-06,
+        score_t4=0.13867171823146562,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
