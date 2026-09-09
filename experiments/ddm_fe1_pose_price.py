@@ -42,6 +42,12 @@ import ddm_jg5_pose_resolve_on_edited_renders as jg5
 import ddm_up2_shipping_pose_solve as up2
 
 N_PAIRS = fe1.N_PAIRS
+#: Encoder-only container choices.  Brotli streams are self-describing and the CK2
+#: interleave rides in the RX1 ``reserved`` byte, so none of these is transmitted.
+CONTAINER_QUALITIES = (9, 10, 11)
+CONTAINER_LGWINS = (16, 18, 20, 22, 24)
+#: The shape the live body ships (measured: it reproduces the header's 30,246 B).
+SHIPPED_SHAPE = ("ck2", 11, 16)
 CAMERA_H, CAMERA_W = jg1.CAMERA_H, jg1.CAMERA_W
 CELL_COUNT = N_PAIRS * fe1.EVAL_H * fe1.EVAL_W
 
@@ -254,6 +260,137 @@ def cmd_price(args) -> int:
     return 0
 
 
+def archive_section_bytes(section, codes: np.ndarray) -> dict[str, int]:
+    """The SEMANTIC SECTION as the archive stores it, both legal container shapes.
+
+    The receiver reads the section as ``brotli -> (CK2 un-interleave if reserved bit
+    0x2) -> RC1 rider`` (``runtime/residual_archive.py:193,237,248``).  Brotli streams
+    are self-describing and the CK2 choice rides in ``reserved``, so quality, window and
+    interleave are ENCODER-ONLY choices the receiver never has to be told about: all of
+    them are searched and the smallest wins, the same container search
+    ``up3.build_archive`` already runs for the carrier.  This matters far more here than
+    it looks.  The RC1 payload is range-coded, so one changed symbol re-randomises every
+    bit after it and the shipped container shape -- which was chosen for the SHIPPED
+    bytes -- loses roughly 65 B of matches on any edit.  A search over the shapes
+    recovers most of that, and skipping it would price the whole arm about 2x too high.
+    """
+    import brotli
+    import ddm_up3_carrier_splice as up3
+
+    stream = section.stream_with_codes(codes)
+    interleaved = up3._ck2_interleave_planes(stream)
+    shapes: dict[tuple[str, int, int], int] = {}
+    for quality in CONTAINER_QUALITIES:
+        for lgwin in CONTAINER_LGWINS:
+            shapes[("ck2", quality, lgwin)] = len(
+                brotli.compress(interleaved, quality=quality, lgwin=lgwin)
+            )
+            shapes[("plain", quality, lgwin)] = len(
+                brotli.compress(stream, quality=quality, lgwin=lgwin)
+            )
+    best_shape = min(shapes, key=lambda key: (shapes[key], key))
+    return {
+        "rc1_stream": len(stream),
+        "section_shipped_shape": shapes[SHIPPED_SHAPE],
+        "section_best": shapes[best_shape],
+        "best_shape": list(best_shape),
+        "shapes": {"/".join(str(part) for part in k): v for k, v in shapes.items()},
+    }
+
+
+def cmd_rate_law(args) -> int:
+    """What does the ARCHIVE charge for N changed frame_embed codes?
+
+    The RC1 payload is a range-coded bitstream: changing one symbol re-randomises every
+    bit after it, so the brotli layer above it loses the matches it had on the shipped
+    bytes.  That makes the price of an edit almost independent of how many codes moved
+    -- a fixed container break plus a small per-code term -- and it is the number that
+    decides whether a one-cell-per-pair repair can ever pay.
+    """
+    fe1._set_threads(args.threads)
+    section = fe1.load_semantic_section()
+    shipped = archive_section_bytes(section, section.codes)
+    if shipped["section_best"] != args.shipped_section_bytes:
+        raise fe1.Fe1Error(
+            f"container identity failed: the best rebuild of the SHIPPED codes is "
+            f"{shipped['section_best']} B, archive header says "
+            f"{args.shipped_section_bytes} B"
+        )
+    rng = np.random.default_rng(args.seed)
+    steps = (-1, 1, 2)
+    rows = []
+    for count in [int(x) for x in args.counts.split(",")]:
+        draws = []
+        for _ in range(args.repeats):
+            codes = section.codes.astype(np.int64).copy()
+            pairs = rng.choice(N_PAIRS, size=count, replace=False)
+            dims = rng.integers(0, fe1.FRAME_DIM, size=count)
+            for pair, dim in zip(pairs, dims, strict=True):
+                old = int(codes[pair, dim])
+                options = [
+                    old + step
+                    for step in steps
+                    if fe1.CODE_MIN <= old + step <= fe1.CODE_MAX
+                ]
+                codes[pair, dim] = int(rng.choice(options))
+            measured = archive_section_bytes(section, codes)
+            draws.append(
+                {
+                    "d_rc1_stream": measured["rc1_stream"] - shipped["rc1_stream"],
+                    "d_section_shipped_shape": measured["section_shipped_shape"]
+                    - shipped["section_best"],
+                    "d_section_best": measured["section_best"]
+                    - shipped["section_best"],
+                    "best_shape": measured["best_shape"],
+                }
+            )
+        best = np.array([d["d_section_best"] for d in draws], dtype=np.float64)
+        fixed = np.array(
+            [d["d_section_shipped_shape"] for d in draws], dtype=np.float64
+        )
+        rows.append(
+            {
+                "changed_codes": count,
+                "repeats": args.repeats,
+                "d_section_best_mean": float(best.mean()),
+                "d_section_best_std": float(best.std()),
+                "d_section_best_min": int(best.min()),
+                "d_section_best_max": int(best.max()),
+                "bytes_per_code": float(best.mean() / count),
+                "d_section_shipped_shape_mean": float(fixed.mean()),
+                "container_search_recovers_bytes": float(fixed.mean() - best.mean()),
+                "dS_rate_mean": float(best.mean() * fe1.RATE_PER_BYTE),
+                "cells_to_break_even": float(
+                    best.mean() * fe1.RATE_PER_BYTE / (100.0 / CELL_COUNT)
+                ),
+                "draws": draws,
+            }
+        )
+        print(
+            f"  N={count:>4}: archive section {best.mean():+7.1f} +-{best.std():>5.1f} B "
+            f"({best.mean() / count:+.3f} B/code) -> needs "
+            f"{best.mean() * fe1.RATE_PER_BYTE / (100.0 / CELL_COUNT):.1f} repaired "
+            f"cells to break even",
+            flush=True,
+        )
+    result = {
+        "schema": "ddm_fe1_rate_law.v1",
+        "axis": "[exact bytes through the shipped container; scorer-free]",
+        "score_claim": False,
+        "shipped": shipped,
+        "shipped_section_bytes_header": args.shipped_section_bytes,
+        "seed": int(args.seed),
+        "cell_value_S": 100.0 / CELL_COUNT,
+        "rate_per_byte_S": fe1.RATE_PER_BYTE,
+        "rows": rows,
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=1))
+    print(f"wrote {out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -273,6 +410,15 @@ def build_parser() -> argparse.ArgumentParser:
     price.add_argument("--allow-repeat-pairs", action="store_true")
     price.add_argument("--out", default=str(fe1.WORK / "admission/PRICE.json"))
     price.set_defaults(func=cmd_price)
+
+    rate = sub.add_parser("rate-law", help="archive cost of N changed codes")
+    rate.add_argument("--counts", default="1,2,5,10,25,50,72,100,150,200")
+    rate.add_argument("--repeats", type=int, default=8)
+    rate.add_argument("--seed", type=int, default=20260909)
+    rate.add_argument("--threads", type=int, default=2)
+    rate.add_argument("--shipped-section-bytes", type=int, default=30_246)
+    rate.add_argument("--out", default=str(fe1.WORK / "admission/RATE_LAW.json"))
+    rate.set_defaults(func=cmd_rate_law)
     return parser
 
 

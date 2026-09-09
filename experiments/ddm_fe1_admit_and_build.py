@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""ddm_fe1 admission and archive build for per-pair frame-embedding moves.
+
+The search leaves a per-pair ledger of realized code moves.  This turns that ledger into
+an archive, with the same discipline sj1 used on the token tail:
+
+* every candidate pair is re-rendered, its pose measured STALE, its carrier re-solved
+  from the LIVE coefficients, and its pose measured RESOLVED -- per pair, retained;
+* the admitted subset is chosen by a sweep and **priced by a REAL archive build**, never
+  by summing a per-pair bit ledger (sj1's pass-3 seal measured that sum under-charging
+  by 19.6 B, and here the semantic section's cost is not even additive: it is a fixed
+  container-break fee, so a ledger sum would be badly wrong in both directions);
+* the container shape (brotli quality, window, CK2 interleave) is SEARCHED, because none
+  of it is transmitted -- the receiver reads a self-describing brotli stream and one
+  ``reserved`` bit.
+
+The archive is assembled by handing the carrier to ``up3.build_archive`` -- which verifies
+its own bytes parse back to the requested codes -- and then splicing the new semantic
+section into the outer it produced, refusing unless the finished bytes parse back to BOTH
+the requested frame_embed codes and the requested carrier codes with a byte-identical
+token tail.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import io
+import json
+import sys
+import zipfile
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+if str(REPO / "experiments") not in sys.path:
+    sys.path.insert(0, str(REPO / "experiments"))
+
+import ddm_fe1_frame_embedding_search as fe1
+import ddm_fe1_pose_price as price
+import ddm_up3_carrier_splice as up3
+
+N_PAIRS = fe1.N_PAIRS
+CELL_COUNT = price.CELL_COUNT
+ADMIT_BAR = -2e-5
+
+
+def load_candidates(search_dir: Path) -> list[dict[str, Any]]:
+    """Every pair whose realized search found a flip-reducing move."""
+    rows: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    for path in sorted(search_dir.glob("search_rows_*.jsonl")):
+        with path.open("r", encoding="utf-8") as stream:
+            for line in stream:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                pair = int(row["pair"])
+                if pair in seen:
+                    raise fe1.Fe1Error(f"pair {pair} appears in two shards")
+                seen.add(pair)
+                if row["final_delta"] < 0:
+                    rows.append(row)
+    return sorted(rows, key=lambda r: int(r["pair"]))
+
+
+def cmd_merge(args) -> int:
+    search_dir = Path(args.search_dir)
+    rows = load_candidates(search_dir)
+    covered = 0
+    for path in sorted(search_dir.glob("search_rows_*.jsonl")):
+        covered += sum(1 for line in path.open() if line.strip())
+    total_cells = sum(int(r["final_delta"]) for r in rows)
+    total_codes = sum(int(r["changed_codes"]) for r in rows)
+    result = {
+        "schema": "ddm_fe1_merge.v1",
+        "axis": "[macOS-CPU advisory, jg1/sj1 instrument, DALI GT lineage]",
+        "score_claim": False,
+        "pairs_searched": covered,
+        "pairs_offering": len(rows),
+        "offer_rate": covered and len(rows) / covered,
+        "cells_repaired": -total_cells,
+        "codes_changed": total_codes,
+        "candidates": [
+            {
+                "pair": int(r["pair"]),
+                "base_flips": int(r["base_flips"]),
+                "final_flips": int(r["final_flips"]),
+                "cells": -int(r["final_delta"]),
+                "changed_codes": int(r["changed_codes"]),
+                "base_row": r["base_row"],
+                "final_row": r["final_row"],
+            }
+            for r in rows
+        ],
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=1))
+    print(
+        json.dumps({k: v for k, v in result.items() if k != "candidates"}, indent=1)
+    )
+    return 0
+
+
+def build_candidate_archive(
+    section,
+    codes: np.ndarray,
+    carrier_codes: np.ndarray,
+    *,
+    runtime_dir: Path = fe1.LIVE_RUNTIME,
+    container_search: bool = True,
+    verify: bool = True,
+) -> dict[str, Any]:
+    """Archive bytes carrying ``codes`` (frame_embed) and ``carrier_codes`` (carrier)."""
+    import brotli
+
+    body = up3.parse_shipped_body(runtime_dir, verify_sha=False)
+    built = up3.build_archive(
+        body,
+        carrier_codes,
+        runtime_dir=runtime_dir,
+        container_search=container_search,
+        verify=verify,
+    )
+    with zipfile.ZipFile(io.BytesIO(built["archive_bytes"])) as archive:
+        outer = archive.read("p")
+
+    ra, _cr, _ar1, _cp = up3._import_runtime(runtime_dir)
+    header = ra.RX1_MODEL_HEADER.unpack_from(outer)
+    magic, version, codec, table_mode, reserved, hpac_bytes, semantic_bytes, carrier_bytes = header
+    offset = ra.RX1_MODEL_HEADER.size
+    hpac_stream = outer[offset : offset + hpac_bytes]
+    offset += hpac_bytes + semantic_bytes
+    carrier_stream = outer[offset : offset + carrier_bytes]
+    offset += carrier_bytes
+    section_tail = outer[offset:]
+
+    stream = section.stream_with_codes(codes)
+    interleaved = up3._ck2_interleave_planes(stream)
+    shapes: dict[tuple[str, int, int], bytes] = {}
+    for quality in price.CONTAINER_QUALITIES:
+        for lgwin in price.CONTAINER_LGWINS:
+            shapes[("ck2", quality, lgwin)] = brotli.compress(
+                interleaved, quality=quality, lgwin=lgwin
+            )
+            shapes[("plain", quality, lgwin)] = brotli.compress(
+                stream, quality=quality, lgwin=lgwin
+            )
+    chosen = min(shapes, key=lambda key: (len(shapes[key]), key))
+    semantic_stream = shapes[chosen]
+    reserved = (
+        reserved | ra.CK2_RESERVED_SEMANTIC_PLANE2
+        if chosen[0] == "ck2"
+        else reserved & ~ra.CK2_RESERVED_SEMANTIC_PLANE2
+    )
+    new_outer = b"".join(
+        (
+            ra.RX1_MODEL_HEADER.pack(
+                magic,
+                version,
+                codec,
+                table_mode,
+                reserved,
+                hpac_bytes,
+                len(semantic_stream),
+                len(carrier_stream),
+            ),
+            hpac_stream,
+            semantic_stream,
+            carrier_stream,
+            section_tail,
+        )
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+        entry = zipfile.ZipInfo("p", date_time=tuple(body.zip_info["date_time"]))
+        entry.compress_type = body.zip_info["compress_type"]
+        entry.external_attr = body.zip_info["external_attr"]
+        entry.create_system = body.zip_info["create_system"]
+        archive.writestr(entry, new_outer)
+    archive_bytes = buffer.getvalue()
+
+    if verify:
+        # Parse the FINISHED bytes back through the receiver's own reader.  A tree-local
+        # scratch file is used because ``read_residual_archive`` takes a path; it is
+        # rewritten every call and never becomes evidence.
+        scratch = fe1.WORK / "candidate/.verify_archive.zip"
+        scratch.parent.mkdir(parents=True, exist_ok=True)
+        scratch.write_bytes(archive_bytes)
+        recovered_section = fe1.load_semantic_section(
+            archive_path=scratch, runtime_dir=runtime_dir
+        )
+        if not np.array_equal(
+            recovered_section.codes.astype(np.int64), np.asarray(codes, dtype=np.int64)
+        ):
+            raise fe1.Fe1Error(
+                "the written archive does not parse back to the requested frame_embed "
+                "codes; refusing to return unverified bytes"
+            )
+        recovered_carrier, _info = up3.parse_back_codes(
+            archive_bytes, runtime_dir=runtime_dir
+        )
+        if not np.array_equal(
+            np.asarray(recovered_carrier, dtype=np.int64),
+            np.asarray(carrier_codes, dtype=np.int64),
+        ):
+            raise fe1.Fe1Error(
+                "the written archive does not parse back to the requested carrier codes"
+            )
+        if bytes(ra.read_residual_archive(scratch).token_stream) != bytes(
+            ra.read_residual_archive(fe1.LIVE_ARCHIVE).token_stream
+        ):
+            raise fe1.Fe1Error(
+                "the token stream is not byte-identical to the live row; this arm "
+                "changes the semantic and carrier sections only"
+            )
+
+    return {
+        "archive_bytes": archive_bytes,
+        "archive_size": len(archive_bytes),
+        "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "semantic_stream_bytes": len(semantic_stream),
+        "semantic_container": list(chosen),
+        "carrier_stream_bytes": len(carrier_stream),
+        "carrier_container": built["container"],
+        "rx1_reserved": f"{reserved:#x}",
+    }
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    merge = sub.add_parser("merge", help="collect the search's flip-reducing pairs")
+    merge.add_argument("--search-dir", default=str(fe1.WORK / "search"))
+    merge.add_argument("--out", default=str(fe1.WORK / "admission/CANDIDATES.json"))
+    merge.set_defaults(func=cmd_merge)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    return int(args.func(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
