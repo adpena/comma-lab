@@ -31,6 +31,7 @@ if str(REPO / "experiments") not in sys.path:
 import ddm_br1_pose_basis_reorientation as br1
 import ddm_fe1_admit_and_build as ab
 import ddm_fe1_frame_embedding_search as fe1
+import ddm_fe1_pose_price as instrument_price
 import ddm_fe1_rebase as rb
 import ddm_jg5_pose_resolve_on_edited_renders as jg5
 import ddm_up3_carrier_splice as up3
@@ -49,7 +50,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--base-mean-d-pose", type=float, required=True)
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--threads", type=int, default=4)
+    instrument_price.add_pose_reference_arguments(ap)
     args = ap.parse_args(argv)
+    pose_reference = instrument_price.prepare_pose_reference(args)
     fe1._set_threads(args.threads)
 
     tree = Path(args.pointer_tree).resolve()
@@ -70,12 +73,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     frame = fe1.render_pair(body, pair)[0]
     fe1.restore_pair_codes(body, pair)
     base_inst = rb._instrument(raw, tree)
-    import ddm_fe1_pose_price as price
 
-    moved_inst = rb._instrument(price._MemoryOverlayRaw(raw, {pair: frame}), tree)
+    moved_inst = rb._instrument(instrument_price._MemoryOverlayRaw(raw, {pair: frame}), tree)
     codes = np.asarray(base_inst.state.codes, dtype=np.int32)
     threshold = jg5.materiality_dd_threshold(args.base_mean_d_pose)
-    d_base = float(br1.evaluate_codes(base_inst, pair, codes[pair][None])[0])
+    d_base = instrument_price.evaluate_base_codes(
+        base_inst, pair, codes[pair][None], pose_reference
+    )
     control = jg5.refine_pair(base_inst, pair, codes[pair], dd_threshold=threshold)
     d_stale = float(br1.evaluate_codes(moved_inst, pair, codes[pair][None])[0])
     refined = jg5.refine_pair(moved_inst, pair, codes[pair], dd_threshold=threshold)
@@ -85,6 +89,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "final_row": row.tolist(),
         "cells_new": 0,
         "d_pose_base": d_base,
+        "pose_base_gate": pose_reference["pair_checks"].get(pair, pose_reference["receipt"]),
         "d_pose_base_resolved": float(control["final_d_pose"]),
         "d_pose_stale": d_stale,
         "d_pose_resolved": float(refined["final_d_pose"]),

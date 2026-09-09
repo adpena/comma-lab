@@ -124,6 +124,7 @@ def base_argmax_for(pairs: Sequence[int], args) -> dict[int, np.ndarray]:
 
 
 def cmd_rebase(args) -> int:
+    pose_reference = price.prepare_pose_reference(args)
     fe1._set_threads(args.threads)
     tree = Path(args.pointer_tree).resolve()
     archive = tree / "archive.zip"
@@ -221,9 +222,10 @@ def cmd_rebase(args) -> int:
     threshold = jg5.materiality_dd_threshold(args.base_mean_d_pose)
     for entry in survivors:
         pair = int(entry["pair"])
-        entry["d_pose_base"] = float(
-            br1.evaluate_codes(base_inst, pair, live_codes[pair][None])[0]
+        entry["d_pose_base"] = price.evaluate_base_codes(
+            base_inst, pair, live_codes[pair][None], pose_reference
         )
+        entry["pose_base_gate"] = pose_reference["pair_checks"].get(pair, pose_reference["receipt"])
         control = jg5.refine_pair(
             base_inst, pair, live_codes[pair], dd_threshold=threshold
         )
@@ -387,6 +389,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-dir", default=str(fe1.WORK / "rebase"))
     parser.add_argument("--threads", type=int, default=4)
     parser.set_defaults(func=cmd_rebase)
+    price.add_pose_reference_arguments(parser)
     return parser
 
 

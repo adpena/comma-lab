@@ -1852,6 +1852,8 @@ def run_coarsen_price(args) -> int:
         }
         rows.append(row)
         (out / f"coarsen_f{factor:g}_n{count}.zip").write_bytes(built["archive_bytes"])
+        # Preserve measured rows even if the optional coefficient dump fails.
+        (out / "coarsen_price.partial.json").write_text(json.dumps({"rows": rows}, indent=2))
         np.savez_compressed(
             out / f"coarsen_f{factor:g}_n{count}.npz",
             codes=codes,
@@ -2057,6 +2059,8 @@ def run_hybrid_price(args) -> int:
         rows.append(row)
         tag = f"r{rank}_refine{refine:g}"
         (out / f"hybrid_{tag}.zip").write_bytes(built["archive_bytes"])
+        # Preserve measured rows even if the optional coefficient dump fails.
+        (out / "hybrid_price.partial.json").write_text(json.dumps({"rows": rows}, indent=2))
         np.savez_compressed(
             out / f"hybrid_{tag}.npz",
             codes=codes,

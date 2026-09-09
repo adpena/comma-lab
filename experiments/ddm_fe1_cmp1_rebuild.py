@@ -58,7 +58,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--admit-bar", type=float, default=ab.ADMIT_BAR)
     ap.add_argument("--film-top", type=int, default=1, help="how many FiLM survivors to race alongside")
+    price.add_pose_reference_arguments(ap)
     args = ap.parse_args(argv)
+    pose_reference = price.prepare_pose_reference(args)
     fe1._set_threads(args.threads)
 
     tree = Path(args.pointer_tree).resolve()
@@ -105,7 +107,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     moved_inst = rb._instrument(price._MemoryOverlayRaw(raw, {pair: frame}), tree)
     codes = np.asarray(base_inst.state.codes, dtype=np.int32)
     threshold = jg5.materiality_dd_threshold(args.base_mean_d_pose)
-    neutral["d_pose_base"] = float(br1.evaluate_codes(base_inst, pair, codes[pair][None])[0])
+    neutral["d_pose_base"] = price.evaluate_base_codes(
+        base_inst, pair, codes[pair][None], pose_reference
+    )
+    neutral["pose_base_gate"] = pose_reference["pair_checks"].get(pair, pose_reference["receipt"])
     control = jg5.refine_pair(base_inst, pair, codes[pair], dd_threshold=threshold)
     neutral["d_pose_base_resolved"] = float(control["final_d_pose"])
     neutral["d_pose_stale"] = float(br1.evaluate_codes(moved_inst, pair, codes[pair][None])[0])

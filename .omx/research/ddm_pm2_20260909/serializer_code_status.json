@@ -1,0 +1,5 @@
+{
+  "returncode": 9,
+  "stdout": "",
+  "stderr": "[subagent-commit-serializer] REFUSED: WAIT_AND_RETRY per Catalog #340 STAGING-surface PREVENT. Sister subagent(s) have older (>30 min) checkpoints declaring these files; they may be near completion. Retry with exponential backoff (e.g. 30s/60s/120s); if still ABORT, escalate to Catalog #230 ownership map coordination.\nWAIT_AND_RETRY: 1 sister subagent collision(s) detected. Per CLAUDE.md \"Bugs must be permanently fixed AND self-protected against\" non-negotiable + Catalog #340 STAGING-surface PREVENTION (sister of Catalog #314 POST-COMMIT detect).\n  sister='ddm_rp1' (checkpoint 56.3 min ago) overlaps on: { experiments/ddm_rp1_pose.py }\n  Recommendation: retry with exponential backoff (sister may be near completion); escalate to Catalog #230 if still ABORT after reasonable delay.\n"
+}

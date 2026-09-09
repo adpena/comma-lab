@@ -1,0 +1,35 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free custody audit]",
+  "score_claim": false,
+  "snapshot": {
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a",
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "d_pose": 5.05e-06,
+    "receipt_path": "/Volumes/APDataStore/pact/ddm_cmp2_t4_sm1_semantic_coder_20260909/MODAL_REMOTE_RESULT.json",
+    "source_receipt_sha256": "14bbd5df8cbefa9d7ce2dc146f165162d37dd19728e0621bcdb07c22d9f17dfe",
+    "modal_runtime_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a"
+  },
+  "checks": [
+    {
+      "event": "instrument_gate_pass",
+      "runtime_root": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime",
+      "pointer_runtime_root": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime",
+      "encoder_sha256": "4ce85e0c68fb72736d1032597da0c3f403345a4ce18f7231cce56746f5f91a9c",
+      "pointer_sha256": "4ce85e0c68fb72736d1032597da0c3f403345a4ce18f7231cce56746f5f91a9c",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "valid": true
+    },
+    {
+      "event": "confound_alarm",
+      "kind": "encoder_not_pointer_coder",
+      "message": "Wrong encoder tree; rebase or use --coder-differs-because",
+      "runtime_root": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime",
+      "pointer_runtime_root": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime",
+      "encoder_sha256": "ce20617dc7db4ff46e13f7acc725e44ae2833696160af039ab7da8bf4033dfc3",
+      "pointer_sha256": "4ce85e0c68fb72736d1032597da0c3f403345a4ce18f7231cce56746f5f91a9c",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "valid": false
+    }
+  ]
+}

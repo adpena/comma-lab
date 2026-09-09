@@ -46,6 +46,12 @@ from typing import Any
 
 import numpy as np
 
+from comma_lab.instrument_gates import (
+    add_pose_gate_argument,
+    check_pose_base,
+    snapshot_pose_pointer,
+)
+
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
@@ -229,6 +235,7 @@ def load_pose_instrument(overlay_dir: Path | None):
 def cmd_pose(args) -> int:
     """Per-pair d_pose over ALL 600 pairs on one decode with one set of codes."""
     _set_threads(args.threads)
+    pose_snapshot = snapshot_pose_pointer() if args.tag == "base" else None
     inst = load_pose_instrument(args.overlay)
     codes = (
         np.load(args.codes).astype(np.int32)
@@ -249,10 +256,19 @@ def cmd_pose(args) -> int:
         indices,
         batch_size=args.batch_size,
     )
+    pose_gate = (
+        check_pose_base(
+            float(per_pair.mean()),
+            rationale=getattr(args, "pose_base_differs_because", None),
+            snapshot=pose_snapshot,
+        )
+        if args.tag == "base" else None
+    )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     np.save(args.out, per_pair)
     report = {
         "schema": "ddm_sj1_pose_leg.v1",
+        "pose_base_gate": pose_gate,
         "tag": args.tag,
         "decode": "candidate_overlay" if args.overlay else "base",
         "overlay_dir": str(args.overlay) if args.overlay else None,
@@ -1185,6 +1201,7 @@ def build_parser() -> argparse.ArgumentParser:
     pose.add_argument("--out", type=Path, required=True)
     pose.add_argument("--batch-size", type=int, default=8)
     pose.add_argument("--threads", type=int, default=4)
+    add_pose_gate_argument(pose)
     pose.set_defaults(func=cmd_pose)
 
     refine = sub.add_parser("refine", help="carrier re-solve on the candidate's renders")

@@ -18,6 +18,13 @@
 # Env: FIELD (edited npz), STORE (pricing custody dir), OUT (pose/overlay dir).
 set -euo pipefail
 
+# Default-on live-pointer coder gate runs before compilation in jg2._prepare.
+# Existing processes may explicitly retain legacy behavior with TAC_INSTRUMENT_GATES=0.
+CODER_GATE_ARGS=()
+if [[ -n "${CODER_DIFFERS_BECAUSE:-}" ]]; then
+    CODER_GATE_ARGS=(--coder-differs-because "$CODER_DIFFERS_BECAUSE")
+fi
+
 REPO="/Users/adpena/Projects/pact"
 BODY="/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime"
 TOKENS="/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/decoded_tokens.u8"
@@ -31,13 +38,13 @@ cd "$REPO"
 # 1 + 2 concurrently: they are the same length of compute and independent, and the
 # encode stage waits for the control's receipt before it reports a trusted delta.
 "$REPO/.venv/bin/python" experiments/ddm_jg2_tail_reencode.py --stage control \
-    --store "$STORE" --runtime-root "$BODY" --tokens "$TOKENS" \
+    --store "$STORE" --runtime-root "$BODY" "${CODER_GATE_ARGS[@]}" --tokens "$TOKENS" \
     --frames 600 --checkpoint-every 25 --resume \
     > "$STORE/control.log" 2>&1 &
 control_pid=$!
 
 "$REPO/.venv/bin/python" experiments/ddm_jg2_tail_reencode.py --stage encode \
-    --store "$STORE" --runtime-root "$BODY" --tokens "$TOKENS" \
+    --store "$STORE" --runtime-root "$BODY" "${CODER_GATE_ARGS[@]}" --tokens "$TOKENS" \
     --edits "$FIELD" --tag sj1_pass2a \
     --frames 600 --checkpoint-every 25 --resume \
     --wait-for-control-seconds 5400 \

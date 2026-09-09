@@ -1,0 +1,87 @@
+{
+  "scope": "experiments/ddm_*.py assignments with base in target and measure_pose/evaluate_codes/evaluate_base_codes descendant call",
+  "files_scanned": 698,
+  "parse_errors": [],
+  "matches": [
+    {
+      "path": "experiments/ddm_bs4y_stage_executor.py",
+      "line": 552,
+      "target": "baseline",
+      "calls": [
+        "evaluate_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_fe1_admit_and_build.py",
+      "line": 319,
+      "target": "d_pose_base",
+      "calls": [
+        "price.evaluate_base_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_fe1_cmp1_rebuild.py",
+      "line": 110,
+      "target": "neutral['d_pose_base']",
+      "calls": [
+        "price.evaluate_base_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_fe1_pass4_race.py",
+      "line": 80,
+      "target": "d_base",
+      "calls": [
+        "instrument_price.evaluate_base_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_fe1_pose_price.py",
+      "line": 259,
+      "target": "row['d_pose_base']",
+      "calls": [
+        "evaluate_base_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_fe1_rebase.py",
+      "line": 225,
+      "target": "entry['d_pose_base']",
+      "calls": [
+        "price.evaluate_base_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_jg5_pose_resolve_on_edited_renders.py",
+      "line": 657,
+      "target": "(base_per_pair, base_poses)",
+      "calls": [
+        "up2.measure_pose"
+      ]
+    },
+    {
+      "path": "experiments/ddm_qs1_frame0_schur_coupled_solve.py",
+      "line": 627,
+      "target": "baseline_vectors",
+      "calls": [
+        "evaluate_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_qs5_resolve_compensation.py",
+      "line": 489,
+      "target": "baseline",
+      "calls": [
+        "qs1.evaluate_codes"
+      ]
+    },
+    {
+      "path": "experiments/ddm_rw1_renderer_edge_foldback.py",
+      "line": 2028,
+      "target": "d_base",
+      "calls": [
+        "pose_price.evaluate_base_codes"
+      ]
+    }
+  ]
+}

@@ -3,6 +3,13 @@
 # A byte difference between them makes any delta run-to-run variance rather than a
 # measurement, so the pair is always run before a byte number is quoted.
 set -euo pipefail
+
+# Default-on live-pointer coder gate runs before compilation in jg2._prepare.
+# Existing processes may explicitly retain legacy behavior with TAC_INSTRUMENT_GATES=0.
+CODER_GATE_ARGS=()
+if [[ -n "${CODER_DIFFERS_BECAUSE:-}" ]]; then
+    CODER_GATE_ARGS=(--coder-differs-because "$CODER_DIFFERS_BECAUSE")
+fi
 REPO="/Users/adpena/Projects/pact"
 ENCODER="/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime"
 TOKENS="/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/decoded_tokens.u8"
@@ -10,7 +17,7 @@ FIELD="${FIELD:?set FIELD}"; STORE="${STORE:?set STORE}"; TAG="${TAG:?set TAG}"
 mkdir -p "$STORE/retained"; cd "$REPO"
 for suffix in "" "_twin"; do
     "$REPO/.venv/bin/python" experiments/ddm_jg2_tail_reencode.py --stage encode \
-        --store "$STORE" --runtime-root "$ENCODER" --tokens "$TOKENS" \
+        --store "$STORE" --runtime-root "$ENCODER" "${CODER_GATE_ARGS[@]}" --tokens "$TOKENS" \
         --edits "$FIELD" --tag "${TAG}${suffix}" --frames 600 --checkpoint-every 25 --resume \
         > "$STORE/encode_${TAG}${suffix}.log" 2>&1 &
 done

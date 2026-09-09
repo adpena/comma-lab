@@ -1,0 +1,50 @@
+[
+  {
+    "argv": [
+      ".venv/bin/ruff",
+      "check",
+      "src/comma_lab/instrument_gates.py",
+      "src/tac/preflight.py",
+      "tools/codex_arm_queue.py",
+      "src/tac/tests/test_ddm_pm2_screening_law.py",
+      "src/tac/tests/test_ddm_pm2_instrument_gates.py",
+      "src/tac/tests/test_ddm_pm2_ledger_preflight.py",
+      "src/tac/tests/test_ddm_pm2_pose_wiring.py",
+      "experiments/ddm_sj1_joint_admission.py",
+      "experiments/ddm_rp1_pose.py",
+      "experiments/ddm_fe1_pose_price.py",
+      "experiments/ddm_fe1_admit_and_build.py",
+      "experiments/ddm_fe1_rebase.py",
+      "experiments/ddm_fe1_cmp1_rebuild.py",
+      "experiments/ddm_fe1_pass4_race.py",
+      "experiments/ddm_rw1_renderer_edge_foldback.py",
+      "experiments/ddm_jg2_tail_reencode.py",
+      "experiments/ddm_tc1_mixer_pricing.py",
+      "experiments/ddm_sm1_mixer_race.py",
+      "experiments/ddm_rc3_shared_mixer_pricing.py",
+      "experiments/ddm_rc3_shared_mixer_race.py",
+      "experiments/ddm_rp1_rate_rank.py",
+      "experiments/ddm_nr1_taskcell_quotient_prebuild.py",
+      "experiments/ddm_tb2_token_bit_attribution.py",
+      "experiments/ddm_pc2_carrier_kwidth_rankcut.py"
+    ],
+    "returncode": 0,
+    "output": "All checks passed!\n"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "src/tac/tests/test_ddm_pm2_screening_law.py",
+      "src/tac/tests/test_ddm_pm2_instrument_gates.py",
+      "src/tac/tests/test_ddm_pm2_ledger_preflight.py",
+      "src/tac/tests/test_ddm_pm2_pose_wiring.py",
+      "src/tac/tests/test_ddm_jg2_tail_reencode.py",
+      "src/tac/tests/test_codex_arm_queue.py"
+    ],
+    "returncode": 0,
+    "output": "........................................................................ [ 27%]\n........................................................................ [ 54%]\n........................................................................ [ 82%]\n...............................................                          [100%]\n263 passed in 4.84s\n"
+  }
+]

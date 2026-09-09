@@ -1,0 +1,35 @@
+{
+  "pointer": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180388,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
+      "source_receipt_sha256": "14bbd5df8cbefa9d7ce2dc146f165162d37dd19728e0621bcdb07c22d9f17dfe"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "score": 0.13791730003757818,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json"
+  },
+  "pose_snapshot": {
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a",
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "d_pose": 5.05e-06,
+    "receipt_path": "/Volumes/APDataStore/pact/ddm_cmp2_t4_sm1_semantic_coder_20260909/MODAL_REMOTE_RESULT.json",
+    "source_receipt_sha256": "14bbd5df8cbefa9d7ce2dc146f165162d37dd19728e0621bcdb07c22d9f17dfe",
+    "modal_runtime_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a"
+  },
+  "new_measurement": false
+}

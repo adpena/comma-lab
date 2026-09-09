@@ -207,5 +207,11 @@ def race(resume_from: Path) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resume-from", type=Path, required=True)
-    result = race(parser.parse_args().resume_from)
+    from comma_lab.instrument_gates import add_coder_gate_argument, check_experimental_coder
+
+    add_coder_gate_argument(parser)
+    args = parser.parse_args()
+    instrument_gate = check_experimental_coder(p.LIVE, rationale=args.coder_differs_because)
+    p.save_json(p.STORE / "INSTRUMENT_GATE.json", instrument_gate)
+    result = race(args.resume_from)
     print(json.dumps({"winner": result["winner"]["slug"] if result["winner"] else None}))

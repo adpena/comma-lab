@@ -215,6 +215,8 @@ def select_task_priority_events(
             candidates_index.append((local[keep] + pair * plane).astype(np.uint32))
             candidates_margin.append(scores[keep].astype(np.float32))
         checked_files.append({"pair_id": pair, "path": str(path), "sha256": digest})
+    if not candidates_index or not candidates_margin:
+        raise NR1FormatError("no mismatching candidate pixels; cannot build an accepted-event bank")
     all_index = np.concatenate(candidates_index)
     all_margin = np.concatenate(candidates_margin)
     count = min(event_limit, int(all_index.size))

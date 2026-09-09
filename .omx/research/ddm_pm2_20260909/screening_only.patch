@@ -1,0 +1,312 @@
+diff --git a/tools/codex_arm_queue.py b/tools/codex_arm_queue.py
+index 791b545c4..bec5c0df8 100644
+--- a/tools/codex_arm_queue.py
++++ b/tools/codex_arm_queue.py
+@@ -1947,9 +1976,14 @@ def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str
+         text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
+     except OSError:
+         return []
++    # The screening law is an apparatus invariant, not optional recall. Keep it
++    # visible even when historical recall is waived; strict mode routes the same
++    # findings through optimal-form refusal instead (all spawn paths consume it).
++    out = (
++        [] if _screening_law_strict() else lint_charter_screening_law(prompt_path)
++    )
+     if "recall_lint_na:" in text.lower():
+-        return []
+-    out: list[str] = []
++        return out
+     for leg in (
+         lambda: _lint_ownership(text, days),
+         lambda: _lint_stale_numbers(text),
+@@ -1965,6 +1999,92 @@ def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str
+     return out
+ 
+ 
++def _screening_law_strict() -> bool:
++    """Catalog #416: warn until the charter census reaches zero, then flip here."""
++    return os.environ.get("TAC_SCREENING_LAW_STRICT", "0") == "1"
++
++
++def lint_charter_screening_law(prompt_path: str) -> list[str]:
++    """Require declared confinement for sampled OPTIMAL FORM scope reductions.
++
++    This is a declaration lint, not proof of physical confinement. A global
++    actuator can change unobserved pairs (rw1 repaired one screened cell but
++    damaged four outside the screen). Its subset screen is a MECHANISM reduction
++    and cannot support a verdict, even if a later full-n600 check is planned.
++    This deliberately requires a declaration even for an ambiguous bare
++    'subset'; the charter must state what its reduction can affect.
++    """
++    try:
++        text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
++    except OSError as exc:
++        return [f"screening-law: charter unreadable ({exc})"]
++    # Markdown decoration must not hide a declaration. Scope this law to the
++    # OPTIMAL FORM block: a historical incident elsewhere is not today's plan.
++    clean = re.sub(r"<!--.*?-->", "", text, flags=re.S)
++    clean = re.sub(r"[`*_]", "", clean).lower()
++    block = re.search(r"^## +optimal form\b[^\n]*\n(.*?)(?=^## |\Z)", clean, re.M | re.S)
++    if block is None:
++        return []
++    section = block.group(1)
++    sampled = False
++    for scope in re.finditer(
++        r"\bscope\b(.*?)(?=\n\s*(?:[-+]\s|\n)|\bmechanism\b|\Z)", section, re.S
++    ):
++        declaration = re.split(r"\bmechanism\b", scope.group(1), maxsplit=1)[0]
++        if re.match(
++            r"\s*(?:(?:reductions?|deltas?)\s*(?:allowed|permitted|declared)?\s*)?"
++            r"[:=]?\s*(?:none|no reductions)\b", declaration,
++        ):
++            continue
++        # 'no subset verdict' is a prohibition, not a declared reduction.
++        declaration = re.sub(
++            r"\b(?:no|never|without)\s+(?:subset(?:-n)?|screen\w*)[^;,.]*",
++            "", declaration,
++        )
++        has_screen = bool(re.search(r"\bscreen(?:s|ing|ed)?\b", declaration))
++        has_subset = bool(re.search(r"\bsubset\b", declaration))
++        counts = re.findall(r"\bn\s*[=≥]?\s*(\d+)\b|\b(\d+)[ -]+pairs?\b", declaration)
++        reduced_n = any(0 < int(a or b) < 600 for a, b in counts)
++        reduced_n = reduced_n or bool(re.search(r"\bn\s*<\s*600\b", declaration))
++        if reduced_n or has_screen or has_subset:
++            # An explicitly full-population screen carries no scope reduction.
++            if not reduced_n and not has_subset and re.search(r"\bn\s*=?\s*600\b|\ball 600\b", declaration):
++                continue
++            sampled = True
++            break
++    if not sampled:
++        return []
++    confinement_text = re.sub(
++        r"\b(?:not|never|non)[ -]+(?:a\s+)?pair[- ]confined\b", "", section
++    )
++    pair_confined = bool(re.search(r"\bpair[- ]confined\b", confinement_text))
++    if re.search(r"\bpair[- ]confined\s*(?:\||or|/)\s*global\b", section):
++        return ["screening-law: actuator confinement lists alternatives; declare the actual confinement"]
++    global_actuator = bool(re.search(
++        r"\b(?:actuator(?: confinement)?|confinement)\s*[:=]\s*global\b"
++        r"|\bglobal\s+actuator\b|\bactuator\s+(?:is\s+)?global\b",
++        section,
++    ))
++    if not pair_confined and not global_actuator:
++        return [
++            "screening-law: sampled SCOPE reduction lacks actuator confinement; "
++            "declare 'actuator confinement: pair-confined' or 'actuator confinement: global'"
++        ]
++    if not global_actuator:
++        return []
++    bracket = re.search(r"\btoy-bracket\s*[:=]\s*([^\n]+)", section)
++    rationale = bracket.group(1).strip() if bracket else ""
++    if len(rationale) >= 12 and not re.match(
++        r"(?:none|no toy|false|forbidden|not\b|required|tbd|todo|placeholder|<)", rationale
++    ):
++        return []
++    return [
++        "screening-law: global actuator subset screen is a MECHANISM reduction "
++        "(verdict-invalid); declare TOY-BRACKET: <substantive diagnostic-only rationale> "
++        "or measure the full population"
++    ]
++
++
+ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
+     """Charter-time toy guard (operator 2026-08-06 'naive first pass' correction).
+ 
+@@ -1996,6 +2116,8 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
+     except OSError as exc:
+         return [f"charter unreadable ({exc})"]
+     problems.extend(_lint_sha_prefix_divergent_tails(text))
++    if _screening_law_strict():
++        problems.extend(lint_charter_screening_law(prompt_path))
+     low = text.lower()
+     has_block = "## optimal form" in low
+     waiver = "optimal_form_na:" in low
+diff --git a/src/tac/tests/test_ddm_pm2_screening_law.py b/src/tac/tests/test_ddm_pm2_screening_law.py
+new file mode 100644
+--- /dev/null
++++ b/src/tac/tests/test_ddm_pm2_screening_law.py
+@@ -0,0 +1,184 @@
++"""Charter declaration regression tests; no scoring or pricing workloads."""
++from __future__ import annotations
++
++import importlib.util
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++
++
++@pytest.fixture
++def queue():
++    path = Path(__file__).resolve().parents[3] / "tools" / "codex_arm_queue.py"
++    spec = importlib.util.spec_from_file_location("pm2_queue", path)
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++@pytest.fixture
++def charter(tmp_path):
++    def write(section, extra=""):
++        path = tmp_path / "charter.md"
++        path.write_text(
++            "# Build renderer\n## MANDATE\nBuild and measure the real renderer.\n"
++            "## PRIOR NEGATIVE\nThe earlier global scale screen reversed sign.\n"
++            "## OPTIMAL FORM\nReference receipt: renderer.py at abc1234.\n"
++            + section + "\n" + extra,
++            encoding="utf-8",
++        )
++        return str(path)
++    return write
++
++
++@pytest.mark.parametrize("scope", [
++    "SCOPE reductions: subset of pairs.",
++    "SCOPE reductions: n120 screen.",
++    "SCOPE reductions: n=32, seeded random.",
++    "SCOPE reductions: 12-pair sizing.",
++    "SCOPE reductions: screen-vs-verdict labels.",
++    "SCOPE reductions: pair subset,\n  seeded selection.",
++    "SCOPE reduction: subset.",
++    "SCOPE reductions:\nscreen on seeded random pairs.",
++    "SCOPE reductions: n<600.",
++])
++def test_sampled_scope_requires_confinement(queue, charter, scope):
++    assert "lacks actuator confinement" in queue.lint_charter_screening_law(charter(scope))[0]
++
++
++def test_pair_confined_screen_is_admissible(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE: n120 screen. Actuator confinement: pair-confined."
++    )) == []
++
++
++def test_incident_shape_global_scale_screen_is_mechanism_reduction(queue, charter):
++    findings = queue.lint_charter_screening_law(charter(
++        "SCOPE reductions: 120-pair screen for renderer scale moves.\n"
++        "Actuator confinement: global. Full n600 confirmation follows."
++    ))
++    assert "MECHANISM reduction" in findings[0]
++    assert "verdict-invalid" in findings[0]
++
++
++def test_global_toy_bracket_allows_diagnostic_screen(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE: n120 screen. Actuator: global.\n"
++        "TOY-BRACKET: diagnostic-only sampling; no family verdict."
++    )) == []
++
++
++@pytest.mark.parametrize("bracket", [
++    "none", "none; full n600 later", "<rationale here>",
++    "required before running", "TODO supply diagnostic rationale", "true",
++])
++def test_placeholder_brackets_do_not_waive_global_screen(queue, charter, bracket):
++    assert "MECHANISM reduction" in queue.lint_charter_screening_law(charter(
++        "SCOPE: n32 screen. Actuator: global.\nTOY-BRACKET: " + bracket
++    ))[0]
++
++
++def test_no_scope_reduction_does_not_fire(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE reductions: none. MECHANISM: no subset screen."
++    )) == []
++
++
++def test_full_population_screen_does_not_fire(queue, charter):
++    assert queue.lint_charter_screening_law(charter("SCOPE: n600 screen.")) == []
++
++
++def test_scope_deltas_none_does_not_inherit_later_prohibitions(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE deltas allowed: none. A subset screen would be a toy; refuse it."
++    )) == []
++
++
++def test_subset_prohibition_does_not_fire(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE reductions: step budget. MECHANISM: no subset-n verdict."
++    )) == []
++
++
++def test_later_section_confinement_cannot_clear_current_scope(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE: n32 screen.", "## HISTORY\nActuator: pair-confined."
++    ))
++
++
++def test_comments_cannot_supply_confinement(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "SCOPE: n32 screen. <!-- actuator: pair-confined -->"
++    ))
++
++
++def test_markdown_decoration_does_not_hide_scope(queue, charter):
++    assert queue.lint_charter_screening_law(charter(
++        "**SCOPE**: `n32` screen. **Actuator confinement**: `global`."
++    ))
++
++
++def test_mixed_actuators_need_global_bracket(queue, charter):
++    assert "MECHANISM reduction" in queue.lint_charter_screening_law(charter(
++        "SCOPE: n32 screen. Token actuator: pair-confined; renderer actuator: global."
++    ))[0]
++
++
++@pytest.mark.parametrize("confinement", ["not pair-confined", "not a pair-confined actuator"])
++def test_negated_confinement_is_not_a_declaration(queue, charter, confinement):
++    assert "lacks actuator confinement" in queue.lint_charter_screening_law(charter(
++        "SCOPE: n32 screen. Actuator: " + confinement
++    ))[0]
++
++
++def test_confinement_menu_is_not_a_choice(queue, charter):
++    assert "lists alternatives" in queue.lint_charter_screening_law(charter(
++        "SCOPE: n32 screen. Actuator confinement: pair-confined | global."
++    ))[0]
++
++
++def test_warn_only_default_even_when_optimal_form_is_strict(queue, charter, monkeypatch):
++    monkeypatch.delenv("TAC_SCREENING_LAW_STRICT", raising=False)
++    monkeypatch.setenv("TAC_CHARTER_LINT_STRICT", "1")
++    path = charter("SCOPE: n32 screen.\nRECALL_LINT_NA: this is a unit fixture.")
++    assert not any("screening-law:" in p for p in queue.lint_charter_optimal_form(path))
++    assert any("screening-law:" in p for p in queue.lint_charter_recall_advisories(path))
++
++
++def test_strict_mode_routes_to_refusal_not_duplicate_warning(queue, charter, monkeypatch):
++    monkeypatch.setenv("TAC_SCREENING_LAW_STRICT", "1")
++    path = charter("SCOPE: n32 screen.\nRECALL_LINT_NA: this is a unit fixture.")
++    assert any("screening-law:" in p for p in queue.lint_charter_optimal_form(path))
++    assert queue.lint_charter_recall_advisories(path) == []
++
++
++def test_optimal_form_waiver_does_not_override_screening_law(queue, charter, monkeypatch):
++    monkeypatch.setenv("TAC_SCREENING_LAW_STRICT", "1")
++    path = charter("OPTIMAL_FORM_NA: bounded apparatus audit.\nSCOPE: n32 screen.")
++    assert any("screening-law:" in p for p in queue.lint_charter_optimal_form(path))
++
++
++def test_unreadable_charter_is_visible(queue, tmp_path):
++    assert "unreadable" in queue.lint_charter_screening_law(str(tmp_path / "absent.md"))[0]
++
++
++@pytest.mark.parametrize("strict, expected_rc, expected_rows", [(False, 0, 1), (True, 3, 0)])
++def test_real_add_path_warns_or_refuses_before_queue_write(
++    queue, charter, monkeypatch, capsys, strict, expected_rc, expected_rows
++):
++    path = charter("SCOPE: n120 screen.\nRECALL_LINT_NA: bounded fixture.")
++    monkeypatch.setenv("TAC_SCREENING_LAW_STRICT", "1" if strict else "0")
++    monkeypatch.setenv("TAC_CHARTER_LINT_STRICT", "1")
++    monkeypatch.setattr(queue, "charter_file_path", lambda value: (Path(value), None))
++    monkeypatch.setattr(queue, "_is_managed_charter", lambda value: False)
++    monkeypatch.setattr(queue, "lint_charter_capability_advisories", lambda value: [])
++    monkeypatch.setattr(queue, "lint_charter_fm_advisories", lambda value: [])
++    rows = []
++    monkeypatch.setattr(queue, "append_row", rows.append)
++    args = SimpleNamespace(prompt=path, name="screen_fixture", rank=1, owns_scorer=False, note="")
++    assert queue.cmd_add(args) == expected_rc
++    assert len(rows) == expected_rows
++    output = capsys.readouterr().out
++    assert "screening-law:" in output
++    assert ("REFUSED" if strict else "WARN") in output

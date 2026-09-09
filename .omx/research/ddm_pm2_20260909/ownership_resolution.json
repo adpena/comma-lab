@@ -1,0 +1,6 @@
+{
+  "prior_refusal": "rc9 old rp1_pose checkpoint overlap",
+  "authority": ".omx/research/charters/ddm_pm2_instrument_laws_as_structural_gates_20260909.md",
+  "resolution": "Operator-supplied ddm_pm2 charter explicitly authorizes refusal-only gates in live rp1. Reviewed diff contains only guard wiring and lint cleanup. Patch intent excludes all sister hunks; legacy TAC_INSTRUMENT_GATES=0 remains available. Ownership evidence: charter HARD CONSTRAINTS and rp1 diff.",
+  "index_mode": "isolated patch"
+}

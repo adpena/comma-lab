@@ -52,8 +52,8 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
 
-import ddm_jg1_seg_solve as jg1  # noqa: E402
-import ddm_jg2_tail_reencode as jg2  # noqa: E402
+import ddm_jg1_seg_solve as jg1
+import ddm_jg2_tail_reencode as jg2
 
 N_PAIRS = jg1.N_PAIRS
 EVAL_H, EVAL_W = jg1.EVAL_H, jg1.EVAL_W
@@ -192,6 +192,21 @@ CENSUS_EDGES = np.array(
 )
 
 
+def _persist_rank_artifacts(out: Path, per_frame_bits: np.ndarray, keep: dict) -> int:
+    """Persist the measured ledger before any optional candidate dump can fail."""
+    np.save(out / "bits_per_frame.npy", per_frame_bits)
+    dtypes = {
+        "frame": np.int16, "pos": np.int32, "sym": np.uint8, "best": np.uint8,
+        "bits_sym": np.float32, "bits_best": np.float32, "is_sj1_edit": np.uint8,
+    }
+    arrays = {}
+    for name, dtype in dtypes.items():
+        parts = keep[name]
+        arrays[name] = np.concatenate(parts) if parts else np.empty(0, dtype=dtype)
+    np.savez_compressed(out / "candidates.npz", **arrays)
+    return int(arrays["frame"].size)
+
+
 def cmd_rank(args: argparse.Namespace) -> int:
     import torch
 
@@ -249,8 +264,8 @@ def cmd_rank(args: argparse.Namespace) -> int:
     n_symbol_is_argmax = 0
     bits_on_argmax_symbols = 0.0
     bits_on_nonargmax_symbols = 0.0
-    n_above = {t: 0 for t in (0.5, 1.0, 2.0, 4.0, 8.0)}
-    saving_above = {t: 0.0 for t in (0.5, 1.0, 2.0, 4.0, 8.0)}
+    n_above = dict.fromkeys((0.5, 1.0, 2.0, 4.0, 8.0), 0)
+    saving_above = dict.fromkeys((0.5, 1.0, 2.0, 4.0, 8.0), 0.0)
 
     keep_pos: list[np.ndarray] = []
     keep_frame: list[np.ndarray] = []
@@ -426,17 +441,11 @@ def cmd_rank(args: argparse.Namespace) -> int:
     }
 
     dump = out / "candidates.npz"
-    np.savez_compressed(
-        dump,
-        frame=np.concatenate(keep_frame),
-        pos=np.concatenate(keep_pos),
-        sym=np.concatenate(keep_sym),
-        best=np.concatenate(keep_best),
-        bits_sym=np.concatenate(keep_bits_sym),
-        bits_best=np.concatenate(keep_bits_best),
-        is_sj1_edit=np.concatenate(keep_is_sj1),
-    )
-    np.save(out / "bits_per_frame.npy", per_frame_bits)
+    candidate_rows = _persist_rank_artifacts(out, per_frame_bits, {
+        "frame": keep_frame, "pos": keep_pos, "sym": keep_sym, "best": keep_best,
+        "bits_sym": keep_bits_sym, "bits_best": keep_bits_best,
+        "is_sj1_edit": keep_is_sj1,
+    })
 
     total_tokens = args.frames * PLANE
     receipt = {
@@ -451,7 +460,7 @@ def cmd_rank(args: argparse.Namespace) -> int:
             "total_bits": total_bits,
             "total_bytes_ideal": total_bits / 8.0,
             "bits_per_token_mean": total_bits / total_tokens,
-            "bin_edges_bits": CENSUS_EDGES[:-1].tolist() + ["inf"],
+            "bin_edges_bits": [*CENSUS_EDGES[:-1].tolist(), "inf"],
             "bin_counts": census.tolist(),
             "n_symbol_is_coder_argmax": n_symbol_is_argmax,
             "fraction_symbol_is_coder_argmax": n_symbol_is_argmax / total_tokens,
@@ -479,7 +488,7 @@ def cmd_rank(args: argparse.Namespace) -> int:
         },
         "candidates_dump": {
             "path": str(dump),
-            "rows": int(np.concatenate(keep_frame).size),
+            "rows": candidate_rows,
             "min_saving_bits": args.min_saving_bits,
             "top_k_per_frame": args.top_k,
         },
@@ -822,7 +831,7 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
             "total_bits": total_bits,
             "total_bytes_ideal": total_bits / 8.0,
             "bits_per_token_mean": total_bits / total_tokens,
-            "bin_edges_bits": CENSUS_EDGES[:-1].tolist() + ["inf"],
+            "bin_edges_bits": [*CENSUS_EDGES[:-1].tolist(), "inf"],
             "bin_counts": census.tolist(),
             "n_symbol_is_coder_argmax": n_symbol_is_argmax,
             "fraction_symbol_is_coder_argmax": n_symbol_is_argmax / total_tokens,

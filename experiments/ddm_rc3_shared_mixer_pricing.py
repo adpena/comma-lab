@@ -291,7 +291,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--supported-contexts", action="store_true")
+    from comma_lab.instrument_gates import add_coder_gate_argument, check_experimental_coder
+
+    add_coder_gate_argument(parser)
     args = parser.parse_args()
+    instrument_gate = check_experimental_coder(LIVE, rationale=args.coder_differs_because)
+    save_json(STORE / "INSTRUMENT_GATE.json", instrument_gate)
     if args.supported_contexts:
         print(json.dumps(supported_contexts(), indent=2))
         raise SystemExit(0)

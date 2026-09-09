@@ -1,0 +1,51 @@
+[
+  {
+    "file": "src/comma_lab/instrument_gates.py",
+    "sha256": "448ad4096921a05a46c290412d6099b659623df83b72eb15e4a9a72519d96c20",
+    "returncode": 0,
+    "stdout": "RESCAN: 'src/comma_lab/instrument_gates.py' current entity census 20 (last stored census 20)\nMarked 20 entities in 'src/comma_lab/instrument_gates.py' as 'reviewed'\n",
+    "stderr": ""
+  },
+  {
+    "file": "src/tac/tests/test_ddm_pm2_instrument_gates.py",
+    "sha256": "966b7eaebd77d1552aea12ce518306959688c247b9919e7f4e577dd3fc2e5579",
+    "returncode": 0,
+    "stdout": "RESCAN: 'src/tac/tests/test_ddm_pm2_instrument_gates.py' current entity census 36 (last stored census 36)\nMarked 36 entities in 'src/tac/tests/test_ddm_pm2_instrument_gates.py' as 'reviewed'\n",
+    "stderr": ""
+  },
+  {
+    "file": "experiments/ddm_jg2_tail_reencode.py",
+    "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2",
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/ddm_jg2_tail_reencode.py' current entity census 41 (last stored census 41)\nMarked 41 entities in 'experiments/ddm_jg2_tail_reencode.py' as 'reviewed'\n",
+    "stderr": ""
+  },
+  {
+    "file": "experiments/ddm_tc1_mixer_pricing.py",
+    "sha256": "a0630cc1dccc117135699caed17094aac500af7df318efac084e69d80e16794b",
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/ddm_tc1_mixer_pricing.py' current entity census 6 (last stored census 6)\nMarked 6 entities in 'experiments/ddm_tc1_mixer_pricing.py' as 'reviewed'\n",
+    "stderr": ""
+  },
+  {
+    "file": "experiments/ddm_sm1_mixer_race.py",
+    "sha256": "af05b0cc9b677d5f660b58d685aa887d8e50723fc64edf5d8f5dd4846256a005",
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/ddm_sm1_mixer_race.py' current entity census 7 (last stored census 7)\nMarked 7 entities in 'experiments/ddm_sm1_mixer_race.py' as 'reviewed'\n",
+    "stderr": ""
+  },
+  {
+    "file": "experiments/ddm_rc3_shared_mixer_pricing.py",
+    "sha256": "52f7016bde297de3237a8e51e7fae08640b788232cfddc640f9210ee870d0a92",
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/ddm_rc3_shared_mixer_pricing.py' current entity census 7 (last stored census 7)\nMarked 7 entities in 'experiments/ddm_rc3_shared_mixer_pricing.py' as 'reviewed'\n",
+    "stderr": ""
+  },
+  {
+    "file": "experiments/ddm_rc3_shared_mixer_race.py",
+    "sha256": "101678b9a09b38fae368ee0c59baedb530fe6b889b3f60540ebba0cb33bea819",
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/ddm_rc3_shared_mixer_race.py' current entity census 2 (last stored census 2)\nMarked 2 entities in 'experiments/ddm_rc3_shared_mixer_race.py' as 'reviewed'\n",
+    "stderr": ""
+  }
+]

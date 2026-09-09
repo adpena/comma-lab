@@ -100,6 +100,31 @@ def _ssd_add_dir_args() -> list[str]:
 # Env override exists so a model bump never requires a code edit mid-campaign.
 _DEFAULT_ARM_MODEL = "gpt-6-astra"
 ARM_MODEL = os.environ.get("TAC_CODEX_ARM_MODEL", _DEFAULT_ARM_MODEL)
+# Operator 2026-09-09, verbatim: "Use Astra or sol and different effort levels as
+# appropriate". The MODEL is therefore a PER-ARM choice at `add` time, exactly
+# like effort, drawn from this admissible pair. Both ids VERIFIED against the
+# installed catalog (~/.codex/models_cache.json: gpt-6-astra and gpt-5.6-sol,
+# efforts low..ultra each). Routing guidance, not a rule: astra for closed-form
+# derivation and code landings; sol as the SECOND MODEL FAMILY for adversarial
+# review / re-derivation of an astra result (a different family catches
+# different things) and for mechanical custody work at medium.
+ARM_MODELS: tuple[str, ...] = ("gpt-6-astra", "gpt-5.6-sol")
+
+
+def resolve_arm_model(model: str | None) -> str:
+    """Model for one arm; refuses anything outside the operator's admissible set.
+
+    The env override (TAC_CODEX_ARM_MODEL) stays admissible so a catalog bump
+    never needs a code edit; the 5.5 ban is enforced underneath regardless.
+    """
+    value = (model or ARM_MODEL).strip()
+    if value not in (*ARM_MODELS, ARM_MODEL):
+        raise SystemExit(
+            f"REFUSED: arm model {value!r} is outside the operator's admissible set "
+            f"{ARM_MODELS} (operator 2026-09-09: Astra or sol)."
+        )
+    assert_arm_model_admissible(value)
+    return value
 # NEVER AGAIN (operator 2026-08-08, verbatim: "We are never spawning on five
 # point five again"). This is a REFUSAL, not a default: spawn() fails closed if
 # the resolved model matches, so an env override cannot resurrect the old
@@ -963,7 +988,9 @@ def keeper_path(name: str) -> str:
     return f".omx/tmp/codex_runs/{name}_keeper.py"
 
 
-def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str:
+def keeper_source(
+    name: str, prompt_path: str, effort: str | None = None, model: str | None = None
+) -> str:
     """Source of the per-arm KEEPER — the reaper-proof supervisor.
 
     The reaper kills on: name-match \\b(claude|codex)\\b AND no-TTY AND
@@ -1016,12 +1043,12 @@ def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str
     # IMPORTANT convocations (operator-flagged or route-changing adjudications),
     # MAIN ALSO runs a parallel FABLE leg (Agent tool, model:"fable" carve-out)
     # on the same charter and reconciles both receipts.
-    assert_arm_model_admissible(ARM_MODEL)
+    resolved_model = resolve_arm_model(model)
     resolved_effort = resolve_arm_effort(effort)
     argv_prefix = [
         "codex", "exec", "--skip-git-repo-check", "-s", "workspace-write",
         *_ssd_add_dir_args(),
-        "-m", ARM_MODEL, "-c", f"model_reasoning_effort={resolved_effort}",
+        "-m", resolved_model, "-c", f"model_reasoning_effort={resolved_effort}",
         "-o", f".omx/tmp/codex_runs/{name}.last.txt",
     ]
     return (
@@ -1137,11 +1164,13 @@ def spawn_command(name: str, prompt_path: str) -> str:
     return " ".join(["python3 -c", q(_DETACH_PY), q(log), "python3", q(keeper_path(name))])
 
 
-def spawn(name: str, prompt_path: str, effort: str | None = None) -> bool:
+def spawn(
+    name: str, prompt_path: str, effort: str | None = None, model: str | None = None
+) -> bool:
     RUNS.mkdir(parents=True, exist_ok=True)
     # Fail closed on a banned generation BEFORE any file is written or process
     # forked -- a refusal must not leave a half-written keeper behind.
-    assert_arm_model_admissible(ARM_MODEL)
+    resolved_model = resolve_arm_model(model)
     resolved_effort = resolve_arm_effort(effort)
     _prompt_file, refusal = charter_file_path(prompt_path)
     if refusal is not None:
@@ -1159,14 +1188,14 @@ def spawn(name: str, prompt_path: str, effort: str | None = None) -> bool:
     for stale in (RUNS / f"{name}.done", RUNS / f"{name}.last.txt"):
         stale.unlink(missing_ok=True)
     (_REPO / keeper_path(name)).write_text(
-        keeper_source(name, prompt_path, resolved_effort), encoding="utf-8"
+        keeper_source(name, prompt_path, resolved_effort, resolved_model), encoding="utf-8"
     )
     subprocess.run(["bash", "-c", spawn_command(name, prompt_path)], cwd=_REPO, check=False)
     append_row({
         "name": name, "prompt_path": prompt_path, "status": "live", "event": "spawned",
         # Model+effort on the SPAWN row: what actually ran is a receipt, not an
         # inference from whatever the constants happen to say when you read back.
-        "model": ARM_MODEL, "effort": resolved_effort,
+        "model": resolved_model, "effort": resolved_effort,
     })
     try:
         SPAWN_LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -1947,9 +1976,14 @@ def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str
         text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
+    # The screening law is an apparatus invariant, not optional recall. Keep it
+    # visible even when historical recall is waived; strict mode routes the same
+    # findings through optimal-form refusal instead (all spawn paths consume it).
+    out = (
+        [] if _screening_law_strict() else lint_charter_screening_law(prompt_path)
+    )
     if "recall_lint_na:" in text.lower():
-        return []
-    out: list[str] = []
+        return out
     for leg in (
         lambda: _lint_ownership(text, days),
         lambda: _lint_stale_numbers(text),
@@ -1963,6 +1997,92 @@ def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str
         except Exception as exc:  # advisory: a broken leg must never block a spawn
             out.append(f"recall-lint leg unavailable ({type(exc).__name__}: {exc})")
     return out
+
+
+def _screening_law_strict() -> bool:
+    """Catalog #416: warn until the charter census reaches zero, then flip here."""
+    return os.environ.get("TAC_SCREENING_LAW_STRICT", "0") == "1"
+
+
+def lint_charter_screening_law(prompt_path: str) -> list[str]:
+    """Require declared confinement for sampled OPTIMAL FORM scope reductions.
+
+    This is a declaration lint, not proof of physical confinement. A global
+    actuator can change unobserved pairs (rw1 repaired one screened cell but
+    damaged four outside the screen). Its subset screen is a MECHANISM reduction
+    and cannot support a verdict, even if a later full-n600 check is planned.
+    This deliberately requires a declaration even for an ambiguous bare
+    'subset'; the charter must state what its reduction can affect.
+    """
+    try:
+        text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"screening-law: charter unreadable ({exc})"]
+    # Markdown decoration must not hide a declaration. Scope this law to the
+    # OPTIMAL FORM block: a historical incident elsewhere is not today's plan.
+    clean = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    clean = re.sub(r"[`*_]", "", clean).lower()
+    block = re.search(r"^## +optimal form\b[^\n]*\n(.*?)(?=^## |\Z)", clean, re.M | re.S)
+    if block is None:
+        return []
+    section = block.group(1)
+    sampled = False
+    for scope in re.finditer(
+        r"\bscope\b(.*?)(?=\n\s*(?:[-+]\s|\n)|\bmechanism\b|\Z)", section, re.S
+    ):
+        declaration = re.split(r"\bmechanism\b", scope.group(1), maxsplit=1)[0]
+        if re.match(
+            r"\s*(?:(?:reductions?|deltas?)\s*(?:allowed|permitted|declared)?\s*)?"
+            r"[:=]?\s*(?:none|no reductions)\b", declaration,
+        ):
+            continue
+        # 'no subset verdict' is a prohibition, not a declared reduction.
+        declaration = re.sub(
+            r"\b(?:no|never|without)\s+(?:subset(?:-n)?|screen\w*)[^;,.]*",
+            "", declaration,
+        )
+        has_screen = bool(re.search(r"\bscreen(?:s|ing|ed)?\b", declaration))
+        has_subset = bool(re.search(r"\bsubset\b", declaration))
+        counts = re.findall(r"\bn\s*[=≥]?\s*(\d+)\b|\b(\d+)[ -]+pairs?\b", declaration)
+        reduced_n = any(0 < int(a or b) < 600 for a, b in counts)
+        reduced_n = reduced_n or bool(re.search(r"\bn\s*<\s*600\b", declaration))
+        if reduced_n or has_screen or has_subset:
+            # An explicitly full-population screen carries no scope reduction.
+            if not reduced_n and not has_subset and re.search(r"\bn\s*=?\s*600\b|\ball 600\b", declaration):
+                continue
+            sampled = True
+            break
+    if not sampled:
+        return []
+    confinement_text = re.sub(
+        r"\b(?:not|never|non)[ -]+(?:a\s+)?pair[- ]confined\b", "", section
+    )
+    pair_confined = bool(re.search(r"\bpair[- ]confined\b", confinement_text))
+    if re.search(r"\bpair[- ]confined\s*(?:\||or|/)\s*global\b", section):
+        return ["screening-law: actuator confinement lists alternatives; declare the actual confinement"]
+    global_actuator = bool(re.search(
+        r"\b(?:actuator(?: confinement)?|confinement)\s*[:=]\s*global\b"
+        r"|\bglobal\s+actuator\b|\bactuator\s+(?:is\s+)?global\b",
+        section,
+    ))
+    if not pair_confined and not global_actuator:
+        return [
+            "screening-law: sampled SCOPE reduction lacks actuator confinement; "
+            "declare 'actuator confinement: pair-confined' or 'actuator confinement: global'"
+        ]
+    if not global_actuator:
+        return []
+    bracket = re.search(r"\btoy-bracket\s*[:=]\s*([^\n]+)", section)
+    rationale = bracket.group(1).strip() if bracket else ""
+    if len(rationale) >= 12 and not re.match(
+        r"(?:none|no toy|false|forbidden|not\b|required|tbd|todo|placeholder|<)", rationale
+    ):
+        return []
+    return [
+        "screening-law: global actuator subset screen is a MECHANISM reduction "
+        "(verdict-invalid); declare TOY-BRACKET: <substantive diagnostic-only rationale> "
+        "or measure the full population"
+    ]
 
 
 def lint_charter_optimal_form(prompt_path: str) -> list[str]:
@@ -1996,6 +2116,8 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     except OSError as exc:
         return [f"charter unreadable ({exc})"]
     problems.extend(_lint_sha_prefix_divergent_tails(text))
+    if _screening_law_strict():
+        problems.extend(lint_charter_screening_law(prompt_path))
     low = text.lower()
     has_block = "## optimal form" in low
     waiver = "optimal_form_na:" in low
@@ -2097,10 +2219,13 @@ def cmd_add(args) -> int:
             "note": args.note or "",
             # Per-task effort, chosen at queue time (operator 2026-08-08).
             "effort": resolve_arm_effort(getattr(args, "effort", None)),
+            # Per-task model, chosen at queue time (operator 2026-09-09: Astra or sol).
+            "model": resolve_arm_model(getattr(args, "model", None)),
         }
     )
     print(
         f"queued {args.name} (rank {args.rank}, "
+        f"model {resolve_arm_model(getattr(args, 'model', None))}, "
         f"effort {resolve_arm_effort(getattr(args, 'effort', None))})"
     )
     return 0
@@ -2291,7 +2416,7 @@ def cmd_saturate(args) -> int:
         if not args.spawn:
             print(f"  would spawn: {name} ({prompt})")
             continue
-        if spawn(name, prompt, row.get("effort")):
+        if spawn(name, prompt, row.get("effort"), row.get("model")):
             print(f"  spawned {name}")
             time.sleep(2)
     if not args.spawn:
@@ -2378,6 +2503,15 @@ def main(argv=None) -> int:
         help=(
             "reasoning effort for THIS arm, chosen per task (operator 2026-08-08: "
             f"high->ultra). Default {DEFAULT_ARM_EFFORT}."
+        ),
+    )
+    p.add_argument(
+        "--model",
+        default=None,
+        choices=list(ARM_MODELS),
+        help=(
+            "codex model for THIS arm, chosen per task (operator 2026-09-09: "
+            f"'Use Astra or sol ... as appropriate'). Default {ARM_MODEL}."
         ),
     )
     p.set_defaults(fn=cmd_add)

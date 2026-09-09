@@ -271,6 +271,7 @@ def cmd_pose(args) -> int:
     full re-render on the next question asked of this ledger.
     """
     fe1._set_threads(args.threads)
+    pose_reference = price.prepare_pose_reference(args)
     candidates = json.loads(Path(args.candidates).read_text())["candidates"]
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -315,8 +316,8 @@ def cmd_pose(args) -> int:
         pair = int(candidate["pair"])
         if pair in done:
             continue
-        d_pose_base = float(
-            br1.evaluate_codes(base_inst, pair, live_codes[pair][None])[0]
+        d_pose_base = price.evaluate_base_codes(
+            base_inst, pair, live_codes[pair][None], pose_reference
         )
         # CONTROL: re-solving the pair on its UNMOVED render tells us how much of any
         # apparent pose gain belongs to the move and how much was simply left on the
@@ -346,6 +347,7 @@ def cmd_pose(args) -> int:
             "changed_codes": int(candidate["changed_codes"]),
             "final_row": candidate["final_row"],
             "d_pose_base": d_pose_base,
+            "pose_base_gate": pose_reference["pair_checks"].get(pair, pose_reference["receipt"]),
             "d_pose_base_resolved": float(control["final_d_pose"]),
             "control_codes": [int(c) for c in control["codes"]],
             "d_pose_stale": d_pose_stale,
@@ -569,6 +571,7 @@ def cmd_base_pose(args) -> int:
     ``up2.measure_pose`` the candidate legs use -- and the gap to the inherited value is
     reported rather than assumed away.
     """
+    pose_snapshot = price.snapshot_pose_pointer()
     fe1._set_threads(args.threads)
     raw = fe1._open_raw(fe1.LIVE_RAW)
     inst = price.build_pose_instrument(raw)
@@ -585,12 +588,18 @@ def cmd_base_pose(args) -> int:
         indices,
         batch_size=args.batch_size,
     )
+    pose_gate = price.check_pose_base(
+        float(per_pair.mean()),
+        rationale=getattr(args, "pose_base_differs_because", None),
+        snapshot=pose_snapshot,
+    )
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     np.save(out_dir / "base_pose_per_pair.npy", per_pair)
     measured = float(per_pair.mean())
     result = {
         "schema": "ddm_fe1_base_pose.v1",
+        "pose_base_gate": pose_gate,
         "axis": "[cpu_torch fp32 PoseNet, DALI-lineage GT, n600]",
         "score_claim": False,
         "archive_sha256": fe1.LIVE_ARCHIVE_SHA256,
@@ -629,6 +638,7 @@ def build_parser() -> argparse.ArgumentParser:
     pose.add_argument("--outer-rounds", type=int, default=40)
     pose.add_argument("--max-gn-iterations", type=int, default=400)
     pose.add_argument("--base-mean-d-pose", type=float, default=fe1.LIVE_D_POSE)
+    price.add_pose_reference_arguments(pose)
     pose.set_defaults(func=cmd_pose)
 
     admit = sub.add_parser("admit", help="sweep subsets, priced by real archive builds")
@@ -649,6 +659,7 @@ def build_parser() -> argparse.ArgumentParser:
     bp.add_argument("--out-dir", default=str(fe1.WORK / "admission"))
     bp.add_argument("--threads", type=int, default=3)
     bp.add_argument("--batch-size", type=int, default=8)
+    price.add_pose_gate_argument(bp)
     bp.set_defaults(func=cmd_base_pose)
     return parser
 

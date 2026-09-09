@@ -1114,6 +1114,11 @@ def _row_bits(rows: np.ndarray, symbols: np.ndarray) -> float:
 
 
 def _prepare(args, tag: str) -> dict[str, Any]:
+    from comma_lab.instrument_gates import check_pointer_coder
+
+    instrument_gate = check_pointer_coder(
+        Path(args.runtime_root), rationale=getattr(args, "coder_differs_because", None)
+    )
     work = Path(args.store) / "work"
     work.mkdir(parents=True, exist_ok=True)
     route_b = load_route_b()
@@ -1133,6 +1138,7 @@ def _prepare(args, tag: str) -> dict[str, Any]:
     sections["residual_compact"] = tail[:RESIDUAL_COMPACT_BYTES]
     sections["token_stream"] = parts.token_stream
     return {
+        "instrument_gate": instrument_gate,
         "work": work,
         "route_b": route_b,
         "library": library,
@@ -1174,6 +1180,7 @@ def stage_control(args) -> dict[str, object]:
     )
     identical = full_run and emitted == shipped_stream
     verdict = {
+        "instrument_gate": env["instrument_gate"],
         **result,
         "shipped_token_stream_bytes": len(shipped_stream),
         "shipped_token_stream_sha256": sha256_bytes(shipped_stream),
@@ -1282,6 +1289,7 @@ def stage_encode(args) -> dict[str, object]:
         }
 
     verdict = {
+        "instrument_gate": env["instrument_gate"],
         **result,
         **edit_report,
         "token_stream_bytes_base": len(shipped_stream),
@@ -1323,6 +1331,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--stage", required=True, choices=("control", "encode"))
     parser.add_argument("--store", required=True, help="custody directory for this arm")
+    from comma_lab.instrument_gates import add_coder_gate_argument
+
+    add_coder_gate_argument(parser)
     parser.add_argument("--runtime-root", default=str(DEFAULT_RUNTIME_ROOT))
     parser.add_argument(
         "--pointer-archive",

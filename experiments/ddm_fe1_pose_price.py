@@ -21,8 +21,11 @@ Everything is per pair and every number is retained beside its pair index
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 import json
 import math
+import os
 import sys
 import time
 from collections.abc import Sequence
@@ -30,6 +33,14 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from comma_lab.instrument_gates import (
+    ConfoundAlarm,
+    add_pose_gate_argument,
+    check_pose_base,
+    check_pose_pair,
+    snapshot_pose_pointer,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
@@ -97,7 +108,74 @@ def semantic_bytes_for(section, codes: np.ndarray) -> int:
     return len(section.stream_with_codes(codes))
 
 
+def add_pose_reference_arguments(parser) -> None:
+    """Pair screens require a population reference, not a pair-to-mean comparison."""
+    add_pose_gate_argument(parser)
+    parser.add_argument(
+        "--base-pose-reference", type=Path,
+        help="n600 per-pair NPY from this base's own pose instrument",
+    )
+
+
+def prepare_pose_reference(args) -> dict[str, Any]:
+    """Validate population scale before any screen; retain pointer identity for its end."""
+    if os.environ.get("TAC_INSTRUMENT_GATES") == "0":
+        return {"disabled": True, "receipt": check_pose_base(0.0), "pair_checks": {}}
+    snapshot = snapshot_pose_pointer()
+    rationale = getattr(args, "pose_base_differs_because", None)
+    population_receipt = check_pose_base(
+        args.base_mean_d_pose, rationale=rationale, snapshot=snapshot
+    )
+    path = getattr(args, "base_pose_reference", None)
+    if path is None:
+        if rationale is None:
+            raise ConfoundAlarm(
+                "pose_base_reference",
+                "Pair-level pose bases cannot be compared to the n600 mean; supply "
+                "--base-pose-reference or --pose-base-differs-because with a rationale.",
+            )
+        waiver = {"event": "instrument_gate_waiver", "valid": False,
+                  "kind": "pose_base_reference", "rationale": rationale,
+                  "population": population_receipt}
+        print(json.dumps(waiver, sort_keys=True), file=sys.stderr, flush=True)
+        return {"snapshot": snapshot, "rationale": rationale, "reference": None,
+                "receipt": waiver, "pair_checks": {}}
+    try:
+        reference_bytes = Path(path).read_bytes()
+        reference = np.load(io.BytesIO(reference_bytes), allow_pickle=False)
+        if (not isinstance(reference, np.ndarray) or reference.shape != (N_PAIRS,)
+                or not np.isfinite(reference).all() or (reference < 0).any()):
+            raise ValueError("Expected finite nonnegative n600 pose vector")
+    except (OSError, ValueError, TypeError) as exc:
+        raise ConfoundAlarm("pose_base_reference", str(exc)) from exc
+    reference_receipt = check_pose_base(float(reference.mean()), rationale=rationale, snapshot=snapshot)
+    return {"snapshot": snapshot, "rationale": rationale, "reference": reference,
+            "receipt": {**population_receipt, "reference_path": str(path),
+                        "reference_sha256": hashlib.sha256(reference_bytes).hexdigest(),
+                        "reference_population": reference_receipt},
+            "pair_checks": {}}
+
+
+def evaluate_base_codes(inst, pair: int, codes, gate: dict[str, Any]) -> float:
+    """Measure first; refuse an incompatible same-pair control before it can be persisted."""
+    value = float(br1.evaluate_codes(inst, pair, codes)[0])
+    if not gate.get("disabled"):
+        snapshot = gate["snapshot"]
+        check_pose_base(snapshot["d_pose"], rationale=gate["rationale"], snapshot=snapshot)
+        reference = gate["reference"]
+        checked = check_pose_pair(
+            value, float(reference[pair]) if reference is not None else value,
+            rationale=gate["rationale"],
+        )
+        gate["pair_checks"][pair] = (
+            {**checked, "population": gate["receipt"]}
+            if reference is not None else gate["receipt"]
+        )
+    return value
+
+
 def cmd_price(args) -> int:
+    pose_reference = prepare_pose_reference(args)
     fe1._set_threads(args.threads)
     moves = []
     seen: set[int] = set()
@@ -178,9 +256,10 @@ def cmd_price(args) -> int:
     moved_inst = build_pose_instrument(overlay)
     for row in rows:
         pair = row["pair"]
-        row["d_pose_base"] = float(
-            br1.evaluate_codes(base_inst, pair, live_codes[pair][None])[0]
+        row["d_pose_base"] = evaluate_base_codes(
+            base_inst, pair, live_codes[pair][None], pose_reference
         )
+        row["pose_base_gate"] = pose_reference["pair_checks"].get(pair, pose_reference["receipt"])
         row["d_pose_stale"] = float(
             br1.evaluate_codes(moved_inst, pair, live_codes[pair][None])[0]
         )
@@ -241,6 +320,7 @@ def cmd_price(args) -> int:
 
     result = {
         "schema": "ddm_fe1_price.v1",
+        "pose_base_gate": pose_reference["receipt"],
         "axis": (
             "d_seg [macOS-CPU advisory, jg1/sj1 instrument, DALI GT]; d_pose "
             "[cpu_torch fp32, DALI GT]; bytes exact through the shipped RC1 coder"
@@ -413,6 +493,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     price.add_argument("--allow-repeat-pairs", action="store_true")
     price.add_argument("--out", default=str(fe1.WORK / "admission/PRICE.json"))
+    add_pose_reference_arguments(price)
     price.set_defaults(func=cmd_price)
 
     rate = sub.add_parser("rate-law", help="archive cost of N changed codes")

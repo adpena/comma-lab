@@ -5196,6 +5196,8 @@ def preflight_all(
         # reader validates every row before returning it. Keep future production
         # consumers from quietly reopening a raw-read bypass. WARN-ONLY while
         # the live backlog is classified.
+        check_instrument_binds_to_live_pointer(strict=True, verbose=verbose)
+        check_ddm_ledger_before_optional_dump(strict=True, verbose=verbose)
         check_no_unvalidated_required_component_jsonl_readers(
             strict=False, verbose=verbose,
         )
@@ -94732,6 +94734,224 @@ def _required_component_raw_read_lines(tree: ast.AST) -> list[int]:
         if is_raw:
             lines.add(node.lineno)
     return sorted(lines)
+
+
+# Catalog #414: ddm candidate producers must preserve ledgers before optional dumps.
+_DDM_LEDGER_WAIVER = 'DDM_LEDGER_DUMP_OK:'
+
+
+def _ddm_ledger_waiver(line: str) -> bool:
+    """Only a substantive same-line comment can waive a finding."""
+    comment = line.partition('#')[2]
+    if _DDM_LEDGER_WAIVER not in comment:
+        return False
+    rationale = comment.split(_DDM_LEDGER_WAIVER, 1)[1].strip()
+    return len(rationale) >= 24 and len(rationale.split()) >= 4 and not re.search(
+        r'(?i)\b(todo|tbd|placeholder|fixme)\b|<[^>]+>', rationale
+    )
+
+
+def _ddm_ledger_source_violations(source: str) -> list[tuple[int, str]]:
+    """Bounded intra-function AST audit; no code is executed.
+
+    Candidate bags are empty-initialized accepted/keep/candidate collections or
+    aliases thereof. Nonempty guards dominate calls lexically; an early exit on
+    emptiness also dominates the remaining block. Fixed nonempty sequences are
+    not bags. Ledger sinks include np.save bit arrays and ledger/rows writes.
+    """
+    tree = ast.parse(source)
+    findings: list[tuple[int, str]] = []
+    comments = {token.start[0]: token.string for token in tokenize.generate_tokens(io.StringIO(source).readline) if token.type == tokenize.COMMENT}
+
+    def emit(node: ast.AST, reason: str) -> None:
+        if not _ddm_ledger_waiver(comments.get(node.lineno, '')):
+            findings.append((node.lineno, reason))
+
+    def key(node: ast.AST) -> str:
+        return ast.unparse(node)
+
+    def name_is_bag(name: str) -> bool:
+        return bool(re.search(r'(^|_)(accepted|keep|candidates?)(_|$)', name))
+
+    scopes = [tree] + [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    for scope in scopes:
+        nodes: list[ast.AST] = []
+
+        def collect(node: ast.AST) -> None:
+            if node is not scope and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                return
+            nodes.append(node)
+            for child in ast.iter_child_nodes(node):
+                collect(child)
+
+        collect(scope)
+        bags: set[str] = {arg.arg for arg in scope.args.args if name_is_bag(arg.arg)} if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)) else set()
+        assignments: list[tuple[str, ast.AST]] = []
+        for node in nodes:
+            if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        assignments.append((target.id, node.value))
+                        if name_is_bag(target.id) and (
+                            isinstance(node.value, (ast.List, ast.Dict, ast.DictComp, ast.ListComp))
+                            or isinstance(node.value, ast.Call) and key(node.value.func) in {'list', 'dict'}
+                        ):
+                            if not isinstance(node.value, ast.List) or not node.value.elts:
+                                bags.add(target.id)
+        # Candidate outputs collected once per input are not accepted-set bags.
+        # Require a filtering branch/continue for candidate-named collections;
+        # keep/accepted names remain conservative even without a visible append.
+        filtered: set[str] = set()
+        for branch in nodes:
+            if isinstance(branch, ast.If):
+                for child in ast.walk(branch):
+                    if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and child.func.attr == 'append':
+                        filtered.add(key(child.func.value))
+            if isinstance(branch, (ast.For, ast.While)) and any(isinstance(child, ast.Continue) for child in ast.walk(branch)):
+                for child in ast.walk(branch):
+                    if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and child.func.attr == 'append':
+                        filtered.add(key(child.func.value))
+        bags = {name for name in bags if re.search(r'(^|_)(accepted|keep)(_|$)', name) or name in filtered}
+        changed = True
+        while changed:
+            changed = False
+            for name, value in assignments:
+                root = value.value if isinstance(value, ast.Subscript) else value
+                if isinstance(root, ast.Name) and root.id in bags and name not in bags:
+                    bags.add(name)
+                    changed = True
+
+        def bag(node: ast.AST) -> bool:
+            root = node.value if isinstance(node, ast.Subscript) else node
+            return isinstance(root, ast.Name) and root.id in bags
+
+        def guard(test: ast.AST, truth: bool) -> set[str]:
+            if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+                return guard(test.operand, not truth)
+            if isinstance(test, ast.BoolOp) and ((isinstance(test.op, ast.And) and truth) or (isinstance(test.op, ast.Or) and not truth)):
+                return set().union(*(guard(v, truth) for v in test.values))
+            if bag(test) and truth:
+                return {key(test)}
+            if isinstance(test, ast.Compare) and len(test.ops) == 1:
+                left = test.left
+                if isinstance(left, ast.Call) and key(left.func) == 'len' and left.args:
+                    rhs = test.comparators[0]
+                    if isinstance(rhs, ast.Constant) and rhs.value == 0:
+                        op = test.ops[0]
+                        nonempty = (truth and isinstance(op, (ast.Gt, ast.NotEq))) or (not truth and isinstance(op, (ast.Eq, ast.LtE)))
+                        return {key(left.args[0])} if nonempty else set()
+            return set()
+
+        def walk(node: ast.AST, guarded: set[str]) -> None:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                return
+            if isinstance(node, ast.If):
+                walk(node.test, guarded)
+                block(node.body, guarded | guard(node.test, True))
+                block(node.orelse, guarded | guard(node.test, False))
+                return
+            if isinstance(node, ast.IfExp):
+                walk(node.test, guarded)
+                walk(node.body, guarded | guard(node.test, True))
+                walk(node.orelse, guarded | guard(node.test, False))
+                return
+            if isinstance(node, ast.Call) and key(node.func) in {'np.concatenate', 'np.stack', 'numpy.concatenate', 'numpy.stack'} and node.args:
+                arg = node.args[0]
+                literal_empty = isinstance(arg, (ast.List, ast.Tuple)) and not arg.elts
+                if literal_empty or (bag(arg) and key(arg) not in guarded):
+                    emit(node, f'possibly-empty candidate bag {key(arg)} reaches {key(node.func)} without an emptiness guard')
+            for child in ast.iter_child_nodes(node):
+                walk(child, guarded)
+
+        def block(body: list[ast.stmt], guarded: set[str]) -> None:
+            current = set(guarded)
+            for node in body:
+                walk(node, current)
+                # An earlier proof expires after reassignment or mutation.
+                if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                    current -= {key(target) for target in targets}
+                if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr in {'clear', 'pop', 'remove'}:
+                    current.discard(key(node.value.func.value))
+                if isinstance(node, ast.Assert):
+                    current |= guard(node.test, True)
+                if isinstance(node, ast.If) and node.body and isinstance(node.body[-1], (ast.Raise, ast.Return, ast.Continue, ast.Break)):
+                    current |= guard(node.test, False)
+
+        block(scope.body, set())
+        ledger_sinks: list[ast.Call] = []
+        dumps: list[ast.Call] = []
+        for node in nodes:
+            if not isinstance(node, ast.Call):
+                continue
+            func = key(node.func)
+            text = key(node)
+            if func in {'np.savez', 'np.savez_compressed', 'numpy.savez', 'numpy.savez_compressed'}:
+                # A checkpoint containing the ledger is itself persistence,
+                # not an optional dump ahead of that ledger.
+                if not any(re.search(r'ledger|per_frame|pair_bits', kw.arg or '', re.I) for kw in node.keywords):
+                    dumps.append(node)
+            if re.search(r'ledger|bits_per_frame|per_frame_bits|pair_bits|rows', text, re.I) and (
+                func.endswith(('.write_text', '.write_bytes', '.write'))
+                or func in {'np.save', 'numpy.save', 'json.dump', 'atomic_npy', 'atomic_json'}
+            ):
+                # A name such as ledger_rows does not make list.append durable.
+                # No append method is a persistence sink without an API proof.
+                ledger_sinks.append(node)
+        parents = {child: (parent, field) for parent in nodes for field, value in ast.iter_fields(parent) for child in (value if isinstance(value, list) else [value]) if isinstance(child, ast.AST)}
+
+        def branch_path(node: ast.AST) -> set[tuple[ast.AST, str]]:
+            result = set()
+            while node in parents:
+                parent, field = parents[node]
+                if isinstance(parent, (ast.If, ast.For, ast.While, ast.Try, ast.With, ast.Match)):
+                    result.add((parent, field))
+                node = parent
+            return result
+
+        for dump in dumps:
+            after = [n for n in ledger_sinks if n.lineno > dump.lineno]
+            before = [n for n in ledger_sinks if n.lineno < dump.lineno and branch_path(n) <= branch_path(dump)]
+            if after and not before:
+                emit(dump, f'optional numpy dump precedes ledger persistence at line {after[0].lineno}; persist the ledger first')
+    return sorted(set(findings))
+
+
+def check_instrument_binds_to_live_pointer(
+    *, repo_root: Path | str | None = None, strict: bool = True, verbose: bool = False,
+) -> list[str]:
+    """Catalog #415: protect pose-base and pricing entrypoint guard wiring."""
+    from comma_lab.instrument_gates import audit_instrument_gate_wiring
+
+    violations = audit_instrument_gate_wiring(Path(repo_root or REPO_ROOT).resolve())
+    if verbose:
+        print(f"  [instrument-binds-live-pointer] {len(violations)} violation(s)")
+    if strict and violations:
+        raise PreflightError("check_instrument_binds_to_live_pointer found violations:\n  " + "\n  ".join(violations))
+    return violations
+
+
+def check_ddm_ledger_before_optional_dump(
+    *, repo_root: Path | str | None = None, strict: bool = True, verbose: bool = False,
+) -> list[str]:
+    """STRICT ledger-first and empty-accepted-list gate over ddm producers."""
+    root = Path(repo_root or REPO_ROOT).resolve()
+    paths = sorted((root / 'experiments').glob('ddm_*.py'))
+    violations: list[str] = []
+    for path in paths:
+        rel = path.relative_to(root).as_posix()
+        try:
+            found = _ddm_ledger_source_violations(path.read_text(encoding='utf-8'))
+        except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+            violations.append(f'{rel}: unable to AST-audit ledger persistence: {exc}')
+            continue
+        violations.extend(f'{rel}:{line}: {reason}' for line, reason in found)
+    if verbose:
+        print(f'  [ddm-ledger-before-dump] {len(violations)} violation(s); scanned {len(paths)} producers')
+    if strict and violations:
+        raise PreflightError('check_ddm_ledger_before_optional_dump found violations:\n  ' + '\n  '.join(violations))
+    return violations
 
 
 def check_no_unvalidated_required_component_jsonl_readers(

@@ -784,6 +784,8 @@ def analyze(
     atomic_npy(aggregate_dir / "pair_manufactured_bits.f64.npy", pair_manufactured_bits)
     atomic_npy(aggregate_dir / "pair_manufactured_count.i64.npy", pair_manufactured_count)
 
+    if not top_candidates:
+        raise ValueError("no accepted top-cost candidates; bit ledgers are retained")
     all_top = np.concatenate(top_candidates)
     order = np.lexsort((all_top["flat_index"], -all_top["cost_bits"]))
     top_positions = all_top[order[:1000]]

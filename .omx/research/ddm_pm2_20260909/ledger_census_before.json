@@ -1,0 +1,81 @@
+{
+  "schema": "ddm_pm2.ledger_census.v1",
+  "axis": "[macOS-CPU static apparatus audit]",
+  "score_claim": false,
+  "producer_glob": "experiments/ddm_*.py",
+  "files_scanned": 698,
+  "before_violations": 14,
+  "before_producers": 4,
+  "before": [
+    {
+      "path": "experiments/ddm_nr1_taskcell_quotient_prebuild.py",
+      "line": 218,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_nr1_taskcell_quotient_prebuild.py",
+      "line": 219,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_pc2_carrier_kwidth_rankcut.py",
+      "line": 1855,
+      "kind": "optional_dump_before_ledger"
+    },
+    {
+      "path": "experiments/ddm_pc2_carrier_kwidth_rankcut.py",
+      "line": 2060,
+      "kind": "optional_dump_before_ledger"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 429,
+      "kind": "optional_dump_before_ledger"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 431,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 432,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 433,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 434,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 435,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 436,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 437,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_rp1_rate_rank.py",
+      "line": 482,
+      "kind": "possibly_empty_accepted_list"
+    },
+    {
+      "path": "experiments/ddm_tb2_token_bit_attribution.py",
+      "line": 787,
+      "kind": "possibly_empty_accepted_list"
+    }
+  ]
+}

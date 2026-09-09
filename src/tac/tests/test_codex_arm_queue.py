@@ -1241,3 +1241,25 @@ def test_saturate_refuses_untracked_research_birth(q, tmp_path, monkeypatch, cap
 
     assert rc == 4
     assert "REFUSED custody debt: 1" in capsys.readouterr().out
+
+
+def test_arm_model_is_a_per_arm_choice_from_the_admissible_pair(q, monkeypatch):
+    # Operator 2026-09-09: "Use Astra or sol and different effort levels as appropriate".
+    assert q.ARM_MODELS == ("gpt-6-astra", "gpt-5.6-sol")
+    assert q.resolve_arm_model(None) == q.ARM_MODEL
+    assert q.resolve_arm_model("gpt-5.6-sol") == "gpt-5.6-sol"
+    with pytest.raises(SystemExit, match="outside the operator's admissible set"):
+        q.resolve_arm_model("gpt-5.6-terra")
+    # The 5.5 ban is enforced UNDERNEATH the admissible set: an env override that
+    # names a 5.5 variant is admissible by the set rule yet still refused.
+    monkeypatch.setattr(q, "ARM_MODEL", "gpt-5.5-anything")
+    with pytest.raises(SystemExit, match="banned"):
+        q.resolve_arm_model(None)
+
+
+def test_keeper_argv_carries_the_chosen_model_and_effort(q):
+    text = q.keeper_source("arm_x", ".omx/research/charters/x.md", "medium", "gpt-5.6-sol")
+    assert "'-m', 'gpt-5.6-sol'" in text
+    assert "model_reasoning_effort=medium" in text
+    default = q.keeper_source("arm_y", ".omx/research/charters/y.md", "xhigh")
+    assert f"'-m', '{q.ARM_MODEL}'" in default

@@ -1,0 +1,7 @@
+{
+  "index_unchanged": false,
+  "index_sha256": "e98a1cffe36efc7176a6a65325ef8d727181457913cb0b861d2eff1ca2619e8e",
+  "bundle_verify_rc": 0,
+  "stdout": "The bundle contains this ref:\n504cbbb0afc22239bf49cab0db11175965f776d1 refs/heads/serializer-fallback\nThe bundle requires this ref:\n5e6f774be5b7d422bb929c983d0858bc67cb016b \nThe bundle uses this hash algorithm: sha1\n",
+  "stderr": ".omx/research/ddm_pm2_20260909/serializer_code/20260909T225309.774875Z-21897/intended-commit.bundle is okay\n"
+}

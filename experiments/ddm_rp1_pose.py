@@ -42,17 +42,23 @@ from typing import Any
 
 import numpy as np
 
+from comma_lab.instrument_gates import (
+    add_pose_gate_argument,
+    check_pose_base,
+    snapshot_pose_pointer,
+)
+
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
 
-import ddm_br1_pose_basis_reorientation as br1  # noqa: E402
-import ddm_jg1_seg_solve as jg1  # noqa: E402
-import ddm_jg2_tail_reencode as jg2  # noqa: E402
-import ddm_jg5_pose_resolve_on_edited_renders as jg5  # noqa: E402
-import ddm_rp1_rate_rank as rp1  # noqa: E402
-import ddm_sj1_joint_admission as sj1ja  # noqa: E402  (READ-ONLY: overlay helpers)
-import ddm_up2_shipping_pose_solve as up2  # noqa: E402
+import ddm_br1_pose_basis_reorientation as br1
+import ddm_jg1_seg_solve as jg1
+import ddm_jg2_tail_reencode as jg2
+import ddm_jg5_pose_resolve_on_edited_renders as jg5
+import ddm_rp1_rate_rank as rp1
+import ddm_sj1_joint_admission as sj1ja
+import ddm_up2_shipping_pose_solve as up2
 
 N_PAIRS = jg1.N_PAIRS
 CAMERA_H, CAMERA_W = jg1.CAMERA_H, jg1.CAMERA_W
@@ -175,6 +181,7 @@ def cmd_render(args: argparse.Namespace) -> int:
 def cmd_pose(args: argparse.Namespace) -> int:
     """Per-pair d_pose over all 600 pairs on one decode with one set of codes."""
     rp1.set_threads(args.threads)
+    pose_snapshot = snapshot_pose_pointer() if args.tag == "base" else None
     receipts = assert_pointer_and_carrier()
     inst = load_instrument(Path(args.overlay) if args.overlay else None)
     codes = (
@@ -195,11 +202,20 @@ def cmd_pose(args: argparse.Namespace) -> int:
         np.arange(N_PAIRS, dtype=np.int64),
         batch_size=args.batch_size,
     )
+    pose_gate = (
+        check_pose_base(
+            float(per_pair.mean()),
+            rationale=getattr(args, "pose_base_differs_because", None),
+            snapshot=pose_snapshot,
+        )
+        if args.tag == "base" else None
+    )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     np.save(out, per_pair)
     report = {
         "schema": "ddm_rp1_pose_leg.v1",
+        "pose_base_gate": pose_gate,
         "tag": args.tag,
         "decode": "candidate_overlay" if args.overlay else "shipped_decode",
         "overlay_dir": str(args.overlay) if args.overlay else None,
@@ -342,6 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
     pose.add_argument("--out", required=True)
     pose.add_argument("--batch-size", type=int, default=8)
     pose.add_argument("--threads", type=int, default=4)
+    add_pose_gate_argument(pose)
     pose.set_defaults(func=cmd_pose)
 
     refine = sub.add_parser("refine", help="carrier re-solve on the changed pairs")

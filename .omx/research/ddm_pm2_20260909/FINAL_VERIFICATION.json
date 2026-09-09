@@ -1,0 +1,10 @@
+{
+  "status": "VERIFIED_RETAINED_NOT_LANDED",
+  "evidence_fallback_commit": "fb6e735a1bd934bc3a5c9f8eee907ed99e150304",
+  "evidence_bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_pm2_20260909/serializer_evidence/20260909T225509.613208Z-28262/intended-commit.bundle",
+  "evidence_bundle_sha256": "052b9d87a4056a3a14b8e6455a17d7b990ab9a22d3535e7a6690c515931ca8b6",
+  "file_hash_count": 31,
+  "bundle_verify_rc": 0,
+  "shared_staged_paths": [],
+  "shell_syntax": "PASS (4/4)"
+}

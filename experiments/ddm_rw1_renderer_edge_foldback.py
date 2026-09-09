@@ -74,6 +74,7 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
 
+import ddm_fe1_pose_price as pose_price
 import ddm_jg1_seg_solve as jg1
 import ddm_up2_shipping_pose_solve as up2
 
@@ -2000,6 +2001,7 @@ def cmd_pose(args) -> int:
     from the LIVE coefficients, so the only thing the global case removes is the
     ability to leave the other 599 pairs alone.
     """
+    pose_reference = pose_price.prepare_pose_reference(args)
     started = time.perf_counter()
     pointer = verify_live_pointer()
     import ddm_jg5_pose_resolve_on_edited_renders as jg5
@@ -2023,7 +2025,9 @@ def cmd_pose(args) -> int:
             pair = int(pair)
             if pair in done:
                 continue
-            d_base = float(br1.evaluate_codes(base, pair, live_codes[pair][None])[0])
+            d_base = pose_price.evaluate_base_codes(
+                base, pair, live_codes[pair][None], pose_reference
+            )
             d_stale = float(br1.evaluate_codes(moved, pair, live_codes[pair][None])[0])
             refined = jg5.refine_pair(
                 moved,
@@ -2036,6 +2040,7 @@ def cmd_pose(args) -> int:
             row = {
                 "pair": pair,
                 "d_pose_base": d_base,
+                "pose_base_gate": pose_reference["pair_checks"].get(pair, pose_reference["receipt"]),
                 "d_pose_stale": d_stale,
                 "d_pose_resolved": float(refined["final_d_pose"]),
                 "resolved_codes": [int(v) for v in refined["codes"]],
@@ -2063,6 +2068,7 @@ def cmd_pose(args) -> int:
 
     result = {
         "schema": "ddm_rw1_pose_shard.v1",
+        "pose_base_gate": pose_reference["receipt"],
         "axis": "[cpu_torch fp32 authority, DALI GT]",
         "score_claim": False,
         "pointer": pointer,
@@ -3369,6 +3375,7 @@ def build_parser() -> argparse.ArgumentParser:
     pose.add_argument("--resume", action="store_true", default=True)
     pose.add_argument("--progress", action="store_true", default=True)
     common(pose)
+    pose_price.add_pose_reference_arguments(pose)
     pose.set_defaults(func=cmd_pose)
 
     admit = sub.add_parser("admit")

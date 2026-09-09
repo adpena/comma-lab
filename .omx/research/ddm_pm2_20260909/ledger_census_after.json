@@ -1,0 +1,10 @@
+{
+  "schema": "ddm_pm2.ledger_census.v1",
+  "axis": "[macOS-CPU static apparatus audit]",
+  "score_claim": false,
+  "files_scanned": 698,
+  "violations": [],
+  "elapsed_seconds": 10.192971417003719,
+  "scoped_sources_sha256": "bf007b7c371eda2dafa49a87f809214f4dcacf268b00d2962a12e85f23a7e582",
+  "command": ".venv/bin/python: check_ddm_ledger_before_optional_dump(strict=True, verbose=True)"
+}
