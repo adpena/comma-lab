@@ -66,6 +66,15 @@ FINAL_MESSAGES = _REPO / ".omx" / "research" / "arm_final_messages"
 FINAL_MESSAGE_INDEX = _REPO / ".omx" / "state" / "codex_arm_queue.final_messages.jsonl"
 NEXT_IF_RESUMED = _REPO / ".omx" / "state" / "codex_arm_queue.next_if_resumed.jsonl"
 ARM_CAPABILITIES = _REPO / ".omx" / "state" / "codex_arm_capabilities.json"
+SCREENING_LAW_EXEMPTIONS = (
+    _REPO
+    / ".omx"
+    / "research"
+    / "ddm_pm2_20260909"
+    / "screening_law_exemptions_20260910.jsonl"
+)
+SCREENING_LAW_CUTOFF_UTC = "2026-09-09T23:00:45+00:00"
+SCREENING_LAW_LANDING_COMMIT = "8038f9e77d90f7a1c7ad9373e27079e73d801c89"
 
 DEFAULT_CAP = 4
 # EVERY connected SSD tier, not just tier-1. Granting only VertigoDataTier was a
@@ -2000,8 +2009,105 @@ def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str
 
 
 def _screening_law_strict() -> bool:
-    """Catalog #416: warn until the charter census reaches zero, then flip here."""
-    return os.environ.get("TAC_SCREENING_LAW_STRICT", "0") == "1"
+    """Catalog #416: strict by default after ddm_sw1's zero census.
+
+    ``0`` remains the explicit escape for a process whose charter was already
+    admitted under the warn-only regime.  Any other value is strict; a typo
+    must not silently weaken a structural gate.
+    """
+    return os.environ.get("TAC_SCREENING_LAW_STRICT", "1") != "0"
+
+
+def _screening_exemption_key(prompt_path: str) -> str | None:
+    """Canonical repo-relative key for a charter, or None outside the repo."""
+    try:
+        return str(Path(prompt_path).resolve().relative_to(_REPO.resolve()))
+    except (OSError, ValueError):
+        return None
+
+
+def _load_screening_law_exemptions() -> dict[str, dict]:
+    """Load individually evidenced pre-law FINISHED exemptions.
+
+    Malformed, conflicting, stale, post-cutoff, or missing-evidence rows are
+    ignored fail-closed.  This is deliberately not a date-wide grandfather:
+    the exact charter bytes and exact terminal memo/final bytes must match the
+    adjudicated row.  Duplicate rows for one charter invalidate that charter
+    rather than letting append order choose the convenient answer.
+    """
+    try:
+        lines = SCREENING_LAW_EXEMPTIONS.read_text(
+            encoding="utf-8", errors="strict"
+        ).splitlines()
+    except OSError:
+        return {}
+    candidates: dict[str, list[dict]] = {}
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        key = row.get("charter_path")
+        if isinstance(key, str):
+            candidates.setdefault(key, []).append(row)
+
+    accepted: dict[str, dict] = {}
+    for key, rows in candidates.items():
+        if len(rows) != 1:
+            continue
+        row = rows[0]
+        if row.get("classification") != "historical_finished_before_law":
+            continue
+        if row.get("law_cutoff_utc") != SCREENING_LAW_CUTOFF_UTC:
+            continue
+        if row.get("law_landing_commit") != SCREENING_LAW_LANDING_COMMIT:
+            continue
+        charter_sha = row.get("charter_sha256")
+        evidence_sha = row.get("evidence_sha256")
+        evidence_path = row.get("evidence_path")
+        finished = row.get("finished_at_utc")
+        if not all(
+            isinstance(value, str) and value
+            for value in (charter_sha, evidence_sha, evidence_path, finished)
+        ):
+            continue
+        if not re.fullmatch(r"[0-9a-f]{64}", charter_sha):
+            continue
+        if not re.fullmatch(r"[0-9a-f]{64}", evidence_sha):
+            continue
+        try:
+            from datetime import datetime
+
+            finished_dt = datetime.fromisoformat(finished.replace("Z", "+00:00"))
+            cutoff_dt = datetime.fromisoformat(SCREENING_LAW_CUTOFF_UTC)
+        except ValueError:
+            continue
+        if finished_dt.tzinfo is None or finished_dt >= cutoff_dt:
+            continue
+        evidence = (_REPO / evidence_path).resolve()
+        try:
+            evidence.relative_to((_REPO / ".omx" / "research").resolve())
+            evidence_bytes = evidence.read_bytes()
+        except (OSError, ValueError):
+            continue
+        if hashlib.sha256(evidence_bytes).hexdigest() != evidence_sha:
+            continue
+        accepted[key] = row
+    return accepted
+
+
+def _screening_law_historical_exemption(prompt_path: str, charter_text: str) -> dict | None:
+    key = _screening_exemption_key(prompt_path)
+    if key is None:
+        return None
+    row = _load_screening_law_exemptions().get(key)
+    if row is None:
+        return None
+    if hashlib.sha256(charter_text.encode("utf-8")).hexdigest() != row["charter_sha256"]:
+        return None
+    return row
 
 
 def lint_charter_screening_law(prompt_path: str) -> list[str]:
@@ -2018,6 +2124,8 @@ def lint_charter_screening_law(prompt_path: str) -> list[str]:
         text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         return [f"screening-law: charter unreadable ({exc})"]
+    if _screening_law_historical_exemption(prompt_path, text) is not None:
+        return []
     # Markdown decoration must not hide a declaration. Scope this law to the
     # OPTIMAL FORM block: a historical incident elsewhere is not today's plan.
     clean = re.sub(r"<!--.*?-->", "", text, flags=re.S)

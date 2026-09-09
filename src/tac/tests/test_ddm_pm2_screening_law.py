@@ -1,7 +1,9 @@
 """Charter declaration regression tests; no scoring or pricing workloads."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -139,7 +141,7 @@ def test_confinement_menu_is_not_a_choice(queue, charter):
 
 
 def test_warn_only_default_even_when_optimal_form_is_strict(queue, charter, monkeypatch):
-    monkeypatch.delenv("TAC_SCREENING_LAW_STRICT", raising=False)
+    monkeypatch.setenv("TAC_SCREENING_LAW_STRICT", "0")
     monkeypatch.setenv("TAC_CHARTER_LINT_STRICT", "1")
     path = charter("SCOPE: n32 screen.\nRECALL_LINT_NA: this is a unit fixture.")
     assert not any("screening-law:" in p for p in queue.lint_charter_optimal_form(path))
@@ -182,3 +184,84 @@ def test_real_add_path_warns_or_refuses_before_queue_write(
     output = capsys.readouterr().out
     assert "screening-law:" in output
     assert ("REFUSED" if strict else "WARN") in output
+
+
+def test_screening_law_is_strict_by_default_after_zero_census(queue, charter, monkeypatch):
+    monkeypatch.delenv("TAC_SCREENING_LAW_STRICT", raising=False)
+    path = charter("SCOPE: n120 screen.\nRECALL_LINT_NA: bounded fixture.")
+    assert any("screening-law:" in p for p in queue.lint_charter_optimal_form(path))
+    assert queue.lint_charter_recall_advisories(path) == []
+
+
+def _write_historical_exemption(queue, charter_path: Path, evidence_path: Path, **changes):
+    row = {
+        "schema": "ddm_pm2_screening_law_exemption.v1",
+        "classification": "historical_finished_before_law",
+        "charter_path": str(charter_path.resolve().relative_to(queue._REPO.resolve())),
+        "charter_sha256": hashlib.sha256(charter_path.read_bytes()).hexdigest(),
+        "evidence_path": str(evidence_path.resolve().relative_to(queue._REPO.resolve())),
+        "evidence_sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+        "finished_at_utc": "2026-09-09T22:00:00+00:00",
+        "law_cutoff_utc": queue.SCREENING_LAW_CUTOFF_UTC,
+        "law_landing_commit": queue.SCREENING_LAW_LANDING_COMMIT,
+    }
+    row.update(changes)
+    queue.SCREENING_LAW_EXEMPTIONS.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    return row
+
+
+def test_exact_historical_exemption_clears_only_its_finished_charter(
+    queue, charter, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(queue, "_REPO", tmp_path)
+    exemptions = tmp_path / ".omx/research/exemptions.jsonl"
+    exemptions.parent.mkdir(parents=True)
+    monkeypatch.setattr(queue, "SCREENING_LAW_EXEMPTIONS", exemptions)
+    charter_path = Path(charter("SCOPE: n120 screen."))
+    evidence = tmp_path / ".omx/research/terminal.md"
+    evidence.write_text("Terminal verdict: complete.\n", encoding="utf-8")
+    _write_historical_exemption(queue, charter_path, evidence)
+    assert queue.lint_charter_screening_law(str(charter_path)) == []
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"charter_sha256": "0" * 64},
+        {"evidence_sha256": "0" * 64},
+        {"finished_at_utc": "2026-09-10T00:00:00+00:00"},
+        {"classification": "historical"},
+    ],
+)
+def test_stale_or_post_cutoff_historical_exemption_fails_closed(
+    queue, charter, monkeypatch, tmp_path, change
+):
+    monkeypatch.setattr(queue, "_REPO", tmp_path)
+    exemptions = tmp_path / ".omx/research/exemptions.jsonl"
+    exemptions.parent.mkdir(parents=True)
+    monkeypatch.setattr(queue, "SCREENING_LAW_EXEMPTIONS", exemptions)
+    charter_path = Path(charter("SCOPE: n120 screen."))
+    evidence = tmp_path / ".omx/research/terminal.md"
+    evidence.write_text("Terminal verdict: complete.\n", encoding="utf-8")
+    _write_historical_exemption(queue, charter_path, evidence, **change)
+    assert "lacks actuator confinement" in queue.lint_charter_screening_law(
+        str(charter_path)
+    )[0]
+
+
+def test_conflicting_duplicate_exemptions_fail_closed(
+    queue, charter, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(queue, "_REPO", tmp_path)
+    exemptions = tmp_path / ".omx/research/exemptions.jsonl"
+    exemptions.parent.mkdir(parents=True)
+    monkeypatch.setattr(queue, "SCREENING_LAW_EXEMPTIONS", exemptions)
+    charter_path = Path(charter("SCOPE: n120 screen."))
+    evidence = tmp_path / ".omx/research/terminal.md"
+    evidence.write_text("Terminal verdict: complete.\n", encoding="utf-8")
+    row = _write_historical_exemption(queue, charter_path, evidence)
+    with exemptions.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row) + "\n")
+    assert "lacks actuator confinement" in queue.lint_charter_screening_law(
+        str(charter_path)
+    )[0]

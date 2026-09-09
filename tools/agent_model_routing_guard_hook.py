@@ -151,6 +151,11 @@ _LINT_ADVISORY_ENTRIES = (
 #: name that is neither bound above nor waived here — a deny-list that is loud
 #: about an unrecognised member instead of passing it in silence.
 _LINT_ENTRY_POINTS_WAIVED = {
+    "lint_charter_screening_law": (
+        "Transitively bound inside lint_charter_optimal_form when the screening law is strict, "
+        "and inside lint_charter_recall_advisories only during the explicit legacy warn mode. "
+        "Calling it again here would duplicate every screening finding rather than add coverage."
+    ),
     "lint_charter_fm_advisories": (
         "model-backed (fm.charter_class, timeout=15s per call). This hook is "
         "SYNCHRONOUS in the spawn path with a measured 0.02s budget; codex's "

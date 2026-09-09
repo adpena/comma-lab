@@ -1,0 +1,1887 @@
+{
+  "axis": "[macOS-CPU static apparatus / scorer-free]",
+  "charters_scanned": 375,
+  "violating_charters": 0,
+  "historical_exemptions": 93,
+  "classification_counts": {
+    "historical_finished_before_law": 93
+  },
+  "strict_default": true,
+  "rows": [
+    {
+      "path": ".omx/research/charters/charter_ddm_ac1_automatic_endpoint_closure_20260814.md",
+      "sha256": "0673273688c7f7edd89869413d873215c479c5a9cce9af6c2ab001a80d4c62e9",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_bg1_bilinear_gate_pricing_20260814.md",
+      "sha256": "c5b2c6639953195b3edbff7d32385c7f05d31db9f3992609438cb791eb075f20",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_bg2_postmortem_execute_20260814.md",
+      "sha256": "f83e37fd27e0b69be5baa60c7826acc801b25e5d5f4ab3a2ff327919e949f9c3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_cn5_arc_consolidation_20260813.md",
+      "sha256": "012b8a403c4137e962d4a3a2fa94d1fd6e570b161b9f36127eb3f3ad219d4185",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_dio1_dion3_crosswalk_20260814.md",
+      "sha256": "47dc2c46954dac1f4baa384b69c889efd8e314310fd710a454fedb75201a2d46",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_dr1_dispatch_infra_repair_20260814.md",
+      "sha256": "31777246865fb2754df0ed2d606cc0a9e665495089992dcd4ff6221b2a55a212",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_dt1_repeated_lesson_determinizer_20260814.md",
+      "sha256": "db488b38f2721b3a273a5af08a660bf898d4d3f66a3dfac098e4dab35495b0f6",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_ec1_implicit_edge_conditioning_20260814.md",
+      "sha256": "47e517271cac4ef2660195b5b0944323558941a997b60a01dd5d6f70818c2d23",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_ec2_oriented_adapter_trainer_20260814.md",
+      "sha256": "23a1dd865e64267d31ab81d57d1fc593c0df388668fb09af615d244d0f98473e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_eu4_fresh_eyes_fractal_composition_20260813.md",
+      "sha256": "5f2b189ca8d6ebd3299516591c7fc2c9aeacf25e2862907cedcbe1a1956628a3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_f26p_runtime_cpu_lift_20260814.md",
+      "sha256": "e952b3b5cf3bc8bb8dbb247f50fee77b1667ffb4728f9f13d7b5c0e9013a294d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_f26q_rc64_native_lowering_20260814.md",
+      "sha256": "f6d33d67d0afaca189f917015c37c631ad6d3218b3fb45e7b4fe3c84bcbec13b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_f26r_hpac_hot_stage_final_rung_20260814.md",
+      "sha256": "5ad41a1063fc4ecdf9a02f052676211c56c0fd8c5699bb16a9e889c9726992b7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_fs1_fire_seal_adapters_20260814.md",
+      "sha256": "80bf473429eb7996f79f38f24c1ea7e2011636f61a66b827b32e816e408bb8a3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_gca1_graph_calculus_crosswalk_20260813.md",
+      "sha256": "47c58528cdce7dc7e6a1bb8a89acbbb7381e05a8952cce33fccef45a2584360c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_gs1_gestalt_signal_census_20260814.md",
+      "sha256": "3579e4d365988f1e231d2c2b010e95e7b494d8757b1662b563a0559ee1c0e167",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_hg1_named_followons_20260813.md",
+      "sha256": "06b5d333d9061204cc9d964129e7bcf1d2419312e852d6530936d809d56049ad",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_js1c_cuda_custody_stage0_20260814.md",
+      "sha256": "d2823dd67d42d72fa3cfbe865204867768042cd57db98e6fe1384d9a820cb80d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_js6_seg_representation_join_20260813.md",
+      "sha256": "41473b8d5360ab3197e8688cf433988fbc6d2496f499b70e25cc5a387ae85867",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_js6b_pose_screened_compile_20260813.md",
+      "sha256": "5cd62693270fafd3fb1140107e150dc3bc44dc58c5ae6b6f93836b8023db8179",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_js8_implicit_edge_conditioning_20260814.md",
+      "sha256": "1c67376178435597814ec01872fde3f8fa319d3996a16e51a33170767218895c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_js8_seg_stack_compensated_rerun_20260813.md",
+      "sha256": "024f8286a116f378d90187782779906916c0e317c4568ce9e2e96edf6cc50bcd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_mc35_micro35_union_build_20260814.md",
+      "sha256": "40ed5cabc9c87576623a34a420e8334582d2284d465d45cdbceb7bc3b1f7d905",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_mc36_micro35_variants_20260814.md",
+      "sha256": "89f253e703cfa4d9da1fad8a578bc711814ab2d6a0a3da503907b59cc5ba01f7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_mt1_978_multitoken_screen_20260814.md",
+      "sha256": "8f333fc68f93cc4788fa7e8b40ad1e5adfebd2b1da422736d10eedb21f4fc383",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_na7_negative_signal_audit_20260814.md",
+      "sha256": "ff0ef0f6bf3d2640d1a5bccdde82ecb024324618eabf5c989c137c78fc8f5cee",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_pk3_frame0_pose_representation_20260813.md",
+      "sha256": "e232db387e530789601e9ea8dfcd3ec4c25688c9d6e8b42d201beeaefc428ab7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_pk4_optimal_form_frame0_pose_20260813.md",
+      "sha256": "ea0990328869ab1c6764be73ff5e5e10c85cc9a3aeae3ca342be82ae913a1db2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_pr135ps_truncated_search_resume_20260813.md",
+      "sha256": "cb9bc9341b3d8522ec99c6486136e084f1e0f75e8ce49361e241e088fdb5b9dd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_qs1_frame0_schur_coupled_solve_20260813.md",
+      "sha256": "7d3464fa91e0a66f9c474f2fcd63694a79e279ce76fcd9ed3b4a3ee7d8f5e22b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_qs2_compensation_rate_rung_20260813.md",
+      "sha256": "9369c79adc3651c5b71531511ff8d57df92e92a4dcff98c192ea6c2fc36e7ec5",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_qs3_saturation_compose_20260813.md",
+      "sha256": "0a4e621c8ea37e4af9cd4ed31303bc17f74981399a413ad1ee2885f6aa3faa29",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_qs4_collateral_suppression_20260813.md",
+      "sha256": "b4acac179525057f34822f06675a94d6caf05a86e6522752676c9700b40ec16a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_qs5_resolve_compensation_20260813.md",
+      "sha256": "108bc6ddeb87aff1e045af8f52c827163213e0c424631c4aeebce2bb13c86f49",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_re1t_t4_gate_prep_20260813.md",
+      "sha256": "725f5417b2117dd541ac70842522ff870a831106a98a9e35dc108dc76191d776",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_re1x_round1_full_n600_eval_20260813.md",
+      "sha256": "efed63586ff3c3c55b17758dce2ed0be1b3607474a4e800afd73d03da973d7fe",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_rfo1_fresh_hybrid_compose_20260814.md",
+      "sha256": "5145531591329dfd5c80de5fe001634809126e1fc8db9e1db4dcf03d547282df",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_rx1_rate_representation_attack_20260814.md",
+      "sha256": "4ff1b55423a888f577d1f81e16d41b6a05e81c4bcaf0306960e36b83517df6f4",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_rx2_mc36_label_hpac_20260814.md",
+      "sha256": "a58e3a633b938f458bdfc0a01dfb46a1550d5dee34b671a475748f389e44cb43",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_sc3_storage_custody_move_20260813.md",
+      "sha256": "0c96712233d9e3a9f0a7e58b821f652a904e0956f7cfe62efbb2f542c2b7e393",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_vh2_vehicle_harvest_drain_20260813.md",
+      "sha256": "3e31987a7d5d7e643862927e977a0c2a443ff18e174e16827db946551693a41c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/charter_ddm_vh3_ms_family_drain_20260813.md",
+      "sha256": "89afcd54102c4a6921c65889b67918eee1e344999de9d81d50a36b411f951c08",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ad2_addressing_cost_decomposition_charter_20260822.md",
+      "sha256": "493be96af65ed451395c37278b2f5bad58ad9c9a2ab2b39e5421bae090b948f4",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ae1_anti_predicted_excess_charter_20260822.md",
+      "sha256": "3f97477499875575bf81e709ab17aeaa7c6e1cb22b33d577fe1ca187f6f1cd75",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_afc1_address_free_census_20260831.md",
+      "sha256": "e27d9164d1a433ffd30121b8c6b1a1c969880cd5b0447c7329f693a6271174ca",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_afr1_tile48_receiver_identity_20260831.md",
+      "sha256": "bf0a79d38488f5295f7642ae035ef87f728564628af68f5c6ee6e1e77b1b11b0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ah2_arm_harvest_charter_20260810.md",
+      "sha256": "3464b6a431ca368d8b216e31b00ab8d5c77c883b0a59b908b63632b65287a59c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ai1_ans_receiver_integration.md",
+      "sha256": "adf4ec0408cf65b2d9cd8d4aadbcc8f8d8d1d3e5dd3382f0919ef46eba3752fc",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ane1_ane_screening_lane_20260905.md",
+      "sha256": "056690c4ebd09f774bdfee8032eed10b587686d0a8867c7b00aba8e57bfd88ab",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ane2_engineer_the_precision_drift_20260905.md",
+      "sha256": "cdff5178bf9e0fb1faa76fce40b164189ef6dc2c139649a688a63cee78b6b54a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ane3_residue_fixed_conversion_remeasure_20260908.md",
+      "sha256": "a7385d302bd1a88d33999ca9fd15f79eff96d77bf1ae1b8b42189616f93f644b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ap1_ans_payload_retention.md",
+      "sha256": "a3b82c5252058296d063f41182a9c7117ae580e459b3978d72dbd769cc44e0f6",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ap1_residue_purchase_scorer_charter_20260823.md",
+      "sha256": "7fbfccebb2a43ec878f2cff205cde223d88f7f402a39b48fb6225be696ebe840",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ar1_aa_render_price_on_born_field_20260903.md",
+      "sha256": "0f83da3d294f51d4b3696612e939aa26064023df7344d4bbd0ab1e815dc72226",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ar1b_archive_residue_purchase_charter_20260822.md",
+      "sha256": "27b7edc9ad2e41c7b0dc72ee3ab80d9a744d6e9d3a82dbc675f91b82e3493c22",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_av1_wd2_earlystop_adversarial_review_20260815.md",
+      "sha256": "f3bb1833a7c40a9a647787d6c907d0f275edb912941c4136d9a647e8c406a21a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_av2_fresh_eyes_and_distillation_reopen_20260815.md",
+      "sha256": "eb4fcebdbcd1478ac5632780fb1c94a7e510a48fbbaf64c2540c416d9251d2ad",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bc1_burn_chain_driver_20260903.md",
+      "sha256": "abff65c21d1f67aa5d45af81bd001cb4bc5378a7a43dddd497f91d6f89a0918f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bd1_bidirectional_pyramid_context_for_the_label_field_coder_20260905.md",
+      "sha256": "d481d0797ff9a7054164d9127e017a8513cd0cc5314a7d9b2f6e331a6f70a29e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bd1_decode_time_structure_first_rung_20260827.md",
+      "sha256": "3163870f516026fb3c19aeb7bc6d32355e605c1730dbe61f1d15d5899ab0121e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bh1_fresh_eyes_bug_hunt_20260904.md",
+      "sha256": "42aa88e11d921bef47c2817fd2f493bcdadb365c3973af58f41a9e9fb797c493",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bhw1_winwin_cone_rescreen_20260829.md",
+      "sha256": "3e90f8815666064a246ba21297c44f6a8ad1713cabbc0bc0c13c683daca52e1a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bhw2_jf2_oe1_argmax_screen_20260829.md",
+      "sha256": "64b20e5995dbf9302902b24dc676cc7175147470f4e8c7be6e7f41e017577b0e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bl1_per_position_bit_allocation_charter_20260822.md",
+      "sha256": "e8a02a05e16d3d92596c97fd09f4ab791eabd66ec3d6b02ab9506e932c7708bd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+      "sha256": "322d1acb62db7b911123be3cbb6ea73237e0208d1098bee1c2dd35f7167d66ec",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bnd2_boundary_segment_code_real_encode_on_shipped_field_20260910.md",
+      "sha256": "e96e921b4c4a7108b095393e9f238a2c4fcd96ed3ff4a12d5f9416a2109b8fef",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bs3_born_small_resolved_carrier_20260826.md",
+      "sha256": "2b3ded3f0d1a49fd808bfa6d1d886e9e6858f7047a23762124d491a7f7952d3b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bs4_born_small_stage_fire_20260826.md",
+      "sha256": "5d68902cf3d6f51813132987aa39b2b0bee9d865160c75f8554289cc630b7a20",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bs4x_stage0_cure_and_stage_fire_20260826.md",
+      "sha256": "b61dc1357408965af2905f73559d04ac09e94584de34751c95c0fb84b5310ac2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bs4y_stage_1_4_executor_20260827.md",
+      "sha256": "a64b5b203ab5763750dee24601d9e211f25cea0d1809323533240ecf570c534f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bx1_basin_minimum_adjudication_20260901.md",
+      "sha256": "9a932859f03e091debf2c35ecf102065b84181162b68b70acff468e6b3ddae65",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_bz2_bornsmall_capacity_ceiling_20260829.md",
+      "sha256": "735196e83481b885733e8d8646659f01221f87c8906117bff91b786880456b2b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cb2_class_balanced_dictionary_charter_20260822.md",
+      "sha256": "461314b96b1480401d97e8be0a8b2ebd5428f54259607f7d1ff36a3649623ae8",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cc2_catalog_consolidation_20260825.md",
+      "sha256": "f4dc804222d57662dd32b2d0799ec2f5c4fdcf9e5de9205406023b62c7e8f68c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ccs1_causal_schedule_builder_20260901.md",
+      "sha256": "ecfc1139a7b7a39621483cc6159681e1d0b7bd657277eb9bb436f42327e3afac",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cd1_working_tree_debt_landing_20260903.md",
+      "sha256": "f23c975429b598b4688e93f0a31d78780e2c6e5a9c6c71d3862296f05a90f48e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ce1_afr1_compress_chain_20260901.md",
+      "sha256": "3d065aa13e2e7e2b7e86a288172a2f20572b9fe83fc887de6ed184e39736c924",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cl2_hpac_prior_capacity_ladder_on_shipped_object_20260905.md",
+      "sha256": "36118539617b8e5de8707b6decd2e4509f574537cabae44ac44c22465bba4b27",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md",
+      "sha256": "0d6394f6d022719018fe4db4b2c30809b3db633ab8967460090489dac349f605",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cl3c_closer_s18_ladder_registration_20260908.md",
+      "sha256": "5141f7c200baa1905961083e50d0571ea64e1a0a9c223510cd88955a8749d324",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cm1_coder_matched_surrogate_20260826.md",
+      "sha256": "d485b51442c6792f09ee7a89f6f88e77608d1caaea7e01a0b712f684c8f49066",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cmp1_compose_rc3_model_section_and_tc1_tail_coder_onto_live_pointer_20260909.md",
+      "sha256": "6fcc5da0287a6090a3680d195cb9f63b57d01cbdfdbc5b4f5906c7787ff3e08c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cmp2_compose_sm1_semantic_coder_and_fe1_code_onto_cmp1_tree_20260909.md",
+      "sha256": "2c3d5a0a67ad0023a5514be55693b2cf7aa525380f85cb80a689344d8160e801",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cn4_arc_consolidation_charter_20260811.md",
+      "sha256": "7f8740c583561222d2ccf04e2705c5665ac662282b8158ffc1a8c1bfbfcb81bb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cp135_rate_compose_charter_20260810.md",
+      "sha256": "50cb2375933bf1d89963dd9bf20116bc8cdf893c3f2ecfed71b149740673e32f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cp2_composition_receiver_and_harness.md",
+      "sha256": "4dc10952f3eac6e4f95fdaed39bd2be9599a8dce08eb11c15eb8ff963a46cbf7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cs1_consolidation_debt_ssd_authored_code_and_landed_arm_dispositions_20260909.md",
+      "sha256": "d5037289e0845e1defb47d294a09261b62bc53065c2a040877c9d7297aa66e5b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cx2_compose_end_to_end.md",
+      "sha256": "54839df682ef6bb7f5b646ba6c07843cd38d8b1ff61e3b280665de4702da723c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_cx3_context_axis_ceiling_charter_20260822.md",
+      "sha256": "c57ac436354d294c64ba0ef6f3a60f55108563fd3a50570c9a17da385842a75d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_d3_alphabet_merge_20260826.md",
+      "sha256": "8257ea01defc0afcccfeb8a578193a2bf2b5e13d289fd94317643aa06d3a3664",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_d3a_analytic_lane_carrier_20260826.md",
+      "sha256": "5e0539cabce5995f8db7f982955f5de4ae4e87930bfe27d967931da0f2b1a3bd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_d3b_lossless_lane_factorization_20260826.md",
+      "sha256": "7677aa92f4821ceff5d5ae9c7ae294bb7c8f463d511b5f9d3ecbfd3b0cf3e930",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_d3c_class_pyramid_peel_order_20260826.md",
+      "sha256": "6e69bf3ea30776aa5651fb4bd83d6480eb0cb9050853b706c59bbe07d34f0c3f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_db1_decode_boundary_families_charter_20260822.md",
+      "sha256": "1b99d9694baef917628cd406686ef7cddac6f00844f61cc266675979e41bfbde",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dc1_decode_time_compute_20260821.md",
+      "sha256": "032325f11cee02003d4b1f358b1a59930b0b01d1b8eca874500537b86014db24",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dc1s_sparse_grid_sweep_20260821.md",
+      "sha256": "dcfd935457059196f41b3c42b757ae7123151ad949833ca12a2ddfd03aa2f527",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dcc1_decoder_causal_conditioning_20260901.md",
+      "sha256": "5279f3913c0affca4896ff2f95c6f551faa146b6af1051fb95e3454192a3e5c1",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dcf1_duplicate_carry_factorization_20260831.md",
+      "sha256": "668061efe80054652305af950f8350fb086ce913afa9a0fdd2750c42e06efb9e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dd1_drift_debt_ledger_20260901.md",
+      "sha256": "ce8dc9bd891c2d765d81c70308344c3d29f3c82da8bf30feca4e7b51a4d66cbc",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dds1_decoder_derivable_born_stats_20260901.md",
+      "sha256": "4d3c1afb28bdd4703fd21496efe2c2131310c768692d84b4a45776f553962011",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dg2_diagonal_reentry_20260823.md",
+      "sha256": "2890e68e867dbef4c5b2d592f0e25d912a70ddce2141d3c0c3f3bae12ca4f7d2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dk1_local_disk_certify_and_move_reclaim_20260904.md",
+      "sha256": "04111144a347e4c29372486173c08103555dd926db95c887d67db7479ef08e83",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dk2_apdatastore_cold_store_sweep_20260904.md",
+      "sha256": "0395ab7a940e8b398b0ef40e6c02315b23383f3320e22f5469f20f076e1f49cc",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dr1_delta_R_noise_floor_n600_20260903.md",
+      "sha256": "79aa91c5ca3027dd28981a516555afe45bb441b857082d7d7e7469a91b955d36",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dt1_ans_decode_wallclock_gate.md",
+      "sha256": "17bce463abf3c591d5b41e1a167e1f363cc8c0ac1d5ba25357f6f3d7ddc35871",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dv1_device_axis_decomposition.md",
+      "sha256": "5c95bcfaf5748afe4beb7a9324c9f420777c42a746fb618287178fd9efb81c37",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_dx2_cabac_receiver_fold_charter_20260821.md",
+      "sha256": "e5837013e4d70f77107b32ba9809d3467224b87ac9aae6ed909ccd6e43b6a513",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ec1_event_coordinate_producer_20260812.md",
+      "sha256": "9901c88b34855ec63375bb4c42a3c1125cf57a817362c23cdc41fb7183928159",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ec2_collateral_suppressed_conditioner_charter_20260822.md",
+      "sha256": "6879d067ca960a98af7343c78816841cd65359c9d5545b049de017ffe0351467",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ef1_token_entropy_floor_charter_20260822.md",
+      "sha256": "92467496f28f3cfde8535290a7f497d050289f028c5aa503825c90118e847751",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_eq1_equations_leg_backfill_20260904.md",
+      "sha256": "e7bab44c830c82661ee2ee7ca4dc5ff8d499596c3e7f0e82aaefe210c5eaf2a6",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_es1_end_state_characterization_charter_20260821.md",
+      "sha256": "428abfb4d4c9d8c3704a013eeda2f8c2a29ec12dc27b0efd81eab2e28bc5092a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_et1_edge_topology_container_gate_20260823.md",
+      "sha256": "57147623eaa207d5a5d45244183067828a1318e1fa6a426bdfe734d5a1132499",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fb2_route_table_gb1_20260826.md",
+      "sha256": "d6b5ab9dfe16c2e5111f872ddf9c6d24c60a36ca8daf92f1e0c48ceabe7f1d00",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fc1x_serializer_fatclone_cure_20260826.md",
+      "sha256": "fbd0e0f8bff1fb4373bcdccdf2e14d2ce256f18639d7cf36d09722914177efbb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fcd1_field_for_coder_diagonal_20260829.md",
+      "sha256": "3b078cdf1f67183771ac95129d79c60312f09a3c76361c93ebe311e1b1248d6c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fcd2_distortion_legs_execute_20260829.md",
+      "sha256": "65062ebdcaddcdc4fb9e94ced73bad65eecdcc95c51a2aff08d0359f62d5d6fa",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fcd3_pose_screened_reselection_20260829.md",
+      "sha256": "a46635f336e3628fd1b8801fda2e4e42c38b5fe0579431c4c386020f1cc6e214",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fd135_fractal_decomposition_charter_20260810.md",
+      "sha256": "44211cbf65108e2d121927780bd30454551ed5a6825c954f3ed0a3f4bfbb7d3c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md",
+      "sha256": "e9281bbea574661ceeef99dd44219510a9e136efd2b725656358a98178adeada",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fm3_fmtools_advisory_lanes_and_polish_20260904.md",
+      "sha256": "a4de9a8b56c761abf057de0670338cef57af8d92eda8f2c58d55a58b5abf9501",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fpc1_full_pipeline_compress_20260903.md",
+      "sha256": "414662363bfe5213a481bc7a5a51f1db3c2760ef2d6c230f7c494c20b419d4c2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fpc2_full_pipeline_ports_20260903.md",
+      "sha256": "58723d1f26395dc92a50b816c90ce6f2efd6318b17b9812e5a9de5e445e81a02",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fpc3_chunked_n600_trainer_20260903.md",
+      "sha256": "4bd53638f27ecb18b4f49bf2593ebbbea3298a22ff7f5cde5afd37d8302476b0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fs1_frame0_selector_reselection_byte_close_20260904.md",
+      "sha256": "7874f60e26f62c206ff94a5aa909ea0143541e36881a8dc0bff0780470784acf",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fs2_carrier_resolve_on_changed_pairs_20260904.md",
+      "sha256": "61ec61322f39be99a187d224ebae2c7dcdaa4e82809c7d84763e9a74e4115d0d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ft1_fire_tool_cpu_axis_two_landing_20260818.md",
+      "sha256": "0b474c1148c8a9ef6cf79026340c8c294fcdc0eaeb6416788cdc4961b8c1a76c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ft1_shipped_renderer_aligned_finetune_20260903.md",
+      "sha256": "16be9c36bb6b5598774d973188f8199b8bd849819024983b0c2ee259dd5bae4b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fx1_fixed_point_logistic_mixer_20260817.md",
+      "sha256": "2201542136edc0efff97d5c656ad375a8a94be38729f6e51ab83d1191b145847",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fx2_inflate_contract_repair.md",
+      "sha256": "e51cd5494159b6b9514b8fba4974a17a41f1ec25fea1ac9ee352a4a917010d46",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_fx2_probability_model_axis_all_sections_20260818.md",
+      "sha256": "e1c594e5cb712b014b062948e82c506ad2bbf8a80b3ab35bdffc6164c3f70c2f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_g8c_gen8_compress_vendoring_20260902.md",
+      "sha256": "d4bcd954ceb85af2cd1f47499d3890c27bc05b00bf22730aed3e1882c9823ef2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_g8r_compress_adversarial_review_20260902.md",
+      "sha256": "e376511e5b0a31fb96f57b6a027778f24d4708b813771fbae263a94595db83a8",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+      "sha256": "db519d6a9cbea518274339225bf83027a89a7ea6bb93b32ac3cfe6dea058bc72",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gb2_generated_basis_unconditional_lattice_bound_20260909.md",
+      "sha256": "e52d332fdaf4c821f171a71b794fe5d1d2796254782edb0d0e0434850f2110e1",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gc1_generator_capacity_control_20260903.md",
+      "sha256": "7dd71cc1ccbe58f973a3df407405600df9ed3a37987ccbe434b65047c9d34c8f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gf1_generator_form_on_lb1_field_20260830.md",
+      "sha256": "020a3bda4c6b3d9773435a53d9bf34f3854a646dbe872509c69ace70d19cecc7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gf2_static_dynamic_generator_form_20260903.md",
+      "sha256": "500d439fdaf8387e995c0046b20133e65d49937fe39b059f4817d8d9d5dbf1a0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gf3_time_conditioned_factorized_field_closed_form_pricing_20260908.md",
+      "sha256": "44089db1351483d534cd18d21c23b0dc0b6ff0ee587cb15f3dc3e2011afb19a0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gm1_gradient_mass_at_n600_msafe_20260904.md",
+      "sha256": "4b973c4f28f7e2ca75ab27e14740d2ea8bcb3fc49e7872484189acf954f948de",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gmf1_fitted_crossgroup_gm_20260901.md",
+      "sha256": "fc61f80a6b82c79dfffc04d2e73710fbaf8adad4f89d9b905a7f2f0138a13999",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gov2_control_plane_permanence_20260904.md",
+      "sha256": "260006dfb77d737a679dc404bf372de09bf6055516ada9a85b1051e8f7f10fc2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gov3_metal_occupancy_progress_budget_sum_refuse_20260908.md",
+      "sha256": "0e1b4a8969ea7d8bd92a7ad8a1cf2cdce9e1b0a573f7f5212e8554653210436b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gp1_lock_derived_parity_reference.md",
+      "sha256": "ef3d6fc1a13af813bbb98cbe1ab7361349f07e586b9e2693badbaf84d6d542c0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gs1_gestalt_convocation_20260817.md",
+      "sha256": "95a6268c45dc5d5885dfe3549cad028f62f345228db1d6e826df2ce92e65ae73",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gt2_dali_gt_selector_repoint_20260820.md",
+      "sha256": "23299a0069d0bd4a5c355362208234df58ba828f4e2e65de02e640b99cd70e51",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gv1_gestalt_validation_charter_20260823.md",
+      "sha256": "2da596eb44dda7cddc8b1a593b09d519366834e8cfda617a75514f5d86f0a788",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_gv1_governor_memory_guard_controller_polish_20260904.md",
+      "sha256": "7251c800e0e71ecc95fdbdada3367700919be0fff7c796794779d1cfb0a8de01",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hc1_hy1_container_push_20260812.md",
+      "sha256": "7cfb58f75a7b2f559abdc44417233870bbecdce1cfb0ee9dc1716c304ed17371",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hc2_wrong_half_flip_location_decomposition_20260905.md",
+      "sha256": "b66b6c4026afd0288075278af336550f271784c8743afc2800f98773ff26ff59",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hd1_apparatus_two_landings_20260826.md",
+      "sha256": "f3798de0de1ce57c5d463e643ecf15a3e4b7be040f94c5e5766cac41026d971e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hd1_na9_hazard_hardening_20260818.md",
+      "sha256": "3bd9e8fa11b4c802807e06120bdbab9b60ceb2945278c478d5da5a33f9f0cbfa",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hg1_heterogeneous_analytic_generator_gate_20260823.md",
+      "sha256": "7ccd5c9888965737eb056a20b17403f63eb8d6beb4712c436cc317ad78da13a8",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hm1_hpac_model_capacity.md",
+      "sha256": "b7b23098e1c66e60fef996d8f9a0ab3f3bfdbea48e257bf500166c546bac64c2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hp3_hpac_section_and_zip_frame.md",
+      "sha256": "7cdd51c9a690f93a1081d926bc43f482715ab885189fed7e2c1f09cebd2d1a47",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hr1_realization_engineering_charter_20260811.md",
+      "sha256": "8798fa3ef671aee066137cae519846cbb91cd51dc44735242528bc49c6581e38",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hr2_prestage_build_charter_20260811.md",
+      "sha256": "255eeb2387973047a2ed8944b12f7ad057dc57dcef811985850899d13ec91805",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hr3_residual_implicit_carrier_20260823.md",
+      "sha256": "219324431119aa83c808829175ef784b7b0a11e83e7aef1df10bfa8cb5c94d4d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ht1_hard_tail_student_charter_20260822.md",
+      "sha256": "c21dc8363bb17dae269457d54b467a03afcd90261f6cd17edb164c32dfece298",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ht1_red_debt_hygiene_20260901.md",
+      "sha256": "a505b0b36c8f92e0a84ab94aba0eaf1cdc407c77ae7a5a8e276cca0d9c6c8912",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hv1_harvest_compose_ep508_20260815.md",
+      "sha256": "66a49b5c70d327f200b93f21fad7263059fd6950e8ccb5d68e55d2011df88a40",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hv1_harvest_to_pointer_autopilot_20260904.md",
+      "sha256": "bc57c7912e4f5da1295129b79647f9128e13ff38d60427c82161e1ae2aa557ac",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hv2_harvest_consumption_sweep_20260826.md",
+      "sha256": "ad875eb0e3d8900ece4402c80934a1da9845855168da6562f9f9707d42b04a64",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hv3_done_arm_consumption_20260827.md",
+      "sha256": "9f0193d7e681b0d31bf929781a95b31d5acf9e3c34e1c9a02cff21aab9053540",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hv4_recovery_consumption_sweep_20260829.md",
+      "sha256": "5c6c965980780356f93e308187412a220b25d13f6f7745edafbdd4757b5d7adb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hx1_pr_wave_harvest_20260817.md",
+      "sha256": "af253ed14e9b064f637073464c2ce5dbb5cad10f50cfadfdccceaca04af79223",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hy1_capstone_hybrid_charter_20260811.md",
+      "sha256": "f6e8411db30c2c64e3eb77a3d1fdcf04499701b829763ff23ca36f1cfe0942cd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_hzs1_horizon_shape_20260831.md",
+      "sha256": "bb0281c20b82ce01bfcf5236e944f4c2c184d00905f10fe920a27d2daacaa3e5",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ig1_implicit_carriage_gestalt_charter_20260821.md",
+      "sha256": "56049fb19da2243cc3f7bd4a52167d401d086f43c1ebfacc9216fc2ae9c8015e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ip1_decision_integrity_ports_charter_20260811.md",
+      "sha256": "fe758f83b60d47fb3977ae1bc0c688b69a6c008eecffb81bd26ca45fdee5bfa7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jbp1_joint_batch_price_20260901.md",
+      "sha256": "d0c9df554a08276a51f2f08f62dd9a2f6f10612097cb3f274b7b879caa432693",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jcb1_scmdl_batched_suffix_pricing_20260902.md",
+      "sha256": "77c319e83d8fb17b712c23d965d3cd262a1ccbc2523ebe1306040333e49546aa",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jf1_joint_field_model_refit_charter_20260823.md",
+      "sha256": "7ad4b45e6b31f09bf58c3df753df42822a0c55f9d5143854397042796542c59a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jf2_terminal_diagonal_harvest_20260826.md",
+      "sha256": "2404b68ecbae29343079fe053c61bf29cd1b6aab52ef31f9a541815886094a9e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jo1u2_materializer_cure_20260821.md",
+      "sha256": "957fcca9a76e66723a4f9009857f1a9d0fa25c503154e02f65ed43c1e61b8988",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jo2_solve_reseal_charter_20260821.md",
+      "sha256": "dc36f6c169acd3fa41b8f63e6684378619ef5f7577226a3c3eb17fd1e7ff9781",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jo3_entrypoint_and_final_reseal_charter_20260821.md",
+      "sha256": "3cb09a54d45bb83f8c1238f49d0ce0d12dfef1590638f28237647bfaf62bff0f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jo4_certified_retention_reseal_charter_20260821.md",
+      "sha256": "804ac3cd71168d2d5e8b35e5de5f64a3137b0224479808d65da3f942b5b7e415",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jo5_determinism_cure_reseal_charter_20260821.md",
+      "sha256": "3a63cd4fba4fcf54e1610ae1a88312f628ec90ba9543a112572534a6ca72d7df",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jo6_receiver_container_compat_charter_20260822.md",
+      "sha256": "e3755f0444912be64bd6c5a38f679d835ea42ca6a930c4e6c82aec5a8307ea9a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js1_global_joint_solve_charter_20260810.md",
+      "sha256": "fc7c4f3a48ccd0cec9efe6ae240b7356df8b8f5505f04d5fb506c1ed502357ca",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js2_implicit_edge_conditioning_20260812.md",
+      "sha256": "e7ece2ee893603f67e4b7e7f631b6a1417a2220e00c7d9b6475a17dcbc74130a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js2b_edge_conditioning_relative_gauge_20260812.md",
+      "sha256": "7912e8a7db46264069be9d03d7912ebc9ad863ed6dd8370acd259c5f52a22c74",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js3_learned_implicit_conditioning_20260812.md",
+      "sha256": "db68eaba08453f34907a9141f1c5ebfaf6004c584aed3065cb21db7965a16c61",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js4_pose_null_projected_conditioning_20260812.md",
+      "sha256": "24bec3a0de345d91b6764f825af554c08cf80e315a7a31a4d4ac0c5835b336da",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js5_projector_distilled_conditioning_20260812.md",
+      "sha256": "f2cda8a1f43a91234b435e64284aa270f31ef630e6204b7f9422fa9e77653cb6",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_js6_event_proposal_acceptance_20260812.md",
+      "sha256": "4359784829cb9ab45ebc8c0ee1def68dfe38db0020f169778144a2ba0cefa692",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_jx1_joint_exchange_envelope_charter_20260822.md",
+      "sha256": "598ec868c9302195044b82135558d408655bfa19fc6ca18c5cc168976f124386",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+      "sha256": "f51a5072a2c93208590d7b7825910ef5659d0055073b60c0b2cb5868bc5b2f17",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lb1_lane_band_carrier_ceiling_on_born_field_20260904.md",
+      "sha256": "b72b78509f0126211660f944a2b323ee3b03856ee72a39af522417d01dc01507",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lc2_lossless_coder_stack.md",
+      "sha256": "f2bca6934794b552478f9f8681bc1baa9c8895d5e81194fa83607d4b2dcb5fec",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ld1_lane_lossy_drop_exchange_charter_20260822.md",
+      "sha256": "c4eabef8df9c85ea47672326c835564d642e8be8cd4b9c2b615364400ff20547",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lfb1_lane_fold_carriage_bar_20260831.md",
+      "sha256": "a3517daadd9bad5f5f4e7e680c0365513f56cd5daebca5baae379aa841660f02",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lh2_continuation_launch_determinizer_20260815.md",
+      "sha256": "7931b9e3b70e32539a038e2ee7601889ad32c02f585fb33daf0d3f60b790f850",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lp135_lossless_pack_charter_20260810.md",
+      "sha256": "47dc323feeb666ce0ce899e5d4656eeb93aeea8b2fa0f36bcffe6a8339af2e4b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lq1_lane_quotient_representability_charter_20260822.md",
+      "sha256": "b0dd00bf6510e164e066e7dc4b59581895d1fc4b1fe57096f612a9846fa7e08d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lt1_levelset_longtail_forces_port.md",
+      "sha256": "4a23bad1c135e13dd9afc13b2023103b7df8ee0c9f0f1b782ec15d569e67f626",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lv2_terminal_campaign_completeness_charter_20260811.md",
+      "sha256": "56d354200311ce84c9d3a4aa80c300d372b6cc48fc440a10602ff65c6bfb19f6",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lv3_recursive_leverage_20260901.md",
+      "sha256": "7dd287b5adfea53b9f99d12b4cd00ef6aeb029f17ef058460fbee5625af58e48",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_lx2_lane_bit_budget_exchange_charter_20260822.md",
+      "sha256": "5b5ef276ad9b19d55993660b94465dc036d94b12e5a4a379b57908bc91eb4783",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mc1_motion_compensated_previous_plane_20260903.md",
+      "sha256": "f09d63003f69a78b13d195c227ec5d49489ff67c41947535ad2d93508234060d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_md1_micro_to_macro_dynamics_20260904.md",
+      "sha256": "15202caae05e2449b84636d34a99bc394ab04b5369dfacb3fbeb33a04217a54b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_md2_persistent_partition_under_the_burn_default_20260905.md",
+      "sha256": "84811228f03d2e38ac32c69bfe4e1d6c72ce14d60f4904e4508127094064db00",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_md3_different_initialisation_cell_20260905.md",
+      "sha256": "9f05e624ab4b31d15dfedf2c313de8f84916e93ed6ed7e5a04978838f93b306f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_me1_micro_edit_engine_20260817.md",
+      "sha256": "38b5ce154364a5de05db15d6d456a275042aff96829e61e0b5e66a7ee9c32c6c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mf1_manufactured_seg_repair_20260823.md",
+      "sha256": "09c3a57d9494b6606271a9dae2a535393120df02487ba381bd8fe6492d71dcec",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mg1_mps_gate_burndown_20260826.md",
+      "sha256": "c2dd91202eae5712f4a1f05a0cd3ecdf68a2856b8c57f597343776f68de1531a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mp2_mixed_precision_receiver_close_20260815.md",
+      "sha256": "f5ddc195ba56162ccc153a811cb5b1ceafe976c0ba340c0d3ecb4f2aa9868553",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mp3_hpac_member_prune_charter_20260823.md",
+      "sha256": "180e4e90429ffe782bec5d19da514a61d2c315d61fbc0dce5b66b98d9a9f2944",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ms9_dx2_seg_manufactured_fraction_charter_20260822.md",
+      "sha256": "5d562c49c901c81d0f72fbe20358365d5ee02a958c01a60a146b6087d5427512",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_msr1_manufactured_seg_reduction_20260823.md",
+      "sha256": "6602000387c41bc85be7ba0dc1eed4123ad168a3e857e03a6843acdb02a29117",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mst1_manufactured_stage_split_charter_20260822.md",
+      "sha256": "e9d8632d6f173fdb507d400841262da451c9251994ab7cc8d0b22f6b9082ed59",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mz1_model_section_rate_race_20260815.md",
+      "sha256": "720aa90bcd36d5333ef2a09de48cdfb4e554ed6221966248a6fc8b21a519f993",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_mz2_frozen_section_representation_attack_20260815.md",
+      "sha256": "b004f71b4bdfef198ac3d4008d5e21503088c85dda942dae7cd5f7a663517af3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_na11_negative_regrade_20260829.md",
+      "sha256": "4f8402162448ce59455d86b737038b865b142c6ffb2c3aeb721fda7bea5edcaa",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_na12_post_sy2_negative_regrade_20260823.md",
+      "sha256": "b8080c3734614f522744ca4daa1e9358806a8e7489346964fd61b85c88680dcf",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_na6_arc_negative_audit_charter_20260811.md",
+      "sha256": "10bad6c19797b146cee5a71224635032a720b7b3423a718b7d6512ed9571f3c0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_na9_gestalt_negative_audit_20260818.md",
+      "sha256": "58bbf80954443de5aac212304a173c549b75583a7e1c15bae850fcea31472189",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ng1_warm_transition_burn_design_20260904.md",
+      "sha256": "f1b9bd76b84b029ff90cd83a244605b5f516412136aed7f772f38787e3ba2d8d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ng2_area_cap_cell_20260904.md",
+      "sha256": "ac5e6881fc933500ec48ef101c28b59b95e01180bf3d380abc2128bbe56d1654",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ng3_tau_band_cell_20260904.md",
+      "sha256": "2d59bc38d11a2450f17cb728477fe6e51f3f150c77c9373e57ff989b16fc68c7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ng4_continuous_objective_cell_20260904.md",
+      "sha256": "ec51569294ecdaff6561307e03efed4d38b968a2692430c2787e2b0efc9fd0c2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ng5_tau_band_x_continuous_objective_cell_20260904.md",
+      "sha256": "058aac02930b67a1190ca41b21f18e215b9c74e04d5b53ecbc35048daf5b1027",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ni1_nr1_k32_receiver_distortion_charter_20260822.md",
+      "sha256": "00e2998d2d6b6336adeb5af9982d7d00dc9e577c9c2ab885e5e36eb994b77622",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_nl1_never_fired_levers_charter_20260822.md",
+      "sha256": "1c10d0578eb8097e77415f6d9746e0e267827e3766fe01ca32ec00255eeea19d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_no2_quotient_born_object_20260827.md",
+      "sha256": "96090a77365c172f0d2353e5deb5c22edaeec6d13edc746a0ddf117998eda83d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_nr1_taskcell_quotient_prebuild_charter_20260822.md",
+      "sha256": "d34fd5f14335714c5780e2e902b933d2f0d6840974818dd73bbc09784ca34aa5",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_nt1_naive_toy_generic_audit_charter_20260821.md",
+      "sha256": "956f1288b5068354f3b52ab18861b09475f92e971127675dd8aa7d3c154654e6",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ny1_live_lineage_toy_and_reactivation_audit_20260823.md",
+      "sha256": "dc470f3786d5193317c7a3e0ad24c44df0ddfca69505c477f397b4ade214f1df",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_oc2_orthogonal_conditioning_charts_20260829.md",
+      "sha256": "fc046a1bcbadf8cd45e9e8e0b4b5ae8f6e06d8ddf4131b43dee682c6f901fe2e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_oe1_online_escape_member_charter_20260822.md",
+      "sha256": "cf2d1e5627baacd571b37d26c082f660be523dcffb655ac7b1cf862aea5a113d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ol1_online_signal_scan_20260903.md",
+      "sha256": "476112510c6d0dfa0378410760ad680cea5d5f297b6a1f9cee27d064de1f8593",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_op2_chestnut_harvest_20260901.md",
+      "sha256": "8031a6ad367db39b56c109a9ef693811e147e7e5209a1b1907e907a9fd25c498",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_oq1_orphan_queue_drain_20260817.md",
+      "sha256": "a28a8749e472f9277ac4f5371561ce2a9b5fb3de04cd364054476365e5719e75",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_or1_orthogonal_representation_regime_20260826.md",
+      "sha256": "2c0ed74f28bad25ddb0e3b435c5d6e8869d00b5f17eae80da444a294790d42c7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_os1_orphan_signal_reconciliation_charter_20260822.md",
+      "sha256": "f38e8871336d7cb8a44c0b74ef38fa6acac6f0a3d53888b4f19456ab1522e2cf",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pc1_pose_carrier_efficiency_basis_precision_and_generated_basis_20260905.md",
+      "sha256": "bcb3dba5a4c6655b02b6879d6f814fb7f60f0f70718818894a449e4c4a047e10",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pc2_carrier_rice_k_width_rank_cut_and_scales_20260908.md",
+      "sha256": "18f8e1f0f0f6b0418cce553433dfa84a88164324f6aaab64b96b0faeea3eb34e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pc2_pose_carrier_live_remainder_20260826.md",
+      "sha256": "82d8865bb5b7330d1ef14795496526470dd2baef8855a99a2d6620de8addcff2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pd1_pr_archive_decomposition_priors_20260818.md",
+      "sha256": "1556a3f55eacf4f175a793e894d5b52adf5438530fda45ae0aff2bbc18bec2b3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pf2x_preflight_chain_burndown_20260826.md",
+      "sha256": "a60bf20297ab5d3a5419f10a90784b488e2ca9fa1584f3d2b1a1309b47ae290e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pf4x_bare_round_burndown_20260826.md",
+      "sha256": "be9dcfa0c3657b6745dcd5ec3c46e6ce8cbb4c59b5112582836a9d83971968b8",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pi135_pr135_intake_charter_20260810.md",
+      "sha256": "0a5aa8d4a7bbe78bfd83465b9e9a9a0a3cfe33f73f353de1b0880b2d19396ff4",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pi136_leaderboard_breadth_charter_20260810.md",
+      "sha256": "86899b2b04520df8af29859cbdd550e76b61868246ebc61202d558d68e993c55",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pk2_pose_carrier_representation.md",
+      "sha256": "4c4fe05f76318df317bb5338c217cf6d1ec007ce4298f0d2c62b3e8fe786efd8",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pk3_rate_aware_gauge_preflight.md",
+      "sha256": "8675a010cdb3ce9c072b7deb2d4b591ba3d3886420f547582c86aebcd27513c1",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pm2_instrument_laws_as_structural_gates_20260909.md",
+      "sha256": "a0bbcf9035df4d269cc193c9dba15d42ba1c6b71272ab50221f03405ef2c2575",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pq10_codex_packet_review_round_20260820.md",
+      "sha256": "251328e1117de5dd1d6f8cf2a91e7fd77c18a93a3ad09c8b0f7fdfb2db7df24c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pq11_composed_candidate_swap_20260820.md",
+      "sha256": "88ac01a736b1af652b5e9f2c6bef271f2749e3e6654c39a636ef1208fbe8a634",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pq13_pr_body_refresh_20260901.md",
+      "sha256": "382ce2d951c3d049a311e8143a767fb7554715e29b2a0079282057a583e6c468",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pq1_submission_packet_prep_20260815.md",
+      "sha256": "4a392db319c574ba611e6faf0bfd978db0a126ff17beb2a67ed34449673bcc22",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pq2_packet_polish_and_e2e_script_20260817.md",
+      "sha256": "e6ea358ebebedec5996e6102da0c50bacc853fe2e1f356b87d04361584e3068d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pq9_pr_final_polish_20260820.md",
+      "sha256": "854718b839720a1c083352963a801f2af6c44eb0b2f4e585a9e24a638a1b235a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pr1_payload_retention_retrofit.md",
+      "sha256": "d900ca6a8dd08f7b5c5252d564ef3f6cc28021944c2cee1655e173ab9e375282",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pr1_pose_resolve_on_renderer_change_20260904.md",
+      "sha256": "ef7831ffd7fc42088c5f972f8c56521764b6b11f34fc7eadd9dda3b47b3e6d99",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pr5_second_family_adversarial_review_moves_33_37_and_addendum_18_20260910.md",
+      "sha256": "271b4d65dd8ce7264e9ef535c0d6d2367e965068230a31adcff7f05e5df8446e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ps135_pose_resolve_charter_20260810.md",
+      "sha256": "29138d657ba0de7b4c1c83143747c7b78c06d60e2f51d22fa5ee2f5264472c7a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ps135b_leg_a_fire_charter_20260810.md",
+      "sha256": "4bdd386a6390b0cff550c80481eedefe6ab59d99d9cb861aac5271eeb55ccacb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ps135t_terminal_alert_charter_20260811.md",
+      "sha256": "e97d56ae3f1e4df09645a9bb6ab60c99b7859d5c0d3b2e4db996f6729e4a4e3c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ps1_pr140_update_packet_prep_20260904.md",
+      "sha256": "6dd061e59ce6de7397b05f6ab6f5ee96209ea1cc0b4daeab2a4d5bb01e793904",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ps2_pose_projection_lever_nscaling_20260818.md",
+      "sha256": "c9d9f34e5670071279e7cf444e4432f10e7330a4423d26d6a7ede9cd390f9983",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ps2_pr140_update_packet_stage7_20260904.md",
+      "sha256": "88ca97b32b2ed4baf9f13bae69c7cf543a15a2dd77b0ab9755cdd361f82b9a0b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pv1_provenance_lineage_citation_audit_20260817.md",
+      "sha256": "84bb4a77de8b6e1d039a4e918ed384a90089f7bccbb54e123bc91cd819d039af",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pz2_pose_representation.md",
+      "sha256": "344cd8975b2f4d8935f6fe5a2df4a15b3027843e0589ae0b0d8e9b860d8c6092",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pz3_pose_receiver_realization.md",
+      "sha256": "759e932e082f2e9196e827fb692129a99503b87bc56a383c979ec3f892d5d18d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pz4a_precision_preproof_20260811.md",
+      "sha256": "b9b5d9285275a3e56fbe88461a10bb438ea080f026688f5971eb300788f1b896",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pz4p_pose_gauge_preproof_charter_20260811.md",
+      "sha256": "07bad21719c11788601d77d41ced0e4de744b057159cbd6603a6f276164bc196",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_pz4r_pgq1_receiver_charter_20260811.md",
+      "sha256": "3c9f5ded82eb180dc2427c01bf6ba8bf5efe265048999335d5c1bdbaf2942efb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbflow_rate_first_rung_20260827.md",
+      "sha256": "a6e73981d0e9e7dbdaa643801f170d53fb89664aef65090aba9bd518f437d15d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbr1_born_fairform_burn_prep_20260902.md",
+      "sha256": "f71959faa3b276edf4bfcab2bd91937b0b8a16b7af9d3ea4ae6e008cc3c62f45",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbt1_qbflow_trainer_build_20260827.md",
+      "sha256": "d67ca1c439ec7b1d27be6e574afb32af4409165ede238be76fcff4801b78a3eb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbt2_class_birth_curriculum_20260827.md",
+      "sha256": "5b8749c3ab595b950dd67f1880368891517f7c75111ed6865736b684784c6077",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbt2b_inherited_palette_birth_20260828.md",
+      "sha256": "20f46fccf9876503a7cbc23812c2066ae617d8fec3514e10f5b54a1fe8148326",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbt2b_r7_lane_constrained_margin_20260828.md",
+      "sha256": "62931c56ed85158f5a40ca356db17de18e9c4e74c72c9a2709cbe2072738051b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbw1_builder_first_rung_20260827.md",
+      "sha256": "e7b3f426028fc9135351db31ac7349cbef836195bc1a0f0b3e5e7d3f99d59795",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbw2_temporal_bound_then_grammar_20260827.md",
+      "sha256": "e0dcdc443fa5581f9c45a6817200525420e68a422e62c5f20962c584bb71bcef",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qbz1_descent_rate_configuration_20260829.md",
+      "sha256": "c3bfa6d88eb8049d67d6d4083b8d316dc96f005265cc33201016a9a4eef14406",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ql1_retired_lineage_test_quarantine_20260903.md",
+      "sha256": "f4d611ddfd32e82dcac969eb1b85af9ead12968a5a1e0b1d6eab4cf3fb3e96cf",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ql2_apparatus_debt_20260903.md",
+      "sha256": "e5473d380efb119c949c80891fcf4cf19834bf30559b4e4cbf62af9da40bbae9",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ql3_apparatus_debt_20260904.md",
+      "sha256": "ca072d75d185d7acd14f1400526fb97cc13440ce3dd6770c30720e85fff7aee1",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qn1_qbr1_n600_realization_ticket_20260903.md",
+      "sha256": "9ef3e6876ce47463408b20f67e20dc088865623039cb280d6000a9f286918099",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qxo1_target_overwrite_grammar_20260901.md",
+      "sha256": "0f30a69e8d9a722d129bf006cea58eb15c42b258a103feabefac58d022752e05",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_qxr1_qxo1_born_realization_binding_20260902.md",
+      "sha256": "68bc6f54bc460a70ab1536567793c38d855272d407e4bbbad5266a3ae9f6c277",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ra2_carrier_rank_pose_calibration.md",
+      "sha256": "9dd0c6b645cb7f60a5fb64398701818d110a7183844753b422ef0d5f8c0ed074",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rb1_born_small_renderer_build_20260826.md",
+      "sha256": "e026245205251a075b29b3096acbe71402a0471642b2de82a7016cf3e23747ca",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rb1_rate_bound_decomposition_charter_20260822.md",
+      "sha256": "ffe3bf3f7008aafef906baf69c4b0c85f43a3b74a3d8062dea9348fbab91cf2e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md",
+      "sha256": "03295e987629443a2ef3a3ef2562756fabeb957cc9a7c0d46210b2abc1d8c6c3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc1_rate_crush_charter_20260822.md",
+      "sha256": "f05d3f603728f0859c4e1eb026dbe8e264975b31e4ef7054ab31d6b81355955e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc2_composed_clean_decode_and_seal_20260820.md",
+      "sha256": "a9af40d08a49deeb4f5ff65c1a320796e735c799179405d589421cf8ffca9637",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc2_hpac_semistatic_depth_mixing_prior_and_container_sweep_20260908.md",
+      "sha256": "e703e736ed5fd1302ecf2ff0cc6e8d697bb344ef2d0a82900d2330e3e84a545e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc2_rust_lowered_coder_reopening.md",
+      "sha256": "6ae3f87c98b88abe773e6dddaa5c8531beae384ca4966caf2efa86de1b24e8fd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md",
+      "sha256": "35c17935c7c6766060f1ac9481734b486d89ca3fb018c6f08d6016154c8f2a20",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rc64p_native_cpu_decode_charter_20260810.md",
+      "sha256": "bf2cf558ea3e728057eeaa7df42e0d8f1052cc198d7962d7d3a48fc36cbe7808",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rfo2_fresh_eyes_gestalt_synergy_20260815.md",
+      "sha256": "33d68c9bc7963d499d884254fcfdc477266299cb394fb87c2e2a45ac5c6b9743",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rho1_survival_prior_harvest_20260811.md",
+      "sha256": "e88f08ad8953ecd3be79f44976bf2855aa083d862c0090d00d04b62be377a3ca",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ri1_rc1_full_rgb_receiver_charter_20260822.md",
+      "sha256": "28f96069b08d561ab182d882ebce88d00683b74291e776f1b12373ea5e391b56",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rj1_renderer_joint_move_charter_20260823.md",
+      "sha256": "526345855f8baf5206096b6d64da5829503c61b6efc3b36f8c84ee9af2ab0e69",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rj2_joint_renderer_object_change_20260823.md",
+      "sha256": "9a9b2773064adfbf62cdf5c80129013dd7b0ace99d97460460ce2e40828bd685",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rn1_n600_reopen_sweep_20260903.md",
+      "sha256": "8859ced97605da5ad81d8c67177caf7326b42134064915c5f61fd43c4dbd1897",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rp1_rate_directed_token_predistortion_seg_neutral_pose_resolved_20260909.md",
+      "sha256": "724bbb39066c7358f1add3e7f995e1829e3923b8df51d393c5ce9b2aaef6316b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rp2_reaper_shim_cure_20260825.md",
+      "sha256": "6c053a5bd9cf5bd02d10fd4ff6f1ff3725fcde9ae6b7969cba8431d101cef8f9",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rv16_round3_finding_wave_20260820.md",
+      "sha256": "7fcaf039fd2feee7915de057c8dd528d3bc1fed6e8a671b0f55304020aa0cbc3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rvf1_rv15_findings_fix_batch_20260820.md",
+      "sha256": "e2f9c9523d652e142cfc3cc8f584838b297353f3af50a5b09a3b80a5ab4ae179",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rvs1_realization_survival_harvest_charter_20260811.md",
+      "sha256": "7bd965830186008723a9e5318baa651ddbf8d1594d132470af7009fa58aec59c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rvs2_geometry_survival_crosswalk_charter_20260811.md",
+      "sha256": "67c7d8a85993663af8ce1bb5aebe05c54014df3b1b0f232e4fa3e45490b15f58",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rw1_boundary_local_renderer_weight_foldback_per_pair_admitted_20260909.md",
+      "sha256": "a5a3ef6cd73258561d39ee258be07107716c217f9a82d0203ad89daedceb0dcb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rx3_receiver_precompensation_charter_20260823.md",
+      "sha256": "3369beb0f13bc2b47f826a798417abe4feaaca5fb2c5e7ac6734f294ff7da41a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_rxc1_gen3_screen_complete_20260901.md",
+      "sha256": "762e365bb8d730297d552249d9c93066e0cf00b2a8744aa6db41bfbfcfe9ca91",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_s1_trained_renderer_diagonal_20260825.md",
+      "sha256": "0b6e03621a37edafc2519043eba74a2b6f08934c41f2fb7398de47e1ae3f3a1e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_s1a_stage_a_adapter_20260825.md",
+      "sha256": "3199aff59db7d79fefcd88277dc39551c665303a7ed852755a21dd98009441d2",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_s1e_off_floor_adjudicator_20260825.md",
+      "sha256": "018778f50c0a4198ea4e8f4be212cfd44991c3299e47d0c0d27bd51e5718dfde",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sa1_semantic_carrier_representation_attack_20260817.md",
+      "sha256": "5d071defbf3d578fbeef6bd12801fa38f01d60fda8be77b057a852f8baf1b077",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_scg1_seal_contract_inflate_sh_smoke_receipts_20260908.md",
+      "sha256": "52ee0919b52e780cf9f658fb1e224b2f46c1254cb6395bd7e4d9fa7bce342cc5",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_scg2_seal_custody_followon_digest_naming_20260909.md",
+      "sha256": "692d8be112f9c768fb52103c0352cea746f5560a6821e85f7e8c4364ce67b4fd",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_scm2_scmdl_gm_refit_trainer_20260903.md",
+      "sha256": "aaeb80280fd76485fd1caa2d686983cb48337e408b83d4b170f0fffcc222ac8f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sd1_surrogate_exact_decoupling_20260904.md",
+      "sha256": "7ecdecc70774de0c02cac091fb767994b15286dc393ded02a120d79bc52ce381",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sd2_pr130_seg_decomposition_runner.md",
+      "sha256": "435973b918d2d81c393ecdbf299782381af81d31b403280133d364b96f259f60",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_se1_shipping_axis_survival_resolve_20260812.md",
+      "sha256": "3854dae7e2439076cf3f576b0d8ae5ffea022b0d74afb94a9d06a2669f11c91c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sg2_seg_axis_on_pr130_base.md",
+      "sha256": "8e702b3be5c50c26455479c2b3a4061e27a0248c631795f9892e7559e4a45386",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sj1_multipass_token_predistortion_to_convergence_20260905.md",
+      "sha256": "a506319e0d3772dbb5e6e587250947c7098db0c745871319c0d89821d4df3879",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md",
+      "sha256": "a694bd129153cdd72b22fe6b3d3755e02b6eafe1bd297fb3f2d2df570eed0c67",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sm3_semantic_section_representation.md",
+      "sha256": "9ac21d6320d6d991aebb9191b1516507e51213e5855053f9e8a16b24e1c5cbc9",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sm4_lowrank_mechanism_discriminator.md",
+      "sha256": "67d33e916734dbfd960d4ea9f241eac346d1c49509ec3825f2cd628e1185965d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sp978_semantic_primary_race_20260901.md",
+      "sha256": "369a9884a0821461d482bfe5e70882f3ab469cf7cb49a7c8c96ae802ff8ee481",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sp9_semantic_primary_corrected_race_20260903.md",
+      "sha256": "877f41bb8142581319964ca5e98259515f2045b3e6fc6496cd7cc162ababe32b",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sr1_implicit_edge_conditioning_research_charter_20260811.md",
+      "sha256": "dfb31aee0dcbf2726261e249d77430b8a022e05a9bc752c737ff1c1af0788399",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sr1_semantic_alloc_schema.md",
+      "sha256": "d569d697e1a856ce8935ed6c20fb8b8819dde4eaab2ab02b19023f55ee7fefe3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sr1_submission_review_gauntlet_20260817.md",
+      "sha256": "0a3c2015366feab01fd2f5b1cb43db3a523f848053c3f4a8d5bcee5c74a6a80e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sr2_vertigo_space_reclaim_charter_20260811.md",
+      "sha256": "14843ee89b4ec85dae10239e77767bc016f0b7b6cf9c4531e61105569432fea0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sr3_ap_certify_compress_reclaim_20260826.md",
+      "sha256": "6d54925b271f984bf6e002e6c54217f12045bace7dbaa00401e66e78bafa4c7c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sv3_unmeasured_semantic_screen.md",
+      "sha256": "9c14ae138bb74085c4dec19ce18258a3d2f0271a01e3d9a684b434b9d3948f82",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sw1_portable_paths_secrets_scrub_20260820.md",
+      "sha256": "2ef4c341d7bcba9ebb4c958b95fa7c8db161a296612e2d5a3de3a10dfe535f10",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sw1_screening_warnings_census_and_ssd_code_debt_disposition_20260910.md",
+      "sha256": "09ee318622503c3038d3ffb39a92956248912965e0d06b8c9bf507dc3632ebd7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sy2_composition_synergy_deep_pass_20260823.md",
+      "sha256": "61b0e34f58e7546a00f014eb8a497e6532953d87cb0e550ea27be5cd349d7ef0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_sz1_semantic_blob_serialization_split_20260818.md",
+      "sha256": "0d583c9b245b0110c6542b48e7f89d8b3933eca3e39e4219f28ce0c82a8cb21c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_t0r1_intake_rehearsal_charter_20260811.md",
+      "sha256": "2bb647c08ac704aeae679045a37f74c2c6b8a2df30ff9cf08fe07c9470248c3e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_t1h_pose_coeff_resolve_headroom_20260817.md",
+      "sha256": "7e7e1fcc8e1c6228ff30a9786be0e21e14560451aa7bf7c824df37f41402c5a3",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_t1r1_container_build_rehearsal_20260812.md",
+      "sha256": "d0f95b427370cd51022569deaa4fbd77cf044191d1b8d5337264ebb68acedd3a",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tac1_two_axis_composition_20260823.md",
+      "sha256": "00d46537f8d32b58de874cde57b6b791141684565c170672d7a0df02abfeed9e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tb2_token_bit_attribution_20260823.md",
+      "sha256": "426a7e8698f9cdce1b8139bef28e4e306d6a27197a51a1cc86000f50e2c234d5",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tba1_token_bit_attribution_20260823.md",
+      "sha256": "a3915740996b4bb5acf51859b127cdfafe35211197448f23e2e31b8a2d6b93e0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+      "sha256": "1c4be5e3a98c720f6d93fb7c3601eebd1c8b8d49f45c9fe14c49b74445d2098e",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tc1_tr1_lifecycle_composition_20260817.md",
+      "sha256": "dc8809e23a3394be492feed955f10851e0368507e2127ef6f8056e0d784a243d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tf1_theoretical_floor_and_beyond_20260812.md",
+      "sha256": "5b7aba98516711c2514f09c2693df90bafdbafcd3f23f4f882aae16eb295b862",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tl1_teacher_ledger_charter_20260822.md",
+      "sha256": "f271b4fcda908dfcd0886e26098cbc1fc512dfd6388c045dae16440538a6d415",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_tm1_token_model_lever.md",
+      "sha256": "d85648304c9368dc0d8aaca9e59c193a1dada771ad82a909a887e20d9fdf4945",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_to2_token_ordering_race_charter_20260822.md",
+      "sha256": "dc72ecf04f90c2dc90c18fcaa2de5ba99df234f96bdfdc4547ca78cc61d25301",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vf1_evaluator_visible_floor_charter_20260822.md",
+      "sha256": "6fd57579580f0cc5993739556a026064f082260aa41a7779cb80c532547500e0",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vh2_vehicle_harvest_routing_ledger.md",
+      "sha256": "f292c36ab19942335480a7d0b479a6ee7816ed002fd2a63b4538894503bb66f4",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vp1_vehicle_inventory_report.md",
+      "sha256": "a1242886c6dc18f5172a647a8020c0f4b8d7fdac33412c0d4770e063e6043b71",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vr1_v7_v11_signal_recall_20260903.md",
+      "sha256": "96897eb2bacc64a8f2ef182706eaa724d9500d1d8793d3f09da985c48e696a50",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vr2_ap_reclaim_round2_20260901.md",
+      "sha256": "cee17c7b29919a8841c28d01dfa37bc8a07077bb6d7a62b3972f5d45b6f8474f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vr3_both_ssds_full_certify_or_block_reclaim_20260908.md",
+      "sha256": "065accc5283f79fddd7bee151c7642eee563858c8baff2ef7363153373b91c5f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vr4_both_ssds_certified_reclaim_successor_20260909.md",
+      "sha256": "cab0ad7fb4bdfe7891bcf928a8ca676774bba887f165b5733292c1763bebe41f",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_vr5_generalized_certified_raw_reclaim_apply_20260909.md",
+      "sha256": "84333919ccc7bba88b71b57b2e4f00c15e6e6dbc554a8a08a2d2c22ac5b57d01",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_w96a_aligned_config_renderer_window_20260826.md",
+      "sha256": "04f4b71b332214d89512ef931341a15be8e1e4af5d873386116c9f8ce34aca79",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_w96b_aligned_loss_implementation_20260826.md",
+      "sha256": "61258a25911aea43394628413cfa862b29412579a989b70892992093ebaabbf7",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wc2_jo1_wallclock_charter_20260821.md",
+      "sha256": "53de536204add4addd7553601a3e51382e6a04c8f01be7064c87bb378d44543d",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wc2_qbr1_bug_wallclock_realization_audit_20260902.md",
+      "sha256": "2d8fa16139e398064e83cd9d6e30c9f860e734c1dc1560952ea48c1230806566",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wc3_qbr1_ema_law_cure_20260903.md",
+      "sha256": "3f6ea1e28d26aae33dfa19861fda4b2a2ddc8105b289eddb1eb0c1e617e08228",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wd2_width_distillation_build_20260815.md",
+      "sha256": "cf5c93b693ec66bb49dffc19ca2d67c40509134e55f93b1387757781960e66ff",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wd3_scorer_aware_width_distillation_20260815.md",
+      "sha256": "23130ed215648b260b8dd0f297edd51ea016340957825e2c9603fa01e0621dd8",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wd4_warm_lineage_width_20260821.md",
+      "sha256": "7e0d9f9171763c8e65d2f943f77c507b048c75c9f78e34d08fad6b812e7f4340",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wh1_wrong_half_decomposition_20260825.md",
+      "sha256": "2da4c3b54b387929e06a1ed6aeece9d22cf374763ede0acaaf8c8ff6d7828155",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wj1_cost_error_position_join_charter_20260823.md",
+      "sha256": "70d9f1099b2ab912edd4b49c349b5ef92286ae8e651035d61da3312cdbf95625",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ws0_worldsheet_grammar_price_charter_20260821.md",
+      "sha256": "13f6f8e635c72610d393c701b49145f3bb10915f9ebeefa316a116e11596ae62",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_ws1_optimal_worldsheet_grammar_charter_20260821.md",
+      "sha256": "1f92805ba36fe7d3dfd5ac1a94361cd4a87d613ee81cb07b8dc10be213a206ab",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wwc1_winwin_cone_sweep_20260831.md",
+      "sha256": "9f9c517b983835d57aac63ab0ec5de81f98c9473d761ea286a29f2fbec1fc00c",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_wx1_divergent_object_hunt_20260902.md",
+      "sha256": "913332fd46c3873b76e368fac13d4707118f9bf9cb4e8a5b40f868bf0ab9b5bf",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_xi1_screw_conditioned_learned_prior_20260812.md",
+      "sha256": "cb559d226cf78cdf66c3da5323931f226462bb9ef092b61d635f60e6ef0bf1f4",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_xo1_cross_successor_object_20260830.md",
+      "sha256": "a7a7547d8080fdb3e22f6a7469e5dba03c0113c7dcd556ef891148ae294d1c80",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+      "sha256": "f811f0c5aa063e98446c82917fb32e0c8534e0cab8667f89be0f6b19cee75ab9",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_xs1_cross_section_conditioning_charter_20260822.md",
+      "sha256": "b23a4b14288adf9127368fb44a2cbfe6db959f79e7bfd1a4cbec8926335084fb",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_xt1_exact_solve_teacher_student_charter_20260822.md",
+      "sha256": "9c3914d704578fa8b0153a83c2112db89d4b91f38d3ceec685f06672e64eedae",
+      "findings": []
+    },
+    {
+      "path": ".omx/research/charters/ddm_yr1_yousfi_adversarial_pr_review_20260902.md",
+      "sha256": "368415e2f6645455ec6f8c1d92a1711525a0d732c6f8b9e1dfcf8953d2d6cb3f",
+      "findings": []
+    }
+  ]
+}
