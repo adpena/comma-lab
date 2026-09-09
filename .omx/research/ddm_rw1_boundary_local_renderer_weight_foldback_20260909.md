@@ -270,6 +270,59 @@ number.
 
 ---
 
+## 8b. THE REACH — MEASURED. The actuator is not weak; it is aimed backwards.
+
+The gate opened, the run fired (3,000 steps, MPS, batch 4, lr 2e-3, one Metal occupant, footprint declared as a **measured 6.28 GiB
+system-availability delta** — RSS accounting sees only 0.16 GiB of it, which is exactly why gov3 asks for the other unit). Speed on the
+quiet machine: **0.34 s/step**, not the 2.17 s measured under load.
+
+### The seg leg's own null control passed first
+
+Before reading any candidate number: my n600 instrument, run on the **unmodified** decode, returns **12,866 cells** and
+`d_seg_local = 0.00010906643337673611` against the pinned `0.0001090664333767361`, with **600 of 600 pairs unchanged**, in 24.8 s at four
+shards (`segnull/SEG.json`). The seg leg reproduces sj1's instrument exactly.
+
+### The device gap, measured four times for free
+
+The first four evaluations all ran with **zero changed shadow codes** — the EMA shadow (decay `1 − 5/3000`, window 600) had not yet
+crossed a rounding boundary — and all four returned **12,871 = live + 5**. So the MPS monitor's gap to the cpu_torch instrument is
+**5 cells (0.039 %)**, **77× below** the 386-cell falsifier threshold. The monitor is trustworthy, and the flat prefix is a control, not a
+missing measurement.
+
+### The curve
+
+| step | shadow codes changed | flips | vs live | reach | cells broken per changed code |
+|---:|---:|---:|---:|---:|---:|
+| 300 | 0 | 12,871 | +5 | −0.039 % | — (device gap) |
+| 600 | 0 | 12,871 | +5 | −0.039 % | — |
+| 900 | 0 | 12,871 | +5 | −0.039 % | — |
+| 1,200 | 0 | 12,871 | +5 | −0.039 % | — |
+| 1,500 | **4** | 13,364 | +498 | **−3.87 %** | **123** |
+| 1,800 | **18** | 13,713 | +847 | **−6.58 %** | **47** |
+| 2,100 | **35** | 13,992 | +1,126 | **−8.75 %** | **32** |
+
+**The reach is negative and monotonically worsening.** This is not the charter's anticipated failure ("the edge is not reachable through
+these two layers"). The edge is *extremely* reachable: **eighteen changed int4 codes move 847 argmax cells.** Compare sj1's token
+pre-distortion, which repairs **1.081 cells per changed token**. The renderer-weight code actuator carries roughly **30–120× the argmax
+leverage per changed symbol at 1/48th the byte cost** (0.0139 B/code vs 0.664 B/token). What it does not have is aim.
+
+That reframes the arm's open question. It is not *can a weight change move a class edge* — measured yes, violently. It is *can any search
+aim it*, against a collateral population that sj1 §16d measured at **44.5 correct boundary cells at risk per residual cell in reach**.
+
+### The confound this measurement names about itself
+
+At batch 4 the fixed-τ surrogate has **no trend** over 1,300 steps (first-10 mean 4.796e-4, last-10 4.976e-4) and the code drift
+**saturates at ~0.6** against a 3.0 free-drift bound — the per-step direction is only ~5 % persistent. So the negative reach is
+**not yet interpretable** between two readings that prescribe opposite next moves:
+
+1. **no descent direction exists** in this code subspace (the actuator is closed at this formulation), or
+2. **the direction exists and the minibatch draw noise buries it** (the search is at fault, not the actuator).
+
+Two controls separate them, both cheap and both built: `perturb-control` prices a RANDOM ±1 code change of the same size (if random costs
+about the same, the surrogate is not steering at all), and `--full-field` accumulates the exact n600 gradient over all 600 pairs in 150
+chunks (~50 s/step) so draw noise stops being a candidate explanation. With 12,672 parameters and a deterministic objective, the
+noise-free gradient is affordable — which is the honest answer to a saturating minibatch drift.
+
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach.** Run `experiments/ddm_rw1_FIRE_ORDER.sh` step 3 (MPS, 3,000 steps, batch 4) the moment BOTH gate
