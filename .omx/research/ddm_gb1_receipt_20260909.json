@@ -1,0 +1,56 @@
+{
+  "schema": "ddm_gb1_handoff_v1",
+  "status": "BLOCKED_CHARTER_NOT_COMPLETED",
+  "research_only": true,
+  "score_claim": false,
+  "completed_prices": 0,
+  "requested_prices": 36,
+  "scorer_jobs": 0,
+  "solver_jobs": 0,
+  "candidate_builds": 0,
+  "seals": 0,
+  "measured_live_carrier_stream_bytes": 18580,
+  "archive_sha256": "e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372",
+  "audit_artifacts": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb1_generated_carrier_basis/input_audit_v2/AUDIT.json",
+      "bytes": 18975,
+      "sha256": "d88d486866259af3171bf675a0d285a76304662360936d6d2c26e58f8a95836f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb1_generated_carrier_basis/input_audit_v2/pricing_rows.json",
+      "bytes": 20199,
+      "sha256": "64ff857ba4477cc9e8fd59caa978d899daf4624dca4fc5e7d4352ce0e86f9de0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb1_generated_carrier_basis/source_verification/HISTORICAL_ROWS.json",
+      "bytes": 6003,
+      "sha256": "c25a24a4fa97f8a2e923f661ba65118095fa876bdd787119595f16b4172fba31"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb1_generated_carrier_basis/source_verification/PR1_DEMAND.json",
+      "bytes": 988,
+      "sha256": "430029ece3d88e1cc39b8076dda90fa05a7d4e3eaf1b42dd08d712d0dc38629d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb1_generated_carrier_basis/source_verification/RECALL_SEARCHES.json",
+      "bytes": 11396,
+      "sha256": "22c210dfb593841711662b95b402f7a361f47f504213047368b1464e9ab672f1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb1_generated_carrier_basis/verification/CONTROLS.json",
+      "bytes": 1325,
+      "sha256": "8bc163d187bc042317966c025af15db9197d1782c4e21326741951b46e1324ab"
+    }
+  ],
+  "review_passes": 2,
+  "verification": [
+    "real live archive parse and byte summation",
+    "real stale archive refused",
+    "retained-payload hash/length resume pass",
+    "corrupt real-manifest hash refused",
+    "36 distinct blocked cells with no fabricated numeric values"
+  ],
+  "consumer_event_export": ".omx/research/ddm_gb1_registry_events_20260909.json",
+  "created_at_utc": "2026-09-09T15:30:02.051572+00:00"
+}
