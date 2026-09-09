@@ -100,6 +100,9 @@ def unmeasurable_basis(monkeypatch):
 def _fixed_basis(monkeypatch, *, reclaimable: float, committed: float) -> None:
     monkeypatch.setattr(ca.mem_basis, "conservative_free_gib", lambda default=0.0: reclaimable)
     monkeypatch.setattr(ca.mem_basis, "true_committed_gib", lambda default=0.0: committed)
+    # Admission now has an independent CPU-feed leg for Metal candidates. Keep unit verdicts
+    # independent of the host's momentary load average; CPU-pressure behavior has dedicated tests.
+    monkeypatch.setattr(ca, "cpu_load_context", lambda: {"logical_cpus": 8, "load_avg_1m": 0.0})
 
 
 # ── live-cell discovery ─────────────────────────────────────────────────────────────────────────
