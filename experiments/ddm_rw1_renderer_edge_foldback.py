@@ -3067,6 +3067,155 @@ def cmd_scale_search(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=scale-sizing -- does the damage curve CONTINUE below the fp16 step?
+# ----------------------------------------------------------------------------------
+#: fp16 relative ULP on the scales this arm opens (measured: 7.09e-04 on blocks.3.dw).
+FP16_REL_ULP = 7.09e-4
+#: fp32 relative ULP, the floor a receiver change could reach.
+FP32_REL_ULP = 6.0e-8
+
+
+def cmd_scale_sizing(args) -> int:
+    """Realized damage as a function of a CONTINUOUS relative scale perturbation.
+
+    The whole fp32 chain rests on one unmeasured premise: that damage keeps falling
+    below the fp16 step.  That premise is a property of the RENDER, not of the archive
+    format -- a sub-fp16 scale move is expressible in the float32 forward, and only
+    SHIPPING it needs a receiver change.  So it is measured HERE, with zero receiver
+    work, and if it fails no receiver code is written.
+
+    The three comparisons this arm already measured give exponents 0.073, 0.322 and
+    0.568, and the fp32 answer differs by 100x across that spread (0.35 to 36.6 cells).
+    Collapsing the spread is the point.
+    """
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    device = torch.device(args.device)
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    model = load_live_renderer(section).to(device)
+    tokens = load_live_tokens()
+    labels = load_gt_seg_dali()
+    segnet = jg1.load_segnet().to(device).eval()
+    for param in segnet.parameters():
+        param.requires_grad_(False)
+    fold = CodeFoldBack(section, names, device)
+    base = {n: section.scales[n].astype(np.float64).copy() for n in names}
+
+    def apply(scales: dict[str, np.ndarray]) -> None:
+        for name in names:
+            run = section.runs[name]
+            shape = [1] * len(run.shape)
+            shape[0] = scales[name].size
+            fold.scales[name] = torch.from_numpy(
+                scales[name].astype(np.float32).reshape(shape)
+            ).to(device)
+
+    rng = np.random.default_rng(int(args.seed))
+    subset = np.sort(rng.choice(N_PAIRS, size=int(args.pairs), replace=False))
+    prefix = np.arange(int(args.pairs), dtype=np.int64)
+    apply({n: base[n] for n in names})
+    null_subset = _evaluate_subset(model, fold, segnet, tokens, labels, device, subset)
+    null_prefix = _evaluate_subset(model, fold, segnet, tokens, labels, device, prefix)
+
+    tensor = str(args.tensor)
+    if tensor not in names:
+        raise Rw1Error(f"--tensor {tensor!r} not in {names}")
+    rowcount = base[tensor].size
+    rows_to_probe = np.sort(
+        rng.choice(rowcount, size=min(int(args.rows), rowcount), replace=False)
+    )
+    deltas = [float(v) for v in str(args.rel_deltas).split(",") if v.strip()]
+
+    out_rows = []
+    for rel in deltas:
+        for row in rows_to_probe:
+            for sign in (1.0, -1.0):
+                trial = {n: base[n].copy() for n in names}
+                trial[tensor][row] = base[tensor][row] * (1.0 + sign * rel)
+                apply(trial)
+                flips = _evaluate_subset(
+                    model, fold, segnet, tokens, labels, device, subset
+                )
+                out_rows.append(
+                    {
+                        "rel": rel,
+                        "row": int(row),
+                        "sign": sign,
+                        "flips": int(flips),
+                        "delta_subset": int(flips - null_subset),
+                        "below_fp16_ulp": FP16_REL_ULP / rel,
+                    }
+                )
+                if args.progress:
+                    print(json.dumps(out_rows[-1]), flush=True)
+    apply({n: base[n] for n in names})
+
+    scale_up = N_PAIRS / len(subset)
+    summary = {}
+    for rel in deltas:
+        vals = [r["delta_subset"] for r in out_rows if r["rel"] == rel]
+        summary[f"{rel:.3e}"] = {
+            "n": len(vals),
+            "median_delta_subset": float(np.median(vals)),
+            "min_delta_subset": int(min(vals)),
+            "median_cells_n600_scaled": float(np.median(vals)) * scale_up,
+            "min_cells_n600_scaled": int(min(vals)) * scale_up,
+            "below_fp16_ulp": FP16_REL_ULP / rel,
+        }
+    # the exponent, refitted on THIS sweep alone
+    xs, ys = [], []
+    for rel in deltas:
+        med = summary[f"{rel:.3e}"]["median_cells_n600_scaled"]
+        if med > 0:
+            xs.append(math.log(rel))
+            ys.append(math.log(med))
+    exponent = float(np.polyfit(xs, ys, 1)[0]) if len(xs) >= 2 else float("nan")
+    predicted_fp32 = (
+        summary[f"{deltas[0]:.3e}"]["median_cells_n600_scaled"]
+        * (FP32_REL_ULP / deltas[0]) ** exponent
+        if xs
+        else float("nan")
+    )
+    result = {
+        "schema": "ddm_rw1_scale_sizing.v1",
+        "axis": f"[{args.device} research-signal; seeded RANDOM subset, realized argmax]",
+        "score_claim": False,
+        "pointer": pointer,
+        "tensor": tensor,
+        "rows_probed": [int(v) for v in rows_to_probe],
+        "rel_deltas": deltas,
+        "pairs_random": len(subset),
+        "null_flips_random_subset": int(null_subset),
+        "null_flips_first_n_prefix": int(null_prefix),
+        "prefix_note": (
+            "the first-N prefix null is reported because MAIN asked for that quantity; the "
+            "VERDICT is taken on the seeded RANDOM draw, because a contiguous prefix of this "
+            "video is a different population ([[m88]]/[[m96]])"
+        ),
+        "summary_by_rel": summary,
+        "fitted_exponent_this_sweep": exponent,
+        "predicted_cells_at_fp32_ulp": predicted_fp32,
+        "prereg_falsifier": (
+            "if the median damage at rel = 1e-05 has NOT fallen below 36 cells at n600 "
+            "(half the fp16-ULP damage), a floor exists and fp32 scales are refuted"
+        ),
+        "falsifier_fired": bool(
+            summary.get("1.000e-05", {}).get("median_cells_n600_scaled", 1e9) >= 36.0
+        ),
+        "rows": out_rows,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -3243,6 +3392,21 @@ def build_parser() -> argparse.ArgumentParser:
     scale.add_argument("--progress", action="store_true", default=True)
     common(scale)
     scale.set_defaults(func=cmd_scale_search)
+
+    sizing = sub.add_parser("scale-sizing")
+    sizing.add_argument("--out", type=Path, default=WORK / "receipts/SCALE_SIZING.json")
+    sizing.add_argument("--device", default="mps")
+    sizing.add_argument("--batch", type=int, default=4)
+    sizing.add_argument("--tensor", default="blocks.3.dw.weight")
+    sizing.add_argument("--rows", type=int, default=6)
+    sizing.add_argument("--pairs", type=int, default=60)
+    sizing.add_argument(
+        "--rel-deltas", default="7.09e-4,1e-4,1e-5,1e-6,1e-7"
+    )
+    sizing.add_argument("--seed", type=int, default=20260909)
+    sizing.add_argument("--progress", action="store_true", default=True)
+    common(sizing)
+    sizing.set_defaults(func=cmd_scale_sizing)
 
     return parser
 
