@@ -1371,6 +1371,47 @@ and the minimum is still 4.
 
 ---
 
+## 22. PRE-REGISTERED — the two-cell SLIDE sizing (before it runs)
+
+§21 measured two things that together are a falsifiable claim about move SHAPE, not about
+coverage: the residual is **99.56% a one-pixel boundary displacement**, and **89.46% of it
+has already been proposed on and REJECTED** by three passes of the single-cell family.
+Those cells are not unexplored. The available move is the wrong shape for them.
+
+**The family.** A single move WIDENS one class by a token — it changes the class balance
+across the edge. A displacement does not need widening, it needs TRANSLATION. So a slide
+writes TWO tokens straddling a flipped site `s` reading `o` where GT says `g`: for each of
+eight directions `d`, advance `g` into `s + d` and retreat it at `s − d` by writing `o`.
+The pair of writes moves the token boundary one step along `d` while leaving the number of
+`g` tokens across the cut unchanged. That degree of freedom is provably outside a
+one-token family, and it is distinct from jg1's block/dilation moves, which set a whole
+neighbourhood to one class.
+
+**Price, stated before the result.** Two changed tokens per proposal, so break-even is
+**~2× per repaired cell — ≈19.58 bits at pass 5's projected 9.7916 bits/token.** A slide
+pays only where it repairs **≥2 cells**, or where the second token is one the coder charges
+near zero. That second condition is real but is NOT settled here: per-token −log2 p is
+direction-dependent ([[fs2]]) and average ≠ marginal ([[fs3]], 2.24×), so it is a question
+for a real re-encode, never for a model. This sizing decides the MECHANISM only.
+
+**Scope.** 12 SEEDED pairs (never a prefix — [[m88]]), ≤2 procs, the same instrument every
+other row on this arm uses: `argmax_for_tokens`, i.e. the receiver's own `render_frame1` at
+batch 1 then the frozen CPU SegNet, judged on the REALIZED whole-pair flip count. REFUSED
+is defined as still-flipped on the shipped bytes AND flipped at pass-2a start, so all three
+single-cell passes enumerated proposals on it and lost.
+
+**PRE-REGISTERED STOP RULE.** The family is DEAD and is excluded from pass 5 unless BOTH:
+**≥5% of refused cells repaired** AND **≥1.5 cells per accepted slide.** Below either, it
+cannot clear a 2× break-even, and pass 5 stays singles-only as §20 planned.
+
+**What each outcome means.** Clearing says the census's diagnosis was right and the wall was
+the move shape — pass 5 becomes singles + slides under one acceptance and one subset sweep.
+Failing says the wall is the RENDERER, not the family: if translating the boundary at the
+token grid cannot move the argmax onto the right side, no token-grid move will, and the
+89.46% refused set belongs wholly to the renderer door.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
