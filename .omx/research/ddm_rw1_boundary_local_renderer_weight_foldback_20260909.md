@@ -591,7 +591,7 @@ container search prices ONE changed scale at **−1 byte**, so the rate break-ev
 | `blocks.3.pw` | ±1 | 22 | **6** | 16–17 | 28 |
 | `blocks.3.pw` | ±2 | 22 | 16 | 21–24 | 38 |
 
-(screen deltas on 120 pairs; ×5 for n600). **Zero accepts.**
+(screen deltas on 120 pairs; ×5 for n600). **Zero accepts** — over the full 400-evaluation run as well as this first 91.
 
 **The pre-registered proportionality is FALSIFIED.** `dw` perturbs 5.8× less than `pw` and costs the *same*; one dw ULP perturbs **41×**
 less than one int4 code and costs only ~4.8× less. Fitting the exponent across every pair of measured scales:
@@ -607,6 +607,24 @@ less than one int4 code and costs only ~4.8× less. Fitting the exponent across 
 **Damage grows roughly as the SQUARE ROOT of the perturbation, and flattens further at the fine end.** That is the signature of a
 knife-edge population — cells sitting at essentially zero SegNet margin that flip under any nudge at all, which is exactly sj1 §16's
 picture (99.67 % of the residual lies on a GT class edge, with 44.5 correct boundary cells at risk per residual cell).
+
+### Door (1) final (`receipts/SCALE_SEARCH.json`, 1,729 s)
+
+| | |
+|---|---|
+| proposals available | 768 (192 rows × 4 ULP steps) |
+| evaluations spent | **400** (52 % of the pool) |
+| accepts | **0** |
+| scales changed | **0** |
+| screen best vs null | 2,646 vs 2,646 (**unmoved**) |
+| n600 final vs null | 12,871 vs 12,871 (**unmoved**) |
+| ΔS | **0.0** — **0.00 %** of the gap |
+
+**A correction on my own falsifier, before anyone reads the flag.** The receipt says `falsifier_fired: false`, and that is a **vacuous**
+false, not a pass: the pre-registered condition was *"the accepted set repairs fewer cells than the rate break-even for the scales it
+changes"*, and with an EMPTY accepted set the rate is 0 B, the break-even is 0.0 cells, and `0 < 0.0` is false by arithmetic rather than
+by evidence ([[m50]] — vacuity reads as PASS). **The verdict is the zero itself**: 400 realized evaluations of the finest actuator the
+archive can express, with a negative rate toll, accepted nothing. Door (1) is closed at `verdict_scope: formulation`.
 
 ### Door (2) is closed by that exponent, before it is built
 
