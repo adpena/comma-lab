@@ -228,6 +228,22 @@ At the measured shape (one cell per admitted pair, `C ≈ N`) this crosses the �
   the FiLM axis cannot pay on this renderer** (verdict_scope: formulation — single- and paired-code moves at
   |step| ≤ 2 on the shipped 3-bit lattice, this body, realized cpu_torch SegNet acceptance). Count it plainly and stop.
 
+### 9.2 Declared SCOPE reductions in the n600 search (mechanism unchanged)
+
+1. **Steps of at most two code units.** Evidence: all 178 sizing moves with |step| ≥ 3 made their pair worse,
+   minimum +4 flips, and both realized repairs came from steps of −1 and +2. Reduces how much of the lattice is
+   walked; acceptance is unchanged.
+2. **Greedy, not exhaustive, on code pairs.** The second code is searched only over the 7 remaining dimensions
+   given the first, not over all (8×4)² combinations.
+3. **The greedy descends only through a STRICTLY reducing first move.** A pair whose best single move is exactly
+   NEUTRAL is not walked further, so a plateau-then-descend path is not searched. In the sizing that shape appeared
+   on 1 of 12 pairs (pair 131, best Δ = 0). This is a real, named residue: a successor that wants the last of this
+   axis should allow one neutral step before pruning. It was NOT changed mid-run, because a search whose rule
+   changes partway through is no longer one n600 measurement.
+
+MECHANISM reductions: none. Acceptance is the frozen cpu_torch SegNet argmax on the receiver's own render at
+`semantic_batch = 1`, on the DALI GT table, for every one of the 600 pairs.
+
 ## 10. What this arm hands the next one, whichever way the verdict falls
 
 * **The move ledger is the durable asset.** `search/search_rows_*.jsonl` retains, for every one of the 600 pairs,
