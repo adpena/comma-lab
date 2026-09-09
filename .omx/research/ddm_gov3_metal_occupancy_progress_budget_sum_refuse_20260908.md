@@ -57,6 +57,7 @@ Seed denominator: 3 profile rows; dual-Metal FIT numerator: 0; dual-Metal FIT de
 - Targeted Ruff checks passed for all changed implementation files and the new test; `git diff --check` passed.
 - All 9 changed Python files received two genuine, registered-principal `review_tracker.py mark-file` passes: `ddm_gov3_registered_pass1` and `ddm_gov3_registered_pass2`.
 - Implementation and tests landed as `29f76e36d` with post-edit serializer hashes, `[no-triality] [p0-ledger-ok]`, and no attribution trailer.
+- A clean rerun under high host load exposed that two pre-existing composed-decision tests inherited the real load average and could falsely REFUSE. Commit `45d527141` makes their shared memory fixture inject a fixed CPU context; dedicated gov3 tests retain explicit CPU contexts. The affected shard then returned to 138 passed, and the file received two new review passes: `ddm_gov3_postlanding_determinism_pass1` and `ddm_gov3_postlanding_determinism_pass2`.
 
 ## PREFLIGHT / TWO-LANDING DISPOSITION
 
