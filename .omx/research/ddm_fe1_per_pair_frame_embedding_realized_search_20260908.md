@@ -455,6 +455,45 @@ too coarse to fine-tune on.
 MAIN routes this to a codex rate arm. Everything below is measured by this arm and on disk; nothing in it needs
 fe1 to run again.
 
+### 13.1 PRE-REGISTRATION — written before the first build (ITEM 5 runs as fe1's own measurement)
+
+MAIN routed ITEM 5 back to this arm rather than to a separate one, for a reason this arm's own tooling makes
+plain: another arm editing the semantic section would move it, and `ddm_fe1_rebase.py` REFUSES a semantic-section
+move. So it runs here, now, as a measurement on the current base (pc2), and the winner is folded into the re-based
+candidate later — one seal, one T4 call.
+
+**The candidate set, extracted and retained before any build** (`item5/NEUTRAL_MOVES.json`): of the 243
+single-code moves the n600 search measured as changing the realized flip count by exactly 0, **21 sit on pairs the
+FiLM candidate already edits** and are excluded so the two sets compose without conflict, leaving **222 free
+neutral moves over 133 distinct pairs** (50 pairs offer more than one). Step sizes: −2: 12, −1: 108, +1: 91, +2: 11.
+
+**Objective.** Maximise `−ΔB`, where ΔB is the EXACT archive byte delta of a REAL build on pc2's archive with the
+container searched over q ∈ {9,10,11} × lgwin ∈ {16,18,20,22,24} × {ck2, plain}. Score
+`ΔS = ΔB · 25/37,545,489 + (pose leg after the per-pair re-solve)`. **No seg term by construction** — that is the
+whole point of choosing neutral moves, and it means this search cannot lose on the axis that is hardest to win.
+
+**Search.** At most ONE move per pair, so the moves are independent by construction (`frame_embed` is per-pair, and
+two moves on different pairs cannot interact). Stage A: price all 222 single-move builds and rank by measured ΔB.
+Stage B: greedy accumulation over that ranking, re-pricing by a real build at every step, accepting a move only if
+it lowers the archive. Stage C: a bounded neighbourhood sweep (leave-one-out and add-one-back) around the greedy
+winner. Budget a few hundred builds.
+
+**Seg-neutrality is VERIFIED on the composed set, not assumed.** Moves neutral alone need not be neutral together
+in general; here the one-move-per-pair rule makes them independent, so the composition should be exactly neutral —
+and that prediction is itself checked, by re-rendering every pair in the final set and comparing realized flip
+counts against the base. Any pair that is not neutral in composition is dropped and the fact recorded.
+
+**PRIOR-LAW PREDICTION (falsifiable, named).** From this arm's own draws: a single random edit moves the searched
+archive delta by −7.2 ± 25.4 B, so the best of 222 measured single moves should already land near
+**−70 B** (≈ mean − 2.5σ) — about the whole −68 B the FiLM candidate got from a set never chosen for bytes. Greedy
+accumulation over a non-additive objective then buys less than linearly but should still compound.
+**I predict the best subset reaches ΔB ≤ −150 B**, i.e. beats −68 B by ≥ 82 B, and that the winning set is
+substantially smaller than 222 moves.
+
+**FALSIFIER (MAIN's, adopted verbatim).** If the best subset does not beat −68 B by at least 20 B — that is, if it
+does not reach ΔB ≤ −88 B — then the FiLM candidate's draw was already near the achievable floor, the byte spread
+of §6 is not exploitable by selection, and **ITEM 5 closes with the table**.
+
 ### The observation that makes it a lever
 
 fe1's admitted candidate is 181,305 B against pc2's 181,373 — **−68 B** — and its seg leg is worth only −1.95e-05
