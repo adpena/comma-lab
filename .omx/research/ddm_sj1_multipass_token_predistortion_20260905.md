@@ -1108,7 +1108,45 @@ actionable messages. Landed at commit `3afe99635`.
 
 ---
 
-*(Section 18+ — the pass-4 run and its admission — are
+## 18. The §17 refusal fires for real, 4 hours after landing
+
+Pass 4 launched 2026-09-08T23:06:46Z and returned **rc = 120** at 12:48:12Z — 13.7 h wall
+for what should have been 2.5 h. Not a run defect. MAIN traced it from `pmset -g log`:
+the machine entered Low Power Sleep on battery at 18:53:45 −0500 for 46,467 s and woke
+from hibernate on AC attach; at wake the external SSDs re-enumerated (Vertigo
+disk6 → disk5) and every detached process on the fleet died in the same second. This
+arm's receipts agree independently: `resource_safe_run_status.json` froze at
+`elapsed_s` **2,793** / `2026-09-08T23:53:19Z` with `status: running`, while the
+supervisor's own clock ran to 49,286 s. **A frozen sampler beside a running wall clock is
+the hibernate signature**, and it is worth keeping: the run receipt says rc=120 with no
+detail, and only the two clocks disagreeing say *why*.
+
+**MEASURED, and a correction to my own declaration.** Peak RSS for 5 shards at batch 8
+was **34,812 MiB (34.0 GiB)** — about **7.0 GiB per shard**, not the 5.7 GiB this arm
+declared from the pass-2a measurement. The relaunch declares 36 GiB. The governor was
+never at risk (ceiling 116 GiB), but the declaration was low and is now right.
+
+**Integrity, checked before trusting anything.** A plane file written into a SIGBUS
+window can be truncated, so every `planes_shard_*.npz` was fully decompressed rather than
+merely opened: **170 planes, all `(384, 512)` uint8 with max < 5, zero malformed**, and
+all 182 rows parse. Nothing was lost to corruption.
+
+**And then the §17 refusal earned itself.** The shards were left with **182 rows against
+170 planes — 12 orphaned pairs** (180, 175 / 191, 201, 181, 176 / 162 / 133, 153, 163,
+193 / 179). Resuming without the check would have skipped all 12, and the merged field
+would have reverted them to `BODY_TOKENS`, losing every banked pass's edits for them
+**while the ledger read complete**. The check was written four hours earlier on the
+theory that the walltime cap might fire; what actually fired was a hibernate. The genus
+was right even though the trigger was not.
+
+`pass-repair-shard` (commit `a1a582935`) then made the recovery **exact** rather than
+total: it dropped precisely those 12 rows, kept UTC-stamped backups of the originals, and
+left rows == planes == 170 verified consistent across all five shards. **Recovery cost 12
+pairs of recompute instead of 182.**
+
+---
+
+*(Section 19+ — the pass-4 run and its admission — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
