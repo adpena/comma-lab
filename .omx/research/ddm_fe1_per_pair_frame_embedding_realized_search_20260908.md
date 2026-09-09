@@ -1,0 +1,200 @@
+# ddm_fe1 — per-pair FRAME-EMBEDDING pre-distortion: the realized search on the shipped renderer
+
+Tokens: `[no-triality] [p0-ledger-ok]` · Lane `lane_ddm_fe1_frame_embedding_predistortion_20260908` ·
+Charter `.omx/research/charters/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md` ·
+Axes: d_seg `[macOS-CPU advisory, jg1/sj1 instrument, DALI GT lineage]`; d_pose `[cpu_torch fp32, DALI GT, n600]`;
+bytes exact through the shipped container. `score_claim=false` everywhere below — no T4 row was fired by this arm.
+
+Live pointer at every stage of this work: **S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]**,
+lane `ddm_sj1_t4_token_predistortion_pass3_20260906`, archive sha `06c44dc4…`.
+
+---
+
+## 1. What was verified at source (the charter's premise, corrected)
+
+The charter said `frame_embed.weight_q (600, 8) i1` — an int4 field with 15 alternatives per code.
+On the LIVE body it is **3 bits, not 4**.
+
+| Fact | Value | verified-at-source |
+|---|---|---|
+| `frame_embed.weight` shape | `(600, 8)` | `candidate_pass3/candidate_runtime/cpr1/inflate.py:96` with `N = 600` (`:20`), `SEMANTIC_FRAME_DIM = 8` (`:28`) |
+| FiLM consumption | one 8-vector drives `film = Linear(8, 192)` in ALL FOUR `TokenBlock`s for that pair | `cpr1/inflate.py:81, 84-86, 127` |
+| shipped code depth | **3 bits** → signed domain `[-4, 3]`, **7 alternatives per code**, not 15 | SM3R mode-6 depth table, walked with the receiver's own `walk_sm3r` (`cpr1/rc1_adaptive_model_sections.py:249`) |
+| codes run in the SM3R body | offset 466, length 1,800 B, count 4,800 | same walk |
+| column scales (8 × fp16, offset 450) | 1.208984, 1.010742, 1.009766, 1.0, 1.204102, 1.045898, 0.873047, 1.068359 | same walk |
+| shipped code histogram over 4,800 codes | `-3:28  -2:230  -1:892  0:2505  +1:904  +2:216  +3:25` | measured |
+| semantic section chain | `brotli → CK2 2-plane un-interleave → RC1 rider` | `runtime/residual_archive.py:193, 237, 248`; RX1 `reserved = 0x7a` (CK2-semantic 0x2 SET, SZ1 0x1 clear) |
+| section sizes | hpac 12,343 · semantic 30,246 · carrier 18,621 · tail 120,321 · header 14 · zip 100 | RX1 header of the live archive |
+
+**Consequence recorded before any search:** one code step changes that dimension by ≈ 1.0 (the scales are ≈ 1.0)
+against embedding entries that never exceed 3.6. The lattice is coarse; a "small nudge" is not available on this axis.
+
+## 2. Controls (both PASS)
+
+* **Identity control.** Re-rendering frame `2p+1` with the SHIPPED embedding reproduces the receiver's own decode
+  **byte for byte**: 5 pairs, 15,258,600 pixels, `max |delta| = 0`, at the receiver's `semantic_batch = 1`.
+  Receipt `probe/CONTROL.json`.
+* **Instrument agreement.** My render→SegNet argmax equals sj1's decode argmax **pixel for pixel** on pairs 0, 199, 599,
+  and the flip counts match (33/33, 26/26, 23/23).
+* **Base seg leg reproduced exactly** (five figures and beyond): **12,866 flipped cells,
+  d_seg 0.00010906643337673611**, carried to T4 by sj1's own instrument ratio as 1.0913879636e-04.
+  All 600 pairs carry flips; median 19, max 100. Receipt `probe/base_flips_per_pair.npy`.
+* **Coder identity.** `apply_semantic(restore_semantic(stream)) == stream` byte for byte, and re-encoding the SHIPPED
+  codes reproduces the shipped RC1 stream (31,792 B) and, through the container, the header's **30,246 B**.
+
+## 3. CLOSED-FORM-FIRST — the sign of ∂(boundary)/∂(code)
+
+The FiLM path is affine in the embedding, so the whole realized chain (renderer → resample → SegNet) was linearized
+about the shipped codes with eight forward-mode JVPs per pair. The one inexactness is DECLARED: the receiver's
+`round` to uint8 at 874×1164 has zero derivative, so the linearization uses the straight-through surrogate there.
+Per pixel the model repairs a wrong pixel when its top1-vs-GT margin goes negative and breaks a right pixel when its
+top1-vs-top2 margin does.
+
+Measured against the realized 56-move enumeration on the same pairs (`probe/SIGN.json` vs `sizing/SIZE_shard_*.json`):
+
+| pair | Pearson r (predicted vs realized Δflips, n=56) | per-dim best DIRECTION agreement |
+|---|---|---|
+| 118 | **0.966** | 8/8 |
+| 382 | **0.856** | 8/8 |
+| 516 | **0.937** | 5/8 |
+
+**The derivation ORDERS well and its MAGNITUDES are optimistic.** Sign agreement is 21/24 dims (87.5%), but the
+first-order model predicts −9 flips where the realized move gives +3, because a full 3-bit code step is far outside
+the linear regime. Verdict: usable as a proposal ordering, **never** as an admission signal — which is why every
+number below the sign table is a realized argmax count.
+
+## 4. SIZING — 12 seeded pairs, every single-code move (SCOPE, no verdict)
+
+Seed 20260908, pairs `118 127 131 180 238 244 382 383 452 516 543 568`; 8 dims × 7 alternatives = 56 realized
+evaluations per pair; **672 realized argmax evaluations**.
+
+| pair | base flips | best Δ | best Δ % | reducing / 56 | worst Δ | best move |
+|---|---|---|---|---|---|---|
+| 118 | 17 | **−1** | −5.9% | 2 | +33 | d0 +0→+2 |
+| 127 | 22 | +1 | +4.5% | 0 | +30 | d6 +0→−1 |
+| 131 | 14 | 0 | 0.0% | 0 | +33 | d5 +0→−1 |
+| 180 | 17 | +2 | +11.8% | 0 | +25 | d0 −1→−2 |
+| 238 | 22 | +1 | +4.5% | 0 | +17 | d1 −1→−2 |
+| 244 | 9 | +1 | +11.1% | 0 | +32 | d2 +0→+1 |
+| 382 | 10 | **−1** | −10.0% | 1 | +20 | d6 +0→−1 |
+| 383 | 12 | +2 | +16.7% | 0 | +22 | d6 +0→−1 |
+| 452 | 33 | +1 | +3.0% | 0 | +53 | d4 −1→+0 |
+| 516 | 59 | +3 | +5.1% | 0 | +45 | d1 +2→+1 |
+| 543 | 46 | +4 | +8.7% | 0 | +41 | d4 +0→+1 |
+| 568 | 23 | +2 | +8.7% | 0 | +46 | d3 −1→−2 |
+
+* **664 of 672 moves make d_seg WORSE**; 5 are neutral; **3 reduce, each by exactly −1 cell.**
+* Median move **+9 flips** on a base of ~24. Maximum **+53**.
+* The best available single-code move is a **LOSS on 10 of the 12 pairs**. Summed best-per-pair: **+15 flips**.
+* By step size, minimum realized Δ: step −1 → −1, +1 → 0, +2 → −1, −2 → +1, and **every one of the 178 moves with
+  |step| ≥ 3 made the pair worse (minimum +4)**. This is the evidence for the n600 search's declared SCOPE
+  reduction to |step| ≤ 2 — a reduction in how much of the lattice is walked, never in the acceptance mechanism.
+
+**Stop rule (charter): "axis INERT if the best move changes flips by < 2% on every one of 12 pairs."
+The rule does NOT fire — the axis is violently active (up to +230% of a pair's flips).** The axis moves boundaries;
+it moves them almost entirely the wrong way. The shipped codes sit at a per-pair local minimum of the realized flip
+count on this lattice.
+
+## 5. Pose — the charter's expected killer, MEASURED not to be
+
+Priced end to end on the three realized winners (`admission/PRICE_sizing_winners.json`): render the moved frame,
+splice it over the live decode, measure d_pose stale, re-solve that pair's carrier from the LIVE coefficients with
+`jg5.refine_pair` (damped GN + the ±2 lattice polish, the shipped chain), measure d_pose resolved.
+
+| pair · move | d_pose base | d_pose STALE | d_pose RESOLVED | recovery |
+|---|---|---|---|---|
+| 118 · d2 +0→+2 | 6.198610e-08 | 2.576839e-04 (**4157×**) | **8.439129e-08** | **3053×** |
+| 382 · d6 +0→−1 | 1.265234e-06 | 5.570474e-04 (**440×**) | **8.665944e-07** | **643×** |
+
+The stale rise is enormous, exactly as the charter predicted; **the carrier re-solve absorbs essentially all of it.**
+Post-re-solve, pair 118 sits at 1.36× its base and pair 382 lands *below* its base. In score terms the resolved pose
+leg is +2.6e-08 S on pair 118 — three per-cent of one repaired cell's value.
+
+Two honesty notes on this table:
+* Pair 382's apparent pose GAIN is **not creditable to the move**. `refine_pair` on the moved render found a better
+  pose than the live carrier's; a re-solve on the UNMOVED render would very likely find some of that too. It is
+  recorded as an unresolved control (ITEM 3) and is NOT taken as a gain anywhere in the arithmetic below.
+* The run that produced this table priced two moves on pair 118. The overlay holds one frame per pair, so both rows
+  carry the LAST move's render. The pricer now refuses a repeated pair unless `--allow-repeat-pairs` is passed.
+
+**This is a genuine correction to the prior.** The renderer-coupling law (`renderer_seg_pose_coupling_170_220_two_arms_20260903`,
+rf1 166.8 / ft1 217.3 / pr1 k_post 13.82) closed renderer WEIGHT changes because they move all 600 pairs at once.
+A per-pair FiLM move does not inherit that: the carrier has twelve free coefficients for that pair and they are
+enough to re-aim the pose after an arbitrary re-render of that pair's frame. **Pose is not the wall on this axis.**
+
+## 6. Rate — the wall is the CONTAINER, and it is a fixed fee
+
+The semantic section is `brotli(CK2-interleave(RC1 stream))`. The RC1 payload is **range-coded**: changing one symbol
+re-randomises every bit after it, so the brotli layer above it loses the matches it had on the shipped bytes.
+Measured at the shipped container shape (`admission/RATE_LAW.json`, exact re-encodes, scorer-free):
+
+| changed codes N | archive section Δ at the SHIPPED shape | Δ with a full container search | B per code (searched) |
+|---|---|---|---|
+| 1 | +65.0 ± 39.8 B | **+1.3 B** | +1.3 |
+| 72 | +68.1 ± 29.4 B | **+28.0 B** | +0.39 |
+| 200 | +80.8 ± 29.0 B | — | — |
+
+Two findings, both reusable:
+
+1. **The penalty is a fixed container-break fee, not a per-code price.** From 1 code to 200 the shipped-shape penalty
+   is flat at ~+70 B; the marginal per-code term is ≈ +0.08 B. It is also NOT a length effect — length-preserving
+   code changes still cost +40 B.
+2. **A container search recovers most of it.** Brotli streams are self-describing and the CK2 choice rides in the RX1
+   `reserved` byte, so quality, window and interleave are encoder-only choices the receiver is never told about.
+   Searching q ∈ {9,10,11} × lgwin ∈ {16,18,20,22,24} × {ck2, plain} recovers **63.5 B at N=1** and **29.2 B at N=72**.
+   The shipped body's own shape is `(ck2, 11, 16)`. Pricing an edit at the shipped shape overstates it about 2×.
+
+## 7. The exchange, and what the arm must clear
+
+* one repaired cell = 100/117,964,800 = **−8.4771e-07 S**
+* one archive byte = 25/37,545,489 = **+6.6586e-07 S**
+* resolved pose ≈ **+2.6e-08 S per moved pair** (pair 118, the uncontaminated row)
+
+With the container search, break-even against the −2e-5 admit bar needs roughly **N > 44 pairs** each repairing at
+least one cell with one changed code. Priced at the shipped container shape instead, it needs **N > 80**.
+
+## 8. PRIOR-LAW PREDICTION vs MEASURED
+
+| charter prediction | measured | verdict |
+|---|---|---|
+| sizing: best move changes flips by ≥ ±10% per pair, or axis INERT at < 2% | up to +230%; best move is a LOSS on 10/12 pairs | axis ACTIVE, stop rule does not fire, but the motion is the wrong sign |
+| 25–45% of pairs admit a move | **see §9** | — |
+| admitted pairs repair 8–15% of their residual (≈1,000–2,500 cells n600) | maximum realized repair anywhere: **1 cell** (0.45% of the 672 sizing moves reduced at all) | **refuted, ~1 order of magnitude** |
+| seg buys ≥ 4× its rate at ≤ 300 B | rate is a ~+28 B fixed fee (searched); seg buys ~2× it at N=72 | rate far cheaper than predicted, seg far thinner |
+| d_pose rises 10–100× pre-re-solve; re-solve recovers ≥ 10× | rises **440–4157×**; re-solve recovers **643–3053×** | prediction directionally right, magnitudes both ~40× larger |
+| pose-bound on >80% of seg-repairing pairs = the reason | pose costs ~3% of one repaired cell after re-solve | **not pose-bound** |
+
+## 9. n600 realized search — IN FLIGHT
+
+### 9.1 PRE-REGISTRATION — written before the n600 search finished
+
+This section was committed while the search was still in flight (24 of 600 pairs read), so the verdict below is
+read against a number written first, not fitted to the answer.
+
+Every coefficient is measured, not guessed:
+
+| term | value | source |
+|---|---|---|
+| one repaired cell | −8.4771e-07 S | 100 / 117,964,800 |
+| one archive byte | +6.6586e-07 S | 25 / 37,545,489 |
+| semantic section, container-searched | ≈ 0.15·N + 8 B for N ≥ 25 | `admission/RATE_LAW.json` (+2.8 B at N=25, +8.8 at N=50, +21.0 at N=72, +13.3 at N=100) |
+| resolved pose per admitted pair | +2.6e-08 S | pair 118, the uncontaminated row of `admission/PRICE_sizing_winners.json` |
+| carrier bytes per re-solved pair | +1.94e-08 S | sj1 pass-3: +13 B over 445 re-solved pairs |
+
+With `N` admitted pairs repairing `C` cells,
+
+```
+ΔS = −8.4771e-07·C + (0.15·N + 8)·6.6586e-07 + N·(2.6e-08 + 1.94e-08)
+   = −8.4771e-07·C + 1.453e-07·N + 5.33e-06
+```
+
+At the measured shape (one cell per admitted pair, `C ≈ N`) this crosses the −2e-5 admit bar at **N > 36.1**, so:
+
+* **PRE-REGISTERED THRESHOLD: the arm needs ≥ 37 admitted pairs.** Fewer than 37 and it cannot clear the bar
+  even at zero pose cost.
+* **PRE-REGISTERED POINT PREDICTION** (from the in-flight rate of 4 offering pairs in 24, 6 cells):
+  N ≈ 100 pairs (binomial 1σ: 45–145), C ≈ 150 cells, **ΔS ≈ −1.05e-04 S**, projected S ≈ **0.138899**.
+* **FALSIFIER (charter's, unchanged): if the admitted set's total ΔS ≥ −2e-5 through the REAL archive build,
+  the FiLM axis cannot pay on this renderer** (verdict_scope: formulation — single- and paired-code moves at
+  |step| ≤ 2 on the shipped 3-bit lattice, this body, realized cpu_torch SegNet acceptance). Count it plainly and stop.
+
