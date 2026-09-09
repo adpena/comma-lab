@@ -145,9 +145,20 @@ Post-re-solve, pair 118 sits at 1.36× its base and pair 382 lands *below* its b
 leg is +2.6e-08 S on pair 118 — three per-cent of one repaired cell's value.
 
 Two honesty notes on this table:
-* Pair 382's apparent pose GAIN is **not creditable to the move**. `refine_pair` on the moved render found a better
-  pose than the live carrier's; a re-solve on the UNMOVED render would very likely find some of that too. It is
-  recorded as an unresolved control (ITEM 3) and is NOT taken as a gain anywhere in the arithmetic below.
+* Pair 382's apparent pose GAIN was recorded here as **not creditable to the move** pending a control, because a
+  re-solve on the UNMOVED render might have found some of it too. **That control has now RUN and it clears the
+  move.** The admission path re-solves every candidate pair on its unmoved render first; on the two pairs measured
+  so far the unmoved re-solve moves d_pose by **exactly 0.00e+00** — the live carrier is already converged for
+  them — so the post-move resolved value is the move's own:
+
+  | pair | base | control re-solve, UNMOVED | stale | resolved after the move |
+  |---|---|---|---|---|
+  | 6 | 5.5695e-07 | **5.5695e-07 (Δ 0)** | 1.6460e-04 (296×) | **4.9734e-07 (0.89× base)** |
+  | 42 | 2.6859e-07 | **2.6859e-07 (Δ 0)** | 2.9497e-03 (**10,982×**) | **6.5550e-08 (0.24× base)** |
+
+  So on this axis the pose leg is not merely payable — it can be a **GAIN**. A move perturbs frame `2p+1`, the
+  twelve coefficients are re-solved against the new render, and the new optimum can sit below the old one. The
+  10,982× stale rise on pair 42 is the largest this campaign has recorded anywhere, and it is fully recovered.
 * The run that produced this table priced two moves on pair 118. The overlay holds one frame per pair, so both rows
   carry the LAST move's render. The pricer now refuses a repeated pair unless `--allow-repeat-pairs` is passed.
 
@@ -177,6 +188,16 @@ Two findings, both reusable:
    `reserved` byte, so quality, window and interleave are encoder-only choices the receiver is never told about.
    Searching q ∈ {9,10,11} × lgwin ∈ {16,18,20,22,24} × {ck2, plain} recovers **63.5 B at N=1** and **29.2 B at N=72**.
    The shipped body's own shape is `(ck2, 11, 16)`. Pricing an edit at the shipped shape overstates it about 2×.
+
+**A length-only container tie-break ships a different stream; pin the shape by BYTE identity.** This is not a
+footnote to the law above, it is part of it. `(ck2, 11, 16)` and `(ck2, 11, 24)` both compress the shipped rider to
+**exactly 30,246 B** and they are **different 30,246 bytes** — brotli records its window size in its own header.
+This arm's first null build therefore produced the right byte COUNT for the whole archive (181,645, delta 0) with
+**30,129 of the semantic section's 30,246 bytes different**, while header, hpac, carrier and tail all matched. A
+container search that minimises on length alone will happily ship a stream that differs from the pointer's for no
+reason, and it will do it silently. The shipped shape is `(ck2, 11, 24)`, pinned by byte identity; ties in the
+search go to it; and with that fix the null build is byte-identical to the live pointer, sha `06c44dc4…`. Same
+genus as `available-field-vs-authoritative-field`: equal on the field you read is not equal on the field that binds.
 
 **Control — the container search is NOT a free rate lever on the shipped bytes.** Re-compressing all three model
 sections of the live archive over a 56-shape grid (q ∈ {5…11} × lgwin ∈ {10…24}) finds **+0 B** on every one:
@@ -279,11 +300,11 @@ The hpac section is the same container family with the same rider magic (RC1, `r
 PREDICTED to apply, and it is NOT measured. One `rate-law` run against hpac codes settles it and would tell rc2
 what its own edits actually cost.
 
-## ITEM 3 — the unmoved-render re-solve control
-`jg5.refine_pair` on pair 382's MOVED render landed BELOW the pair's live d_pose, which means the live carrier was
-not converged for that pair. The admission path now runs the control (re-solve on the UNMOVED render) for every
-candidate, so no move can book a gain the live carrier had simply left on the table. If that control finds material
-gains across many pairs, it is a rate-free pose lever in its own right and belongs to a carrier arm, not to fe1.
+## ITEM 3 — the unmoved-render re-solve control (ANSWERED for the pairs measured, still owed at n600 scale)
+The control is wired into the admission path and runs for every candidate. On the first two candidates it moves
+d_pose by exactly 0.00e+00, so the live carrier is converged there and the moves' pose gains are their own. If the
+control turns up material gains on OTHER pairs at full scale, those gains are a rate-free pose lever belonging to a
+carrier arm, not to fe1, and must be subtracted from fe1's credit before it seals.
 
 ## ITEM 4 — a finer FiLM lattice is a different question
 Every negative in §4 is scoped to the shipped **3-bit** code domain. The renderer's `frame_embed` could be re-trained
