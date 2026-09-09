@@ -83,18 +83,32 @@ import ddm_up2_shipping_pose_solve as up2
 POINTER_JSON = REPO / ".omx/state/canonical_frontier_pointer.json"
 
 SJ1_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion")
-LIVE_TREE = SJ1_ROOT / "candidate_pass3/candidate_runtime"
+RC2_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_rc2_hpac_semistatic_mixing")
+
+#: The 33rd pointer move (rc2, 2026-09-09).  ONLY the hpac model section and its
+#: reader changed (-231 B).  MEASURED here, not assumed: against the pass-3 tree the
+#: semantic (31,792 B), carrier (18,931 B), token stream (120,225 B) and residual
+#: payload (100 B) sections are BYTE-IDENTICAL and only ``hpac_blob`` differs
+#: (16,267 -> 16,061).  rc2's T4 row reproduced d_seg 0.00010913 and d_pose 5.1e-6
+#: exactly, which is the authority receipt that the DECODED token field -- and hence
+#: every render this arm measures -- is the same object.  So the pass-3 parse-back
+#: decode is reused as the live decode rather than re-inflated, and the pinned
+#: d_seg / d_pose / cell count carry across the move unchanged.
+LIVE_TREE = RC2_ROOT / "candidate_runtime"
 LIVE_RUNTIME = LIVE_TREE / "runtime"
 LIVE_ARCHIVE = LIVE_TREE / "archive.zip"
 LIVE_RAW = SJ1_ROOT / "candidate_pass3/parseback/0.raw"
 LIVE_FIELD = SJ1_ROOT / "admission_pass3/field_admitted.npz"
 LIVE_ARGMAX = SJ1_ROOT / "seg_final_pass3/argmax_n600.npy"
+#: The sections the live decode is shared with, and the fingerprint that says so.
+SHARED_SECTION_SOURCE = SJ1_ROOT / "candidate_pass3/candidate_runtime/archive.zip"
+SHARED_SECTIONS = ("semantic_blob", "carrier_blob", "token_stream", "residual_payload")
 
 LIVE_ARCHIVE_SHA256 = (
-    "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3"
+    "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e"
 )
-LIVE_ARCHIVE_BYTES = 181_645
-LIVE_SCORE_T4 = 0.13900437796841966
+LIVE_ARCHIVE_BYTES = 181_414
+LIVE_SCORE_T4 = 0.13885056455024844
 LIVE_D_SEG_T4 = 1.0913879636e-04
 LIVE_D_SEG_LOCAL = 0.0001090664333767361
 LIVE_D_SEG_CELLS = 12_866
@@ -130,6 +144,9 @@ CONTAINER_BREAK_FIXED_BYTES = 8.0
 #: Signed int4 domain of the shipped depth-4 code runs.
 CODE_MIN, CODE_MAX = -8, 7
 
+#: fe1's bar: a candidate must buy at least this much S to be worth a paid row.
+ADMIT_BAR = -2e-5
+
 #: The tensors this arm opens.  Depth 4 AND not row-pruned, so a trained code is
 #: byte-expressible with zero re-quantization.  ``blocks.2`` is the ONE widening the
 #: charter's falsifier (a) allows; it is not opened by default.
@@ -161,6 +178,43 @@ def sha256_file(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def verify_shared_decode_sections() -> dict[str, Any]:
+    """The live tree must share the decode-determining sections with LIVE_RAW's tree.
+
+    rc2's move rewrote ONLY the hpac model section, so the pass-3 parse-back decode is
+    reused instead of re-inflating.  That reuse is a claim about bytes, so it is
+    CHECKED here rather than inherited from the move's memo: if any of the semantic,
+    carrier, token-stream or residual sections ever diverges, the raw this arm
+    measures against is a different object and every realized number would be
+    unanchored.
+    """
+    ra, _rc1, _renderer = import_live()
+    live = ra.read_residual_archive(LIVE_ARCHIVE)
+    source = ra.read_residual_archive(SHARED_SECTION_SOURCE)
+    report: dict[str, Any] = {}
+    mismatched = []
+    for field in SHARED_SECTIONS:
+        same = bytes(getattr(live, field)) == bytes(getattr(source, field))
+        report[field] = {
+            "identical": bool(same),
+            "bytes": len(getattr(live, field)),
+        }
+        if not same:
+            mismatched.append(field)
+    if mismatched:
+        raise Rw1Error(
+            f"the live tree no longer shares {mismatched} with the tree that produced "
+            f"{LIVE_RAW}; re-inflate before measuring anything against that decode"
+        )
+    report["hpac_blob"] = {
+        "identical": bytes(live.hpac_blob) == bytes(source.hpac_blob),
+        "bytes_live": len(live.hpac_blob),
+        "bytes_source": len(source.hpac_blob),
+    }
+    report["raw_source_tree"] = str(SHARED_SECTION_SOURCE)
+    return report
+
+
 def verify_live_pointer() -> dict[str, Any]:
     """Refuse unless the pointer still names the body this module is pinned to.
 
@@ -176,7 +230,9 @@ def verify_live_pointer() -> dict[str, Any]:
             f"live tree archive sha {observed} != pinned {LIVE_ARCHIVE_SHA256}"
         )
     moved = frontier["archive_sha256"] != LIVE_ARCHIVE_SHA256
+    shared = verify_shared_decode_sections()
     return {
+        "shared_decode_sections": shared,
         "pointer_archive_sha256": frontier["archive_sha256"],
         "pointer_score": frontier["score"],
         "pointer_lane_id": frontier.get("lane_id"),
@@ -1493,16 +1549,29 @@ def cmd_render(args) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     destination = _candidate_raw_path(out_dir)
     expected = 2 * N_PAIRS * CAMERA_H * CAMERA_W * 3
-    if args.shard_index == 0 and (
-        not destination.is_file() or destination.stat().st_size != expected
-    ):
+    if args.seed_only:
+        # Seeding is its OWN step, never something a shard does implicitly: four shards
+        # racing on one 3.66 GB copy is a corrupt decode that would look like a render
+        # difference.  The copy lands on a sibling and is renamed, so the destination
+        # either does not exist or is complete.
         staging = destination.with_suffix(".raw.partial")
         shutil.copyfile(LIVE_RAW, staging)
         staging.rename(destination)
+        report = {
+            "schema": "ddm_rw1_render_seed.v1",
+            "seeded": str(destination),
+            "bytes": destination.stat().st_size,
+            "source": str(LIVE_RAW),
+            "elapsed_seconds": time.perf_counter() - started,
+        }
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(json.dumps(report, indent=1, sort_keys=True))
+        print(json.dumps(report, indent=1, sort_keys=True))
+        return 0
     if not destination.is_file() or destination.stat().st_size != expected:
         raise Rw1Error(
-            f"candidate raw is not the {expected} B copy of the live decode; shard 0 "
-            "seeds it and every other shard requires it to exist first"
+            f"candidate raw is not the {expected} B copy of the live decode; run "
+            "``render --seed-only`` once before launching the shards"
         )
 
     raw = np.memmap(
@@ -1678,6 +1747,260 @@ def cmd_seg_merge(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=pose -- the per-pair carrier re-solve on a GLOBAL render change
+# ----------------------------------------------------------------------------------
+
+
+def _pose_instrument(raw_path: Path):
+    """br1's instrument on a named decode, pinned to the LIVE carrier and DALI GT."""
+    import ddm_br1_pose_basis_reorientation as br1
+
+    expected = 2 * N_PAIRS * CAMERA_H * CAMERA_W * 3
+    raw_path = Path(raw_path)
+    if raw_path.stat().st_size != expected:
+        raise Rw1Error(f"raw is {raw_path.stat().st_size} B, expected {expected}")
+    raw = np.memmap(
+        raw_path, dtype=np.uint8, mode="r", shape=(2 * N_PAIRS, CAMERA_H, CAMERA_W, 3)
+    )
+    state = up2.load_carrier_state(LIVE_TREE, verify_archive=False)
+    targets, lineage = up2.load_gt_poses(GT_CACHE_DALI)
+    up2.verify_gt_lineage(axis="contest_cuda", declared_lineage=lineage)
+    posenet = up2.load_posenet()
+    up2.enable_posenet_gradients()
+    blow = br1.low_basis(state)
+    gram, bmat = br1.span_gram(blow)
+    return br1.Instrument(state, raw, targets, posenet, blow, gram, bmat), br1
+
+
+def cmd_pose(args) -> int:
+    """Per pair: base, stale, and re-solved d_pose on the candidate's own renders.
+
+    fe1 measured the per-pair re-solve recovering 643-3,053x -- but on a change
+    confined to ONE pair.  This arm's change moves ALL 600 renders, which the coupling
+    law says is a different case, so the recovery is MEASURED here rather than
+    inherited.  Each pair is still re-solved independently against its OWN new render
+    from the LIVE coefficients, so the only thing the global case removes is the
+    ability to leave the other 599 pairs alone.
+    """
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    import ddm_jg5_pose_resolve_on_edited_renders as jg5
+
+    moved, br1 = _pose_instrument(Path(args.raw))
+    base, _br1 = _pose_instrument(LIVE_RAW)
+    live_codes = np.asarray(base.state.codes, dtype=np.int32)
+    threshold = jg5.materiality_dd_threshold(float(args.base_mean_d_pose))
+
+    pairs = np.arange(args.shard_index, N_PAIRS, args.shard_count, dtype=np.int64)
+    out_path = Path(args.out_rows)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    done = set()
+    if args.resume and out_path.is_file():
+        for line in out_path.read_text().splitlines():
+            if line.strip():
+                done.add(int(json.loads(line)["pair"]))
+
+    with out_path.open("a") as stream:
+        for offset, pair in enumerate(pairs):
+            pair = int(pair)
+            if pair in done:
+                continue
+            d_base = float(br1.evaluate_codes(base, pair, live_codes[pair][None])[0])
+            d_stale = float(br1.evaluate_codes(moved, pair, live_codes[pair][None])[0])
+            refined = jg5.refine_pair(
+                moved,
+                pair,
+                live_codes[pair],
+                dd_threshold=threshold,
+                outer_rounds=int(args.outer_rounds),
+                max_gn_iterations=int(args.max_gn_iterations),
+            )
+            row = {
+                "pair": pair,
+                "d_pose_base": d_base,
+                "d_pose_stale": d_stale,
+                "d_pose_resolved": float(refined["final_d_pose"]),
+                "resolved_codes": [int(v) for v in refined["codes"]],
+                "live_codes": [int(v) for v in live_codes[pair]],
+                "stale_over_base": d_stale / max(d_base, 1e-30),
+                "recovery_stale_over_resolved": d_stale
+                / max(float(refined["final_d_pose"]), 1e-30),
+                "resolved_over_base": float(refined["final_d_pose"]) / max(d_base, 1e-30),
+                "stop_reason": refined.get("stop_reason"),
+                "rounds": refined.get("rounds"),
+                "evaluations": refined.get("evaluations"),
+                "shippable_d_pose": min(d_stale, float(refined["final_d_pose"])),
+                "ships_resolved_codes": bool(float(refined["final_d_pose"]) <= d_stale),
+            }
+            stream.write(json.dumps(row) + "\n")
+            stream.flush()
+            if args.progress:
+                print(
+                    f"pose {offset + 1}/{len(pairs)} pair={pair} "
+                    f"base={d_base:.3e} stale={d_stale:.3e} "
+                    f"resolved={refined['final_d_pose']:.3e} "
+                    f"in {time.perf_counter() - started:.1f}s",
+                    flush=True,
+                )
+
+    result = {
+        "schema": "ddm_rw1_pose_shard.v1",
+        "axis": "[cpu_torch fp32 authority, DALI GT]",
+        "score_claim": False,
+        "pointer": pointer,
+        "shard_index": int(args.shard_index),
+        "shard_count": int(args.shard_count),
+        "pairs": len(pairs),
+        "rows": str(out_path),
+        "materiality_dd_threshold": threshold,
+        "raw": str(args.raw),
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps(result, indent=1, sort_keys=True))
+    return 0
+
+
+# ----------------------------------------------------------------------------------
+# mode=admit -- one atom on seg, per-pair on the carrier, priced by a REAL encode
+# ----------------------------------------------------------------------------------
+
+
+def cmd_admit(args) -> int:
+    """The admission.  The WEIGHT delta is one atom; the CARRIER choice is per pair.
+
+    A weight change moves all 600 renders and the receiver has no per-pair selector
+    for weights, so a pair that loses cannot opt out of the delta -- the sum over all
+    600 pairs is the verdict.  What IS per-pair is the carrier: each pair ships either
+    its re-solved twelve codes or the live ones, whichever measures lower, and both
+    are representable, so that choice is free.  Everything is priced by a REAL encode.
+    """
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    seg = json.loads(Path(args.seg).read_text())
+    rows: dict[int, dict[str, Any]] = {}
+    for path in args.pose_rows:
+        for line in Path(path).read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            rows[int(row["pair"])] = row
+    missing = sorted(set(range(N_PAIRS)) - set(rows))
+    if missing:
+        raise Rw1Error(f"{len(missing)} pose rows missing ({missing[:8]}...)")
+
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    edits = _codes_from_checkpoint(section, names, Path(args.checkpoint), args.weights)
+    changed_codes = section.changed_code_count(edits)
+
+    state = up2.load_carrier_state(LIVE_TREE, verify_archive=False)
+    carrier = np.asarray(state.codes, dtype=np.int64).copy()
+    shipped_pose = np.zeros(N_PAIRS, dtype=np.float64)
+    base_pose = np.zeros(N_PAIRS, dtype=np.float64)
+    stale_pose = np.zeros(N_PAIRS, dtype=np.float64)
+    resolved_pose = np.zeros(N_PAIRS, dtype=np.float64)
+    resolved_shipped = 0
+    for pair in range(N_PAIRS):
+        row = rows[pair]
+        base_pose[pair] = row["d_pose_base"]
+        stale_pose[pair] = row["d_pose_stale"]
+        resolved_pose[pair] = row["d_pose_resolved"]
+        if row["ships_resolved_codes"]:
+            carrier[pair] = np.asarray(row["resolved_codes"], dtype=np.int64)
+            resolved_shipped += 1
+        shipped_pose[pair] = row["shippable_d_pose"]
+
+    built = build_candidate_archive(
+        section, edits, carrier, container_search=True, verify=True
+    )
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "archive.zip").write_bytes(built.pop("archive_bytes"))
+    np.save(out_dir / "carrier_codes.npy", carrier.astype(np.int32))
+    np.savez(
+        out_dir / "codes.npz",
+        **{name.replace(".", "__"): edits[name].astype(np.int8) for name in names},
+    )
+
+    d_seg_new = float(seg["d_seg_local"])
+    d_pose_new = float(shipped_pose.mean())
+    bytes_new = int(built["archive_size"])
+    dS_seg = 100.0 * (d_seg_new - LIVE_D_SEG_LOCAL)
+    dS_pose = math.sqrt(10.0 * d_pose_new) - math.sqrt(10.0 * LIVE_D_POSE)
+    dS_rate = (bytes_new - LIVE_ARCHIVE_BYTES) * RATE_PER_BYTE
+    total = dS_seg + dS_pose + dS_rate
+
+    result = {
+        "schema": "ddm_rw1_admission.v1",
+        "axis": "[macOS-CPU advisory seg + cpu_torch pose + exact bytes; projection]",
+        "score_claim": False,
+        "pointer": pointer,
+        "admit_bar": ADMIT_BAR,
+        "admits": bool(total < ADMIT_BAR),
+        "checkpoint": str(args.checkpoint),
+        "weights": args.weights,
+        "changed_codes": changed_codes,
+        "changed_codes_by_tensor": {
+            name: int(
+                (
+                    np.asarray(edits[name], dtype=np.int64)
+                    != np.asarray(section.codes[name], dtype=np.int64)
+                ).sum()
+            )
+            for name in names
+        },
+        "seg": {
+            "cells_live": LIVE_D_SEG_CELLS,
+            "cells_candidate": int(seg["cells_disagreeing"]),
+            "cells_repaired": int(seg["cells_repaired"]),
+            "reach_fraction_of_residual": float(seg["reach_fraction_of_residual"]),
+            "d_seg_live": LIVE_D_SEG_LOCAL,
+            "d_seg_candidate": d_seg_new,
+            "pairs_improved": seg.get("pairs_improved"),
+            "pairs_worsened": seg.get("pairs_worsened"),
+            "dS": dS_seg,
+        },
+        "pose": {
+            "d_pose_live": LIVE_D_POSE,
+            "d_pose_base_recomputed": float(base_pose.mean()),
+            "d_pose_stale": float(stale_pose.mean()),
+            "d_pose_resolved": float(resolved_pose.mean()),
+            "d_pose_shipped": d_pose_new,
+            "stale_over_base": float(stale_pose.mean() / max(base_pose.mean(), 1e-30)),
+            "recovery_stale_over_shipped": float(
+                stale_pose.mean() / max(d_pose_new, 1e-30)
+            ),
+            "shipped_over_base": float(d_pose_new / max(base_pose.mean(), 1e-30)),
+            "pairs_shipping_resolved_codes": resolved_shipped,
+            "dS": dS_pose,
+        },
+        "rate": {
+            "bytes_live": LIVE_ARCHIVE_BYTES,
+            "bytes_candidate": bytes_new,
+            "bytes_delta": bytes_new - LIVE_ARCHIVE_BYTES,
+            "predicted_bytes_from_code_law": BYTES_PER_CHANGED_CODE * changed_codes
+            + (CONTAINER_BREAK_FIXED_BYTES if changed_codes else 0.0),
+            "semantic_stream_bytes": built["semantic_stream_bytes"],
+            "semantic_container": built["semantic_container"],
+            "carrier_stream_bytes": built["carrier_stream_bytes"],
+            "dS": dS_rate,
+        },
+        "dS_total": total,
+        "S_projected": LIVE_SCORE_T4 + total,
+        "S_live": LIVE_SCORE_T4,
+        "archive_sha256": built["archive_sha256"],
+        "archive_dir": str(out_dir),
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps(result, indent=1, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1738,6 +2061,7 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--weights", default="shadow", choices=("shadow", "latent"))
     render.add_argument("--shard-index", type=int, default=0)
     render.add_argument("--shard-count", type=int, default=1)
+    render.add_argument("--seed-only", action="store_true")
     render.add_argument("--progress", action="store_true", default=True)
     common(render)
     render.set_defaults(func=cmd_render)
@@ -1756,6 +2080,30 @@ def build_parser() -> argparse.ArgumentParser:
     seg_merge.add_argument("--shards", nargs="+", required=True)
     seg_merge.add_argument("--out", type=Path, required=True)
     seg_merge.set_defaults(func=cmd_seg_merge)
+
+    pose = sub.add_parser("pose")
+    pose.add_argument("--out", type=Path, required=True)
+    pose.add_argument("--out-rows", type=Path, required=True)
+    pose.add_argument("--raw", type=Path, required=True)
+    pose.add_argument("--shard-index", type=int, default=0)
+    pose.add_argument("--shard-count", type=int, default=1)
+    pose.add_argument("--outer-rounds", type=int, default=40)
+    pose.add_argument("--max-gn-iterations", type=int, default=400)
+    pose.add_argument("--base-mean-d-pose", type=float, default=LIVE_D_POSE)
+    pose.add_argument("--resume", action="store_true", default=True)
+    pose.add_argument("--progress", action="store_true", default=True)
+    common(pose)
+    pose.set_defaults(func=cmd_pose)
+
+    admit = sub.add_parser("admit")
+    admit.add_argument("--out", type=Path, default=WORK / "receipts/ADMISSION.json")
+    admit.add_argument("--out-dir", type=Path, default=WORK / "candidate")
+    admit.add_argument("--seg", type=Path, required=True)
+    admit.add_argument("--pose-rows", nargs="+", required=True)
+    admit.add_argument("--checkpoint", type=Path, required=True)
+    admit.add_argument("--weights", default="shadow", choices=("shadow", "latent"))
+    common(admit)
+    admit.set_defaults(func=cmd_admit)
 
     return parser
 
