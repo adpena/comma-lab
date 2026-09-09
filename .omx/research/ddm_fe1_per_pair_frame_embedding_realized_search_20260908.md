@@ -354,6 +354,51 @@ section happens to compress to under a re-searched container — a consequence o
 mechanism. That is a real, exact, shipping number, and it is also the finding that matters most for what comes
 next (§11, ITEM 5).
 
+## 9.5 The candidate, measured on its own shipped bytes
+
+| | |
+|---|---|
+| archive | **181,305 B**, sha `a0c33d7ba30555cdc8ba1649ae2dfe75fe94c9e69ea042f881aed42fd8eb7d0d` (−68 B vs pc2) |
+| d_seg, parse-back | **12,843 cells = 0.0001088714599609375**; the admission predicted 12,843 and the shipped bytes measured 12,843 — **zero cells of disagreement** |
+| d_seg carried to T4 | 0.00010894369357914811 |
+| d_pose, re-solved | **5.083922691393623e-06** |
+| **projected S** | **0.13874809002955826** |
+| **net ΔS vs pc2** | **−7.517430361217436e-05** (3.8× the −2e-5 bar) |
+
+Legs: seg 0.010894369357914812 · pose 0.007130163175828182 · rate 0.12072355749581527.
+
+Receiver proof, all PASS:
+
+* **public entrypoint smoke, both legs, both roles** — candidate REACHED_TOKEN_DECODE (240.0 s) and
+  REACHED_CUDA_GATE (2.35 s); frontier (pc2) REACHED_TOKEN_DECODE and REACHED_CUDA_GATE.
+* **parse-back** through the candidate tree's own `inflate.py _verify_input` + `runtime.f26_inflate`, device cpu,
+  num_threads 4: `0.raw` 3,662,409,600 B sha `30964f53…`, wall 1,030.5 s.
+* **decoded token field byte-identical to the live field**, 0 differing cells of 117,964,800 — this arm changed
+  only the semantic model section and the carrier.
+* **staged tree differs from pc2's in exactly two files**: `archive.zip` and its own `inflate.py` pins.
+* **null build** reproduces pc2 byte-identically.
+
+Seal: `SEAL_ddm_fe1_frame_embedding_predistortion_contest_cuda.json`, sha
+`e15da89eba4124352008946f0e0fb60afd2a531f60c044ea186ffa78478af0cd`, **VALIDATED SEAL_VALID**.
+
+### 9.6 PRIOR-LAW PREDICTION vs MEASURED — counted plainly
+
+| pre-registered | measured | verdict |
+|---|---|---|
+| ≥ 37 admitted pairs needed to clear the bar | **30 offered, 15 admitted** | the pair count MISSED the threshold |
+| point prediction ~100 offering pairs | **30 (5.0%)** | **MISS, 3.3× over-predicted** |
+| point prediction ~150 cells | **39 found, 23 admitted** | **MISS, 3.8–6.5× over-predicted** |
+| point prediction ΔS ≈ −1.05e-04 | **−7.52e-05** | within 1.4× — but for the WRONG reason |
+| charter: 25–45% of pairs admit | 5.0% offer, 2.5% admit | **refuted, an order of magnitude** |
+| charter: pairs repair 8–15% of their residual | 1–3 cells, ~7% at best, usually 1 | **refuted** |
+| charter: seg buys ≥ 4× its rate | seg −1.95e-5 vs rate −4.53e-5 — the rate leg is 2.3× the seg leg and has the **same sign** | the framing itself was wrong |
+| charter: pose-bound is the expected failure | pose is a GAIN of −3.42e-6 | **refuted** |
+
+**The honest reading.** The arm cleared the bar and the pair-count threshold it pre-registered was MISSED — it
+admitted 15 pairs where it needed 37 to clear on the seg mechanism alone. It cleared anyway because the rate leg
+turned out negative, which the pre-registration did not anticipate in either direction. Counting this as a
+vindication of per-pair FiLM pre-distortion would be reading the total and ignoring the legs.
+
 ## 10. What this arm hands the next one, whichever way the verdict falls
 
 * **The move ledger is the durable asset.** `search/search_rows_*.jsonl` retains, for every one of the 600 pairs,
@@ -402,3 +447,27 @@ or re-quantised at 4 bits (+600 B of codes at the shipped packing, before the co
 moves the current lattice cannot express. Nothing here says the FiLM axis is dead; it says the shipped lattice is
 too coarse to fine-tune on.
 
+
+## 12. Verdict
+
+**ADMITTED.** `ddm_fe1_frame_embedding_predistortion`, 181,305 B, sha `a0c33d7b…`, projected S
+**0.13874809002955826**, net ΔS **−7.517430361217436e-05** against pc2's 0.13882326433317044 — 3.8× the admit bar.
+SEAL VALID; MAIN fires.
+
+Three findings outlast the candidate:
+
+1. **The renderer-coupling wall does not transfer to a per-pair change** (§0). 440×–572,269× stale, fully
+   recovered, +2.6e-08 S per moved pair. The coupling number was a property of touching every pair at once.
+2. **A range-coded model section charges a fixed ~58.9 B container-break fee for ANY edit, and an encoder-side
+   container search pays most of it back** (§6), registered as `model_section_edit_container_break_fee_v1`.
+   Pricing at the shipped shape would have killed this live axis 3× too expensively.
+3. **The FiLM lattice is the wrong tool for this residual** (§4, §9). 18,624 of 18,906 single-code moves make
+   d_seg worse; the shipped codes sit at a per-pair local minimum on 95% of pairs. The 3-bit lattice cannot
+   express a small enough step. That is a formulation-scope closure, not a family closure — ITEM 4 names the
+   re-quantised lattice that would reopen it.
+
+**verdict_scope:** formulation — single- and greedy paired-code moves at |step| ≤ 2 on the shipped 3-bit
+`frame_embed` lattice of this body, under realized frozen-cpu_torch-SegNet acceptance. Not a verdict on the FiLM
+axis at a finer lattice, nor on any other per-pair carrier.
+
+pc2 S 0.13882326433317044 @ 181,373 B [contest-CUDA T4 n600]

@@ -503,7 +503,14 @@ def cmd_control(args) -> int:
 def cmd_step0(args) -> int:
     """Reproduce the live seg leg from the receiver's own decode, one shard of pairs."""
     _set_threads(args.threads)
-    body = load_body(with_raw=True, verify_shas=not args.no_sha)
+    body = load_body(with_raw=not args.raw, verify_shas=not args.no_sha)
+    if args.raw:
+        # The seg leg of a CANDIDATE must be read off the candidate's OWN decode, not off
+        # the pointer's: a distortion claim taken from the encoder's field rather than the
+        # receiver's render measures the wrong object.
+        body.raw = _open_raw(Path(args.raw))
+        body.receipts["decode"] = str(args.raw)
+        body.receipts["decode_sha256"] = _sha256_file(Path(args.raw))
     pairs = _pairs_from_args(args)
     argmax = np.empty((len(pairs), EVAL_H, EVAL_W), dtype=np.uint8)
     flips = np.zeros(len(pairs), dtype=np.int64)
@@ -821,6 +828,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     step0 = sub.add_parser("step0", help="reproduce the live seg leg from the decode")
     common(step0)
+    step0.add_argument("--raw", default="", help="measure a CANDIDATE decode instead")
     step0.add_argument("--out", default=str(WORK / "probe/STEP0.json"))
     step0.set_defaults(func=cmd_step0)
 
