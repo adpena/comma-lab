@@ -2364,6 +2364,103 @@ def cmd_rebase(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=perturb-control -- is the TRAINED direction better than a random one?
+# ----------------------------------------------------------------------------------
+
+
+def cmd_perturb_control(args) -> int:
+    """n600 realized flips for RANDOM +-1 code changes of the same size as the trained one.
+
+    Without this the trained result is uninterpretable.  If a random N-code change
+    costs about the same as the trained N-code change, the surrogate is not steering at
+    all and the finding is about the SEARCH, not about the actuator; if random costs far
+    more, the actuator is steering and the finding is about its REACH.  The two readings
+    prescribe different next moves, so the control is not optional.
+    """
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    device = torch.device(args.device)
+    torch.manual_seed(args.seed)
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    model = load_live_renderer(section).to(device)
+    tokens = load_live_tokens()
+    labels = load_gt_seg_dali()
+    segnet = jg1.load_segnet().to(device).eval()
+    for param in segnet.parameters():
+        param.requires_grad_(False)
+    fold = CodeFoldBack(section, names, device)
+
+    sizes = [int(v) for v in str(args.counts).split(",") if v.strip()]
+    flat_sizes = [int(section.runs[n].count) for n in names]
+    base_flat = np.concatenate(
+        [np.asarray(section.codes[n], dtype=np.int64).ravel() for n in names]
+    )
+    rng = np.random.default_rng(int(args.seed))
+
+    with torch.no_grad():
+        null = _evaluate_realized(model, fold, segnet, tokens, labels, device)
+    rows = []
+    for count in sizes:
+        for draw in range(int(args.draws)):
+            perturbed = base_flat.copy()
+            where = rng.choice(base_flat.size, size=count, replace=False)
+            step = rng.choice(np.array([-1, 1]), size=count)
+            proposal = np.clip(perturbed[where] + step, CODE_MIN, CODE_MAX)
+            stuck = proposal == perturbed[where]
+            proposal[stuck] = np.clip(
+                perturbed[where][stuck] - step[stuck], CODE_MIN, CODE_MAX
+            )
+            perturbed[where] = proposal
+            latent = {}
+            cursor = 0
+            for name, size in zip(names, flat_sizes, strict=True):
+                latent[name] = torch.from_numpy(
+                    perturbed[cursor : cursor + size]
+                    .reshape(section.runs[name].shape)
+                    .astype(np.float32)
+                ).to(device)
+                cursor += size
+            with torch.no_grad():
+                evaluation = _evaluate_realized(
+                    model, fold, segnet, tokens, labels, device, latent=latent
+                )
+            rows.append(
+                {
+                    "changed_codes": int((perturbed != base_flat).sum()),
+                    "draw": draw,
+                    "flips": evaluation["flips"],
+                    "flips_vs_null": evaluation["flips"] - null["flips"],
+                    "cells_broken_per_code": (evaluation["flips"] - null["flips"])
+                    / max(count, 1),
+                }
+            )
+            print(json.dumps(rows[-1]), flush=True)
+
+    result = {
+        "schema": "ddm_rw1_perturb_control.v1",
+        "axis": f"[{args.device} research-signal; n600 realized argmax]",
+        "score_claim": False,
+        "pointer": pointer,
+        "null_flips_same_path": null["flips"],
+        "live_cells": LIVE_D_SEG_CELLS,
+        "device_gap_vs_cpu_instrument": null["flips"] - LIVE_D_SEG_CELLS,
+        "counts": sizes,
+        "draws": int(args.draws),
+        "seed": int(args.seed),
+        "rows": rows,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2489,6 +2586,15 @@ def build_parser() -> argparse.ArgumentParser:
     rebase.add_argument("--d-pose", type=float, required=True)
     rebase.add_argument("--allow-semantic-change", action="store_true")
     rebase.set_defaults(func=cmd_rebase)
+
+    perturb = sub.add_parser("perturb-control")
+    perturb.add_argument("--out", type=Path, default=WORK / "receipts/PERTURB.json")
+    perturb.add_argument("--device", default="mps")
+    perturb.add_argument("--counts", default="4,32,144")
+    perturb.add_argument("--draws", type=int, default=2)
+    perturb.add_argument("--seed", type=int, default=20260909)
+    common(perturb)
+    perturb.set_defaults(func=cmd_perturb_control)
 
     return parser
 
