@@ -600,6 +600,47 @@ this body: it exists because the semantic section is a range-coded payload under
 (§6's domain of validity). A body whose model section is not range-coded owes nothing.
 
 
+---
+
+## 14. RE-BASE onto sj1 pass 4 (move 35) — and what it did to this arm's story
+
+Pointer: sj1 pass 4, **S 0.13867171823146562 @ 181,521 B**, sha `b0ca809c…`. Verified at source with each tree's
+own reader: hpac 12,112 B and **semantic 30,246 B byte-identical**; carrier 18,580 → 18,586 and tail
+120,321 → 120,463 moved. Null build reproduces pass 4 byte-identically.
+
+**One real bug, found by the re-base and failing closed.** `build_candidate_archive`'s token-tail guard compared
+against `fe1.LIVE_ARCHIVE` instead of the tree being built on, so a re-base onto a pointer whose tail moved refused
+a candidate whose tail was byte-identical to its own base. The tail itself was always right (it comes from
+`parse_shipped_body` of the tree it is handed); only the reference was stale. Late-bound, guard NOT weakened, and
+proven in one run: the null build now reproduces pc2 at 181,373 B AND pass 4 at 181,521 B, byte-identically.
+
+**13 of 15 admitted pairs survived; 2 were DROPPED** because pass 4 had already repaired what they were buying —
+pair 237 (was −2 cells, now 0) and pair 451 (was −1, now 0). That is the drop rule doing exactly the job it exists
+for: carrying those forward would have booked sj1's repairs as fe1's.
+
+**And then the FiLM legs collapsed.** Pass 4 took the base from 12,866 to 12,614 cells, so the 13 survivors are
+worth only 20 cells between them, and against a byte lottery of ±40 B per draw no multi-pair FiLM cut survives.
+The best FiLM-only cut is a single pair: −40 B, ΔS −2.997e-05.
+
+**The winner is the ITEM 5 move, alone.**
+
+| candidate | pairs | cells | archive | ΔS |
+|---|---:|---:|---:|---:|
+| best FiLM-only cut (`film-1`) | 1 | 3 | 181,481 B (−40) | −2.997e-05 |
+| FiLM best + neutral | 2 | 3 | 181,534 B (+13) | +5.19e-06 |
+| **`neutral-alone` (pair 331)** | **1** | **0** | **181,460 B (−61)** | **−4.075e-05** |
+
+Legs of the winner: **seg +0.000000e+00 · pose −1.340131e-07 · rate −4.061740e-05**, projected
+**S 0.13863096682224871**, sha `9c1b367a6d852e76…`. Its move is re-verified seg-neutral on the NEW field
+(21 → 21 flips), pair 331 is not one of the 112 pairs pass 4 edits, its unmoved-render control reads exactly
+0.00e+00, and its carrier re-solve takes d_pose from 1.4494e-07 to **3.0660e-08, 0.21× base**. Ten priced
+combinations admit; none beats it, and every addition to it is worse — §13.2's lottery, confirmed a third time.
+
+**Say what this means about the arm, not just about the number.** After two pointer moves, **the FiLM mechanism
+this charter was written to test contributes nothing that survives.** What survives is a single zero-distortion
+code change worth 61 bytes — a by-product found by the ITEM 5 probe whose own falsifier had fired. The candidate
+is now, in kind, a rate move; calling it a per-pair pre-distortion result would be false.
+
 ## 12. Verdict
 
 **ADMITTED.** `ddm_fe1_frame_embedding_predistortion`, 181,305 B, sha `a0c33d7b…`, projected S
