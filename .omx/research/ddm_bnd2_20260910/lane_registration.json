@@ -1,0 +1,41 @@
+{
+  "id": "lane_ddm_bnd2_segment_code_20260910",
+  "name": "ddm_bnd2 shipped boundary segment real recode",
+  "phase": 2.0,
+  "level": 0,
+  "gates": {
+    "impl_complete": {
+      "status": false,
+      "evidence": ""
+    },
+    "real_archive_empirical": {
+      "status": false,
+      "evidence": ""
+    },
+    "contest_cuda": {
+      "status": false,
+      "evidence": ""
+    },
+    "contest_cpu": {
+      "status": false,
+      "evidence": ""
+    },
+    "strict_preflight": {
+      "status": false,
+      "evidence": ""
+    },
+    "three_clean_review": {
+      "status": false,
+      "evidence": ""
+    },
+    "memory_entry": {
+      "status": false,
+      "evidence": ""
+    },
+    "deploy_runbook": {
+      "status": false,
+      "evidence": ""
+    }
+  },
+  "notes": "Charter .omx/research/charters/ddm_bnd2_boundary_segment_code_real_encode_on_shipped_field_20260910.md; scorer-free, owned Vertigo directory; no launch until nice 10 verified"
+}

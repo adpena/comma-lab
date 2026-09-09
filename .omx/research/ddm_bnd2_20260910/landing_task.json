@@ -1,0 +1,26 @@
+{
+  "schema_version": "canonical_task_status_v1_20260518",
+  "task_id": "ddm_bnd2_boundary_segment_code_real_encode_20260910::LANDING",
+  "source_design_memo": ".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
+  "title": "Land the reviewed bnd2 source-preflight handoff",
+  "status": "blocked",
+  "owner": "MAIN",
+  "predicted_cost_usd": null,
+  "predicted_delta_s_band": null,
+  "actual_delta_s": null,
+  "commit_shas": [],
+  "test_status": "green",
+  "blockers": [
+    "MAIN_CHECKOUT_GIT_OBJECT_WRITE_DENIED"
+  ],
+  "started_at_utc": null,
+  "completed_at_utc": null,
+  "event_type": "blocked",
+  "event_timestamp_utc": "2026-09-09T23:19:56.504639Z",
+  "event_actor": "ddm_bnd2",
+  "event_notes": "{\"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"owner\": \"MAIN\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"fire_trigger\": \"MAIN harvest in Git-writable context\", \"action\": \"Land final reviewed bnd2 fallback bundle selected by .omx/research/ddm_bnd2_20260910/FINAL_HANDOFF.json through serializer; preserve staged index and unrelated changes; run required commit checks; charter encode still blocked\", \"blocker\": \"MAIN_CHECKOUT_GIT_OBJECT_WRITE_DENIED\"}",
+  "session_id": "ddm_bnd2_20260910",
+  "written_at_utc": "2026-09-09T23:19:56.504639Z",
+  "written_pid": 95622,
+  "written_host": "mac.lan"
+}

@@ -1,0 +1,210 @@
+{
+  "archive": {
+    "bytes": 180388,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+    "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+  },
+  "archive_bytes": 180388,
+  "argv": [
+    "experiments/ddm_bnd2_source_preflight.py",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code"
+  ],
+  "axis": "[macOS-CPU scorer-free source-custody preflight]",
+  "blockers": [
+    "NICE_10_DENIED"
+  ],
+  "charter_complete": false,
+  "control_envelope": {
+    "bytes": 119784,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/rank_control.envelope",
+    "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9"
+  },
+  "encoder_implemented": false,
+  "envelope_identity": true,
+  "envelope_overhead_bytes": 5,
+  "existing_anchor_recomputed_score": 0.13791730003757818,
+  "field": {
+    "bytes": 117964800,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/source/field.u8",
+    "sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94"
+  },
+  "free_bytes_before": 69711142912,
+  "git_head": "32620e7c46d47d5408207ac60b408872aeb397fa",
+  "imported_jg2": {
+    "bytes": 59351,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+    "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
+  },
+  "launch_constraints_satisfied": false,
+  "new_encode_rows": 0,
+  "new_misprediction_locations": 0,
+  "new_scorer_pairs": 0,
+  "new_shipped_field_decode": false,
+  "pointer_anchor": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180388,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
+      "source_receipt_sha256": "14bbd5df8cbefa9d7ce2dc146f165162d37dd19728e0621bcdb07c22d9f17dfe"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "score": 0.13791730003757818,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json"
+  },
+  "priority": {
+    "after": 0,
+    "before": 0,
+    "errno": 1,
+    "error": "[Errno 1] Operation not permitted",
+    "required": 10,
+    "satisfied": false
+  },
+  "producer": {
+    "bytes": 11491,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_source_preflight.py",
+    "sha256": "85fef367933e931dc09005707d943098ad828ee0e2b37879b4a651ebc350dbfe"
+  },
+  "randomness": "none",
+  "raw_stream": {
+    "bytes": 119779,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/shipped_token_stream.rc64",
+    "sha256": "ffcd64bd3013f313538d3a426fdccdd8ac82c5fbcb19b382d7f935c5163bb427"
+  },
+  "reader_components": {
+    "carrier_blob": {
+      "bytes": 18936,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_carrier_blob.bin",
+      "sha256": "178cf5d2246adbcd932c293af7366a7d0cd8559003e03cf91a47eb4cd6ed668c"
+    },
+    "compressed_models": {
+      "bytes": 60373,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_compressed_models.bin",
+      "sha256": "0c0b0057494175d01c78e16ebb1b9d3f949ed152c21b6b40dcec9bf1b5473f31"
+    },
+    "hpac_blob": {
+      "bytes": 15859,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_hpac_blob.bin",
+      "sha256": "c083b85976b267a10f8b173e225910631c856344863ae39fa2aa4158f6ab3b5c"
+    },
+    "residual_payload": {
+      "bytes": 100,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_residual_payload.bin",
+      "sha256": "74775aab04c7615cacabfddfa185efa05429cc0d8e21fd1a1d84f37bbc79d750"
+    },
+    "semantic_blob": {
+      "bytes": 31451,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_semantic_blob.bin",
+      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
+    }
+  },
+  "reconstructed_envelope": {
+    "bytes": 119784,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_rewrapped.envelope",
+    "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9"
+  },
+  "recovered_census_complete": false,
+  "research_only": true,
+  "retained": {
+    "archive.zip": {
+      "bytes": 180388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/archive.zip",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    "filtered_candidates.npz": {
+      "bytes": 2201035,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/filtered_candidates.npz",
+      "sha256": "a6d19fa68744ef1238354253e2a398733aba45d3aff095b154cc46b8b39b94ae"
+    },
+    "pointer.json": {
+      "bytes": 17890,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/pointer.json",
+      "sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a"
+    },
+    "rank.json": {
+      "bytes": 4388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/rank.json",
+      "sha256": "2ac591747069a53cb75a6528d8ee223886960e1387b3cee534adcbab9dcba273"
+    }
+  },
+  "retained_locations_revalidated": 213733,
+  "retained_rank_census": {
+    "bin_counts": [
+      111621172,
+      3998166,
+      1144761,
+      310135,
+      316002,
+      185397,
+      152713,
+      117298,
+      75536,
+      33321,
+      8164,
+      1791,
+      328,
+      16
+    ],
+    "bin_edges_bits": [
+      0.0,
+      0.001,
+      0.01,
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      4.0,
+      8.0,
+      12.0,
+      16.0,
+      24.0,
+      "inf"
+    ],
+    "bits_on_argmax_symbols": 292155.1257180173,
+    "bits_on_nonargmax_symbols": 666069.0591727127,
+    "bits_per_token_mean": 0.008122967062129732,
+    "fraction_of_bits_on_nonargmax_symbols": 0.6951077521057071,
+    "fraction_symbol_is_coder_argmax": 0.9980075073242187,
+    "n_symbol_is_coder_argmax": 117729756,
+    "total_bits": 958224.1848907213,
+    "total_bytes_ideal": 119778.02311134017,
+    "total_tokens": 117964800
+  },
+  "retention_policy": "all extracted bytes kept; no deletion or movement",
+  "schema": "ddm_bnd2_source_preflight.v1",
+  "score_claim": false,
+  "seed": null,
+  "source_preflight_passed": true,
+  "source_reader": {
+    "bytes": 34053,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/residual_archive.py",
+    "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+  },
+  "source_total_mispredictions": 235044,
+  "storage_reserve_bytes": 42949672960,
+  "unlocated_mispredictions": 21311,
+  "upstream_evaluate": {
+    "bytes": 6005,
+    "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+    "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+  },
+  "weights": {
+    "bytes": 35,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/tc1_weights.bin",
+    "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+  }
+}

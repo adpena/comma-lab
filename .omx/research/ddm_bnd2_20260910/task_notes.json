@@ -1,0 +1,82 @@
+[
+  {
+    "schema_version": "canonical_task_status_v1_20260518",
+    "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_1",
+    "source_design_memo": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+    "title": "Repair the population, causal pricing and proof premises",
+    "status": "blocked",
+    "owner": "ddm_bnd1",
+    "predicted_cost_usd": null,
+    "predicted_delta_s_band": null,
+    "actual_delta_s": null,
+    "commit_shas": [],
+    "test_status": "pending",
+    "blockers": [
+      "INCOMPLETE_SHIPPED_POPULATION_AND_INVALID_PRICE_FLOOR_PREMISE"
+    ],
+    "started_at_utc": null,
+    "completed_at_utc": null,
+    "event_type": "note",
+    "event_timestamp_utc": "2026-09-09T23:17:59.422925Z",
+    "event_actor": "ddm_bnd2",
+    "event_notes": "{\"action\": \"Recover all current-field integer-frequency coder misses, implement and review charged segment grammar, retain n600 twins and masked control plus full parse-back; price complete framing. No encoder exists yet.\", \"blocker\": \"NICE_10_DENIED\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"coordinator\": \"MAIN\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"execution_owner\": \"ddm_bnd2\", \"fire_trigger\": \"nice 10 becomes verifiable or operator explicitly changes priority requirement; rebind live pointer before execution\", \"ledger_owner\": \"ddm_bnd1\", \"payload_store\": \"/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/\", \"source_memo\": \".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md\"}",
+    "session_id": "ddm_bnd2_20260910",
+    "written_at_utc": "2026-09-09T23:17:59.422925Z",
+    "written_pid": 89179,
+    "written_host": "mac.lan"
+  },
+  {
+    "schema_version": "canonical_task_status_v1_20260518",
+    "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_2",
+    "source_design_memo": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+    "title": "Run the retained 12-pair draw after the pricing prerequisite",
+    "status": "blocked",
+    "owner": "ddm_bnd1",
+    "predicted_cost_usd": null,
+    "predicted_delta_s_band": null,
+    "actual_delta_s": null,
+    "commit_shas": [],
+    "test_status": "pending",
+    "blockers": [
+      "UNPRICED_DRAW_AND_SCORER_ALLOCATION_REQUIRED"
+    ],
+    "started_at_utc": null,
+    "completed_at_utc": null,
+    "event_type": "note",
+    "event_timestamp_utc": "2026-09-09T23:17:59.439580Z",
+    "event_actor": "ddm_bnd2",
+    "event_notes": "{\"action\": \"Run retained 12-pair draw; no draw if lossless recode loses. This update tightens existing gate, creates no new task.\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"coordinator\": \"MAIN\", \"disposition\": \"FOLDED\", \"execution_owner\": \"ddm_bnd2\", \"fire_trigger\": \"lossless twin-verified segment plus residual total <=114784 B and explicit scorer allocation\", \"ledger_owner\": \"ddm_bnd1\"}",
+    "session_id": "ddm_bnd2_20260910",
+    "written_at_utc": "2026-09-09T23:17:59.439580Z",
+    "written_pid": 89179,
+    "written_host": "mac.lan"
+  },
+  {
+    "schema_version": "canonical_task_status_v1_20260518",
+    "task_id": "ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909::VALID_BOUND_INPUTS",
+    "source_design_memo": ".omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+    "title": "Resolve the generated-carrier proof gate and missing live derivative inputs",
+    "status": "blocked",
+    "owner": "MAIN",
+    "predicted_cost_usd": null,
+    "predicted_delta_s_band": null,
+    "actual_delta_s": null,
+    "commit_shas": [],
+    "test_status": "n_a",
+    "blockers": [
+      "NONTRIVIAL_REALIZED_LOWER_BOUND_NOT_ESTABLISHED",
+      "LIVE_N600_SPATIAL_JACOBIAN_MISSING",
+      "MATCHED_ABSOLUTE_LATTICE_PENALTY_MISSING"
+    ],
+    "started_at_utc": null,
+    "completed_at_utc": null,
+    "event_type": "note",
+    "event_timestamp_utc": "2026-09-09T23:17:59.455397Z",
+    "event_actor": "ddm_bnd2",
+    "event_notes": "{\"action\": \"bnd2 source-preflight block leaves the-cross/gb2 successor with existing gb1 proof-input/scorer-allocation fire order; no new dispatch or closure\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"disposition\": \"FOLDED\", \"owner\": \"MAIN\", \"source_memo\": \".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md\"}",
+    "session_id": "ddm_bnd2_20260910",
+    "written_at_utc": "2026-09-09T23:17:59.455397Z",
+    "written_pid": 89179,
+    "written_host": "mac.lan"
+  }
+]

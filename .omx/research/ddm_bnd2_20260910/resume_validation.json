@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "experiments/ddm_bnd2_source_preflight.py",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code"
+  ],
+  "returncode": 20,
+  "source_preflight_passed": true,
+  "blockers": [
+    "NICE_10_DENIED"
+  ],
+  "artifacts": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/resume.stdout.json",
+      "bytes": 7575,
+      "sha256": "e7543f5260fbb0063f1fc00938c277c7b8f4a31684f8f53fb0414a0ee38a415f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/resume.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

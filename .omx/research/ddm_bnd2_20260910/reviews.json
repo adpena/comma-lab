@@ -1,0 +1,31 @@
+{
+  "schema": "ddm_bnd2_reviews.v1",
+  "producer_sha256": "85fef367933e931dc09005707d943098ad828ee0e2b37879b4a651ebc350dbfe",
+  "passes": [
+    {
+      "reviewer": "recall_review",
+      "status": "FINDINGS_FIXED",
+      "findings": [
+        "rank envelope and census unbound",
+        "archive snapshot race",
+        "overwrite-capable immutable publication"
+      ]
+    },
+    {
+      "reviewer": "recall_review",
+      "status": "CLEAN",
+      "scope": "source custody, snapshot and exclusive retention, fail-closed priority, honest unimplemented encoder boundary"
+    },
+    {
+      "reviewer": "ddm_bnd2 parent",
+      "status": "CLEAN",
+      "scope": "source and field joins, causal-claim boundaries, atomic retry, explicit priority errno; reviewed entire final file"
+    }
+  ],
+  "ruff": "pass",
+  "review_policy": {
+    "entities_compliant": 5,
+    "violations": 0
+  },
+  "encoder_reviewed": false
+}
