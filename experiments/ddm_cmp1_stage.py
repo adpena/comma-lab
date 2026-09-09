@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+"""Stage and certify the composed RC3/TC1 sections against the live base."""
+from __future__ import annotations
+
+import argparse
+from datetime import UTC, datetime
+import json
+from pathlib import Path
+import subprocess
+import sys
+import zipfile
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(REPO), str(REPO / 'src')]
+sys.dont_write_bytecode = True
+from experiments import ddm_cmp1_compose as c
+
+
+def replace_once(text, before, after):
+    if text.count(before) != 1:
+        raise ValueError('reader patch is not unique: ' + before)
+    return text.replace(before, after)
+
+
+def prepare_runtime():
+    """Use exact predecessor reader bytes, after verifying their base is current."""
+    inputs = c.guard()
+    source, target = c.ROOT / 'source_runtime', c.ROOT / 'candidate_runtime'
+    for relative, fact in inputs['sources'].items():
+        if c.jg2.file_fact(source/relative) != fact:
+            raise RuntimeError('retained source runtime drift')
+        if (c.LIVE/relative).read_bytes() != (source/relative).read_bytes():
+            raise RuntimeError('live source runtime changed since pointer capture')
+    tc = c.TC1 / 'candidate_runtime'
+    for relative in ('runtime/residual_archive.py', 'runtime/ihs2.py', 'runtime/f26_inflate.py'):
+        if (source/relative).read_bytes() != (c.TC1/'source_runtime'/relative).read_bytes():
+            raise RuntimeError('TC1 reader base no longer matches current source')
+    residual = (tc/'runtime/residual_archive.py').read_text()
+    residual = replace_once(residual,
+        '        from .rc2_hpac_semistatic_mixing import MAGIC as RC2_HPAC_MAGIC',
+        '        from .rc2_hpac_semistatic_mixing import MAGIC as RC2_HPAC_MAGIC\n        from .rc3_shared_mixer import MAGIC as RC3_HPAC_MAGIC')
+    residual = replace_once(residual,'hpac.startswith((RC1_HPAC_MAGIC, RC2_HPAC_MAGIC))',
+                            'hpac.startswith((RC1_HPAC_MAGIC, RC2_HPAC_MAGIC, RC3_HPAC_MAGIC))')
+    changed = {
+        'runtime/residual_archive.py': residual.encode(),
+        'runtime/ihs2.py': (c.RC3/'runtime/ihs2.py').read_bytes(),
+        'runtime/rc3_shared_mixer.py': (c.RC3/'runtime/rc3_shared_mixer.py').read_bytes(),
+        'runtime/tc1_shared_mixer.py': (tc/'runtime/tc1_shared_mixer.py').read_bytes(),
+        'runtime/tc1_receiver_checkpoint.py': (tc/'runtime/tc1_receiver_checkpoint.py').read_bytes(),
+    }
+    for relative in inputs['sources']:
+        if relative not in ('archive.zip','MANIFEST.sha256','inflate.py'):
+            c.write(target/relative, changed.pop(relative, (source/relative).read_bytes()))
+    for relative, payload in changed.items():
+        c.write(target/relative, payload)
+    return target
+
+
+def model_proof(role):
+    """Public parser and IHS1 materializer on the retained current sections."""
+    c.guard()
+    root = c.ROOT / ('source_runtime' if role == 'source' else 'candidate_runtime')
+    if role == 'source':
+        section = c.ROOT/'retained/source/hpac.bin'
+    else:
+        section = c.ROOT/'retained/rc3_hpac.br'
+    sys.path[:0] = [str(root),str(root/'cpr1')]
+    from runtime.residual_archive import read_residual_archive
+    from runtime.ihs2 import materialize_ihs1
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('cmp1_model_renderer',root/'cpr1/inflate.py')
+    renderer = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = renderer
+    spec.loader.exec_module(renderer)
+    # Retain a model-only section swap for independent public-parser proof.
+    parts = c.jg2.split_member(c.jg2.read_archive_member(c.ROOT/'source_runtime/archive.zip'))
+    parts['hpac'] = section.read_bytes()
+    header = list(c.jg2.RX1_HEADER.unpack(parts['header'])); header[5] = len(parts['hpac'])
+    parts['header'] = c.jg2.RX1_HEADER.pack(*header)
+    archive = c.ROOT/'retained'/f'model_only_{role}.zip'
+    c.preflight(archive)
+    c.jg2.pack_archive(c.jg2.join_member(parts), archive)
+    restored = materialize_ihs1(read_residual_archive(archive).hpac_blob, renderer)
+    fact = c.write(c.ROOT/'retained'/f'{role}_model.ihs1',restored)
+    if role == 'candidate' and restored != (c.ROOT/'retained/source_model.ihs1').read_bytes():
+        raise RuntimeError('RC3 changed current decoded model rows')
+    return c.record(c.ROOT/f'MODEL_PROOF_{role}.json',dict(role=role,body=fact,archive=c.jg2.file_fact(archive),
+                    model_identity=role=='candidate',axis=c.AXIS,score_claim=False))
+
+
+def stage():
+    import brotli
+    inputs = c.guard()
+    proof = json.loads((c.ROOT/'MODEL_PROOF_candidate.json').read_text())
+    if not proof['model_identity']:
+        raise RuntimeError('model proof required')
+    primary, repeat = [json.loads((c.ROOT/'encode'/tag/'ENCODE_0600.json').read_text()) for tag in ('primary','repeat')]
+    for item in (primary,repeat):
+        if not item['control_identical'] or item['frames'] != 600:
+            raise RuntimeError('full current-field original-stream control required')
+        for key in ('mixed','control'):
+            if c.jg2.file_fact(Path(item[key]['path'])) != item[key]:
+                raise RuntimeError('encoder payload drift')
+    raw = Path(primary['mixed']['path']).read_bytes()
+    if raw != Path(repeat['mixed']['path']).read_bytes():
+        raise RuntimeError('independent twin encodes differ')
+    parts = c.jg2.split_member(c.jg2.read_archive_member(c.ROOT/'source_runtime/archive.zip'))
+    base_parts = dict(parts)
+    parts['hpac'] = (c.ROOT/'retained/rc3_hpac.br').read_bytes()
+    header = list(c.jg2.RX1_HEADER.unpack(parts['header']))
+    header[4] |= 0x80; header[5] = len(parts['hpac'])
+    parts['header'] = c.jg2.RX1_HEADER.pack(*header)
+    weights = Path(inputs['weights']['path']).read_bytes()
+    alternatives = [('plain',c.tc1.MAGIC+weights+raw)]
+    for q in (9,10,11):
+        for w in (22,23,24):
+            alternatives.append((f'brotli_q{q}_w{w}',c.tc1.MAGIC[:4]+b'\x11'+weights+brotli.compress(raw,quality=q,lgwin=w)))
+    rows = []
+    standalone_rows = []
+    for label,rider in alternatives:
+        fact = c.write(c.ROOT/'retained/containers'/(label+'.bin'),rider)
+        if c.tc1.unpack_rider(rider) != (weights,raw):
+            raise RuntimeError('rider parse-back changed stream')
+        parts['tail'] = base_parts['tail'][:96]+rider
+        member = c.jg2.join_member(parts)
+        c.write(c.ROOT/'retained/containers'/(label+'.rx1'),member)
+        for method,level in [('stored',None),('deflate',1),('deflate',6),('deflate',9)]:
+            path = c.ROOT/'retained/containers'/f'{label}_{method}_{level}.zip'
+            c.preflight(path)
+            if method == 'stored':
+                c.jg2.pack_archive(member,path)
+            else:
+                with zipfile.ZipFile(path,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=level) as z:
+                    info=zipfile.ZipInfo('p',date_time=c.jg2.SHIPPED_ZIP_DATE_TIME)
+                    info.compress_type=zipfile.ZIP_DEFLATED
+                    info.external_attr=c.jg2.SHIPPED_ZIP_EXTERNAL_ATTR
+                    info.create_system=c.jg2.SHIPPED_ZIP_CREATE_SYSTEM
+                    z.writestr(info,member,compresslevel=level)
+            if c.jg2.read_archive_member(path)!=member:
+                raise RuntimeError('archive parse-back differs')
+            rows.append(dict(label=label,method=method,level=level,archive=c.jg2.file_fact(path),rider=fact))
+            standalone=dict(parts)
+            standalone['hpac']=base_parts['hpac']
+            standalone_header=list(c.jg2.RX1_HEADER.unpack(standalone['header']))
+            standalone_header[5]=len(standalone['hpac'])
+            standalone['header']=c.jg2.RX1_HEADER.pack(*standalone_header)
+            standalone_member=c.jg2.join_member(standalone)
+            standalone_path=c.ROOT/'retained/standalone_tc1'/f'{label}_{method}_{level}.zip'
+            c.preflight(standalone_path)
+            if method=='stored':
+                c.jg2.pack_archive(standalone_member,standalone_path)
+            else:
+                with zipfile.ZipFile(standalone_path,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=level) as z:
+                    info=zipfile.ZipInfo('p',date_time=c.jg2.SHIPPED_ZIP_DATE_TIME)
+                    info.compress_type=zipfile.ZIP_DEFLATED
+                    info.external_attr=c.jg2.SHIPPED_ZIP_EXTERNAL_ATTR
+                    info.create_system=c.jg2.SHIPPED_ZIP_CREATE_SYSTEM
+                    z.writestr(info,standalone_member,compresslevel=level)
+            if c.jg2.read_archive_member(standalone_path)!=standalone_member:
+                raise RuntimeError('standalone archive parse-back differs')
+            standalone_rows.append(dict(label=label,method=method,level=level,archive=c.jg2.file_fact(standalone_path)))
+    winner=min(rows,key=lambda r:(r['archive']['bytes'],r['label']!='plain',r['method']!='stored',str(r['level'])))
+    target=prepare_runtime()
+    archive=Path(winner['archive']['path']).read_bytes()
+    c.write(target/'archive.zip',archive)
+    # Independently pack the second encoder's stream with the selected shape.
+    repeated_raw=Path(repeat['mixed']['path']).read_bytes()
+    if winner['label']=='plain':
+        repeated_rider=c.tc1.MAGIC+weights+repeated_raw
+    else:
+        _,qpart,wpart=winner['label'].split('_')
+        repeated_rider=c.tc1.MAGIC[:4]+b'\x11'+weights+brotli.compress(repeated_raw,quality=int(qpart[1:]),lgwin=int(wpart[1:]))
+    repeated_parts=dict(parts); repeated_parts['tail']=base_parts['tail'][:96]+repeated_rider
+    repeated_member=c.jg2.join_member(repeated_parts)
+    repeated_archive=c.ROOT/'retained/archive.repeat.zip'
+    c.preflight(repeated_archive)
+    if winner['method']=='stored':
+        c.jg2.pack_archive(repeated_member,repeated_archive)
+    else:
+        with zipfile.ZipFile(repeated_archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=winner['level']) as z:
+            info=zipfile.ZipInfo('p',date_time=c.jg2.SHIPPED_ZIP_DATE_TIME)
+            info.compress_type=zipfile.ZIP_DEFLATED
+            info.external_attr=c.jg2.SHIPPED_ZIP_EXTERNAL_ATTR
+            info.create_system=c.jg2.SHIPPED_ZIP_CREATE_SYSTEM
+            z.writestr(info,repeated_member,compresslevel=winner['level'])
+    if repeated_archive.read_bytes()!=archive:
+        raise RuntimeError('independent complete archive packs differ')
+    sha=c.jg2.sha256_bytes(archive)
+    entry=(c.ROOT/'source_runtime/inflate.py').read_text()
+    entry=replace_once(entry,inputs['archive']['sha256'],sha)
+    entry=replace_once(entry,f"ARCHIVE_BYTES = {inputs['archive']['bytes']}",f'ARCHIVE_BYTES = {len(archive)}')
+    c.write(target/'inflate.py',entry.encode())
+    manifest=''.join(f'{c.jg2.sha256_file(p)}  {p.relative_to(target)}\n' for p in sorted(target.rglob('*'))
+                     if p.is_file() and p.name!='MANIFEST.sha256' and '__pycache__' not in p.parts)
+    c.write(target/'MANIFEST.sha256',manifest.encode())
+    new=c.jg2.split_member(c.jg2.read_archive_member(target/'archive.zip'))
+    census={k:dict(base_bytes=len(v),candidate_bytes=len(new[k]),identical=v==new[k],
+                   base_sha=c.jg2.sha256_bytes(v),candidate_sha=c.jg2.sha256_bytes(new[k])) for k,v in base_parts.items()}
+    if not all(census[k]['identical'] for k in ('semantic','carrier')) or new['tail'][:96]!=base_parts['tail'][:96]:
+        raise RuntimeError('composition moved an unauthorized section')
+    changes=[]
+    for p in sorted(target.rglob('*')):
+        if p.is_file():
+            relative=p.relative_to(target); old=c.ROOT/'source_runtime'/relative
+            if not old.exists() or p.read_bytes()!=old.read_bytes(): changes.append(str(relative))
+    expected={'archive.zip','MANIFEST.sha256','inflate.py','runtime/residual_archive.py','runtime/ihs2.py',
+              'runtime/rc3_shared_mixer.py','runtime/tc1_shared_mixer.py','runtime/tc1_receiver_checkpoint.py'}
+    if set(changes)!=expected: raise RuntimeError('runtime census moved unexpected files: '+repr(changes))
+    saving=inputs['archive']['bytes']-len(archive)
+    standalone_winner=min(standalone_rows,key=lambda r:(r['archive']['bytes'],r['label']!='plain',r['method']!='stored',str(r['level'])))
+    standalone_model=c.jg2.file_fact(c.ROOT/'retained/model_only_candidate.zip')
+    separate_saving_sum=2*inputs['archive']['bytes']-standalone_model['bytes']-standalone_winner['archive']['bytes']
+    result=dict(axis=c.AXIS,score_claim=False,archive=c.jg2.file_fact(target/'archive.zip'),
+                base=inputs['archive'],saving=saving,model_saving=len(base_parts['hpac'])-len(new['hpac']),
+                tail_saving=len(base_parts['tail'])-len(new['tail']),prior_prediction_saving=750,
+                interaction_vs_prior_savings=saving-750,prior_falsifier_fired=saving<700,
+                projected_score=inputs['pointer']['our_local_frontier_contest_cuda']['score']-saving*25/37545489,
+                delta_score_rate_only=-saving*25/37545489,projection_only=True,
+                independent_twin_encode_identity=True,section_census=census,runtime_changed_files=changes,
+                container_rows=rows,winner=winner,model_proof=proof,weights=inputs['weights'])
+    result.update(standalone_tail_container_rows=standalone_rows,standalone_tail_winner=standalone_winner,
+                  standalone_model_archive=standalone_model,measured_standalone_saving_sum=separate_saving_sum,
+                  container_interaction_bytes=saving-separate_saving_sum)
+    c.guard()
+    c.record(c.ROOT/'RESULT.json',result)
+    if saving <= 0:
+        raise RuntimeError('retained composition does not beat the live archive; do not seal')
+    return result
+
+
+def equations():
+    from tac.canonical_equations import EmpiricalAnchor, get_equation_by_id, update_equation_with_empirical_anchor
+    from tac.provenance import build_provenance_for_macos_cpu_advisory
+    result=json.loads((c.ROOT/'RESULT.json').read_text()); c.guard()
+    identity=json.loads((c.ROOT/'public_identity/PUBLIC_FIELD_IDENTITY.json').read_text())
+    if not identity['exact_field_identity'] or identity['archive_sha256'] != result['archive']['sha256']:
+        raise RuntimeError('equation anchor requires full current-candidate public field identity')
+    if c.jg2.file_fact(Path(identity['retained_field']['path'])) != identity['retained_field']:
+        raise RuntimeError('public field payload drift')
+    path=c.ROOT/'RESULT.json'; stamp=datetime.now(UTC).isoformat()
+    provenance=build_provenance_for_macos_cpu_advisory(
+        archive_sha256=result['archive']['sha256'],source_path=result['archive']['path'],captured_at_utc=stamp)
+    events=[]
+    for equation in ('model_section_adaptive_recode_ceiling_v1','token_tail_context_mixing_bound_v1'):
+        anchor=EmpiricalAnchor(anchor_id='ddm_cmp1_rc3_tc1_live_sj1_composition_20260909',measurement_utc=stamp,
+            inputs=dict(base=result['base'],fixed_tc1_weights=result['weights'],pairs=600,symbols=117964800),
+            predicted_output=dict(composed_bytes=180771,saving_bytes=750),
+            empirical_output={k:result[k] for k in ('archive','saving','model_saving','tail_saving','interaction_vs_prior_savings','independent_twin_encode_identity')},
+            residual=abs(result['saving']-750)/750,source_artifact=str(path),
+            measurement_method='Full independent twin sparse encodes, original-stream control, public full-field decode, exact model restoration, container and source census; residual is absolute prediction error divided by predicted saving; no scorer.',
+            provenance=provenance,empirical_verification_status='VERIFIED_VIA_EMPIRICAL_ANCHOR')
+        existing=get_equation_by_id(equation)
+        previous=next((a for a in existing.empirical_anchors if a.anchor_id==anchor.anchor_id),None)
+        if previous is None:
+            subprocess.run(['df','-h',str(REPO)],check=True)
+            update_equation_with_empirical_anchor(equation,anchor,agent='codex',subagent_id='ddm_cmp1',notes='Composed on live sj1 pass4; score_claim=false; MAIN fires.')
+        else:
+            if previous.empirical_output != anchor.empirical_output or previous.inputs != anchor.inputs:
+                raise RuntimeError('existing composition anchor describes different bytes')
+            anchor=previous
+        events.append(dict(equation_id=equation,anchor=anchor.to_dict()))
+    return c.record(c.ROOT/'EQUATION_ANCHORS.json',events)
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('stage',choices=['prepare','model-source','model-candidate','stage','equations'])
+    p.add_argument('--resume-from',type=Path,required=True)
+    args=p.parse_args()
+    if args.resume_from.resolve()!=c.ROOT: raise ValueError('wrong resume root')
+    if args.stage=='prepare': result=str(prepare_runtime())
+    elif args.stage.startswith('model-'): result=model_proof(args.stage.split('-')[1])
+    elif args.stage=='stage': result=stage()
+    else: result=equations()
+    print(json.dumps(result,sort_keys=True))

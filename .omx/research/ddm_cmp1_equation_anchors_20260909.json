@@ -1,0 +1,122 @@
+{
+  "anchors": [
+    {
+      "anchor": {
+        "anchor_id": "ddm_cmp1_rc3_tc1_live_sj1_composition_20260909",
+        "empirical_output": {
+          "archive": {
+            "bytes": 180772,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+            "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+          },
+          "independent_twin_encode_identity": true,
+          "interaction_vs_prior_savings": -1,
+          "model_saving": 201,
+          "saving": 749,
+          "tail_saving": 548
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base": {
+            "bytes": 181521,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_runtime/archive.zip",
+            "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+          },
+          "fixed_tc1_weights": {
+            "bytes": 35,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/weights_i8.bin",
+            "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+          },
+          "pairs": 600,
+          "symbols": 117964800
+        },
+        "measurement_method": "Full independent twin sparse encodes, original-stream control, public full-field decode, exact model restoration, container and source census; residual is absolute prediction error divided by predicted saving; no scorer.",
+        "measurement_utc": "2026-09-09T19:24:54.312852+00:00",
+        "predicted_output": {
+          "composed_bytes": 180771,
+          "saving_bytes": 750
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-09T19:24:54.312852+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+          "source_sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+        },
+        "residual": 0.0013333333333333333,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/RESULT.json"
+      },
+      "equation_id": "model_section_adaptive_recode_ceiling_v1"
+    },
+    {
+      "anchor": {
+        "anchor_id": "ddm_cmp1_rc3_tc1_live_sj1_composition_20260909",
+        "empirical_output": {
+          "archive": {
+            "bytes": 180772,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+            "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+          },
+          "independent_twin_encode_identity": true,
+          "interaction_vs_prior_savings": -1,
+          "model_saving": 201,
+          "saving": 749,
+          "tail_saving": 548
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base": {
+            "bytes": 181521,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_runtime/archive.zip",
+            "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+          },
+          "fixed_tc1_weights": {
+            "bytes": 35,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/weights_i8.bin",
+            "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+          },
+          "pairs": 600,
+          "symbols": 117964800
+        },
+        "measurement_method": "Full independent twin sparse encodes, original-stream control, public full-field decode, exact model restoration, container and source census; residual is absolute prediction error divided by predicted saving; no scorer.",
+        "measurement_utc": "2026-09-09T19:24:54.312852+00:00",
+        "predicted_output": {
+          "composed_bytes": 180771,
+          "saving_bytes": 750
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-09T19:24:54.312852+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+          "source_sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+        },
+        "residual": 0.0013333333333333333,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/RESULT.json"
+      },
+      "equation_id": "token_tail_context_mixing_bound_v1"
+    }
+  ],
+  "disposition": "Written to canonical live registry via update_equation_with_empirical_anchor; own portable receipt retained for serializer and MAIN harvest without absorbing sibling events.",
+  "owner": "ddm_cmp1",
+  "schema": "ddm_cmp1_portable_equation_anchors.v1",
+  "score_claim": false
+}
