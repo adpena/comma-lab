@@ -518,6 +518,12 @@ def build_parser() -> argparse.ArgumentParser:
     mixer.add_argument("--min-saving-bits", type=float, default=DEFAULT_MIN_SAVING_BITS)
     mixer.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     mixer.add_argument("--frames", type=int, default=N_PAIRS)
+    mixer.add_argument(
+        "--field",
+        default=None,
+        help="pricing mode: encode this 600-plane edited field instead of the live one; "
+        "the identity control then reports the byte delta instead of asserting identity",
+    )
     mixer.set_defaults(func=cmd_rank_mixer)
     return parser
 
@@ -586,9 +592,29 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     field_sha = sha256_file(CMP1_FIELD_U8)
     if field_sha != CMP1_FIELD_SHA256:
         raise Rp1Error(f"cmp1 field sha {field_sha} != {CMP1_FIELD_SHA256}")
-    target = np.memmap(
+    live = np.memmap(
         CMP1_FIELD_U8, dtype=np.uint8, mode="r", shape=(N_PAIRS, EVAL_H, EVAL_W)
     )
+    if args.field:
+        # PRICING MODE.  The edited field must carry ALL 600 planes: a pair merely absent
+        # from an edits npz reverts to the pristine base, which would silently undo every
+        # edit the live pointer banked.  So the planes are counted, not trusted.
+        target = np.array(live, dtype=np.uint8)
+        with np.load(args.field, allow_pickle=False) as blob:
+            if len(blob.files) != N_PAIRS:
+                raise Rp1Error(
+                    f"pricing field carries {len(blob.files)} planes; all {N_PAIRS} are "
+                    "required or the absent pairs revert to the pristine base"
+                )
+            for key in blob.files:
+                plane = np.asarray(blob[key], dtype=np.uint8)
+                if plane.shape != (EVAL_H, EVAL_W) or plane.max() >= NUM_CLASSES:
+                    raise Rp1Error(f"edit plane {key} is malformed")
+                target[int(key)] = plane
+        edits_vs_live = int((target != np.asarray(live)).sum())
+    else:
+        target = live
+        edits_vs_live = 0
     base = np.array(jg2.load_tokens(BASE_TOKENS), dtype=np.uint8)
     sj1_edit_mask = np.asarray(target) != base
 
@@ -745,14 +771,17 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     stream_path = out / "tail_rp1_mixer_control.bin"
     stream_path.write_bytes(body)
     stream_sha = hashlib.sha256(body).hexdigest()
-    live = CMP1_MIXED_STREAM.read_bytes()
+    live_stream = CMP1_MIXED_STREAM.read_bytes()
     identity = {
         "frames_encoded": args.frames,
+        "field": str(args.field) if args.field else "the live pointer's own field",
+        "tokens_changed_vs_live_field": edits_vs_live,
         "emitted_bytes": len(body),
         "emitted_sha256": stream_sha,
-        "cmp1_stream_bytes": len(live),
-        "cmp1_stream_sha256": hashlib.sha256(live).hexdigest(),
-        "byte_identical": body == live,
+        "cmp1_stream_bytes": len(live_stream),
+        "cmp1_stream_sha256": hashlib.sha256(live_stream).hexdigest(),
+        "delta_bytes_vs_cmp1": len(body) - len(live_stream),
+        "byte_identical": body == live_stream,
     }
 
     dump = out / "candidates.npz"
@@ -812,7 +841,7 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     }
     (out / "RANK.json").write_text(json.dumps(receipt, indent=2, sort_keys=True))
     print(json.dumps({k: v for k, v in receipt.items() if k != "census"}, indent=2))
-    if args.frames == N_PAIRS and not identity["byte_identical"]:
+    if args.frames == N_PAIRS and not args.field and not identity["byte_identical"]:
         raise Rp1Error(
             f"IDENTITY CONTROL FAILED against cmp1's own mixed stream: {identity}"
         )
