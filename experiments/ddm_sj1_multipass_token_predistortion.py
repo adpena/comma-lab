@@ -1384,6 +1384,88 @@ def cmd_pass(args) -> int:
     return 0
 
 
+def cmd_pass_repair_shard(args) -> int:
+    """Make a crashed shard resumable EXACTLY, by dropping only its orphaned rows.
+
+    The refusal in ``cmd_pass`` says "delete both files and redo the shard", which is
+    safe but throws away every pair the shard did finish.  It does not have to: a pair
+    that HAS a plane has both artifacts on disk and they were written from the same
+    ``result``, so the row/plane pair is consistent by construction.  The orphans are
+    exactly the rows appended after the last plane checkpoint, and re-doing only those
+    is an EXACT repair, not a guess.
+
+    MEASURED cost of the difference, on the pass-4 crash this was written for: 182 rows
+    against 170 planes, so 12 orphans.  Deleting and redoing costs 182 pairs; this costs
+    12.
+
+    Fail-closed on anything the truncation would not be exact for: a duplicate row for a
+    pair (a prior resume already went wrong), or a plane with no row (a different
+    inconsistency than the one this repairs).  The original rows file is never deleted --
+    it is moved aside with a UTC suffix, per the keep-the-payload rule.
+    """
+    out_dir = Path(args.out_dir)
+    rows_path = out_dir / f"rows_shard_{args.shard_index}.jsonl"
+    planes_path = out_dir / f"planes_shard_{args.shard_index}.npz"
+    for path in (rows_path, planes_path):
+        if not path.is_file():
+            raise Sj1Error(f"shard {args.shard_index} has no {path.name} to repair")
+
+    rows = [
+        json.loads(line)
+        for line in rows_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    pairs = [int(r["pair"]) for r in rows]
+    if len(set(pairs)) != len(pairs):
+        dupes = sorted({p for p in pairs if pairs.count(p) > 1})
+        raise Sj1Error(
+            f"shard {args.shard_index} has duplicate rows for pairs {dupes[:8]}; the "
+            "ledger would double-count flips_before at merge. This is not the orphan "
+            "class this repairs -- inspect the shard by hand."
+        )
+    with np.load(planes_path, allow_pickle=False) as blob:
+        planed = {int(k) for k in blob.files}
+    if not planed <= set(pairs):
+        stray = sorted(planed - set(pairs))
+        raise Sj1Error(
+            f"shard {args.shard_index} has planes for pairs with no row {stray[:8]}; "
+            "that is the opposite inconsistency and this repair does not cover it."
+        )
+
+    keep = [r for r in rows if int(r["pair"]) in planed]
+    dropped = [int(r["pair"]) for r in rows if int(r["pair"]) not in planed]
+    verdict = {
+        "schema": "ddm_sj1_pass_repair.v1",
+        "shard_index": args.shard_index,
+        "rows_before": len(rows),
+        "planes": len(planed),
+        "rows_after": len(keep),
+        "orphaned_pairs_redone": dropped,
+        "rows_sha256_before": _sha256_file(rows_path),
+        "planes_sha256": _sha256_file(planes_path),
+        "applied": bool(args.apply),
+        "axis": "[bookkeeping only -- no measurement, no score]",
+        "score_claim": False,
+    }
+    if args.apply and dropped:
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        backup = rows_path.with_suffix(f".jsonl.orphaned-{stamp}")
+        rows_path.replace(backup)
+        tmp = rows_path.with_suffix(".jsonl.tmp")
+        tmp.write_text(
+            "".join(json.dumps(r, sort_keys=True) + "\n" for r in keep),
+            encoding="utf-8",
+        )
+        tmp.replace(rows_path)
+        verdict["rows_backup"] = str(backup)
+        verdict["rows_sha256_after"] = _sha256_file(rows_path)
+    (out_dir / f"REPAIR_SHARD_{args.shard_index}.json").write_text(
+        json.dumps(verdict, indent=2, sort_keys=True)
+    )
+    print(json.dumps(verdict, sort_keys=True))
+    return 0
+
+
 def cmd_pass_merge(args) -> int:
     """Merge pass shards: the n600 ledger, the edited field, and the pass table row."""
     receipts = [json.loads(Path(p).read_text()) for p in args.receipts]
@@ -1592,6 +1674,15 @@ def build_parser() -> argparse.ArgumentParser:
     part.add_argument("--shard-count", type=int, default=1)
     part.add_argument("--out", type=Path, required=True)
     part.set_defaults(func=cmd_partition)
+
+    prep = sub.add_parser(
+        "pass-repair-shard",
+        help="drop a crashed shard's orphaned rows so --resume redoes exactly those",
+    )
+    prep.add_argument("--out-dir", type=Path, required=True)
+    prep.add_argument("--shard-index", type=int, required=True)
+    prep.add_argument("--apply", action="store_true")
+    prep.set_defaults(func=cmd_pass_repair_shard)
 
     pmerge = sub.add_parser("pass-merge", help="merge pass shards into the n600 ledger")
     pmerge.add_argument("--receipts", nargs="+", required=True)
