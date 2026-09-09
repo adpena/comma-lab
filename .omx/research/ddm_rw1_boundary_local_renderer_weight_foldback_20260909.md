@@ -711,6 +711,37 @@ Re-scored at the new operating point: one repaired cell is `8.4771e-07` S = **0.
 **0.010693 S = 57.3 % of the gap**; a +73.1 B format change (+3 mantissa bits) is `4.869e-05` S = **0.26 % of the gap**, break-even
 **57 cells**.
 
+## 8g. The sign asymmetry — why a wider mantissa CANNOT help, and OWED #1e closes
+
+The yield looked thin (1 accept in 227 evaluations) and the obvious reading was *"the search needs more of it."* The **sign distribution**
+says otherwise, and it is the measurement that settles the door (236 evaluations on the pass-4 base, 120-pair screen):
+
+| \|rel\| | n | **repairs** | no effect | **damages** | no-effect % | damage : repair |
+|---|---:|---:|---:|---:|---:|---:|
+| 1e-04 | 117 | **0** | 2 | **115** | 1.7 % | **∞** |
+| 3e-05 | 119 | **1** | 20 | **98** | 16.8 % | **98 : 1** |
+| **all** | **236** | **1** | **22** | **213** | 9.3 % | **213 : 1** |
+
+**Shrinking the step does not shift the sign — it shifts moves into "no effect."** From `1e-04` to `3e-05` the no-effect share rises
+1.7 % → 16.8 % while repairs stay at 0–1 and the damage:repair ratio stays around 100:1. Extrapolate that trend and the limit of a finer
+grid is **not** net benefit; it is **doing nothing**: zeros → 100 %, damages → 0, and repairs → 0 with them. The sizing sweep's
+"damage → 0 at rel = 1e-05" was really **effect → 0**, and between the two there is no window where repairs outnumber damage.
+
+That closes **OWED #1e by measurement, before any receiver code was written**: a wider-mantissa scale format moves the actuator toward
+inaction, not toward benefit, so **+3, +6 or +13 mantissa bits all buy the same nothing** — while costing 0.26 %, 0.52 % or 1.13 % of the
+gap respectively. The 6.15-bit window §8e derived is a window of **diminishing effect**, and §8e is corrected here rather than left
+standing: it priced a door that this distribution shows does not open.
+
+The 213:1 ratio is also the same number the whole arm has been circling. sj1 §16d measured 44.5 correct boundary cells at risk per
+residual cell in reach for a *local* r=9 token move; a per-row scale change is **global over all 600 frames**, so its collateral
+population is larger still, and 213:1 is what that looks like measured directly. Every route this arm tried — token-adjacent code moves,
+gradient-ranked codes, random codes, AdamW-accumulated codes, fp16 scale ULPs, and now sub-fp16 relative scales — has been paying the
+same ratio.
+
+**Scored at the operating point** (S 0.13867171823146562, gap 0.018671718): the one repair found is worth `8.477e-07` S = **0.00454 % of
+the gap**; the accompanying 213 damages are worth **+1.806e-04 S = +0.967 %**. There is no configuration of this actuator in which those
+two numbers swap places.
+
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
