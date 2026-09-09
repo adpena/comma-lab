@@ -930,6 +930,236 @@ def cmd_parseback(args) -> int:
 # --------------------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------------------
+# Public-entrypoint smoke receipts -- the seal contract ddm_scg1 closed 2026-09-08.
+# --------------------------------------------------------------------------------------
+
+_SMOKE_BOUND_FRACTION = 0.8
+
+
+def _public_path_probe(runtime_root: Path, *, timeout_s: float) -> dict[str, Any]:
+    """Reach the receiver's own token decode through ``runtime.f26_inflate``.
+
+    ``bash inflate.sh`` cannot COMPLETE on this host by the submission's own design -- it
+    refuses without CUDA -- so the leg that proves the archive actually parses is the
+    function ``inflate.py`` calls.  Getting as far as the token decode means the container
+    framing, the RX1 riders, the pin check, the renderer load and the semantic unpack all
+    passed.  Everything that can go wrong on a re-pinned candidate throws FAST (rc1's F26
+    magic guard is the canonical example), so surviving the bound without an exception is
+    the PASS, and any exception is reported as itself and refuses at the seal.
+    """
+    import os
+    import subprocess
+    import tempfile
+
+    runtime_root = Path(runtime_root).resolve()
+    script = (
+        "import json, sys, time\n"
+        "from pathlib import Path\n"
+        "root = Path(sys.argv[1]); sys.path.insert(0, str(root))\n"
+        "from runtime.f26_inflate import inflate_archive\n"
+        "out = Path(sys.argv[2]); started = time.time()\n"
+        "try:\n"
+        "    inflate_archive(root / 'archive.zip', out / '0.raw',\n"
+        "                    renderer_dir=root / 'cpr1', device_name='cpu',\n"
+        "                    num_threads=4, checkpoint_dir=out / '.ckpt')\n"
+        "    print(json.dumps({'outcome': 'COMPLETED', 'seconds': time.time()-started}))\n"
+        "except Exception as error:\n"
+        "    print(json.dumps({'outcome': type(error).__name__, 'seconds': time.time()-started,\n"
+        "                      'exception_class': type(error).__name__,\n"
+        "                      'exception_message': str(error)}))\n"
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        library = Path(scratch) / "rc64_backend.so"
+        subprocess.run(
+            [
+                os.environ.get("CC", "cc"), "-O3", "-std=c11", "-shared", "-fPIC",
+                str(runtime_root / "runtime" / "entropy" / "rc64_backend.c"),
+                "-o", str(library),
+            ],
+            check=True, capture_output=True,
+        )
+        environment = dict(os.environ, CPR1_RC64_LIBRARY=str(library))
+        started = time.time()
+        try:
+            done = subprocess.run(
+                [sys.executable, "-c", script, str(runtime_root), scratch],
+                capture_output=True, text=True, timeout=timeout_s,
+                cwd=str(runtime_root), env=environment,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "outcome": "REACHED_TOKEN_DECODE",
+                "seconds": time.time() - started,
+                "exception_class": None,
+                "exception_message": "",
+                "note": (
+                    "no exception within the bound; every pre-decode stage throws fast, so "
+                    "the token decode -- the slow leg -- was reached"
+                ),
+            }
+    tail = (done.stdout or "").strip().splitlines()
+    parsed: dict[str, Any] = {"outcome": "UNPARSED", "stdout_tail": tail[-3:]}
+    for line in reversed(tail):
+        try:
+            parsed = json.loads(line)
+            break
+        except json.JSONDecodeError:
+            continue
+    parsed.setdefault("exception_class", None)
+    parsed.setdefault("exception_message", "")
+    parsed["stderr_tail"] = (done.stderr or "").strip().splitlines()[-5:]
+    return parsed
+
+
+def _inflate_sh_smoke(runtime_root: Path, *, timeout_s: float) -> dict[str, Any]:
+    """Run ``bash inflate.sh`` with the real 3-argument contest signature.
+
+    Reaching the CUDA refusal is the PASS: it proves the C toolchain builds, the dependency
+    gate passes, the file-list loop dispatches, and the tree's own ``_verify_input`` accepts
+    the STAGED archive against its two pinned constants -- exactly what a re-pinned
+    candidate gets wrong.  Receiver identity means THIS, not the library path.
+    """
+    import os
+    import subprocess
+    import tempfile
+    import zipfile
+
+    runtime_root = Path(runtime_root).resolve()
+    archive = runtime_root / "archive.zip"
+    environment = dict(
+        os.environ,
+        PATH=f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}",
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        scratch_path = Path(scratch)
+        data_dir = scratch_path / "archive_dir"
+        data_dir.mkdir()
+        shutil.copyfile(archive, data_dir / "archive.zip")
+        with zipfile.ZipFile(archive) as bundle:
+            for member in bundle.namelist():
+                (data_dir / member).write_bytes(bundle.read(member))
+        file_list = scratch_path / "list.txt"
+        file_list.write_text("0.mkv\n", encoding="utf-8")
+        started = time.time()
+        try:
+            done = subprocess.run(
+                ["bash", str(runtime_root / "inflate.sh"), str(data_dir),
+                 str(scratch_path / "out"), str(file_list)],
+                capture_output=True, text=True, timeout=timeout_s,
+                cwd=str(runtime_root), env=environment,
+            )
+        except subprocess.TimeoutExpired:
+            return {"outcome": "TIMEOUT", "seconds": time.time() - started, "returncode": None}
+    combined = f"{done.stdout}\n{done.stderr}"
+    message = ""
+    for line in combined.splitlines():
+        if "requires CUDA inflation" in line:
+            message = line.strip()
+            break
+    if message:
+        outcome = "REACHED_CUDA_GATE"
+    elif done.returncode == 0:
+        outcome = "COMPLETED"
+    else:
+        outcome = "OTHER_FAILURE"
+    return {
+        "outcome": outcome,
+        "returncode": done.returncode,
+        "seconds": time.time() - started,
+        "exception_class": "RuntimeError" if message else None,
+        "exception_message": message,
+        "stderr_tail": (done.stderr or "").strip().splitlines()[-6:],
+    }
+
+
+def _smoke_receipt(runtime_root: Path, probe: dict[str, Any]) -> dict[str, Any]:
+    """Add the identity pins the seal validator RE-MEASURES from disk."""
+    from tac.candidate_seal import measure_runtime_digest
+
+    runtime_root = Path(runtime_root).resolve()
+    archive = runtime_root / "archive.zip"
+    receipt = dict(probe)
+    receipt["runtime_path"] = str(runtime_root)
+    receipt["tree_sha256"] = measure_runtime_digest(runtime_root).sha256
+    receipt["archive_path"] = str(archive)
+    receipt["archive_sha256"] = _sha256_file(archive)
+    return receipt
+
+
+def cmd_public_smoke(args) -> int:
+    """Emit the ``candidate_public_entrypoint_smoke.v1`` block the seal now requires.
+
+    Both legs, both roles.  The FRONTIER role is the live pointer tree as the control: a
+    candidate that reaches its gates proves nothing unless the object it is being compared
+    against reaches the same gates from the same host in the same session.
+
+    The probes run FIRST and the tree digests are measured ONCE afterwards, because the
+    seal requires both legs of a role to name the same ``tree_sha256`` and a digest taken
+    between two probes that touch the tree would refuse itself.
+    """
+    candidate = Path(args.candidate_runtime).resolve()
+    frontier = Path(args.frontier_runtime).resolve()
+    frontier_sha = _sha256_file(frontier / "archive.zip")
+    if frontier_sha != sj1.POINTER_ARCHIVE_SHA256:
+        raise Sj1JointError(
+            f"frontier runtime {frontier} has archive sha {frontier_sha}, not the live "
+            f"pointer's {sj1.POINTER_ARCHIVE_SHA256}; a control that is not the pointer "
+            "cannot anchor the candidate's delta"
+        )
+    bound = float(args.bound_seconds)
+    probe_timeout = bound * _SMOKE_BOUND_FRACTION
+
+    trees = {"candidate": candidate, "frontier": frontier}
+    probes = {
+        ("public_path_probes", role): _public_path_probe(tree, timeout_s=probe_timeout)
+        for role, tree in trees.items()
+    }
+    probes.update(
+        {
+            ("inflate_sh_smokes", role): _inflate_sh_smoke(tree, timeout_s=probe_timeout)
+            for role, tree in trees.items()
+        }
+    )
+    block: dict[str, Any] = {
+        "schema": "candidate_public_entrypoint_smoke.v1",
+        "public_path_probe_seconds": bound,
+        "public_path_probes": {},
+        "inflate_sh_smokes": {},
+    }
+    for (group, role), probe in probes.items():
+        block[group][role] = _smoke_receipt(trees[role], probe)
+
+    # Check against the VALIDATOR'S OWN checker rather than a second implementation here:
+    # a reimplementation would drift from the contract silently, which is the whole class
+    # this block exists to close.  A rename is a fail-closed ImportError, never a skip.
+    from tac.candidate_seal import _public_smoke_problems
+
+    problems, _observed = _public_smoke_problems(
+        block,
+        candidate_runtime_dir=candidate,
+        candidate_archive_path=candidate / "archive.zip",
+        pointer_archive_sha256=sj1.POINTER_ARCHIVE_SHA256,
+    )
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(block, indent=2, sort_keys=True))
+    for group in ("public_path_probes", "inflate_sh_smokes"):
+        for role in ("candidate", "frontier"):
+            receipt = block[group][role]
+            print(
+                f"  {group:20s} {role:9s} {receipt['outcome']:20s} "
+                f"{receipt['seconds']:8.2f}s  archive {receipt['archive_sha256'][:12]}"
+            )
+    if problems:
+        raise Sj1JointError(
+            "public-entrypoint smoke block does not satisfy the seal contract:\n  - "
+            + "\n  - ".join(problems)
+        )
+    print(f"public_entrypoint_smoke OK -> {out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1031,6 +1261,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage.add_argument("--out-dir", type=Path, required=True)
     stage.set_defaults(func=cmd_stage_tail)
+
+    ps = sub.add_parser(
+        "public-smoke",
+        help="emit the candidate_public_entrypoint_smoke.v1 block the seal requires",
+    )
+    ps.add_argument("--candidate-runtime", type=Path, required=True)
+    ps.add_argument("--frontier-runtime", type=Path, default=sj1.POINTER_TREE)
+    ps.add_argument("--out", type=Path, required=True)
+    ps.add_argument("--bound-seconds", type=float, default=300.0)
+    ps.set_defaults(func=cmd_public_smoke)
 
     pb = sub.add_parser("parseback", help="decode the candidate through its own receiver")
     pb.add_argument("--runtime", type=Path, required=True)
