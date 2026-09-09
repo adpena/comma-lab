@@ -374,7 +374,42 @@ confirms two things at once: this arm's pose instrument is correct, and cmp1 and
 did leave the pose leg untouched (their carrier section is byte-identical at 18,586 B, which
 `assert_pointer_and_carrier` checks rather than assumes).
 
-## 11. State on hand-off, and what it would cost to finish
+## 11. The n600 pass, complete — and the seg leg VERIFIED at zero
+
+**Acceptance, all 600 pairs** (4 interleaved shards, 2,308–3,007 s each, peak RSS 3.54 GiB
+per process): **19,200 proposals realized, 838 argmax-neutral = 4.36 %**, spread over
+**450 pairs**, first-order 6,616.6 bits = **827.1 B**. The SegNet batch control read 0
+disagreements on all 600 pairs.
+
+**The composite check earned its keep.** On **58 of the 450 edited pairs (12.9 %)** the
+individually-neutral set was NOT jointly neutral — proposals interact, exactly as the
+influence probe's 343-cell p99 radius predicts — and the greedy re-accumulation narrowed
+each to a set it had actually realized. Every shipped set is verified by a render that
+happened, never assembled from separately-verified parts.
+
+**Seg identity, on whole decodes** (`cand/SEGCHECK_renders.json`): base and candidate
+overlays segmented cell by cell over all 600 pairs.
+
+| | measured |
+|---|---|
+| cells compared | 117,964,800 |
+| **cells disagreeing** | **0** |
+| pairs disagreeing | 0 |
+| base flipped cells | 12,614 |
+| candidate flipped cells | **12,614** |
+| **Δd_seg** | **exactly 0.0** |
+
+12,614 is the residual gs3 Addendum 17 names for this body, reproduced independently here.
+**The seg leg of this candidate is zero by measurement, not by assumption.**
+
+**The pose leg is the real cost.** Stale d_pose on the candidate's own renders with the
+pointer's own carrier: **1.7290337e-4 against a 5.0497658e-6 base — a 34.2× rise**, pose leg
+0.041582 against 0.007106, i.e. **+0.03448 S** if left unresolved against a −1.4e-4 S rate
+gain. 838 token changes over 450 pairs move the rendered pixels enough to swamp the whole
+pass. The carrier re-solve is not a refinement here; it is the entire viability of the arm,
+and it is running on the 450 changed pairs.
+
+## 12. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -402,6 +437,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 12. Frontier line
+## 13. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
