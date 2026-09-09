@@ -1192,15 +1192,12 @@ def cmd_train(args) -> int:
 
     rng = np.random.default_rng(args.seed + step0)
     best = {"step": -1, "flips": None, "path": None}
-    for step in range(step0, int(args.steps)):
-        progress = step / max(int(args.steps) - 1, 1)
-        tau = TAU_START + (TAU_END - TAU_START) * progress
-        index = rng.choice(N_PAIRS, size=int(args.batch), replace=False)
-        index = np.sort(index)
+
+    def one_chunk(index: np.ndarray, tau: float):
+        """Loss terms for one chunk of pairs.  Returns (loss, diagnostics)."""
         tokens_batch = torch.from_numpy(tokens[index].astype(np.int64)).to(device)
         index_batch = torch.from_numpy(index).to(device)
         labels_batch = torch.from_numpy(labels[index].astype(np.int64)).to(device)
-
         frame = _render_eval(model, fold, tokens_batch, index_batch)
         camera = _exact_r_camera(frame)
         logits = _seg_logits(segnet, camera)
@@ -1209,7 +1206,6 @@ def cmd_train(args) -> int:
             seg_reference = _expected_flip(
                 logits.detach(), labels_batch, TAU_REFERENCE
             ).mean()
-
         frame0 = up2.frames_to_bchw(np.asarray(raw[2 * index])).to(device)
         pose_new = up2.pose_from_frames(posenet, frame0, camera)
         delta_r = pose_new - geom.pose_base[index_batch]
@@ -1220,14 +1216,59 @@ def cmd_train(args) -> int:
         budget = geom.reach_budget[index_batch].clamp_min(1.0)
         pose_term = (reach / budget).pow(2).mean()
         stale_d_pose = ((pose_new - geom.targets[index_batch]) ** 2).mean()
-
         loss = (
             100.0 * seg_surrogate
             + weight_pose * pose_term
             + weight_stale * stale_d_pose
         )
+        return loss, {
+            "seg_surrogate": float(seg_surrogate.detach()),
+            "seg_reference": float(seg_reference),
+            "pose_term": float(pose_term.detach()),
+            "reach_max": float(reach.max()),
+            "reach_mean": float(reach.mean()),
+            "stale_d_pose": float(stale_d_pose.detach()),
+            "pose_drift": float(
+                ((pose_new - geom.pose_base[index_batch]) ** 2).mean().detach()
+            ),
+        }
+
+    for step in range(step0, int(args.steps)):
+        progress = step / max(int(args.steps) - 1, 1)
+        tau = TAU_START + (TAU_END - TAU_START) * progress
         optimizer.zero_grad(set_to_none=True)
-        loss.backward()
+        if args.full_field:
+            # FULL-FIELD gradient by accumulation over all 600 pairs.  Measured at
+            # batch 4 the fixed-tau surrogate has NO visible trend over 1,300 steps
+            # (first-10 mean 4.796e-04, last-10 4.976e-04) and the code drift saturates
+            # at ~0.6 -- the per-step direction is not persistent.  With only 12,672
+            # parameters and a deterministic n600 objective, the noise-free gradient is
+            # affordable, so minibatch noise stops being the confound.
+            chunks = [
+                np.arange(s, min(s + int(args.batch), N_PAIRS), dtype=np.int64)
+                for s in range(0, N_PAIRS, int(args.batch))
+            ]
+            acc: dict[str, float] = {}
+            for chunk in chunks:
+                loss_chunk, diag = one_chunk(chunk, tau)
+                (loss_chunk * (len(chunk) / N_PAIRS)).backward()
+                for key, value in diag.items():
+                    weight = len(chunk) / N_PAIRS
+                    if key in ("reach_max",):
+                        acc[key] = max(acc.get(key, 0.0), value)
+                    else:
+                        acc[key] = acc.get(key, 0.0) + value * weight
+            diagnostics = acc
+            loss_value = (
+                100.0 * acc["seg_surrogate"]
+                + weight_pose * acc["pose_term"]
+                + weight_stale * acc["stale_d_pose"]
+            )
+        else:
+            index = np.sort(rng.choice(N_PAIRS, size=int(args.batch), replace=False))
+            loss_tensor, diagnostics = one_chunk(index, tau)
+            loss_tensor.backward()
+            loss_value = float(loss_tensor.detach())
         torch.nn.utils.clip_grad_norm_(fold.parameters(), 2.0)
         optimizer.step()
         scheduler.step()
@@ -1243,16 +1284,15 @@ def cmd_train(args) -> int:
             row = {
                 "step": step + 1,
                 "tau": tau,
-                "loss": float(loss.detach()),
-                "seg_surrogate_at_tau": float(seg_surrogate.detach()),
-                "seg_surrogate_at_tau_reference": float(seg_reference),
-                "pose_barrier": float(pose_term.detach()),
-                "reach_codes_max": float(reach.max()),
-                "reach_codes_mean": float(reach.mean()),
-                "stale_d_pose_batch": float(stale_d_pose.detach()),
-                "pose_drift_from_base_batch": float(
-                    ((pose_new - geom.pose_base[index_batch]) ** 2).mean()
-                ),
+                "full_field": bool(args.full_field),
+                "loss": loss_value,
+                "seg_surrogate_at_tau": diagnostics["seg_surrogate"],
+                "seg_surrogate_at_tau_reference": diagnostics["seg_reference"],
+                "pose_barrier": diagnostics["pose_term"],
+                "reach_codes_max": diagnostics["reach_max"],
+                "reach_codes_mean": diagnostics["reach_mean"],
+                "stale_d_pose_batch": diagnostics["stale_d_pose"],
+                "pose_drift_from_base_batch": diagnostics["pose_drift"],
                 "latent_drift_max_codes": drift,
                 "changed_codes": fold.changed_codes(),
                 "changed_codes_shadow": fold.changed_codes(shadow),
@@ -2363,6 +2403,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--eval-every", type=int, default=300)
     train.add_argument("--checkpoint-every", type=int, default=300)
     train.add_argument("--resume-from", type=Path, default=None)
+    train.add_argument("--full-field", action="store_true")
     common(train)
     train.set_defaults(func=cmd_train)
 
