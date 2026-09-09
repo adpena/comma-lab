@@ -427,10 +427,21 @@ def ledger() -> dict:
     rows = [dict(pair=i, tokens=int(per_pair_tokens[i]), delta_bits=float(delta_bits[i]),
                  delta_bytes=float(delta_bits[i] / 8))
             for i in range(N_PAIRS)]
+    # ddm_sj1_joint_admission's `admit --bits-control/--bits-candidate` reads two (600,)
+    # float vectors of per-frame bits.  Emitting them here keeps the admission on the
+    # MEASURED per-pair ledger rather than the uniform bytes-per-changed-token fallback
+    # that `token_rate_model_direction_dependence_v1` measured wrong by 2.24x.
+    ledger_files = {}
+    for name, vector in (('control', control), ('candidate', candidate)):
+        destination = ROOT / 'retained' / f'bits_mixed_{name}.npy'
+        preflight(destination, vector.nbytes + 4096)
+        np.save(destination, vector)
+        ledger_files[name] = jg2.file_fact(destination)
     return record(ROOT / 'LEDGER.json',
                   dict(schema='ddm_sj1_pass5_ledger.v1', axis=AXIS, score_claim=False,
                        note='ideal-bit deltas RANK pairs; a selected subset is priced by its own real encode',
-                       total_delta_bytes=float(delta_bits.sum() / 8), rows=rows))
+                       total_delta_bytes=float(delta_bits.sum() / 8),
+                       bit_ledgers=ledger_files, rows=rows))
 
 
 if __name__ == '__main__':
