@@ -231,12 +231,17 @@ def build_candidate_archive(
             raise fe1.Fe1Error(
                 "the written archive does not parse back to the requested carrier codes"
             )
+        # The reference for this invariant is the TREE BEING BUILT ON, not the module's
+        # live pointer.  Binding it to fe1.LIVE_ARCHIVE was a real bug: a re-base onto a
+        # pointer whose tail moved (sj1's passes move it) would refuse a candidate whose
+        # tail is in fact byte-identical to its OWN base.  It failed closed, which is why
+        # it was findable; the fix is to compare against the right object.
         if bytes(ra.read_residual_archive(scratch).token_stream) != bytes(
-            ra.read_residual_archive(fe1.LIVE_ARCHIVE).token_stream
+            ra.read_residual_archive(Path(tree_dir) / "archive.zip").token_stream
         ):
             raise fe1.Fe1Error(
-                "the token stream is not byte-identical to the live row; this arm "
-                "changes the semantic and carrier sections only"
+                "the token stream is not byte-identical to the tree this candidate is "
+                "built on; this arm changes the semantic and carrier sections only"
             )
 
     return {
