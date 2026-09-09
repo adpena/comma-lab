@@ -91,10 +91,14 @@ def _ssd_add_dir_args() -> list[str]:
 # THE arm model. Single source of truth: the pin used to live inside
 # keeper_source(), where a stale generation went unnoticed until the operator
 # caught it (2026-08-08, "You should be using GPT five point six" -> then "a
-# five point six SOL"). The value is VERIFIED against the operator's own codex
-# config (~/.codex/config.toml: model = "gpt-5.6-sol"), not guessed. Env
-# override exists so a model bump never requires a code edit mid-campaign.
-_DEFAULT_ARM_MODEL = "gpt-5.6-sol"
+# five point six SOL"). BUMPED 2026-09-09 on the operator's word, verbatim: "You
+# can use astra medium through astra xhigh on codex since those are the latest
+# models". VERIFIED against the operator's own codex config
+# (~/.codex/config.toml: model = "gpt-6-astra") and the installed catalog
+# (~/.codex/models_cache.json: gpt-6-astra, supported efforts
+# low/medium/high/xhigh/max/ultra, default medium, context 272k), not guessed.
+# Env override exists so a model bump never requires a code edit mid-campaign.
+_DEFAULT_ARM_MODEL = "gpt-6-astra"
 ARM_MODEL = os.environ.get("TAC_CODEX_ARM_MODEL", _DEFAULT_ARM_MODEL)
 # NEVER AGAIN (operator 2026-08-08, verbatim: "We are never spawning on five
 # point five again"). This is a REFUSAL, not a default: spawn() fails closed if
@@ -111,10 +115,13 @@ BANNED_ARM_MODEL_SUBSTRINGS: tuple[str, ...] = ("gpt-5.5",)
 CODEX_EFFORT_ENUM: tuple[str, ...] = (
     "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
 )
-# The operator's admissible RANGE (2026-08-08: "high to ultra effort levels
-# depending on the task at hand"). Effort is PER-TASK, chosen at `add` time --
-# it is not one global constant. Below-`high` is refused for arm work.
-ARM_EFFORT_LEVELS: tuple[str, ...] = ("high", "xhigh", "max", "ultra")
+# The operator's admissible RANGE. 2026-08-08 (5.6-sol era): "high to ultra
+# effort levels depending on the task at hand". 2026-09-09 (astra era), verbatim:
+# "astra medium through astra xhigh" -- the range MOVED DOWN one rung at the
+# floor (medium is admissible on astra) and its ceiling is xhigh. Effort is
+# PER-TASK, chosen at `add` time -- it is not one global constant. Outside the
+# range is refused for arm work.
+ARM_EFFORT_LEVELS: tuple[str, ...] = ("medium", "high", "xhigh")
 # Fallback for rows queued before `effort` existed. NOT a recommendation: pick
 # the level deliberately per arm.
 DEFAULT_ARM_EFFORT = os.environ.get("TAC_CODEX_ARM_EFFORT", "xhigh")
@@ -1004,7 +1011,8 @@ def keeper_source(name: str, prompt_path: str, effort: str | None = None) -> str
     # 5.6-sol "of high to ultra effort levels depending on the task at hand").
     # Effort is a per-task CHOICE, no longer a hardcoded xhigh. OPERATOR LAW
     # (2026-08-05): every CONVOCATION arm (gc*/pantheon passes) runs at the
-    # MAXIMUM tier -- now literally expressible as effort="ultra". For the MOST
+    # MAXIMUM tier -- which since 2026-09-09 is the astra ceiling "xhigh"
+    # (operator: "astra medium through astra xhigh"); "ultra" is refused. For the MOST
     # IMPORTANT convocations (operator-flagged or route-changing adjudications),
     # MAIN ALSO runs a parallel FABLE leg (Agent tool, model:"fable" carve-out)
     # on the same charter and reconciles both receipts.
@@ -1477,7 +1485,7 @@ def _falsified_premise_registries() -> list[Path]:
     """
 
     canonical_default = RESEARCH_DIR / "falsified_premise_registry.jsonl"
-    if FALSIFIED_PREMISE_REGISTRY != canonical_default:
+    if canonical_default != FALSIFIED_PREMISE_REGISTRY:
         return [FALSIFIED_PREMISE_REGISTRY]
     return [FALSIFIED_PREMISE_REGISTRY, FALSIFIED_PREMISE_REGISTRY_LEGACY]
 FRONTIER_POINTER = _REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
@@ -1500,12 +1508,7 @@ _NEGATIVE_EXISTENCE = re.compile(
 # Stopwords that carry no discriminating power when matching a charter claim
 # against the recent memo corpus.
 _RECALL_STOPWORDS = frozenset(
-    """
-    charter measure measured measurement should would could there their these those
-    through against because before after within number result results verdict
-    should_be family families arm arms which where whose while about above below
-    return returns running current currently already always never nothing
-    """.split()
+    ["charter", "measure", "measured", "measurement", "should", "would", "could", "there", "their", "these", "those", "through", "against", "because", "before", "after", "within", "number", "result", "results", "verdict", "should_be", "family", "families", "arm", "arms", "which", "where", "whose", "while", "about", "above", "below", "return", "returns", "running", "current", "currently", "already", "always", "never", "nothing"]
 )
 
 

@@ -1012,7 +1012,9 @@ def test_scaffold_template_carries_every_lint_required_section():
     ):
         assert header in text, f"template lost required section {header!r}"
     assert "DETACHED >30-MIN COMPUTE" in text
-    assert "`nohup` + `disown`" in text
+    # The template moved from the nohup+disown idiom to the governed launcher
+    # (tools/launch_detached_process.py) — assert the CURRENT contract phrase.
+    assert "launch_detached_process.py" in text
     assert "a pidfile" in text
     assert "durable done-receipt" in text
     assert "successor or\n  MAIN harvests" in text
