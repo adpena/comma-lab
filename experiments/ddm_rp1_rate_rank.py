@@ -784,18 +784,29 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
         "byte_identical": body == live_stream,
     }
 
+    # THE LEDGER IS PERSISTED FIRST.  In pricing mode the candidate dump is empty by
+    # design, and an unguarded ``np.concatenate([])`` between the encode and the ledger
+    # write threw away a 29-minute per-frame bit ledger that a completed encode had
+    # already produced -- the measure-and-discard shape, arriving as an ordering bug
+    # rather than a missing write.  Ledger first, then the optional dump.
+    np.save(out / "bits_per_frame.npy", per_frame_bits)
     dump = out / "candidates.npz"
+    empty = np.zeros(0, dtype=np.int64)
+
+    def _cat(name: str, dtype) -> np.ndarray:
+        parts = keep[name]
+        return np.concatenate(parts) if parts else empty.astype(dtype)
+
     np.savez_compressed(
         dump,
-        frame=np.concatenate(keep["frame"]),
-        pos=np.concatenate(keep["pos"]),
-        sym=np.concatenate(keep["sym"]),
-        best=np.concatenate(keep["best"]),
-        bits_sym=np.concatenate(keep["bits_sym"]),
-        bits_best=np.concatenate(keep["bits_best"]),
-        is_sj1_edit=np.concatenate(keep["is_sj1"]),
+        frame=_cat("frame", np.int16),
+        pos=_cat("pos", np.int32),
+        sym=_cat("sym", np.uint8),
+        best=_cat("best", np.uint8),
+        bits_sym=_cat("bits_sym", np.float32),
+        bits_best=_cat("bits_best", np.float32),
+        is_sj1_edit=_cat("is_sj1", np.uint8),
     )
-    np.save(out / "bits_per_frame.npy", per_frame_bits)
 
     total_tokens = args.frames * PLANE
     receipt = {
@@ -832,7 +843,7 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
         },
         "candidates_dump": {
             "path": str(dump),
-            "rows": int(np.concatenate(keep["frame"]).size),
+            "rows": int(_cat("frame", np.int16).size),
             "min_saving_bits": args.min_saving_bits,
             "top_k_per_frame": args.top_k,
         },
