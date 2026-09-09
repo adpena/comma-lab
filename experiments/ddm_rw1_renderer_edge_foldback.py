@@ -413,6 +413,48 @@ class MultiSemanticSection:
             body[run.code_offset : run.code_offset + run.code_length] = packed
         return bytes(body)
 
+    def body_with_scales(
+        self, code_edits: dict[str, np.ndarray], scale_edits: dict[str, np.ndarray]
+    ) -> bytes:
+        """The SM3R body with named code runs AND named fp16 SCALE runs replaced.
+
+        A scale is 2 bytes and multiplies a whole row, so this is length-preserving for
+        the same reason the code path is: the shipped run's geometry is reused, never
+        recomputed.  The written value is round-tripped through float16 first, because
+        the archive can only carry an fp16 and a value that is not one would silently
+        become a different object at parse-back.
+        """
+        body = bytearray(self.body_with_codes(code_edits))
+        for name, scales in scale_edits.items():
+            run = self.runs.get(name)
+            if run is None:
+                raise Rw1Error(f"{name} is not a quantized run in this section")
+            if run.row_pruned:
+                raise Rw1Error(f"{name} is row-pruned; refusing (ft1 realization gap)")
+            values = np.asarray(scales, dtype=np.float16)
+            if values.size != self.scales[name].size:
+                raise Rw1Error(
+                    f"{name}: {values.size} scales offered, shipped run holds "
+                    f"{self.scales[name].size}"
+                )
+            if not np.all(np.isfinite(values.astype(np.float32))):
+                raise Rw1Error(f"{name}: non-finite scale")
+            packed = values.astype("<f2").tobytes()
+            if len(packed) != run.scale_length:
+                raise Rw1Error(
+                    f"{name}: repacked scales are {len(packed)} B, shipped run is "
+                    f"{run.scale_length} B"
+                )
+            body[run.scale_offset : run.scale_offset + run.scale_length] = packed
+        return bytes(body)
+
+    def stream_with_scales(
+        self, code_edits: dict[str, np.ndarray], scale_edits: dict[str, np.ndarray]
+    ) -> bytes:
+        return self.rc1.apply_semantic(
+            self.body_with_scales(code_edits, scale_edits), self.template, self.shift
+        )
+
     def stream_with_codes(self, edits: dict[str, np.ndarray]) -> bytes:
         """The RC1 semantic stream carrying ``edits``, through the SHIPPED coder."""
         return self.rc1.apply_semantic(
@@ -2174,11 +2216,16 @@ def semantic_section_bytes(section: MultiSemanticSection, edits) -> dict[str, An
     delta IS the semantic-stream delta -- exactly, not approximately.  That is why the
     rate law can be measured without building a whole archive per point.
     """
+
+    return _price_stream(section.stream_with_codes(edits))
+
+
+def _price_stream(stream: bytes) -> dict[str, Any]:
+    """Container-searched size of one already-built RC1 semantic stream."""
     import brotli
     import ddm_fe1_pose_price as price
     import ddm_up3_carrier_splice as up3
 
-    stream = section.stream_with_codes(edits)
     interleaved = up3._ck2_interleave_planes(stream)
     shapes: dict[tuple[str, int, int], bytes] = {}
     for quality in price.CONTAINER_QUALITIES:
@@ -2192,10 +2239,9 @@ def semantic_section_bytes(section: MultiSemanticSection, edits) -> dict[str, An
     chosen = min(
         shapes, key=lambda key: (len(shapes[key]), key != price.SHIPPED_SHAPE, key)
     )
-    shipped = len(shapes[price.SHIPPED_SHAPE])
     return {
         "searched_bytes": len(shapes[chosen]),
-        "shipped_shape_bytes": shipped,
+        "shipped_shape_bytes": len(shapes[price.SHIPPED_SHAPE]),
         "container": list(chosen),
     }
 
@@ -2845,6 +2891,182 @@ def cmd_code_search(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=scale-search -- the SUB-CODE actuator: per-row fp16 scales, realized acceptance
+# ----------------------------------------------------------------------------------
+
+
+def _fp16_step(values: np.ndarray, k: int) -> np.ndarray:
+    """Move positive fp16 values by exactly ``k`` ULPs, on the fp16 grid itself.
+
+    For a positive float16 the bit pattern read as uint16 is MONOTONE, so adding k walks
+    exactly k representable values.  Doing it this way rather than by multiplying by
+    (1+delta) matters: the archive can only carry an fp16, so a move that is not a whole
+    number of ULPs is not a move the receiver can express.
+    """
+    bits = np.asarray(values, dtype=np.float16).view(np.uint16).astype(np.int64) + int(k)
+    bits = np.clip(bits, 1, 0x7BFF)  # stay positive and finite
+    return bits.astype(np.uint16).view(np.float16)
+
+
+def cmd_scale_search(args) -> int:
+    """Greedy realized acceptance over per-row fp16 SCALE moves.
+
+    The actuator ddm_rw1's closing law pointed at: ``weight[i,j] = code[i,j]*scale[i]``,
+    so moving one scale by k ULPs moves a whole row by a CODE-PROPORTIONAL fraction of a
+    code step.  MEASURED before launch (`receipts/PREREG_SCALE_SEARCH.json`): one ULP is
+    0.0242 of a code move on ``blocks.3.dw`` (41x finer), 0.141 on ``blocks.3.pw``
+    (7.1x finer) and 1.342 on ``head`` (COARSER, so head is expected to behave like the
+    code actuator and is excluded from the default pool).
+
+    Acceptance is realized, never predicted, so the search cannot lose: worst case it
+    returns the base object and the door closes on a clean negative.
+    """
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    device = torch.device(args.device)
+    torch.manual_seed(args.seed)
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    pool_names = tuple(
+        n for n in names if n in {v.strip() for v in str(args.tensors).split(",")}
+    )
+    if not pool_names:
+        raise Rw1Error(f"--tensors {args.tensors!r} selected none of {names}")
+    model = load_live_renderer(section).to(device)
+    tokens = load_live_tokens()
+    labels = load_gt_seg_dali()
+    segnet = jg1.load_segnet().to(device).eval()
+    for param in segnet.parameters():
+        param.requires_grad_(False)
+    fold = CodeFoldBack(section, names, device)
+    base_scales = {n: section.scales[n].astype(np.float16).copy() for n in names}
+    current = {n: base_scales[n].copy() for n in names}
+
+    def apply(scales: dict[str, np.ndarray]) -> None:
+        for name in names:
+            run = section.runs[name]
+            shape = [1] * len(run.shape)
+            shape[0] = scales[name].size
+            fold.scales[name] = (
+                torch.from_numpy(scales[name].astype(np.float32).reshape(shape))
+            ).to(device)
+
+    rng = np.random.default_rng(int(args.seed))
+    screen = (
+        np.sort(rng.choice(N_PAIRS, size=int(args.screen_pairs), replace=False))
+        if int(args.screen_pairs)
+        else np.arange(N_PAIRS, dtype=np.int64)
+    )
+    apply(current)
+    screen_null = _evaluate_subset(
+        model, fold, segnet, tokens, labels, device, screen
+    )
+    best = screen_null
+    steps = [int(v) for v in str(args.ulp_steps).split(",") if v.strip()]
+    proposals = [(n, int(i)) for n in pool_names for i in range(base_scales[n].size)]
+    rng.shuffle(proposals)
+
+    evaluations = 1
+    accepted: list[dict[str, Any]] = []
+    rows = []
+    for name, index in proposals:
+        if evaluations >= int(args.max_evaluations):
+            break
+        for k in steps:
+            if evaluations >= int(args.max_evaluations):
+                break
+            trial = {n: current[n].copy() for n in names}
+            moved = _fp16_step(trial[name][index : index + 1], k)
+            if moved[0] == trial[name][index]:
+                continue
+            trial[name][index] = moved[0]
+            apply(trial)
+            flips = _evaluate_subset(
+                model, fold, segnet, tokens, labels, device, screen
+            )
+            evaluations += 1
+            improved = flips < best
+            rows.append(
+                {
+                    "tensor": name,
+                    "row": index,
+                    "ulp": k,
+                    "screen_flips": int(flips),
+                    "screen_best": int(best),
+                    "delta": int(flips - best),
+                    "accepted": bool(improved),
+                    "evaluations": evaluations,
+                    "accepted_rows": len(accepted),
+                    "elapsed_seconds": time.perf_counter() - started,
+                }
+            )
+            if args.progress:
+                print(json.dumps(rows[-1]), flush=True)
+            if improved:
+                current = trial
+                best = flips
+                accepted.append({"tensor": name, "row": index, "ulp": k})
+                break
+        apply(current)
+
+    # CONFIRM at n600 and PRICE by a REAL container-searched encode.
+    apply(base_scales)
+    with torch.no_grad():
+        n600_null = _evaluate_realized(model, fold, segnet, tokens, labels, device)
+    apply(current)
+    with torch.no_grad():
+        n600_final = _evaluate_realized(model, fold, segnet, tokens, labels, device)
+    changed = sum(int((current[n] != base_scales[n]).sum()) for n in names)
+    code_edits = {n: section.codes[n] for n in names}
+    priced_base = semantic_section_bytes(section, code_edits)
+    stream = section.stream_with_scales(code_edits, {n: current[n] for n in names})
+    priced = _price_stream(stream)
+    rate_bytes = priced["searched_bytes"] - priced_base["searched_bytes"]
+    repaired = n600_null["flips"] - n600_final["flips"]
+    break_even_cells = rate_bytes * RATE_PER_BYTE / S_PER_SEG_CELL
+    result = {
+        "schema": "ddm_rw1_scale_search.v1",
+        "axis": f"[{args.device} research-signal; screened on a seeded RANDOM subset, "
+        "confirmed at n600 realized argmax]",
+        "score_claim": False,
+        "pointer": pointer,
+        "tensors": list(pool_names),
+        "ulp_steps": steps,
+        "screen_pairs": len(screen),
+        "screen_null_flips": int(screen_null),
+        "screen_best_flips": int(best),
+        "evaluations": evaluations,
+        "proposals_available": len(proposals) * len(steps),
+        "accepted_rows": len(accepted),
+        "accepted": accepted,
+        "changed_scales": changed,
+        "n600_null_flips": n600_null["flips"],
+        "n600_final_flips": n600_final["flips"],
+        "cells_repaired_n600": repaired,
+        "rate_bytes_measured": rate_bytes,
+        "rate_break_even_cells": break_even_cells,
+        "dS_seg": -repaired * S_PER_SEG_CELL,
+        "dS_rate": rate_bytes * RATE_PER_BYTE,
+        "dS_seg_plus_rate": -repaired * S_PER_SEG_CELL + rate_bytes * RATE_PER_BYTE,
+        "falsifier_fired": bool(repaired < break_even_cells),
+        **_stake(-repaired),
+        "rows": rows,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    np.savez(
+        Path(args.out).with_suffix(".scales.npz"),
+        **{n.replace(".", "__"): current[n] for n in names},
+    )
+    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -3006,6 +3228,21 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--progress", action="store_true", default=True)
     common(search)
     search.set_defaults(func=cmd_code_search)
+
+    scale = sub.add_parser("scale-search")
+    scale.add_argument("--out", type=Path, default=WORK / "receipts/SCALE_SEARCH.json")
+    scale.add_argument("--device", default="mps")
+    scale.add_argument("--batch", type=int, default=4)
+    scale.add_argument(
+        "--tensors", default="blocks.3.dw.weight,blocks.3.pw.weight"
+    )
+    scale.add_argument("--ulp-steps", default="-1,1,-2,2")
+    scale.add_argument("--screen-pairs", type=int, default=120)
+    scale.add_argument("--max-evaluations", type=int, default=400)
+    scale.add_argument("--seed", type=int, default=20260909)
+    scale.add_argument("--progress", action="store_true", default=True)
+    common(scale)
+    scale.set_defaults(func=cmd_scale_search)
 
     return parser
 
