@@ -68,8 +68,12 @@ against embedding entries that never exceed 3.6. The lattice is coarse; a "small
   and the flip counts match (33/33, 26/26, 23/23).
 * **Instrument agreement at scale, not on spot checks.** For every pair the n600 search has read, its base flip
   count (computed from MY render → SegNet argmax) is compared against sj1's count from the receiver's DECODE
-  argmax. Over the first 97 searched pairs: **97 of 97 agree exactly**, 1,871 flips both ways. The realized
-  objective this arm accepts on is the one the shipped bytes produce.
+  argmax. At 321 searched pairs: **321 of 321 agree exactly**, 6,669 flips both ways. The realized objective this
+  arm accepts on is the one the shipped bytes produce. This control also closes a gap in the first two shards'
+  receipts: they were launched before the end-of-shard "renderer restored to the shipped weights" assertion was
+  added, so their receipts carry `restored_to_shipped_weights: null`. Their 200 pairs are nonetheless proven
+  undrifted, by measurement rather than by assertion — every one of their base flip counts still equals the
+  decode's.
 * **Base seg leg reproduced exactly** (five figures and beyond): **12,866 flipped cells,
   d_seg 0.00010906643337673611**, carried to T4 by sj1's own instrument ratio as 1.0913879636e-04.
   All 600 pairs carry flips; median 19, max 100. Receipt `probe/base_flips_per_pair.npy`.
@@ -225,7 +229,45 @@ least one cell with one changed code. Priced at the shipped container shape inst
 | d_pose rises 10–100× pre-re-solve; re-solve recovers ≥ 10× | rises **440–4157×**; re-solve recovers **643–3053×** | prediction directionally right, magnitudes both ~40× larger |
 | pose-bound on >80% of seg-repairing pairs = the reason | pose costs ~3% of one repaired cell after re-solve | **not pose-bound** |
 
-## 9. n600 realized search — IN FLIGHT
+## 9. n600 realized search — COMPLETE (all 600 pairs)
+
+**19,736 realized SegNet-argmax evaluations**, every one on the receiver's own render at `semantic_batch = 1`
+against the DALI GT table. Base flips over the 600 pairs: **12,866** — the pointer's seg leg, reproduced, and
+**600 of 600 pairs agree exactly** with the receiver's decode argmax.
+
+| | |
+|---|---:|
+| pairs offering a realized repair | **30 (5.0%)** |
+| cells repaired | **39** |
+| codes changed | **34** (1.13 per offering pair) |
+| pairs needing two codes | 4 |
+| single-code moves evaluated | 18,906 |
+| … that REDUCE flips | **39 (0.21%)** |
+| … neutral | 243 (1.3%) |
+| … that WORSEN | 18,624 (98.5%), median **+6**, max **+59** |
+
+Repairs per offering pair: 23 pairs × 1 cell, 5 × 2 cells, 2 × 3 cells.
+
+**The shipped codes sit at a per-pair local minimum of the realized flip count on this lattice, on 95% of pairs.**
+Where a descent direction exists at all it is worth one to three cells.
+
+### 9.3 The rate leg, measured by real encode on the 30-pair edit
+
+The whole 30-pair, 34-code edit re-encodes through the shipped RC1 coder to a semantic section of **30,231 B against
+the shipped 30,246 B — the edit is 15 bytes SMALLER**, at container shape `(ck2, 10, 16)`. The break fee is not
+merely recovered here; the perturbed payload happens to compress better than the shipped one under a re-searched
+shape. That is inside the ±25 B draw-to-draw spread §6 measured and it is EXACT for this set, not a draw.
+
+So before pose:
+
+| leg | value |
+|---|---:|
+| d_seg: 39 cells | **−3.3061e-05** |
+| rate: −15 B of semantic section | **−9.9879e-06** |
+| **seg + rate** | **−4.3049e-05** |
+
+against an admit bar of −2e-5.
+
 
 ### 9.1 PRE-REGISTRATION — written before the n600 search finished
 
@@ -275,6 +317,43 @@ At the measured shape (one cell per admitted pair, `C ≈ N`) this crosses the �
 MECHANISM reductions: none. Acceptance is the frozen cpu_torch SegNet argmax on the receiver's own render at
 `semantic_batch = 1`, on the DALI GT table, for every one of the 600 pairs.
 
+## 9.4 Admission — every cut priced by a REAL archive build
+
+Rebased twice while this ran: move 33 (rc2, hpac) then move 34 (pc2, carrier). Both were verified section by
+section with each tree's own reader before anything was carried; pc2's carrier change made the 12 pose rows already
+measured against rc2's carrier inadmissible, and they are RETAINED under
+`admission/pose_superseded_rc2_carrier/` with a README rather than deleted.
+
+**Pose, all 30 candidate pairs, on pc2's carrier.** The unmoved-render re-solve control moves d_pose by
+**exactly 0.00e+00 on all 30 pairs** — the live carrier is converged everywhere, so every resolved value is the
+move's own. Stale rise: min 2×, median **1,021×**, max **572,269×**. Base d_pose was re-measured over all 600
+pairs on this instrument rather than inherited: **5.090164724404211e-06** on pc2 (and on rc2 the same instrument
+reproduced sj1's sealed 5.0928018072772644e-06 to the last digit).
+
+**The sweep.** 47 subsets were built into REAL archives and parsed back — never a ledger sum, because the section's
+cost is a container-break fee and is not additive. Prefix cuts by per-pair value, then leave-one-out and
+add-one-back around the winner. The archive size is genuinely non-monotonic in the edit set: 15 pairs gives
+181,305 B and 27 pairs gives 181,405 B.
+
+**ADMITTED: 15 pairs / 23 cells, archive 181,305 B (-68 vs pc2), container `('ck2', 10, 16)`.**
+Pairs: [6, 42, 48, 71, 73, 188, 237, 247, 268, 289, 323, 329, 382, 420, 451].
+
+| leg | value |
+|---|---:|
+| d_seg (23 cells repaired, 12,866 → 12,843) | **-1.949734e-05** |
+| d_pose (re-solved; the subset's pose is BETTER than base) | **-4.375859e-06** |
+| rate (-68 B, exact) | **-4.527841e-05** |
+| **net ΔS vs pc2** | **-6.915161e-05** |
+| projected S | **0.13875411272345906** |
+
+against an admit bar of −2e-5: **the admitted set clears it 3.5×.**
+
+**Read the legs honestly.** The arm set out to buy seg and the seg leg is the SMALLEST of the three: −1.95e-5 from
+23 repaired cells, against −4.53e-5 of rate. Most of this candidate's win is the 68 bytes the edited semantic
+section happens to compress to under a re-searched container — a consequence of §6's law, not of the FiLM
+mechanism. That is a real, exact, shipping number, and it is also the finding that matters most for what comes
+next (§11, ITEM 5).
+
 ## 10. What this arm hands the next one, whichever way the verdict falls
 
 * **The move ledger is the durable asset.** `search/search_rows_*.jsonl` retains, for every one of the 600 pairs,
@@ -305,6 +384,17 @@ The control is wired into the admission path and runs for every candidate. On th
 d_pose by exactly 0.00e+00, so the live carrier is converged there and the moves' pose gains are their own. If the
 control turns up material gains on OTHER pairs at full scale, those gains are a rate-free pose lever belonging to a
 carrier arm, not to fe1, and must be subtracted from fe1's credit before it seals.
+
+## ITEM 5 — the container-break fee cuts BOTH ways: search seg-NEUTRAL, byte-NEGATIVE edits
+This is the strongest thing this arm found and it belongs to a rate arm, not to fe1. The admitted candidate's
+biggest leg is −68 B of semantic section, and that is not a property of the 23 repaired cells: it is the edited
+range-coded payload happening to compress better under a re-searched container. The n600 search already measured
+**243 single-code moves that leave the realized flip count EXACTLY UNCHANGED**. Those moves are free on the seg
+axis and free on pose (nothing to re-solve if no frame changes materially), and each of them re-randomises the RC1
+payload. A search over seg-neutral code sets, scored purely on the real archive byte count, is a pure rate lever
+with no distortion risk at all — and this arm's ledger already contains the moves it would search. Sizing from the
+draws in §6: the spread of the archive delta over random edit sets is roughly ±25 B with a best-of observed at
+−68 B, so the lever is worth tens of bytes, and tens of bytes is 1–3× the whole admit bar.
 
 ## ITEM 4 — a finer FiLM lattice is a different question
 Every negative in §4 is scoped to the shipped **3-bit** code domain. The renderer's `frame_embed` could be re-trained
