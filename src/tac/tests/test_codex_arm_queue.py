@@ -1015,7 +1015,7 @@ def test_scaffold_template_carries_every_lint_required_section():
     # The template moved from the nohup+disown idiom to the governed launcher
     # (tools/launch_detached_process.py) — assert the CURRENT contract phrase.
     assert "launch_detached_process.py" in text
-    assert "a pidfile" in text
+    assert "--nice-best-effort" in text  # the launcher's sandbox escape (measured 2026-09-03)
     assert "durable done-receipt" in text
     assert "successor or\n  MAIN harvests" in text
     assert "in-session multi-hour compute loop is FORBIDDEN" in text
