@@ -791,6 +791,13 @@ discovered.
   window then measured the SIGN: **213 damage / 22 no-effect / 1 repair** over 236 evaluations, and shrinking the step shifts moves into
   *no effect* rather than toward benefit (no-effect share 1.7 % → 16.8 % from rel 1e-04 → 3e-05, repairs flat at 0–1). So +3, +6 and +13
   mantissa bits all buy the same nothing at 0.26 %, 0.52 % and 1.13 % of the gap. STATUS: `closed-by-measurement`.
+- **OWED #1g — a screening oracle for GLOBAL actuators (a defect this arm created and must hand over).** §8h: a 120-pair screen is a
+  valid acceptance oracle for a per-pair actuator (sj1/fe1) and NOT for one that moves all 600 renders. Two things are owed: (a) any
+  successor searching a global actuator screens at n600 or not at all — budget ~35 s/evaluation, so 768 proposals is 7.5 h, a real price
+  to plan for rather than discover; (b) `scale-search` and `code-search` have **no intermediate checkpoint** — the accepted set is written
+  only at the end, so a host-starved or killed run loses it. That violates the resumability non-negotiable, it bit this arm (a run
+  stopped at 364 of 500 evaluations survived only because its accepted set was one row visible in the log), and it should be fixed before
+  either instrument is reused. STATUS: `READY`, small.
 - **OWED #1f — what the 213:1 actually points at.** Every actuator this arm tried pays the same collateral ratio, and it is a property of
   the *field*, not of the actuator: 99.67 % of the residual sits on a GT class edge with a far larger population of correct boundary
   cells beside it, and sj1's pass-4 census adds that 89.46 % of the residual was already proposed ~4× and refused — a capability limit,
