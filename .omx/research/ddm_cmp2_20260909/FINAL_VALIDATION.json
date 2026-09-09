@@ -1,0 +1,35 @@
+{
+  "B_scorer_proofs": "OWED; MAIN lane",
+  "pointer": {
+    "archive_sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180772,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_cmp1_t4_rc3_tc1_composed_20260909",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "0008176f5d44fc1c1d317476c3c88aae6e6755f5dac47a72229f7463a3ad7253",
+      "source_receipt_sha256": "25be905d5951f457ba243eef5e36d6ba258e464798556882a3f07c21416985ab"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp1_t4_rc3_tc1_composed_20260909",
+    "measured_at_utc": null,
+    "score": 0.13817298987557713,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp1_t4_20260909.json"
+  },
+  "public_smoke_problems": [],
+  "score_claim": false,
+  "seal": {
+    "bytes": 12468,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/SEAL_ddm_cmp2_sm1_fe1_composed.json",
+    "sha256": "0e79a636026449769ba8da3f33ad6f846545fad8e311283dfd4dad5b42a87bd7"
+  },
+  "selected_build": "A",
+  "validation": "SEAL VALID: ddm_cmp2_sm1_fe1_composed [contest_cuda] \u2014 archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree"
+}

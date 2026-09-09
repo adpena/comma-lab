@@ -1,0 +1,22 @@
+{
+  "all_tensors_bit_identical": true,
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "frame_embed_included": true,
+  "no_render_or_scorer_executed": true,
+  "output_identity": "construction proof, not rendered-frame measurement",
+  "public_path": "f26.inflate_archive actual token-function call boundary",
+  "rows": {
+    "candidate": {
+      "bytes": 31188,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/PROOF_candidate.json",
+      "sha256": "d7f1b85b82271169df6c9480faf933c3f15b9951e34b86ad6105d3f467afa20e"
+    },
+    "frontier": {
+      "bytes": 31080,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/PROOF_frontier.json",
+      "sha256": "ddf054aa6261fac8648f26bb64a379323fa9255e9de208777742a2a746892f69"
+    }
+  },
+  "score_claim": false,
+  "tensors_compared": 38
+}

@@ -1,0 +1,10 @@
+{
+  "control": {
+    "bytes": 17884,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/controls/changed_pointer.json",
+    "sha256": "de153f46aff1a908a6f5555176c6544fb4e7ab0b192bb7119ba1b314bf2a4e9b"
+  },
+  "passed": true,
+  "refusal": "pointer moved: rebase into a new retained generation before staging/sealing",
+  "source_pointer_untouched": true
+}

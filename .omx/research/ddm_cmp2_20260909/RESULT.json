@@ -1,0 +1,227 @@
+{
+  "A": {
+    "bytes": 180388,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+    "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+  },
+  "A_samples": [
+    {
+      "archive": {
+        "bytes": 180490,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_0/container_True_10_24/archive.zip",
+        "sha256": "731082de5e7547bba4e44367d8bf9dba5798caee297e53e52dc1cdd14e0657bb"
+      },
+      "build": "A",
+      "ck2": true,
+      "lgwin": 24,
+      "q": 10,
+      "sample": 0,
+      "semantic": {
+        "bytes": 29964,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_0/container_True_10_24/semantic.br",
+        "sha256": "67407a5b7385f6481c1b0962b25c97ca021283d2a0f526ab9efab10df010c251"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180449,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_1/container_True_11_22/archive.zip",
+        "sha256": "06dfab280f259dc5664b39acaed274295cb0b1ec82896734d38b2592fab3020c"
+      },
+      "build": "A",
+      "ck2": true,
+      "lgwin": 22,
+      "q": 11,
+      "sample": 1,
+      "semantic": {
+        "bytes": 29923,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_1/container_True_11_22/semantic.br",
+        "sha256": "63177572476156aa5c00d8d88aadb78e8b63b4ba0553e51e884610e91d915d78"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180416,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_2/container_True_10_20/archive.zip",
+        "sha256": "0099d2b2786572abd200ed181ef1fd519f8cc18d299334a5f8e7321ba25cf524"
+      },
+      "build": "A",
+      "ck2": true,
+      "lgwin": 20,
+      "q": 10,
+      "sample": 2,
+      "semantic": {
+        "bytes": 29890,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_2/container_True_10_20/semantic.br",
+        "sha256": "4e6e8826763f809c8cea376fe72c689f98fdb35dc2c1e874033a1e40ea06155d"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180388,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_3/container_True_10_16/archive.zip",
+        "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+      },
+      "build": "A",
+      "ck2": true,
+      "lgwin": 16,
+      "q": 10,
+      "sample": 3,
+      "semantic": {
+        "bytes": 29862,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_3/container_True_10_16/semantic.br",
+        "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180492,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_4/container_True_10_16/archive.zip",
+        "sha256": "1e6e72a5a6108db30d4d42e8234055c6f7c9d8e7d03d2f0450fd83c3371a2eef"
+      },
+      "build": "A",
+      "ck2": true,
+      "lgwin": 16,
+      "q": 10,
+      "sample": 4,
+      "semantic": {
+        "bytes": 29966,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/A/sample_4/container_True_10_16/semantic.br",
+        "sha256": "2c0ab460e1d6cfc1d2d2296e0eea8e01dc5efadaada7cbcc0e995e27926678a8"
+      }
+    }
+  ],
+  "B_admitted": false,
+  "B_owed": [
+    "parse-back n600 flipped-cell equality against live base",
+    "own-instrument n600 base pose vector on its own configuration",
+    "pair331 current-carrier solve and unmoved-render control",
+    "resolved B rebuild and pose payment admission"
+  ],
+  "B_samples": [
+    {
+      "archive": {
+        "bytes": 180412,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_0/container_True_10_24/archive.zip",
+        "sha256": "0f154361e400b021d2978f158b6c81eee72b396102a942525042afbfc2c297b0"
+      },
+      "build": "B",
+      "ck2": true,
+      "lgwin": 24,
+      "q": 10,
+      "sample": 0,
+      "semantic": {
+        "bytes": 29886,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_0/container_True_10_24/semantic.br",
+        "sha256": "4fc20a44a75171dd1d5191eaac2b20ce5003d967aaf09ebc5dd8f782897c7f9f"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180393,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_1/container_True_10_16/archive.zip",
+        "sha256": "092a9a04b9340215adc561c559bc07022790e056d78c73f2cf814f118c3f03e0"
+      },
+      "build": "B",
+      "ck2": true,
+      "lgwin": 16,
+      "q": 10,
+      "sample": 1,
+      "semantic": {
+        "bytes": 29867,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_1/container_True_10_16/semantic.br",
+        "sha256": "6a7b5ed5b128e5be347fb40d5ee109ee309b6e88c0650110e6246b436d771c80"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180478,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_2/container_True_10_24/archive.zip",
+        "sha256": "38ee121e42738437f6f30e06f8866a05bf50eabcb2f5d5d785c6365bc863b5e8"
+      },
+      "build": "B",
+      "ck2": true,
+      "lgwin": 24,
+      "q": 10,
+      "sample": 2,
+      "semantic": {
+        "bytes": 29952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_2/container_True_10_24/semantic.br",
+        "sha256": "8cb52508e73bf0862b3daf7ce6ad0d250540048d92c995e297ed8d6c69cf2b8e"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180372,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_3/container_True_10_16/archive.zip",
+        "sha256": "6e500244bf4dc4cc78e6afc7473cf44d95b73ff6977178d7299ece9a0e808fbf"
+      },
+      "build": "B",
+      "ck2": true,
+      "lgwin": 16,
+      "q": 10,
+      "sample": 3,
+      "semantic": {
+        "bytes": 29846,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_3/container_True_10_16/semantic.br",
+        "sha256": "3a064e1cb3f6d8634a43bb76c6fd0532605d02e9c26ca9d791394371a68fd46a"
+      }
+    },
+    {
+      "archive": {
+        "bytes": 180476,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_4/container_True_10_16/archive.zip",
+        "sha256": "e4003eafe088a4d4ec1b2e736030ffb150c698cb8bc2f733ac9e28a909e07fca"
+      },
+      "build": "B",
+      "ck2": true,
+      "lgwin": 16,
+      "q": 10,
+      "sample": 4,
+      "semantic": {
+        "bytes": 29950,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/B/sample_4/container_True_10_16/semantic.br",
+        "sha256": "f9edf986e4419c77d2125ebe11933bc50797dde85ca19b05dffacdc282373123"
+      }
+    }
+  ],
+  "B_unresolved": {
+    "bytes": 180372,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/archive.zip",
+    "sha256": "6e500244bf4dc4cc78e6afc7473cf44d95b73ff6977178d7299ece9a0e808fbf"
+  },
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "base": {
+    "bytes": 180772,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+    "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+  },
+  "projection_A": 0.13791730003757818,
+  "retained_container_archives": 300,
+  "saving_A": 384,
+  "saving_B_before_pose_resolve": 400,
+  "score_claim": false,
+  "seal": {
+    "bytes": 12468,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/SEAL_ddm_cmp2_sm1_fe1_composed.json",
+    "sha256": "0e79a636026449769ba8da3f33ad6f846545fad8e311283dfd4dad5b42a87bd7"
+  },
+  "selected_build": "A",
+  "source_shape_measured": 180509,
+  "source_shape_prediction": 180509,
+  "symbol_price_original_mixer": {
+    "actual_range_delta_bytes": 0,
+    "changed_symbol_delta_bits": -1.418239268813044,
+    "matched_shape_delta_bytes": -29,
+    "searched_B_minus_A_sample0_bytes": -78,
+    "symbol_bit_start": 9882,
+    "symbol_bits": 3,
+    "whole_stream_delta_bits": -1.3286082414404667
+  },
+  "symbol_price_selected_mixer": {
+    "archive_delta_bytes": -16,
+    "changed_symbol_delta_bits": -1.537546598593062,
+    "range_delta_bytes": 0,
+    "whole_stream_delta_bits": -1.3030581070318468
+  }
+}

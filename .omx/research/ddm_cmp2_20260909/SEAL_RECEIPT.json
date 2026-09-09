@@ -1,0 +1,12 @@
+{
+  "fe1_code_included": false,
+  "score_claim": false,
+  "seal": {
+    "bytes": 12468,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/SEAL_ddm_cmp2_sm1_fe1_composed.json",
+    "sha256": "0e79a636026449769ba8da3f33ad6f846545fad8e311283dfd4dad5b42a87bd7"
+  },
+  "selected_build": "A",
+  "status": "SEAL READY \u2014 A ONLY; B VERIFICATION OWED",
+  "validation": "SEAL VALID: ddm_cmp2_sm1_fe1_composed [contest_cuda] \u2014 archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree"
+}

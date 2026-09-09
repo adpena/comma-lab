@@ -1,0 +1,41 @@
+{
+  "gates": {
+    "contest_cpu": {
+      "evidence": "",
+      "status": false
+    },
+    "contest_cuda": {
+      "evidence": "",
+      "status": false
+    },
+    "deploy_runbook": {
+      "evidence": "",
+      "status": false
+    },
+    "impl_complete": {
+      "evidence": "",
+      "status": false
+    },
+    "memory_entry": {
+      "evidence": "",
+      "status": false
+    },
+    "real_archive_empirical": {
+      "evidence": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json",
+      "status": true
+    },
+    "strict_preflight": {
+      "evidence": "",
+      "status": false
+    },
+    "three_clean_review": {
+      "evidence": "",
+      "status": false
+    }
+  },
+  "id": "ddm_cmp2_sm1_fe1_composed",
+  "level": 1,
+  "name": "CMP2 current-base semantic coder composition",
+  "notes": "Owner ddm_cmp2; byte-only A/B build; MAIN scorer and exact fire; score_claim=false",
+  "phase": 8.0
+}

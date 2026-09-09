@@ -1,0 +1,23 @@
+{
+  "code": {
+    "bytes": 27563,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_cmp2_compose.py",
+    "sha256": "a9b4f39afc383060fb82268dede8bd893290b6a681fecf7d32c9615c14176091"
+  },
+  "initial_source": {
+    "bytes": 2348,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/PLAN.json",
+    "sha256": "424f7a2dcb62a3adc9ce1a6908ca4505c745d207c47f6129549efa2503ff6e00"
+  },
+  "retained": {
+    "bytes": 27563,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/code_final/ddm_cmp2_compose.py",
+    "sha256": "a9b4f39afc383060fb82268dede8bd893290b6a681fecf7d32c9615c14176091"
+  },
+  "review_scope": [
+    "byte custody and source binding",
+    "public state and twin archive comparison",
+    "no scorer lane bypass",
+    "container price vs arithmetic cost"
+  ]
+}

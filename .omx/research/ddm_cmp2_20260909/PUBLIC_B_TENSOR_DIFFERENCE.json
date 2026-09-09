@@ -1,0 +1,27 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "decoded_body_exact": true,
+  "differences": [
+    {
+      "coordinates": [
+        [
+          331,
+          6
+        ]
+      ],
+      "name": "frame_embed.weight",
+      "new": 0.0,
+      "old": -0.873046875
+    }
+  ],
+  "identical_tensors": 37,
+  "pose": "NOT MEASURED: unchanged carrier requires fresh live-base re-solve",
+  "public_proof": {
+    "bytes": 32072,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/B_public/PROOF_candidate.json",
+    "sha256": "0d7ce066d135a992c86cf1156e3c6cd0e6f4c80d1bc3cc4d4e35cec5299c3300"
+  },
+  "score_claim": false,
+  "seg_neutrality": "NOT MEASURED: model identity except the intended scalar does not prove flipped-cell neutrality",
+  "tensors_compared": 38
+}

@@ -1,0 +1,23 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "build": "A",
+  "byte_identical": true,
+  "score_claim": false,
+  "staged_codec": {
+    "bytes": 9693,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/sm1_semantic_mixer.py",
+    "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+  },
+  "twins": [
+    {
+      "bytes": 180388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/staged_twins/A/1/archive.zip",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    {
+      "bytes": 180388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/retained/staged_twins/A/2/archive.zip",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    }
+  ]
+}

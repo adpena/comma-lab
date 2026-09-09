@@ -1,0 +1,118 @@
+[
+  {
+    "anchor": {
+      "anchor_id": "ddm_cmp2_lossless_A_20260909",
+      "empirical_output": {
+        "saving_A": 384,
+        "scope": "actual source shape prediction exact; further 121 B from sampled weights and container search",
+        "selected_A": {
+          "bytes": 180388,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+          "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+        },
+        "source_shape_bytes": 180509
+      },
+      "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+      "inputs": {
+        "base": {
+          "bytes": 180772,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+          "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+        },
+        "moved_dim": 6,
+        "moved_pair": 331,
+        "seed": 20260909
+      },
+      "measurement_method": "retained real twin encodes plus actual integer encoder frequencies, 300 full archives, public 38-tensor identity/difference; no scorers; interval residual is zero inside preregistered interval",
+      "measurement_utc": "2026-09-09T20:06:35.234485+00:00",
+      "predicted_output": {
+        "source_shape_bytes": 180509
+      },
+      "provenance": {
+        "artifact_kind": "advisory_non_promotable",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+        "captured_at_utc": "2026-09-09T20:06:35.234485+00:00",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "macos_cpu_advisory",
+        "hardware_substrate": "macos_arm64",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json",
+        "source_sha256": "d38b34848ad19ffa316295e88421e1bbab9165525841ab8fc18c3f27dc9f6b8f"
+      },
+      "residual": 0.0,
+      "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json"
+    },
+    "equation_id": "model_section_adaptive_recode_ceiling_v1"
+  },
+  {
+    "anchor": {
+      "anchor_id": "ddm_cmp2_single_code_B_20260909",
+      "empirical_output": {
+        "B_unresolved": {
+          "bytes": 180372,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/archive.zip",
+          "sha256": "6e500244bf4dc4cc78e6afc7473cf44d95b73ff6977178d7299ece9a0e808fbf"
+        },
+        "original_mixer": {
+          "actual_range_delta_bytes": 0,
+          "changed_symbol_delta_bits": -1.418239268813044,
+          "matched_shape_delta_bytes": -29,
+          "searched_B_minus_A_sample0_bytes": -78,
+          "symbol_bit_start": 9882,
+          "symbol_bits": 3,
+          "whole_stream_delta_bits": -1.3286082414404667
+        },
+        "scope": "integer encoder decisions and full archives; no seg or pose claim; Brotli lottery persists",
+        "selected_mixer": {
+          "archive_delta_bytes": -16,
+          "changed_symbol_delta_bits": -1.537546598593062,
+          "range_delta_bytes": 0,
+          "whole_stream_delta_bits": -1.3030581070318468
+        }
+      },
+      "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+      "inputs": {
+        "base": {
+          "bytes": 180772,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+          "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+        },
+        "moved_dim": 6,
+        "moved_pair": 331,
+        "seed": 20260909
+      },
+      "measurement_method": "retained real twin encodes plus actual integer encoder frequencies, 300 full archives, public 38-tensor identity/difference; no scorers; interval residual is zero inside preregistered interval",
+      "measurement_utc": "2026-09-09T20:06:35.234485+00:00",
+      "predicted_output": {
+        "B_additional_saving_interval_bytes": [
+          0,
+          80
+        ]
+      },
+      "provenance": {
+        "artifact_kind": "advisory_non_promotable",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+        "captured_at_utc": "2026-09-09T20:06:35.234485+00:00",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "macos_cpu_advisory",
+        "hardware_substrate": "macos_arm64",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json",
+        "source_sha256": "d38b34848ad19ffa316295e88421e1bbab9165525841ab8fc18c3f27dc9f6b8f"
+      },
+      "residual": 0.0,
+      "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json"
+    },
+    "equation_id": "model_section_edit_container_break_fee_v1"
+  }
+]

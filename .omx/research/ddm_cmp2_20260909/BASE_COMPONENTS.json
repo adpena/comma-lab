@@ -1,0 +1,13 @@
+{
+  "axis": "[contest-CUDA T4 n600; existing base row]",
+  "bytes": 180772,
+  "component_print_precision": "8 decimal places from bound receipt; new exact evaluation not run",
+  "d_pose": 5.05e-06,
+  "d_seg": 0.00010698,
+  "recomputed_score": 0.1381729898755771,
+  "source": {
+    "bytes": 157991,
+    "path": "/Volumes/APDataStore/pact/ddm_cmp1_t4_rc3_tc1_composed_20260909/MODAL_REMOTE_RESULT.json",
+    "sha256": "25be905d5951f457ba243eef5e36d6ba258e464798556882a3f07c21416985ab"
+  }
+}

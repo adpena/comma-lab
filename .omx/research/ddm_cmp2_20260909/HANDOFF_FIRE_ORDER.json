@@ -1,0 +1,58 @@
+{
+  "charter_status": "PARTIAL_B_SCORER_PROOFS_OWED",
+  "orders": [
+    {
+      "action": "Measure live-base own-configuration n600 pose vector; prove shipped B parse-back n600 flipped-cell equality; re-solve pair 331 from live coefficients with unmoved-render control; retain per-pair receipt, all carrier payloads and final B builds; admit only at exact neutral seg and paid pose. A is already sealed; B is NOT admitted.",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/B_ADMISSION.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Harvest handoff while MAIN can use its scorer lane, before selecting the one exact call",
+      "id": "B_ADMISSION",
+      "inputs": [
+        {
+          "bytes": 4675,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/STAGED_B.json",
+          "sha256": "814e27b371c2530abebc851584a6610405a0b9db6feea64ee6340f029462a423"
+        },
+        {
+          "bytes": 791,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/PUBLIC_B_TENSOR_DIFFERENCE.json",
+          "sha256": "4b756d2a3ee1714a12144609e41f15e5b1c8b06baed384f1525a357404594d78"
+        }
+      ],
+      "owner": "MAIN"
+    },
+    {
+      "action": "Fire exactly one T4 n600 row; use sealed A if B not admitted. If B wins, freshly rebuild/prove/seal B before single fire. Retain and harvest; recompute components and apply canonical admission.",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/MAIN_EXACT_RESULT.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "B is closed or fully admitted, selected seal validates against current pointer, unique T4 lane claimed",
+      "id": "MAIN_EXACT",
+      "inputs": [
+        {
+          "bytes": 12468,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/SEAL_ddm_cmp2_sm1_fe1_composed.json",
+          "sha256": "0e79a636026449769ba8da3f33ad6f846545fad8e311283dfd4dad5b42a87bd7"
+        }
+      ],
+      "owner": "MAIN"
+    },
+    {
+      "action": "Preserve this generation; rebase semantic re-encode onto live pointer; repeat affected proofs and reseal.",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/REBASE_HANDOFF.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Live pointer changes before selection or fire",
+      "id": "REBASE",
+      "owner": "MAIN or assigned successor"
+    },
+    {
+      "action": "Land named fallback files only if serializer did not land; reconcile exact equation events and lane row separately from preexisting sibling changes.",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/LANDING_RECEIPT.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Harvest serializer result in Git-writable context",
+      "id": "LANDING",
+      "owner": "MAIN"
+    }
+  ],
+  "schema": "ddm_cmp2_handoff.v1",
+  "score_claim": false
+}
