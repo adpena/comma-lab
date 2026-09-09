@@ -146,7 +146,33 @@ cancelled. Recording that rather than the headline is the point of pre-registeri
 from the rank-100–400 stratum, which rests on **7 neutral events in 118 tests** — a Poisson
 interval of roughly ±38 % on that term alone. (b) is a projection, not a row.
 
-## 5. Status and what is running
+## 5. POINTER MOVE 36 — the coder changed under the arm, and what survives it
+
+Mid-run, cmp1 promoted: **S 0.13817298987557713 @ 180,772 B [contest-CUDA T4 n600]**, sha
+`66b8d5bb…`, lane `ddm_cmp1_t4_rc3_tc1_composed_20260909`. It replaced the shipped tail
+coder with **tc1's 35-weight shared mixer over HPAC** (rc3's model rows + tc1's mixer,
+−749 B). The field, the renders and the carrier are untouched. Gap to sub-0.12 is now
+**0.017672990 S = 26,542.4 B**.
+
+The arm splits cleanly along that line, and the split is worth stating because it is the
+general shape of a coder change landing under a field arm:
+
+- **What survives unchanged: the realized acceptance.** Argmax neutrality is a property of
+  the receiver's renderer and the frozen SegNet acting on a fixed base plane. No coder
+  appears anywhere on that path. Every verdict already measured stays a verdict, and a
+  neutrality cache now carries them forward rather than paying 0.68 s each to re-measure.
+- **What does NOT survive: every price.** §3's census and ceiling and §4's projections were
+  measured under the superseded HPAC coder and are re-stated here as **SUPERSEDED-CODER**
+  numbers. A position the HPAC row charged nine bits for is not necessarily expensive under
+  the mixer, and the mixer's most probable class need not be HPAC's.
+
+So the ranking is re-measured, not transferred. `rank-mixer` is cmp1's own encode loop with
+the probability rows kept, priced off `tc1.frequencies` — the integer frequency table RC64
+actually codes against, not the float row before quantization. **It reproduces cmp1's own
+mixed stream byte-identically at 2 frames (580 B, sha `5ceb58cb…`)**; the 600-frame identity
+control against `mixed_0600.envelope` is the gate on the re-ranked census.
+
+## 6. Status and what is running
 
 The stop rule cleared, so the n600 pass is running: **all 600 pairs, ranks 0–32 per pair**
 (the value-per-test optimum above), singles mode, 5 interleaved shards, 2 live while sj1's
@@ -161,6 +187,6 @@ and change the CODER and the semantic section, not the field, so they compose wi
 by re-pricing rather than re-searching — but the byte delta of this field change must then be
 re-measured under whichever tail coder is live at seal time.
 
-## 6. Frontier line
+## 7. Frontier line
 
-`sj1 S 0.13867171823146562 @ 181,521 B [contest-CUDA T4 n600]`
+`cmp1 S 0.13817298987557713 @ 180,772 B [contest-CUDA T4 n600]`
