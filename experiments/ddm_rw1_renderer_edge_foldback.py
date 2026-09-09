@@ -147,6 +147,10 @@ CODE_MIN, CODE_MAX = -8, 7
 #: fe1's bar: a candidate must buy at least this much S to be worth a paid row.
 ADMIT_BAR = -2e-5
 
+#: fe1's WORST measured per-pair carrier re-solve recovery (pair 382, stale/resolved).
+#: Used as a conservative discount, never as the expected value.
+FE1_WORST_RECOVERY = 643.0
+
 #: The tensors this arm opens.  Depth 4 AND not row-pruned, so a trained code is
 #: byte-expressible with zero re-quantization.  ``blocks.2`` is the ONE widening the
 #: charter's falsifier (a) allows; it is not opened by default.
@@ -802,16 +806,22 @@ def cmd_prep(args) -> int:
             "median": float(np.median(reach)),
             "max": float(reach.max()),
         },
-        "lattice_floor_d_pose": {
+        "naive_rounding_pose_bound": {
             "mean": float(floor.mean()),
             "median": float(np.median(floor)),
             "max": float(floor.max()),
             "over_base": float(floor.mean() / LIVE_D_POSE),
+            "reading": (
+                "UPPER bound for a re-solve that only ROUNDS to the lattice.  The "
+                "INCUMBENT falsifies it as a prediction: the live row already sits at "
+                "d_pose 5.0928e-06 on this same lattice, i.e. below this bound, so "
+                "jg5's +-2 integer polish beats uniform rounding by the ratio in "
+                "``over_base``.  The operative expectation for the post-re-solve leg "
+                "is fe1's MEASURED per-pair recovery (0.24-1.36x base), not this bound"
+            ),
         },
-        "prediction_post_resolve_d_pose_floor": float(floor.mean()),
-        "prediction_post_resolve_pose_leg_S": float(
-            math.sqrt(10.0 * floor.mean())
-        ),
+        "incumbent_falsifies_naive_bound": bool(floor.mean() > LIVE_D_POSE),
+        "naive_bound_looseness_vs_incumbent": float(floor.mean() / LIVE_D_POSE),
         "live_pose_leg_S": float(math.sqrt(10.0 * LIVE_D_POSE)),
         "geometry_path": str(out_dir / "pose_geometry.npz"),
         "geometry_sha256": sha256_file(out_dir / "pose_geometry.npz"),
@@ -969,8 +979,9 @@ def _expected_flip(logits, labels, tau: float):
 class PoseGeometry:
     resolve_operator: Any  # (600, 12, 6) float32 -- dr -> carrier step in CODE units
     pose_base: Any  # (600, 6)
+    targets: Any  # (600, 6) -- the DALI GT poses the scorer measures against
     reach_budget: Any  # (600,)
-    lattice_floor: Any  # (600,)
+    lattice_floor: Any  # (600,) naive-rounding bound; see cmd_prep's reading
 
 
 def load_pose_geometry(path: Path, device):
@@ -983,6 +994,9 @@ def load_pose_geometry(path: Path, device):
             ).to(device),
             pose_base=torch.from_numpy(
                 np.asarray(blob["pose_base"], dtype=np.float32)
+            ).to(device),
+            targets=torch.from_numpy(
+                np.asarray(blob["targets"], dtype=np.float32)
             ).to(device),
             reach_budget=torch.from_numpy(
                 np.asarray(blob["reach_budget"], dtype=np.float32)
@@ -1088,10 +1102,21 @@ def cmd_train(args) -> int:
         history = list(blob.get("history", []))
         print(f"resumed from {args.resume_from} at step {step0}", flush=True)
 
-    # The pose barrier's weight is DERIVED, not tuned: at full reach the correcting
-    # carrier step leaves the shipped int12 lattice, so the pair becomes unpayable on
-    # pose; that is worth exactly the whole seg residual this arm is trying to buy.
+    # TWO pose weights, both derived, because prep MEASURED that the barrier alone is
+    # nearly vacuous on this object: every one of the 600 Jacobians is full rank 6 and
+    # the reach budget is 1,892-2,020 code units, so the re-solve can cancel any
+    # first-order residual without approaching the lattice edge.
+    #
+    # (1) the barrier: at full reach the correcting step leaves the shipped int12
+    #     lattice and the pair becomes unpayable on pose, which is worth exactly the
+    #     whole seg residual this arm is trying to buy.
+    # (2) the stale term: what the re-solve CANNOT remove (lattice polish residual and
+    #     second order) still grows with the stale excursion.  Its weight is the S
+    #     linearisation 5/sqrt(10*d_pose) DISCOUNTED by fe1's WORST measured per-pair
+    #     recovery (643x, pair 382) -- the conservative end of measured evidence, not
+    #     the best case and not a guess.
     weight_pose = 100.0 * LIVE_D_SEG_LOCAL
+    weight_stale = (5.0 / math.sqrt(10.0 * LIVE_D_POSE)) / FE1_WORST_RECOVERY
 
     def save(tag: str, step: int) -> Path:
         path = run_dir / f"ckpt.{tag}.step{step:06d}.pt"
@@ -1146,8 +1171,13 @@ def cmd_train(args) -> int:
         reach = step_codes.abs().amax(dim=1)
         budget = geom.reach_budget[index_batch].clamp_min(1.0)
         pose_term = (reach / budget).pow(2).mean()
+        stale_d_pose = ((pose_new - geom.targets[index_batch]) ** 2).mean()
 
-        loss = 100.0 * seg_surrogate + weight_pose * pose_term
+        loss = (
+            100.0 * seg_surrogate
+            + weight_pose * pose_term
+            + weight_stale * stale_d_pose
+        )
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(fold.parameters(), 2.0)
@@ -1171,7 +1201,8 @@ def cmd_train(args) -> int:
                 "pose_barrier": float(pose_term.detach()),
                 "reach_codes_max": float(reach.max()),
                 "reach_codes_mean": float(reach.mean()),
-                "stale_d_pose_batch": float(
+                "stale_d_pose_batch": float(stale_d_pose.detach()),
+                "pose_drift_from_base_batch": float(
                     ((pose_new - geom.pose_base[index_batch]) ** 2).mean()
                 ),
                 "latent_drift_max_codes": drift,
@@ -1183,7 +1214,12 @@ def cmd_train(args) -> int:
             history.append(row)
             print(json.dumps(row), flush=True)
 
-        if (step + 1) % int(args.eval_every) == 0 or (step + 1) == int(args.steps):
+        # The forced final evaluation is right for a real run and wrong for a smoke: a
+        # 30-step smoke that asks for no evaluations should not pay a full n600 pass.
+        final_eval = (step + 1) == int(args.steps) and int(args.eval_every) <= int(
+            args.steps
+        )
+        if (step + 1) % int(args.eval_every) == 0 or final_eval:
             evaluation = _evaluate_realized(
                 model, fold, segnet, tokens, labels, device, latent=shadow
             )
@@ -1224,7 +1260,11 @@ def cmd_train(args) -> int:
         "score_claim": False,
         "pointer": pointer,
         "config": {str(k): str(v) for k, v in vars(args).items() if k != "func"}
-        | {"ema_decay": decay, "weight_pose": weight_pose},
+        | {
+            "ema_decay": decay,
+            "weight_pose_barrier": weight_pose,
+            "weight_pose_stale": weight_stale,
+        },
         "trainable_tensors": list(names),
         "trainable_codes": sum(section.runs[n].count for n in names),
         "ema_decay_derivation": "ema_decay_run_geometry_v1: 1 - 5/steps",
