@@ -636,7 +636,12 @@ class RuntimeDigest:
     files: tuple[tuple[str, int, str], ...] = field(default=(), repr=False)
 
     def to_dict(self) -> dict[str, object]:
-        return {"sha256": self.sha256, "file_count": self.file_count, "total_bytes": self.total_bytes}
+        return {
+            "sha256": self.sha256,
+            "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+            "file_count": self.file_count,
+            "total_bytes": self.total_bytes,
+        }
 
     def file_map(self) -> dict[str, tuple[int, str]]:
         return {rel: (size, sha) for rel, size, sha in self.files}
@@ -917,6 +922,9 @@ def _public_smoke_problems(
             runtime_path = Path(str(receipt.get("runtime_path") or "")).resolve()
             archive_path = Path(str(receipt.get("archive_path") or "")).resolve()
             tree_sha = str(receipt.get("tree_sha256") or "").lower()
+            definition = receipt.get("digest_definition")
+            if definition is not None and definition != "tac.candidate_seal.measure_runtime_digest":
+                problems.append(f"{label}.digest_definition does not identify the seal digest")
             archive_sha = str(receipt.get("archive_sha256") or "").lower()
             if not runtime_path.is_dir():
                 problems.append(f"{label}.runtime_path is not a directory: {runtime_path}")
@@ -1006,6 +1014,14 @@ def build_seal(
     )
     if smoke_problems:
         raise SealContractError("public-entrypoint smoke refused: " + "; ".join(smoke_problems))
+
+    # Older producers predate digest naming. Validate their bytes first, then name the
+    # verified algorithm on a private copy; never mutate a retained input receipt.
+    public_entrypoint_smoke = json.loads(json.dumps(public_entrypoint_smoke))
+    for group in ("public_path_probes", "inflate_sh_smokes"):
+        for role in ("candidate", "frontier"):
+            receipt = public_entrypoint_smoke[group][role]
+            receipt["digest_definition"] = "tac.candidate_seal.measure_runtime_digest"
 
     receivers: list[dict[str, object]] = []
     file_map = runtime.file_map()
@@ -1158,6 +1174,11 @@ def validate_seal(
         problems.append(f"unknown seal schema {document.get('schema')!r}; this validator speaks {SEAL_SCHEMA}")
     if axis and axis not in SEAL_AXES:
         problems.append(f"unknown axis {axis!r}; expected one of {list(SEAL_AXES)}")
+    runtime_block = document.get("runtime")
+    if isinstance(runtime_block, dict) and runtime_block.get("digest_definition") not in (
+        None, "tac.candidate_seal.measure_runtime_digest",
+    ):
+        problems.append("runtime.digest_definition does not identify the seal digest")
     if problems:
         return SealValidation(
             verdict=SEAL_SCHEMA_VIOLATION,

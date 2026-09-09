@@ -86,6 +86,7 @@ from tac.candidate_seal import (  # noqa: E402
     PIN_ABSENT,
     SEAL_PUBLIC_SMOKE_MISSING,
     check_pin_consistency,
+    measure_runtime_digest,
     repin_receiver,
     validate_seal,
 )
@@ -548,6 +549,28 @@ def reconcile_claims(
     return action
 
 
+def measure_fire_runtime_digests(runtime_dir: Path) -> dict:
+    """Name both existing algorithms without comparing unlike hashes as drift.
+
+    The upload projection is the same composition used by the CUDA worker's
+    ``_expected_uploaded_runtime_tree_sha256``; importing it here never runs a scorer.
+    """
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
+
+    local = _runtime_dependency_manifest(runtime_dir / "inflate.sh", REPO / "upstream")
+    uploaded = modal_uploaded_submission_dir_runtime_manifest(local)
+    definition = "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
+    return {
+        "seal_runtime": measure_runtime_digest(runtime_dir).to_dict(),
+        "modal_uploaded_runtime": {
+            "runtime_tree_sha256": uploaded["runtime_tree_sha256"],
+            "runtime_content_tree_sha256": uploaded["runtime_content_tree_sha256"],
+            "digest_definition": definition,
+        },
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -898,6 +921,10 @@ def main(argv: list[str] | None = None) -> int:
                 "rule_chain": PUBLIC_SMOKE_RULE_CHAIN,
             }
             print("PUBLIC SMOKE: PRESENT + SEAL VALIDATED")
+
+    manifest["stage3_runtime_digests"] = measure_fire_runtime_digests(runtime_dir)
+    if args.seal:
+        manifest["stage3_runtime_digests"]["seal_runtime"]["sealed_sha256"] = document["runtime"]["sha256"]
 
     manifest["stage4_claims"] = reconcile_claims(
         args.claim_agent,

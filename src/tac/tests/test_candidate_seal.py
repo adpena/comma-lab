@@ -539,6 +539,97 @@ def _load_fire_tool():
     return module
 
 
+def test_successor_names_both_runtime_digests_without_mutating_original(tmp_path, monkeypatch):
+    runtime, archive = _stage_candidate(tmp_path)
+    original_path = _seal(tmp_path, runtime)
+    original = load_seal(original_path)
+    del original["public_entrypoint_smoke"]
+    original["seal_sha256"] = compute_seal_sha256(original)
+    write_seal(original, original_path)
+    original_bytes = original_path.read_bytes()
+    pointer = _write_pointer(tmp_path)
+    smoke = _public_smoke(runtime, archive)
+    successor = build_seal(
+        candidate_id=original["candidate_id"], runtime_dir=runtime,
+        admit_bar=AdmitBar.from_dict(original["admit_bar"]), public_entrypoint_smoke=smoke,
+    )
+    successor["supersedes"] = original["seal_sha256"]
+    successor["already_scored"] = {"call_id": "fixture-call", "score": POINTER_SCORE}
+    successor["seal_sha256"] = compute_seal_sha256(successor)
+    successor_path = tmp_path / "successor.json"
+    write_seal(successor, successor_path)
+    assert validate_seal(successor_path, pointer_path=pointer).verdict == SEAL_VALID
+    assert validate_seal(original_path, pointer_path=pointer).verdict == SEAL_PUBLIC_SMOKE_MISSING
+    assert original_path.read_bytes() == original_bytes
+    for group in ("public_path_probes", "inflate_sh_smokes"):
+        for role in ("candidate", "frontier"):
+            assert "digest_definition" not in smoke[group][role]
+            assert successor["public_entrypoint_smoke"][group][role]["digest_definition"] == (
+                "tac.candidate_seal.measure_runtime_digest"
+            )
+    module = _load_fire_tool()
+    monkeypatch.setattr(module, "validate_seal", lambda path, **kw: validate_seal(path, pointer_path=pointer, **kw))
+    monkeypatch.setattr(module, "reconcile_claims", lambda *a, **kw: {"closed": []})
+    out = tmp_path / "fire"
+    rc = module.main([
+        "--seal", str(successor_path), "--output-dir", str(out),
+        "--lane-id", "lane_test", "--instance-job-id", "job_test",
+        "--pair-group-id", "scg2-fixture", "--no-source-snapshot", "--dry-run",
+    ])
+    assert rc == 0
+    manifest = json.loads((out / "FIRE_MANIFEST.json").read_text())
+    digests = manifest["stage3_runtime_digests"]
+    seal_digest = digests["seal_runtime"]
+    uploaded = digests["modal_uploaded_runtime"]
+    assert seal_digest["sha256"] == seal_digest["sealed_sha256"] == successor["runtime"]["sha256"]
+    assert seal_digest["digest_definition"] == "tac.candidate_seal.measure_runtime_digest"
+    assert uploaded["digest_definition"] == (
+        "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
+    )
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
+    expected = modal_uploaded_submission_dir_runtime_manifest(
+        _runtime_dependency_manifest(runtime / "inflate.sh", REPO / "upstream")
+    )
+    assert uploaded["runtime_tree_sha256"] == expected["runtime_tree_sha256"]
+    assert uploaded["runtime_tree_sha256"] != seal_digest["sha256"]
+    assert manifest["stage3c_public_entrypoint_smoke"]["verdict"] == "PRESENT_AND_SEAL_VALIDATED"
+    assert original_path.read_bytes() == original_bytes
+
+
+def test_public_smoke_rejects_an_explicit_wrong_digest_definition(tmp_path):
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime)
+    document = load_seal(seal_path)
+    document["public_entrypoint_smoke"]["public_path_probes"]["candidate"]["digest_definition"] = (
+        "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
+    )
+    document["seal_sha256"] = compute_seal_sha256(document)
+    write_seal(document, seal_path)
+    verdict = validate_seal(seal_path, pointer_path=_write_pointer(tmp_path))
+    assert verdict.verdict == SEAL_PUBLIC_SMOKE_INVALID
+    assert any("digest_definition" in problem for problem in verdict.problems)
+    with pytest.raises(SealContractError, match="digest_definition"):
+        build_seal(candidate_id="wrong-definition", runtime_dir=runtime,
+                   admit_bar=AdmitBar.from_dict(document["admit_bar"]),
+                   public_entrypoint_smoke=document["public_entrypoint_smoke"])
+
+
+def test_runtime_rejects_a_mislabeled_digest_but_accepts_legacy_unnamed_digest(tmp_path):
+    runtime, _ = _stage_candidate(tmp_path)
+    path = _seal(tmp_path, runtime)
+    pointer = _write_pointer(tmp_path)
+    document = load_seal(path)
+    document["runtime"]["digest_definition"] = "a.different.algorithm"
+    document["seal_sha256"] = compute_seal_sha256(document)
+    write_seal(document, path)
+    assert validate_seal(path, pointer_path=pointer).verdict == SEAL_SCHEMA_VIOLATION
+    del document["runtime"]["digest_definition"]
+    document["seal_sha256"] = compute_seal_sha256(document)
+    write_seal(document, path)
+    assert validate_seal(path, pointer_path=pointer).verdict == SEAL_VALID
+
+
 def _forbid_subprocess(monkeypatch, module) -> None:
     """Make a paid call structurally unreachable, so 'no dispatch' is proved, not hoped."""
 
