@@ -13,6 +13,16 @@
 # before any byte number is quoted.
 #
 # Env: FIELD (cumulative edited npz), STORE, TAG, OUT (overlay/pose dir), BASE_RAW.
+#
+# STOP_BEFORE_POSE=1 stops after the two POINTER-INDEPENDENT stages (the encode pair and
+# the overlay renders) and skips the stale-pose leg.  That boundary is real and worth
+# having in the script rather than in someone's memory: `render-edits` touches the pointer
+# ZERO times (it renders from the field through RENDER_TREE), while `pose` goes through
+# `load_pose_instrument` -> `assert_carrier_is_pointer` and therefore BINDS the run to
+# whichever row is live at that moment.  When a sister arm's row is about to land, running
+# the independent prefix first and choosing the pointer afterwards costs nothing; running
+# past this line first costs the whole chain, because appending the new row makes every
+# later carrier step refuse (correctly) and the partial work is wasted.
 set -euo pipefail
 
 REPO="/Users/adpena/Projects/pact"
@@ -47,6 +57,13 @@ fi
 "$REPO/.venv/bin/python" experiments/ddm_sj1_joint_admission.py render-edits \
     --field "$FIELD" --out-dir "$OUT/overlay" --threads 4 --progress \
     > "$OUT/render_edits.log" 2>&1
+
+if [ "${STOP_BEFORE_POSE:-0}" = "1" ]; then
+    echo "ddm_sj1 successor pricing: POINTER-INDEPENDENT prefix complete (encode pair + renders)."
+    echo "  next: re-read .omx/state/canonical_frontier_pointer.json, append the row if it moved,"
+    echo "  then re-run WITHOUT STOP_BEFORE_POSE (the encodes and renders resume from disk)."
+    exit 0
+fi
 
 # The STALE leg: the live pointer's OWN carrier on the NEW renders, i.e. the damage this
 # pass's edits do before any re-solve.  The BASE leg is not re-measured -- it is the live
