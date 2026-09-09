@@ -58,26 +58,48 @@ CODE_BITS = 3
 CODE_MIN, CODE_MAX = -(1 << (CODE_BITS - 1)), (1 << (CODE_BITS - 1)) - 1
 
 # ----------------------------------------------------------------------------------
-# THE LIVE POINTER BODY (2026-09-08): sj1 pass-3 token pre-distortion + carrier re-solve.
+# THE LIVE POINTER BODY.  Move 33 (2026-09-09) is ddm_rc2's shared 8-B logistic
+# depth-mixing prior on the HPAC model section: a RATE-ONLY move of -231 B.
+#
+# Why this arm's search survives the move without re-running, VERIFIED not assumed
+# (measured here by splitting both archives with each tree's own reader):
+#   * semantic section 30,246 B BYTE-IDENTICAL -- the renderer weights this arm renders
+#     with, and the frame_embed codes it edits, are the same objects;
+#   * carrier 18,621 B and token tail 120,321 B BYTE-IDENTICAL;
+#   * hpac 12,343 -> 12,112 B is the whole difference, and rc2's own seal pins the
+#     RESTORED IHS1 body to 17,770 B sha 8172819089... -- a lossless recode, so the
+#     decoded token field, hence every rendered frame, is unchanged.
+# The pass-3 decode is therefore rc2's decode, and the base seg and pose legs carry
+# unchanged; only the archive bytes and the score to beat move.
 # ----------------------------------------------------------------------------------
 SJ1_ROOT = Path(
     "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
 )
-LIVE_TREE = SJ1_ROOT / "candidate_pass3/candidate_runtime"
+RC2_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_rc2_hpac_semistatic_mixing")
+LIVE_TREE = RC2_ROOT / "candidate_runtime"
 LIVE_RUNTIME = LIVE_TREE / "runtime"
 LIVE_ARCHIVE = LIVE_TREE / "archive.zip"
 LIVE_ARCHIVE_SHA256 = (
+    "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e"
+)
+LIVE_ARCHIVE_BYTES = 181_414
+#: The body this arm's n600 search rendered against: pass 3, whose semantic section rc2
+#: carries byte-identically.  Retained so the transfer stays checkable.
+SEARCH_BODY_TREE = SJ1_ROOT / "candidate_pass3/candidate_runtime"
+SEARCH_BODY_ARCHIVE_SHA256 = (
     "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3"
 )
-LIVE_ARCHIVE_BYTES = 181_645
 #: The token field the live receiver decodes (sj1's admitted pass-3 subset).
 LIVE_FIELD = SJ1_ROOT / "admission_pass3/field_admitted.npz"
-#: The live receiver's OWN decode of that archive.
+#: The live receiver's OWN decode.  rc2 retained no parse-back, and it does not need to:
+#: its hpac recode is lossless (its seal pins the restored IHS1 body) and every other
+#: section is byte-identical, so pass 3's decode IS rc2's decode.  This arm's own
+#: parse-back stage re-proves that on the candidate's shipped bytes.
 LIVE_RAW = SJ1_ROOT / "candidate_pass3/parseback/0.raw"
 #: sj1's own n600 argmax of that decode (its seg leg receipt).
 LIVE_ARGMAX = SJ1_ROOT / "seg_final_pass3/argmax_n600.npy"
 
-LIVE_SCORE_T4 = 0.13900437796841966
+LIVE_SCORE_T4 = 0.13885056455024844
 LIVE_D_SEG_T4 = 1.0913879636e-04
 LIVE_D_SEG_LOCAL = 0.0001090664333767361  # 12,866 cells, cpu_torch argmax on DALI
 LIVE_D_SEG_CELLS = 12_866
