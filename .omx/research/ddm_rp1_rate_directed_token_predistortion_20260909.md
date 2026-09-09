@@ -294,20 +294,32 @@ was a charge. It is not. **The single number this arm adds to the campaign is 0.
 fraction of a first-order saving that an adaptive coder actually pays out when you take a
 surprise out of the field.**
 
-## 9. Status and what is running
+## 9. State on hand-off, and what it would cost to finish
 
-The stop rule cleared, so the n600 pass is running: **all 600 pairs, ranks 0–32 per pair**
-(the value-per-test optimum above), singles mode, 5 interleaved shards, 2 live while sj1's
-pass-5 shards hold the CPU. The first-order sub-projection for exactly that window is
-0.794 + 4.025 + 7.502 = **12.32 bits per pair → 924 B**, and it is fully covered rather than
-extrapolated, because ranks 0–32 were sampled exhaustively in the sizing.
+**Landed and retained** (all under
+`/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
+`rank/` and `rank_mixer/` (both censuses, both identity-controlled streams, both candidate
+rankings, both per-frame bit ledgers), `sizing/` (the 12-pair pre-registered sizing),
+`n600m/shard0/` (an unbiased 1-in-5 sample of all 600 pairs, complete, with its own
+600-plane pricing field), `price_partial/enc2/` (the priced encode and its per-pair delta
+ledger), `retained/` (the 217-token candidate stream at 119,752 B and the neutrality cache).
+Equations leg: `rate_directed_predistortion_yield_v1` registered with this arm's anchor.
+Lane `lane_ddm_rp1_rate_directed_predistortion_20260909` at L2.
 
-Then: real-encode pricing of the accepted field (`experiments/ddm_rp1_price.sh`, twin
-encodes), stale pose, per-pair carrier re-solve, a rate-objective/pose-constraint admission,
-and the seal. **Composition note:** cmp1 (rc3 + tc1, −749 B) and sm1 (−263 B) are SEAL READY
-and change the CODER and the semantic section, not the field, so they compose with this arm
-by re-pricing rather than re-searching — but the byte delta of this field change must then be
-re-measured under whichever tail coder is live at seal time.
+**What is NOT done, and its cost.** The acceptance covers 148 of 600 pairs (shard 0 complete
+at 120, shard 1 partial at 28). Finishing it is 452 pairs × ~30 s ≈ 3.8 CPU-hours; then the
+pose chain (stale pose, per-pair carrier re-solve, resolved pose), the Lagrange admission,
+a real subset re-encode, stage/close/parseback/seg-final/public-smoke and the seal. Roughly
+6–8 hours of wall clock for a projected **−217 B, ΔS −1.44e-4**.
+
+**Recommendation, stated plainly.** Finish it only if the queue has no better use of those
+hours. The arm's science is done and it is portable; the remaining work buys 0.81 % of the
+corner. The rate corner is NOT closed by this result — but it is now closed **to this
+actuator at formulation scope**, and the reason is a coefficient, not a wall: the field's
+expensive tokens are the boundary tokens (95.6 % of accepted changes land in rows 128–319,
+72.7 % of them Lane→Road), the argmax refuses 95.6 % of them, and the adaptive coder returns
+only 15–27 % of what the survivors are worth. Any successor aiming at the 26,908 B corner
+through the FIELD must beat all three of those numbers at once.
 
 ## 10. Frontier line
 
