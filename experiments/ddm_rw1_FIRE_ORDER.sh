@@ -87,6 +87,32 @@ cat <<'SEALBLOCK'
     MAIN fires. This arm never calls Modal.
 SEALBLOCK
 echo
+echo "== 6. WHAT THE 2026-09-09 RUN LEFT FOR THE NEXT ARM =="
+cat <<'NEXTNOTE'
+The 3,000-step minibatch run FIRED falsifier (a): the residual ROSE to -11.37 % at 66
+changed codes.  Two controls then made that number readable:
+
+  perturb-control : a RANDOM code change of the same size costs 2.1-4.1x MORE, so the
+                    surrogate IS steering -- it avoids 75.6 % of random collateral at
+                    66 codes and needs 100 % to break even.
+  full-field      : step 1 moves the latent by exactly lr and step 2 reports a
+                    byte-identical loss, because the forward is piecewise constant in
+                    the latent while AdamW normalises PER PARAMETER.  Every code marches
+                    at the same rate, which destroys the sparsity the rate law and the
+                    collateral both call for.
+
+So the next probes, cheapest first:
+
+  1) gradient-topk -- one exact n600 gradient, then realized flips for the k largest
+     |dL/dcode| each moved ONE step down their own gradient.  No optimizer in the way.
+        .venv/bin/python experiments/ddm_rw1_renderer_edge_foldback.py gradient-topk \
+            --device mps --k 1,4,16,64,256 --batch 4
+  2) if top-k turns positive at some k, sweep k and tau, then run the admission (4a-4c).
+  3) only if BOTH stay negative is the actuator closed at formulation scope, and only
+     then is the charter's widening (--widened, +10,080 codes in blocks.2) worth an hour.
+NEXTNOTE
+echo
+
 echo "== FALSIFIERS (count them plainly, do not narrate around them) =="
 echo "(a) instrument residual falls < 3 % after 3,000 steps -> widen ONCE to blocks.2 (--widened) at the same LR;"
 echo "    still < 3 % -> the renderer-weight actuator is CLOSED on this object at formulation scope."
