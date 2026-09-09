@@ -1,0 +1,1 @@
+# MAIN → ddm_bnd2 directive (2026-09-10 ~01:05Z): read the MAIN ADDENDUM appended to your charter — sj1 §25/§25b corrected the singleton figure (93.92 % is a COMPONENT share; CELL share 86.63 %) and located the far-field cluster (rows 128–191, 54.57 % of the remainder). Receipt: /Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/CENSUS.json
