@@ -397,13 +397,28 @@ d_pose it wins costs ZERO bytes, so its whole dS is negative by construction, an
 additively with the -41 B scales row. The base it starts from is measured (5.0939863022125565e-06).
 ~5-7 h at 4 shards. This is the most interesting unmeasured thing left on this carrier.
 
-### ITEM 2 — shrink the scales block from 96 B to 48 B
+### ITEM 2 — shrink the scales block from 96 B to 48 B: MEASURED at -7 B, REGISTERED AND SKIPPED
 
-Worth another -48 B on top of ITEM 1 (net -5.84e-05 composed). The basis half of the block is dead
-once the basis scales are all 1.0, so the block can carry the twelve coefficient scales alone. Needs
-one more width parameter threaded through the same three receiver modules KW1 already parameterised
-(`rr5_arith_basis.split_carrier_body`, `dx2_cabac_coefficients.packed_ks`,
-`residual_archive._packed_portion` / `_restore_packed_cap1_metadata`), plus its own n600 d_pose.
+I priced this at the container with no receiver work and no pose run. RR5 and DX2 pass the scales
+region through verbatim (`split_carrier_body` slices `[6:102]` into `scales`, `assemble_carrier_body`
+writes it back unchanged), so the 48 basis-scale bytes sit verbatim in the ENCODED body at `[6:54]`;
+deleting them and re-compressing at the shipped container shape prices exactly what a 48-byte block
+would buy.
+
+    carrier stream, 96 B block : 18,580 B
+    carrier stream, 48 B block : 18,573 B
+    ITEM 2 buys                :     -7 B
+
+**Once all twelve basis scales are identical the 48 raw bytes are already down to 7 B of compressed
+match — the -41 B ITEM 1 banks IS 41 of the 48.** So the remaining prize is -7 B = -4.66e-06 S, which
+does not clear the -2e-05 admit bar on its own, and it would cost a change to the RENDERER's own
+reader (`cpr1/inflate.py::decode_compact_carrier` reads the 12+12 float32 layout), not just the three
+container modules KW1 parameterised. That is a materially larger and riskier diff than KW1, on a
+candidate whose entire virtue is that it ships an UNMODIFIED receiver, for 0.6% of an already-small
+row. Registered and skipped on the measurement, not on a guess.
+
+What WOULD make it worth building: any future candidate that already changes the renderer's carrier
+reader for another reason. The 7 bytes are then free to collect.
 
 ### ITEM 3 — a solver whose local move scales with the lattice step
 

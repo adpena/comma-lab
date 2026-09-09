@@ -131,6 +131,54 @@ def assert_pointer_unmoved() -> dict[str, Any]:
     return live
 
 
+
+def rebase_to(runtime: Path) -> dict[str, Any]:
+    """Re-point this module at a NEW pointer tree, reading every number off disk.
+
+    sj1 and this arm work the same object, so whoever lands second re-bases.  A
+    re-base must not be a source edit under the clock: the tree is named, its
+    archive's sha and size are MEASURED from the bytes, the score comes from
+    `.omx/state/canonical_frontier_pointer.json`, and the three are then required
+    to agree.  Nothing here is typed by hand, which is the whole point
+    ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]).
+    """
+    global POINTER_RUNTIME, POINTER_RAW, POINTER_ARCHIVE_SHA256
+    global POINTER_ARCHIVE_BYTES, POINTER_SCORE, POINTER_LANE
+
+    runtime = Path(runtime).resolve()
+    archive = runtime / "archive.zip"
+    if not archive.is_file():
+        raise Pc2Error(f"no archive.zip under {runtime}")
+    measured_sha = _sha256_file(archive)
+    measured_bytes = archive.stat().st_size
+    live = read_live_pointer()
+    if live.get("archive_sha256") != measured_sha:
+        raise Pc2Error(
+            f"{runtime} carries archive sha {measured_sha}, but the live pointer "
+            f"names {live.get('archive_sha256')}; re-base onto the POINTER's tree"
+        )
+    raw = runtime.parent / "parseback" / "0.raw"
+    if not raw.is_file():
+        raise Pc2Error(
+            f"no raw decode beside the new tree ({raw}); the solver needs its "
+            "frame_1 planes and will not silently reuse another body's"
+        )
+    POINTER_RUNTIME = runtime
+    POINTER_RAW = raw
+    POINTER_ARCHIVE_SHA256 = measured_sha
+    POINTER_ARCHIVE_BYTES = measured_bytes
+    POINTER_SCORE = float(live["score"])
+    POINTER_LANE = str(live.get("lane_id", ""))
+    return {
+        "pointer_runtime": str(POINTER_RUNTIME),
+        "pointer_raw": str(POINTER_RAW),
+        "pointer_archive_sha256": POINTER_ARCHIVE_SHA256,
+        "pointer_archive_bytes": POINTER_ARCHIVE_BYTES,
+        "pointer_score": POINTER_SCORE,
+        "pointer_lane": POINTER_LANE,
+    }
+
+
 # --------------------------------------------------------------------------- #
 # Receiver imports
 # --------------------------------------------------------------------------- #
@@ -2084,6 +2132,12 @@ def run_scales_candidate(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--pointer-runtime",
+        default=None,
+        help="re-base onto a NEW pointer tree; its archive sha and size are "
+        "measured from the bytes and must match the live canonical pointer",
+    )
     sub = parser.add_subparsers(dest="mode", required=True)
 
     identity = sub.add_parser("identity", help="container + KW1-patch identity controls")
@@ -2204,6 +2258,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if getattr(args, "pointer_runtime", None):
+        print(json.dumps(rebase_to(Path(args.pointer_runtime)), indent=2))
     return int(args.func(args))
 
 
