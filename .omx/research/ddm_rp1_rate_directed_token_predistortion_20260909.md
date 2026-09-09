@@ -172,7 +172,40 @@ actually codes against, not the float row before quantization. **It reproduces c
 mixed stream byte-identically at 2 frames (580 B, sha `5ceb58cb…`)**; the 600-frame identity
 control against `mixed_0600.envelope` is the gate on the re-ranked census.
 
-## 6. Status and what is running
+## 6. The census and ceiling RE-MEASURED under the live coder (MEASURED, n600, exact)
+
+**Identity control passed again, against the new coder's own output.** The re-ranked encode
+emitted **119,784 B, sha `bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9`**
+— byte-identical to cmp1's own `mixed_0600.envelope`. Receipt: `rank_mixer/RANK.json`,
+1,748 s, one process, at cmp1's determinism contract (1 thread, 1 interop thread, seeded,
+`use_deterministic_algorithms(True)`).
+
+| quantity | HPAC (move 35, superseded) | tc1 mixer (move 36, LIVE) |
+|---|---|---|
+| tail bits | 962,934.008 | **958,224.185** |
+| tail bytes (ideal) | 120,366.75 | **119,778.02** |
+| mean bits per token | 0.00816289 | **0.00812297** |
+| tokens that ARE the coder's argmax | 99.79940 % | **99.80075 %** |
+| bits on the non-argmax tokens | 70.333 % | **69.511 %** = 666,069 bits = 83,259 B |
+| flag mass on the other 99.8 % | 35,709 B | **36,519 B** |
+| ceiling ≥ 0.5 bits | 70,046.0 B | **68,951.7 B** (191,882 positions) |
+| ceiling ≥ 2 bits | 56,965.5 B | 55,465.0 B (99,157 positions) |
+| ceiling ≥ 8 bits | 15,024.8 B | 13,410.2 B (10,209 positions) |
+
+**The ceiling is 68,951.7 B against a 26,542.4 B demand — 2.598×.** The structure is the
+same object under both coders, which is itself worth recording:
+
+**A −749 B coder change re-orders 4 % of the field's expensive tokens.** Comparing the two
+rankings' top-32 per pair over all 600 pairs: **96.03 %** of the mixer's (position, class)
+proposals are also in HPAC's top-32, position-only overlap is **96.21 %**, and where a
+position is shared the two coders disagree about which class is cheapest at **0.19 %** of
+them (35 of 18,473). So the two coders price the *same* tokens as expensive; tc1's mixer
+takes 588 B off the total without changing which parts of the field are dear. That is why
+the acceptance measured under the superseded ranking transfers essentially intact, and why
+the neutrality cache is serving ~96 % of the new pass's proposals — pairs are completing in
+3.8–4.8 s instead of 30.
+
+## 7. Status and what is running
 
 The stop rule cleared, so the n600 pass is running: **all 600 pairs, ranks 0–32 per pair**
 (the value-per-test optimum above), singles mode, 5 interleaved shards, 2 live while sj1's
@@ -187,6 +220,6 @@ and change the CODER and the semantic section, not the field, so they compose wi
 by re-pricing rather than re-searching — but the byte delta of this field change must then be
 re-measured under whichever tail coder is live at seal time.
 
-## 7. Frontier line
+## 8. Frontier line
 
 `cmp1 S 0.13817298987557713 @ 180,772 B [contest-CUDA T4 n600]`
