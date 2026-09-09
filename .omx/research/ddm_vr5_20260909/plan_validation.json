@@ -1,0 +1,47 @@
+{
+  "schema": "ddm_vr5.plan_validation.v1",
+  "axis": "filesystem custody / scorer-free",
+  "score_claim": false,
+  "rows": 20,
+  "admitted_rows": 17,
+  "admitted_bytes": 62260963200,
+  "blocked_rows": 3,
+  "blocked_bytes": 10987228800,
+  "current_hash_vs_decode_matches": 20,
+  "historical_sha_matches": 5,
+  "current_hashes_without_historical_sha": 15,
+  "reclaimed_bytes": 0,
+  "apply_executed": false,
+  "ledger_path": ".omx/research/ddm_vr5_reclaim_plan_20260909.jsonl",
+  "ledger_sha256": "44164e45610e410b4d59abaadb0bc6b03b5611b267fa558fb274aedcdd5635d6",
+  "apply_argv": [
+    ".venv/bin/python",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "apply",
+    "--ledger",
+    ".omx/research/ddm_vr5_reclaim_plan_20260909.jsonl",
+    "--expected-ledger-sha256",
+    "44164e45610e410b4d59abaadb0bc6b03b5611b267fa558fb274aedcdd5635d6",
+    "--journal",
+    ".omx/research/ddm_vr5_apply_journal_20260909.jsonl",
+    "--target-bytes",
+    "62260963200"
+  ],
+  "journal_path": ".omx/research/ddm_vr5_apply_journal_20260909.jsonl",
+  "by_drive": {
+    "APDataStore": {
+      "rows": 15,
+      "admitted_rows": 12,
+      "admitted_bytes": 43948915200,
+      "blocked_rows": 3,
+      "free_bytes_at_plan": 40297562112
+    },
+    "VertigoDataTier": {
+      "rows": 5,
+      "admitted_rows": 5,
+      "admitted_bytes": 18312048000,
+      "blocked_rows": 0,
+      "free_bytes_at_plan": 69711208448
+    }
+  }
+}

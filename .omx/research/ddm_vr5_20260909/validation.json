@@ -1,0 +1,27 @@
+{
+  "axis": "filesystem custody / scorer-free",
+  "score_claim": false,
+  "test_command": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
+  ],
+  "observed_stdout": "38 passed in 0.43s",
+  "ruff_command": [
+    ".venv/bin/ruff",
+    "check",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
+  ],
+  "ruff_observed_stdout": "All checks passed!",
+  "source_sha256": {
+    "experiments/ddm_vr3_certified_raw_reclaim.py": "71773039b7fb9552f62fef1f5e1c766949d2c05c2f05e1eaf7bbf13644099cc4",
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py": "9a53770d41b1e7a59671bef0857a4d45f2458e354bf1a3883123a9a2ab551149",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py": "463e7f8efd660777adef45a0c6ed5f7d8026797ddfdb8bc8ecb81c10396a0eeb"
+  },
+  "test_boundary": "Actual unlink and journal tests ran only on disposable pytest fixtures; no SSD apply executed."
+}

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/list_canonical_equations.py",
+    "--json"
+  ],
+  "rows": 480,
+  "query": "certif.{0,30}reclaim|reclaim.{0,30}certif|disk.hygiene|raw.reclaim",
+  "matches": [],
+  "matched_rows": 0,
+  "full_cli_output_sha256": "7fe0a09d912d1ff1f97e4a3191c701f23565e34409ffa1ca4f77c7b34e5fd791"
+}

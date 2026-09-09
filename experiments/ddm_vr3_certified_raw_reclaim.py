@@ -2,8 +2,7 @@
 """Certify-or-block planner and executor for the ddm_vr3 raw reclaim.
 
 The planner consumes the completed detached SHA census, emits one row per
-chartered >=1 GiB blob, and admits only the two exact terminal families named
-below.  Apply mode revalidates every certificate and lsof/reference gate before
+chartered >=1 GiB blob, and admits the original two families or data-pinned VR4 retained chains.  Apply mode revalidates every certificate and lsof/reference gate before
 unlinking a raw.  The archive, runtime, receipts, seals, and staged trees are
 never mutation targets.
 """
@@ -14,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -23,6 +23,9 @@ from typing import Any
 SCHEMA = "ddm_vr3.reclaim_ledger.v1"
 JOURNAL_SCHEMA = "ddm_vr3.reclaim_apply_journal.v1"
 VERTIGO_ROOT = Path("/Volumes/VertigoDataTier/pact")
+AP_ROOT = Path("/Volumes/APDataStore/pact")
+RETAINED_STATUS = "RETAINED_REPRODUCER_VERIFIED_RAW_REHASH_AND_SAFETY_OWED"
+LIVE_PREFIXES = ("ddm_sj1", "ddm_rp1", "ddm_bnd1", "ddm_gb2", "ddm_cmp2_compose")
 TARGET_BYTES = 60 * (1 << 30)
 AP1_ROOT = VERTIGO_ROOT / "cold_store/.omx/tmp/arm_receipts_local/ddm_ap1_residue_purchase_scorer/advisory"
 JF2_ROOT = VERTIGO_ROOT / "cold_store/pact/ddm_jf2_terminal_diagonal_harvest/scorer"
@@ -159,30 +162,38 @@ def _selected_family(path: Path) -> tuple[str, str] | None:
     return None
 
 
+def storage_root(path: Path) -> Path:
+    for root in (VERTIGO_ROOT, AP_ROOT):
+        if root in path.parents:
+            return root
+    raise CertifyError(f"outside SSD roots: {path}")
+
+
 def _forbidden_target_reason(path: Path) -> str | None:
-    if VERTIGO_ROOT not in path.parents:
-        return "OUTSIDE_VERTIGO_ROOT"
-    if PROTECTED_COMPONENT in path.parts:
+    if any(part.startswith(LIVE_PREFIXES) for part in path.parts):
         return "LIVE_POINTER_TREE_PROTECTED"
     try:
-        path.resolve(strict=True).relative_to(VERTIGO_ROOT.resolve(strict=True))
+        root = storage_root(path)
+    except CertifyError:
+        return "OUTSIDE_SSD_ROOTS"
+    try:
+        path.resolve(strict=True).relative_to(root.resolve(strict=True))
     except (OSError, ValueError):
-        return "RESOLVED_TARGET_OUTSIDE_VERTIGO_ROOT"
+        return "RESOLVED_TARGET_OUTSIDE_VERTIGO_ROOT" if root == VERTIGO_ROOT else "RESOLVED_TARGET_OUTSIDE_AP_ROOT"
+    if path.name != "0.raw" or path.is_symlink() or not path.is_file():
+        return "TARGET_NOT_REGULAR_0_RAW"
     current = path.parent
-    while current != VERTIGO_ROOT:
+    while current != root:
         if current.is_symlink():
-            return "SYMLINK_ANCESTOR_BELOW_VERTIGO_ROOT"
-        if VERTIGO_ROOT not in current.parents:
-            return "ANCESTOR_ESCAPES_VERTIGO_ROOT"
+            return "SYMLINK_ANCESTOR_BELOW_SSD_ROOT"
+        if root not in current.parents:
+            return "ANCESTOR_ESCAPES_SSD_ROOT"
         current = current.parent
-    if path.name == "archive.zip" or path.name.startswith("SEAL"):
-        return "ARCHIVE_OR_SEAL_NEVER_TOUCH"
-    if path.name == "MODAL_REMOTE_RESULT.json":
-        return "MODAL_RESULT_NEVER_TOUCH"
+    if any("SEAL" in part.upper() for part in path.parts):
+        return "SEAL_TREE_NEVER_TOUCH"
     if "submissions" in path.parts:
         return "SUBMISSIONS_TREE_NEVER_TOUCH"
-    parts = path.parts
-    if "experiments" in parts and "results" in parts and "submission_dir" in parts:
+    if "experiments" in path.parts and "results" in path.parts and "submission_dir" in path.parts:
         return "CODEX_SUBMISSION_DIR_NEVER_TOUCH"
     return None
 
@@ -334,10 +345,16 @@ def certify_selected(path: Path, raw_sha256: str) -> dict[str, Any]:
 
 
 def repo_reference_hits(
-    aliases_by_path: dict[str, list[str]], repo_root: Path, *, exclude_current: bool = True
+    aliases_by_path: dict[str, list[str]],
+    repo_root: Path,
+    *,
+    exclude_current: bool = True,
+    observation_files: list[str] | None = None,
 ) -> dict[str, list[str]]:
     all_aliases = list(dict.fromkeys(alias for aliases in aliases_by_path.values() for alias in aliases))
-    command = ["rg", "-n", "-F", "--no-messages"]
+    command = ["rg", "-n", "-F", "--no-messages", "--hidden"]
+    for observed in observation_files or []:
+        command.extend(["--glob", "!" + observed])
     if exclude_current:
         command.extend(
             [
@@ -351,17 +368,45 @@ def repo_reference_hits(
                 "!**/ddm_vr3_census.done*",
                 "--glob",
                 "!ddm_vr3_both_ssds_full_certify_or_block_reclaim.log",
+                "--glob",
+                "!ddm_vr5_generalized_certified_raw_reclaim_apply.log",
             ]
         )
     for alias in all_aliases:
         command.extend(["-e", alias])
-    command.extend(scope for scope in REFERENCE_SCOPES if (repo_root / scope).exists())
-    if LIVE_POINTER_REFERENCE_ROOT.exists():
-        command.append(str(LIVE_POINTER_REFERENCE_ROOT))
-    completed = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, check=False)
-    if completed.returncode not in (0, 1):
-        raise CertifyError(f"reference scan failed rc={completed.returncode}: {completed.stderr}")
-    lines = completed.stdout.splitlines()
+    scopes = [scope for scope in REFERENCE_SCOPES if (repo_root / scope).exists()]
+    # Explicit files bypass ignore rules: the live pointer may itself be gitignored.
+    for name in (
+        "canonical_frontier_pointer.json",
+        "main_hot_state.md",
+        "lane_registry.json",
+        "active_lane_dispatch_claims.md",
+    ):
+        relative = ".omx/state/" + name
+        if (repo_root / relative).is_file():
+            scopes.append(relative)
+    live_roots = {LIVE_POINTER_REFERENCE_ROOT}
+    for root in (VERTIGO_ROOT, AP_ROOT):
+        if root.is_dir():
+            live_roots.update(p for p in root.iterdir() if p.name.startswith(LIVE_PREFIXES) and p.is_dir())
+    live_scopes = [str(root) for root in sorted(live_roots) if root.exists()]
+    commands = [command + scopes] if scopes else []
+    if live_scopes:
+        # Inspect live-tree control/receipt text without reading multi-GiB raw payloads.
+        commands.append(
+            [*command, "--no-ignore", "--glob", "*.{py,sh,json,jsonl,md,txt,yaml,yml,toml,log}", *live_scopes]
+        )
+    if not commands or not all_aliases:
+        raise CertifyError("reference scan has no scopes or aliases")
+    lines = []
+    for scan in commands:
+        try:
+            completed = subprocess.run(scan, cwd=repo_root, text=True, capture_output=True, check=False, timeout=180)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise CertifyError(f"reference scan unavailable: {exc}") from exc
+        if completed.returncode not in (0, 1):
+            raise CertifyError(f"reference scan failed rc={completed.returncode}: {completed.stderr}")
+        lines.extend(completed.stdout.splitlines())
     return {
         path: sorted({line for line in lines if any(alias in line for alias in aliases)})
         for path, aliases in aliases_by_path.items()
@@ -369,8 +414,13 @@ def repo_reference_hits(
 
 
 def lsof_plus_d(directory: Path) -> dict[str, Any]:
-    completed = subprocess.run(["lsof", "+D", str(directory)], text=True, capture_output=True, check=False)
-    if completed.returncode not in (0, 1):
+    try:
+        completed = subprocess.run(
+            ["lsof", "+D", str(directory)], text=True, capture_output=True, check=False, timeout=30
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise CertifyError(f"lsof unavailable: {exc}") from exc
+    if completed.returncode not in (0, 1) or completed.stderr.strip():
         raise CertifyError(f"lsof +D failed rc={completed.returncode}: {directory}: {completed.stderr.strip()}")
     output = completed.stdout.splitlines()
     open_rows = output[1:] if output and output[0].startswith("COMMAND") else output
@@ -381,6 +431,217 @@ def lsof_plus_d(directory: Path) -> dict[str, Any]:
         "no_open_descriptors": not open_rows,
         "checked_at_utc": utc_now(),
     }
+
+
+def process_gate(family: str) -> dict[str, Any]:
+    """Require visible init/self and a successful owner search, never empty blind lsof."""
+    if not re.fullmatch(r"ddm_[a-z0-9]+", family):
+        raise CertifyError(f"invalid process owner: {family}")
+    commands = [["ps", "-axo", "pid=,ppid=,command="], ["pgrep", "-fl", family + r"([^a-z0-9]|$)"]]
+    receipts = []
+    for command in commands:
+        try:
+            result = subprocess.run(command, text=True, capture_output=True, check=False, timeout=30)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise CertifyError(f"PROCESS_VISIBILITY_UNAVAILABLE:{exc}") from exc
+        if result.stderr.strip() or result.returncode not in ((0,) if command[0] == "ps" else (0, 1)):
+            raise CertifyError(f"PROCESS_VISIBILITY_UNAVAILABLE:{command[0]}:{result.stderr}")
+        receipts.append({"command": command, "returncode": result.returncode})
+        if command[0] == "ps":
+            lines = [line.split(None, 2) for line in result.stdout.splitlines()]
+            if any(len(line) != 3 or not line[0].isdigit() for line in lines):
+                raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed ps")
+            pids = {int(line[0]) for line in lines}
+            if not {1, os.getpid()}.issubset(pids):
+                raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:init or self invisible")
+            hits = [
+                line for line in lines if int(line[0]) != os.getpid() and re.search(family + r"([^a-z0-9]|$)", line[2])
+            ]
+            if hits:
+                raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{hits}")
+        elif result.returncode == 0 or result.stdout.strip():
+            raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{result.stdout}")
+    return {"visible": True, "owner": family, "commands": receipts, "checked_at_utc": utc_now()}
+
+
+def owner_family(row: dict[str, Any]) -> str:
+    owner = str(row.get("owner", "")).split(" / ")[-1]
+    if not re.fullmatch(r"ddm_[a-z0-9]+", owner):
+        raise CertifyError("missing or invalid owning arm")
+    if not any(part == owner or part.startswith(owner + "_") for part in Path(row["path"]).parts):
+        raise CertifyError("owner/path mismatch")
+    return owner
+
+
+def pinned_file(path: Path) -> dict[str, str]:
+    if not path.is_file() or path.is_symlink():
+        raise CertifyError(f"pinned file missing or symlinked: {path}")
+    return {"path": str(path), "sha256": sha256_file(path)}
+
+
+def verify_pin(pin: dict[str, str]) -> Path:
+    path = Path(pin["path"])
+    if pinned_file(path) != pin:
+        raise CertifyError(f"PIN_SHA256_DRIFT:{path}")
+    return path
+
+
+def unique_rows(path: Path) -> dict[str, dict[str, Any]]:
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    result = {row["path"]: row for row in rows}
+    if not rows or len(result) != len(rows):
+        raise CertifyError(f"empty or duplicate path ledger: {path}")
+    return result
+
+
+def certify_retained(source: dict[str, Any], rehash: dict[str, Any], closure: dict[str, Any]) -> dict[str, Any]:
+    """Join VR4, MAIN's current hash, the terminal memo, and the current reproducer."""
+    if source.get("certificate_status") != RETAINED_STATUS or not source.get("reproducer"):
+        raise CertifyError("MISSING_RETAINED_REPRODUCER")
+    path = Path(source["path"])
+    forbidden = _forbidden_target_reason(path)
+    if forbidden:
+        raise CertifyError(forbidden)
+    blockers = _stat_identity_blockers(path, source)
+    if blockers:
+        raise CertifyError(";".join(blockers))
+    raw_sha = rehash.get("sha256")
+    if (
+        rehash.get("present") is not True
+        or rehash.get("path") != str(path)
+        or rehash.get("bytes") != source["bytes"]
+        or not valid_sha256(raw_sha)
+    ):
+        raise CertifyError("CURRENT_REHASH_MISSING_OR_INVALID")
+    if source.get("historical_sha256") and source["historical_sha256"] != raw_sha:
+        raise CertifyError("HISTORICAL_RAW_SHA256_DRIFT")
+    family = owner_family(source)
+    if closure.get("family") != family or closure.get("disposition") != "CLOSED_ADVISORY_INSTANCE":
+        raise CertifyError("OWNING_ARM_CLOSURE_MISSING")
+    memo = verify_pin(closure["memo"])
+    quote = closure.get("verdict_quote")
+    if not isinstance(quote, str) or not quote.strip() or quote not in memo.read_text():
+        raise CertifyError("CLOSURE_VERDICT_QUOTE_MISSING")
+    current = certify_selected(path, str(raw_sha))
+    if current != source["reproducer"]:
+        raise CertifyError("RETAINED_REPRODUCER_DRIFT")
+    return current
+
+
+def combined_df(roots: list[Path]) -> dict[str, Any]:
+    drives = [df_row(root) for root in roots]
+    # APFS volumes may share a container; these charter drives must be distinct devices.
+    if len({root.stat().st_dev for root in roots}) != len(roots):
+        raise CertifyError("storage roots share device; combined capacity would double count")
+    return {"available_bytes": sum(d["available_bytes"] for d in drives), "drives": drives, "sampled_at_utc": utc_now()}
+
+
+def retained_revalidation(row: dict[str, Any]) -> dict[str, Any]:
+    admission = row["retained_admission"]
+    source = unique_rows(verify_pin(admission["source_ledger"]))[row["path"]]
+    rehash = unique_rows(verify_pin(admission["rehash_ledger"]))[row["path"]]
+    if row["family"] != owner_family(source) or row["sha256"] != rehash["sha256"]:
+        raise CertifyError("ADMISSION_IDENTITY_DRIFT")
+    current = certify_retained(source, rehash, admission["closure"])
+    if {k: v for k, v in current.items() if k != "reference_aliases"} != row["reproducer"]:
+        raise CertifyError("PLANNED_REPRODUCER_DRIFT")
+    return current
+
+
+def observation_exclusions(pins: list[dict[str, str]], repo_root: Path) -> list[str]:
+    result = []
+    for pin in pins:
+        path = verify_pin(pin)
+        relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+        if any(c in relative for c in "*?[]!"):
+            raise CertifyError("observation exclusion must be an exact file")
+        result.append(relative)
+    return result
+
+
+def plan_retained(args: argparse.Namespace) -> int:
+    sources = unique_rows(args.source_ledger)
+    selected = [row for row in sources.values() if row.get("certificate_status") == RETAINED_STATUS]
+    hashes = unique_rows(args.rehash_ledger)
+    if set(hashes) != {row["path"] for row in selected}:
+        raise CertifyError(f"MAIN_REHASH_INCOMPLETE:expected={len(selected)} actual={len(hashes)}")
+    policy = load_json(args.closures)
+    exclusions = observation_exclusions(policy["observation_files"], args.repo_root)
+    output_relative = args.output_ledger.resolve().relative_to(args.repo_root.resolve()).as_posix()
+    exclusions.append(output_relative)
+    roots = sorted({storage_root(Path(row["path"])) for row in selected})
+    before = combined_df(roots)
+    rows = []
+    aliases = {}
+    for rank, source in enumerate(selected, 1):
+        row = dict(source)
+        path = source["path"]
+        family = owner_family(source)
+        closure = policy["closures"].get(family, {})
+        blockers = []
+        current = None
+        try:
+            current = certify_retained(source, hashes[path], closure)
+        except (OSError, ValueError, KeyError, CertifyError) as exc:
+            blockers.append(f"CERTIFICATE_REFUSED:{exc}")
+        aliases[path] = source["reproducer"]["reference_aliases"]
+        row.update(
+            schema=SCHEMA,
+            arm="ddm_vr5",
+            family=family,
+            inventory_rank=rank,
+            sha256=hashes[path].get("sha256"),
+            hash_status="HASHED_STABLE" if current else "BLOCKED",
+            hash_completed_utc=None,
+            hash_timestamp_note="MAIN receipt contains no timestamp",
+            blockers=blockers,
+            reproducer=None if current is None else {k: v for k, v in current.items() if k != "reference_aliases"},
+            df_before=before,
+            df_after=None,
+            applied_at_utc=None,
+            lsof_plan=None,
+            score_claim=False,
+            freed_bytes=0,
+            certificate_complete=bool(current),
+            certificate_status="RETAINED_CHAIN_CURRENT" if current else "BLOCKED",
+            retained_admission={
+                "source_ledger": pinned_file(args.source_ledger),
+                "rehash_ledger": pinned_file(args.rehash_ledger),
+                "closure": closure,
+            },
+            observation_files=policy["observation_files"],
+            process_plan=policy.get("main_process_receipt", {"status": "LIVE_CHECK_REQUIRED_AT_APPLY"}),
+            consumer_store=str(args.output_ledger),
+            fire_trigger="MAIN harvest; outside sandbox with live process/reference/certificate gates",
+        )
+        rows.append(row)
+    hits = repo_reference_hits(aliases, args.repo_root, observation_files=exclusions)
+    for row in rows:
+        row["reference_scan"] = {
+            "hits": hits[row["path"]],
+            "aliases": aliases[row["path"]],
+            "checked_at_utc": utc_now(),
+            "observation_exclusions": exclusions,
+        }
+        if hits[row["path"]]:
+            row["blockers"].append("REPOSITORY_REFERENCE_HIT")
+        row["planned_verdict"] = "DELETABLE" if not row["blockers"] else "BLOCKED:" + ";".join(row["blockers"])
+        row["verdict"] = row["planned_verdict"]
+        row["certificate_complete"] = not row["blockers"]
+    atomic_jsonl(args.output_ledger, rows)
+    admitted = [row for row in rows if row["planned_verdict"] == "DELETABLE"]
+    print(
+        json.dumps(
+            {
+                "rows": len(rows),
+                "deletable_rows": len(admitted),
+                "deletable_bytes": sum(row["bytes"] for row in admitted),
+                "ledger_sha256": sha256_file(args.output_ledger),
+                "score_claim": False,
+            }
+        )
+    )
+    return 0
 
 
 def _hash_rows(path: Path) -> dict[str, dict[str, Any]]:
@@ -431,7 +692,7 @@ def plan(args: argparse.Namespace) -> int:
             try:
                 reproducer = certify_selected(path, str(raw_sha))
                 aliases = list(reproducer.pop("reference_aliases"))
-            except (OSError, ValueError, json.JSONDecodeError, CertifyError) as exc:
+            except (OSError, ValueError, KeyError, json.JSONDecodeError, CertifyError) as exc:
                 blockers.append(f"CERTIFICATE_REFUSED:{type(exc).__name__}:{exc}")
                 aliases = [str(path), str(path.parent)]
         else:
@@ -535,7 +796,13 @@ def _stat_identity_blockers(path: Path, row: dict[str, Any]) -> list[str]:
 
 def apply(args: argparse.Namespace) -> int:
     rows = _load_ledger(args.ledger)
-    if int(args.target_bytes) < TARGET_BYTES:
+    generalized = any("retained_admission" in row for row in rows)
+    if generalized and not all("retained_admission" in row for row in rows):
+        raise CertifyError("mixed legacy/generalized ledger refused")
+    admitted_bytes = sum(int(row["bytes"]) for row in rows if row.get("planned_verdict") == "DELETABLE")
+    if generalized and (args.target_bytes != admitted_bytes or admitted_bytes <= 0):
+        raise CertifyError("generalized target must equal the full admitted byte set")
+    if not generalized and int(args.target_bytes) < TARGET_BYTES:
         raise CertifyError(f"refusing to lower the charter target: got={args.target_bytes}:minimum={TARGET_BYTES}")
     if any(
         not valid_sha256(row.get("sha256")) or row.get("hash_status") != "HASHED_STABLE"
@@ -545,10 +812,14 @@ def apply(args: argparse.Namespace) -> int:
         raise CertifyError("every deletable ledger row must carry a stable full SHA-256 before apply")
     preapply_sha = sha256_file(args.ledger)
     if preapply_sha != args.expected_ledger_sha256:
-        raise CertifyError(
-            "ledger identity mismatch: "
-            f"expected={args.expected_ledger_sha256}:actual={preapply_sha}"
-        )
+        raise CertifyError(f"ledger identity mismatch: expected={args.expected_ledger_sha256}:actual={preapply_sha}")
+    if len({row["path"] for row in rows}) != len(rows):
+        raise CertifyError("duplicate apply paths")
+    roots = sorted({storage_root(Path(row["path"])) for row in rows}) if generalized else [VERTIGO_ROOT]
+    for row in rows:
+        if row.get("verdict") == "DELETABLE":
+            family = row["family"] if generalized else re.search(r"ddm_[a-z0-9]+", row["path"])[0]
+            process_gate(family)
     baseline = min(int(row.get("df_before", {}).get("available_bytes")) for row in rows if row.get("df_before"))
     append_fsynced(
         args.journal,
@@ -558,7 +829,7 @@ def apply(args: argparse.Namespace) -> int:
             "preapply_ledger_path": str(args.ledger),
             "preapply_ledger_sha256": preapply_sha,
             "target_bytes": int(args.target_bytes),
-            "df": df_row(VERTIGO_ROOT),
+            "df": combined_df(roots),
             "written_at_utc": utc_now(),
         },
     )
@@ -567,7 +838,7 @@ def apply(args: argparse.Namespace) -> int:
     for row in sorted(rows, key=lambda item: (-int(item["bytes"]), int(item["inventory_rank"]))):
         if row.get("planned_verdict") != "DELETABLE" or row.get("verdict") != "DELETABLE":
             continue
-        current_df = df_row(VERTIGO_ROOT)
+        current_df = combined_df(roots)
         net_freed = int(current_df["available_bytes"]) - baseline
         if net_freed >= int(args.target_bytes) and deleted_logical_bytes >= int(args.target_bytes):
             row["verdict"] = "BLOCKED:TARGET_MET_BEFORE_ROW"
@@ -575,18 +846,26 @@ def apply(args: argparse.Namespace) -> int:
             continue
         path = Path(str(row["path"]))
         blockers = _stat_identity_blockers(path, row)
-        if _selected_family(path) is None:
+        if not generalized and _selected_family(path) is None:
             blockers.append("TARGET_NOT_IN_EXACT_APPLY_ALLOWLIST")
         forbidden = _forbidden_target_reason(path)
         if forbidden:
             blockers.append(forbidden)
         try:
-            refreshed = certify_selected(path, str(row["sha256"]))
-        except (OSError, ValueError, json.JSONDecodeError, CertifyError) as exc:
+            refreshed = retained_revalidation(row) if generalized else certify_selected(path, str(row["sha256"]))
+        except (OSError, ValueError, KeyError, json.JSONDecodeError, CertifyError) as exc:
             blockers.append(f"CERTIFICATE_REVALIDATION_REFUSED:{type(exc).__name__}:{exc}")
             refreshed = None
         aliases = [str(path), str(path.parent)] if refreshed is None else list(refreshed.pop("reference_aliases"))
-        hits = repo_reference_hits({str(path): aliases}, args.repo_root)[str(path)]
+        exclusions = observation_exclusions(row.get("observation_files", []), args.repo_root)
+        if generalized:
+            exclusions.extend(
+                [
+                    args.ledger.resolve().relative_to(args.repo_root.resolve()).as_posix(),
+                    args.journal.resolve().relative_to(args.repo_root.resolve()).as_posix(),
+                ]
+            )
+        hits = repo_reference_hits({str(path): aliases}, args.repo_root, observation_files=exclusions)[str(path)]
         if hits:
             blockers.append("REPOSITORY_REFERENCE_HIT_AT_APPLY")
         raw_sha_verified_current = False
@@ -595,13 +874,17 @@ def apply(args: argparse.Namespace) -> int:
                 blockers.append("RAW_SHA256_DRIFT_AT_APPLY")
             else:
                 raw_sha_verified_current = True
+        process = None
         try:
+            family = row["family"] if generalized else re.search(r"ddm_[a-z0-9]+", row["path"])[0]
+            process = process_gate(family)
             lsof = lsof_plus_d(path.parent)
             if lsof["open_descriptor_rows"]:
                 blockers.append("LIVE_OPEN_DESCRIPTOR_AT_APPLY")
         except CertifyError as exc:
             lsof = None
             blockers.append(f"LSOF_SCAN_FAILED_AT_APPLY:{exc}")
+        blockers.extend(_stat_identity_blockers(path, row))
         blockers = list(dict.fromkeys(blockers))
         append_fsynced(
             args.journal,
@@ -614,6 +897,7 @@ def apply(args: argparse.Namespace) -> int:
                 "refreshed_reproducer": refreshed,
                 "reference_hits": hits,
                 "lsof": lsof,
+                "process_gate": process,
                 "raw_sha256_verified_current": raw_sha_verified_current,
                 "blockers": blockers,
                 "df": current_df,
@@ -633,7 +917,7 @@ def apply(args: argparse.Namespace) -> int:
             os.close(parent_fd)
         if path.exists() or path.is_symlink():
             raise CertifyError(f"raw still exists after unlink: {path}")
-        after = df_row(VERTIGO_ROOT)
+        after = combined_df(roots)
         row["verdict"] = "DELETED"
         row["df_after"] = after
         row["applied_at_utc"] = utc_now()
@@ -661,7 +945,7 @@ def apply(args: argparse.Namespace) -> int:
         atomic_jsonl(args.ledger, rows)
         deleted += 1
         deleted_logical_bytes += int(row["bytes"])
-    final_df = df_row(VERTIGO_ROOT)
+    final_df = combined_df(roots)
     for row in rows:
         if row.get("planned_verdict") == "DELETABLE" and row.get("verdict") == "DELETABLE":
             row["verdict"] = "BLOCKED:CERTIFIED_SET_EXHAUSTED_OR_TARGET_CHECK_ENDED"
@@ -701,6 +985,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     plan_parser.add_argument("--inventory", type=Path, required=True)
     plan_parser.add_argument("--hash-ledger", type=Path, required=True)
     plan_parser.add_argument("--output-ledger", type=Path, required=True)
+    retained_parser = subparsers.add_parser("plan-retained")
+    retained_parser.add_argument("--source-ledger", type=Path, required=True)
+    retained_parser.add_argument("--rehash-ledger", type=Path, required=True)
+    retained_parser.add_argument("--closures", type=Path, required=True)
+    retained_parser.add_argument("--output-ledger", type=Path, required=True)
     apply_parser = subparsers.add_parser("apply")
     apply_parser.add_argument("--ledger", type=Path, required=True)
     apply_parser.add_argument("--expected-ledger-sha256", required=True)
@@ -712,8 +1001,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        if args.command == "plan-retained":
+            return plan_retained(args)
         return plan(args) if args.command == "plan" else apply(args)
-    except (OSError, ValueError, json.JSONDecodeError, CertifyError) as exc:
+    except (OSError, ValueError, KeyError, json.JSONDecodeError, CertifyError) as exc:
         print(f"FATAL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
 

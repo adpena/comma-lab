@@ -137,7 +137,12 @@ def test_forbidden_target_rejects_resolved_escape(tmp_path: Path, monkeypatch: p
     assert vr3._forbidden_target_reason(root / "escape/0.raw") == "RESOLVED_TARGET_OUTSIDE_VERTIGO_ROOT"
 
 
-def test_reference_scan_ignores_only_this_arms_observation_outputs(tmp_path: Path) -> None:
+def test_reference_scan_ignores_only_this_arms_observation_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(vr3, "VERTIGO_ROOT", tmp_path / "absent")
+    monkeypatch.setattr(vr3, "AP_ROOT", tmp_path / "absent_ap")
+    monkeypatch.setattr(vr3, "LIVE_POINTER_REFERENCE_ROOT", tmp_path / "absent_pointer")
     alias = "/Volumes/VertigoDataTier/pact/candidate/work/inflated/0.raw"
     observation = tmp_path / ".omx/tmp/codex_runs/ddm_vr3_both_ssds_full_certify_or_block_reclaim.log"
     observation.parent.mkdir(parents=True)

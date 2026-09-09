@@ -1,0 +1,31 @@
+{
+  "pass1": {
+    "scope": "Admission certificate and mutation boundaries; original AP1/JF2 compatibility",
+    "findings_fixed": [
+      "Generalized admission must retain exact source certificate equality, not only current archive validity.",
+      "Repository reference coverage must remain broad; live-tree metadata filtering is a separate scan.",
+      "Raw SHA must be recomputed at apply even when size and mtime match.",
+      "Unavailable or warning-bearing lsof must refuse."
+    ]
+  },
+  "pass2": {
+    "scope": "Live process visibility, ignored pointers, per-row revalidation and journaling",
+    "findings_fixed": [
+      "Gitignored live pointer must be scanned as an explicit file.",
+      "Live-tree metadata must be scanned with --no-ignore.",
+      "Protect both bare and suffixed live arm names."
+    ],
+    "verified": [
+      "Process ps must show init and self; pgrep errors, denied ps, malformed visibility and active owner all refuse.",
+      "All source/hash/memo/observation pins are revalidated before deletion.",
+      "PRE_DELETE fsync precedes unlink; parent fsync and DELETED journal precede atomic ledger checkpoint.",
+      "Two-drive free space is reported separately and summed; target remains full admitted logical bytes."
+    ]
+  },
+  "boundaries": [
+    "No actual SSD apply attempted.",
+    "Temporary fixture tests are implementation tests, not evidence of real reclaimed bytes.",
+    "MAIN receipt reports approximately 23:50Z, later than tool time during reading; retained as reported, never used to waive live apply gates.",
+    "An optional duplicate current-chain precheck was interrupted to avoid competing with MAIN hashing; final planner performs the required current-chain validation."
+  ]
+}

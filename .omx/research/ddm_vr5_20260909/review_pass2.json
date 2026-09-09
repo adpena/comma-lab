@@ -1,0 +1,56 @@
+[
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/review_tracker.py",
+      "mark-file",
+      "experiments/ddm_vr3_certified_raw_reclaim.py",
+      "--status",
+      "reviewed",
+      "--reviewer",
+      "ddm_vr5",
+      "--pass",
+      "vr5-pass2-final-process-reference-pointer-and-journal"
+    ],
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/ddm_vr3_certified_raw_reclaim.py' current entity census 33 (last stored census 33)\nMarked 33 entities in 'experiments/ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n",
+    "stderr": "",
+    "file_sha256": "71773039b7fb9552f62fef1f5e1c766949d2c05c2f05e1eaf7bbf13644099cc4"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/review_tracker.py",
+      "mark-file",
+      "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
+      "--status",
+      "reviewed",
+      "--reviewer",
+      "ddm_vr5",
+      "--pass",
+      "vr5-pass2-final-process-reference-pointer-and-journal"
+    ],
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/tests/test_ddm_vr3_certified_raw_reclaim.py' current entity census 7 (last stored census 7)\nMarked 7 entities in 'experiments/tests/test_ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n",
+    "stderr": "",
+    "file_sha256": "9a53770d41b1e7a59671bef0857a4d45f2458e354bf1a3883123a9a2ab551149"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/review_tracker.py",
+      "mark-file",
+      "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+      "--status",
+      "reviewed",
+      "--reviewer",
+      "ddm_vr5",
+      "--pass",
+      "vr5-pass2-final-process-reference-pointer-and-journal"
+    ],
+    "returncode": 0,
+    "stdout": "RESCAN: 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' current entity census 15 (last stored census 15)\nMarked 15 entities in 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' as 'reviewed'\n",
+    "stderr": "",
+    "file_sha256": "463e7f8efd660777adef45a0c6ed5f7d8026797ddfdb8bc8ecb81c10396a0eeb"
+  }
+]

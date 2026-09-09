@@ -1,0 +1,19 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "plan-retained",
+    "--source-ledger",
+    ".omx/research/ddm_vr4_reclaim_ledger_20260909.jsonl",
+    "--rehash-ledger",
+    "/Volumes/VertigoDataTier/pact/ddm_vr4_reclaim_20260909/main_rehash_20260909.jsonl",
+    "--closures",
+    ".omx/research/ddm_vr5_20260909/admission_policy.json",
+    "--output-ledger",
+    ".omx/research/ddm_vr5_reclaim_plan_20260909.jsonl"
+  ],
+  "returncode": 0,
+  "waited_seconds": 538.5088637500012,
+  "score_claim": false,
+  "applied": false
+}

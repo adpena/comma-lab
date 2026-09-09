@@ -1,0 +1,202 @@
+{
+  "closures": {
+    "ddm_bz2d": {
+      "family": "ddm_bz2d",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bz2d_distortion_verdict_20260830.md",
+        "sha256": "2c1bbe7b5ae43751bb387dcc7ed6bcc8585bfdd537698f1f6a8b7c3504ef9b69"
+      },
+      "verdict_quote": "# ddm_bz2d \u2014 bz2 born-object distortion: REFUSED at 99.68\u00d7, and the transfer law that closes the family",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_wd2": {
+      "family": "ddm_wd2",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_wd2_ep60_advisory_refusal_verdict_20260815.md",
+        "sha256": "174b08b62fa98c3f0fd36f841a60222edb44c1b575d5e0a3ecfe31ec18907022"
+      },
+      "verdict_quote": "**REFUSED.** The composed \u22480.1480 projection via the ep60 flattened d4/w64 student is DEAD.",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_hv1": {
+      "family": "ddm_hv1",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hv1_pointer_move_and_wd2_advisory_chain_20260815.md",
+        "sha256": "c10ccbdb416c7d59030382aafbe494b18ef91f2daab19ed3156386dbb0bcc5bb"
+      },
+      "verdict_quote": "- The wc2 e960 continuation was ALREADY governed-early-stopped at 15:49Z",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_sa3": {
+      "family": "ddm_sa3",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+        "sha256": "87eb479227ba6f91a39282fc284e52dc35bcc23920318575339908fcf32c6bfb"
+      },
+      "verdict_quote": "Eighth micro-campaign pointer move. Gap to 0.15: 0.00771 \u2192 **0.00766** (0.71% closed).",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_ck1": {
+      "family": "ddm_ck1",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ck1_t4_refusal_mixed_lineage_desync_20260818.md",
+        "sha256": "06055da3e3b4be5c1f212b482e84924008d928b4fc693bc2ff72ad631b875ea5"
+      },
+      "verdict_quote": "# ck1 T4 refusal S=79.4 \u2014 mixed-lineage silent arithmetic desync (typed + cured)",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_ck2": {
+      "family": "ddm_ck2",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ck2_container_plane2_eleventh_move_20260819.md",
+        "sha256": "07cd2010f5172297e042866d09400e06b7f9ce0d8222b56f908782c89353cc62"
+      },
+      "verdict_quote": "# ck2 \u2014 the eleventh-move candidate: a parameter-free container transform, \u2212657 B at zero distortion",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_jg4": {
+      "family": "ddm_jg4",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jg5_pose_resolve_on_edited_renders_20260819.md",
+        "sha256": "dd0bee480cbd28e084dd3af7670c92e47468a4445995088b03fe73f484a29249"
+      },
+      "verdict_quote": "The composed candidate `ddm_jg4` handed me was never a sub-0.15 candidate. Measured at n600",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_jg5": {
+      "family": "ddm_jg5",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rr8_t4_wallclock_verdict_20260820.md",
+        "sha256": "01ca4a86156b43cdd73623da0fa2875d15375b29c1a170499740a339defbba0e"
+      },
+      "verdict_quote": "# ddm_rr8 T4 wall-clock row \u2014 one instrumented instance passes (464.6 s vs 1,419.9 s), score bit-identical",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_cd1": {
+      "family": "ddm_cd1",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd1_corrector_shipping_axis_decomposition_20260820.md",
+        "sha256": "edf19b84ac8aff2df550c8c36f7378b0dd5136487002debc066386600da54704"
+      },
+      "verdict_quote": "Status: **MEASURED. Identity proven on both axes. Verdict: BUILD the corrector port.**",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_fs3": {
+      "family": "ddm_fs3",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_fs3_jg5_real_price_reopen_20260820.md",
+        "sha256": "506d4dbd11d609f03d9601e3b52c4bc13edcbe593b90721b2bab70c4d1c643c9"
+      },
+      "verdict_quote": "> registered before the encode. **NET +5.724484e-05 \u2014 a LOSS at 16.36\u00d7 the bar. REFUSED on rate.**",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_ri1": {
+      "family": "ddm_ri1",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ri1_rc1_full_rgb_receiver_20260822.md",
+        "sha256": "7b70bb89274425d16179684ee46110440e773117de83a89cf40784483f9cb0f6"
+      },
+      "verdict_quote": "**Disposition:** `FOLDED`, `verdict_scope=INSTANCE`. The exact K=2,048/i3 RC1 archive is",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_ni1": {
+      "family": "ddm_ni1",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ni1r_nr1_k32_distortion_measured_20260830.md",
+        "sha256": "ec5a081b7d3cf3a5e79a9b8dfaa9e1727c0afd6105d3b40084e00fda8ebd1d51"
+      },
+      "verdict_quote": "**Status:** `MEASURED_DEAD_ON_DISTORTION` \u2014 the ni1 (2026-08-22) queued measurement, fired and harvested $0.",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_rf1": {
+      "family": "ddm_rf1",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rf1_renderer_film_rung_20260824.md",
+        "sha256": "d5c5d3b29f7d88d50a15cff115e28b679d36da57ac44afd1e1a9d4a248a937c2"
+      },
+      "verdict_quote": "**Verdict: REFUSED at 2.7749\u00d7 the matched base \u2014 the mildest refusal on the renderer ladder by",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_jf2": {
+      "family": "ddm_jf2",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jf2_terminal_diagonal_harvest_20260826.md",
+        "sha256": "3fca9f4dc29d80cee3a2a822f92109764e03ec7ac84aa8bed333651119a0f81d"
+      },
+      "verdict_quote": "**VERDICT \u2014 TRAINED-DIAGONAL FAMILY CLOSED at TERMINAL+DISTORTION scope.** Every byte",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    },
+    "ddm_rr8": {
+      "family": "ddm_rr8",
+      "disposition": "CLOSED_ADVISORY_INSTANCE",
+      "memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rr8_corrector_only_native_port_20260820.md",
+        "sha256": "b39220e7585fb15c6378786f4c0f484dfc8d777855e1ccc96e8b986daacbf30a"
+      },
+      "verdict_quote": "Status: **BUILT. Identity PROVEN at n600 on BOTH candidate trees \u2014 0.raw byte-identical, score exact. Speedup MEASURED",
+      "scope": "Charter-declared closed advisory raw instance; retained archives, runtimes and follow-on payloads are not reclaim targets."
+    }
+  },
+  "observation_files": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_reclaim_ledger_20260909.jsonl",
+      "sha256": "2fbe57b7a7bcbe410b01abbf7b7214812553c37e7e4288423914f71decc73495"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/reference_scan.json",
+      "sha256": "2cfab82509102ddbd1b3f88ec548286183b92882e2e79002a799e3e9b7d412d0"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/ap_certificate_preflight.json",
+      "sha256": "0abdad1a30fdd24e9ae355d4f3663f47c38f3e3bc1092857e268e356fb31d372"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/inventory.json",
+      "sha256": "cc98bf1e6469dc05cda63748e067c4d60ae5b2e9c5f7d7fb508e7a6b70b9f5c4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/reference_patterns.txt",
+      "sha256": "43c3b97bcce5dfb069396d79f75c4d5a02ba4232a987aaeb19fbe69cd3b37293"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/vertigo_certificate_preflight.json",
+      "sha256": "094548792fb4db9dd5329a25f4e2ba82f290e8ee6e0e159c9b6b6b99386d53ae"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/vr3_certificate_preflight.json",
+      "sha256": "438d60a625513db5e595d05f0ca68e7e7f024e99690791e8f2fc03639319c4ab"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/vr3_nearby_receipts.json",
+      "sha256": "689328ca702fb4ca21883348700d9dfda7d2db00b57355dce40465aacf088513"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/vr3_successor_rows.json",
+      "sha256": "6336bac10b6b048a0a1c1c0339319a8e3a8bcf27a9d3bce07774f80a227a025a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr4_20260909/process_gate.json",
+      "sha256": "648bc656c295af994137311c35e542d4db87a77529ee31ad5fca5692dd10ca32"
+    }
+  ],
+  "observation_rationale": "VR4 inventory, certificate and reference-scan outputs are historical observations, not consumers; exact files pinned so later edits fail closed.",
+  "main_process_receipt": {
+    "status": "MAIN_REPORTED_CLEAR_RECHECK_REQUIRED",
+    "reported_at": "2026-09-09 ~23:50Z",
+    "source": "Charter MAIN receipt; not a live check by VR5. Reported time is later than the tool clock at charter consumption; no freshness inferred."
+  }
+}

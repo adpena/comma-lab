@@ -1,0 +1,2 @@
+cd /Users/adpena/Projects/pact
+.venv/bin/python experiments/ddm_vr3_certified_raw_reclaim.py apply --ledger .omx/research/ddm_vr5_reclaim_plan_20260909.jsonl --expected-ledger-sha256 44164e45610e410b4d59abaadb0bc6b03b5611b267fa558fb274aedcdd5635d6 --journal .omx/research/ddm_vr5_apply_journal_20260909.jsonl --target-bytes 62260963200
