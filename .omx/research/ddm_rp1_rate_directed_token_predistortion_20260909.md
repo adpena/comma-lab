@@ -244,7 +244,57 @@ and a verdict: the per-pair bit ledger, which allows keeping only the pairs that
 saved and dropping the ones the re-pricing turned negative. That encode is re-running (the
 first one produced the ledger and an ordering bug threw it away; the bug is fixed and gated).
 
-## 8. Status and what is running
+## 8. Per-pair selection, and the verdict
+
+The re-run priced encode produced the per-pair bit ledger the admission needs
+(`price_partial/enc2/bits_per_frame.npy`, delta at `delta_bytes_per_pair.npy`). It
+decomposes the −31.75 B exactly:
+
+| | bytes |
+|---|---|
+| 115 edited pairs | **−30.02** |
+| — of which 68 SAVERS (130 tokens) | **−58.50** |
+| — of which 47 LOSERS (87 tokens) | **+28.48** |
+| 485 untouched pairs (autoregressive spill) | −1.73 |
+| total (stream check 119,752 − 119,784) | **−31.75 (−32)** |
+
+**Forty-one per cent of realized-neutral changes cost bytes rather than saving them**, even
+though each was proposed *because* the coder's own row said it would save 8 bits. That is the
+adaptive claw-back at per-pair resolution, and it is exactly what a Lagrange admission is for:
+keeping only the savers takes the yield from −30.02 B to **−58.50 B, a 1.95× selection gain**,
+and moves realized/modelled from **0.1445 to 0.2663**.
+
+**The full-pass projection, from an unbiased n=120 sample.** Shard 0 is a clean 1-in-5
+interleaved sample of all 600 pairs: 3,840 proposals, **168 neutral (4.375 %)**, first-order
+162.94 B → **814.72 B** first-order for the whole pass at ranks 0–32.
+
+| | bytes | ΔS |
+|---|---|---|
+| first-order (what the ranking claims) | 814.7 | −5.42e-4 |
+| real, unselected (×0.1445) | 117.8 | −7.84e-5 |
+| **real, per-pair selected (×0.2663)** | **217.0** | **−1.445e-4** |
+
+**VERDICT.** A candidate exists and it is small: **≈ −217 B, ΔS ≈ −1.44e-4, 7.2× the 2e-5
+admit bar, and 0.81 % of the 26,908.6 B corner.** It clears this arm's pre-registered
+`no candidate` floor of 150 B only *after* per-pair selection, and the number still owes a
+real subset re-encode (a subset's exact archive is not its ledger sum — sj1 measured +19.6 B
+of under-charge on its own subset) plus whatever the pose leg costs after the carrier
+re-solve.
+
+**PRIOR-LAW PREDICTION vs MEASURED, final:**
+
+| | predicted | measured |
+|---|---|---|
+| neutral fraction | 5–20 % | **4.38 %** (n=120, unbiased) — below the band |
+| bits per neutral change | 2–6 | 8.10 first-order, **1.18 real** — the band priced the wrong quantity |
+| yield | −800 to −3,000 B | **−217 B selected** — an order of magnitude below |
+
+The prediction failed in a specific and instructive way: it assumed a first-order coder price
+was a charge. It is not. **The single number this arm adds to the campaign is 0.146 — the
+fraction of a first-order saving that an adaptive coder actually pays out when you take a
+surprise out of the field.**
+
+## 9. Status and what is running
 
 The stop rule cleared, so the n600 pass is running: **all 600 pairs, ranks 0–32 per pair**
 (the value-per-test optimum above), singles mode, 5 interleaved shards, 2 live while sj1's
@@ -259,6 +309,6 @@ and change the CODER and the semantic section, not the field, so they compose wi
 by re-pricing rather than re-searching — but the byte delta of this field change must then be
 re-measured under whichever tail coder is live at seal time.
 
-## 9. Frontier line
+## 10. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
