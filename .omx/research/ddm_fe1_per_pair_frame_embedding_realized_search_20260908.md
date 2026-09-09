@@ -10,6 +10,36 @@ lane `ddm_sj1_t4_token_predistortion_pass3_20260906`, archive sha `06c44dc4…`.
 
 ---
 
+## 0. THE HEADLINE LAW — the renderer-coupling wall does NOT transfer to a per-pair change
+
+The renderer arms are closed on coupling: rf1 measured 166.8, ft1 217.3, and pr1 still sat 41.5× over the payable
+bar after a re-solve (`renderer_seg_pose_coupling_170_220_two_arms_20260903`). The stated reason was that renderer
+weights move all 600 pairs at once, so there is no per-pair admission lever. **`frame_embed` is that lever, and on
+it the wall is gone.**
+
+MEASURED here, end to end on the shipped chain:
+
+| pair · move | d_pose base | d_pose STALE | d_pose after `jg5.refine_pair` | recovery | resolved cost in S |
+|---|---|---|---|---|---|
+| 118 · d2 +0→+2 | 6.198610e-08 | 2.576839e-04 (**4157×**) | **8.439129e-08** (1.36× base) | **3053×** | **+2.6e-08** |
+| 382 · d6 +0→−1 | 1.265234e-06 | 5.570474e-04 (**440×**) | **8.665944e-07** (0.68× base) | **643×** | (not credited — see §5) |
+
+The stale rise is larger than any renderer arm has recorded — 440× to 4157× — and the carrier re-solve gives back
+essentially all of it. Post-re-solve the pose leg costs **+2.6e-08 S per moved pair, about 3% of what one repaired
+seg cell is worth.**
+
+**The law: a change confined to ONE pair's render is payable on pose, however violent, because that pair's twelve
+carrier coefficients are free to re-aim after it.** A change that moves all 600 renders is not, because the same
+twelve coefficients per pair must then absorb a perturbation they were not solved against. The coupling number was
+never a property of "touching the renderer"; it was a property of touching every pair at once. Any future arm that
+can localise its render change to a pair should read the coupling memo as scoped to the all-pairs case and price
+its own pose leg rather than inheriting 170–220×.
+
+What this arm did NOT clear is a different wall, and it is worth naming beside the good news: the shipped 3-bit
+FiLM lattice is too coarse to buy much seg (§4, §9). Pose stopped being the question; supply became the question.
+
+---
+
 ## 1. What was verified at source (the charter's premise, corrected)
 
 The charter said `frame_embed.weight_q (600, 8) i1` — an int4 field with 15 alternatives per code.
@@ -197,4 +227,41 @@ At the measured shape (one cell per admitted pair, `C ≈ N`) this crosses the �
 * **FALSIFIER (charter's, unchanged): if the admitted set's total ΔS ≥ −2e-5 through the REAL archive build,
   the FiLM axis cannot pay on this renderer** (verdict_scope: formulation — single- and paired-code moves at
   |step| ≤ 2 on the shipped 3-bit lattice, this body, realized cpu_torch SegNet acceptance). Count it plainly and stop.
+
+## 10. What this arm hands the next one, whichever way the verdict falls
+
+* **The move ledger is the durable asset.** `search/search_rows_*.jsonl` retains, for every one of the 600 pairs,
+  the realized flip count of every single-code move at |step| ≤ 2 and the greedy second code where the first
+  reduced. Because the section's cost is a container-break fee and NOT a per-code price, those moves are nearly
+  free to anyone who is **already** re-encoding the semantic section: the marginal is +0.17 B per changed code.
+  **fe1's repairs are free riders on any arm that perturbs the semantic section for its own reasons.** That is the
+  composition law (`sy2`: a closed leg survives only if another leg changes its object first) applied here.
+* **The per-pair pose law (§0)** re-opens a class the coupling memo closed: localise your render change to one pair
+  and its twelve carrier coefficients will pay for it.
+* **The container-break law (§6)** is registered as `model_section_edit_container_break_fee_v1` and any arm editing
+  a model section on this body must price through it.
+
+## 11. Owed items
+
+## ITEM 1 — price the fe1 move ledger as a rider on the next semantic-section edit
+The ledger's repairs cost +0.17 B/code once someone else has paid the container-break fee. When pc2, rc2, or any
+successor re-encodes the semantic section, re-price the fe1 admitted set against THAT candidate's bytes rather than
+the live row's — the seg gain is unchanged and the rate leg nearly vanishes.
+
+## ITEM 2 — is the break fee the same on the hpac section?
+The hpac section is the same container family with the same rider magic (RC1, `reserved` bit 0x40), so the fee is
+PREDICTED to apply, and it is NOT measured. One `rate-law` run against hpac codes settles it and would tell rc2
+what its own edits actually cost.
+
+## ITEM 3 — the unmoved-render re-solve control
+`jg5.refine_pair` on pair 382's MOVED render landed BELOW the pair's live d_pose, which means the live carrier was
+not converged for that pair. The admission path now runs the control (re-solve on the UNMOVED render) for every
+candidate, so no move can book a gain the live carrier had simply left on the table. If that control finds material
+gains across many pairs, it is a rate-free pose lever in its own right and belongs to a carrier arm, not to fe1.
+
+## ITEM 4 — a finer FiLM lattice is a different question
+Every negative in §4 is scoped to the shipped **3-bit** code domain. The renderer's `frame_embed` could be re-trained
+or re-quantised at 4 bits (+600 B of codes at the shipped packing, before the coder), which would offer sub-step
+moves the current lattice cannot express. Nothing here says the FiLM axis is dead; it says the shipped lattice is
+too coarse to fine-tune on.
 
