@@ -26,6 +26,13 @@ frame() {
   fi
 }
 
+# MEASURED bound, not a guessed one.  The first round used 1800 s, sized off a 2-frame
+# smoke that ran ALONE at 2.6 s/frame; four concurrent encodes beside rp1's four shards
+# measured 4.0 s/frame, so 600 frames needs ~2,400 s and every encode hit the wall at
+# frame 440.  7200 s is 3x the measured need, which leaves room for the machine getting
+# busier without paying for a resume that a source change can then refuse.
+TIMEOUT="${TIMEOUT:-7200}"
+
 for attempt in $(seq 1 20); do
   if [ -f "$work/ENCODE_0600.json" ]; then
     echo "encode already complete: $field/$tag"
@@ -34,7 +41,7 @@ for attempt in $(seq 1 20); do
   before="$(frame)"
   df -h /Volumes/VertigoDataTier /Volumes/APDataStore
   set +e
-  nice -n 10 .venv/bin/python tools/safe_run.py --timeout 1800 --rss-mb 6144 \
+  nice -n 10 .venv/bin/python tools/safe_run.py --timeout "$TIMEOUT" --rss-mb 6144 \
     --label "sj1p5_${field}_${tag}_${attempt}" -- \
     .venv/bin/python -B experiments/ddm_sj1_pass5_price.py encode --field "$field" --tag "$tag" --stop 600
   code="$?"
