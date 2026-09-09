@@ -177,6 +177,54 @@ class Rw1Error(RuntimeError):
     """A ddm_rw1 precondition failed.  Always fail closed."""
 
 
+#: LATE-BOUND live-body pin.  The constants above are the body this module was written
+#: against; when the pointer moves, ``rebase`` MEASURES the new tree and writes this
+#: file, and every later import reads it.  Two reasons it is a file and not an edit:
+#: (1) hand-typing shas and scores into a module is the hand-error genus the
+#: pointer-move packet exists to remove; (2) a default captured at parser-build time is
+#: bound BEFORE a re-base can act, which is the early-binding trap pc2's r=12 identity
+#: control caught the hard way.
+LIVE_PIN_PATH = WORK / "LIVE_PIN.json"
+_PIN_PATH_KEYS = (
+    "LIVE_TREE",
+    "LIVE_RAW",
+    "LIVE_FIELD",
+    "LIVE_ARGMAX",
+    "SHARED_SECTION_SOURCE",
+)
+_PIN_VALUE_KEYS = (
+    "LIVE_ARCHIVE_SHA256",
+    "LIVE_ARCHIVE_BYTES",
+    "LIVE_SCORE_T4",
+    "LIVE_D_SEG_T4",
+    "LIVE_D_SEG_LOCAL",
+    "LIVE_D_SEG_CELLS",
+    "LIVE_D_POSE",
+    "SEG_T4_RATIO",
+    "LIVE_SM3R_SHA256",
+)
+
+
+def _apply_live_pin() -> dict[str, Any] | None:
+    """Override the live-body constants from the pin file, if one has been written."""
+    if not LIVE_PIN_PATH.is_file():
+        return None
+    pin = json.loads(LIVE_PIN_PATH.read_text())
+    globals_ = globals()
+    for key in _PIN_PATH_KEYS:
+        if key in pin:
+            globals_[key] = Path(pin[key])
+    for key in _PIN_VALUE_KEYS:
+        if key in pin:
+            globals_[key] = pin[key]
+    globals_["LIVE_RUNTIME"] = globals_["LIVE_TREE"] / "runtime"
+    globals_["LIVE_ARCHIVE"] = globals_["LIVE_TREE"] / "archive.zip"
+    return pin
+
+
+LIVE_PIN = _apply_live_pin()
+
+
 def sha256_file(path: Path) -> str:
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
@@ -2196,6 +2244,86 @@ def cmd_rate_law(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=rebase -- re-point at a moved frontier by MEASURING it, never by typing it
+# ----------------------------------------------------------------------------------
+
+
+def cmd_rebase(args) -> int:
+    """Write the live-body pin from a moved pointer, measuring everything measurable.
+
+    The archive sha, its size and the SM3R body sha are MEASURED from the tree; only the
+    numbers that live in an authority receipt (the T4 score and its two legs) are
+    accepted as arguments, and even those are read from the pointer file where it
+    carries them.  The one hard refusal: if the new tree's SM3R body differs from the
+    one this arm trained against, the frozen base codes are a different object and the
+    trained delta does not transfer -- re-training, not re-pinning, is the answer, so
+    the pin refuses unless the caller says so out loud.
+    """
+    started = time.perf_counter()
+    tree = Path(args.tree)
+    archive = tree / "archive.zip"
+    if not archive.is_file():
+        raise Rw1Error(f"no archive.zip under {tree}")
+    ra, rc1, renderer = import_live(tree / "runtime")
+    parts = ra.read_residual_archive(archive)
+    stream = bytes(parts.semantic_blob)
+    template = renderer.SemanticTokenRenderer(96).state_dict()
+    body = (
+        rc1.restore_semantic(stream, template)
+        if stream.startswith(rc1.SEMANTIC_MAGIC)
+        else stream
+    )
+    sm3r_sha = hashlib.sha256(body).hexdigest()
+    trained_against = LIVE_SM3R_SHA256
+    if sm3r_sha != trained_against and not args.allow_semantic_change:
+        raise Rw1Error(
+            f"the new tree's SM3R body is {sm3r_sha}, not the {trained_against} this "
+            "arm's base codes were frozen against; a trained code DELTA is defined "
+            "relative to those codes, so it does not transfer -- re-train, or pass "
+            "--allow-semantic-change and say in the receipt why the delta still applies"
+        )
+
+    pointer = json.loads(POINTER_JSON.read_text())["effective_frontier"]
+    observed = sha256_file(archive)
+    if pointer["archive_sha256"] != observed:
+        raise Rw1Error(
+            f"the pointer names {pointer['archive_sha256']} but {archive} is {observed}; "
+            "re-base onto the tree the pointer actually names"
+        )
+    pin = {
+        "schema": "ddm_rw1_live_pin.v1",
+        "written_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "LIVE_TREE": str(tree),
+        "LIVE_RAW": str(args.raw),
+        "LIVE_FIELD": str(args.field),
+        "LIVE_ARGMAX": str(args.argmax),
+        "SHARED_SECTION_SOURCE": str(args.shared_source or archive),
+        "LIVE_ARCHIVE_SHA256": observed,
+        "LIVE_ARCHIVE_BYTES": archive.stat().st_size,
+        "LIVE_SCORE_T4": float(pointer["score"]),
+        "LIVE_D_SEG_CELLS": int(args.d_seg_cells),
+        "LIVE_D_SEG_LOCAL": int(args.d_seg_cells) / SEG_CELLS_TOTAL,
+        "LIVE_D_SEG_T4": float(args.d_seg_t4),
+        "LIVE_D_POSE": float(args.d_pose),
+        "SEG_T4_RATIO": SEG_T4_RATIO,
+        "LIVE_SM3R_SHA256": sm3r_sha,
+        "semantic_changed_vs_trained_base": sm3r_sha != trained_against,
+        "pointer_lane_id": pointer.get("lane_id"),
+        "measured_not_typed": [
+            "LIVE_ARCHIVE_SHA256",
+            "LIVE_ARCHIVE_BYTES",
+            "LIVE_SM3R_SHA256",
+            "LIVE_SCORE_T4",
+        ],
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    LIVE_PIN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    LIVE_PIN_PATH.write_text(json.dumps(pin, indent=1, sort_keys=True))
+    print(json.dumps(pin, indent=1, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2308,6 +2436,18 @@ def build_parser() -> argparse.ArgumentParser:
     rate.add_argument("--progress", action="store_true", default=True)
     common(rate)
     rate.set_defaults(func=cmd_rate_law)
+
+    rebase = sub.add_parser("rebase")
+    rebase.add_argument("--tree", type=Path, required=True)
+    rebase.add_argument("--raw", type=Path, required=True)
+    rebase.add_argument("--field", type=Path, required=True)
+    rebase.add_argument("--argmax", type=Path, required=True)
+    rebase.add_argument("--shared-source", type=Path, default=None)
+    rebase.add_argument("--d-seg-cells", type=int, required=True)
+    rebase.add_argument("--d-seg-t4", type=float, required=True)
+    rebase.add_argument("--d-pose", type=float, required=True)
+    rebase.add_argument("--allow-semantic-change", action="store_true")
+    rebase.set_defaults(func=cmd_rebase)
 
     return parser
 
