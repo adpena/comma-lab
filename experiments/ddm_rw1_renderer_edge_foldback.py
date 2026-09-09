@@ -2641,6 +2641,210 @@ def cmd_gradient_topk(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=code-search -- DISCRETE realized search over the int4 codes (the sj1/fe1 pattern)
+# ----------------------------------------------------------------------------------
+
+
+def _evaluate_subset(
+    model, fold, segnet, tokens, labels, device, pairs, *, latent=None, batch: int = 4
+) -> int:
+    """Realized argmax flips over a NAMED subset of pairs.  Screening only."""
+    import torch
+
+    flips = 0
+    with torch.no_grad():
+        for start in range(0, len(pairs), batch):
+            index = np.asarray(pairs[start : start + batch], dtype=np.int64)
+            tokens_batch = torch.from_numpy(tokens[index].astype(np.int64)).to(device)
+            index_batch = torch.from_numpy(index).to(device)
+            frame = _render_eval(model, fold, tokens_batch, index_batch, latent)
+            logits = _seg_logits(segnet, _exact_r_camera(frame))
+            argmax = logits.argmax(dim=1).to(torch.uint8).cpu().numpy()
+            flips += int((argmax != labels[index]).sum())
+    return flips
+
+
+def cmd_code_search(args) -> int:
+    """Greedy realized acceptance over int4 code moves, ranked by the surrogate.
+
+    The sj1/fe1 pattern moved onto this actuator: PROPOSE a group of +-1 code moves
+    down the surrogate's own gradient sign, RENDER, score with the frozen SegNet, and
+    accept the group only if realized flips strictly FALL.  A rejected group is halved
+    and its halves retried, so a group that contains one good move is not thrown away
+    with it.  Nothing is accepted on a predicted delta; the acceptance is realized.
+
+    Screening runs on a SEEDED RANDOM subset of pairs (never a prefix -- a prefix of
+    this video is a different population, worst on exactly these axes), and every
+    accepted set is confirmed at n600 before it is reported.
+    """
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    device = torch.device(args.device)
+    torch.manual_seed(args.seed)
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    model = load_live_renderer(section).to(device)
+    tokens = load_live_tokens()
+    labels = load_gt_seg_dali()
+    segnet = jg1.load_segnet().to(device).eval()
+    for param in segnet.parameters():
+        param.requires_grad_(False)
+    fold = CodeFoldBack(section, names, device)
+    sizes = [int(section.runs[n].count) for n in names]
+    base_flat = np.concatenate(
+        [np.asarray(section.codes[n], dtype=np.int64).ravel() for n in names]
+    )
+
+    rng = np.random.default_rng(int(args.seed))
+    screen_pairs = (
+        np.sort(rng.choice(N_PAIRS, size=int(args.screen_pairs), replace=False))
+        if int(args.screen_pairs)
+        else np.arange(N_PAIRS, dtype=np.int64)
+    )
+
+    def as_latent(flat: np.ndarray):
+        out = {}
+        cursor = 0
+        for name, size in zip(names, sizes, strict=True):
+            out[name] = torch.from_numpy(
+                flat[cursor : cursor + size]
+                .reshape(section.runs[name].shape)
+                .astype(np.float32)
+            ).to(device)
+            cursor += size
+        return out
+
+    # One exact gradient on the SCREEN subset gives the proposal ranking and its signs.
+    for param in fold.parameters():
+        param.grad = None
+    for start in range(0, len(screen_pairs), int(args.batch)):
+        index = screen_pairs[start : start + int(args.batch)]
+        tokens_batch = torch.from_numpy(tokens[index].astype(np.int64)).to(device)
+        index_batch = torch.from_numpy(index).to(device)
+        labels_batch = torch.from_numpy(labels[index].astype(np.int64)).to(device)
+        frame = _render_eval(model, fold, tokens_batch, index_batch)
+        logits = _seg_logits(segnet, _exact_r_camera(frame))
+        loss = _expected_flip(logits, labels_batch, float(args.tau)).mean() * (
+            len(index) / len(screen_pairs)
+        )
+        loss.backward()
+    flat_grad = np.concatenate(
+        [fold.latent[n].grad.detach().to("cpu").numpy().ravel() for n in names]
+    )
+    magnitude = np.abs(flat_grad)
+    ranking = str(args.rank)
+    if ranking == "abs_desc":
+        order = np.argsort(-magnitude)
+    elif ranking == "abs_asc":
+        nonzero = np.flatnonzero(magnitude > 0)
+        order = nonzero[np.argsort(magnitude[nonzero])]
+    elif ranking.startswith("band:"):
+        lo_pct, hi_pct = (float(v) for v in ranking.split(":", 1)[1].split(","))
+        lo, hi = np.percentile(magnitude, [lo_pct, hi_pct])
+        inside = np.flatnonzero((magnitude >= lo) & (magnitude <= hi))
+        order = inside[np.argsort(-magnitude[inside])]
+    else:
+        raise Rw1Error(f"unknown --rank {ranking!r}")
+
+    current = base_flat.copy()
+    screen_null = _evaluate_subset(
+        model, fold, segnet, tokens, labels, device, screen_pairs, latent=as_latent(current)
+    )
+    best_screen = screen_null
+    evaluations = 1
+    accepted: list[int] = []
+    rows = []
+    pool = order[: int(args.pool)]
+    group = int(args.group)
+    queue = [pool[i : i + group] for i in range(0, len(pool), group)]
+    while queue and evaluations < int(args.max_evaluations):
+        candidate_idx = queue.pop(0)
+        if candidate_idx.size == 0:
+            continue
+        trial = current.copy()
+        move = -np.sign(flat_grad[candidate_idx]).astype(np.int64)
+        trial[candidate_idx] = np.clip(
+            trial[candidate_idx] + move, CODE_MIN, CODE_MAX
+        )
+        if np.array_equal(trial, current):
+            continue
+        flips = _evaluate_subset(
+            model, fold, segnet, tokens, labels, device, screen_pairs, latent=as_latent(trial)
+        )
+        evaluations += 1
+        improved = flips < best_screen
+        row = {
+            "group_size": int(candidate_idx.size),
+            "screen_flips": int(flips),
+            "screen_best": int(best_screen),
+            "accepted": bool(improved),
+            "evaluations": evaluations,
+            "accepted_codes": len(accepted),
+            "elapsed_seconds": time.perf_counter() - started,
+        }
+        if improved:
+            current = trial
+            best_screen = flips
+            accepted.extend(int(v) for v in candidate_idx)
+        elif candidate_idx.size > 1:
+            half = candidate_idx.size // 2
+            queue.insert(0, candidate_idx[half:])
+            queue.insert(0, candidate_idx[:half])
+            row["bisected"] = True
+        rows.append(row)
+        if args.progress:
+            print(json.dumps(row), flush=True)
+
+    # CONFIRM at n600 -- a screened result is not a verdict.
+    with torch.no_grad():
+        n600_null = _evaluate_realized(model, fold, segnet, tokens, labels, device)
+        n600_final = _evaluate_realized(
+            model, fold, segnet, tokens, labels, device, latent=as_latent(current)
+        )
+    changed = int((current != base_flat).sum())
+    repaired = n600_null["flips"] - n600_final["flips"]
+    rate_bytes = BYTES_PER_CHANGED_CODE * changed + (
+        CONTAINER_BREAK_FIXED_BYTES if changed else 0.0
+    )
+    result = {
+        "schema": "ddm_rw1_code_search.v1",
+        "axis": f"[{args.device} research-signal; screened on a seeded RANDOM subset, "
+        "confirmed at n600 realized argmax]",
+        "score_claim": False,
+        "pointer": pointer,
+        "rank": ranking,
+        "pool": int(args.pool),
+        "group": group,
+        "tau": float(args.tau),
+        "screen_pairs": len(screen_pairs),
+        "screen_null_flips": int(screen_null),
+        "screen_best_flips": int(best_screen),
+        "evaluations": evaluations,
+        "accepted_codes": changed,
+        "n600_null_flips": n600_null["flips"],
+        "n600_final_flips": n600_final["flips"],
+        "cells_repaired_n600": repaired,
+        "rate_bytes_predicted": rate_bytes,
+        "dS_rate": rate_bytes * RATE_PER_BYTE,
+        "dS_seg": -repaired * S_PER_SEG_CELL,
+        "dS_seg_plus_rate": -repaired * S_PER_SEG_CELL + rate_bytes * RATE_PER_BYTE,
+        "prereg_falsifier_cells": 139,
+        "falsifier_fired": bool(repaired < 139),
+        **_stake(-repaired),
+        "rows": rows,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    np.save(Path(args.out).with_suffix(".codes.npy"), current.astype(np.int8))
+    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2787,6 +2991,21 @@ def build_parser() -> argparse.ArgumentParser:
     topk.add_argument("--progress", action="store_true", default=True)
     common(topk)
     topk.set_defaults(func=cmd_gradient_topk)
+
+    search = sub.add_parser("code-search")
+    search.add_argument("--out", type=Path, default=WORK / "receipts/CODE_SEARCH.json")
+    search.add_argument("--device", default="mps")
+    search.add_argument("--batch", type=int, default=4)
+    search.add_argument("--tau", type=float, default=TAU_REFERENCE)
+    search.add_argument("--rank", default="abs_asc")
+    search.add_argument("--pool", type=int, default=1024)
+    search.add_argument("--group", type=int, default=64)
+    search.add_argument("--screen-pairs", type=int, default=120)
+    search.add_argument("--max-evaluations", type=int, default=120)
+    search.add_argument("--seed", type=int, default=20260909)
+    search.add_argument("--progress", action="store_true", default=True)
+    common(search)
+    search.set_defaults(func=cmd_code_search)
 
     return parser
 
