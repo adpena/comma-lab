@@ -129,8 +129,10 @@ def test_leverd_equation_contract_and_orphan_invariant():
     assert "tac.witness_dsl.gauge" in eq.canonical_consumers          # the DSL leg consumes it
     assert any("margin_conditional_residual" in p for p in eq.canonical_producers)  # #72 MCR coder
     assert any("levelset_byte_close_and_eval" in p for p in eq.canonical_producers)  # #202 A/B
-    # two MEASURED-pending anchors (the net-S band + the coder floor).
-    assert len(eq.empirical_anchors) == 2
+    # Every MEASURED-pending anchor must be addressable by the residual map.
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert anchor_ids
+    assert len(eq.predicted_vs_empirical_residual) == len(anchor_ids)
 
 
 def test_leverd_equation_carries_predicted_provenance():

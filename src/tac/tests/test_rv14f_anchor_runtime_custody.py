@@ -193,9 +193,12 @@ def test_f4_the_measured_collision_becomes_distinguishable(tmp_path):
                   runtime_tree_sha256="71c75468" + "c" * 56),
     )
     anchors = load_experiments_results_anchors(tmp_path)
-    assert len({a.archive_sha256 for a in anchors}) == 1
+    assert {a.archive_sha256 for a in anchors} == {sha}
     keys = {(a.archive_sha256, a.extra["runtime_tree_sha256"]) for a in anchors}
-    assert len(keys) == 2, "keyed on (archive, runtime_tree) the two rows must differ"
+    assert keys == {
+        (sha, "da91e067" + "b" * 56),
+        (sha, "71c75468" + "c" * 56),
+    }, "keyed on (archive, runtime_tree) the two rows must differ"
 
 
 def test_f4_live_mirror_rows_all_carry_runtime_custody():

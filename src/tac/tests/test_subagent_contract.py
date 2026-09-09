@@ -108,7 +108,10 @@ def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     # +1 on 2026-08-09 for INTERNAL_LEVERAGE_AUTHORITY — the operator's standing grant over our
     # OWN codebase/docs (use off the shelf, adapt, refactor, extend, or fork to a variant); the
     # INTERNAL sibling of RESEARCH_AUTHORITY (external) and RESEARCH_ORIGINAL_DESIGN_AUTHORITY.
-    assert composed.count("\n\n") == 30
+    # +1 on 2026-09-08 for RECEIVER_IDENTITY: public bash inflate.sh identity cannot be
+    # inferred from a library-path decode. The composed constants contain one intentional
+    # internal paragraph break, so 32 separators encode 31 contract blocks.
+    assert composed.count("\n\n") == 32
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:

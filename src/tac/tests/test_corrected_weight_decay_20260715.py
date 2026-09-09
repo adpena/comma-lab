@@ -126,7 +126,9 @@ def test_equation_builds_and_math_is_exact() -> None:
 
     eq = build_adamc_wd_lr_equilibrium_v1()
     assert eq.equation_id == EQUATION_ID == "adamc_wd_lr_equilibrium_v1"
-    assert len(eq.empirical_anchors) == 2
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert anchor_ids
+    assert len(eq.predicted_vs_empirical_residual) == len(anchor_ids)
     # Eq. 2: ratio doubles when gamma quarters
     r1 = steady_state_grad_to_weight_ratio(1e-4, 1e-3)
     r2 = steady_state_grad_to_weight_ratio(1e-4, 2.5e-4)

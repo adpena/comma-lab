@@ -245,5 +245,5 @@ def test_check_177_legacy_pre_nv7_excluded_from_predict_by_default(tmp_path):
         ],
     )
     anchors = load_anchors(posterior)
-    assert len(anchors) == 1
-    assert anchors[0].outcome == LEGACY_PRE_NV7
+    (anchor,) = anchors
+    assert anchor.outcome == LEGACY_PRE_NV7

@@ -102,7 +102,9 @@ class TestAreaConstraintBalanceLaw:
         eq = build_chan_vese_area_constraint_birth_balance_v1()
         assert eq.equation_id == "chan_vese_area_constraint_birth_balance_v1"
         assert "tac.witness_dsl.curriculum_dsl" in eq.canonical_consumers
-        assert len(eq.empirical_anchors) == 2
+        anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+        assert anchor_ids
+        assert len(eq.predicted_vs_empirical_residual) == len(anchor_ids)
 
 
 class TestIsoperimetricBirthWeightLaw:

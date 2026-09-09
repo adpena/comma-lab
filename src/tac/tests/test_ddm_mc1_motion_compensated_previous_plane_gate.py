@@ -126,6 +126,8 @@ def test_carried_motion_arithmetic_and_breakeven() -> None:
 
 def test_equation_builds_with_three_verified_anchors() -> None:
     equation = build_motion_compensated_previous_plane_alignment_gate_v1()
-    assert len(equation.empirical_anchors) == 3
+    anchor_ids = {anchor.anchor_id for anchor in equation.empirical_anchors}
+    assert anchor_ids
+    assert set(equation.predicted_vs_empirical_residual) == anchor_ids
     assert all(a.empirical_verification_status == "VERIFIED_VIA_EMPIRICAL_ANCHOR" for a in equation.empirical_anchors)
     assert equation.canonical_producers and equation.canonical_consumers

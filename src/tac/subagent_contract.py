@@ -52,6 +52,7 @@ __all__ = [
     "CORRECT_OVER_EASY",
     "RESEARCH_AUTHORITY",
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
+    "RECEIVER_IDENTITY",
     "RETAINED_REASONING",
     "RETRIEVAL_FIRST_CLAUSE",
     "PRIMARY_SOURCE_RE_DERIVATION",
@@ -573,6 +574,12 @@ INTERNAL_LEVERAGE_AUTHORITY = (
     "upstream snapshot, public-PR intake clones, sister arms' landed artifacts are append-only)."
 )
 
+#: ddm_scg1 / rc1 paid-call incident: a library decode can pass while the contest entrypoint
+#: still refuses before token decode. Keep the public receiver identity explicit in every arm.
+RECEIVER_IDENTITY = (
+    "receiver identity means bash inflate.sh on the staged tree, not the library path"
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -615,6 +622,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "RETAINED_REASONING",
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
     "INTERNAL_LEVERAGE_AUTHORITY",
+    "RECEIVER_IDENTITY",
     "CHECKPOINT_FINDINGS",
 )
 
@@ -672,6 +680,7 @@ KEY_PHRASES: dict[str, str] = {
     "INTERNAL_LEVERAGE_AUTHORITY": (
         "use off the shelf or to adapt or refactor or extend or enhance"
     ),
+    "RECEIVER_IDENTITY": "receiver identity means bash inflate.sh on the staged tree, not the library path",
     "CHECKPOINT_FINDINGS": "every tools/subagent_checkpoint.py write carries at least one --finding",
 }
 
@@ -714,6 +723,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         CORRECT_OVER_EASY,
         RESEARCH_ORIGINAL_DESIGN_AUTHORITY,
         INTERNAL_LEVERAGE_AUTHORITY,
+        RECEIVER_IDENTITY,
         RETAINED_REASONING,
         WAITER_DISCIPLINE,
         CHECKPOINT_FINDINGS,

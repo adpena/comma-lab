@@ -64,11 +64,11 @@ def test_append_modal_training_cost_anchor_is_idempotent(tmp_path: Path) -> None
     )
 
     anchors = load_anchors(posterior)
-    assert len(anchors) == 1
-    assert anchors[0].dispatch_label == "t1_balle_cheap_config_20260512T120000Z"
-    assert anchors[0].platform == "modal"
-    assert anchors[0].gpu == "T4"
-    assert anchors[0].actual_wall_clock_sec == 7200.0
+    (anchor,) = anchors
+    assert anchor.dispatch_label == "t1_balle_cheap_config_20260512T120000Z"
+    assert anchor.platform == "modal"
+    assert anchor.gpu == "T4"
+    assert anchor.actual_wall_clock_sec == 7200.0
     assert anchors[0].actual_cost_usd == 1.18
     assert anchors[0].prediction_in_band is True
     assert "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate" in anchors[0].notes

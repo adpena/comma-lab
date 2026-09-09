@@ -86,6 +86,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="runtime-relative path to pin per-file (repeatable; default: inflate.py and inflate.sh)",
     )
     ap.add_argument("--archive-member", default="", help="pin one member INSIDE the archive, e.g. 0.bin")
+    ap.add_argument(
+        "--public-entrypoint-smoke",
+        required=True,
+        help="JSON receipt block (or JSON document containing that block) with candidate/frontier "
+        "public_path_probes and inflate_sh_smokes",
+    )
     ap.add_argument("--retained-path", action="append", default=[], help="retained payload custody (repeatable)")
     ap.add_argument("--falsifier", action="append", default=[], help="pre-registered falsifier (repeatable)")
     ap.add_argument("--admit-bar-net-ds", required=True, type=float, help="the net dS threshold to admit")
@@ -168,6 +174,19 @@ def main(argv: list[str] | None = None) -> int:
     out_path = Path(args.out)
 
     try:
+        smoke_path = Path(args.public_entrypoint_smoke)
+        if not smoke_path.is_file():
+            raise SealContractError(f"--public-entrypoint-smoke is not a file: {smoke_path}")
+        try:
+            smoke_payload = json.loads(smoke_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise SealContractError(f"--public-entrypoint-smoke is not readable JSON: {exc}") from exc
+        if not isinstance(smoke_payload, dict):
+            raise SealContractError("--public-entrypoint-smoke JSON must be an object")
+        public_entrypoint_smoke = smoke_payload.get("public_entrypoint_smoke", smoke_payload)
+        if not isinstance(public_entrypoint_smoke, dict):
+            raise SealContractError("public_entrypoint_smoke must be an object")
+
         pin = check_pin_consistency(runtime_dir, archive_path=archive_path)
         if not pin.ok:
             raise SealContractError(
@@ -204,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
             archive_path=archive_path,
             axis=args.axis,
             admit_bar=bar,
+            public_entrypoint_smoke=public_entrypoint_smoke,
             receiver_relative_paths=receivers,
             archive_member_name=args.archive_member,
             retained_payload_paths=tuple(args.retained_path),

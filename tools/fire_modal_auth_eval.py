@@ -84,6 +84,7 @@ sys.path.insert(0, str(REPO / "src"))
 from tac.candidate_seal import (  # noqa: E402
     MISMATCH,
     PIN_ABSENT,
+    SEAL_PUBLIC_SMOKE_MISSING,
     check_pin_consistency,
     repin_receiver,
     validate_seal,
@@ -107,6 +108,10 @@ VENV_PY = str(REPO / ".venv" / "bin" / "python")
 MODAL_BIN = str(REPO / ".venv" / "bin" / "modal")
 LITTER_BASENAMES = {".DS_Store"}
 LITTER_PREFIXES = ("._",)
+PUBLIC_SMOKE_RULE_CHAIN = (
+    "candidate + frontier control -> f26_inflate.inflate_archive REACHED_TOKEN_DECODE "
+    "without exception -> bash inflate.sh REACHED_CUDA_GATE with the CUDA RuntimeError"
+)
 
 # launch_detached_process.py refuses --done-receipt outside this shape. We compose the
 # receipt from --instance-job-id, whose CONVENTION is "modal:<name>" — and ':' is not in
@@ -177,6 +182,36 @@ def axis_spec(axis: str) -> dict:
             f"choose one of {sorted(AXES)}"
         )
     return {"axis": key, **spec}
+
+
+def _substantive_public_smoke_waiver(reason: str) -> bool:
+    """Reject empty/template waiver prose; naming the flag alone is not authority."""
+    text = str(reason or "").strip()
+    if len(text) < 20 or text.lower() in {"reason", "waiver", "test", "n/a", "none", "tbd"}:
+        return False
+    return sum(token.isalpha() for token in re.findall(r"[A-Za-z]+", text)) >= 4
+
+
+def _archive_sha_is_already_scored(archive_sha256: str) -> bool:
+    """True only when the archive is named by a scored canonical pointer axis."""
+    pointer = REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
+    try:
+        payload = json.loads(pointer.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+
+    target = str(archive_sha256 or "").strip().lower()
+
+    def _walk(value: object) -> bool:
+        if isinstance(value, dict):
+            if str(value.get("archive_sha256") or "").strip().lower() == target and target:
+                return True
+            return any(_walk(child) for child in value.values())
+        if isinstance(value, list):
+            return any(_walk(child) for child in value)
+        return False
+
+    return _walk(payload)
 
 
 def write_fire_manifest(out_dir: Path, manifest: dict) -> Path:
@@ -532,6 +567,13 @@ def main(argv: list[str] | None = None) -> int:
         help="fire even if the pointer's checkpoint-maturity gate would refuse this lane id "
         "(deliberately advisory / custody rows only)",
     )
+    ap.add_argument(
+        "--allow-seal-without-public-smoke",
+        default="",
+        metavar="REASON",
+        help="waive a missing public-entrypoint smoke block only for custody replay of an "
+        "archive already present on the canonical scored pointer; requires substantive reason",
+    )
     ap.add_argument("--instance-job-id", required=True)
     ap.add_argument("--claim-agent", default="MAIN")
     ap.add_argument(
@@ -585,6 +627,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
+
+    if args.allow_seal_without_public_smoke and not args.seal:
+        ap.error("--allow-seal-without-public-smoke requires --seal")
 
     # The worker's pairing validation treats these as mutually exclusive; passing both
     # refuses REMOTELY after the image build (the ck1 cpu_row_r1 rc=5, 2026-08-19).
@@ -662,15 +707,33 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FATAL: {reason}", file=sys.stderr)
             return refuse_seal(seal_path, out_dir, 7, reason, {"seal_path": str(seal_path)}, {})
 
-        verdict = validate_seal(seal_path)
+        try:
+            document = json.loads(seal_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            document = {}
+        seal_has_public_smoke = isinstance(document.get("public_entrypoint_smoke"), dict)
+        # The generic seal contract refuses a missing block. Only an explicitly requested
+        # waiver may defer that one question to Stage 3c beside SEAL PIN CONSISTENT; an
+        # ordinary fire gets the typed seal refusal before any staged-tree mutation.
+        verdict = validate_seal(
+            seal_path,
+            allow_missing_public_smoke=(
+                not seal_has_public_smoke and bool(args.allow_seal_without_public_smoke)
+            ),
+        )
         seal_manifest = {"seal_path": str(seal_path), "seal_validation": verdict.to_dict()}
         print(f"SEAL: {verdict.summary()}")
         if not verdict.ok:
+            if verdict.verdict == SEAL_PUBLIC_SMOKE_MISSING:
+                reason = verdict.problems[0]
+                print(f"FATAL: {reason}", file=sys.stderr)
+                return refuse_seal(
+                    seal_path, out_dir, 8, reason, seal_manifest, verdict.to_dict()
+                )
             return refuse_seal(
                 seal_path, out_dir, 7, f"seal invalid: {verdict.verdict}", seal_manifest, verdict.to_dict()
             )
 
-        document = json.loads(seal_path.read_text())
         seal_axis = str(document.get("axis") or "")
         if seal_axis not in SEAL_AXIS_TO_FIRE_AXIS:
             reason = (
@@ -797,6 +860,44 @@ def main(argv: list[str] | None = None) -> int:
             "WARNING: this receiver carries no archive pin, so the seal is weaker than the "
             "rr4 lineage's and the pin check is vacuous for this tree. Proceeding, loudly."
         )
+
+    # Stage 3c PUBLIC ENTRYPOINT SMOKE — pin consistency proves that inflate.py NAMES this
+    # archive; it does not prove that the public inflate.sh path can REACH the token decoder.
+    # rc1 lost a paid call on exactly that gap. The waiver is intentionally narrower than
+    # the seal: only custody replay of bytes already present on a scored pointer may use it.
+    if args.seal:
+        public_smoke = document.get("public_entrypoint_smoke")
+        if not isinstance(public_smoke, dict):
+            waiver_reason = str(args.allow_seal_without_public_smoke or "").strip()
+            if not _substantive_public_smoke_waiver(waiver_reason):
+                reason = (
+                    f"public-entrypoint smoke refusal: {PUBLIC_SMOKE_RULE_CHAIN}; seal lacks "
+                    "public_entrypoint_smoke and no substantive custody-replay waiver was supplied"
+                )
+                print(f"FATAL: {reason}", file=sys.stderr)
+                return refuse_seal(seal_path, out_dir, 8, reason, manifest, verdict.to_dict())
+            sealed_archive_sha = str((document.get("archive") or {}).get("sha256") or "")
+            if not _archive_sha_is_already_scored(sealed_archive_sha):
+                reason = (
+                    "public-entrypoint smoke waiver refused: the sealed archive is not present "
+                    "on a canonical scored pointer, so this is not custody replay of an "
+                    f"already-scored archive; rule chain: {PUBLIC_SMOKE_RULE_CHAIN}"
+                )
+                print(f"FATAL: {reason}", file=sys.stderr)
+                return refuse_seal(seal_path, out_dir, 8, reason, manifest, verdict.to_dict())
+            manifest["stage3c_public_entrypoint_smoke"] = {
+                "verdict": "WAIVED_ALREADY_SCORED_CUSTODY_REPLAY",
+                "reason": waiver_reason,
+                "archive_sha256": sealed_archive_sha,
+                "rule_chain": PUBLIC_SMOKE_RULE_CHAIN,
+            }
+            print("PUBLIC SMOKE: WAIVED for already-scored custody replay")
+        else:
+            manifest["stage3c_public_entrypoint_smoke"] = {
+                "verdict": "PRESENT_AND_SEAL_VALIDATED",
+                "rule_chain": PUBLIC_SMOKE_RULE_CHAIN,
+            }
+            print("PUBLIC SMOKE: PRESENT + SEAL VALIDATED")
 
     manifest["stage4_claims"] = reconcile_claims(
         args.claim_agent,

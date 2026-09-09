@@ -289,7 +289,8 @@ def test_load_strict_raises_on_non_dict_root(tmp_path: Path):
 def test_load_strict_clean_round_trip(tmp_path: Path):
     posterior = tmp_path / "c.jsonl"
     append_council_anchor(_record(), posterior_path=posterior, lock_path=tmp_path / ".c.lock")
-    assert len(load_council_anchors_strict(posterior_path=posterior)) == 1
+    (loaded,) = load_council_anchors_strict(posterior_path=posterior)
+    assert loaded.deliberation_id == _record().deliberation_id
 
 
 # ─────────────────────── query helpers ────────────────────────────
@@ -317,7 +318,8 @@ def test_query_by_topic_case_insensitive(tmp_path: Path):
         _record(topic="UPPER CASE TOPIC"),
         posterior_path=posterior, lock_path=tmp_path / ".c.lock",
     )
-    assert len(query_anchors_by_topic("upper case", posterior_path=posterior)) == 1
+    (match,) = query_anchors_by_topic("upper case", posterior_path=posterior)
+    assert match.deliberation_id == "test_deliberation_001"
 
 
 def test_query_dissent_history(tmp_path: Path):

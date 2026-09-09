@@ -517,8 +517,8 @@ class TestPath3SubstrateBulkEmissions:
             )
             anchors.append(anchor)
 
-        # All 8 anchors land
-        assert len(anchors) == 8
+        # Every requested substrate lands exactly once; the requested set is the invariant.
+        assert {anchor.substrate_id for anchor in anchors} == set(self.PATH_3_SUBSTRATES)
         # All 8 are MLX research-signal anchors
         for a in anchors:
             assert a.evidence_tag == "[macOS-MLX research-signal]"

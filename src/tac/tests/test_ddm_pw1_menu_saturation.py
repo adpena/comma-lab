@@ -94,8 +94,9 @@ def test_explicit_terminal_index_handles_non_last_bounds() -> None:
 def test_equation_builds_with_both_measured_anchors() -> None:
     """Two independent instances (a value menu and a solver cap) lift it off INSTANCE."""
     eq = build_ddm_pw1_menu_saturation_discriminator_v1()
-    assert len(eq.empirical_anchors) == 2
     ids = {a.anchor_id for a in eq.empirical_anchors}
+    assert ids
+    assert len(eq.predicted_vs_empirical_residual) == len(ids)
     assert any("pw1" in i for i in ids)
     assert any("dc1" in i for i in ids)
 

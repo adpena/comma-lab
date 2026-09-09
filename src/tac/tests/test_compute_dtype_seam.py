@@ -227,8 +227,10 @@ def test_equation_builds_with_measured_anchor():
     0.992538 over 60 steps; honest scope preserved (p10 below the bar; speed un-measured)."""
     eq = build_bf16_compute_seam_gradient_quality_v1()
     assert eq.equation_id == "bf16_compute_seam_gradient_quality_v1"
-    assert len(eq.empirical_anchors) == 1
-    a = eq.empirical_anchors[0]
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert anchor_ids
+    assert set(eq.predicted_vs_empirical_residual) == anchor_ids
+    a = next(iter(eq.empirical_anchors))
     assert a.anchor_id == "bf16_seam_n24_quality_check_measured_20260715"
     assert a.empirical_output["gate_verdict"] == "ADMIT"
     assert a.empirical_output["n_steps"] == 60

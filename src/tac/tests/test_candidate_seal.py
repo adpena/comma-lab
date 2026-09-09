@@ -12,6 +12,7 @@ seal is trusted.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -21,10 +22,13 @@ from pathlib import Path
 import pytest
 
 from tac.candidate_seal import (
+    PUBLIC_ENTRYPOINT_SMOKE_SCHEMA,
     SEAL_BAR_DRIFT,
     SEAL_BYTE_DRIFT,
     SEAL_FILE_MISSING,
     SEAL_PLACEHOLDER_PIN,
+    SEAL_PUBLIC_SMOKE_INVALID,
+    SEAL_PUBLIC_SMOKE_MISSING,
     SEAL_RECEIVER_PIN_MISMATCH,
     SEAL_RUNTIME_DRIFT,
     SEAL_SCHEMA,
@@ -48,7 +52,19 @@ FIRE_TOOL = REPO / "tools" / "fire_modal_auth_eval.py"
 MAKE_TOOL = REPO / "tools" / "make_candidate_seal.py"
 
 POINTER_SCORE = 0.15771357797660338
-POINTER_SHA = "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a"
+DEFAULT_PAYLOAD = b"token-stream-bytes" * 64
+
+
+def _archive_blob(payload: bytes = DEFAULT_PAYLOAD) -> bytes:
+    buffer = io.BytesIO()
+    info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    with zipfile.ZipFile(buffer, "w") as zf:
+        zf.writestr(info, payload)
+    return buffer.getvalue()
+
+
+POINTER_SHA = hashlib.sha256(_archive_blob()).hexdigest()
 
 RECEIVER_PY = '''#!/usr/bin/env python3
 """A stand-in receiver shaped like the shipped one."""
@@ -81,24 +97,63 @@ def _write_pointer(tmp_path: Path, score: float = POINTER_SCORE, sha: str = POIN
     return path
 
 
-def _stage_candidate(tmp_path: Path, payload: bytes = b"token-stream-bytes" * 64) -> tuple[Path, Path]:
+def _stage_candidate(tmp_path: Path, payload: bytes = DEFAULT_PAYLOAD) -> tuple[Path, Path]:
     """Stage a runtime tree shaped like a real candidate_runtime: archive + receiver + shell."""
     runtime = tmp_path / "candidate_runtime"
     (runtime / "cpr1").mkdir(parents=True)
 
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("0.bin", payload)
     archive = runtime / "archive.zip"
-    archive.write_bytes(buffer.getvalue())
-
-    import hashlib
+    archive.write_bytes(_archive_blob(payload))
 
     sha = hashlib.sha256(archive.read_bytes()).hexdigest()
     (runtime / "inflate.py").write_text(RECEIVER_PY.format(sha=sha, size=archive.stat().st_size))
     (runtime / "inflate.sh").write_text("#!/bin/sh\nexec python inflate.py \"$@\"\n")
     (runtime / "cpr1" / "semantic_receiver.py").write_text("DECODER = 'SM3R'\n")
     return runtime, archive
+
+
+def _public_smoke(runtime: Path, archive: Path) -> dict:
+    tree_sha = measure_runtime_digest(runtime).sha256
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    identity = {
+        "runtime_path": str(runtime.resolve()),
+        "tree_sha256": tree_sha,
+        "archive_path": str(archive.resolve()),
+        "archive_sha256": archive_sha,
+    }
+    probe = {
+        **identity,
+        "outcome": "REACHED_TOKEN_DECODE",
+        "seconds": 0.125,
+        "exception_class": None,
+        "exception_message": "",
+    }
+    shell = {
+        **identity,
+        "outcome": "REACHED_CUDA_GATE",
+        "seconds": 0.25,
+        "returncode": 1,
+        "exception_class": "RuntimeError",
+        "exception_message": (
+            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
+            "the measured CPU path exceeded the contest budget"
+        ),
+    }
+    return {
+        "schema": PUBLIC_ENTRYPOINT_SMOKE_SCHEMA,
+        "public_path_probe_seconds": 1.0,
+        "public_path_probes": {"candidate": dict(probe), "frontier": dict(probe)},
+        "inflate_sh_smokes": {"candidate": dict(shell), "frontier": dict(shell)},
+    }
+
+
+def _write_public_smoke(tmp_path: Path, runtime: Path, name: str = "PUBLIC_SMOKE.json") -> Path:
+    path = tmp_path / name
+    path.write_text(
+        json.dumps({"public_entrypoint_smoke": _public_smoke(runtime, runtime / "archive.zip")}),
+        encoding="utf-8",
+    )
+    return path
 
 
 def _seal(tmp_path: Path, runtime: Path, **overrides) -> Path:
@@ -119,6 +174,9 @@ def _seal(tmp_path: Path, runtime: Path, **overrides) -> Path:
         runtime_dir=runtime,
         axis=overrides.pop("axis", "contest_cuda"),
         admit_bar=bar,
+        public_entrypoint_smoke=overrides.pop(
+            "public_entrypoint_smoke", _public_smoke(runtime, runtime / "archive.zip")
+        ),
         archive_member_name="0.bin",
         retained_payload_paths=(str(retained),),
         falsifiers=("net dS >= -3.5e-6 at n600 refutes the rate credit",),
@@ -149,6 +207,66 @@ def test_a_freshly_sealed_candidate_validates(tmp_path: Path) -> None:
     assert document["seal_sha256"] == compute_seal_sha256(document)
     assert {pin["relative_path"] for pin in document["receiver_pins"]} == {"inflate.py", "inflate.sh"}
     assert document["archive_member"]["name"] == "0.bin"
+
+
+def test_a_seal_without_public_entrypoint_smoke_refuses(tmp_path: Path) -> None:
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime)
+    document = load_seal(seal_path)
+    del document["public_entrypoint_smoke"]
+    document["seal_sha256"] = compute_seal_sha256(document)
+    seal_path.write_text(json.dumps(document), encoding="utf-8")
+
+    verdict = validate_seal(seal_path, pointer_path=_write_pointer(tmp_path))
+    assert verdict.verdict == SEAL_PUBLIC_SMOKE_MISSING
+    assert "f26_inflate.inflate_archive" in verdict.summary()
+    assert "bash inflate.sh" in verdict.summary()
+
+
+def test_rc1_magic_guard_shape_cannot_be_seal_valid(tmp_path: Path) -> None:
+    """Executed receipt replay of the pre-fix rc1 public/library mismatch."""
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime)
+    document = load_seal(seal_path)
+    probe = document["public_entrypoint_smoke"]["public_path_probes"]["candidate"]
+    probe.update(
+        {
+            "outcome": "EXCEPTION",
+            "exception_class": "InflationError",
+            "exception_message": "F26 requires WANS1, SD1M, or SM3R semantic weights",
+        }
+    )
+    document["seal_sha256"] = compute_seal_sha256(document)
+    seal_path.write_text(json.dumps(document), encoding="utf-8")
+
+    verdict = validate_seal(seal_path, pointer_path=_write_pointer(tmp_path))
+    assert verdict.verdict == SEAL_PUBLIC_SMOKE_INVALID, verdict.summary()
+    assert verdict.verdict != SEAL_VALID
+    assert "REACHED_TOKEN_DECODE" in verdict.summary()
+
+
+@pytest.mark.parametrize(
+    ("group", "field", "value", "expected"),
+    [
+        ("public_path_probes", "seconds", -0.1, "wall-clock"),
+        ("public_path_probes", "seconds", float("nan"), "wall-clock"),
+        ("public_path_probes", "tree_sha256", "f" * 64, "tree_sha256 drifted"),
+        ("inflate_sh_smokes", "exception_class", "InflationError", "CUDA gate's"),
+    ],
+)
+def test_public_smoke_receipt_details_are_validated_not_just_the_outcome_boolean(
+    tmp_path: Path, group: str, field: str, value: object, expected: str
+) -> None:
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime)
+    document = load_seal(seal_path)
+    document["public_entrypoint_smoke"][group]["candidate"][field] = value
+    document["seal_sha256"] = compute_seal_sha256(document)
+    seal_path.write_text(json.dumps(document), encoding="utf-8")
+
+    verdict = validate_seal(seal_path, pointer_path=_write_pointer(tmp_path))
+    assert verdict.verdict == SEAL_PUBLIC_SMOKE_INVALID
+    assert expected in verdict.summary()
 
 
 def test_the_runtime_digest_is_invariant_under_the_fire_paths_sanitize_stage(tmp_path: Path) -> None:
@@ -465,6 +583,116 @@ def test_the_fire_path_refuses_a_drifted_seal_without_dispatching(tmp_path: Path
     assert not (out_dir / "FIRE_MANIFEST.json").exists()
 
 
+def test_fire_dry_run_refuses_pre_fix_seal_with_public_rule_chain(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime, tolerance=1.0)
+    document = load_seal(seal_path)
+    del document["public_entrypoint_smoke"]
+    document["seal_sha256"] = compute_seal_sha256(document)
+    seal_path.write_text(json.dumps(document), encoding="utf-8")
+    pointer = _write_pointer(tmp_path)
+
+    module = _load_fire_tool()
+    _forbid_subprocess(monkeypatch, module)
+    monkeypatch.setattr(
+        module,
+        "validate_seal",
+        lambda path, **kwargs: validate_seal(path, pointer_path=pointer, **kwargs),
+    )
+    out_dir = tmp_path / "out"
+    rc = module.main(
+        [
+            "--seal", str(seal_path),
+            "--output-dir", str(out_dir),
+            "--lane-id", "lane_test",
+            "--instance-job-id", "job_test",
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
+            "--dry-run",
+        ]
+    )
+
+    assert rc == 8
+    output = capsys.readouterr()
+    assert "f26_inflate.inflate_archive REACHED_TOKEN_DECODE" in output.err
+    assert "bash inflate.sh REACHED_CUDA_GATE" in output.err
+    refusal = json.loads((out_dir / "FIRE_REFUSED.json").read_text())
+    assert "public-entrypoint rule chain" in refusal["refusal_reason"]
+
+
+def test_missing_smoke_waiver_refuses_an_unscored_archive(tmp_path: Path, monkeypatch) -> None:
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime, tolerance=1.0)
+    document = load_seal(seal_path)
+    del document["public_entrypoint_smoke"]
+    document["seal_sha256"] = compute_seal_sha256(document)
+    seal_path.write_text(json.dumps(document), encoding="utf-8")
+    pointer = _write_pointer(tmp_path)
+
+    module = _load_fire_tool()
+    _forbid_subprocess(monkeypatch, module)
+    monkeypatch.setattr(
+        module,
+        "validate_seal",
+        lambda path, **kwargs: validate_seal(path, pointer_path=pointer, **kwargs),
+    )
+    monkeypatch.setattr(module, "_archive_sha_is_already_scored", lambda sha: False)
+    rc = module.main(
+        [
+            "--seal", str(seal_path),
+            "--output-dir", str(tmp_path / "out"),
+            "--lane-id", "lane_test",
+            "--instance-job-id", "job_test",
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
+            "--allow-seal-without-public-smoke",
+            "custody replay requested for an archive with a prior exact score",
+            "--dry-run",
+        ]
+    )
+    assert rc == 8
+    refusal = json.loads((tmp_path / "out" / "FIRE_REFUSED.json").read_text())
+    assert "not present on a canonical scored pointer" in refusal["refusal_reason"]
+
+
+def test_missing_smoke_waiver_allows_only_scored_custody_replay(tmp_path: Path, monkeypatch) -> None:
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime, tolerance=1.0)
+    document = load_seal(seal_path)
+    del document["public_entrypoint_smoke"]
+    document["seal_sha256"] = compute_seal_sha256(document)
+    seal_path.write_text(json.dumps(document), encoding="utf-8")
+    pointer = _write_pointer(tmp_path)
+
+    module = _load_fire_tool()
+    monkeypatch.setattr(
+        module,
+        "validate_seal",
+        lambda path, **kwargs: validate_seal(path, pointer_path=pointer, **kwargs),
+    )
+    monkeypatch.setattr(module, "_archive_sha_is_already_scored", lambda sha: True)
+    monkeypatch.setattr(module, "reconcile_claims", lambda *args, **kwargs: {"closed": []})
+    out_dir = tmp_path / "out"
+    rc = module.main(
+        [
+            "--seal", str(seal_path),
+            "--output-dir", str(out_dir),
+            "--lane-id", "lane_test",
+            "--instance-job-id", "job_test",
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
+            "--allow-seal-without-public-smoke",
+            "custody replay of these already-scored canonical pointer bytes",
+            "--no-source-snapshot",
+            "--dry-run",
+        ]
+    )
+    assert rc == 0
+    manifest = json.loads((out_dir / "FIRE_MANIFEST.json").read_text())
+    assert manifest["stage3c_public_entrypoint_smoke"]["verdict"] == (
+        "WAIVED_ALREADY_SCORED_CUSTODY_REPLAY"
+    )
+
+
 def test_the_fire_path_refuses_hand_typed_duplicates_of_sealed_values(tmp_path: Path, monkeypatch) -> None:
     """Two sources for one truth is the hand-assembly hazard the seal exists to remove."""
     runtime, _ = _stage_candidate(tmp_path)
@@ -527,7 +755,9 @@ def test_the_fire_path_refuses_an_advisory_seal(tmp_path: Path, monkeypatch) -> 
     monkeypatch.setattr(
         module,
         "validate_seal",
-        lambda p, pointer_path=synthetic_pointer: validate_seal(p, pointer_path=pointer_path),
+        lambda p, pointer_path=synthetic_pointer, **kwargs: validate_seal(
+            p, pointer_path=pointer_path, **kwargs
+        ),
     )
 
     rc = module.main(
@@ -571,6 +801,7 @@ def test_the_no_seal_path_is_unchanged(tmp_path: Path, monkeypatch) -> None:
             "--instance-job-id", "job_test",
             # paired-by-default since 2026-08-18; see the note on the first fire-path test.
             "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
+            "--no-source-snapshot",
             "--dry-run",
         ]
     )
@@ -590,6 +821,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
     spec.loader.exec_module(make)
 
     runtime, archive = _stage_candidate(tmp_path)
+    smoke_path = _write_public_smoke(tmp_path, runtime)
     pointer = _write_pointer(tmp_path)
     monkeypatch.setattr(
         make, "read_pointer_state", lambda axis="contest_cuda": make_pointer_state(pointer, axis)
@@ -612,6 +844,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
             "--axis", "contest_cuda",
             "--admit-bar-net-ds", "-3.5e-6",
             "--archive-member", "0.bin",
+            "--public-entrypoint-smoke", str(smoke_path),
             "--out", str(out),
         ]
     )
@@ -633,6 +866,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
                 "--axis", "contest_cuda",
                 "--admit-bar-net-ds", "-3.5e-6",
                 "--verify-archive-sha", "b" * 64,
+                "--public-entrypoint-smoke", str(smoke_path),
                 "--out", str(tmp_path / "SEAL_rejected.json"),
             ]
         )
@@ -751,6 +985,7 @@ def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Pa
 
     runtime, _ = _stage_candidate(tmp_path)
     _plant_donor_pin(runtime, sha=IV1_DONOR_SHA, size=IV1_DONOR_BYTES)
+    smoke_path = _write_public_smoke(tmp_path, runtime)
     pointer = _write_pointer(tmp_path)
     monkeypatch.setattr(
         make, "read_pointer_state", lambda axis="contest_cuda": make_pointer_state(pointer, axis)
@@ -764,6 +999,7 @@ def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Pa
             "--axis", "contest_cuda",
             "--admit-bar-net-ds", "-3.5e-6",
             "--archive-member", "0.bin",
+            "--public-entrypoint-smoke", str(smoke_path),
             "--out", str(out),
         ]
     )

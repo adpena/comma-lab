@@ -201,7 +201,7 @@ def build_bf16_compute_seam_gradient_quality_v1() -> CanonicalEquation:
                    "median_rel_norm": "ratio"},
         empirical_anchors=(anchor_qc_measured,),
         predicted_vs_empirical_residual={
-            "n24_quality_check_owed": 0.0,
+            "bf16_seam_n24_quality_check_measured_20260715": 0.0,  # keyed by the anchor id (the residual map must address every anchor; the old "owed" key predated the 07-15 measurement)
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

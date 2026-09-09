@@ -131,8 +131,10 @@ def test_canonical_equation_is_honest_composed_research_only_law() -> None:
 
 def test_composed_anchor_is_source_inspected_not_a_new_measurement() -> None:
     equation = build_witness_right_level_coordinate_quotient_law_v1()
-    assert len(equation.empirical_anchors) == 1
-    anchor = equation.empirical_anchors[0]
+    anchor_ids = {item.anchor_id for item in equation.empirical_anchors}
+    assert anchor_ids
+    assert len(equation.predicted_vs_empirical_residual) == len(anchor_ids)
+    anchor = next(iter(equation.empirical_anchors))
     assert anchor.empirical_verification_status == VERIFIED_VIA_SOURCE_INSPECTION
     assert anchor.inputs["evidence_ids"] == list(COMPOSED_EVIDENCE_IDS)
     assert anchor.inputs["new_measurement"] is False

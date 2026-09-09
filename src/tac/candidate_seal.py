@@ -73,6 +73,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import math
 import os
 import stat as stat_module
 from dataclasses import dataclass, field
@@ -83,12 +84,15 @@ __all__ = [
     "CONSISTENT",
     "MISMATCH",
     "PIN_ABSENT",
+    "PUBLIC_ENTRYPOINT_SMOKE_SCHEMA",
     "RECEIVER_MISSING",
     "SEAL_AXES",
     "SEAL_BAR_DRIFT",
     "SEAL_BYTE_DRIFT",
     "SEAL_FILE_MISSING",
     "SEAL_PLACEHOLDER_PIN",
+    "SEAL_PUBLIC_SMOKE_INVALID",
+    "SEAL_PUBLIC_SMOKE_MISSING",
     "SEAL_RECEIVER_PIN_MISMATCH",
     "SEAL_RUNTIME_DRIFT",
     "SEAL_SCHEMA",
@@ -539,6 +543,8 @@ SEAL_SCHEMA = "candidate_seal.v1"
 SEAL_VALID = "SEAL_VALID"
 SEAL_SCHEMA_VIOLATION = "SEAL_SCHEMA_VIOLATION"
 SEAL_PLACEHOLDER_PIN = "SEAL_PLACEHOLDER_PIN"
+SEAL_PUBLIC_SMOKE_MISSING = "SEAL_PUBLIC_SMOKE_MISSING"
+SEAL_PUBLIC_SMOKE_INVALID = "SEAL_PUBLIC_SMOKE_INVALID"
 SEAL_FILE_MISSING = "SEAL_FILE_MISSING"
 SEAL_SHA_DRIFT = "SEAL_SHA_DRIFT"
 SEAL_BYTE_DRIFT = "SEAL_BYTE_DRIFT"
@@ -551,6 +557,15 @@ SEAL_TAMPERED = "SEAL_TAMPERED"
 #: ``ARCHIVE_MISSING`` pin verdicts (nothing to compare).  Here both sides are present, intact,
 #: and DISAGREE.
 SEAL_RECEIVER_PIN_MISMATCH = "SEAL_RECEIVER_PIN_MISMATCH"
+
+#: The field names deliberately follow the already-retained rc1/sj1 smoke vocabulary:
+#: ``public_path_probes`` is the direct ``f26_inflate.inflate_archive`` leg and
+#: ``inflate_sh_smokes`` is the public-shell leg.  This block adds identity and exception
+#: pins to those receipts; it does not create a parallel boolean pass flag.
+PUBLIC_ENTRYPOINT_SMOKE_SCHEMA = "candidate_public_entrypoint_smoke.v1"
+_SMOKE_ROLES = ("candidate", "frontier")
+_CUDA_GATE_EXCEPTION = "RuntimeError"
+_CUDA_GATE_MESSAGE = "requires CUDA inflation on linux-nvidia-t4"
 
 #: The axes a seal may declare.  ``advisory`` is included so a non-promotable local row can
 #: still be sealed with the same rigor — but it is NEVER a contest score, and the fire path
@@ -799,6 +814,158 @@ def compute_seal_sha256(document: dict) -> str:
     return hashlib.sha256(canonical_seal_bytes(document)).hexdigest()
 
 
+def _public_smoke_problems(
+    block: object,
+    *,
+    candidate_runtime_dir: Path,
+    candidate_archive_path: Path,
+    pointer_archive_sha256: str,
+) -> tuple[list[str], dict[str, object]]:
+    """Re-derive the four public-entrypoint receipt identities and outcomes.
+
+    The receipt is evidence about an executed path, so the validator cannot replay it cheaply;
+    it can, however, refuse a vacuous boolean and re-measure every byte identity the execution
+    claimed.  Both legs must name the same candidate/control objects, and the control archive
+    must be the frontier object against which the seal's admission bar was derived.
+    """
+    if not isinstance(block, dict):
+        return (["public_entrypoint_smoke must be an object"], {})
+
+    problems: list[str] = []
+    observed: dict[str, object] = {}
+    if block.get("schema") != PUBLIC_ENTRYPOINT_SMOKE_SCHEMA:
+        problems.append(
+            "public_entrypoint_smoke.schema must be "
+            f"{PUBLIC_ENTRYPOINT_SMOKE_SCHEMA!r}, got {block.get('schema')!r}"
+        )
+    bound = block.get("public_path_probe_seconds")
+    if not isinstance(bound, (int, float)) or isinstance(bound, bool) or not (0.0 < float(bound) <= 1800.0):
+        problems.append(
+            "public_entrypoint_smoke.public_path_probe_seconds must be a positive time bound <= 1800"
+        )
+
+    groups = {
+        "public_path_probes": ("REACHED_TOKEN_DECODE", None),
+        "inflate_sh_smokes": ("REACHED_CUDA_GATE", _CUDA_GATE_EXCEPTION),
+    }
+    role_identities: dict[str, tuple[str, str, str, str]] = {}
+    for group_name, (wanted_outcome, wanted_exception) in groups.items():
+        group = block.get(group_name)
+        if not isinstance(group, dict):
+            problems.append(f"public_entrypoint_smoke.{group_name} must be an object")
+            continue
+        for role in _SMOKE_ROLES:
+            receipt = group.get(role)
+            label = f"public_entrypoint_smoke.{group_name}.{role}"
+            if not isinstance(receipt, dict):
+                problems.append(f"{label} must be an object")
+                continue
+            required_receipt_fields = {
+                "outcome",
+                "seconds",
+                "exception_class",
+                "exception_message",
+                "runtime_path",
+                "tree_sha256",
+                "archive_path",
+                "archive_sha256",
+            }
+            if wanted_exception is not None:
+                required_receipt_fields.add("returncode")
+            for missing in sorted(required_receipt_fields - set(receipt)):
+                problems.append(f"{label} is missing required field {missing!r}")
+            outcome = receipt.get("outcome")
+            if outcome != wanted_outcome:
+                problems.append(f"{label}.outcome must be {wanted_outcome!r}, got {outcome!r}")
+            seconds = receipt.get("seconds")
+            if (
+                not isinstance(seconds, (int, float))
+                or isinstance(seconds, bool)
+                or not math.isfinite(float(seconds))
+                or float(seconds) < 0.0
+            ):
+                problems.append(f"{label}.seconds must be a non-negative wall-clock measurement")
+            elif isinstance(bound, (int, float)) and float(seconds) > float(bound):
+                problems.append(
+                    f"{label}.seconds {float(seconds):.6g} exceeds the declared bound {float(bound):.6g}"
+                )
+
+            exception_class = receipt.get("exception_class")
+            exception_message = str(receipt.get("exception_message") or "")
+            if wanted_exception is None:
+                if exception_class not in (None, ""):
+                    problems.append(
+                        f"{label}.exception_class must be null because token decode was reached without exception"
+                    )
+                if exception_message:
+                    problems.append(f"{label}.exception_message must be empty on the no-exception leg")
+            else:
+                if exception_class != wanted_exception:
+                    problems.append(
+                        f"{label}.exception_class must be the CUDA gate's {wanted_exception!r}, "
+                        f"got {exception_class!r}"
+                    )
+                if _CUDA_GATE_MESSAGE not in exception_message:
+                    problems.append(
+                        f"{label}.exception_message does not identify the CUDA gate "
+                        f"({_CUDA_GATE_MESSAGE!r})"
+                    )
+                returncode = receipt.get("returncode")
+                if not isinstance(returncode, int) or isinstance(returncode, bool) or returncode == 0:
+                    problems.append(f"{label}.returncode must be the shell's non-zero CUDA-gate exit status")
+
+            runtime_path = Path(str(receipt.get("runtime_path") or "")).resolve()
+            archive_path = Path(str(receipt.get("archive_path") or "")).resolve()
+            tree_sha = str(receipt.get("tree_sha256") or "").lower()
+            archive_sha = str(receipt.get("archive_sha256") or "").lower()
+            if not runtime_path.is_dir():
+                problems.append(f"{label}.runtime_path is not a directory: {runtime_path}")
+            if not archive_path.is_file():
+                problems.append(f"{label}.archive_path is not a file: {archive_path}")
+            identity = (str(runtime_path), tree_sha, str(archive_path), archive_sha)
+            previous = role_identities.setdefault(role, identity)
+            if previous != identity:
+                problems.append(
+                    f"{label} names a different {role} tree/archive than the other smoke leg"
+                )
+            if runtime_path.is_dir():
+                measured_tree = measure_runtime_digest(runtime_path)
+                if tree_sha != measured_tree.sha256:
+                    problems.append(
+                        f"{label}.tree_sha256 drifted: receipt {tree_sha[:16]}…, "
+                        f"disk {measured_tree.sha256[:16]}…"
+                    )
+                observed[f"{group_name}.{role}.runtime"] = measured_tree.to_dict()
+            if archive_path.is_file():
+                measured_archive = measure_archive_identity(archive_path)
+                if archive_sha != measured_archive.sha256:
+                    problems.append(
+                        f"{label}.archive_sha256 drifted: receipt {archive_sha[:16]}…, "
+                        f"disk {measured_archive.sha256[:16]}…"
+                    )
+                observed[f"{group_name}.{role}.archive"] = measured_archive.to_dict()
+
+    candidate_identity = role_identities.get("candidate")
+    if candidate_identity is not None:
+        expected_candidate = (
+            str(candidate_runtime_dir.resolve()),
+            measure_runtime_digest(candidate_runtime_dir).sha256,
+            str(candidate_archive_path.resolve()),
+            measure_archive_identity(candidate_archive_path).sha256,
+        )
+        if candidate_identity != expected_candidate:
+            problems.append(
+                "public_entrypoint_smoke candidate receipts do not name the runtime/archive being sealed"
+            )
+    frontier_identity = role_identities.get("frontier")
+    if frontier_identity is not None and frontier_identity[3] != str(pointer_archive_sha256).lower():
+        problems.append(
+            "public_entrypoint_smoke frontier archive does not match "
+            "admit_bar.derivation.pointer_archive_sha256_at_seal"
+        )
+    return problems, observed
+
+
 def build_seal(
     *,
     candidate_id: str,
@@ -806,6 +973,7 @@ def build_seal(
     archive_path: Path | None = None,
     axis: str = "contest_cuda",
     admit_bar: AdmitBar,
+    public_entrypoint_smoke: dict,
     receiver_relative_paths: tuple[str, ...] = (DEFAULT_RECEIVER_NAME, "inflate.sh"),
     archive_member_name: str = "",
     retained_payload_paths: tuple[str, ...] = (),
@@ -830,6 +998,15 @@ def build_seal(
     archive = measure_archive_identity(archive_path)
     runtime = measure_runtime_digest(runtime_dir)
 
+    smoke_problems, _ = _public_smoke_problems(
+        public_entrypoint_smoke,
+        candidate_runtime_dir=runtime_dir,
+        candidate_archive_path=archive_path,
+        pointer_archive_sha256=admit_bar.pointer_archive_sha256_at_seal,
+    )
+    if smoke_problems:
+        raise SealContractError("public-entrypoint smoke refused: " + "; ".join(smoke_problems))
+
     receivers: list[dict[str, object]] = []
     file_map = runtime.file_map()
     for rel in receiver_relative_paths:
@@ -852,6 +1029,7 @@ def build_seal(
         "runtime": {"path": str(runtime_dir), **runtime.to_dict()},
         "receiver_pins": receivers,
         "admit_bar": admit_bar.to_dict(),
+        "public_entrypoint_smoke": public_entrypoint_smoke,
         "retained_payload_paths": [str(p) for p in retained_payload_paths],
         "falsifiers": list(falsifiers),
         "notes": notes,
@@ -939,6 +1117,7 @@ def validate_seal(
     *,
     pointer_path: Path | None = None,
     check_pointer: bool = True,
+    allow_missing_public_smoke: bool = False,
 ) -> SealValidation:
     """Re-verify EVERY pin against disk.  Fail-closed with a typed reason.
 
@@ -1023,6 +1202,20 @@ def validate_seal(
                 "— this seal was edited after it was signed",
             ),
             observed={"declared_seal_sha256": declared, "recomputed_seal_sha256": recomputed},
+        )
+
+    if "public_entrypoint_smoke" not in document and not allow_missing_public_smoke:
+        return SealValidation(
+            verdict=SEAL_PUBLIC_SMOKE_MISSING,
+            seal_path=seal_path,
+            candidate_id=candidate_id,
+            axis=axis,
+            problems=(
+                "public-entrypoint rule chain: candidate + frontier control -> "
+                "f26_inflate.inflate_archive REACHED_TOKEN_DECODE without exception -> "
+                "bash inflate.sh REACHED_CUDA_GATE with the CUDA RuntimeError; "
+                "seal lacks required field 'public_entrypoint_smoke'",
+            ),
         )
 
     observed: dict[str, object] = {}
@@ -1176,6 +1369,27 @@ def validate_seal(
             problems=(pin_state.summary(),),
             observed=observed,
         )
+
+    smoke_block = document.get("public_entrypoint_smoke")
+    if smoke_block is not None:
+        smoke_problems, smoke_observed = _public_smoke_problems(
+            smoke_block,
+            candidate_runtime_dir=runtime_dir,
+            candidate_archive_path=archive_path,
+            pointer_archive_sha256=AdmitBar.from_dict(document["admit_bar"]).pointer_archive_sha256_at_seal,
+        )
+        observed["public_entrypoint_smoke"] = smoke_observed
+        if smoke_problems:
+            return SealValidation(
+                verdict=SEAL_PUBLIC_SMOKE_INVALID,
+                seal_path=seal_path,
+                candidate_id=candidate_id,
+                axis=axis,
+                problems=tuple(smoke_problems),
+                observed=observed,
+            )
+    elif allow_missing_public_smoke:
+        observed["public_entrypoint_smoke"] = {"missing_allowed_by_consumer": True}
 
     # ---- 6. retained payload custody -----------------------------------------------------
     missing_payload = [p for p in document.get("retained_payload_paths", []) if not Path(str(p)).exists()]

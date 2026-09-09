@@ -390,11 +390,11 @@ def test_append_cost_band_anchor_cli_accepts_github_cpu_and_failed_outcome(tmp_p
     )
     assert proc.returncode == 0, proc.stderr
     anchors = load_anchors(posterior)
-    assert len(anchors) == 1
-    assert anchors[0].platform == "github"
-    assert anchors[0].gpu == "cpu"
-    assert anchors[0].outcome == FAILED_DISPATCH
-    assert anchors[0].returncode == 1
+    (anchor,) = anchors
+    assert anchor.platform == "github"
+    assert anchor.gpu == "cpu"
+    assert anchor.outcome == FAILED_DISPATCH
+    assert anchor.returncode == 1
 
 
 def test_append_cost_band_anchor_cli_has_no_manual_sys_path_mutation() -> None:
@@ -527,10 +527,10 @@ def test_nv7_anchor_with_no_outcome_field_tagged_legacy_pre_nv7(tmp_path: Path) 
         encoding="utf-8",
     )
     anchors = load_anchors(pp)
-    assert len(anchors) == 1
-    assert anchors[0].outcome == LEGACY_PRE_NV7
-    assert anchors[0].outcome != SUCCESSFUL_DISPATCH
-    assert anchors[0].returncode is None
+    (anchor,) = anchors
+    assert anchor.outcome == LEGACY_PRE_NV7
+    assert anchor.outcome != SUCCESSFUL_DISPATCH
+    assert anchor.returncode is None
 
 
 def test_nv7_migration_tool_is_dry_run_by_default_and_apply_tags_failed(tmp_path: Path) -> None:

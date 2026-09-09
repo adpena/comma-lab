@@ -189,8 +189,13 @@ def test_the_cost_lattice_has_a_gap_and_the_model_reports_it():
 def test_the_equation_builds_and_carries_its_measured_anchor():
     eq = build_ddm_os1_termination_census_from_cost_proxy_v1()
     assert eq.equation_id == "ddm_os1_termination_census_from_cost_proxy_v1"
-    assert len(eq.empirical_anchors) == 1
-    anchor = eq.empirical_anchors[0]
+    anchor_ids = {item.anchor_id for item in eq.empirical_anchors}
+    assert anchor_ids
+    anchor = next(
+        item
+        for item in eq.empirical_anchors
+        if item.anchor_id == "ddm_os1_pfs1_d2_termination_census_n600_20260802"
+    )
     assert anchor.empirical_output["converged"] == 0
     assert anchor.empirical_output["stopped_on_a_bound_at_least"] == 512
     assert anchor.empirical_output["n_infeasible"] == 88

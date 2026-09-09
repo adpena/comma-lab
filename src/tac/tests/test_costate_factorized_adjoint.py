@@ -118,7 +118,12 @@ def test_provenance_and_event_prior_are_typed_and_nonpromotable():
 def test_canonical_equation_carries_three_lawrefs_and_scope_caveat():
     eq = build_hybrid_exact_factorized_costate_adjoint_v1()
     assert eq.equation_id == "hybrid_exact_factorized_costate_adjoint_v1"
-    assert len(eq.empirical_anchors) == 2
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert anchor_ids
+    assert {
+        "factorized_structure_from_three_canonical_laws_20260716",
+        "factorized_adjoint_n205_walkforward_20260716",
+    } <= anchor_ids
     scope = eq.domain_of_validity["verdict_scope"]
     assert "per-class walk-forward loses" in scope
     assert eq.domain_of_validity["promotion_eligible"] is False

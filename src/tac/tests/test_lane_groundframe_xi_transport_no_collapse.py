@@ -59,7 +59,9 @@ def test_advisory_non_promotable_and_formulation_scope():
 # --- the two accounting-mode anchors carry the MEASURED numbers -------------
 def test_two_empirical_anchors_verified_status():
     eq = build_lane_groundframe_xi_transport_no_collapse_v1()
-    assert len(eq.empirical_anchors) == 2
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert anchor_ids
+    assert len(eq.predicted_vs_empirical_residual) == len(anchor_ids)
     for a in eq.empirical_anchors:
         assert a.empirical_verification_status == VERIFIED_VIA_EMPIRICAL_ANCHOR
         assert a.residual == 0.0  # MEASURED, not predicted
@@ -99,4 +101,6 @@ def test_populate_registers_into_registry(tmp_path):
     got = get_equation_by_id(EQUATION_ID, path=path)
     assert got is not None
     assert got.equation_id == EQUATION_ID
-    assert len(got.empirical_anchors) == 2
+    anchor_ids = {anchor.anchor_id for anchor in got.empirical_anchors}
+    assert anchor_ids
+    assert len(got.predicted_vs_empirical_residual) == len(anchor_ids)

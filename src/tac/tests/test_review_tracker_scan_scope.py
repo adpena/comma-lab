@@ -123,3 +123,37 @@ def test_extract_entities_disambiguates_rebound_module_names(tmp_path: Path) -> 
         "sample::load@L1",
         "sample::load@L4",
     ]
+
+
+def test_mark_file_rescans_and_marks_a_function_added_after_scan(tmp_path: Path, monkeypatch) -> None:
+    """The approval denominator is the current AST, never the last scan's census."""
+    module_path = tmp_path / "src" / "tac" / "sample.py"
+    module_path.parent.mkdir(parents=True)
+    module_path.write_text("def first():\n    return 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(review_tracker, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(review_tracker, "TRACKER_DB", tmp_path / ".omx" / "state" / "tracker.duckdb")
+    monkeypatch.setattr(review_tracker, "TRACKER_JSON", tmp_path / ".omx" / "state" / "tracker.json")
+    monkeypatch.setattr(review_tracker, "_tracked_reviewable_python_files", lambda: [module_path])
+    monkeypatch.setattr(review_tracker, "_run_git", lambda *args, **kwargs: "")
+
+    review_tracker.cmd_scan(full=True)
+    con = review_tracker._init_db()
+    assert con.execute("SELECT COUNT(*) FROM entities").fetchone()[0] == 1
+    con.close()
+
+    module_path.write_text(
+        module_path.read_text(encoding="utf-8") + "\ndef added_after_scan():\n    return 2\n",
+        encoding="utf-8",
+    )
+    assert review_tracker.cmd_mark_file(
+        "src/tac/sample.py", reviewer="test-reviewer", review_pass="current-census"
+    ) == 0
+
+    con = review_tracker._init_db()
+    rows = con.execute(
+        "SELECT name, review_status FROM entities WHERE file_path = ? ORDER BY name",
+        ["src/tac/sample.py"],
+    ).fetchall()
+    con.close()
+    assert rows == [("added_after_scan", "reviewed"), ("first", "reviewed")]

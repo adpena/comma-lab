@@ -751,8 +751,8 @@ class TestParetoFrontTracker:
         d = t.to_dict()
         t2 = ParetoFrontTracker.from_dict(d)
         assert t2.axis == t.axis
-        assert len(t2.anchors) == 1
-        assert t2.anchors[0].source == "x"
+        (anchor,) = t2.anchors
+        assert anchor.source == "x"
 
     def test_pipeline_with_pareto_growth(self):
         # Register two stages where the second WORSENS rate

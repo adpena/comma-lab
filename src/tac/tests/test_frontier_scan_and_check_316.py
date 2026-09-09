@@ -192,10 +192,10 @@ def test_load_continual_learning_anchors_parses_canonical_schema(tmp_path):
     }
     (state / "continual_learning_posterior.json").write_text(json.dumps(payload))
     anchors = load_continual_learning_anchors(tmp_path)
-    assert len(anchors) == 1
-    assert anchors[0].score == pytest.approx(0.19205)
-    assert anchors[0].canonical_axis() == "contest_cpu"
-    assert anchors[0].extra["lane_id"] == "lane_test"
+    (anchor,) = anchors
+    assert anchor.score == pytest.approx(0.19205)
+    assert anchor.canonical_axis() == "contest_cpu"
+    assert anchor.extra["lane_id"] == "lane_test"
 
 
 def test_load_active_lane_dispatch_claims_anchors_parses_canonical_row(tmp_path):
@@ -211,10 +211,10 @@ def test_load_active_lane_dispatch_claims_anchors_parses_canonical_row(tmp_path)
     )
     (state / "active_lane_dispatch_claims.md").write_text(row + "\n")
     anchors = load_active_lane_dispatch_claims_anchors(tmp_path)
-    assert len(anchors) == 1
-    assert anchors[0].score == pytest.approx(0.19205)
-    assert anchors[0].canonical_axis() == "contest_cpu"
-    assert anchors[0].extra.get("lane_id") == "lane_pr101_test"
+    (anchor,) = anchors
+    assert anchor.score == pytest.approx(0.19205)
+    assert anchor.canonical_axis() == "contest_cpu"
+    assert anchor.extra.get("lane_id") == "lane_pr101_test"
 
 
 # ----------------------------------------------------------------------------

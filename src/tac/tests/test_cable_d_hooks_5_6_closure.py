@@ -331,8 +331,8 @@ def test_hook_5_anchor_provenance_canonical_helper_pinned() -> None:
 def test_collect_all_hook_5_anchors_returns_one_per_catalog_303() -> None:
     """Per Catalog #303: collection returns exactly 1 HARD-EARNED ACTIVE cell."""
     anchors = collect_all_hook_5_anchors_for_archive(_fresh_archive_sha())
-    assert len(anchors) == 1
-    assert anchors[0].consumer_id == "per_pair_lora_supervision_signal"
+    (anchor,) = anchors
+    assert anchor.consumer_id == "per_pair_lora_supervision_signal"
 
 
 def test_collect_all_hook_5_anchors_all_observability_only() -> None:
@@ -349,9 +349,9 @@ def test_collect_all_hook_5_anchors_with_sidecar_present() -> None:
         "per_pair_lora_supervision_signal", sha, n_pairs=600
     ):
         anchors = collect_all_hook_5_anchors_for_archive(sha)
-        assert len(anchors) == 1
-        assert anchors[0].sidecar_present is True
-        assert anchors[0].n_pairs == 600
+        (anchor,) = anchors
+        assert anchor.sidecar_present is True
+        assert anchor.n_pairs == 600
 
 
 def test_collect_all_hook_5_anchors_empty_sha_rejected() -> None:

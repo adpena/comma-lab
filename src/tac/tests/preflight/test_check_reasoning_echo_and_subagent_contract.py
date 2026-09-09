@@ -223,3 +223,17 @@ def test_contract_names_typed_verdict_producer() -> None:
     violations = check_subagent_contract_module_integrity(_module=mutant)
     assert len(violations) == 1
     assert "typed verdict producer" in violations[0]
+
+
+def test_contract_integrity_keeps_public_receiver_identity_composed() -> None:
+    import tac.subagent_contract as real
+
+    phrase = "receiver identity means bash inflate.sh on the staged tree, not the library path"
+    mutant = SimpleNamespace(
+        KEY_PHRASES=real.KEY_PHRASES,
+        standard_contract=lambda **kw: real.standard_contract(**kw).replace(phrase, "library identity"),
+        review_contract=real.review_contract,
+        **{name: getattr(real, name) for name in real.CONTRACT_CONSTANT_NAMES},
+    )
+    violations = check_subagent_contract_module_integrity(_module=mutant)
+    assert any("public receiver-identity rule" in violation for violation in violations)

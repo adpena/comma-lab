@@ -87,7 +87,12 @@ def test_registry_round_trip(tmp_path) -> None:
     payload = matching[-1]["equation_payload"]
     assert payload == eq.to_dict()
     assert payload["latex_form"] and payload["one_line_summary"]
-    assert len(payload["empirical_anchors"]) == 2
+    anchor_ids = {anchor["anchor_id"] for anchor in payload["empirical_anchors"]}
+    assert anchor_ids
+    assert {
+        "forfeit_matched_exit_evaluator_source_verified_20260708",
+        "tail_stop_forfeit_floor_s_star_derived_20260708",
+    } <= anchor_ids
 
 
 # ── FIX-2: turnpike vs descending-ladder honesty ─────────────────────────────────────────────

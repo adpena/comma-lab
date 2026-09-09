@@ -245,8 +245,7 @@ def test_discover_anchors_classifies_cuda_t4_as_promotable_orphan(tmp_path: Path
         search_roots=("experiments/results/modal_auth_eval",),
         posterior_path=posterior_path,
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.custody_accepted is True
     assert a.custody_refused_class is None
     assert a.in_posterior_already is False
@@ -270,8 +269,7 @@ def test_discover_anchors_classifies_modal_cpu_as_promotable_orphan(
         search_roots=("experiments/results/modal_auth_eval_cpu",),
         posterior_path=posterior_path,
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.custody_accepted is True
     assert a.custody_refused_class is None
     assert a.is_promotable_orphan is True
@@ -288,8 +286,7 @@ def test_discover_anchors_classifies_gha_cpu_as_promotable_orphan(tmp_path: Path
         search_roots=("experiments/results/modal_auth_eval_cpu",),
         posterior_path=posterior_path,
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.custody_accepted is True
     assert a.is_promotable_orphan is True
     assert a.evidence_tag == "[contest-CPU GHA Linux x86_64]"
@@ -306,8 +303,7 @@ def test_discover_anchors_classifies_macos_as_refused_macos_substrate(tmp_path: 
         search_roots=("experiments/results/modal_auth_eval_cpu",),
         posterior_path=posterior_path,
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.custody_accepted is False
     # macOS evidence_grade=contest-CPU but hardware=Darwin -> tag flips to
     # advisory; the verdict is still macos_substrate (highest specificity).
@@ -325,8 +321,7 @@ def test_discover_anchors_handles_corrupt_json_gracefully(tmp_path: Path):
         tmp_path,
         search_roots=("experiments/results/modal_auth_eval",),
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.parse_error is not None
     assert "JSONDecodeError" in a.parse_error
     assert a.is_promotable_orphan is False
@@ -344,8 +339,7 @@ def test_discover_anchors_handles_missing_required_field(tmp_path: Path):
         tmp_path,
         search_roots=("experiments/results/modal_auth_eval",),
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.parse_error is not None
     assert a.is_promotable_orphan is False
 
@@ -369,8 +363,7 @@ def test_discover_anchors_marks_already_in_posterior(tmp_path: Path):
         search_roots=("experiments/results/modal_auth_eval",),
         posterior_path=posterior_path,
     )
-    assert len(anchors) == 1
-    a = anchors[0]
+    (a,) = anchors
     assert a.in_posterior_already is True
     assert a.is_promotable_orphan is False  # already in posterior is NOT an orphan
 

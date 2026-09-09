@@ -93,7 +93,9 @@ def test_builder_carries_verified_anchors_with_re_derivable_residuals() -> None:
 
     equation = build_hpac_prior_capacity_slope_v1()
     assert equation.equation_id == EQUATION_ID
-    assert len(equation.empirical_anchors) == 3
+    anchor_ids = {anchor.anchor_id for anchor in equation.empirical_anchors}
+    assert anchor_ids
+    assert set(equation.predicted_vs_empirical_residual) == anchor_ids
     control, slope, smaller = equation.empirical_anchors
     assert control.residual == 41.0
     assert slope.residual == 506.0 + 1_500.0

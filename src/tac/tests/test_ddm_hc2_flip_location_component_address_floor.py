@@ -174,8 +174,9 @@ def test_refusal_bar_is_the_charter_bar():
 def test_equation_builds_with_three_verified_anchors_and_a_refusal_verdict():
     eq = build_flip_location_component_address_floor_v1()
     assert eq.equation_id == EQUATION_ID
-    assert len(eq.empirical_anchors) == 3
-    assert len(eq.predicted_vs_empirical_residual) == 3
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert anchor_ids
+    assert set(eq.predicted_vs_empirical_residual) == anchor_ids
     ceiling = next(a for a in eq.empirical_anchors if "no_location_set_representation" in a.anchor_id)
     assert ceiling.empirical_output["typed_verdict"] == "CEILING-REFUSED"
     assert "REFUSAL-ONLY" in " ".join(eq.domain_of_validity["measurement_axis"])

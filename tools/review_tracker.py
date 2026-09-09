@@ -1059,6 +1059,65 @@ def cmd_mark(pattern: str, status: str = "reviewed",
     print(f"Marked {len(rows)} entities as '{status}'")
 
 
+def _rescan_file_before_mark(con, normalized: str) -> tuple[bool, int, int]:
+    """Refresh one file's entity census before ``mark-file`` can approve it.
+
+    ``mark-file`` used to trust the last global scan. Adding a function after that scan
+    therefore let the command approve only the old denominator while printing success. This
+    targeted rescan replaces the file's rows atomically and preserves prior review metadata
+    only for entities that still exist; the subsequent mark binds every CURRENT entity.
+    """
+    path = REPO_ROOT / normalized
+    if not path.is_file() or not _is_reviewable_python_path(normalized):
+        return False, 0, 0
+    try:
+        ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, OSError) as exc:
+        print(f"ERROR: refusing mark-file because {normalized} cannot be rescanned: {exc}", file=sys.stderr)
+        return False, 0, 0
+
+    old_rows = con.execute(
+        """SELECT qualified_name, review_status, reviewed_by, reviewed_at, review_pass, notes
+           FROM entities WHERE file_path = ?""",
+        [normalized],
+    ).fetchall()
+    old = {
+        qualified_name: (review_status, reviewed_by, reviewed_at, review_pass, notes)
+        for qualified_name, review_status, reviewed_by, reviewed_at, review_pass, notes in old_rows
+    }
+    entities = extract_entities(path, compute_complexity=False)
+    commit, date = _batch_file_last_commits([normalized]).get(normalized, ("", ""))
+    rows_to_insert = []
+    for entity in entities:
+        prior = old.get(entity.qualified_name, ("unreviewed", "", "", "", ""))
+        rows_to_insert.append(
+            [
+                entity.qualified_name,
+                entity.module,
+                entity.file_path,
+                entity.entity_type,
+                entity.name,
+                entity.start_line,
+                entity.end_line,
+                entity.line_count,
+                entity.complexity,
+                commit,
+                date,
+                *prior,
+            ]
+        )
+
+    con.execute("BEGIN TRANSACTION")
+    con.execute("DELETE FROM entities WHERE file_path = ?", [normalized])
+    if rows_to_insert:
+        con.executemany(
+            """INSERT INTO entities VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            rows_to_insert,
+        )
+    con.execute("COMMIT")
+    return True, len(old_rows), len(rows_to_insert)
+
+
 def cmd_mark_file(file_path: str, status: str = "reviewed",
                   reviewer: str = "council", review_pass: str = "",
                   dry_run: bool = False) -> int:
@@ -1074,9 +1133,6 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
         print(f"ERROR: invalid status '{status}'. Must be one of: {VALID_STATUSES}")
         return 1
 
-    con = _init_db()
-    now = datetime.now(UTC).isoformat()
-
     # Normalize path
     normalized = file_path.replace("\\", "/")
     if normalized.startswith("/"):
@@ -1085,9 +1141,22 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
         except ValueError:
             pass
 
+    con = _init_db()
+    now = datetime.now(UTC).isoformat()
+    rescanned, old_count, current_count = _rescan_file_before_mark(con, normalized)
+    if rescanned:
+        print(
+            f"RESCAN: '{normalized}' current entity census {current_count} "
+            f"(last stored census {old_count})"
+        )
+    elif (REPO_ROOT / normalized).is_file() and _is_reviewable_python_path(normalized):
+        con.close()
+        return 1
+
     rows = con.execute(
+        "SELECT qualified_name FROM entities WHERE file_path = ?" if rescanned else
         "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
-        [f"%{normalized}%"]
+        [normalized if rescanned else f"%{normalized}%"]
     ).fetchall()
 
     if not rows:
@@ -1147,6 +1216,8 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
         print(f"DRY RUN: would mark {len(rows)} entities in '{file_path}' as '{status}'")
         for (qn,) in rows:
             print(f"  {qn}")
+        if rescanned:
+            _export_json(con)
         con.close()
         return 0
 

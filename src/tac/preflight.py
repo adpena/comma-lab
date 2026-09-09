@@ -93042,6 +93042,9 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     # #785, 2026-07-30). Hardcoded here per the same anti-self-waive design.
     "RETAINED_REASONING",
     "RESEARCH_ORIGINAL_DESIGN_AUTHORITY",
+    # ddm_scg1 (2026-09-08): receiver identity is the public shell path, not a
+    # library import that can bypass the staged preamble and dispatch guards.
+    "RECEIVER_IDENTITY",
     # Internal-leverage authority (operator 2026-08-09 — the INTERNAL half of the
     # research/original pair: our own codebase, docs, and unwired modules are
     # off-the-shelf usable, adaptable, refactorable, extendable). Hardcoded here
@@ -93072,6 +93075,9 @@ _SUBAGENT_CONTRACT_RISK_RANKING_PHRASE = "probability × blast-radius × SILENCE
 # discipline with no named producer is exactly how the typed surface stayed orphaned, so
 # the producer name is pinned gate-side (anti-self-waive, like the two phrases above).
 _SUBAGENT_CONTRACT_VERDICT_PRODUCER_PHRASE = "tac.verdicts.emit_verdict"
+_SUBAGENT_CONTRACT_RECEIVER_IDENTITY_PHRASE = (
+    "receiver identity means bash inflate.sh on the staged tree, not the library path"
+)
 
 
 def check_subagent_contract_module_integrity(
@@ -93160,6 +93166,12 @@ def check_subagent_contract_module_integrity(
                     "— stating the scope ladder as prose without naming the surface that "
                     "records it is how the typed producer was orphaned (0 production call "
                     "sites at task #936). Restore the producer name in VERDICT_SCOPE_LADDER.")
+            if _SUBAGENT_CONTRACT_RECEIVER_IDENTITY_PHRASE not in composed:
+                violations.append(
+                    f"{_SUBAGENT_CONTRACT_REL}: standard_contract() output lost the "
+                    "public receiver-identity rule — receiver identity must remain bound "
+                    "to bash inflate.sh on the staged tree, not a library path."
+                )
             for name, phrase in _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES.items():
                 if phrase not in composed:
                     violations.append(
