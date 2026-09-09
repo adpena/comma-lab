@@ -361,7 +361,20 @@ homography are already free in `inflate.py` under rule 118 — would be aimed di
 29,977 B Lane→Road term. That is the one place on this object where a 26,909 B demand and an
 83,259 B supply are looking at each other.
 
-## 10. State on hand-off, and what it would cost to finish
+## 10. The pose base, measured on this arm's own instrument (MEASURED)
+
+Per the pose-base law, the base is measured here rather than lifted: the LIVE field's own
+600 odd frames rendered through this arm's overlay at `semantic_batch=1` (262.5 s), then the
+frozen CPU-torch PoseNet on the move-37 pointer's own carrier state (96.3 s).
+
+**d_pose base = 5.049765771412152e-06, pose leg 0.007106170397205623.** That is
+bit-for-bit the value sj1's pass-4 `CLOSE.json` reports for the same body — measured
+independently here, on a different instrument build, against a pointer two moves later. It
+confirms two things at once: this arm's pose instrument is correct, and cmp1 and cmp2 really
+did leave the pose leg untouched (their carrier section is byte-identical at 18,586 B, which
+`assert_pointer_and_carrier` checks rather than assumes).
+
+## 11. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -389,6 +402,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 11. Frontier line
+## 12. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
