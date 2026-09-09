@@ -20,7 +20,7 @@ Review only: no code, no measurement jobs, no pricing. Read receipts; write find
 - Serializer commits w/ post-edit `--expected-content-sha256`; if git object writes are refused, leave `landing.patch` + manifest and say so. Tokens `[no-triality] [p0-ledger-ok]`; NEVER a Co-Authored-By or AI-attribution trailer. Checkpoint `tools/subagent_checkpoint.py --subagent-id ddm_pr5`.
 
 ## PRIOR NEGATIVE SIGNAL
-- bnd1's four DEAD-ENDS are the four misreading classes; hunt them, do not repeat them.
+- bnd1's four DEAD-ENDS are the four misreading classes; hunt them, do not repeat them. # VERDICT_SCOPE_OK: this charter issues no negative verdict of its own; it cites bnd1's dead-end list (instance-level reading errors, not a family) as the review's hunt list
 - m106: stale headlines survive corrected bodies — check the packets' headline lines against their bodies.
 - available-field-vs-authoritative-field: a number read from the wrong field is the #1 class.
 
