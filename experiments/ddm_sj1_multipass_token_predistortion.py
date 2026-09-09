@@ -313,6 +313,36 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.1e-06,
         score_t4=0.13900437796841966,
     ),
+    #: LIVE (MAIN 2026-09-09).  NOT this arm's row: ddm_rc2 replaced the hpac MODEL
+    #: section and its reader with a shared 8-byte logistic depth-mixing prior, lane
+    #: ddm_rc2_t4_hpac_semistatic_mixing_20260909.  Pointer move #33, -1.5381e-04 S on
+    #: -231 B alone: BOTH distortion legs reproduced EXACTLY on T4 (d_seg 0.00010913,
+    #: d_pose 5.1e-06 — the same prints as the row above), so the whole delta is rate.
+    #:
+    #: VERIFIED HERE before this arm composed anything on it, by splitting both members
+    #: with ``jg2.split_member`` rather than trusting the handoff:
+    #:   semantic 30,246 B  BYTE-IDENTICAL to pass 3
+    #:   carrier  18,621 B  BYTE-IDENTICAL to pass 3
+    #:   tail    120,321 B  BYTE-IDENTICAL to pass 3
+    #:   hpac     12,343 -> 12,112 B  (-231, exactly the declared delta)
+    #:   header       14 B  differs (the codec-version rider, as at the rc1 rung)
+    #: That identity is what makes pass 4 re-basable onto this tree without re-rendering:
+    #: the carrier re-solve starts from the SAME coefficients, and the new tail splices
+    #: into a member whose other sections this arm already measured.
+    PointerRow(
+        label="rc2_hpac_semistatic_mixing",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_rc2_hpac_semistatic_mixing"
+            "/candidate_runtime"
+        ),
+        archive_sha256=(
+            "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e"
+        ),
+        archive_bytes=181_414,
+        d_seg_t4=0.00010913,
+        d_pose_t4=5.1e-06,
+        score_t4=0.13885056455024844,
+    ),
 )
 
 for _row in POINTER_LINEAGE:

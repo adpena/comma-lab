@@ -979,7 +979,12 @@ def _public_path_probe(runtime_root: Path, *, timeout_s: float) -> dict[str, Any
             ],
             check=True, capture_output=True,
         )
-        environment = dict(os.environ, CPR1_RC64_LIBRARY=str(library))
+        # PYTHONDONTWRITEBYTECODE: the probe imports FROM the tree, which would drop
+        # __pycache__ into it.  The seal digest skips bytecode caches so identity is safe
+        # either way, but a frontier tree handed over READ ONLY must come back untouched.
+        environment = dict(
+            os.environ, CPR1_RC64_LIBRARY=str(library), PYTHONDONTWRITEBYTECODE="1"
+        )
         started = time.time()
         try:
             done = subprocess.run(
@@ -1030,6 +1035,7 @@ def _inflate_sh_smoke(runtime_root: Path, *, timeout_s: float) -> dict[str, Any]
     environment = dict(
         os.environ,
         PATH=f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}",
+        PYTHONDONTWRITEBYTECODE="1",
     )
     with tempfile.TemporaryDirectory() as scratch:
         scratch_path = Path(scratch)
