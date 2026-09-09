@@ -261,4 +261,21 @@ number.
 
 ---
 
+## 9. OWED (the queue this arm hands forward, each with its blocker named)
+
+- **OWED #1 — the reach.** Run `experiments/ddm_rw1_FIRE_ORDER.sh` step 3 (MPS, 3,000 steps, batch 4) the moment BOTH gate
+  conditions hold (0 Metal occupants AND `.omx/tmp/codex_runs/ddm_sj1_pass4_r2.done.done` exists), then steps 4a–4b (render + seg)
+  for the n600 instrument residual. STATUS: `blocked-by-sj1-pass4-receipt` (a NAMED, MEASURED blocker: MAIN's sequencing rule).
+  READY: yes — one command, everything upstream controlled.
+- **OWED #2 — the per-pair recovery on a GLOBAL change.** `FIRE_ORDER` step 4c. Nobody has measured whether the per-pair re-solve
+  keeps fe1's 643–3,053× when all 600 renders move at once; §4 shows the structural precondition holds on every pair.
+  STATUS: blocked-by-OWED-#1.
+- **OWED #3 — the widening, only if falsifier (a) fires.** `--widened` opens `blocks.2.{dw,pw}.weight` (+10,080 codes, still
+  depth 4 and un-pruned). At the measured rate law that is still ~+200 B for a total rewrite. STATUS: conditional.
+- **OWED #4 — the `blocks.*.film` half is out of scope by construction**, because those runs are row-pruned to 2 of 192 rows and
+  editing them would re-open the ft1 realization gap. Whether a FiLM fold-back is reachable at all needs a receiver change
+  (a differently-pruned SM3R), which is a different arm. STATUS: `genuinely-deferred-because-row-pruned-run-is-not-byte-expressible`.
+
+---
+
 Own-vehicle frontier: **S 0.13885056455024844 @ 181,414 B [contest-CUDA T4 n600]**, archive sha `c810c2c7…f671e` (rc2, 33rd move).
