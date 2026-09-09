@@ -205,7 +205,46 @@ the acceptance measured under the superseded ranking transfers essentially intac
 the neutrality cache is serving ~96 % of the new pass's proposals — pairs are completing in
 3.8–4.8 s instead of 30.
 
-## 7. Status and what is running
+## 7. THE PRICE, MEASURED — the adaptive coder claws back 85 % of the first-order saving
+
+This is the arm's decisive number and it is exact, on the shipped stream, under the live
+coder. Payload retained: `retained/tail_rp1_partial_217tok_119752B.bin`.
+
+| | measured |
+|---|---|
+| argmax-neutral token changes realized and applied | **217** across 115 pairs |
+| first-order sum of their coder savings | **−219.66 B** (8.10 bits per change) |
+| **REAL 600-frame mixer encode** | **119,752 B against the control's 119,784 B = −32 B** |
+| **realized / modelled** | **0.1457** |
+| **real saving per accepted token** | **1.18 bits**, not 8.10 |
+
+The mechanism is not mysterious and it is the mirror image of sj1's. Both the FreeCorrector
+and tc1's mixer are ADAPTIVE: their per-context statistics are estimated from the field as
+it goes by. Writing the model's favourite symbol at a surprising position removes a surprise
+the coder had already learned to expect, so the *remaining* surprises get re-priced upward
+and most of the local gain is returned. sj1 measured the same coupling with the opposite
+sign — their seg-directed writes cost **1.279×** their modelled bits — so the placement law
+now has both of its tails measured on the same object:
+
+> **A first-order per-position price is a RANKING, never a charge. On this coder the
+> correction is 1.28× against you when you write surprises in, and 0.15× for you when you
+> take them out.** The asymmetry is the adaptive state: surprises you add are paid at the
+> margin, surprises you remove are subsidising the neighbours you leave behind.
+
+**Consequence for the ceiling.** §6's 68,951.7 B first-order ceiling is not a byte budget.
+Multiplied through by the measured 0.1457 it becomes **≈ 10,045 B**, against a 26,908.6 B
+demand — and that is still the ceiling of a search that would have to realize all 191,882
+positions at 0.68 s each (36 CPU-hours) and would find only ~5 % of them neutral.
+
+**Projection for this pass, honestly.** The acceptance is at 148 of 600 pairs and has
+produced 217 accepted changes; the full ranks-0–32 pass extrapolates to ~880 changes, and at
+1.18 real bits each that is **≈ 130 B before any pose cost** — **below the 150 B
+`no candidate` floor this arm pre-registered.** One measurement stands between that reading
+and a verdict: the per-pair bit ledger, which allows keeping only the pairs that actually
+saved and dropping the ones the re-pricing turned negative. That encode is re-running (the
+first one produced the ledger and an ordering bug threw it away; the bug is fixed and gated).
+
+## 8. Status and what is running
 
 The stop rule cleared, so the n600 pass is running: **all 600 pairs, ranks 0–32 per pair**
 (the value-per-test optimum above), singles mode, 5 interleaved shards, 2 live while sj1's
@@ -220,6 +259,6 @@ and change the CODER and the semantic section, not the field, so they compose wi
 by re-pricing rather than re-searching — but the byte delta of this field change must then be
 re-measured under whichever tail coder is live at seal time.
 
-## 8. Frontier line
+## 9. Frontier line
 
-`cmp1 S 0.13817298987557713 @ 180,772 B [contest-CUDA T4 n600]`
+`cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
