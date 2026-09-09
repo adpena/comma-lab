@@ -679,6 +679,38 @@ rel = 1e-05 buy nothing because the render stops responding there.
 **1,080** — the prefix is **13.9 % easier**, a stronger seg prefix bias than the 0.95–0.97× in memory. The verdict is taken on the random
 draw; the prefix number is reported because it was asked for, and labelled.
 
+## 8f. The first repair this arm has ever seen — and the base it moved to
+
+Running the realized search **inside the measured productive window** (relative scale moves, not fp16 ULPs) produced the arm's first
+accept: `blocks.3.dw.weight` row 34 at `rel = +3e-05`, screen flips **2,646 → 2,645**, `accepted: true`, at evaluation 28 of a 52-eval
+partial. Early per-step distribution on that partial (120-pair screen deltas):
+
+| tensor | rel | n | min | median |
+|---|---:|---:|---:|---:|
+| dw | +3e-05 | 2 | **−1** | −0.5 |
+| dw | −3e-05 | 1 | 0 | 0 |
+| dw | ±1e-04 | 5 | 0 | 3–4 |
+| pw | +3e-05 | 5 | 0 | 1 |
+| pw | ±1e-04 | 10 | 1 | 5–6 |
+
+Two things are now measured that were not before: **negative deltas exist**, and they sit at the *fine* end of the window (`3e-05`),
+exactly where the sizing sweep put the crossover. Every earlier route — five of them — could only produce non-negative deltas because the
+fp16 grid could not express a move this small.
+
+**That partial is anchored to a baseline that has since moved and is retained as superseded**
+(`receipts/RELSEARCH_pc2base_superseded.log`). The 35th pointer move (sj1 pass 4) changed the token tail for 112 of 600 pairs, so those
+pairs now render differently and its screen null of 2,646 is no longer the live null. The search was stopped at 52 evaluations and
+relaunched on the pass-4 base rather than allowed to produce an n600 number against a baseline that had moved.
+
+**Re-pinned and re-controlled on the 35th move:** archive `b0ca809c…`, **181,521 B**, S **0.13867171823146562**, residual **12,614
+cells**, gap now **0.01867172**, d_pose base 5.049766e-06. The identity control re-passes byte-exact (0 of 24,416,064 px) with the new
+token field and the new parse-back, and the pin guard again confirmed the SM3R body unchanged (`17e0fd0b`), so the renderer this arm
+actuates is the same object across all three moves it has now been re-based through.
+
+Re-scored at the new operating point: one repaired cell is `8.4771e-07` S = **0.00454 % of the gap**; the residual 12,614 cells =
+**0.010693 S = 57.3 % of the gap**; a +73.1 B format change (+3 mantissa bits) is `4.869e-05` S = **0.26 % of the gap**, break-even
+**57 cells**.
+
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
