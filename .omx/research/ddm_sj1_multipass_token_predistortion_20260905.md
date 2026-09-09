@@ -1412,6 +1412,86 @@ token grid cannot move the argmax onto the right side, no token-grid move will, 
 
 ---
 
+## 23. Move 35 — this arm's pass 4, PROMOTED, and the calibration flips sign
+
+**S 0.13867171823146562 @ 181,521 B [contest-CUDA T4 n600]**, sha `b0ca809c…`, lane
+`ddm_sj1_t4_token_predistortion_pass4_20260909`, **−1.515461e-04 S on +148 B**. Verified at
+source: the lane's own `MODAL_REMOTE_RESULT.json` carries the same sha, size and
+`score_recomputed_from_components`, and the tree on disk hashes to the same sha at the same
+size. Lineage to date: **0.14784474 → 0.13867172 = −9.173023e-03 over 11 rows.**
+
+**Projected 0.13867280587520867 → MEASURED 0.13867171823146562, residual −1.0876e-06.** The
+first PESSIMISTIC projection of the wave, against +5.2748e-06 (move 31) and +4.1619e-06
+(move 32). So the one-signed +0.0030%..+0.0038% band this arm carried is **not one-signed**;
+the honest reading is a residual of order 1e-06 to 5e-06 with EITHER sign. Seg came in about
+one cell better than projected (0.00010698 vs 0.00010699252).
+
+## 24. The two-cell SLIDE family — DEAD on both clauses, MEASURED
+
+### 24a. Mechanism (12 seeded pairs, 260 refused cells)
+
+| | measured | bar |
+|---|---:|---:|
+| refused cells repaired | **28 = 10.77%** | ≥5% ✔ |
+| accepted slides | 21 | |
+| cells repaired | 24 | |
+| **cells per accepted slide** | **1.143** | ≥1.5 ✘ |
+
+The slide **does** reach cells that three passes of singles refused — 10.77%, twice the bar,
+so the census's diagnosis of the residual as a boundary DISPLACEMENT was right about shape.
+It reaches them **one at a time**, and two of twelve pairs accepted nothing at all.
+
+### 24b. Rate — the clause I nearly failed to test
+
+§22 pre-registered *"pays at ≥2 cells/slide **OR** where the second token is near-free"*, and
+after 24a I was ready to call DEAD on the first clause alone. That would have been a
+half-applied rule. The second clause is a property of the CODER and had to be encoded.
+
+The sizing then surfaced something that made it genuinely live: the 21 slides cost only
+**34 token writes, not 42** (advance 14, retreat 20), because one target token was often
+already in the wanted class. At **1.62 tokens/slide** and pass 4's 6.40 bits/token the
+modelled cost is **10.4 bits** against an **11.19-bit** break-even — under it by 7%, far too
+close to call from a model.
+
+MEASURED, four concurrent encodes against the live 120,367 B control, twin byte-identical:
+
+| field | bytes | Δ | per slide |
+|---|---:|---:|---:|
+| control (live row) | 120,367 | — | — |
+| **both** | 120,412 | **+45 B** | **17.143 bits** |
+| advance only | 120,386 | +19 B | 7.238 bits |
+| retreat only | 120,395 | +28 B | 10.667 bits |
+
+**17.143 bits/slide against an 11.192-bit break-even — over by 1.53×.** The family would
+need **1.751 cells/slide** and delivers 1.143.
+
+**The standing hypothesis is FALSIFIED.** The retreat token was supposed to be cheap or
+negative because it restores context earlier pre-distortion had broken. It costs **11.20
+bits per write against the advance token's 10.86 — 1.03×, i.e. the same.** Restoring
+context buys nothing here.
+
+**A third number, larger than the verdict.** Both slide writes price at **~1.73× pass-4's
+single tokens** (10.9–11.2 bits versus 6.40). Pass-4's singles were chosen greedily and the
+search implicitly preferred cheap placements; the slide writes are FORCED to specific
+offsets. So **the marginal price of a token depends strongly on WHERE it is, not only on how
+many there are** — which means pass 5's projected 7.72 bits/token, extrapolated from
+greedily-chosen placements, may itself be optimistic if pass 5's remaining sites are more
+constrained. Additivity holds to 4.3% (+47 B separately vs +45 B together), so the two
+writes barely interact and per-token accounting is sound.
+
+### 24c. Verdict and consequence
+
+**DEAD on both clauses. Pass 5 is singles-only, as §20 planned.** No slide code enters the
+pass-5 family.
+
+This is a complete negative with a named mechanism, and it sharpens the renderer door's
+brief rather than merely closing a lane: **the residual is not reachable by token-grid moves
+of either shape.** Singles refused 89.46% of it; slides reach 10.77% of that refused set at
+1.53× over break-even. The token grid has been tried in both the widening and the
+translating direction, and the remaining 12,443 cells belong to the renderer.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
