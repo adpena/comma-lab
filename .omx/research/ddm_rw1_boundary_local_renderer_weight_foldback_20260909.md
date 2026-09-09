@@ -580,6 +580,21 @@ one that picks WHICH codes to move. Per Catalog #307 this is an IMPLEMENTATION-l
 
 ---
 
+## 10. Equations leg
+
+Two laws carry this arm forward, both registered in `tac.canonical_equations`:
+
+- **`model_section_edit_container_break_fee_v1`** — third anchor
+  `rw1_semantic_int4_weight_code_rewrite_marginal_0p0139_bytes_per_code_20260909`, closing that law's own excluded clause
+  ("extrapolation past N = 200 changed codes") on a different run. The container-break fee SATURATES: 0.0139 B/code at N = 12,672.
+- **`renderer_edge_layer_foldback_reach_v1`** (NEW) — the closing law: *one int4 code step in `head`/`blocks.3` already moves 240–455
+  argmax cells, so a renderer-weight fold-back is limited by the grid's resolution, not by the search.* `verdict_scope: formulation`;
+  its `excluded` list names the two live doors (a finer grid, and the per-row fp16 scales) so the next arm inherits the opening, not
+  just the closure. Anchor `rw1_int4_code_minimum_action_costs_240_to_455_cells_20260909`, residual: both predictions falsified, the
+  measured reach has the OPPOSITE sign to the charter's.
+
+---
+
 Own-vehicle frontier: **S 0.13885056455024844 @ 181,414 B [contest-CUDA T4 n600]**, archive sha `c810c2c7…f671e` (rc2, 33rd move).
 
 ### MAIN note (2026-09-09 17:40Z) — relative significance of the step-7 stop, and the verdict's scope
