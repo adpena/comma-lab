@@ -301,7 +301,67 @@ was a charge. It is not. **The single number this arm adds to the campaign is 0.
 fraction of a first-order saving that an adaptive coder actually pays out when you take a
 surprise out of the field.**
 
-## 9. State on hand-off, and what it would cost to finish
+## 9. CHARTER-READY: the mispredicted-token census — where the −26,909 B corner actually lives
+
+Receipt: `retained/MISPREDICTED_CENSUS.json`, `experiments/ddm_rp1_mispredicted_census.py`,
+read off the LIVE coder's own probability rows. Denominator stated first, always: of
+117,964,800 tokens, **235,044 (0.19925 %) are mispredicted and carry 666,069 bits =
+83,258.6 B**; the other 117,729,756 carry 36,519.4 B of flag mass at 0.0024 bits each and
+are unreachable by any field change. This census covers **96.57 %** of the payable bits
+(213,733 tokens; the shortfall is mispredicted tokens the coder charges almost nothing for).
+**The sub-0.12 corner, 26,908.6 B, is 32.3 % of the payable object.**
+
+**Finding 1 — the payable bytes are a boundary, not a region.**
+
+| | tokens | bytes | share |
+|---|---|---|---|
+| **on a GT edge** (label differs from a 4-neighbour) | 209,179 | **78,245.8** | **97.32 %** |
+| in region interior | 4,554 | 2,154.0 | 2.68 % |
+
+At 2.99 bits per edge token against 3.78 in the interior, the interior tokens are individually
+*dearer* — there are just almost none of them. **97 % of everything the tail coder charges
+for sits on the codim-1 boundary of the segmentation.**
+
+**Finding 2 — it is the LANE boundary, and one transition dominates.**
+
+| stored class | tokens | bytes | share | bits/token |
+|---|---|---|---|---|
+| **Lane** | 70,277 | **30,523.8** | **37.97 %** | 3.47 |
+| Road | 82,294 | 26,760.9 | 33.28 % | 2.60 |
+| Movable | 22,588 | 9,047.0 | 11.25 % | 3.20 |
+| Undrivable | 27,613 | 8,858.7 | 11.02 % | 2.57 |
+| MyCar | 10,961 | 5,209.3 | 6.48 % | 3.80 |
+
+**Lane is 0.59 % of the image area and 38 % of the payable bytes — a 64× over-representation.**
+The single transition **Lane→Road** (the coder wants Road, the field stores Lane) is
+**69,584 tokens = 29,976.9 B = 37.28 %** of everything payable; no other transition reaches
+0.4 %.
+
+**Finding 3 — the vertical support is exactly the seg residual's.** 82.58 % of payable bytes
+in rows 128–255, 17.42 % in rows 256–319, and **one token** in the whole hood band. gs3
+Addendum 17 puts the seg residual in rows 128–319 with Lane at 40.4×. **The rate corner and
+the seg residual are the same 0.2 % of the image.**
+
+**Finding 4 — the coder is wrong, not the field.** **87.64 %** of the payable bits sit on
+tokens that AGREE with the DALI GT label; only 11.43 % are positions where the coder's
+favourite is itself the GT label. sj1's pre-distortion edits account for 7.68 %. So this is
+not stored noise the field could drop — it is real content the model fails to predict.
+
+**Finding 5 — the mass is spread, not spiked.** Top 1,000 tokens = 2,008 B (2.4 %); top
+10,000 = 13,242 B (15.9 %); top 50,000 = 39,264 B (47.2 %); top 100,000 = 57,451 B (69.0 %).
+A sidecar for a few thousand hard positions cannot reach the corner; the corner needs a
+change that prices ~100,000 lane-edge tokens better.
+
+**What this says to the next rate charter.** The actuator that reaches 26,908.6 B is a
+**coder** (or a receiver-side generator) that predicts the **lane-marking boundary**, not a
+field edit and not a better general-purpose context mixer. tc1's shared mixer took 588 B off
+the whole tail with five generic context maps (spatial2/spatial3/previous/run/rowband); none
+of them is a lane model. A context that carried lane GEOMETRY — the openpilot polynomial and
+homography are already free in `inflate.py` under rule 118 — would be aimed directly at the
+29,977 B Lane→Road term. That is the one place on this object where a 26,909 B demand and an
+83,259 B supply are looking at each other.
+
+## 10. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -329,6 +389,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 10. Frontier line
+## 11. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
