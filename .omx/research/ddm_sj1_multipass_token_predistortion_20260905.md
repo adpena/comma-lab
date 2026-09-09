@@ -1146,7 +1146,109 @@ pairs of recompute instead of 182.**
 
 ---
 
-*(Section 19+ — the pass-4 run and its admission — are
+## 19. PASS 4 — SEALED, and the pre-registration graded honestly
+
+`SEAL_ddm_sj1_token_predistortion_pass4_contest_cuda.json`, seal sha `c887162d…`,
+**SEAL_VALID**. Archive **181,521 B**, sha `b0ca809ce2c657df…`, runtime digest
+`453d191e…`. Re-based onto pointer move 34 (pc2) and run ONCE against it.
+
+### 19a. The n600 pass, against what was pre-registered at §15
+
+| | projected | MEASURED | ratio |
+|---|---:|---:|---:|
+| repair fraction | 2.586% | **3.288%** | 1.271× |
+| cells repaired | 332.8 | **423** | 1.271× |
+| tokens changed | 350.3 | **415** | 1.185× |
+| cells/token | 0.9500 | **1.0193** | 1.073× |
+| bits/token (EXACT encode) | 4.5176 | **6.4000** | **1.417×** |
+| break-even bits/token | 9.676 | **10.3812** | 1.073× |
+| price margin | 2.14× | **1.62×** | 0.757× |
+
+`d_seg` 0.00010907 → 0.00010548; flips 12,866 → 12,443. Twin encode byte-identical.
+
+**The falling-price model is FALSIFIED.** Three points now — 6.2307, 5.3055, **6.4000** —
+and the third went back above the first pass's neighbourhood. The story that the context
+model absorbs earlier edits as structure does not survive it. The simpler account fits and
+predicts a RISING price: the search takes the cheapest repairs first, so each later pass
+buys progressively dearer tokens. On that reading pass 3's dip is the anomaly to explain,
+not pass 4's rise. Pass 5's arithmetic must use a rising-price model.
+
+### 19b. The subset sweep is what admitted this pass
+
+| composition | seg ΔS | pose ΔS | rate ΔS | net | vs bar |
+|---|---:|---:|---:|---:|---:|
+| full 600-pair field | −3.585815e-04 | **+1.043752e-04** | +2.210652e-04 | −3.314120e-05 | 1.66× |
+| **112-pair admitted subset** | −2.137476e-04 | **−3.525803e-05** | +9.854713e-05 | **−1.504585e-04** | **7.52×** |
+
+Keeping only the pairs where the seg gain and the re-solve BOTH help flips the pose leg
+from a **+1.04e-04 cost to a −3.53e-05 credit** — a 1.40e-04 swing, seven times the admit
+bar, **from selection alone**. It also explains the full-field weakness: 488 of the 600
+pairs were carrying pose damage that 171 marginal repaired cells did not pay for.
+
+**Two of the three pre-registered inputs were wrong** — bits/token by 1.417× and the pose
+leg by its SIGN. The CONTINUE call still stands on its own margin (−1.50e-04 against a
+1.242e-05 threshold), but the reasoning offered for it was not the reasoning that made it
+right, and what I called the "floor" case — *seg+rate with zero pose credit* — was **not a
+floor**: pose went positive, which only the adverse row in §15's table contemplated.
+
+### 19c. The base-pose instrument trap (the expensive near-miss)
+
+`admit` composes pose PER PAIR — `pose = np.where(keep, resolved_pose, base_pose)` — so
+`base_pose` supplies the actual pose of every NON-admitted pair, not a comparison constant.
+A wrong base poisons the majority of the vector.
+
+The first attempt measured it with `pose --tag base` and **no `--overlay`**, which pairs the
+live carrier against the ORIGINAL odd frames — frames carrying none of three passes'
+pre-distortion. It returned `d_pose` **2.559e-03, 500× the T4 print**, and would have shown
+pass 4 as a **−0.153 S, 7,643×-the-bar** gain. **What caught it was the magnitude being
+absurd, not any gate.** Nothing in the chain refuses a base measured on the wrong decode:
+the number is a well-formed float from a correctly functioning instrument. At 2× instead of
+500× it would have sealed.
+
+Three borrowable bases were all inadmissible: the **T4 print** (different instrument, and a
+scalar where a 600-vector is needed); **pass 3's local resolved pose** (different carrier —
+pc2 re-solved 17 coordinates and set scales to 1.0); and **pc2's own `base_d_pose.json`** (a
+scalar, from their `base/` rung rather than the shipped `rebase_scales_resolve/`). Even
+`pose_pass3/overlay` is wrong: it renders the FULL 445-pair pass-3 field while the pointer
+ships the 370-pair admitted subset, differing on 75 pairs.
+
+The correct object — pc2's shipped codes on the renders of `admission_pass3/field_admitted.npz`
+— measured **5.090165e-06**, which cross-checks against pc2's own scalar 5.09276404439735e-06
+to **0.05%** and against the T4 print to 0.2%. Same genus as §16's receipt correction: a
+field that exists, is correctly computed, and names a DIFFERENT OBJECT.
+
+### 19d. Gates, all green on the shipped bytes
+
+| gate | result |
+|---|---|
+| exact subset stream | 120,367 B, twin BYTE-IDENTICAL, **+142 B** vs the 120,225 control |
+| ledger sum | predicted +136.30 B — **under-charged by 5.70 B** (pass 3: 181,612.4 vs 181,632). Sums RANK, encodes PRICE |
+| stage-tail | 181,515 B, `tail_baseline_check: PASS` |
+| close identity control | **PASSED** — body rebuilds byte-identically from its own codes |
+| carrier splice | 112 pairs, 661 coordinates |
+| candidate runtime | built FROM THE POINTER TREE, re-pinned `e138ee09…` → `b0ca809c…` @ 181,521 |
+| parse-back | `decoded_field_matches_admitted: true`, receiver pin PASS, 881.9 s |
+| **seg final on shipped bytes** | **12,614 cells predicted, 12,614 measured — zero disagreement** |
+| public-entrypoint smoke | REACHED_TOKEN_DECODE 240.01/240.02 s; REACHED_CUDA_GATE 1.78/1.78 s rc=1, both roles |
+
+Projected row **S 0.13867280587520867**, net **−1.504585e-04** vs pc2. Both banked
+projections came in optimistic (+5.2748e-06, +4.1619e-06), so T4 is expected near
+**0.13867781 ± 1.0e-05**; a residual outside that band is a new effect, and is
+pre-registered as a falsifier rather than absorbed.
+
+### 19e. Where the lever stands
+
+The convergence rule does not fire (3.288% vs 1%), but one more step extrapolates to
+**1.093% — essentially ON the bar**. And the residual is **not concentrating**: Gini
+0.2542 → 0.2518, top-100 share 31.01% → 30.74%, still **zero clean pairs**, minimum still
+4, and only **206 of 600 pairs** received any repair. Pre-distortion is skimming a thin
+uniform layer off a floor it cannot reach — which is §16's census read from the other side.
+Pass 5 is a genuine decision, not a formality, and on a rising-price model it looks
+marginal.
+
+---
+
+*(Section 20+ — the pass-5 decision and the renderer door — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
