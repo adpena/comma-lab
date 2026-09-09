@@ -11,8 +11,24 @@ for this arm and MAIN fires.
 
 ## 0. Headline
 
-**The pointer did NOT move on this arm.** What landed is the instrument, three passing identity controls, and one measurement that
-inverts the charter's own rate premise:
+**The pointer did NOT move on this arm.** The reach IS measured, it is negative, and the arm closes at `verdict_scope: formulation` with
+its cause named and quantified. Stated at the operating point as every verdict here must be (S 0.13882326433317044, gap to 0.12 =
+0.018823264):
+
+| | ΔS | share of gap |
+|---|---|---|
+| the residual this arm targeted (12,866 cells) | 0.010907 | **57.9 %** |
+| rate toll for rewriting all 12,672 codes (+176.7 B) | 1.177e-04 | **0.63 %** |
+| best trained delta, 66 codes (reach **−11.37 %**) | **+1.240e-03** | **+6.59 %** |
+| discrete code search, 150 evals | **0.0** | **0.00 %** |
+| fp16 scale search (door 1), 91+ evals | **0.0** | **0.00 %** |
+
+**The closing law** (`renderer_edge_layer_foldback_reach_v1`): *one int4 code step in `head`/`blocks.3` already moves 240–455 argmax
+cells, so the fold-back is limited by the grid's resolution, not by the search.* Door (1) then measured a **41× finer** actuator with a
+**negative** rate break-even and still found nothing, and the damage exponent it fitted (**0.073–0.568**, roughly a square root) closes
+door (2) by arithmetic. §8b–§8d carry the four routes; §10 the two registered laws.
+
+Three findings survive the closure and travel:
 
 - **The rate corner for a renderer-weight fold-back is essentially open.** Rewriting the shipped signed-int4 codes of
   `head.weight` + `blocks.3.dw.weight` + `blocks.3.pw.weight` costs **0.01398 B per changed code** — `+176.7 B` to rewrite ALL
@@ -26,11 +42,12 @@ inverts the charter's own rate premise:
   **1,892–2,020 code units**. There is no rank-deficient pair and no pair near the lattice edge.
 - **My own closed-form pose floor was falsified by the incumbent, immediately.** See §4. It is relabelled, not defended.
 
-The number the arm exists to buy — the **reach** of the renderer-weight actuator on this object — is **NOT YET MEASURED**. Training is
-gated behind sj1's pass-4 receipt (MAIN's sequencing rule: its five CPU shards starve a Metal cell's host thread). Everything upstream of
-that gate is built, controlled and committed, and the launch cost is measured rather than estimated: a 25-step MPS
-compatibility-and-timing smoke (batch 4, 2 threads, on a loaded machine) runs the whole graph — `functional_call` over the shipped
-renderer, the exact R, SegNet and PoseNet — at **2.17 s/step**, so the 3,000-step run is **≈ 1.81 h** plus ten n600 evaluations.
+What the arm exists to buy — the **reach** — was measured on the live body after the gate opened. It is negative on every route tried:
+a 3,000-step joint run (§8b), a random-direction control (§8b), the exact-field gradient in both ranking directions (§8c), a discrete
+realized code search (§8c), and a per-row fp16 scale search (§8d). Five routes, one cause.
+
+*(§0 was rewritten when the reach landed; the pre-gate framing it replaced said "NOT YET MEASURED", which was true when written and
+would have been a stale headline over a corrected body if left — [[m106]].)*
 
 ---
 
