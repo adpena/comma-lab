@@ -493,6 +493,66 @@ def cmd_admit(args) -> int:
     return 0
 
 
+
+def cmd_stage(args) -> int:
+    """Copy the live tree, drop the candidate archive in, and re-pin the receiver.
+
+    The receiver pins its own archive's sha and size, so a candidate tree that keeps the
+    pointer's pins would refuse its own bytes.  The pin patcher is sj1's, imported rather
+    than re-written: it finds the two constants by PATTERN and verifies what it wrote,
+    which is the shape that survives a generation change of the literals.
+    """
+    import shutil
+
+    import ddm_sj1_joint_admission as sj1_joint
+
+    archive = Path(args.archive)
+    if not archive.is_file():
+        raise fe1.Fe1Error(f"no candidate archive at {archive}")
+    archive_bytes = archive.read_bytes()
+    archive_sha = hashlib.sha256(archive_bytes).hexdigest()
+    out_dir = Path(args.out_dir)
+    if out_dir.exists() and args.clean:
+        shutil.rmtree(out_dir)
+    shutil.copytree(fe1.LIVE_TREE, out_dir, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
+    (out_dir / "archive.zip").write_bytes(archive_bytes)
+    pins = sj1_joint.patch_inflate_pins(out_dir, archive_sha, len(archive_bytes))
+
+    # Census: everything except archive.zip and inflate.py must be byte-identical to the
+    # live tree, so the candidate differs only where it means to.
+    changed = []
+    for path in sorted(out_dir.rglob("*")):
+        if not path.is_file() or "__pycache__" in path.parts:
+            continue
+        rel = path.relative_to(out_dir)
+        live = fe1.LIVE_TREE / rel
+        if not live.is_file():
+            changed.append({"path": str(rel), "why": "absent from the live tree"})
+            continue
+        if path.read_bytes() != live.read_bytes():
+            changed.append({"path": str(rel), "why": "bytes differ"})
+    expected = {"archive.zip", "inflate.py"}
+    unexpected = [c for c in changed if c["path"] not in expected]
+    if unexpected:
+        raise fe1.Fe1Error(f"staged tree differs outside {sorted(expected)}: {unexpected}")
+
+    receipt = {
+        "schema": "ddm_fe1_stage.v1",
+        "axis": "[scorer-free EXACT byte measurement]",
+        "score_claim": False,
+        "live_tree": str(fe1.LIVE_TREE),
+        "staged_tree": str(out_dir),
+        "archive_bytes": len(archive_bytes),
+        "archive_sha256": archive_sha,
+        "d_archive_bytes": len(archive_bytes) - fe1.LIVE_ARCHIVE_BYTES,
+        "inflate_pins": pins,
+        "files_differing_from_live_tree": [c["path"] for c in changed],
+    }
+    (out_dir.parent / "STAGE.json").write_text(json.dumps(receipt, indent=1))
+    print(json.dumps(receipt, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -520,6 +580,12 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument("--no-verify", action="store_true")
     admit.add_argument("--base-mean-d-pose", type=float, default=fe1.LIVE_D_POSE)
     admit.set_defaults(func=cmd_admit)
+
+    stage = sub.add_parser("stage", help="stage the candidate runtime tree")
+    stage.add_argument("--archive", default=str(fe1.WORK / "candidate/archive.zip"))
+    stage.add_argument("--out-dir", default=str(fe1.WORK / "candidate/candidate_runtime"))
+    stage.add_argument("--clean", action="store_true", default=True)
+    stage.set_defaults(func=cmd_stage)
     return parser
 
 

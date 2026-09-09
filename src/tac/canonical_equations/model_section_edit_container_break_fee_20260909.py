@@ -15,19 +15,19 @@ THE MEASUREMENT (ddm_fe1, exact re-encodes, scorer-free).  Random single-code ed
 draws each, priced as the archive's own section bytes:
 
   N changed codes    at the SHIPPED container shape     with a container SEARCH
-        1                    +65.0 +- 39.8 B                    -7.2 +- 25.4 B
-       72                    +68.1 +- 29.4 B                   +21.0 +- 29.5 B
-      200                    +80.8 +- 29.0 B                   +24.8 +- 24.5 B
+        1                    +62.5 B                            -7.2 +- 25.4 B
+       72                    +77.3 B                           +21.0 +- 29.5 B
+      200                   +100.6 B                           +24.8 +- 24.5 B
 
   least squares over all ten N:
-      shipped shape:  dB = 0.2121*N + 58.58   (rms 7.18 B)
+      shipped shape:  dB = 0.2134*N + 58.89   (rms 7.09 B)
       searched:       dB = 0.1677*N -  1.92   (rms 5.26 B)
 
 THE LAW.  The cost of editing a range-coded model section splits into
 
     dB(N) = BREAK_FEE * [the container shape is not re-searched] + MARGINAL_B_PER_CODE * N
 
-with a MEASURED break fee of **58.6 B** and a marginal of only **0.17-0.21 B per changed code**.
+with a MEASURED break fee of **58.9 B** and a marginal of only **0.17-0.21 B per changed code**.
 The fee is not a length effect: length-preserving code changes still cost +40 B at the shipped
 shape.  It is the loss of brotli's purchase on a re-randomised payload.
 
@@ -35,9 +35,11 @@ WHY IT IS RECOVERABLE.  Brotli streams are self-describing and the CK2 interleav
 RX1 ``reserved`` byte, so the brotli quality, the window size and the interleave are
 ENCODER-ONLY choices -- the receiver is never told which were used and its decode path is
 unchanged.  Searching q in {9, 10, 11} x lgwin in {16, 18, 20, 22, 24} x {ck2, plain} and
-shipping the smallest recovers **63.5 B at N = 1** and **47.1 B at N = 72**.  The live body's own
-shape is ``(ck2, 11, 24)``; it is the best shape for the SHIPPED codes and a poor one for any
-edit of them.
+shipping the smallest recovers **69.7 B at N = 1** and **56.3 B at N = 72**.  The live body's own
+shape is ``(ck2, 11, 24)`` -- pinned by BYTE identity, because (ck2, 11, 16) compresses the
+shipped rider to exactly the same 30,246 B and they are DIFFERENT bytes (brotli records its
+window size), a trap that made this arm's first null build reproduce the right byte COUNT with
+30,129 wrong bytes.  It is the best shape for the SHIPPED codes and a poor one for any edit.
 
 WHY IT MATTERS.  A one-cell seg repair is worth -8.4771e-07 S and one archive byte costs
 +6.6586e-07 S, so an unsearched +70 B fee demands ~55 repaired cells before an edit breaks even
@@ -85,9 +87,9 @@ SHIPPED_CONTAINER_SHAPE = ("ck2", 11, 24)
 RX1_RESERVED = 0x7A
 
 #: Least-squares fits over N in {1, 2, 5, 10, 25, 50, 72, 100, 150, 200}, ten draws each.
-BREAK_FEE_BYTES = 58.58
-SHIPPED_SHAPE_MARGINAL_B_PER_CODE = 0.2121
-SHIPPED_SHAPE_FIT_RMS_BYTES = 7.18
+BREAK_FEE_BYTES = 58.89
+SHIPPED_SHAPE_MARGINAL_B_PER_CODE = 0.2134
+SHIPPED_SHAPE_FIT_RMS_BYTES = 7.09
 SEARCHED_INTERCEPT_BYTES = -1.92
 SEARCHED_MARGINAL_B_PER_CODE = 0.1677
 SEARCHED_FIT_RMS_BYTES = 5.26
@@ -150,9 +152,9 @@ def _anchor_break_fee() -> EmpiricalAnchor:
             "naive_prior": "an edit costs bits proportional to how many codes moved",
         },
         empirical_output={
-            "shipped_shape_fit": "dB = 0.2121*N + 58.58 B (rms 7.18)",
-            "shipped_shape_at_N1": 65.0,
-            "shipped_shape_at_N200": 80.8,
+            "shipped_shape_fit": "dB = 0.2134*N + 58.89 B (rms 7.09)",
+            "shipped_shape_at_N1": 62.5,
+            "shipped_shape_at_N200": 100.6,
             "length_preserving_edits_still_cost_bytes": 40,
             "reading": (
                 "the cost is a fixed container-break fee, not a per-code price: 1 code and "
@@ -195,12 +197,12 @@ def _anchor_container_search() -> EmpiricalAnchor:
         },
         empirical_output={
             "searched_fit": "dB = 0.1677*N - 1.92 B (rms 5.26)",
-            "recovered_at_N1": 63.5,
-            "recovered_at_N72": 47.1,
+            "recovered_at_N1": 69.7,
+            "recovered_at_N72": 56.3,
             "searched_at_N1": -7.2,
             "searched_at_N72": 21.0,
             "cells_to_break_even_N72_searched": 16.5,
-            "cells_to_break_even_N72_shipped_shape": 53.5,
+            "cells_to_break_even_N72_shipped_shape": 60.7,
             "reading": (
                 "the shipped shape is optimal for the SHIPPED codes and poor for any edit of "
                 "them; re-searching it is an encoder-only change the receiver never sees, and "
@@ -238,12 +240,12 @@ def build_model_section_edit_container_break_fee_v1() -> CanonicalEquation:
             "most of it back"
         ),
         one_line_summary=(
-            "fe1: an edit costs 0.2121*N + 58.58 B at the shipped brotli/CK2 shape but only "
-            "0.1677*N - 1.92 B re-searched; 63.5 B recovered at N=1, 47.1 B at N=72"
+            "fe1: an edit costs 0.2134*N + 58.89 B at the shipped brotli/CK2 shape but only "
+            "0.1677*N - 1.92 B re-searched; 69.7 B recovered at N=1, 56.3 B at N=72"
         ),
         latex_form=(
-            r"\Delta B(N)=\underbrace{58.58}_{\text{break fee}}\cdot\mathbb{1}[\text{shape not re-searched}]"
-            r"+m N,\quad m_{\text{shipped}}=0.2121,\ m_{\text{searched}}=0.1677;\quad"
+            r"\Delta B(N)=\underbrace{58.89}_{\text{break fee}}\cdot\mathbb{1}[\text{shape not re-searched}]"
+            r"+m N,\quad m_{\text{shipped}}=0.2134,\ m_{\text{searched}}=0.1677;\quad"
             r"\text{cells to break even}=\Delta B\cdot\frac{25/37{,}545{,}489}{100/117{,}964{,}800}"
         ),
         python_callable_module_path=(
