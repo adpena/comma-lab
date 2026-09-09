@@ -46,6 +46,7 @@ import ddm_fe1_frame_embedding_search as fe1
 import ddm_fe1_pose_price as price
 import ddm_jg1_seg_solve as jg1
 import ddm_jg5_pose_resolve_on_edited_renders as jg5
+import ddm_up2_shipping_pose_solve as up2
 import ddm_up3_carrier_splice as up3
 
 N_PAIRS = fe1.N_PAIRS
@@ -553,6 +554,58 @@ def cmd_stage(args) -> int:
     return 0
 
 
+
+def cmd_base_pose(args) -> int:
+    """Measure the LIVE row's own per-pair d_pose over all 600 pairs, on this instrument.
+
+    The admission's pose arithmetic divides by a population mean.  Taking that mean from
+    another arm's seal would make this arm's pose leg depend on a number it never
+    measured, so it is measured here -- live decode, live carrier codes, the same
+    ``up2.measure_pose`` the candidate legs use -- and the gap to the inherited value is
+    reported rather than assumed away.
+    """
+    fe1._set_threads(args.threads)
+    raw = fe1._open_raw(fe1.LIVE_RAW)
+    inst = price.build_pose_instrument(raw)
+    codes = np.asarray(inst.state.codes, dtype=np.int32)
+    coefficients = up2.codes_to_coefficients(codes, inst.state.coefficient_scales)
+    indices = np.arange(N_PAIRS, dtype=np.int64)
+    started = time.time()
+    per_pair, _poses = up2.measure_pose(
+        inst.posenet,
+        inst.state,
+        coefficients,
+        inst.raw,
+        inst.targets,
+        indices,
+        batch_size=args.batch_size,
+    )
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    np.save(out_dir / "base_pose_per_pair.npy", per_pair)
+    measured = float(per_pair.mean())
+    result = {
+        "schema": "ddm_fe1_base_pose.v1",
+        "axis": "[cpu_torch fp32 PoseNet, DALI-lineage GT, n600]",
+        "score_claim": False,
+        "archive_sha256": fe1.LIVE_ARCHIVE_SHA256,
+        "archive_bytes": fe1.LIVE_ARCHIVE_BYTES,
+        "decode": str(fe1.LIVE_RAW),
+        "d_pose_mean_measured": measured,
+        "d_pose_mean_inherited": fe1.LIVE_D_POSE,
+        "relative_gap": measured / fe1.LIVE_D_POSE - 1.0,
+        "pose_leg_measured": math.sqrt(10.0 * measured),
+        "pose_leg_inherited": math.sqrt(10.0 * fe1.LIVE_D_POSE),
+        "leg_gap_in_score_units": math.sqrt(10.0 * measured)
+        - math.sqrt(10.0 * fe1.LIVE_D_POSE),
+        "per_pair_path": str(out_dir / "base_pose_per_pair.npy"),
+        "elapsed_s": round(time.time() - started, 1),
+    }
+    (out_dir / "BASE_POSE.json").write_text(json.dumps(result, indent=1))
+    print(json.dumps(result, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -586,6 +639,12 @@ def build_parser() -> argparse.ArgumentParser:
     stage.add_argument("--out-dir", default=str(fe1.WORK / "candidate/candidate_runtime"))
     stage.add_argument("--clean", action="store_true", default=True)
     stage.set_defaults(func=cmd_stage)
+
+    bp = sub.add_parser("base-pose", help="measure the live row's own n600 pose leg")
+    bp.add_argument("--out-dir", default=str(fe1.WORK / "admission"))
+    bp.add_argument("--threads", type=int, default=3)
+    bp.add_argument("--batch-size", type=int, default=8)
+    bp.set_defaults(func=cmd_base_pose)
     return parser
 
 
