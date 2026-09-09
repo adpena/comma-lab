@@ -189,6 +189,58 @@ def _coverage_corrected_bits_per_pair(
     return total, detail
 
 
+def accept_by_bisection(
+    inst: "Instrument",
+    pair: int,
+    plane: np.ndarray,
+    base_argmax: np.ndarray,
+    proposals: list[tuple[int, int]],
+    *,
+    max_verifies: int = 400,
+) -> tuple[list[tuple[int, int]], dict[str, Any]]:
+    """Accept the largest verified-neutral subset, verifying CUMULATIVE sets only.
+
+    Every ``verify`` call realizes ``accepted + group`` through the receiver's renderer
+    and the frozen SegNet and requires argmax identity on all 196,608 cells.  Because a
+    group is only merged after the cumulative set that CONTAINS it verified, the final
+    accepted set is certified by an actual realization -- it is never assembled out of
+    separately-verified parts, which is the interaction the composite check exists for.
+
+    Cost is O(K) verifies only when almost everything fails; when most proposals are
+    neutral the whole set passes on the first call.
+    """
+    stats = {"verifies": 0, "hit_cap": False}
+
+    def verify(candidate: list[tuple[int, int]]) -> bool:
+        stats["verifies"] += 1
+        variant = plane.copy()
+        flat = variant.reshape(-1)
+        for pos, new_class in candidate:
+            flat[pos] = np.uint8(new_class)
+        return int((inst.argmax_batch([variant], pair)[0] != base_argmax).sum()) == 0
+
+    accepted: list[tuple[int, int]] = []
+    queue: list[list[tuple[int, int]]] = [list(proposals)] if proposals else []
+    while queue:
+        if stats["verifies"] >= max_verifies:
+            stats["hit_cap"] = True
+            break
+        group = queue.pop(0)
+        if verify(accepted + group):
+            accepted = accepted + group
+        elif len(group) > 1:
+            mid = len(group) // 2
+            queue.insert(0, group[mid:])
+            queue.insert(0, group[:mid])
+    if accepted and not verify(accepted):
+        raise rp1.Rp1Error(
+            f"pair {pair}: final accepted set failed its own realization -- refusing"
+        )
+    stats["accepted"] = len(accepted)
+    stats["proposed"] = len(proposals)
+    return accepted, stats
+
+
 def _by_bucket(
     tested: list[dict[str, Any]], key: str, edges: list[float]
 ) -> list[dict[str, Any]]:
@@ -308,6 +360,89 @@ def cmd_sizing(args: argparse.Namespace) -> int:
 
         tested: list[dict[str, Any]] = []
         neutral_idx: list[int] = []
+        if args.accept_mode == "bisect":
+            proposals = [
+                (int(cand["pos"][j]), int(cand["best"][j])) for j in chosen
+            ]
+            accepted_pairs, bisect_stats = accept_by_bisection(
+                inst, pair, plane, base_argmax, proposals,
+                max_verifies=args.max_verifies,
+            )
+            accepted_set = set(accepted_pairs)
+            for j in chosen:
+                key = (int(cand["pos"][j]), int(cand["best"][j]))
+                is_in = key in accepted_set
+                tested.append(
+                    {
+                        "pos": key[0],
+                        "row": key[0] // EVAL_W,
+                        "col": key[0] % EVAL_W,
+                        "sym": int(cand["sym"][j]),
+                        "best": key[1],
+                        "saving_bits": float(saving[j]),
+                        "rank_in_pair": rank_of[int(j)],
+                        "neighbourhood_agreement": neighbourhood_agreement(
+                            plane, key[0], key[1]
+                        ),
+                        "argmax_cells_changed": 0 if is_in else -1,
+                        "neutral": is_in,
+                    }
+                )
+                if is_in:
+                    neutral_idx.append(int(j))
+            composite = {
+                "members": len(neutral_idx),
+                "argmax_cells_changed": 0,
+                "neutral": True,
+                "mode": "bisect",
+                **bisect_stats,
+            }
+            accepted_edits[pair] = [
+                (int(cand["pos"][j]), int(cand["best"][j])) for j in neutral_idx
+            ]
+            row = {
+                "pair": pair,
+                "accepted": [
+                    {"pos": int(cand["pos"][j]), "best": int(cand["best"][j])}
+                    for j in neutral_idx
+                ],
+                "base_flipped_cells": base_flips,
+                "segnet_batch_control_disagreements": control_disagreements,
+                "candidates_in_pair": int(select.sum()),
+                "candidates_available": int(order.size),
+                "candidates_that_are_sj1_edits": int(is_edit.sum()),
+                "proposals_tested": len(tested),
+                "neutral_count": len(neutral_idx),
+                "neutral_fraction": (len(neutral_idx) / len(tested)) if tested else 0.0,
+                "accepted_saving_bits_first_order": float(
+                    sum(saving[j] for j in neutral_idx)
+                ),
+                "tested_saving_bits_first_order": float(
+                    sum(t["saving_bits"] for t in tested)
+                ),
+                "composite": composite,
+                "seconds": time.perf_counter() - pair_started,
+                "tested": tested,
+            }
+            rows.append(row)
+            with ledger_path.open("a") as handle:
+                handle.write(json.dumps(row) + "\n")
+            print(
+                json.dumps(
+                    {
+                        "pair": pair,
+                        "proposed": len(tested),
+                        "accepted": len(neutral_idx),
+                        "verifies": bisect_stats["verifies"],
+                        "accepted_bits": round(
+                            row["accepted_saving_bits_first_order"], 1
+                        ),
+                        "seconds": round(row["seconds"], 1),
+                    }
+                ),
+                flush=True,
+            )
+            continue
         for start in range(0, len(chosen), args.batch):
             block = chosen[start : start + args.batch]
             planes = []
@@ -527,6 +662,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--sample-mode", choices=("top", "stratified"), default="stratified"
     )
     sizing.add_argument("--threads", type=int, default=3)
+    sizing.add_argument(
+        "--accept-mode",
+        choices=("singles", "bisect"),
+        default="singles",
+        help="singles measures the per-proposal neutral fraction; bisect maximizes the "
+        "accepted set per realization and is the n600 mode",
+    )
+    sizing.add_argument("--max-verifies", type=int, default=400)
     sizing.add_argument("--shards", type=int, default=1)
     sizing.add_argument("--shard", type=int, default=0)
     sizing.add_argument("--resume", action="store_true")
