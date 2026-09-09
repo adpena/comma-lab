@@ -511,6 +511,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="smoke only; the identity control is asserted at 600 frames",
     )
     rank.set_defaults(func=cmd_rank)
+    mixer = sub.add_parser(
+        "rank-mixer", help="the same measurement under the LIVE tc1 mixer (move 36)"
+    )
+    mixer.add_argument("--out", required=True)
+    mixer.add_argument("--min-saving-bits", type=float, default=DEFAULT_MIN_SAVING_BITS)
+    mixer.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
+    mixer.add_argument("--frames", type=int, default=N_PAIRS)
+    mixer.set_defaults(func=cmd_rank_mixer)
     return parser
 
 
@@ -518,6 +526,297 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     return int(args.func(args))
 
+
+
+# --------------------------------------------------------------------------------------
+# rank-mixer -- the SAME measurement under the LIVE coder after pointer move 36 (cmp1).
+#
+# Move 36 replaced the shipped tail coder with tc1's 35-weight shared mixer over HPAC
+# (lane ddm_cmp1_t4_rc3_tc1_composed_20260909, archive 180,772 B sha 66b8d5bb...).  The
+# FIELD, the renders and the carrier are untouched, so every realized argmax-neutrality
+# result carries across unchanged -- neutrality is a property of the renderer and SegNet,
+# not of the coder.  What does NOT carry is the PRICE: a token the HPAC row charged 9 bits
+# for may cost the mixer something else, and the mixer's most-probable class need not be
+# HPAC's.  So the ranking is re-measured here rather than transferred.
+#
+# This loop is cmp1's own encode loop (experiments/ddm_cmp1_compose.py::encode) with the
+# probability rows kept.  Its identity control is cmp1's own emitted stream.
+# --------------------------------------------------------------------------------------
+
+CMP1_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_cmp1_compose")
+CMP1_SOURCE_RUNTIME = CMP1_ROOT / "source_runtime"
+CMP1_WEIGHTS = CMP1_ROOT / "retained/weights_i8.bin"
+CMP1_FIELD_U8 = CMP1_ROOT / "retained/source/field.u8"
+CMP1_FIELD_SHA256 = (
+    "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94"
+)
+#: cmp1's own mixed stream at 600 frames -- the identity control's target.
+CMP1_MIXED_STREAM = CMP1_ROOT / "encode/primary/mixed_0600.envelope"
+CMP1_POINTER_ARCHIVE_SHA256 = (
+    "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+)
+CMP1_POINTER_ARCHIVE_BYTES = 180_772
+CMP1_POINTER_SCORE_T4 = 0.13817298987557713
+
+
+def cmd_rank_mixer(args: argparse.Namespace) -> int:
+    import random
+
+    import torch
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    pointer = verify_pointer(expect_sha=CMP1_POINTER_ARCHIVE_SHA256)
+
+    # cmp1's determinism contract, matched exactly: a different thread count is a
+    # different reduction order, and the identity control is a byte comparison.
+    torch.set_num_threads(1)
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
+    seed = 20260909
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.use_deterministic_algorithms(True)
+
+    import ddm_tc1_mixer_codec as tc1
+
+    field_sha = sha256_file(CMP1_FIELD_U8)
+    if field_sha != CMP1_FIELD_SHA256:
+        raise Rp1Error(f"cmp1 field sha {field_sha} != {CMP1_FIELD_SHA256}")
+    target = np.memmap(
+        CMP1_FIELD_U8, dtype=np.uint8, mode="r", shape=(N_PAIRS, EVAL_H, EVAL_W)
+    )
+    base = np.array(jg2.load_tokens(BASE_TOKENS), dtype=np.uint8)
+    sj1_edit_mask = np.asarray(target) != base
+
+    route_b = jg2.load_route_b()
+    library, build = jg2.compile_rc64(out / "work", route_b, "rp1_mixer")
+    residual, renderer, renderer_dir = jg2.load_runtime(CMP1_SOURCE_RUNTIME)
+    from runtime.free_corrector import FreeCorrector  # type: ignore[import-not-found]
+    from runtime.hpac_inference import (  # type: ignore[import-not-found]
+        optimize_sparse_evaluator,
+    )
+
+    parts = residual.read_residual_archive(CMP1_SOURCE_RUNTIME / "archive.zip")
+    device = torch.device("cpu")
+    model = renderer.load_hpac(
+        residual.materialize_ihs1(parts.hpac_blob, renderer), device
+    )
+    sparse = residual._sparse_class(renderer_dir)(model, EVAL_H, EVAL_W)
+    corrector = FreeCorrector(EVAL_H * EVAL_W)
+    mixer = tc1.SharedMixer(CMP1_WEIGHTS.read_bytes())
+    groups = [
+        np.flatnonzero(mask.cpu().numpy().reshape(-1))
+        for mask in renderer.group_masks(device)
+    ]
+    encoder = route_b.NativeRc64Encoder(library)
+
+    census = np.zeros(len(CENSUS_EDGES) - 1, dtype=np.int64)
+    per_frame_bits = np.zeros(N_PAIRS, dtype=np.float64)
+    total_bits = 0.0
+    n_symbol_is_argmax = 0
+    bits_on_argmax_symbols = 0.0
+    bits_on_nonargmax_symbols = 0.0
+    thresholds = (0.5, 1.0, 2.0, 4.0, 8.0)
+    n_above = dict.fromkeys(thresholds, 0)
+    saving_above = dict.fromkeys(thresholds, 0.0)
+    keep: dict[str, list[np.ndarray]] = {
+        k: [] for k in ("frame", "pos", "sym", "best", "bits_sym", "bits_best", "is_sj1")
+    }
+
+    started = time.perf_counter()
+    previous = torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long, device=device)
+    with torch.inference_mode():
+        optimize_sparse_evaluator(sparse)
+        for frame in range(args.frames):
+            previous_cpu = (
+                None if frame == 0 else previous[0].numpy().astype(np.uint8)
+            )
+            boundary = (
+                np.full(PLANE, 4, dtype=np.uint8)
+                if frame == 0
+                else residual._boundary_buckets(previous_cpu).reshape(-1)
+            )
+            current = torch.zeros_like(previous)
+            context = model.prepare_frame_context(
+                torch.tensor([frame], dtype=torch.long, device=device), previous
+            )
+            corrector.begin_frame(boundary)
+            mixer.begin_frame()
+            truth = np.asarray(target[frame]).reshape(-1)
+            edit_flat = sj1_edit_mask[frame].reshape(-1)
+            frame_bits = 0.0
+            f: dict[str, list[np.ndarray]] = {k: [] for k in keep}
+
+            for group, positions in enumerate(groups):
+                logits = sparse.selected_logits(current, context, group).cpu().numpy()
+                predicted = logits.argmax(axis=1).astype(np.int64)
+                feature = (
+                    boundary[positions].astype(np.int64) * NUM_CLASSES + predicted
+                )
+                probability = residual._probability_table(
+                    logits + parts.table.values[feature], renderer.HPAC_LOGIT_PRECISION
+                )
+                state = corrector.group_state(probability, predicted, positions)
+                original = corrector.coding_row(state)
+                coding = mixer.coding(
+                    original, positions, current[0].numpy().astype(np.uint8), previous_cpu
+                )
+                symbols = truth[positions].astype(np.int32)
+
+                # THE PRICE THE LIVE CODER CHARGES.  RC64 codes against the INTEGER
+                # frequency table, so the bits are read off ``tc1.frequencies`` -- the
+                # same quantity cmp1's own loop sums to reproduce its stream length --
+                # not off the float row before quantization.
+                freq = tc1.frequencies(coding).astype(np.float64) / tc1.TOTAL
+                bits_all = -np.log2(freq)
+                idx = np.arange(len(symbols))
+                bits_sym = bits_all[idx, symbols.astype(np.int64)]
+                best_class = freq.argmax(axis=1)
+                bits_best = bits_all[idx, best_class]
+                saving = bits_sym - bits_best
+
+                frame_bits += float(bits_sym.sum())
+                census += np.histogram(bits_sym, bins=CENSUS_EDGES)[0]
+                is_argmax = best_class == symbols
+                n_symbol_is_argmax += int(is_argmax.sum())
+                bits_on_argmax_symbols += float(bits_sym[is_argmax].sum())
+                bits_on_nonargmax_symbols += float(bits_sym[~is_argmax].sum())
+                for threshold in thresholds:
+                    hit = saving >= threshold
+                    n_above[threshold] += int(hit.sum())
+                    saving_above[threshold] += float(saving[hit].sum())
+
+                take = saving >= args.min_saving_bits
+                if take.any():
+                    where = np.flatnonzero(take)
+                    f["pos"].append(positions[where].astype(np.int32))
+                    f["sym"].append(symbols[where].astype(np.uint8))
+                    f["best"].append(best_class[where].astype(np.uint8))
+                    f["bits_sym"].append(bits_sym[where].astype(np.float32))
+                    f["bits_best"].append(bits_best[where].astype(np.float32))
+                    f["is_sj1"].append(edit_flat[positions[where]].astype(np.uint8))
+
+                encoder.encode(symbols, coding)
+                corrector.observe(state, symbols.astype(np.int64))
+                current.reshape(-1)[torch.from_numpy(positions)] = torch.from_numpy(
+                    symbols.astype(np.int64)
+                )
+
+            plane = current[0].numpy().astype(np.uint8)
+            if not np.array_equal(plane, np.asarray(target[frame])):
+                raise Rp1Error(f"frame {frame}: encoded field diverged from the target")
+            corrector.end_frame(plane.reshape(-1))
+            mixer.end_frame(plane, previous_cpu)
+            previous = current
+            total_bits += frame_bits
+            per_frame_bits[frame] = frame_bits
+
+            if f["pos"]:
+                pos = np.concatenate(f["pos"])
+                order = np.argsort(
+                    np.concatenate(f["bits_best"]) - np.concatenate(f["bits_sym"])
+                )[: args.top_k]
+                keep["pos"].append(pos[order])
+                keep["frame"].append(np.full(order.size, frame, dtype=np.int16))
+                for name in ("sym", "best", "bits_sym", "bits_best", "is_sj1"):
+                    keep[name].append(np.concatenate(f[name])[order])
+
+            if (frame + 1) % 10 == 0:
+                print(
+                    json.dumps(
+                        {
+                            "stage": "rank-mixer",
+                            "frame": frame + 1,
+                            "code_bytes_so_far": total_bits / 8.0,
+                            "candidates_so_far": int(
+                                sum(a.size for a in keep["pos"])
+                            ),
+                            "elapsed_seconds": time.perf_counter() - started,
+                        }
+                    ),
+                    flush=True,
+                )
+
+    body = encoder.finish()
+    stream_path = out / "tail_rp1_mixer_control.bin"
+    stream_path.write_bytes(body)
+    stream_sha = hashlib.sha256(body).hexdigest()
+    live = CMP1_MIXED_STREAM.read_bytes()
+    identity = {
+        "frames_encoded": args.frames,
+        "emitted_bytes": len(body),
+        "emitted_sha256": stream_sha,
+        "cmp1_stream_bytes": len(live),
+        "cmp1_stream_sha256": hashlib.sha256(live).hexdigest(),
+        "byte_identical": body == live,
+    }
+
+    dump = out / "candidates.npz"
+    np.savez_compressed(
+        dump,
+        frame=np.concatenate(keep["frame"]),
+        pos=np.concatenate(keep["pos"]),
+        sym=np.concatenate(keep["sym"]),
+        best=np.concatenate(keep["best"]),
+        bits_sym=np.concatenate(keep["bits_sym"]),
+        bits_best=np.concatenate(keep["bits_best"]),
+        is_sj1_edit=np.concatenate(keep["is_sj1"]),
+    )
+    np.save(out / "bits_per_frame.npy", per_frame_bits)
+
+    total_tokens = args.frames * PLANE
+    receipt = {
+        "schema": "ddm_rp1_rank_mixer.v1",
+        "axis": "[macOS-CPU advisory / scorer-free EXACT coder measurement]",
+        "score_claim": False,
+        "coder": "tc1 35-weight shared mixer over HPAC (pointer move 36, cmp1)",
+        "pointer": pointer,
+        "build": build,
+        "identity_control": identity,
+        "census": {
+            "total_tokens": total_tokens,
+            "total_bits": total_bits,
+            "total_bytes_ideal": total_bits / 8.0,
+            "bits_per_token_mean": total_bits / total_tokens,
+            "bin_edges_bits": CENSUS_EDGES[:-1].tolist() + ["inf"],
+            "bin_counts": census.tolist(),
+            "n_symbol_is_coder_argmax": n_symbol_is_argmax,
+            "fraction_symbol_is_coder_argmax": n_symbol_is_argmax / total_tokens,
+            "bits_on_argmax_symbols": bits_on_argmax_symbols,
+            "bits_on_nonargmax_symbols": bits_on_nonargmax_symbols,
+            "fraction_of_bits_on_nonargmax_symbols": (
+                bits_on_nonargmax_symbols / total_bits if total_bits else 0.0
+            ),
+        },
+        "saving_ceiling": {
+            f"ge_{t}_bits": {
+                "positions": n_above[t],
+                "total_saving_bits": saving_above[t],
+                "total_saving_bytes": saving_above[t] / 8.0,
+                "delta_S_if_all_free": -saving_above[t] / 8.0 * S_PER_BYTE,
+            }
+            for t in thresholds
+        },
+        "candidates_dump": {
+            "path": str(dump),
+            "rows": int(np.concatenate(keep["frame"]).size),
+            "min_saving_bits": args.min_saving_bits,
+            "top_k_per_frame": args.top_k,
+        },
+        "stream": {"path": str(stream_path), "bytes": len(body), "sha256": stream_sha},
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    (out / "RANK.json").write_text(json.dumps(receipt, indent=2, sort_keys=True))
+    print(json.dumps({k: v for k, v in receipt.items() if k != "census"}, indent=2))
+    if args.frames == N_PAIRS and not identity["byte_identical"]:
+        raise Rp1Error(
+            f"IDENTITY CONTROL FAILED against cmp1's own mixed stream: {identity}"
+        )
+    return 0
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

@@ -126,6 +126,34 @@ def select_proposals(
     return np.concatenate(picked)
 
 
+def load_neutrality_cache(paths: list[Path]) -> dict[tuple[int, int, int], bool]:
+    """Realized verdicts from earlier runs, keyed by (pair, position, new class).
+
+    Neutrality is a property of the RENDERER and SegNet on a fixed base plane -- it does
+    not depend on which coder priced the proposal.  Pointer move 36 replaced the tail
+    coder and left the field, the renders and the carrier untouched, so every verdict
+    measured under the superseded ranking is still a verdict.  Re-running them would buy
+    nothing and cost 0.68 s each.
+    """
+    cache: dict[tuple[int, int, int], bool] = {}
+    for path in paths:
+        if not path.is_file():
+            continue
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            pair = int(row["pair"])
+            for entry in row.get("tested", []):
+                if int(entry.get("argmax_cells_changed", -1)) < 0 and not entry["neutral"]:
+                    # bisect-mode refusals carry no per-item realization; not a verdict.
+                    continue
+                cache[(pair, int(entry["pos"]), int(entry["best"]))] = bool(
+                    entry["neutral"]
+                )
+    return cache
+
+
 def load_candidates(rank_dir: Path) -> dict[str, np.ndarray]:
     with np.load(rank_dir / "candidates.npz", allow_pickle=False) as blob:
         return {key: blob[key] for key in blob.files}
@@ -294,6 +322,8 @@ def cmd_sizing(args: argparse.Namespace) -> int:
         # a uniform one.
         pairs = pairs[args.shard :: args.shards]
 
+    cache = load_neutrality_cache([Path(p) for p in args.neutrality_cache])
+    cache_hits = {"hit": 0, "miss": 0}
     inst = Instrument(threads=args.threads)
     started = time.perf_counter()
 
@@ -443,6 +473,38 @@ def cmd_sizing(args: argparse.Namespace) -> int:
                 flush=True,
             )
             continue
+        cached_rows: list[tuple[int, bool]] = []
+        if cache:
+            remaining = []
+            for j in chosen:
+                key = (pair, int(cand["pos"][j]), int(cand["best"][j]))
+                if key in cache:
+                    cached_rows.append((int(j), cache[key]))
+                    cache_hits["hit"] += 1
+                else:
+                    remaining.append(j)
+                    cache_hits["miss"] += 1
+            chosen = np.array(remaining, dtype=chosen.dtype)
+        for j, was_neutral in cached_rows:
+            tested.append(
+                {
+                    "pos": int(cand["pos"][j]),
+                    "row": int(cand["pos"][j]) // EVAL_W,
+                    "col": int(cand["pos"][j]) % EVAL_W,
+                    "sym": int(cand["sym"][j]),
+                    "best": int(cand["best"][j]),
+                    "saving_bits": float(saving[j]),
+                    "rank_in_pair": rank_of[int(j)],
+                    "neighbourhood_agreement": neighbourhood_agreement(
+                        plane, int(cand["pos"][j]), int(cand["best"][j])
+                    ),
+                    "argmax_cells_changed": 0 if was_neutral else 1,
+                    "neutral": was_neutral,
+                    "from_cache": True,
+                }
+            )
+            if was_neutral:
+                neutral_idx.append(int(j))
         for start in range(0, len(chosen), args.batch):
             block = chosen[start : start + args.batch]
             planes = []
@@ -606,6 +668,12 @@ def cmd_sizing(args: argparse.Namespace) -> int:
         if refused_savings
         else 0.0,
         "sample_mode": args.sample_mode,
+        "neutrality_cache": {
+            "paths": list(args.neutrality_cache),
+            "entries": len(cache),
+            "proposals_served_from_cache": cache_hits["hit"],
+            "proposals_realized_now": cache_hits["miss"],
+        },
         "neutrality_by_rank_decile": _by_bucket(
             all_tested, "rank_in_pair", [float(e) for e in RANK_EDGES]
         ),
@@ -672,6 +740,7 @@ def build_parser() -> argparse.ArgumentParser:
     sizing.add_argument("--max-verifies", type=int, default=400)
     sizing.add_argument("--shards", type=int, default=1)
     sizing.add_argument("--shard", type=int, default=0)
+    sizing.add_argument("--neutrality-cache", nargs="*", default=[])
     sizing.add_argument("--resume", action="store_true")
     sizing.set_defaults(func=cmd_sizing)
     return parser
