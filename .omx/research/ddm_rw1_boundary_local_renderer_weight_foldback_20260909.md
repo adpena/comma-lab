@@ -549,6 +549,60 @@ Two of its three legs measured favourably before the search failed: the rate leg
 code) and the pose leg's structural precondition holds on every pair (rank 6/6, reach 1,892–2,020 codes). The leg that failed is the
 one that picks WHICH codes to move. Per Catalog #307 this is an IMPLEMENTATION-level falsification with the paradigm intact.
 
+## 8d. Door (1): the per-row fp16 SCALES — and the exponent that closes door (2) by arithmetic
+
+The closing law said the int4 grid is the binding constraint, so the first door is the actuator whose step is FINER.
+`weight[i,j] = code[i,j] · scale[i]`, so moving one per-row fp16 scale by k ULPs moves a whole row by a **code-proportional fraction** of
+a code step. Measured before launch (`receipts/PREREG_SCALE_SEARCH.json`), in units of one code move:
+
+| tensor | rows | weights/row | one 1-ULP move |
+|---|---:|---:|---:|
+| `head.weight` | 3 | 864 | 1.342 (**coarser** — excluded from the pool by measurement) |
+| `blocks.3.dw.weight` | 96 | 9 | **0.0242** — a **41× finer** minimum action |
+| `blocks.3.pw.weight` | 96 | 96 | **0.141** — 7.1× finer |
+
+The seam has its own null control (shipped scales in → byte-identical 36,130 B body and 31,792 B stream), the walk is on the fp16 grid
+itself (bit-pattern ULPs: monotone, exact, reversible — a move that is not a whole ULP is not a move the receiver can express), and the
+container search prices ONE changed scale at **−1 byte**, so the rate break-even is *negative* and any repair at all would win.
+
+### What 91 realized evaluations measured
+
+| tensor | ULP | n | min | median | max |
+|---|---:|---:|---:|---:|---:|
+| `blocks.3.dw` | ±1 | 24 | **7** | 14–15 | 29 |
+| `blocks.3.dw` | ±2 | 23 | 10 | 21–22 | 36 |
+| `blocks.3.pw` | ±1 | 22 | **6** | 16–17 | 28 |
+| `blocks.3.pw` | ±2 | 22 | 16 | 21–24 | 38 |
+
+(screen deltas on 120 pairs; ×5 for n600). **Zero accepts.**
+
+**The pre-registered proportionality is FALSIFIED.** `dw` perturbs 5.8× less than `pw` and costs the *same*; one dw ULP perturbs **41×**
+less than one int4 code and costs only ~4.8× less. Fitting the exponent across every pair of measured scales:
+
+| comparison | exponent |
+|---|---:|
+| one int4 code vs `pw` 1-ULP | 0.545 |
+| one int4 code vs `dw` 1-ULP | 0.322 |
+| `pw` 1-ULP vs `dw` 1-ULP | **0.073** |
+| `dw` 1 → 2 ULP | 0.568 |
+| `pw` 1 → 2 ULP | 0.447 |
+
+**Damage grows roughly as the SQUARE ROOT of the perturbation, and flattens further at the fine end.** That is the signature of a
+knife-edge population — cells sitting at essentially zero SegNet margin that flip under any nudge at all, which is exactly sj1 §16's
+picture (99.67 % of the residual lies on a GT class edge, with 44.5 correct boundary cells at risk per residual cell).
+
+### Door (2) is closed by that exponent, before it is built
+
+At exponent 0.5, taking the minimum damage from **~72 cells** down to **1** needs a perturbation reduction of **5,184× = 12.3 extra
+bits**. An int4 → depth-5/6 change buys **1 or 2** bits (2–4×), which moves 72 cells to **51 or 36** — still far above any break-even.
+So the depth arithmetic does **NOT** clear, and pricing a depth change by real encode would be spending on a lever the exponent already
+refutes. Recorded as an arithmetic closure, not an untried option.
+
+The same arithmetic, run forward, names the one place it *does* clear: **fp32 per-row scales** are +13 mantissa bits = 8,192× finer,
+predicting a minimum damage of **0.8 cells** — below the point where a steered search can plausibly net a repair. The cost is +2 B per row
+× 195 rows = **+390 B = 2.597e-04 S = 1.38 % of the gap**, and it needs a RECEIVER change (the parser reads `<f2`), so it is a different
+arm's charter, not a knob here.
+
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
