@@ -302,3 +302,24 @@ def test_ignored_live_pointer_still_blocks_apply(tmp_path, monkeypatch):
     assert vr3.apply(args) == 3
     assert "REPOSITORY_REFERENCE_HIT_AT_APPLY" in json.loads(args.ledger.read_text())["verdict"]
     assert raw.exists()
+
+
+def test_reclaim_custody_artifacts_are_not_consumer_references(tmp_path):
+    # MAIN 2026-09-10: the first vr5 apply refused all 17 rows because the raw's path
+    # appeared inside vr5's OWN serializer format-patch (a copy of the plan ledger).
+    # Custody artifacts of the reclaim family name the path in order to certify it.
+    mod = vr3
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "research" / "ddm_vr9_20260910" / "serializer").mkdir(parents=True)
+    (repo / "experiments").mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    raw = "/Volumes/APDataStore/pact/ddm_zz9/advisory/work/inflated/0.raw"
+    custody = repo / ".omx" / "research" / "ddm_vr9_20260910" / "serializer" / "intended-commit.format-patch"
+    custody.write_text('+{"path": "' + raw + '", "verdict": "DELETABLE"}\n')
+    (repo / ".omx" / "research" / "ddm_vr9_reclaim_plan_20260910.jsonl").write_text('{"path": "' + raw + '"}\n')
+    hits = mod.repo_reference_hits({raw: [raw]}, repo)[raw]
+    assert hits == [], hits
+    consumer = repo / "experiments" / "consumer.py"
+    consumer.write_text('RAW = "' + raw + '"\n')
+    hits = mod.repo_reference_hits({raw: [raw]}, repo)[raw]
+    assert any("experiments/consumer.py" in h for h in hits), hits

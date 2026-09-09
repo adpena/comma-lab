@@ -370,6 +370,20 @@ def repo_reference_hits(
                 "!ddm_vr3_both_ssds_full_certify_or_block_reclaim.log",
                 "--glob",
                 "!ddm_vr5_generalized_certified_raw_reclaim_apply.log",
+                # RECLAIM-CUSTODY ARTIFACTS ARE NOT CONSUMERS (MAIN 2026-09-10, the vr5
+                # apply that refused all 17 rows): a reclaim arm's ledgers, journals,
+                # inventories, memos, charters, final messages and serializer receipts
+                # (format-patches copy the ledger verbatim) exist IN ORDER TO name the
+                # path. A hit inside them certifies the row; it does not consume it.
+                # Scoped to the ddm_vr<N> family so a real consumer elsewhere still hits.
+                "--glob",
+                "!**/ddm_vr[0-9]*/**",
+                "--glob",
+                "!**/ddm_vr[0-9]*_*.jsonl",
+                "--glob",
+                "!**/ddm_vr[0-9]*_*.md",
+                "--glob",
+                "!**/ddm_vr[0-9]*.log",
             ]
         )
     for alias in all_aliases:
