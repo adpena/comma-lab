@@ -404,6 +404,78 @@ simultaneous wave — which the same finding says is the wrong shape for this ac
 log retained; `gradient-topk` answers the arm's question unconfounded and in a sixth of the time. Recording the stop and its reason here
 because a run that is quietly abandoned is indistinguishable from one that failed.
 
+### `gradient-topk` — the decisive probe, and it names the binding constraint
+
+One exact n600 gradient of the seg surrogate (35.6 s), then realized flips for the k codes with the largest `|dL/dcode|`, each moved ONE
+step down its own gradient. No optimizer, no schedule, no EMA, no draw noise (`receipts/GRADIENT_TOPK.json`; same null 12,871):
+
+| k | changed codes | flips | vs null | cells broken **per code** | rate |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 1 | 15,785 | **+2,914** | 2,914 | 8.2 B |
+| 4 | 4 | 20,726 | +7,855 | 1,964 | 8.6 B |
+| 16 | 16 | 43,497 | +30,626 | 1,914 | 10.4 B |
+| 64 | 64 | 237,830 | +224,959 | 3,515 | 17.6 B |
+| 256 | 256 | 676,876 | +664,005 | 2,594 | 46.4 B |
+| 1,024 | 1,024 | 57,097,199 | +57,084,328 | 55,746 | 161.6 B |
+
+**Moving the single most-influential code one step costs 2,914 cells.** Put the three selection rules side by side, all in the same unit:
+
+| how the codes were chosen | cells broken per changed code |
+|---|---:|
+| **top-`|gradient|`**, one step | **1,914 – 55,746** |
+| random ±1 | 90 – 160 |
+| AdamW-accumulated (the 3,000-step run) | **27 – 123** |
+
+**The gradient's magnitude is ANTI-correlated with usefulness at the int4 step size** — the highest-leverage codes are 20–35× *worse*
+than random to move, and AdamW beat random 2–4× precisely because its slow accumulation selects codes with SMALL, persistent gradients,
+i.e. the low-leverage ones. Every number in this arm now falls out of one mechanism.
+
+**The binding constraint is the quantization step, not the layer set and not the search.** `∂L/∂code` is a first-order quantity, valid for
+infinitesimal moves. The smallest representable move here is ±1 code = one full fp16 scale unit, which for `head.weight` is **1/7 of that
+weight's own dynamic range** (codes span −7…+7). The linearisation is invalid at that step size, and it is *most* invalid exactly where
+the gradient is largest. The gradient is also fully dense — all 12,672 codes have non-zero gradient, `|max| 2.18e-06` against
+`|median| 3.31e-08`, a 66× spread — so there is no sparse subset for the first-order model to be right about.
+
+That is a closure at `verdict_scope: formulation` **that names its own two cures**, neither of which is the charter's widening:
+
+1. **A finer grid on these tensors.** Depth 4 → 5 or 6 on `head.weight` / `blocks.3.*` shrinks the step to 1/2 or 1/4 and would bring the
+   linearisation back into range. The receiver already supports per-tensor depths 2–8 (`_decode_depth_nibbles`), so this is a packer
+   change, not a receiver change. **Its rate is NOT yet priced**: §3's law prices CHANGED codes at fixed depth, and a depth change alters
+   the run length — that must be measured by a real encode before it is claimed, and is registered as OWED, not as a result.
+2. **Selection by realized Δflips instead of by gradient** — sj1's own method, applied to codes rather than tokens. The mechanism is
+   proven on this object (32 pointer moves); the actuator is 30–120× more leveraged per symbol and 48× cheaper per symbol. The cost is a
+   search: 12,672 codes × 2 directions with realized acceptance, which needs a screening subset before n600 confirmation.
+
+### The ranking probe: `abs_asc` is the best rule found, and it still does not repair
+
+Same probe, ranking INVERTED — the codes with the SMALLEST non-zero `|dL/dcode|` first, which is what the AdamW run's own behaviour
+implied (it beat random by selecting small, persistent gradients). Pre-registered prediction, written before the run: **−1 to +30 cells
+per code**, i.e. at or below the random band.
+
+| k | changed codes | vs null | cells per code | ΔS | share of the 0.018823 gap |
+|---:|---:|---:|---:|---:|---:|
+| 16 | 16 | +1,203 | 75.2 | +1.020e-03 | **+5.42 %** |
+| 64 | 64 | +2,090 | 32.7 | +1.772e-03 | **+9.41 %** |
+| 256 | 255 | +3,648 | 14.3 | +3.092e-03 | **+16.43 %** |
+| 1,024 | 1,018 | +8,204 | 8.06 | +6.955e-03 | **+36.95 %** |
+
+**The prediction is falsified on the low side too.** `abs_asc` is comfortably the best rule found — 8.1 cells/code at k=1,024 against
+random's 90–160 and `abs_desc`'s 1,914–55,746, a **238×** spread between the two ends of the same gradient — and the per-code cost falls
+monotonically with dose. But it never crosses zero: the total still grows, +8,204 cells at k=1,024.
+
+So the complete ranking picture, all in cells broken per changed code:
+
+| rule | best measured |
+|---|---:|
+| top-`|gradient|` (`abs_desc`) | 1,914 |
+| random ±1 | ~90 |
+| AdamW-accumulated | 27 |
+| bottom-`|gradient|` (`abs_asc`) | **8.1** |
+| **needed to break even** | **≤ 0 (repair)** |
+
+**Not one selection rule repairs anything.** Every dose of every ranking increases the residual. The gradient carries a real and strong
+ORDERING — 238× between its ends — but the ordering is over *how much damage a full int4 step does*, not over *which move helps*.
+
 ## 8c. Counting falsifier (a) plainly
 
 The charter's falsifier (a): *"after 3,000 steps at the object's own LR the instrument residual falls < 3 % → widen to all four blocks
@@ -425,11 +497,11 @@ skip it — it is the reason to run the two controls FIRST, because they decide 
 
 1. **`perturb-control`** — **RUN, and it answered**: random costs 2.1–4.1× more, so the surrogate IS steering and the finding is about
    the collateral ratio, not about the existence of a direction (see the table above).
-2. **`--full-field`** (built, ~35 min for 40 steps): the exact n600 gradient, 150 chunks of 4. This removes minibatch draw noise as a
-   candidate explanation for the oscillation. With 12,672 parameters and a deterministic objective there is no reason to accept a 5 %-
-   persistent direction.
-3. Only then, if the noise-free direction still damages, is the actuator closed at `verdict_scope: formulation`, and the widening becomes
-   the last thing to try rather than the first.
+2. **`--full-field`** — **RUN and STOPPED at step 7**, having answered on its first two steps: AdamW normalises per parameter, so it
+   marches every code at one rate and destroys the sparsity this actuator needs.
+3. **`gradient-topk`** — **RUN, and it is the decisive one**: the first-order model is invalid at the int4 step size, most invalid where
+   the gradient is largest. The actuator is closed at `verdict_scope: formulation`, and the charter's widening is NOT the cure — a finer
+   grid or a realized-acceptance search is.
 
 **What is NOT closed by this.** The paradigm — *a renderer-weight change admitted per pair through the carrier re-solve* — is untouched.
 Two of its three legs measured favourably before the search failed: the rate leg is nearly free (0.0139 B/code, break-even 0.011 cells per
