@@ -395,6 +395,15 @@ This was not visible in the minibatch run because there the drift saturated at ~
 masking the optimizer's own bias toward density. It is recorded here as a named next-arm change, not as a post-hoc excuse: the run that
 exposed it was launched to answer a different question.
 
+### The full-field probe, stopped at step 7 on purpose
+
+It was launched to remove minibatch draw noise as an explanation, and it delivered that answer on its first two steps rather than its
+last: step 1 moved the latent by exactly `lr`, step 2 reported a byte-identical loss, and those two facts together are the AdamW-density
+finding above. Its remaining 18 steps would have priced a **dense** move — every code crossing the rounding boundary in a near-
+simultaneous wave — which the same finding says is the wrong shape for this actuator. It was stopped at step 7 and its checkpoints and
+log retained; `gradient-topk` answers the arm's question unconfounded and in a sixth of the time. Recording the stop and its reason here
+because a run that is quietly abandoned is indistinguishable from one that failed.
+
 ## 8c. Counting falsifier (a) plainly
 
 The charter's falsifier (a): *"after 3,000 steps at the object's own LR the instrument residual falls < 3 % → widen to all four blocks
