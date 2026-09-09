@@ -1,0 +1,991 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "bound": {
+    "bytes": 72876,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+    "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+  },
+  "controls": {
+    "raw_body": {
+      "bytes": 30856,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/controls/raw_body.br",
+      "sha256": "39d1be52ba62933498395c48ce4d9482f37db097d504da76c2a321efe3e4a76f"
+    },
+    "rc1_rider": {
+      "bytes": 30246,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/controls/rc1_rider.br",
+      "sha256": "f1f0f85730981f2639edea2fdb36bf190c6c065a0c91b15afe4f6ffd0f99b186"
+    }
+  },
+  "families_built": 1,
+  "fit": {
+    "bytes": 1839,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+    "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+  },
+  "rows": [
+    {
+      "artifacts": [
+        {
+          "bytes": 24,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/weights.int8",
+          "sha256": "a0e017e04879ac254aef379d5d0aaad7ec79f2de796abd8bd8fe1e4ddac8a0d3"
+        },
+        {
+          "bytes": 31450,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/rider.sm1s",
+          "sha256": "968712668b2e12fba8c705bda755bfb898a0fedb82d9a7f5563f27b590ff8c0e"
+        },
+        {
+          "bytes": 24180,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/range.bin",
+          "sha256": "d4cdccd4b3275914ddd21ae22c98930c61187ea3856994168cb9ea751eb0afb8"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/metadata.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 31450,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/rider.repeat.sm1s",
+          "sha256": "968712668b2e12fba8c705bda755bfb898a0fedb82d9a7f5563f27b590ff8c0e"
+        },
+        {
+          "bytes": 24180,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/range.repeat.bin",
+          "sha256": "d4cdccd4b3275914ddd21ae22c98930c61187ea3856994168cb9ea751eb0afb8"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/metadata.repeat.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 36130,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/decoded.sm3r",
+          "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+        },
+        {
+          "bytes": 31450,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/container_input.ck2",
+          "sha256": "3b36cb21104ed9a3789b6da8934f1f4a1b5183f973065edc552d9e236aeeba2e"
+        },
+        {
+          "bytes": 29988,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/semantic.br",
+          "sha256": "ca603289055b77d51fb00c1c8633b668155f0879424565b1cd86ee47d1547c29"
+        }
+      ],
+      "binding": {
+        "codecs": {
+          "base_codec": {
+            "bytes": 20916,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc1_adaptive_section_codec.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "codec": {
+            "bytes": 9693,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+            "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+          },
+          "fixed_math": {
+            "bytes": 31341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc2_hpac_semistatic_mixing_codec.py",
+            "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+          },
+          "inputs": {
+            "bytes": 31380,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+            "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+          }
+        },
+        "fit": {
+          "bytes": 1839,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+          "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+        },
+        "weights": [
+          29,
+          8,
+          -25,
+          -30,
+          8,
+          13,
+          -7,
+          -1,
+          6,
+          7,
+          -7,
+          4,
+          -4,
+          1,
+          2,
+          0,
+          -1,
+          0,
+          4,
+          -3,
+          12,
+          5,
+          12,
+          0
+        ]
+      },
+      "body_identity": true,
+      "ck2": true,
+      "header_increment_bytes": 2,
+      "lgwin": 24,
+      "net_container_bytes": -258,
+      "parameter_bytes": 24,
+      "payload_bytes": 24180,
+      "q": 11,
+      "rider": {
+        "bytes": 31450,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/rider.sm1s",
+        "sha256": "968712668b2e12fba8c705bda755bfb898a0fedb82d9a7f5563f27b590ff8c0e"
+      },
+      "sample": 0,
+      "semantic_container": {
+        "bytes": 29988,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_0/semantic.br",
+        "sha256": "ca603289055b77d51fb00c1c8633b668155f0879424565b1cd86ee47d1547c29"
+      },
+      "twins_identical": true,
+      "weights": [
+        29,
+        8,
+        -25,
+        -30,
+        8,
+        13,
+        -7,
+        -1,
+        6,
+        7,
+        -7,
+        4,
+        -4,
+        1,
+        2,
+        0,
+        -1,
+        0,
+        4,
+        -3,
+        12,
+        5,
+        12,
+        0
+      ]
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 24,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/weights.int8",
+          "sha256": "b289b583d6044b1d29fc945c5e6137eb098001c8a45132ad0c8b498ff622e5ae"
+        },
+        {
+          "bytes": 31451,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/rider.sm1s",
+          "sha256": "7388f2c30937172ef2d5e72ab014faabb8bcb882792f18196f78b34ff9dd88d9"
+        },
+        {
+          "bytes": 24181,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/range.bin",
+          "sha256": "e56b96aca64b87c9de90acfc8609f791a58fbd057432e47c6770dc79dd5cc425"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/metadata.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 31451,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/rider.repeat.sm1s",
+          "sha256": "7388f2c30937172ef2d5e72ab014faabb8bcb882792f18196f78b34ff9dd88d9"
+        },
+        {
+          "bytes": 24181,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/range.repeat.bin",
+          "sha256": "e56b96aca64b87c9de90acfc8609f791a58fbd057432e47c6770dc79dd5cc425"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/metadata.repeat.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 36130,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/decoded.sm3r",
+          "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+        },
+        {
+          "bytes": 31451,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/container_input.ck2",
+          "sha256": "39aff7466958c329305fc51d8ef02dd7a85918a892ac7116e8627b146dcb2212"
+        },
+        {
+          "bytes": 29997,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/semantic.br",
+          "sha256": "184a4ee9e7a061f5626e53474559cb62feba5c39809a0bba4eba9bd751a89532"
+        }
+      ],
+      "binding": {
+        "codecs": {
+          "base_codec": {
+            "bytes": 20916,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc1_adaptive_section_codec.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "codec": {
+            "bytes": 9693,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+            "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+          },
+          "fixed_math": {
+            "bytes": 31341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc2_hpac_semistatic_mixing_codec.py",
+            "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+          },
+          "inputs": {
+            "bytes": 31380,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+            "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+          }
+        },
+        "fit": {
+          "bytes": 1839,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+          "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+        },
+        "weights": [
+          29,
+          8,
+          -25,
+          -30,
+          8,
+          13,
+          -7,
+          -1,
+          6,
+          7,
+          -7,
+          5,
+          -5,
+          1,
+          2,
+          0,
+          -1,
+          0,
+          3,
+          -3,
+          12,
+          6,
+          12,
+          0
+        ]
+      },
+      "body_identity": true,
+      "ck2": true,
+      "header_increment_bytes": 2,
+      "lgwin": 24,
+      "net_container_bytes": -249,
+      "parameter_bytes": 24,
+      "payload_bytes": 24181,
+      "q": 11,
+      "rider": {
+        "bytes": 31451,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/rider.sm1s",
+        "sha256": "7388f2c30937172ef2d5e72ab014faabb8bcb882792f18196f78b34ff9dd88d9"
+      },
+      "sample": 1,
+      "semantic_container": {
+        "bytes": 29997,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_1/semantic.br",
+        "sha256": "184a4ee9e7a061f5626e53474559cb62feba5c39809a0bba4eba9bd751a89532"
+      },
+      "twins_identical": true,
+      "weights": [
+        29,
+        8,
+        -25,
+        -30,
+        8,
+        13,
+        -7,
+        -1,
+        6,
+        7,
+        -7,
+        5,
+        -5,
+        1,
+        2,
+        0,
+        -1,
+        0,
+        3,
+        -3,
+        12,
+        6,
+        12,
+        0
+      ]
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 24,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/weights.int8",
+          "sha256": "5b1d095ee33447315c123b4a78e401949eb78ca2e0942b4fb33574ac807b154c"
+        },
+        {
+          "bytes": 31457,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/rider.sm1s",
+          "sha256": "ddc21d66a95f47eb25433aad7d9934d2ea414e9e8f322ad7dc58a44b70bc8f3b"
+        },
+        {
+          "bytes": 24187,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/range.bin",
+          "sha256": "f6c92f6162ad37523b321c42c78d904e7eeafa4ad5c601b3e72dc30fd9e64b84"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/metadata.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 31457,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/rider.repeat.sm1s",
+          "sha256": "ddc21d66a95f47eb25433aad7d9934d2ea414e9e8f322ad7dc58a44b70bc8f3b"
+        },
+        {
+          "bytes": 24187,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/range.repeat.bin",
+          "sha256": "f6c92f6162ad37523b321c42c78d904e7eeafa4ad5c601b3e72dc30fd9e64b84"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/metadata.repeat.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 36130,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/decoded.sm3r",
+          "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+        },
+        {
+          "bytes": 31457,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/container_input.ck2",
+          "sha256": "1595e835a91d7eafae090fee0cec66eaac432f8d57cc3678cead9d0bc94d4ed2"
+        },
+        {
+          "bytes": 30001,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/semantic.br",
+          "sha256": "9c267c1eb61263889a91daa5ee6b303210dff1e221d518f3e213c50353da31b6"
+        }
+      ],
+      "binding": {
+        "codecs": {
+          "base_codec": {
+            "bytes": 20916,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc1_adaptive_section_codec.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "codec": {
+            "bytes": 9693,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+            "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+          },
+          "fixed_math": {
+            "bytes": 31341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc2_hpac_semistatic_mixing_codec.py",
+            "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+          },
+          "inputs": {
+            "bytes": 31380,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+            "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+          }
+        },
+        "fit": {
+          "bytes": 1839,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+          "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+        },
+        "weights": [
+          29,
+          8,
+          -26,
+          -30,
+          8,
+          12,
+          -7,
+          -1,
+          6,
+          7,
+          -8,
+          4,
+          -4,
+          1,
+          2,
+          0,
+          -1,
+          0,
+          4,
+          -3,
+          13,
+          5,
+          12,
+          0
+        ]
+      },
+      "body_identity": true,
+      "ck2": true,
+      "header_increment_bytes": 2,
+      "lgwin": 24,
+      "net_container_bytes": -245,
+      "parameter_bytes": 24,
+      "payload_bytes": 24187,
+      "q": 11,
+      "rider": {
+        "bytes": 31457,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/rider.sm1s",
+        "sha256": "ddc21d66a95f47eb25433aad7d9934d2ea414e9e8f322ad7dc58a44b70bc8f3b"
+      },
+      "sample": 2,
+      "semantic_container": {
+        "bytes": 30001,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_2/semantic.br",
+        "sha256": "9c267c1eb61263889a91daa5ee6b303210dff1e221d518f3e213c50353da31b6"
+      },
+      "twins_identical": true,
+      "weights": [
+        29,
+        8,
+        -26,
+        -30,
+        8,
+        12,
+        -7,
+        -1,
+        6,
+        7,
+        -8,
+        4,
+        -4,
+        1,
+        2,
+        0,
+        -1,
+        0,
+        4,
+        -3,
+        13,
+        5,
+        12,
+        0
+      ]
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 24,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/weights.int8",
+          "sha256": "54367193fdf86418d2bc1478f22af7fccc622ef32c138caf7769ff9f552804c9"
+        },
+        {
+          "bytes": 31464,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/rider.sm1s",
+          "sha256": "45a50b8b51051de9774fc10d0b81b109d66fd75ea13994c0b924c31f53584f8f"
+        },
+        {
+          "bytes": 24194,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/range.bin",
+          "sha256": "39d82d1d22c2793dac0ddb2fd46dfd36477e76074b77153c2419a617469048f6"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/metadata.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 31464,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/rider.repeat.sm1s",
+          "sha256": "45a50b8b51051de9774fc10d0b81b109d66fd75ea13994c0b924c31f53584f8f"
+        },
+        {
+          "bytes": 24194,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/range.repeat.bin",
+          "sha256": "39d82d1d22c2793dac0ddb2fd46dfd36477e76074b77153c2419a617469048f6"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/metadata.repeat.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 36130,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/decoded.sm3r",
+          "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+        },
+        {
+          "bytes": 31464,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/container_input.ck2",
+          "sha256": "0a77c91631d53c0df6e6d5e557a0d378bdd39503f979ce9bb90c64b8ba55ae10"
+        },
+        {
+          "bytes": 29983,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/semantic.br",
+          "sha256": "ab33184fe0473ceddaa40f50e569bfa11ded4bf5e9d92bf86497d428afb26295"
+        }
+      ],
+      "binding": {
+        "codecs": {
+          "base_codec": {
+            "bytes": 20916,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc1_adaptive_section_codec.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "codec": {
+            "bytes": 9693,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+            "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+          },
+          "fixed_math": {
+            "bytes": 31341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc2_hpac_semistatic_mixing_codec.py",
+            "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+          },
+          "inputs": {
+            "bytes": 31380,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+            "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+          }
+        },
+        "fit": {
+          "bytes": 1839,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+          "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+        },
+        "weights": [
+          29,
+          7,
+          -25,
+          -30,
+          8,
+          13,
+          -8,
+          -1,
+          6,
+          7,
+          -7,
+          5,
+          -4,
+          1,
+          1,
+          0,
+          -1,
+          0,
+          4,
+          -3,
+          12,
+          5,
+          12,
+          0
+        ]
+      },
+      "body_identity": true,
+      "ck2": true,
+      "header_increment_bytes": 2,
+      "lgwin": 24,
+      "net_container_bytes": -263,
+      "parameter_bytes": 24,
+      "payload_bytes": 24194,
+      "q": 11,
+      "rider": {
+        "bytes": 31464,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/rider.sm1s",
+        "sha256": "45a50b8b51051de9774fc10d0b81b109d66fd75ea13994c0b924c31f53584f8f"
+      },
+      "sample": 3,
+      "semantic_container": {
+        "bytes": 29983,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/semantic.br",
+        "sha256": "ab33184fe0473ceddaa40f50e569bfa11ded4bf5e9d92bf86497d428afb26295"
+      },
+      "twins_identical": true,
+      "weights": [
+        29,
+        7,
+        -25,
+        -30,
+        8,
+        13,
+        -8,
+        -1,
+        6,
+        7,
+        -7,
+        5,
+        -4,
+        1,
+        1,
+        0,
+        -1,
+        0,
+        4,
+        -3,
+        12,
+        5,
+        12,
+        0
+      ]
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 24,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/weights.int8",
+          "sha256": "05a5d1d6907d30968d367e4f1e9a3b17007e37323f940c9fc40f1caf4f7d0dc9"
+        },
+        {
+          "bytes": 31455,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/rider.sm1s",
+          "sha256": "a1856bbde6cfbda566fe1c161aa067bbf22cf5ea7e65c5e3a69b6fc39e7f0df2"
+        },
+        {
+          "bytes": 24185,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/range.bin",
+          "sha256": "a3f14bd4f0cd11dbf54dee7724a36690363435abfa8055a26ce4c154eb0fc111"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/metadata.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 31455,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/rider.repeat.sm1s",
+          "sha256": "a1856bbde6cfbda566fe1c161aa067bbf22cf5ea7e65c5e3a69b6fc39e7f0df2"
+        },
+        {
+          "bytes": 24185,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/range.repeat.bin",
+          "sha256": "a3f14bd4f0cd11dbf54dee7724a36690363435abfa8055a26ce4c154eb0fc111"
+        },
+        {
+          "bytes": 7234,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/metadata.repeat.bin",
+          "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+        },
+        {
+          "bytes": 36130,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/decoded.sm3r",
+          "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+        },
+        {
+          "bytes": 31455,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/container_input.ck2",
+          "sha256": "5243da0a8f2e89e8e1b4239501c1a9db63740568d43c4b52d8eeb757baac786d"
+        },
+        {
+          "bytes": 29989,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/semantic.br",
+          "sha256": "2c7869631f34d55b1e40fd36574f96e16cc2687d5a253d58eaf0f4f658fb0f68"
+        }
+      ],
+      "binding": {
+        "codecs": {
+          "base_codec": {
+            "bytes": 20916,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc1_adaptive_section_codec.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "codec": {
+            "bytes": 9693,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+            "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+          },
+          "fixed_math": {
+            "bytes": 31341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_rc2_hpac_semistatic_mixing_codec.py",
+            "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+          },
+          "inputs": {
+            "bytes": 31380,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+            "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+          }
+        },
+        "fit": {
+          "bytes": 1839,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+          "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+        },
+        "weights": [
+          29,
+          8,
+          -25,
+          -30,
+          8,
+          13,
+          -7,
+          -1,
+          6,
+          6,
+          -7,
+          4,
+          -4,
+          0,
+          3,
+          0,
+          -1,
+          -1,
+          4,
+          -3,
+          12,
+          5,
+          12,
+          0
+        ]
+      },
+      "body_identity": true,
+      "ck2": true,
+      "header_increment_bytes": 2,
+      "lgwin": 24,
+      "net_container_bytes": -257,
+      "parameter_bytes": 24,
+      "payload_bytes": 24185,
+      "q": 11,
+      "rider": {
+        "bytes": 31455,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/rider.sm1s",
+        "sha256": "a1856bbde6cfbda566fe1c161aa067bbf22cf5ea7e65c5e3a69b6fc39e7f0df2"
+      },
+      "sample": 4,
+      "semantic_container": {
+        "bytes": 29989,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_4/semantic.br",
+        "sha256": "2c7869631f34d55b1e40fd36574f96e16cc2687d5a253d58eaf0f4f658fb0f68"
+      },
+      "twins_identical": true,
+      "weights": [
+        29,
+        8,
+        -25,
+        -30,
+        8,
+        13,
+        -7,
+        -1,
+        6,
+        6,
+        -7,
+        4,
+        -4,
+        0,
+        3,
+        0,
+        -1,
+        -1,
+        4,
+        -3,
+        12,
+        5,
+        12,
+        0
+      ]
+    }
+  ],
+  "score_claim": false,
+  "seed": 20260909,
+  "variant_design": "one fitted vector and four seeded +/-1 perturbations of four shared coefficients; all lossless; q11/w24 fixed",
+  "winner": {
+    "artifacts": [
+      {
+        "bytes": 24,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/weights.int8",
+        "sha256": "54367193fdf86418d2bc1478f22af7fccc622ef32c138caf7769ff9f552804c9"
+      },
+      {
+        "bytes": 31464,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/rider.sm1s",
+        "sha256": "45a50b8b51051de9774fc10d0b81b109d66fd75ea13994c0b924c31f53584f8f"
+      },
+      {
+        "bytes": 24194,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/range.bin",
+        "sha256": "39d82d1d22c2793dac0ddb2fd46dfd36477e76074b77153c2419a617469048f6"
+      },
+      {
+        "bytes": 7234,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/metadata.bin",
+        "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+      },
+      {
+        "bytes": 31464,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/rider.repeat.sm1s",
+        "sha256": "45a50b8b51051de9774fc10d0b81b109d66fd75ea13994c0b924c31f53584f8f"
+      },
+      {
+        "bytes": 24194,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/range.repeat.bin",
+        "sha256": "39d82d1d22c2793dac0ddb2fd46dfd36477e76074b77153c2419a617469048f6"
+      },
+      {
+        "bytes": 7234,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/metadata.repeat.bin",
+        "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+      },
+      {
+        "bytes": 36130,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/decoded.sm3r",
+        "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+      },
+      {
+        "bytes": 31464,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/container_input.ck2",
+        "sha256": "0a77c91631d53c0df6e6d5e557a0d378bdd39503f979ce9bb90c64b8ba55ae10"
+      },
+      {
+        "bytes": 29983,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/semantic.br",
+        "sha256": "ab33184fe0473ceddaa40f50e569bfa11ded4bf5e9d92bf86497d428afb26295"
+      }
+    ],
+    "binding": {
+      "codecs": {
+        "base_codec": {
+          "bytes": 20916,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rc1_adaptive_section_codec.py",
+          "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+        },
+        "bound": {
+          "bytes": 72876,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+          "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+        },
+        "codec": {
+          "bytes": 9693,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+          "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+        },
+        "fixed_math": {
+          "bytes": 31341,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rc2_hpac_semistatic_mixing_codec.py",
+          "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+        },
+        "inputs": {
+          "bytes": 31380,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+          "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+        }
+      },
+      "fit": {
+        "bytes": 1839,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+        "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+      },
+      "weights": [
+        29,
+        7,
+        -25,
+        -30,
+        8,
+        13,
+        -8,
+        -1,
+        6,
+        7,
+        -7,
+        5,
+        -4,
+        1,
+        1,
+        0,
+        -1,
+        0,
+        4,
+        -3,
+        12,
+        5,
+        12,
+        0
+      ]
+    },
+    "body_identity": true,
+    "ck2": true,
+    "header_increment_bytes": 2,
+    "lgwin": 24,
+    "net_container_bytes": -263,
+    "parameter_bytes": 24,
+    "payload_bytes": 24194,
+    "q": 11,
+    "rider": {
+      "bytes": 31464,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/rider.sm1s",
+      "sha256": "45a50b8b51051de9774fc10d0b81b109d66fd75ea13994c0b924c31f53584f8f"
+    },
+    "sample": 3,
+    "semantic_container": {
+      "bytes": 29983,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/variants/sample_3/semantic.br",
+      "sha256": "ab33184fe0473ceddaa40f50e569bfa11ded4bf5e9d92bf86497d428afb26295"
+    },
+    "twins_identical": true,
+    "weights": [
+      29,
+      7,
+      -25,
+      -30,
+      8,
+      13,
+      -8,
+      -1,
+      6,
+      7,
+      -7,
+      5,
+      -4,
+      1,
+      1,
+      0,
+      -1,
+      0,
+      4,
+      -3,
+      12,
+      5,
+      12,
+      0
+    ]
+  }
+}

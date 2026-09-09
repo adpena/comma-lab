@@ -1,0 +1,487 @@
+#!/usr/bin/env python3
+"""Retained SM1 staging, public receiver identity, bounded smoke, and seal.
+
+Research-only byte evidence; this tool never renders, loads scorers, or fires an
+evaluation. Each CLI stage resumes from RACE.json with immutable input bindings.
+"""
+from __future__ import annotations
+
+import argparse
+import copy
+import hashlib
+import io
+import json
+import os
+import re
+import shutil
+import signal
+import struct
+import subprocess
+import sys
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+
+import brotli
+import numpy as np
+
+sys.dont_write_bytecode = True
+REPO = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(REPO), str(REPO / 'src')]
+from experiments import ddm_sm1_semantic_bound as base
+from experiments import ddm_sm1_semantic_mixer_codec as codec
+from tac.candidate_seal import _public_smoke_problems, measure_runtime_digest
+
+ROOT = base.ROOT
+SOURCE = ROOT / 'source_runtime'
+CANDIDATE = ROOT / 'candidate_runtime'
+HEADER = struct.Struct('<4sBBBBHHH')
+
+
+def checked(item):
+    path = Path(item['path'])
+    if base.fact(path) != item:
+        raise ValueError(f'artifact drift: {path}')
+    return path.read_bytes()
+
+
+def inputs():
+    """Never import, compile, or write the live tree; validate its retained copy."""
+    value = json.loads((ROOT / 'INPUTS.json').read_text())
+    for item in value['source_files']:
+        checked(item)
+    pin = value['source_archive']['sha256']
+    if base.fact(SOURCE / 'archive.zip')['sha256'] != pin:
+        raise ValueError('isolated source archive differs from INPUTS')
+    pointer = json.loads(base.POINTER.read_text())
+    if (pointer['effective_frontier']['archive_sha256'] != pin or
+            pointer['our_local_frontier_contest_cuda']['archive_sha256'] != pin):
+        raise ValueError('live pointer moved; rebase and re-encode before staging/sealing')
+    return value, pointer['our_local_frontier_contest_cuda']
+
+
+def binding():
+    value, _ = inputs()
+    race = json.loads((ROOT / 'RACE.json').read_text())
+    bound = json.loads(checked(race['bound']))
+    if bound['gate_pass'] is not True:
+        raise ValueError('closed-form gate failed; staged coder execution forbidden')
+    for key in ('input_binding', 'source_code', 'decoder_trace', 'body'):
+        checked(bound[key])
+    if bound['body'] != base.fact(ROOT / 'retained/source/body.sm3r'):
+        raise ValueError('bound and staging use different SM3R bodies')
+    winner = race['winner']
+    checked(winner['rider'])
+    checked(winner['semantic_container'])
+    return {'inputs': base.fact(ROOT / 'INPUTS.json'), 'race': base.fact(ROOT / 'RACE.json'),
+            'bound': race['bound'],
+            'codec': base.fact(Path(codec.__file__)), 'stage_code': base.fact(Path(__file__)),
+            'source_archive_sha256': value['source_archive']['sha256'],
+            'body': base.fact(ROOT / 'retained/source/body.sm3r')}
+
+
+def recover_tree(path):
+    """Certify and move an interrupted stage intact; never discard its bytes."""
+    if not path.exists():
+        return
+    dest = ROOT / 'retained/interrupted_stage' / datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')
+    facts = [base.fact(p) for p in sorted(path.rglob('*')) if p.is_file()]
+    base.save(dest / 'CUSTODY.json', {'original_path': str(path), 'destination': str(dest / 'runtime'),
+              'files': facts, 'command': sys.argv, 'reason': 'incomplete stage retained for restart',
+              'score_claim': False})
+    os.rename(path, dest / 'runtime')
+
+
+def replace_once(text, old, new):
+    if text.count(old) != 1:
+        raise ValueError(f'public reader seam is not unique: {old!r}')
+    return text.replace(old, new)
+
+
+def patched_files():
+    """Add SM1 only at the existing adaptive-semantic dispatch seams."""
+    paths = ('runtime/f26_inflate.py', 'runtime/residual_archive.py',
+             'cpr1/inflate.py', 'cpr1/ddm_mp2_semantic_receiver.py')
+    texts = {p: (SOURCE / p).read_text() for p in paths}
+    key = 'runtime/f26_inflate.py'
+    texts[key] = replace_once(texts[key],
+        'from .rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic',
+        'from .rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic\n'
+        'from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n'
+        'from .sm1_semantic_mixer import restore_semantic as restore_sm1_semantic')
+    texts[key] = replace_once(texts[key], '    if parts.semantic_blob.startswith(RC1_SEMANTIC_MAGIC):',
+        '    if parts.semantic_blob.startswith(SM1_SEMANTIC_MAGIC):\n'
+        '        parts = dataclasses.replace(parts, semantic_blob=restore_sm1_semantic(\n'
+        '            parts.semantic_blob, _load_renderer(renderer_dir).SemanticTokenRenderer(96).state_dict()))\n'
+        '    if parts.semantic_blob.startswith(RC1_SEMANTIC_MAGIC):')
+    key = 'runtime/residual_archive.py'
+    texts[key] = replace_once(texts[key],
+        '        if not semantic_body.startswith(RC1_SEMANTIC_MAGIC):',
+        '        from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n'
+        '        if not semantic_body.startswith((RC1_SEMANTIC_MAGIC, SM1_SEMANTIC_MAGIC)):')
+    texts[key] = replace_once(texts[key], '(b"SD1M", b"SM3R", b"RC1S")',
+                             '(b"SD1M", b"SM3R", b"RC1S", b"SM1S")')
+    key = 'cpr1/inflate.py'
+    texts[key] = replace_once(texts[key], '(b"SD1M", b"SM3R", b"RC1S")',
+                             '(b"SD1M", b"SM3R", b"RC1S", b"SM1S")')
+    key = 'cpr1/ddm_mp2_semantic_receiver.py'
+    texts[key] = replace_once(texts[key],
+        'from rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic',
+        'from rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic\n'
+        'from runtime.sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n'
+        'from runtime.sm1_semantic_mixer import restore_semantic as restore_sm1_semantic')
+    texts[key] = replace_once(texts[key], '    if blob.startswith(RC1_SEMANTIC_MAGIC):',
+        '    if blob.startswith(SM1_SEMANTIC_MAGIC):\n'
+        '        blob = restore_sm1_semantic(blob, template)\n'
+        '    if blob.startswith(RC1_SEMANTIC_MAGIC):')
+    return {k: v.encode() for k, v in texts.items()}
+
+
+def archive_bytes(member):
+    """Preserve the actual source ZIP metadata; prove identity on its source member."""
+    import zipfile
+    with zipfile.ZipFile(SOURCE / 'archive.zip') as z:
+        if z.namelist() != ['p'] or z.getinfo('p').compress_type != zipfile.ZIP_STORED:
+            raise ValueError('expected the exact single STORED member')
+        info, comment = copy.copy(z.getinfo('p')), z.comment
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, 'w', compression=zipfile.ZIP_STORED) as z:
+        z.comment = comment
+        z.writestr(info, member)
+    return out.getvalue()
+
+
+def stage():
+    pins = binding()
+    target = ROOT / 'STAGED.json'
+    if target.exists():
+        result = json.loads(target.read_text())
+        if result['binding'] != pins or result['runtime_sha256'] != measure_runtime_digest(CANDIDATE).sha256:
+            raise ValueError('completed stage inputs/runtime drifted')
+        checked(result['archive'])
+        return result
+    value, pointer = inputs()
+    winner = json.loads((ROOT / 'RACE.json').read_text())['winner']
+    if winner['semantic_container']['bytes'] >= value['census']['semantic']['bytes']:
+        raise ValueError('no smaller semantic container admitted')
+    if winner['ck2'] is not True:
+        raise ValueError('SM1 stage preserves the shipped CK2 flag')
+    parts, header = base.sections(SOURCE / 'archive.zip')
+    source_member = b''.join(parts[k] for k in ('header', 'hpac', 'semantic', 'carrier', 'tail'))
+    base.retain(ROOT / 'retained/staged_controls/source_member.rx1', source_member)
+    source_control = archive_bytes(source_member)
+    base.retain(ROOT / 'retained/staged_controls/source_archive.zip', source_control)
+    if source_control != (SOURCE / 'archive.zip').read_bytes():
+        raise ValueError('source ZIP identity control failed')
+    patches = patched_files()
+    recover_tree(CANDIDATE)
+    for source in sorted(SOURCE.rglob('*')):
+        if source.is_file():
+            rel = source.relative_to(SOURCE).as_posix()
+            if rel not in ('archive.zip', 'inflate.py', 'MANIFEST.sha256'):
+                base.retain(CANDIDATE / rel, patches.get(rel, source.read_bytes()))
+    base.retain(CANDIDATE / 'runtime/sm1_semantic_mixer.py', Path(codec.__file__).read_bytes())
+    # Use the actual staged receiver module for both deterministic re-encodes.
+    sys.path.insert(0, str(CANDIDATE))
+    staged_codec = __import__('runtime.sm1_semantic_mixer', fromlist=['encode'])
+    if Path(staged_codec.__file__).resolve() != CANDIDATE / 'runtime/sm1_semantic_mixer.py':
+        raise ValueError('staged encoder import resolved outside candidate')
+    _, _, template = base.load_source(ROOT)
+    weights_raw = winner['weights']
+    if len(weights_raw) != codec.WEIGHT_COUNT or any(type(w) is not int or not -128 <= w <= 127 for w in weights_raw):
+        raise ValueError('winner requires 24 exact int8 weights')
+    weights = np.asarray(weights_raw, dtype=np.int8)
+    body = (ROOT / 'retained/source/body.sm3r').read_bytes()
+    twins = []
+    for trial in (1, 2):
+        rider, payload, metadata = staged_codec.encode(body, template, weights)
+        dest = ROOT / 'retained/staged_twins' / str(trial)
+        base.retain(dest / 'rider.sm1s', rider)
+        base.retain(dest / 'range.bin', payload)
+        base.retain(dest / 'metadata.bin', metadata)
+        base.retain(dest / 'weights.int8', weights.tobytes())
+        if rider != checked(winner['rider']):
+            raise ValueError('staged re-encode differs from retained winning rider')
+        outer = base.layout_tools.ck2_interleave(rider)
+        base.retain(dest / 'rider.ck2', outer)
+        container = brotli.compress(outer, quality=winner['q'], lgwin=winner['lgwin'])
+        base.retain(dest / 'semantic.br', container)
+        if container != checked(winner['semantic_container']) or brotli.decompress(container) != outer:
+            raise ValueError('winning container is not reproduced exactly')
+        decoded = staged_codec.restore_semantic(rider, template)
+        base.retain(dest / 'decoded.sm3r', decoded)
+        if decoded != body:
+            raise ValueError('staged decoder changed SM3R bytes')
+        new_header = list(header)
+        new_header[6] = len(container)
+        member = HEADER.pack(*new_header) + parts['hpac'] + container + parts['carrier'] + parts['tail']
+        base.retain(dest / 'member.rx1', member)
+        twins.append(base.retain(dest / 'archive.zip', archive_bytes(member)))
+    if checked(twins[0]) != checked(twins[1]):
+        raise ValueError('staged twin archives differ')
+    archive = checked(twins[0])
+    base.retain(CANDIDATE / 'archive.zip', archive)
+    receiver = (SOURCE / 'inflate.py').read_text()
+    receiver, count = re.subn(r'^ARCHIVE_SHA256 = "[0-9a-f]{64}"$',
+        'ARCHIVE_SHA256 = "' + hashlib.sha256(archive).hexdigest() + '"', receiver, flags=re.M)
+    if count != 1:
+        raise ValueError('receiver SHA pin seam differs')
+    receiver, count = re.subn(r'^ARCHIVE_BYTES = [0-9_]+$', f'ARCHIVE_BYTES = {len(archive)}', receiver, flags=re.M)
+    if count != 1:
+        raise ValueError('receiver byte pin seam differs')
+    base.retain(CANDIDATE / 'inflate.py', receiver.encode())
+    manifest = ''.join(f'{base.fact(p)["sha256"]}  {p.relative_to(CANDIDATE)}\n'
+                       for p in sorted(CANDIDATE.rglob('*')) if p.is_file() and p.name != 'archive.zip')
+    base.retain(CANDIDATE / 'MANIFEST.sha256', manifest.encode())
+    new, new_header = base.sections(CANDIDATE / 'archive.zip')
+    census = {}
+    for name in ('hpac', 'carrier', 'tail'):
+        if parts[name] != new[name]:
+            raise ValueError(f'nonsemantic section changed: {name}')
+        census[name] = {'identical': True, 'bytes': len(new[name]), 'sha256': hashlib.sha256(new[name]).hexdigest()}
+    if tuple(new_header[:6]) != tuple(header[:6]) or new_header[7] != header[7]:
+        raise ValueError('RX1 header changed beyond semantic section length')
+    changed = [p.relative_to(CANDIDATE).as_posix() for p in sorted(CANDIDATE.rglob('*')) if p.is_file()
+               and (not (SOURCE / p.relative_to(CANDIDATE)).is_file() or
+                    p.read_bytes() != (SOURCE / p.relative_to(CANDIDATE)).read_bytes())]
+    allowed = set(patches) | {'runtime/sm1_semantic_mixer.py', 'archive.zip', 'inflate.py', 'MANIFEST.sha256'}
+    if set(changed) != allowed:
+        raise ValueError(f'changed-file census differs: {changed}')
+    inputs()
+    result = {'axis': base.AXIS, 'score_claim': False, 'binding': pins, 'archive': base.fact(CANDIDATE / 'archive.zip'),
+              'runtime': str(CANDIDATE), 'runtime_sha256': measure_runtime_digest(CANDIDATE).sha256,
+              'winner': winner, 'twin_archives': twins, 'twin_identical': True, 'section_census': census,
+              'runtime_changed_files': changed, 'net_archive_bytes': len(archive) - value['source_archive']['bytes'],
+              'live_pointer': pointer, 'public_tensor_identity': 'owed: run proof stage',
+              'cleanup': 'all payloads retained on owned SSD; no renderer/scorer executed'}
+    base.save(target, result)
+    return result
+
+
+def bounded(argv, work, env, label):
+    """Each child has a new process group; timeout kills and reaps the group."""
+    started = time.monotonic()
+    stdout, stderr = work / f'{label}.stdout', work / f'{label}.stderr'
+    with stdout.open('xb') as out, stderr.open('xb') as err:
+        proc = subprocess.Popen(argv, cwd=REPO, env=env, stdout=out, stderr=err, start_new_session=True)
+        timed_out = False
+        try:
+            proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait(timeout=10)
+    return {'argv': argv, 'seconds': time.monotonic() - started, 'returncode': proc.returncode,
+            'timed_out': timed_out, 'stdout': base.fact(stdout), 'stderr': base.fact(stderr),
+            'timeout_policy': '60s process-group SIGKILL and reap; no detached child'}
+
+
+def attempt(label):
+    work = ROOT / 'retained/probes' / label / datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')
+    (work / 'scratch').mkdir(parents=True)
+    env = {k: v for k, v in os.environ.items() if not k.startswith(('F26_', 'CPR1_'))}
+    env.update(PYTHONDONTWRITEBYTECODE='1', TMPDIR=str(work / 'scratch'),
+               PATH=str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH'], F26_TOKEN_DECODER='python')
+    for key in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS'):
+        env[key] = '4'  # The public receiver requires four threads; processes stay sequential.
+    return work, env
+
+
+PROBE = r'''import hashlib,json,os,sys
+from pathlib import Path
+root,work,mode=Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve(),sys.argv[3]
+sys.path.insert(0,str(root))
+from runtime.f26_inflate import inflate_archive
+def emit(path,data):
+ with path.open('xb') as f: f.write(data)
+ return {'path':str(path),'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+def observe(frame,event,arg):
+ if event!='call': return
+ name=frame.f_code.co_name
+ if name not in ('render_video','render_video_parallel','decode_production_tokens'): return
+ file=Path(frame.f_code.co_filename).resolve()
+ if name in ('render_video','render_video_parallel') and root in file.parents:
+  emit(work/'FORBIDDEN_RENDER.json',json.dumps({'function':name,'filename':str(file)}).encode())
+  os._exit(81)
+ if name=='decode_production_tokens' and file==root/'runtime/residual_archive.py':
+  marker={'function':name,'filename':str(file),'runtime':str(root),'attempt':str(work)}
+  emit(work/'TOKEN_DECODE_ENTERED.json',json.dumps(marker).encode())
+  if mode=='proof':
+   caller=frame.f_back
+   if Path(caller.f_code.co_filename).resolve()!=root/'runtime/f26_inflate.py': raise RuntimeError('wrong public caller')
+   state=caller.f_locals['semantic'].state_dict()
+   if len(state)!=38 or 'frame_embed.weight' not in state: raise RuntimeError('incomplete semantic state')
+   facts=[]
+   for index,(key,tensor) in enumerate(state.items()):
+    array=tensor.detach().cpu().contiguous().numpy()
+    fact=emit(work/('%02d.tensor'%index),array.tobytes())
+    facts.append(dict(name=key,shape=list(array.shape),dtype=str(array.dtype),artifact=fact))
+   emit(work/'restored.sm3r',caller.f_locals['parts'].semantic_blob)
+   emit(work/'TENSORS.json',json.dumps(facts,sort_keys=True).encode())
+   os._exit(0)
+sys.setprofile(observe)
+inflate_archive(root/'archive.zip',work/'0.raw',renderer_dir=root/'cpr1',device_name='cpu',num_threads=4,checkpoint_dir=work/'.ckpt')
+raise RuntimeError('public probe returned without its stopping boundary')
+'''
+
+
+def public_probe(role, mode):
+    """Proof exits at actual token-function entry; smoke runs until group bound."""
+    inputs()
+    stage_record = stage()
+    root = SOURCE if role == 'frontier' else CANDIDATE
+    current = {'stage': base.fact(ROOT / 'STAGED.json'), 'runtime_sha256': measure_runtime_digest(root).sha256,
+               'archive': base.fact(root / 'archive.zip'), 'stage_binding': stage_record['binding']}
+    target = ROOT / f'{mode.upper()}_{role}.json'
+    if target.exists():
+        result = json.loads(target.read_text())
+        if result['binding'] != current:
+            raise ValueError('public probe binding drift')
+        for item in result['retained_files']:
+            checked(item)
+        return result
+    work, env = attempt(f'{mode}_{role}')
+    compiled = bounded(['cc', '-O3', '-std=c11', '-shared', '-fPIC',
+                        str(root / 'runtime/entropy/rc64_backend.c'), '-o', str(work / 'rc64_backend.so')], work, env, 'compile')
+    if compiled['returncode'] != 0:
+        raise RuntimeError(f'public probe compiler failed: {compiled}')
+    env['CPR1_RC64_LIBRARY'] = str(work / 'rc64_backend.so')
+    base.retain(work / 'probe.py', PROBE.encode())
+    direct = bounded([sys.executable, '-B', str(work / 'probe.py'), str(root), str(work), mode], work, env, 'direct')
+    marker = work / 'TOKEN_DECODE_ENTERED.json'
+    if not marker.is_file() or (work / 'FORBIDDEN_RENDER.json').exists():
+        raise RuntimeError(f'public token boundary absent or render guard fired: {direct}')
+    observed = json.loads(marker.read_text())
+    if observed['runtime'] != str(root) or observed['attempt'] != str(work):
+        raise ValueError('token marker came from a different probe')
+    if mode == 'proof' and (direct['returncode'] != 0 or direct['timed_out']):
+        raise RuntimeError(f'public tensor proof failed: {direct}')
+    if mode == 'smoke' and not direct['timed_out']:
+        raise RuntimeError(f'public smoke must reach token entry without exception until bound: {direct}')
+    identity = {'runtime_path': str(root), 'archive_path': str(root / 'archive.zip'),
+                'tree_sha256': current['runtime_sha256'], 'archive_sha256': current['archive']['sha256'],
+                'digest_definition': 'tac.candidate_seal.measure_runtime_digest'}
+    direct.update(identity, outcome='REACHED_TOKEN_DECODE', exception_class=None, exception_message='',
+                  marker=base.fact(marker), observation='actual function call from public f26; render guard armed')
+    result = {'axis': base.AXIS, 'score_claim': False, 'binding': current, 'compile': compiled, 'direct': direct,
+              'work': str(work), 'threads': 4, 'processes_at_a_time': 1, 'mode': mode}
+    if mode == 'smoke':
+        extracted = work / 'extracted'
+        with __import__('zipfile').ZipFile(root / 'archive.zip') as z:
+            base.retain(extracted / 'p', z.read('p'))
+        base.retain(work / 'file_list.txt', b'0.hevc\n')
+        shell = bounded(['bash', str(root / 'inflate.sh'), str(extracted), str(work / 'out'), str(work / 'file_list.txt')],
+                        work, env, 'shell')
+        stderr = checked(shell['stderr']).decode()
+        if shell['timed_out'] or shell['returncode'] == 0 or 'requires CUDA inflation' not in stderr:
+            raise RuntimeError(f'public shell did not reach CUDA gate: {shell}')
+        messages = [line.removeprefix('RuntimeError: ') for line in stderr.splitlines() if line.startswith('RuntimeError: ')]
+        if len(messages) != 1 or 'requires CUDA inflation' not in messages[0]:
+            raise RuntimeError('CUDA gate traceback is ambiguous')
+        shell.update(identity, outcome='REACHED_CUDA_GATE', exception_class='RuntimeError', exception_message=messages[0])
+        result['shell'] = shell
+    else:
+        result['tensors'] = json.loads((work / 'TENSORS.json').read_text())
+        result['restored_body'] = base.fact(work / 'restored.sm3r')
+        if checked(result['restored_body']) != (ROOT / 'retained/source/body.sm3r').read_bytes():
+            raise ValueError('public f26 semantic body differs from retained source')
+    if measure_runtime_digest(root).sha256 != current['runtime_sha256']:
+        raise ValueError('probe modified its runtime')
+    inputs()
+    result['retained_files'] = [base.fact(p) for p in sorted(work.rglob('*')) if p.is_file()]
+    base.save(target, result)
+    return result
+
+
+def proof():
+    rows = {role: public_probe(role, 'proof') for role in ('frontier', 'candidate')}
+    source, candidate = rows['frontier']['tensors'], rows['candidate']['tensors']
+    if len(source) != 38 or len(candidate) != 38:
+        raise ValueError('public proof must cover all 38 tensors')
+    for a, b in zip(source, candidate, strict=True):
+        if any(a[k] != b[k] for k in ('name', 'shape', 'dtype')) or checked(a['artifact']) != checked(b['artifact']):
+            raise ValueError(f'public decoded tensor differs: {a["name"]}')
+    result = {'axis': base.AXIS, 'score_claim': False, 'tensors_compared': 38, 'frame_embed_included': True,
+              'all_tensors_bit_identical': True, 'public_path': 'f26.inflate_archive actual token-function call boundary',
+              'rows': {role: base.fact(ROOT / f'PROOF_{role}.json') for role in rows},
+              'no_render_or_scorer_executed': True, 'output_identity': 'construction proof, not rendered-frame measurement'}
+    base.save(ROOT / 'PUBLIC_TENSOR_IDENTITY.json', result)
+    return result
+
+
+def combine():
+    inputs()
+    proof()
+    roles = {role: public_probe(role, 'smoke') for role in ('candidate', 'frontier')}
+    block = {'schema': 'candidate_public_entrypoint_smoke.v1', 'public_path_probe_seconds': 90,
+             'public_path_probes': {role: row['direct'] for role, row in roles.items()},
+             'inflate_sh_smokes': {role: row['shell'] for role, row in roles.items()}}
+    errors, _ = _public_smoke_problems(block, candidate_runtime_dir=CANDIDATE,
+        candidate_archive_path=CANDIDATE / 'archive.zip', pointer_archive_sha256=inputs()[0]['source_archive']['sha256'])
+    if errors:
+        raise ValueError(errors)
+    base.save(ROOT / 'PUBLIC_ENTRYPOINT_SMOKE.json', block)
+    return {'public_smoke_problems': errors, 'receipt': base.fact(ROOT / 'PUBLIC_ENTRYPOINT_SMOKE.json')}
+
+
+def seal():
+    combine()
+    _, pointer = inputs()
+    mirror_path = Path(pointer['source_path'])
+    if not mirror_path.is_absolute():
+        mirror_path = REPO / mirror_path
+    mirror = json.loads(mirror_path.read_text())
+    source_receipt = Path(mirror['source_receipt'])
+    if (base.fact(source_receipt)['sha256'] != mirror['source_receipt_sha256'] or
+            mirror['archive_sha256'] != pointer['archive_sha256'] or
+            mirror['source_receipt_sha256'] != pointer['extra']['source_receipt_sha256']):
+        raise ValueError('base auth receipt is not bound to the live source archive')
+    out = ROOT / 'SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json'
+    argv = [sys.executable, '-B', str(REPO / 'tools/make_candidate_seal.py'),
+            '--candidate-id', 'ddm_sm1_semantic_shared_mixer', '--runtime-dir', str(CANDIDATE),
+            '--axis', 'contest_cuda', '--out', str(out), '--archive-member', 'p',
+            '--public-entrypoint-smoke', str(ROOT / 'PUBLIC_ENTRYPOINT_SMOKE.json'),
+            '--bound-base-receipt', str(source_receipt),
+            '--admit-bar-net-ds', '0', '--pointer-axis', 'contest_cuda', '--sealed-by', 'ddm_sm1',
+            '--verify-archive-sha', base.fact(CANDIDATE / 'archive.zip')['sha256'],
+            '--retained-path', str(ROOT / 'retained'), '--falsifier', 'No lower exact score on identical archive/runtime custody',
+            '--falsifier', 'Any decoded semantic tensor differs from the live source or any hpac/carrier/tail byte changes',
+            '--notes', 'Byte-only zero-distortion construction proof; all 38 public-decoded tensors identical; MAIN fires; no scorer run']
+    for rel in ('inflate.py', 'inflate.sh', 'runtime/f26_inflate.py', 'runtime/residual_archive.py',
+                'runtime/sm1_semantic_mixer.py', 'cpr1/inflate.py', 'cpr1/ddm_mp2_semantic_receiver.py'):
+        argv += ['--receiver', rel]
+    if out.exists():
+        from tac.candidate_seal import validate_seal
+        verdict = validate_seal(out)
+        if not verdict.ok:
+            raise ValueError(verdict.summary())
+        return {'status': 'SEAL READY', 'seal': base.fact(out)}
+    work, env = attempt('seal')
+    base.save(work / 'COMMAND.json', argv)
+    result = bounded(argv, work, env, 'seal')
+    if result['returncode'] != 0 or not out.is_file():
+        raise RuntimeError(f'candidate seal failed: {result}')
+    inputs()
+    base.save(ROOT / 'SEAL_RECEIPT.json', {'status': 'SEAL READY', 'seal': base.fact(out), 'process': result,
+                                         'score_claim': False, 'owner_of_exact_fire': 'MAIN'})
+    return json.loads((ROOT / 'SEAL_RECEIPT.json').read_text())
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--stage', required=True, choices=('stage', 'proof', 'smoke-candidate', 'smoke-frontier', 'combine', 'seal'))
+    parser.add_argument('--resume-from', type=Path, required=True)
+    args = parser.parse_args()
+    if args.resume_from.resolve() != (ROOT / 'RACE.json').resolve():
+        raise ValueError('resume-from must be the completed RACE.json')
+    if shutil.disk_usage(ROOT).free < 256 * 1024**2:
+        raise RuntimeError('SSD storage preflight requires 256 MiB')
+    if args.stage.startswith('smoke-'):
+        result = public_probe(args.stage.removeprefix('smoke-'), 'smoke')
+    else:
+        result = {'stage': stage, 'proof': proof, 'combine': combine, 'seal': seal}[args.stage]()
+    print(json.dumps(result, sort_keys=True))
+
+
+if __name__ == '__main__':
+    main()

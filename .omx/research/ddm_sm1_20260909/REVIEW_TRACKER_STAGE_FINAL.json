@@ -1,0 +1,50 @@
+{
+  "score_claim": false,
+  "scope": "Final observer prefilter reviewed by root and governing_tail after the prior clean review",
+  "passes": [
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_stage.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_root",
+        "--pass",
+        "ddm_sm1_stage_final_root"
+      ],
+      "returncode": 0,
+      "stdout": "RESCAN: 'experiments/ddm_sm1_stage.py' current entity census 15 (last stored census 15)\nMarked 15 entities in 'experiments/ddm_sm1_stage.py' as 'reviewed'\n",
+      "stderr": "",
+      "source": {
+        "path": "experiments/ddm_sm1_stage.py",
+        "bytes": 26810,
+        "sha256": "6cf8a9b09227ae15a87ff5213a276cf0d1c9abaeeb8ca92d68d0d9cf410ef341"
+      }
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_stage.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_governing_tail",
+        "--pass",
+        "ddm_sm1_stage_final_independent"
+      ],
+      "returncode": 0,
+      "stdout": "RESCAN: 'experiments/ddm_sm1_stage.py' current entity census 15 (last stored census 15)\nMarked 15 entities in 'experiments/ddm_sm1_stage.py' as 'reviewed'\n",
+      "stderr": "",
+      "source": {
+        "path": "experiments/ddm_sm1_stage.py",
+        "bytes": 26810,
+        "sha256": "6cf8a9b09227ae15a87ff5213a276cf0d1c9abaeeb8ca92d68d0d9cf410ef341"
+      }
+    }
+  ]
+}

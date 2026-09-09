@@ -1,0 +1,81 @@
+{
+  "anchor": {
+    "anchor_id": "sm1_supported_scale_shared_mixer_container_20260909",
+    "empirical_output": {
+      "all_five_restored_bodies_identical": true,
+      "all_five_twins_identical": true,
+      "frame_parity": "construction_only_no_render",
+      "pre_rc1_semantic_container_bytes": 30856,
+      "raw_body_bytes": 36130,
+      "rc1_semantic_container_bytes": 30246,
+      "scope": "one counted shared mixer on six causal context projections; MM is not a universal bound",
+      "score_claim": false,
+      "semantic_container_bytes": 29983,
+      "semantic_container_saving_bytes": 263
+    },
+    "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    "inputs": {
+      "bound": {
+        "bytes": 72876,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+        "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+      },
+      "coded_symbols": 59376,
+      "contexts": [
+        "row_position",
+        "scale_bucket",
+        "previous_row",
+        "left_sign",
+        "dw_pw",
+        "block_depth"
+      ],
+      "counted_weights_bytes": 24,
+      "families_built": 1,
+      "fit": {
+        "bytes": 1839,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+        "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+      },
+      "race": {
+        "bytes": 34433,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+        "sha256": "ec52abc659773d260715c8a847975ad32092268bac7cac2f7ebe0ba65f1c6d40"
+      },
+      "sampled_variants": 5,
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 181521,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass4/candidate_runtime/archive.zip",
+        "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+      }
+    },
+    "measurement_method": "Complete shipped-decoder probability observation; supported MM diagnostics; retained exact twin range encodes and Brotli containers",
+    "measurement_utc": "2026-09-09T19:08:46.321300+00:00",
+    "noise_floor": null,
+    "noise_floor_provenance": null,
+    "predicted_output": {
+      "fixed_model_net_ideal_bytes": 342.7892405609746,
+      "is_container_prediction": false,
+      "supported_scale_oracle_net_bytes": 362.67454141347275
+    },
+    "provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "captured_at_utc": "2026-09-09T19:08:46Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "macos_cpu_advisory",
+      "hardware_substrate": "macos_arm64",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+      "source_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+    },
+    "residual": 0.23276471697419523,
+    "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json"
+  },
+  "equation_id": "model_section_adaptive_recode_ceiling_v1"
+}

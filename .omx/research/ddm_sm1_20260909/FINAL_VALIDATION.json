@@ -1,0 +1,126 @@
+{
+  "seal_validation": {
+    "verdict": "SEAL_VALID",
+    "seal_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json",
+    "candidate_id": "ddm_sm1_semantic_shared_mixer",
+    "axis": "contest_cuda",
+    "problems": [],
+    "observed": {
+      "archive": {
+        "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+        "bytes": 181258,
+        "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip"
+      },
+      "archive_member": {
+        "sha256": "f888c8dda375f30dd56fd70a632dff28b23604470020c85ab774203bd643d7be",
+        "bytes": 181158
+      },
+      "runtime": {
+        "sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "file_count": 45,
+        "total_bytes": 967601
+      },
+      "public_entrypoint_smoke": {
+        "public_path_probes.candidate.runtime": {
+          "sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70",
+          "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+          "file_count": 45,
+          "total_bytes": 967601
+        },
+        "public_path_probes.candidate.archive": {
+          "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+          "bytes": 181258,
+          "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip"
+        },
+        "public_path_probes.frontier.runtime": {
+          "sha256": "453d191e586faa1aca5429c65a8791ec55e278fa45a0789d6f27e4e56dff9da8",
+          "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+          "file_count": 44,
+          "total_bytes": 957350
+        },
+        "public_path_probes.frontier.archive": {
+          "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+          "bytes": 181521,
+          "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/archive.zip"
+        },
+        "inflate_sh_smokes.candidate.runtime": {
+          "sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70",
+          "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+          "file_count": 45,
+          "total_bytes": 967601
+        },
+        "inflate_sh_smokes.candidate.archive": {
+          "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+          "bytes": 181258,
+          "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip"
+        },
+        "inflate_sh_smokes.frontier.runtime": {
+          "sha256": "453d191e586faa1aca5429c65a8791ec55e278fa45a0789d6f27e4e56dff9da8",
+          "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+          "file_count": 44,
+          "total_bytes": 957350
+        },
+        "inflate_sh_smokes.frontier.archive": {
+          "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+          "bytes": 181521,
+          "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/archive.zip"
+        }
+      },
+      "pointer": {
+        "pointer_axis": "contest_cuda",
+        "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+        "pointer_score": 0.13867171823146562,
+        "pointer_archive_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+      }
+    }
+  },
+  "public_smoke_problems": [],
+  "public_smoke_observed": {
+    "public_path_probes.candidate.runtime": {
+      "sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 45,
+      "total_bytes": 967601
+    },
+    "public_path_probes.candidate.archive": {
+      "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+      "bytes": 181258,
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip"
+    },
+    "public_path_probes.frontier.runtime": {
+      "sha256": "453d191e586faa1aca5429c65a8791ec55e278fa45a0789d6f27e4e56dff9da8",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 44,
+      "total_bytes": 957350
+    },
+    "public_path_probes.frontier.archive": {
+      "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+      "bytes": 181521,
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/archive.zip"
+    },
+    "inflate_sh_smokes.candidate.runtime": {
+      "sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 45,
+      "total_bytes": 967601
+    },
+    "inflate_sh_smokes.candidate.archive": {
+      "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+      "bytes": 181258,
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip"
+    },
+    "inflate_sh_smokes.frontier.runtime": {
+      "sha256": "453d191e586faa1aca5429c65a8791ec55e278fa45a0789d6f27e4e56dff9da8",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 44,
+      "total_bytes": 957350
+    },
+    "inflate_sh_smokes.frontier.archive": {
+      "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+      "bytes": 181521,
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/archive.zip"
+    }
+  },
+  "score_claim": false
+}

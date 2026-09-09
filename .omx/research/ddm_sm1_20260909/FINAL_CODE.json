@@ -1,0 +1,64 @@
+{
+  "files": [
+    {
+      "retained": {
+        "bytes": 16350,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/code_final/ddm_sm1_semantic_bound.py",
+        "sha256": "3da404108768acddae26b97ad93ff6bdcaa7307c2dd6903c41dd1d1e81bf7933"
+      },
+      "source": {
+        "bytes": 16350,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_bound.py",
+        "sha256": "3da404108768acddae26b97ad93ff6bdcaa7307c2dd6903c41dd1d1e81bf7933"
+      }
+    },
+    {
+      "retained": {
+        "bytes": 9693,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/code_final/ddm_sm1_semantic_mixer_codec.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      },
+      "source": {
+        "bytes": 9693,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_mixer_codec.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      }
+    },
+    {
+      "retained": {
+        "bytes": 14588,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/code_final/ddm_sm1_mixer_race.py",
+        "sha256": "04b7354163340520fd677cc96295708adb3b11520f1171212c001adf73fd3bfd"
+      },
+      "source": {
+        "bytes": 14588,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_mixer_race.py",
+        "sha256": "04b7354163340520fd677cc96295708adb3b11520f1171212c001adf73fd3bfd"
+      }
+    },
+    {
+      "retained": {
+        "bytes": 26810,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/code_final/ddm_sm1_stage.py",
+        "sha256": "6cf8a9b09227ae15a87ff5213a276cf0d1c9abaeeb8ca92d68d0d9cf410ef341"
+      },
+      "source": {
+        "bytes": 26810,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_stage.py",
+        "sha256": "6cf8a9b09227ae15a87ff5213a276cf0d1c9abaeeb8ca92d68d0d9cf410ef341"
+      }
+    }
+  ],
+  "review_receipts": [
+    {
+      "bytes": 6178,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/REVIEW_TRACKER_RECEIPT.json",
+      "sha256": "900e50121d1229c8052b9d5b6e994492b68feebf73039520500ac4805a67ce04"
+    },
+    {
+      "bytes": 1578,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/REVIEW_TRACKER_STAGE_FINAL.json",
+      "sha256": "374a81fa60b299bb455046464ad633a888d81b961db2a2908654169f62f9829b"
+    }
+  ]
+}

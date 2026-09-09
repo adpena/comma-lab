@@ -1,0 +1,228 @@
+{
+  "admit_bar": {
+    "derivation": {
+      "pointer_archive_sha256_at_seal": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.13867171823146562,
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    },
+    "net_dS_threshold": 0.0,
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold"
+  },
+  "archive": {
+    "bytes": 181258,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip",
+    "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb"
+  },
+  "archive_member": {
+    "bytes": 181158,
+    "name": "p",
+    "sha256": "f888c8dda375f30dd56fd70a632dff28b23604470020c85ab774203bd643d7be"
+  },
+  "axis": "contest_cuda",
+  "candidate_id": "ddm_sm1_semantic_shared_mixer",
+  "falsifiers": [
+    "No lower exact score on identical archive/runtime custody",
+    "Any decoded semantic tensor differs from the live source or any hpac/carrier/tail byte changes",
+    "report-8dp bound (COMPUTED, source=published): the base row's bound is 4.018859e-06 = seg 5.000000e-07 + pose 3.518859e-06 (d_pose 5.050000e-06). Bounds ADD for a DELTA, so the admissible margin must be judged against base + candidate, NOT against this row alone -- dividing by one row's bound overstates the margin by exactly 2.00x when the two rows' bounds are equal. Compose the two-row sentence with tools/report_8dp_delta_bound.py once the candidate row lands. Base receipt: /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass4_20260909/MODAL_REMOTE_RESULT.json"
+  ],
+  "notes": "Byte-only zero-distortion construction proof; all 38 public-decoded tensors identical; MAIN fires; no scorer run",
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip",
+        "archive_sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/extracted",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/out",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime",
+        "seconds": 2.98656258399933,
+        "stderr": {
+          "bytes": 486,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/shell.stderr",
+          "sha256": "41ef9981049df5d2005bddd5a2b0185a3bb5b169f384bd1b80495e94252b5195"
+        },
+        "stdout": {
+          "bytes": 0,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/shell.stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "timed_out": false,
+        "timeout_policy": "60s process-group SIGKILL and reap; no detached child",
+        "tree_sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/archive.zip",
+        "archive_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/extracted",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/out",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime",
+        "seconds": 3.1972675830002117,
+        "stderr": {
+          "bytes": 480,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/shell.stderr",
+          "sha256": "340bd120f987240f46c188aec757308fc5d5cffb43ff4160b7eccc437bec1451"
+        },
+        "stdout": {
+          "bytes": 0,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/shell.stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "timed_out": false,
+        "timeout_policy": "60s process-group SIGKILL and reap; no detached child",
+        "tree_sha256": "453d191e586faa1aca5429c65a8791ec55e278fa45a0789d6f27e4e56dff9da8"
+      }
+    },
+    "public_path_probe_seconds": 90,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip",
+        "archive_sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb",
+        "argv": [
+          "/Users/adpena/Projects/pact/.venv/bin/python",
+          "-B",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/probe.py",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z",
+          "smoke"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "marker": {
+          "bytes": 382,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/TOKEN_DECODE_ENTERED.json",
+          "sha256": "4989ad0616045862dd10f19c3ee4d105016f9c44879c2eeed09e638a33bd8773"
+        },
+        "observation": "actual function call from public f26; render guard armed",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "returncode": -9,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime",
+        "seconds": 60.03115266600071,
+        "stderr": {
+          "bytes": 0,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/direct.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_candidate/20260909T191347956789Z/direct.stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "timed_out": true,
+        "timeout_policy": "60s process-group SIGKILL and reap; no detached child",
+        "tree_sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime/archive.zip",
+        "archive_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+        "argv": [
+          "/Users/adpena/Projects/pact/.venv/bin/python",
+          "-B",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime",
+          "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z",
+          "smoke"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "marker": {
+          "bytes": 375,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/TOKEN_DECODE_ENTERED.json",
+          "sha256": "4c0da555c0c6aaeef520d74efcc2de276415db90f7dc8241fe2731737f155886"
+        },
+        "observation": "actual function call from public f26; render guard armed",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "returncode": -9,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/source_runtime",
+        "seconds": 60.02257112499865,
+        "stderr": {
+          "bytes": 0,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/direct.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/direct.stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "timed_out": true,
+        "timeout_policy": "60s process-group SIGKILL and reap; no detached child",
+        "tree_sha256": "453d191e586faa1aca5429c65a8791ec55e278fa45a0789d6f27e4e56dff9da8"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "receiver_pins": [
+    {
+      "bytes": 2475,
+      "relative_path": "inflate.py",
+      "sha256": "0f7f44f3e199459d0a6ce73aec63e728bff0bcebcb7585e16b6b015113d3b48d"
+    },
+    {
+      "bytes": 3219,
+      "relative_path": "inflate.sh",
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+    },
+    {
+      "bytes": 29176,
+      "relative_path": "runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "bytes": 32332,
+      "relative_path": "runtime/residual_archive.py",
+      "sha256": "109bb6052f4fdb1a72195f49979091776e71c5ffe261cc80add0b044fc0e7e34"
+    },
+    {
+      "bytes": 9693,
+      "relative_path": "runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "bytes": 13810,
+      "relative_path": "cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "bytes": 13389,
+      "relative_path": "cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    }
+  ],
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained"
+  ],
+  "runtime": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 45,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime",
+    "sha256": "07f7b06513579621d40aa634e274cac8215f0fdedd01d263817aeb71730dae70",
+    "total_bytes": 967601
+  },
+  "schema": "candidate_seal.v1",
+  "seal_sha256": "afae1782134f438f2b72ae8c89a3a6dc78728d5c4202ecd7452cacde2140ea76",
+  "sealed_at_utc": "2026-09-09T19:15:57.545571+00:00",
+  "sealed_by": "ddm_sm1"
+}

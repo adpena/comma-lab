@@ -1,0 +1,59 @@
+{
+  "actions": [
+    {
+      "action": "Validate seal, claim one unique contest-CUDA T4 n600 lane and fire exact evaluation; retain and harvest archive/runtime/logs/component receipt; recompute score and two-row report-8dp bound, then apply canonical pointer admission",
+      "consumer_store": [
+        "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/MAIN_EXACT_RESULT.json",
+        "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json"
+      ],
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Harvest of this SEAL READY handoff; current pointer archive equals sealed base, validate_seal is SEAL_VALID, and no duplicate active lane. This arm does not dispatch.",
+      "owner": "MAIN"
+    },
+    {
+      "action": "Rebase the semantic recoder and reader onto the new live tree, re-encode twice, repeat public identity/census/smoke pair and reseal before exact fire",
+      "consumer_store": [
+        "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/REBASE_HANDOFF.json",
+        "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json"
+      ],
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Only if the canonical pointer has moved before exact dispatch, including cmp1 or fe1 promotion. Preserve this candidate and all source pins; changed semantic codes are inputs to a new encode, never transfer old savings.",
+      "owner": "MAIN or MAIN-assigned ddm_sm1 successor"
+    },
+    {
+      "action": "If serializer returns Git-denial fallback, land exactly the declared source/memo/receipt bundle from its receipt with post-edit hashes; separately consume only this arm\u2019s equation correction and lane events without absorbing sibling changes",
+      "consumer_store": [
+        "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/serializer_fallback",
+        "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/LANDING_RECEIPT.json",
+        "/Users/adpena/Projects/pact/.omx/state/canonical_equations_registry.jsonl",
+        "/Users/adpena/Projects/pact/.omx/state/lane_registry.json"
+      ],
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Only on typed serializer fallback receipt and a Git-writable MAIN context. Do not mark code landed before verified commit custody.",
+      "owner": "MAIN"
+    }
+  ],
+  "base_archive_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+  "candidate_archive": {
+    "bytes": 181258,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/archive.zip",
+    "sha256": "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb"
+  },
+  "created_at_utc": "2026-09-09T19:23:59.283472+00:00",
+  "owner": "MAIN",
+  "schema": "ddm_sm1_handoff_fire_order.v1",
+  "score_claim": false,
+  "seal": {
+    "bytes": 12411,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json",
+    "sha256": "ec7ab381b447c39c24a59dcade5f62e1dccdf985d53a5bc5c00a7b87b8d6639e"
+  },
+  "status": "SEAL READY",
+  "unlaunched_research_leads": [
+    {
+      "disposition": "FOLDED_THIS_ARM",
+      "lead": "Another small model may capture remaining scale signal",
+      "reason": "One family already converts supported headroom; no second-family launch is queued without a new charter and bound."
+    }
+  ]
+}

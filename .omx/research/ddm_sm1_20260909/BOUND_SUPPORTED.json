@@ -1,0 +1,2561 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "block_depth_note": "redundant given per-tensor group; incremental information is exactly zero",
+  "body": {
+    "bytes": 36130,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/source/body.sm3r",
+    "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+  },
+  "coded_bits": 231168,
+  "coded_symbols": 59376,
+  "container_bytes": 30246,
+  "context_scope": [
+    "row_position",
+    "scale_bucket",
+    "previous_row",
+    "left_sign",
+    "dw_pw",
+    "block_depth"
+  ],
+  "decoder_trace": {
+    "bytes": 4623488,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/decoder_events.npy",
+    "sha256": "61ac78ff97eab6064643be00e497aa61fff2f82bb236b1c9d8c47ce34dcbe785"
+  },
+  "fixed_regions": [
+    {
+      "bytes": 8,
+      "claimed_gain_bytes": 0,
+      "kind": "header",
+      "name": "header"
+    },
+    {
+      "bytes": 2,
+      "claimed_gain_bytes": 0,
+      "kind": "header",
+      "name": "selection_mask"
+    },
+    {
+      "bytes": 8,
+      "claimed_gain_bytes": 0,
+      "kind": "header",
+      "name": "depth_table"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "token_embed.weight:scales"
+    },
+    {
+      "bytes": 16,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "frame_embed.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "coord_mix.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "coord_mix.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.0.dw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.0.dw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.0.pw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.0.pw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.0.norm.weight"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.0.norm.bias"
+    },
+    {
+      "bytes": 384,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.0.film.weight:scales"
+    },
+    {
+      "bytes": 384,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.0.film.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.1.dw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.1.dw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.1.pw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.1.pw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.1.norm.weight"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.1.norm.bias"
+    },
+    {
+      "bytes": 24,
+      "claimed_gain_bytes": 0,
+      "kind": "prune_mask",
+      "name": "blocks.1.film.weight:mask"
+    },
+    {
+      "bytes": 4,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.1.film.weight:scales"
+    },
+    {
+      "bytes": 384,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.1.film.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.2.dw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.2.dw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.2.pw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.2.pw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.2.norm.weight"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.2.norm.bias"
+    },
+    {
+      "bytes": 24,
+      "claimed_gain_bytes": 0,
+      "kind": "prune_mask",
+      "name": "blocks.2.film.weight:mask"
+    },
+    {
+      "bytes": 4,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.2.film.weight:scales"
+    },
+    {
+      "bytes": 384,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.2.film.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.3.dw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.3.dw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.3.pw.weight:scales"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.3.pw.bias"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.3.norm.weight"
+    },
+    {
+      "bytes": 192,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.3.norm.bias"
+    },
+    {
+      "bytes": 24,
+      "claimed_gain_bytes": 0,
+      "kind": "prune_mask",
+      "name": "blocks.3.film.weight:mask"
+    },
+    {
+      "bytes": 4,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "blocks.3.film.weight:scales"
+    },
+    {
+      "bytes": 384,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "blocks.3.film.bias"
+    },
+    {
+      "bytes": 6,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_scales",
+      "name": "head.weight:scales"
+    },
+    {
+      "bytes": 6,
+      "claimed_gain_bytes": 0,
+      "kind": "fp16_tensor",
+      "name": "head.bias"
+    }
+  ],
+  "gate_pass": true,
+  "gate_scope": "supported empirical conditional estimates minus assumed shared-model budget; attainability must be priced separately",
+  "gate_threshold_bytes": 150,
+  "geometry": [
+    {
+      "bits": 4,
+      "codes": 480,
+      "marginal_mm_bits": 1836.4554891829941,
+      "name": "token_embed.weight",
+      "packed_bytes": 240,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shape": [
+        5,
+        96
+      ]
+    },
+    {
+      "bits": 3,
+      "codes": 4800,
+      "marginal_mm_bits": 9069.652357357321,
+      "name": "frame_embed.weight",
+      "packed_bytes": 1800,
+      "realized_rc1_bits": 9282.512718444943,
+      "shape": [
+        600,
+        8
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 9600,
+      "marginal_mm_bits": 31136.04170537678,
+      "name": "coord_mix.weight",
+      "packed_bytes": 4800,
+      "realized_rc1_bits": 30904.713724626476,
+      "shape": [
+        96,
+        100,
+        1,
+        1
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 864,
+      "marginal_mm_bits": 3373.26137954096,
+      "name": "blocks.0.dw.weight",
+      "packed_bytes": 432,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shape": [
+        96,
+        1,
+        3,
+        3
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 9216,
+      "marginal_mm_bits": 32320.031524225407,
+      "name": "blocks.0.pw.weight",
+      "packed_bytes": 4608,
+      "realized_rc1_bits": 32511.167842125913,
+      "shape": [
+        96,
+        96,
+        1,
+        1
+      ]
+    },
+    {
+      "bits": 3,
+      "codes": 1536,
+      "marginal_mm_bits": 4087.95242117514,
+      "name": "blocks.0.film.weight",
+      "packed_bytes": 576,
+      "realized_rc1_bits": 4180.868091160579,
+      "shape": [
+        192,
+        8
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 864,
+      "marginal_mm_bits": 3372.398326390557,
+      "name": "blocks.1.dw.weight",
+      "packed_bytes": 432,
+      "realized_rc1_bits": 3427.615170072463,
+      "shape": [
+        96,
+        1,
+        3,
+        3
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 9216,
+      "marginal_mm_bits": 32162.59077446693,
+      "name": "blocks.1.pw.weight",
+      "packed_bytes": 4608,
+      "realized_rc1_bits": 32362.05112414312,
+      "shape": [
+        96,
+        96,
+        1,
+        1
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 16,
+      "marginal_mm_bits": 57.73724018183687,
+      "name": "blocks.1.film.weight",
+      "packed_bytes": 8,
+      "realized_rc1_bits": 64.12974204080628,
+      "shape": [
+        192,
+        8
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 864,
+      "marginal_mm_bits": 3360.927502733541,
+      "name": "blocks.2.dw.weight",
+      "packed_bytes": 432,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shape": [
+        96,
+        1,
+        3,
+        3
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 9216,
+      "marginal_mm_bits": 31371.024132614293,
+      "name": "blocks.2.pw.weight",
+      "packed_bytes": 4608,
+      "realized_rc1_bits": 31661.612110646296,
+      "shape": [
+        96,
+        96,
+        1,
+        1
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 16,
+      "marginal_mm_bits": 57.73724018183687,
+      "name": "blocks.2.film.weight",
+      "packed_bytes": 8,
+      "realized_rc1_bits": 64.20914242938937,
+      "shape": [
+        192,
+        8
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 864,
+      "marginal_mm_bits": 3366.1784925681336,
+      "name": "blocks.3.dw.weight",
+      "packed_bytes": 432,
+      "realized_rc1_bits": 3430.381609845541,
+      "shape": [
+        96,
+        1,
+        3,
+        3
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 9216,
+      "marginal_mm_bits": 31577.850639400807,
+      "name": "blocks.3.pw.weight",
+      "packed_bytes": 4608,
+      "realized_rc1_bits": 31862.435180308956,
+      "shape": [
+        96,
+        96,
+        1,
+        1
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 16,
+      "marginal_mm_bits": 58.49212768400034,
+      "name": "blocks.3.film.weight",
+      "packed_bytes": 8,
+      "realized_rc1_bits": 64.34528657113611,
+      "shape": [
+        192,
+        8
+      ]
+    },
+    {
+      "bits": 4,
+      "codes": 2592,
+      "marginal_mm_bits": 7701.58534145662,
+      "name": "head.weight",
+      "packed_bytes": 1296,
+      "realized_rc1_bits": 7797.332697206382,
+      "shape": [
+        3,
+        96,
+        3,
+        3
+      ]
+    }
+  ],
+  "input_binding": {
+    "bytes": 31380,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+    "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+  },
+  "limitation": "MM is an asymptotic estimate, not a finite-sample or universal compressor ceiling; shared-model attainability and container delta are unmeasured",
+  "noncode_bytes": 7234,
+  "raw_body_bytes": 36130,
+  "rc1_logloss_bytes": 24544.02045507309,
+  "rc1_payload_bytes": 24548,
+  "schema": "ddm_sm1_context_bound.v1",
+  "score_claim": false,
+  "source_code": {
+    "bytes": 16350,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_sm1_semantic_bound.py",
+    "sha256": "3da404108768acddae26b97ad93ff6bdcaa7307c2dd6903c41dd1d1e81bf7933"
+  },
+  "table": [
+    {
+      "bound_bits_saved": 55.56151907289359,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 7.953865875562997,
+      "mm_bits": 1828.5016233074311,
+      "n": 480,
+      "net_bytes_standalone": -17.0548101158883,
+      "plugin_bits": 1788.1061621625402,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        3
+      ],
+      "supported_gain_bits": 35.37608046849323,
+      "supported_symbols": 360,
+      "tensor": "token_embed.weight"
+    },
+    {
+      "bound_bits_saved": 59.23709324152037,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 39.6741136244465,
+      "incremental_vs_marginal_mm_bits": 11.629440044189778,
+      "mm_bits": 1824.8260491388044,
+      "n": 480,
+      "net_bytes_standalone": -16.595363344809954,
+      "plugin_bits": 1785.1519355143578,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2,
+        1,
+        3
+      ],
+      "supported_gain_bits": 59.23709324152037,
+      "supported_symbols": 480,
+      "tensor": "token_embed.weight"
+    },
+    {
+      "bound_bits_saved": 101.86026528771572,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 126.9571635982288,
+      "incremental_vs_marginal_mm_bits": 54.25261209038513,
+      "mm_bits": 1782.202877092609,
+      "n": 480,
+      "net_bytes_standalone": -11.267466839035535,
+      "plugin_bits": 1655.2457134943802,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "token_embed.weight"
+    },
+    {
+      "bound_bits_saved": 61.64807208228012,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 30.296595858668233,
+      "incremental_vs_marginal_mm_bits": 14.040418884949531,
+      "mm_bits": 1822.4150702980446,
+      "n": 480,
+      "net_bytes_standalone": -16.293990989714985,
+      "plugin_bits": 1792.1184744393763,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2
+      ],
+      "supported_gain_bits": 42.4182253344261,
+      "supported_symbols": 438,
+      "tensor": "token_embed.weight"
+    },
+    {
+      "bound_bits_saved": 47.60765319733059,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 1836.4554891829941,
+      "n": 480,
+      "net_bytes_standalone": -18.049043350333676,
+      "plugin_bits": 1826.3566238967715,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 47.60765319733059,
+      "supported_symbols": 480,
+      "tensor": "token_embed.weight"
+    },
+    {
+      "bound_bits_saved": 47.60765319733059,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 1836.4554891829941,
+      "n": 480,
+      "net_bytes_standalone": -18.049043350333676,
+      "plugin_bits": 1826.3566238967715,
+      "realized_rc1_bits": 1884.0631423803247,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        4
+      ],
+      "supported_gain_bits": 47.60765319733059,
+      "supported_symbols": 480,
+      "tensor": "token_embed.weight"
+    },
+    {
+      "bound_bits_saved": 230.98190832298496,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 17.312340490667562,
+      "incremental_vs_marginal_mm_bits": 18.121547235363323,
+      "mm_bits": 9051.530810121958,
+      "n": 4800,
+      "net_bytes_standalone": 4.8727385403731205,
+      "plugin_bits": 9034.21846963129,
+      "realized_rc1_bits": 9282.512718444943,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 230.98190832298496,
+      "supported_symbols": 4800,
+      "tensor": "frame_embed.weight"
+    },
+    {
+      "bound_bits_saved": 249.0005239112943,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 17.312340490667562,
+      "incremental_vs_marginal_mm_bits": 36.140162823672654,
+      "mm_bits": 9033.512194533649,
+      "n": 4800,
+      "net_bytes_standalone": 7.125065488911787,
+      "plugin_bits": 9016.199854042981,
+      "realized_rc1_bits": 9282.512718444943,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "supported_gain_bits": 249.0005239112943,
+      "supported_symbols": 4800,
+      "tensor": "frame_embed.weight"
+    },
+    {
+      "bound_bits_saved": 216.5777595800373,
+      "cells": 8,
+      "context": "previous_row",
+      "correction_bits": 28.13255329733479,
+      "incremental_vs_marginal_mm_bits": 3.7173984924156684,
+      "mm_bits": 9065.934958864906,
+      "n": 4800,
+      "net_bytes_standalone": 3.0722199475046637,
+      "plugin_bits": 9037.80240556757,
+      "realized_rc1_bits": 9282.512718444943,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -1,
+        0,
+        1
+      ],
+      "supported_gain_bits": 181.20929262812297,
+      "supported_symbols": 4293,
+      "tensor": "frame_embed.weight"
+    },
+    {
+      "bound_bits_saved": 215.94796873940504,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 17.312340490667562,
+      "incremental_vs_marginal_mm_bits": 3.087607651783401,
+      "mm_bits": 9066.564749705538,
+      "n": 4800,
+      "net_bytes_standalone": 2.99349609242563,
+      "plugin_bits": 9049.25240921487,
+      "realized_rc1_bits": 9282.512718444943,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "supported_gain_bits": 215.94796873940504,
+      "supported_symbols": 4800,
+      "tensor": "frame_embed.weight"
+    },
+    {
+      "bound_bits_saved": 212.86036108762164,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 4.328085122666891,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 9069.652357357321,
+      "n": 4800,
+      "net_bytes_standalone": 2.607545135952705,
+      "plugin_bits": 9065.324272234655,
+      "realized_rc1_bits": 9282.512718444943,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 212.86036108762164,
+      "supported_symbols": 4800,
+      "tensor": "frame_embed.weight"
+    },
+    {
+      "bound_bits_saved": 212.86036108762164,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 4.328085122666891,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 9069.652357357321,
+      "n": 4800,
+      "net_bytes_standalone": 2.607545135952705,
+      "plugin_bits": 9065.324272234655,
+      "realized_rc1_bits": 9282.512718444943,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        4
+      ],
+      "supported_gain_bits": 212.86036108762164,
+      "supported_symbols": 4800,
+      "tensor": "frame_embed.weight"
+    },
+    {
+      "bound_bits_saved": -98.8183262761122,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 132.50965447419367,
+      "mm_bits": 31003.532050902588,
+      "n": 9600,
+      "net_bytes_standalone": -36.352290784514025,
+      "plugin_bits": 30963.136589757698,
+      "realized_rc1_bits": 30904.713724626476,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": -98.8183262761122,
+      "supported_symbols": 9600,
+      "tensor": "coord_mix.weight"
+    },
+    {
+      "bound_bits_saved": 1427.8387995778867,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 1659.1667803281925,
+      "mm_bits": 29476.87492504859,
+      "n": 9600,
+      "net_bytes_standalone": 154.47984994723583,
+      "plugin_bits": 29436.4794639037,
+      "realized_rc1_bits": 30904.713724626476,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2,
+        0
+      ],
+      "supported_gain_bits": 683.566258012821,
+      "supported_symbols": 4800,
+      "tensor": "coord_mix.weight"
+    },
+    {
+      "bound_bits_saved": -15.610501855197072,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 147.87624169111876,
+      "incremental_vs_marginal_mm_bits": 215.7174788951088,
+      "mm_bits": 30920.324226481673,
+      "n": 9600,
+      "net_bytes_standalone": -25.951312731899634,
+      "plugin_bits": 30772.447984790553,
+      "realized_rc1_bits": 30904.713724626476,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        2,
+        -3,
+        1,
+        0,
+        -2,
+        -4,
+        4
+      ],
+      "supported_gain_bits": -278.90318980297525,
+      "supported_symbols": 7470,
+      "tensor": "coord_mix.weight"
+    },
+    {
+      "bound_bits_saved": -174.81344458273816,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 38.231418583557534,
+      "incremental_vs_marginal_mm_bits": 56.51453616756771,
+      "mm_bits": 31079.527169209214,
+      "n": 9600,
+      "net_bytes_standalone": -45.85168057284227,
+      "plugin_bits": 31041.295750625657,
+      "realized_rc1_bits": 30904.713724626476,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2,
+        0,
+        1
+      ],
+      "supported_gain_bits": -182.82322849142292,
+      "supported_symbols": 9504,
+      "tensor": "coord_mix.weight"
+    },
+    {
+      "bound_bits_saved": -231.32798075030587,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 31136.04170537678,
+      "n": 9600,
+      "net_bytes_standalone": -52.915997593788234,
+      "plugin_bits": 31125.94284009056,
+      "realized_rc1_bits": 30904.713724626476,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": -231.32798075030587,
+      "supported_symbols": 9600,
+      "tensor": "coord_mix.weight"
+    },
+    {
+      "bound_bits_saved": -231.32798075030587,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 31136.04170537678,
+      "n": 9600,
+      "net_bytes_standalone": -52.915997593788234,
+      "plugin_bits": 31125.94284009056,
+      "realized_rc1_bits": 30904.713724626476,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        4
+      ],
+      "supported_gain_bits": -231.32798075030587,
+      "supported_symbols": 9600,
+      "tensor": "coord_mix.weight"
+    },
+    {
+      "bound_bits_saved": 52.43608995601653,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -5.454743284631604,
+      "mm_bits": 3378.716122825592,
+      "n": 864,
+      "net_bytes_standalone": -17.445488755497934,
+      "plugin_bits": 3338.320661680701,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 52.43608995601653,
+      "supported_symbols": 864,
+      "tensor": "blocks.0.dw.weight"
+    },
+    {
+      "bound_bits_saved": 54.25342683999179,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -3.637406400656346,
+      "mm_bits": 3376.8987859416166,
+      "n": 864,
+      "net_bytes_standalone": -17.218321645001026,
+      "plugin_bits": 3336.503324796726,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        2,
+        0,
+        1
+      ],
+      "supported_gain_bits": 54.25342683999179,
+      "supported_symbols": 864,
+      "tensor": "blocks.0.dw.weight"
+    },
+    {
+      "bound_bits_saved": 82.63952436547925,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 151.48297929334117,
+      "incremental_vs_marginal_mm_bits": 24.74869112483111,
+      "mm_bits": 3348.512688416129,
+      "n": 864,
+      "net_bytes_standalone": -13.670059454315094,
+      "plugin_bits": 3197.029709122788,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -7
+      ],
+      "supported_gain_bits": 14.229080724515029,
+      "supported_symbols": 75,
+      "tensor": "blocks.0.dw.weight"
+    },
+    {
+      "bound_bits_saved": 75.94190848760809,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 39.6741136244465,
+      "incremental_vs_marginal_mm_bits": 18.051075246959954,
+      "mm_bits": 3355.2103042940003,
+      "n": 864,
+      "net_bytes_standalone": -14.507261439048989,
+      "plugin_bits": 3315.536190669554,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        2,
+        0
+      ],
+      "supported_gain_bits": 71.23271721400943,
+      "supported_symbols": 815,
+      "tensor": "blocks.0.dw.weight"
+    },
+    {
+      "bound_bits_saved": 57.890833240648135,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3373.26137954096,
+      "n": 864,
+      "net_bytes_standalone": -16.763645844918983,
+      "plugin_bits": 3363.1625142547373,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 57.890833240648135,
+      "supported_symbols": 864,
+      "tensor": "blocks.0.dw.weight"
+    },
+    {
+      "bound_bits_saved": 57.890833240648135,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3373.26137954096,
+      "n": 864,
+      "net_bytes_standalone": -16.763645844918983,
+      "plugin_bits": 3363.1625142547373,
+      "realized_rc1_bits": 3431.1522127816083,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0
+      ],
+      "supported_gain_bits": 57.890833240648135,
+      "supported_symbols": 864,
+      "tensor": "blocks.0.dw.weight"
+    },
+    {
+      "bound_bits_saved": 193.87488318281612,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 2.7385652823104465,
+      "mm_bits": 32317.292958943097,
+      "n": 9216,
+      "net_bytes_standalone": 0.234360397852015,
+      "plugin_bits": 32276.897497798207,
+      "realized_rc1_bits": 32511.167842125913,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 193.87488318281612,
+      "supported_symbols": 9216,
+      "tensor": "blocks.0.pw.weight"
+    },
+    {
+      "bound_bits_saved": 601.8386023928906,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 410.70228449238493,
+      "mm_bits": 31909.329239733022,
+      "n": 9216,
+      "net_bytes_standalone": 51.229825299111326,
+      "plugin_bits": 31868.933778588133,
+      "realized_rc1_bits": 32511.167842125913,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 601.8386023928906,
+      "supported_symbols": 9216,
+      "tensor": "blocks.0.pw.weight"
+    },
+    {
+      "bound_bits_saved": 214.3793579310186,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 156.53241193645255,
+      "incremental_vs_marginal_mm_bits": 23.24304003051293,
+      "mm_bits": 32296.788484194894,
+      "n": 9216,
+      "net_bytes_standalone": 2.7974197413773254,
+      "plugin_bits": 32140.256072258442,
+      "realized_rc1_bits": 32511.167842125913,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -5,
+        2,
+        -1,
+        1,
+        -3,
+        -2,
+        -4,
+        4,
+        0,
+        5
+      ],
+      "supported_gain_bits": 164.7130464113543,
+      "supported_symbols": 7948,
+      "tensor": "blocks.0.pw.weight"
+    },
+    {
+      "bound_bits_saved": 191.79751564257094,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 38.952766104002016,
+      "incremental_vs_marginal_mm_bits": 0.6611977420652693,
+      "mm_bits": 32319.370326483342,
+      "n": 9216,
+      "net_bytes_standalone": -0.02531054467863214,
+      "plugin_bits": 32280.41756037934,
+      "realized_rc1_bits": 32511.167842125913,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        0,
+        2,
+        1
+      ],
+      "supported_gain_bits": 191.79751564257094,
+      "supported_symbols": 9216,
+      "tensor": "blocks.0.pw.weight"
+    },
+    {
+      "bound_bits_saved": 214.16657219834087,
+      "cells": 15,
+      "context": "dw_pw",
+      "correction_bits": 150.7616317728967,
+      "incremental_vs_marginal_mm_bits": 23.0302542978352,
+      "mm_bits": 32297.001269927572,
+      "n": 9216,
+      "net_bytes_standalone": 2.770821524792609,
+      "plugin_bits": 32146.239638154675,
+      "realized_rc1_bits": 32511.167842125913,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        4,
+        -7,
+        3,
+        -6,
+        -1,
+        5,
+        7,
+        0,
+        -2,
+        -3,
+        -5
+      ],
+      "supported_gain_bits": 197.83132933201705,
+      "supported_symbols": 7584,
+      "tensor": "blocks.0.pw.weight"
+    },
+    {
+      "bound_bits_saved": 191.13631790050567,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 32320.031524225407,
+      "n": 9216,
+      "net_bytes_standalone": -0.1079602624367908,
+      "plugin_bits": 32309.932658939186,
+      "realized_rc1_bits": 32511.167842125913,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0
+      ],
+      "supported_gain_bits": 191.13631790050567,
+      "supported_symbols": 9216,
+      "tensor": "blocks.0.pw.weight"
+    },
+    {
+      "bound_bits_saved": 108.07376164794914,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 17.312340490667562,
+      "incremental_vs_marginal_mm_bits": 15.158091662510287,
+      "mm_bits": 4072.7943295126297,
+      "n": 1536,
+      "net_bytes_standalone": -10.490779794006357,
+      "plugin_bits": 4055.4819890219624,
+      "realized_rc1_bits": 4180.868091160579,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 108.07376164794914,
+      "supported_symbols": 1536,
+      "tensor": "blocks.0.film.weight"
+    },
+    {
+      "bound_bits_saved": 109.27459126507347,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 17.312340490667562,
+      "incremental_vs_marginal_mm_bits": 16.358921279634615,
+      "mm_bits": 4071.5934998955054,
+      "n": 1536,
+      "net_bytes_standalone": -10.340676091865816,
+      "plugin_bits": 4054.281159404838,
+      "realized_rc1_bits": 4180.868091160579,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1,
+        0,
+        2,
+        3
+      ],
+      "supported_gain_bits": 109.27459126507347,
+      "supported_symbols": 1536,
+      "tensor": "blocks.0.film.weight"
+    },
+    {
+      "bound_bits_saved": 89.15960993828367,
+      "cells": 8,
+      "context": "previous_row",
+      "correction_bits": 33.18198594044616,
+      "incremental_vs_marginal_mm_bits": -3.756060047155188,
+      "mm_bits": 4091.708481222295,
+      "n": 1536,
+      "net_bytes_standalone": -12.855048757714542,
+      "plugin_bits": 4058.526495281849,
+      "realized_rc1_bits": 4180.868091160579,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1,
+        0,
+        -2,
+        -1,
+        3,
+        2,
+        -3
+      ],
+      "supported_gain_bits": 85.42649578833243,
+      "supported_symbols": 1528,
+      "tensor": "blocks.0.film.weight"
+    },
+    {
+      "bound_bits_saved": 104.43734447513089,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 17.312340490667562,
+      "incremental_vs_marginal_mm_bits": 11.521674489692032,
+      "mm_bits": 4076.430746685448,
+      "n": 1536,
+      "net_bytes_standalone": -10.94533194060864,
+      "plugin_bits": 4059.1184061947806,
+      "realized_rc1_bits": 4180.868091160579,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        2,
+        1,
+        0
+      ],
+      "supported_gain_bits": 104.43734447513089,
+      "supported_symbols": 1536,
+      "tensor": "blocks.0.film.weight"
+    },
+    {
+      "bound_bits_saved": 92.91566998543885,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 4.328085122666891,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 4087.95242117514,
+      "n": 1536,
+      "net_bytes_standalone": -12.385541251820143,
+      "plugin_bits": 4083.624336052473,
+      "realized_rc1_bits": 4180.868091160579,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 92.91566998543885,
+      "supported_symbols": 1536,
+      "tensor": "blocks.0.film.weight"
+    },
+    {
+      "bound_bits_saved": 92.91566998543885,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 4.328085122666891,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 4087.95242117514,
+      "n": 1536,
+      "net_bytes_standalone": -12.385541251820143,
+      "plugin_bits": 4083.624336052473,
+      "realized_rc1_bits": 4180.868091160579,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0
+      ],
+      "supported_gain_bits": 92.91566998543885,
+      "supported_symbols": 1536,
+      "tensor": "blocks.0.film.weight"
+    },
+    {
+      "bound_bits_saved": 50.43847900075889,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -4.778364681147195,
+      "mm_bits": 3377.176691071704,
+      "n": 864,
+      "net_bytes_standalone": -17.69519012490514,
+      "plugin_bits": 3336.7812299268135,
+      "realized_rc1_bits": 3427.615170072463,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 50.43847900075889,
+      "supported_symbols": 864,
+      "tensor": "blocks.1.dw.weight"
+    },
+    {
+      "bound_bits_saved": 47.44099109043191,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -7.775852591474177,
+      "mm_bits": 3380.174178982031,
+      "n": 864,
+      "net_bytes_standalone": -18.06987611369601,
+      "plugin_bits": 3339.7787178371404,
+      "realized_rc1_bits": 3427.615170072463,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2,
+        0,
+        3,
+        1
+      ],
+      "supported_gain_bits": 47.44099109043191,
+      "supported_symbols": 864,
+      "tensor": "blocks.1.dw.weight"
+    },
+    {
+      "bound_bits_saved": 72.93450722231228,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 152.20432681378566,
+      "incremental_vs_marginal_mm_bits": 17.717663540406193,
+      "mm_bits": 3354.680662850151,
+      "n": 864,
+      "net_bytes_standalone": -14.883186597210965,
+      "plugin_bits": 3202.4763360363654,
+      "realized_rc1_bits": 3427.615170072463,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.dw.weight"
+    },
+    {
+      "bound_bits_saved": 62.53501634256645,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 39.6741136244465,
+      "incremental_vs_marginal_mm_bits": 7.318172660660366,
+      "mm_bits": 3365.0801537298967,
+      "n": 864,
+      "net_bytes_standalone": -16.183122957179194,
+      "plugin_bits": 3325.4060401054503,
+      "realized_rc1_bits": 3427.615170072463,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3,
+        0,
+        2
+      ],
+      "supported_gain_bits": 57.74906328295765,
+      "supported_symbols": 816,
+      "tensor": "blocks.1.dw.weight"
+    },
+    {
+      "bound_bits_saved": 55.216843681906084,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3372.398326390557,
+      "n": 864,
+      "net_bytes_standalone": -17.09789453976174,
+      "plugin_bits": 3362.299461104334,
+      "realized_rc1_bits": 3427.615170072463,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 55.216843681906084,
+      "supported_symbols": 864,
+      "tensor": "blocks.1.dw.weight"
+    },
+    {
+      "bound_bits_saved": 55.216843681906084,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3372.398326390557,
+      "n": 864,
+      "net_bytes_standalone": -17.09789453976174,
+      "plugin_bits": 3362.299461104334,
+      "realized_rc1_bits": 3427.615170072463,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1
+      ],
+      "supported_gain_bits": 55.216843681906084,
+      "supported_symbols": 864,
+      "tensor": "blocks.1.dw.weight"
+    },
+    {
+      "bound_bits_saved": 198.457461671107,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -1.0028880050813314,
+      "mm_bits": 32163.593662472013,
+      "n": 9216,
+      "net_bytes_standalone": 0.8071827088883765,
+      "plugin_bits": 32123.198201327123,
+      "realized_rc1_bits": 32362.05112414312,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 198.457461671107,
+      "supported_symbols": 9216,
+      "tensor": "blocks.1.pw.weight"
+    },
+    {
+      "bound_bits_saved": 475.32442697010265,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 275.8640772939143,
+      "mm_bits": 31886.726697173017,
+      "n": 9216,
+      "net_bytes_standalone": 35.41555337126283,
+      "plugin_bits": 31846.331236028127,
+      "realized_rc1_bits": 32362.05112414312,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1,
+        2,
+        0,
+        3
+      ],
+      "supported_gain_bits": 475.32442697010265,
+      "supported_symbols": 9216,
+      "tensor": "blocks.1.pw.weight"
+    },
+    {
+      "bound_bits_saved": 233.08891004233374,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 155.81106441600807,
+      "incremental_vs_marginal_mm_bits": 33.62856036614539,
+      "mm_bits": 32128.962214100786,
+      "n": 9216,
+      "net_bytes_standalone": 5.136113755291717,
+      "plugin_bits": 31973.151149684778,
+      "realized_rc1_bits": 32362.05112414312,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -2,
+        -1,
+        3,
+        0,
+        -5,
+        1,
+        4,
+        2,
+        -4,
+        -3
+      ],
+      "supported_gain_bits": 165.8104121688666,
+      "supported_symbols": 8496,
+      "tensor": "blocks.1.pw.weight"
+    },
+    {
+      "bound_bits_saved": 210.6723899892495,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 38.231418583557534,
+      "incremental_vs_marginal_mm_bits": 11.212040313061152,
+      "mm_bits": 32151.37873415387,
+      "n": 9216,
+      "net_bytes_standalone": 2.334048748656187,
+      "plugin_bits": 32113.147315570313,
+      "realized_rc1_bits": 32362.05112414312,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2,
+        1
+      ],
+      "supported_gain_bits": 207.64661860108026,
+      "supported_symbols": 9120,
+      "tensor": "blocks.1.pw.weight"
+    },
+    {
+      "bound_bits_saved": 209.57297277758698,
+      "cells": 15,
+      "context": "dw_pw",
+      "correction_bits": 151.48297929334117,
+      "incremental_vs_marginal_mm_bits": 10.11262310139864,
+      "mm_bits": 32152.478151365533,
+      "n": 9216,
+      "net_bytes_standalone": 2.196621597198373,
+      "plugin_bits": 32000.99517207219,
+      "realized_rc1_bits": 32362.05112414312,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        6,
+        -7,
+        -2,
+        -6,
+        4,
+        -4,
+        -5,
+        0,
+        1,
+        3,
+        -1
+      ],
+      "supported_gain_bits": 152.70202774768768,
+      "supported_symbols": 7008,
+      "tensor": "blocks.1.pw.weight"
+    },
+    {
+      "bound_bits_saved": 199.46034967618834,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 32162.59077446693,
+      "n": 9216,
+      "net_bytes_standalone": 0.9325437095235429,
+      "plugin_bits": 32152.49190918071,
+      "realized_rc1_bits": 32362.05112414312,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1
+      ],
+      "supported_gain_bits": 199.46034967618834,
+      "supported_symbols": 9216,
+      "tensor": "blocks.1.pw.weight"
+    },
+    {
+      "bound_bits_saved": 34.35896187725042,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 5.7707801635558535,
+      "incremental_vs_marginal_mm_bits": 27.966460018281012,
+      "mm_bits": 29.770780163555855,
+      "n": 16,
+      "net_bytes_standalone": -19.7051297653437,
+      "plugin_bits": 24.0,
+      "realized_rc1_bits": 64.12974204080628,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.film.weight"
+    },
+    {
+      "bound_bits_saved": 8.752224275028013,
+      "cells": 2,
+      "context": "scale_bucket",
+      "correction_bits": 9.377517765778263,
+      "incremental_vs_marginal_mm_bits": 2.3597224160586023,
+      "mm_bits": 55.377517765778265,
+      "n": 16,
+      "net_bytes_standalone": -22.905971965621497,
+      "plugin_bits": 46.0,
+      "realized_rc1_bits": 64.12974204080628,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.film.weight"
+    },
+    {
+      "bound_bits_saved": 6.3925018589694105,
+      "cells": 1,
+      "context": "previous_row",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 57.73724018183687,
+      "n": 16,
+      "net_bytes_standalone": -23.200937267628824,
+      "plugin_bits": 51.24511249783653,
+      "realized_rc1_bits": 64.12974204080628,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.film.weight"
+    },
+    {
+      "bound_bits_saved": 26.509894879794764,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 7.213475204444817,
+      "incremental_vs_marginal_mm_bits": 20.117393020825354,
+      "mm_bits": 37.61984716101151,
+      "n": 16,
+      "net_bytes_standalone": -20.686263140025655,
+      "plugin_bits": 30.406371956566694,
+      "realized_rc1_bits": 64.12974204080628,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.film.weight"
+    },
+    {
+      "bound_bits_saved": 6.3925018589694105,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 57.73724018183687,
+      "n": 16,
+      "net_bytes_standalone": -23.200937267628824,
+      "plugin_bits": 51.24511249783653,
+      "realized_rc1_bits": 64.12974204080628,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.film.weight"
+    },
+    {
+      "bound_bits_saved": 6.3925018589694105,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 57.73724018183687,
+      "n": 16,
+      "net_bytes_standalone": -23.200937267628824,
+      "plugin_bits": 51.24511249783653,
+      "realized_rc1_bits": 64.12974204080628,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.1.film.weight"
+    },
+    {
+      "bound_bits_saved": 67.70304397604787,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 5.0567009088053965,
+      "mm_bits": 3355.8708018247357,
+      "n": 864,
+      "net_bytes_standalone": -15.537119502994017,
+      "plugin_bits": 3315.475340679845,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 67.70304397604787,
+      "supported_symbols": 864,
+      "tensor": "blocks.2.dw.weight"
+    },
+    {
+      "bound_bits_saved": 65.54386606687103,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 2.8975229996285634,
+      "mm_bits": 3358.0299797339126,
+      "n": 864,
+      "net_bytes_standalone": -15.807016741641121,
+      "plugin_bits": 3317.634518589022,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        3,
+        2,
+        1
+      ],
+      "supported_gain_bits": 65.54386606687103,
+      "supported_symbols": 864,
+      "tensor": "blocks.2.dw.weight"
+    },
+    {
+      "bound_bits_saved": 58.86858825501304,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 153.64702185467462,
+      "incremental_vs_marginal_mm_bits": -3.777754812229432,
+      "mm_bits": 3364.7052575457706,
+      "n": 864,
+      "net_bytes_standalone": -16.64142646812337,
+      "plugin_bits": 3211.058235691096,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -7
+      ],
+      "supported_gain_bits": 9.525308088743941,
+      "supported_symbols": 84,
+      "tensor": "blocks.2.dw.weight"
+    },
+    {
+      "bound_bits_saved": 70.65499619396041,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 8.008653126717945,
+      "mm_bits": 3352.918849606823,
+      "n": 864,
+      "net_bytes_standalone": -15.168125475754948,
+      "plugin_bits": 3312.5233884619324,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2
+      ],
+      "supported_gain_bits": 58.94252713345895,
+      "supported_symbols": 709,
+      "tensor": "blocks.2.dw.weight"
+    },
+    {
+      "bound_bits_saved": 62.64634306724247,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3360.927502733541,
+      "n": 864,
+      "net_bytes_standalone": -16.16920711659469,
+      "plugin_bits": 3350.828637447318,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 62.64634306724247,
+      "supported_symbols": 864,
+      "tensor": "blocks.2.dw.weight"
+    },
+    {
+      "bound_bits_saved": 62.64634306724247,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3360.927502733541,
+      "n": 864,
+      "net_bytes_standalone": -16.16920711659469,
+      "plugin_bits": 3350.828637447318,
+      "realized_rc1_bits": 3423.5738458007836,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2
+      ],
+      "supported_gain_bits": 62.64634306724247,
+      "supported_symbols": 864,
+      "tensor": "blocks.2.dw.weight"
+    },
+    {
+      "bound_bits_saved": 292.3127824185867,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 1.7248043865838554,
+      "mm_bits": 31369.29932822771,
+      "n": 9216,
+      "net_bytes_standalone": 12.53909780232334,
+      "plugin_bits": 31328.90386708282,
+      "realized_rc1_bits": 31661.612110646296,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 292.3127824185867,
+      "supported_symbols": 9216,
+      "tensor": "blocks.2.pw.weight"
+    },
+    {
+      "bound_bits_saved": 363.3110203469332,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 72.72304231493035,
+      "mm_bits": 31298.301090299363,
+      "n": 9216,
+      "net_bytes_standalone": 21.413877543366652,
+      "plugin_bits": 31257.905629154473,
+      "realized_rc1_bits": 31661.612110646296,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2,
+        3,
+        1,
+        0
+      ],
+      "supported_gain_bits": 363.3110203469332,
+      "supported_symbols": 9216,
+      "tensor": "blocks.2.pw.weight"
+    },
+    {
+      "bound_bits_saved": 338.5886893243078,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 157.9751069773415,
+      "incremental_vs_marginal_mm_bits": 48.00071129230491,
+      "mm_bits": 31323.02342132199,
+      "n": 9216,
+      "net_bytes_standalone": 18.323586165538472,
+      "plugin_bits": 31165.048314344647,
+      "realized_rc1_bits": 31661.612110646296,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -4,
+        -1,
+        -2,
+        2,
+        -3,
+        0,
+        3,
+        1,
+        -5,
+        5,
+        4,
+        6
+      ],
+      "supported_gain_bits": 278.65950291091576,
+      "supported_symbols": 8790,
+      "tensor": "blocks.2.pw.weight"
+    },
+    {
+      "bound_bits_saved": 287.2554448511328,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 38.952766104002016,
+      "incremental_vs_marginal_mm_bits": -3.3325331808700867,
+      "mm_bits": 31374.356665795163,
+      "n": 9216,
+      "net_bytes_standalone": 11.906930606391597,
+      "plugin_bits": 31335.403899691162,
+      "realized_rc1_bits": 31661.612110646296,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2,
+        1
+      ],
+      "supported_gain_bits": 283.89663764340366,
+      "supported_symbols": 9120,
+      "tensor": "blocks.2.pw.weight"
+    },
+    {
+      "bound_bits_saved": 375.3840873452209,
+      "cells": 15,
+      "context": "dw_pw",
+      "correction_bits": 151.48297929334117,
+      "incremental_vs_marginal_mm_bits": 84.79610931321804,
+      "mm_bits": 31286.228023301075,
+      "n": 9216,
+      "net_bytes_standalone": 22.923010918152613,
+      "plugin_bits": 31134.745044007734,
+      "realized_rc1_bits": 31661.612110646296,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -7,
+        6,
+        0,
+        3,
+        -5,
+        -4,
+        -6,
+        -3,
+        7,
+        1,
+        5,
+        4,
+        2,
+        -1
+      ],
+      "supported_gain_bits": 359.48905798537817,
+      "supported_symbols": 8832,
+      "tensor": "blocks.2.pw.weight"
+    },
+    {
+      "bound_bits_saved": 290.58797803200287,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 31371.024132614293,
+      "n": 9216,
+      "net_bytes_standalone": 12.323497254000358,
+      "plugin_bits": 31360.92526732807,
+      "realized_rc1_bits": 31661.612110646296,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2
+      ],
+      "supported_gain_bits": 290.58797803200287,
+      "supported_symbols": 9216,
+      "tensor": "blocks.2.pw.weight"
+    },
+    {
+      "bound_bits_saved": 26.274319704500073,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 7.934822724889299,
+      "incremental_vs_marginal_mm_bits": 19.802417456947566,
+      "mm_bits": 37.9348227248893,
+      "n": 16,
+      "net_bytes_standalone": -20.71571003693749,
+      "plugin_bits": 30.0,
+      "realized_rc1_bits": 64.20914242938937,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.2.film.weight"
+    },
+    {
+      "bound_bits_saved": 14.274319704500073,
+      "cells": 2,
+      "context": "scale_bucket",
+      "correction_bits": 7.934822724889299,
+      "incremental_vs_marginal_mm_bits": 7.802417456947566,
+      "mm_bits": 49.9348227248893,
+      "n": 16,
+      "net_bytes_standalone": -22.21571003693749,
+      "plugin_bits": 42.0,
+      "realized_rc1_bits": 64.20914242938937,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.2.film.weight"
+    },
+    {
+      "bound_bits_saved": 6.4719022475525065,
+      "cells": 1,
+      "context": "previous_row",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 57.73724018183687,
+      "n": 16,
+      "net_bytes_standalone": -23.191012219055935,
+      "plugin_bits": 51.24511249783653,
+      "realized_rc1_bits": 64.20914242938937,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.2.film.weight"
+    },
+    {
+      "bound_bits_saved": 15.41400669663797,
+      "cells": 3,
+      "context": "left_sign",
+      "correction_bits": 8.656170245333781,
+      "incremental_vs_marginal_mm_bits": 8.942104449085463,
+      "mm_bits": 48.795135732751405,
+      "n": 16,
+      "net_bytes_standalone": -22.073249162920256,
+      "plugin_bits": 40.13896548741762,
+      "realized_rc1_bits": 64.20914242938937,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.2.film.weight"
+    },
+    {
+      "bound_bits_saved": 6.4719022475525065,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 57.73724018183687,
+      "n": 16,
+      "net_bytes_standalone": -23.191012219055935,
+      "plugin_bits": 51.24511249783653,
+      "realized_rc1_bits": 64.20914242938937,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.2.film.weight"
+    },
+    {
+      "bound_bits_saved": 6.4719022475525065,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 57.73724018183687,
+      "n": 16,
+      "net_bytes_standalone": -23.191012219055935,
+      "plugin_bits": 51.24511249783653,
+      "realized_rc1_bits": 64.20914242938937,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.2.film.weight"
+    },
+    {
+      "bound_bits_saved": 59.753881695565724,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -4.449235581841549,
+      "mm_bits": 3370.627728149975,
+      "n": 864,
+      "net_bytes_standalone": -16.530764788054285,
+      "plugin_bits": 3330.2322670050844,
+      "realized_rc1_bits": 3430.381609845541,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 59.753881695565724,
+      "supported_symbols": 864,
+      "tensor": "blocks.3.dw.weight"
+    },
+    {
+      "bound_bits_saved": 61.3006475068878,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": -2.902469770519474,
+      "mm_bits": 3369.080962338653,
+      "n": 864,
+      "net_bytes_standalone": -16.337419061639025,
+      "plugin_bits": 3328.6855011937623,
+      "realized_rc1_bits": 3430.381609845541,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        3,
+        1,
+        2
+      ],
+      "supported_gain_bits": 61.3006475068878,
+      "supported_symbols": 864,
+      "tensor": "blocks.3.dw.weight"
+    },
+    {
+      "bound_bits_saved": 154.35458751020724,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 144.26950408889635,
+      "incremental_vs_marginal_mm_bits": 90.15147023279997,
+      "mm_bits": 3276.0270223353336,
+      "n": 864,
+      "net_bytes_standalone": -4.705676561224095,
+      "plugin_bits": 3131.7575182464375,
+      "realized_rc1_bits": 3430.381609845541,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.dw.weight"
+    },
+    {
+      "bound_bits_saved": 68.38211090783216,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 4.178993630424884,
+      "mm_bits": 3361.9994989377087,
+      "n": 864,
+      "net_bytes_standalone": -15.45223613652098,
+      "plugin_bits": 3321.604037792818,
+      "realized_rc1_bits": 3430.381609845541,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2
+      ],
+      "supported_gain_bits": 49.08273126389531,
+      "supported_symbols": 711,
+      "tensor": "blocks.3.dw.weight"
+    },
+    {
+      "bound_bits_saved": 64.20311727740727,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3366.1784925681336,
+      "n": 864,
+      "net_bytes_standalone": -15.97461034032409,
+      "plugin_bits": 3356.0796272819107,
+      "realized_rc1_bits": 3430.381609845541,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 64.20311727740727,
+      "supported_symbols": 864,
+      "tensor": "blocks.3.dw.weight"
+    },
+    {
+      "bound_bits_saved": 64.20311727740727,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 3366.1784925681336,
+      "n": 864,
+      "net_bytes_standalone": -15.97461034032409,
+      "plugin_bits": 3356.0796272819107,
+      "realized_rc1_bits": 3430.381609845541,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3
+      ],
+      "supported_gain_bits": 64.20311727740727,
+      "supported_symbols": 864,
+      "tensor": "blocks.3.dw.weight"
+    },
+    {
+      "bound_bits_saved": 318.6630999452864,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 34.07855903713789,
+      "mm_bits": 31543.77208036367,
+      "n": 9216,
+      "net_bytes_standalone": 15.832887493160797,
+      "plugin_bits": 31503.37661921878,
+      "realized_rc1_bits": 31862.435180308956,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "supported_gain_bits": 318.6630999452864,
+      "supported_symbols": 9216,
+      "tensor": "blocks.3.pw.weight"
+    },
+    {
+      "bound_bits_saved": 339.30488366296413,
+      "cells": 4,
+      "context": "scale_bucket",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 54.72034275481565,
+      "mm_bits": 31523.13029664599,
+      "n": 9216,
+      "net_bytes_standalone": 18.413110457870516,
+      "plugin_bits": 31482.7348355011,
+      "realized_rc1_bits": 31862.435180308956,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1,
+        0,
+        2,
+        3
+      ],
+      "supported_gain_bits": 339.30488366296413,
+      "supported_symbols": 9216,
+      "tensor": "blocks.3.pw.weight"
+    },
+    {
+      "bound_bits_saved": 337.8491300059941,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 159.41780201823047,
+      "incremental_vs_marginal_mm_bits": 53.2645890978456,
+      "mm_bits": 31524.58605030296,
+      "n": 9216,
+      "net_bytes_standalone": 18.23114125074926,
+      "plugin_bits": 31365.16824828473,
+      "realized_rc1_bits": 31862.435180308956,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -3,
+        2,
+        3,
+        1,
+        0,
+        4,
+        -2,
+        -1,
+        -4,
+        -5,
+        -7
+      ],
+      "supported_gain_bits": 283.8391687211588,
+      "supported_symbols": 8612,
+      "tensor": "blocks.3.pw.weight"
+    },
+    {
+      "bound_bits_saved": 286.79799317554716,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 40.39546114489098,
+      "incremental_vs_marginal_mm_bits": 2.2134522673986794,
+      "mm_bits": 31575.63718713341,
+      "n": 9216,
+      "net_bytes_standalone": 11.849749146943395,
+      "plugin_bits": 31535.24172598852,
+      "realized_rc1_bits": 31862.435180308956,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        0,
+        2,
+        1
+      ],
+      "supported_gain_bits": 281.5070591235235,
+      "supported_symbols": 9120,
+      "tensor": "blocks.3.pw.weight"
+    },
+    {
+      "bound_bits_saved": 447.67389877691676,
+      "cells": 15,
+      "context": "dw_pw",
+      "correction_bits": 147.15489417067428,
+      "incremental_vs_marginal_mm_bits": 163.08935786876827,
+      "mm_bits": 31414.76128153204,
+      "n": 9216,
+      "net_bytes_standalone": 31.959237347114595,
+      "plugin_bits": 31267.606387361364,
+      "realized_rc1_bits": 31862.435180308956,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -4,
+        6,
+        -1,
+        -7,
+        2,
+        -5,
+        4,
+        -2,
+        3,
+        7,
+        0,
+        1
+      ],
+      "supported_gain_bits": 350.0116915944018,
+      "supported_symbols": 8448,
+      "tensor": "blocks.3.pw.weight"
+    },
+    {
+      "bound_bits_saved": 284.5845409081485,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 31577.850639400807,
+      "n": 9216,
+      "net_bytes_standalone": 11.57306761351856,
+      "plugin_bits": 31567.751774114586,
+      "realized_rc1_bits": 31862.435180308956,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        3
+      ],
+      "supported_gain_bits": 284.5845409081485,
+      "supported_symbols": 9216,
+      "tensor": "blocks.3.pw.weight"
+    },
+    {
+      "bound_bits_saved": 26.410463846246813,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 7.934822724889299,
+      "incremental_vs_marginal_mm_bits": 20.557304959111036,
+      "mm_bits": 37.9348227248893,
+      "n": 16,
+      "net_bytes_standalone": -20.69869201921915,
+      "plugin_bits": 30.0,
+      "realized_rc1_bits": 64.34528657113611,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.film.weight"
+    },
+    {
+      "bound_bits_saved": 11.689116325802331,
+      "cells": 2,
+      "context": "scale_bucket",
+      "correction_bits": 8.656170245333781,
+      "incremental_vs_marginal_mm_bits": 5.835957438666554,
+      "mm_bits": 52.65617024533378,
+      "n": 16,
+      "net_bytes_standalone": -22.53886045927471,
+      "plugin_bits": 44.0,
+      "realized_rc1_bits": 64.34528657113611,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.film.weight"
+    },
+    {
+      "bound_bits_saved": 5.853158887135777,
+      "cells": 1,
+      "context": "previous_row",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 58.49212768400034,
+      "n": 16,
+      "net_bytes_standalone": -23.268355139108028,
+      "plugin_bits": 52.0,
+      "realized_rc1_bits": 64.34528657113611,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.film.weight"
+    },
+    {
+      "bound_bits_saved": 27.271537498773803,
+      "cells": 3,
+      "context": "left_sign",
+      "correction_bits": 5.7707801635558535,
+      "incremental_vs_marginal_mm_bits": 21.418378611638026,
+      "mm_bits": 37.07374907236231,
+      "n": 16,
+      "net_bytes_standalone": -20.591057812653276,
+      "plugin_bits": 31.302968908806456,
+      "realized_rc1_bits": 64.34528657113611,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.film.weight"
+    },
+    {
+      "bound_bits_saved": 5.853158887135777,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 58.49212768400034,
+      "n": 16,
+      "net_bytes_standalone": -23.268355139108028,
+      "plugin_bits": 52.0,
+      "realized_rc1_bits": 64.34528657113611,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.film.weight"
+    },
+    {
+      "bound_bits_saved": 5.853158887135777,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 6.4921276840003355,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 58.49212768400034,
+      "n": 16,
+      "net_bytes_standalone": -23.268355139108028,
+      "plugin_bits": 52.0,
+      "realized_rc1_bits": 64.34528657113611,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "blocks.3.film.weight"
+    },
+    {
+      "bound_bits_saved": 121.91439257498223,
+      "cells": 4,
+      "context": "row_position",
+      "correction_bits": 35.34602850177961,
+      "incremental_vs_marginal_mm_bits": 26.16703682521984,
+      "mm_bits": 7675.4183046314,
+      "n": 2592,
+      "net_bytes_standalone": -8.760700928127221,
+      "plugin_bits": 7640.07227612962,
+      "realized_rc1_bits": 7797.332697206382,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        1
+      ],
+      "supported_gain_bits": 11.911056306971204,
+      "supported_symbols": 648,
+      "tensor": "head.weight"
+    },
+    {
+      "bound_bits_saved": 248.10794321032063,
+      "cells": 3,
+      "context": "scale_bucket",
+      "correction_bits": 27.411205776890306,
+      "incremental_vs_marginal_mm_bits": 152.36058746055824,
+      "mm_bits": 7549.224753996062,
+      "n": 2592,
+      "net_bytes_standalone": 7.013492901290078,
+      "plugin_bits": 7521.813548219171,
+      "realized_rc1_bits": 7797.332697206382,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [],
+      "supported_gain_bits": 0.0,
+      "supported_symbols": 0,
+      "tensor": "head.weight"
+    },
+    {
+      "bound_bits_saved": 347.4978005401499,
+      "cells": 16,
+      "context": "previous_row",
+      "correction_bits": 86.56170245333782,
+      "incremental_vs_marginal_mm_bits": 251.75044479038752,
+      "mm_bits": 7449.834896666232,
+      "n": 2592,
+      "net_bytes_standalone": 19.43722506751874,
+      "plugin_bits": 7363.273194212895,
+      "realized_rc1_bits": 7797.332697206382,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        -1
+      ],
+      "supported_gain_bits": 32.96339308699294,
+      "supported_symbols": 346,
+      "tensor": "head.weight"
+    },
+    {
+      "bound_bits_saved": 111.20984045513342,
+      "cells": 4,
+      "context": "left_sign",
+      "correction_bits": 28.132553297334788,
+      "incremental_vs_marginal_mm_bits": 15.462484705371025,
+      "mm_bits": 7686.122856751249,
+      "n": 2592,
+      "net_bytes_standalone": -10.098769943108323,
+      "plugin_bits": 7657.990303453914,
+      "realized_rc1_bits": 7797.332697206382,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        2,
+        0
+      ],
+      "supported_gain_bits": 75.44934757421652,
+      "supported_symbols": 2043,
+      "tensor": "head.weight"
+    },
+    {
+      "bound_bits_saved": 95.74735574976239,
+      "cells": 1,
+      "context": "dw_pw",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 7701.58534145662,
+      "n": 2592,
+      "net_bytes_standalone": -12.031580531279701,
+      "plugin_bits": 7691.4864761703975,
+      "realized_rc1_bits": 7797.332697206382,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        99
+      ],
+      "supported_gain_bits": 95.74735574976239,
+      "supported_symbols": 2592,
+      "tensor": "head.weight"
+    },
+    {
+      "bound_bits_saved": 95.74735574976239,
+      "cells": 1,
+      "context": "block_depth",
+      "correction_bits": 10.098865286222745,
+      "incremental_vs_marginal_mm_bits": 0.0,
+      "mm_bits": 7701.58534145662,
+      "n": 2592,
+      "net_bytes_standalone": -12.031580531279701,
+      "plugin_bits": 7691.4864761703975,
+      "realized_rc1_bits": 7797.332697206382,
+      "shared_parameter_bytes": 24,
+      "supported_contexts": [
+        4
+      ],
+      "supported_gain_bits": 95.74735574976239,
+      "supported_symbols": 2592,
+      "tensor": "head.weight"
+    }
+  ],
+  "totals": [
+    {
+      "context": "row_position",
+      "counted_weights_bytes": 24,
+      "header_increment_bytes": 2,
+      "mm_gain_bytes": 217.29959032711002,
+      "net_estimate_bytes": 191.29959032711002,
+      "supported_gain_bytes": 190.14552528955895,
+      "supported_oracle_net_bytes": 164.14552528955895,
+      "supported_symbols": 57264
+    },
+    {
+      "context": "scale_bucket",
+      "counted_weights_bytes": 24,
+      "header_increment_bytes": 2,
+      "mm_gain_bytes": 517.0615595485624,
+      "net_estimate_bytes": 491.0615595485624,
+      "supported_gain_bytes": 388.67454141347275,
+      "supported_oracle_net_bytes": 362.67454141347275,
+      "supported_symbols": 51936
+    },
+    {
+      "context": "previous_row",
+      "counted_weights_bytes": 24,
+      "header_increment_bytes": 2,
+      "mm_gain_bytes": 281.36322389266417,
+      "net_estimate_bytes": 255.36322389266417,
+      "supported_gain_bytes": 117.18406384075344,
+      "supported_oracle_net_bytes": 91.18406384075344,
+      "supported_symbols": 47642
+    },
+    {
+      "context": "left_sign",
+      "counted_weights_bytes": 24,
+      "header_increment_bytes": 2,
+      "mm_gain_bytes": 205.20782447936068,
+      "net_estimate_bytes": 179.20782447936068,
+      "supported_gain_bytes": 182.16056594208192,
+      "supported_oracle_net_bytes": 156.16056594208192,
+      "supported_symbols": 57948
+    },
+    {
+      "context": "dw_pw",
+      "counted_weights_bytes": 24,
+      "header_increment_bytes": 2,
+      "mm_gain_bytes": 215.40941132859686,
+      "net_estimate_bytes": 189.40941132859686,
+      "supported_gain_bytes": 189.72428789956703,
+      "supported_oracle_net_bytes": 163.72428789956703,
+      "supported_symbols": 54336
+    },
+    {
+      "context": "block_depth",
+      "counted_weights_bytes": 24,
+      "header_increment_bytes": 2,
+      "mm_gain_bytes": 180.28086825594434,
+      "net_estimate_bytes": 154.28086825594434,
+      "supported_gain_bytes": 177.94117288173712,
+      "supported_oracle_net_bytes": 151.94117288173712,
+      "supported_symbols": 59328
+    }
+  ]
+}

@@ -1,0 +1,222 @@
+{
+  "bulk_policy": "All per-candidate bytes, controls, snapshots, fit states and failed probes stay on SSD under root_store; no deletion; final inventory covers retained files before serializer.",
+  "memo": {
+    "bytes": 28441,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md",
+    "sha256": "f7b3f73f4c16814eb4606cbb5050de8e6958311bde1f41092a357b7c41cd6019"
+  },
+  "receipts": [
+    {
+      "mirror": {
+        "bytes": 31380,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/INPUTS.json",
+        "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+      },
+      "retained": {
+        "bytes": 31380,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/INPUTS.json",
+        "sha256": "6a056218dcec71d6c630e950d764614aee43db455869fe44f96e3db2f72cd415"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 72876,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/BOUND_SUPPORTED.json",
+        "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+      },
+      "retained": {
+        "bytes": 72876,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+        "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 1839,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/FIT.json",
+        "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+      },
+      "retained": {
+        "bytes": 1839,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+        "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 34433,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/RACE.json",
+        "sha256": "ec52abc659773d260715c8a847975ad32092268bac7cac2f7ebe0ba65f1c6d40"
+      },
+      "retained": {
+        "bytes": 34433,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+        "sha256": "ec52abc659773d260715c8a847975ad32092268bac7cac2f7ebe0ba65f1c6d40"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 9687,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/STAGED.json",
+        "sha256": "591267a49371834fe4974d39c9662d6cf4bad87f3b702c412505352a58bbb1aa"
+      },
+      "retained": {
+        "bytes": 9687,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/STAGED.json",
+        "sha256": "591267a49371834fe4974d39c9662d6cf4bad87f3b702c412505352a58bbb1aa"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 856,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/PUBLIC_TENSOR_IDENTITY.json",
+        "sha256": "3355cb1d30a877053e74b0cc9cb1449d22b168ccbe0b26aa83916e28ef4628cf"
+      },
+      "retained": {
+        "bytes": 856,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/PUBLIC_TENSOR_IDENTITY.json",
+        "sha256": "3355cb1d30a877053e74b0cc9cb1449d22b168ccbe0b26aa83916e28ef4628cf"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 8453,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/PUBLIC_ENTRYPOINT_SMOKE.json",
+        "sha256": "2e42809c6b02612df98f8780c73a4c71c8d70722e74243974d939c8b3d1ccf2c"
+      },
+      "retained": {
+        "bytes": 8453,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/PUBLIC_ENTRYPOINT_SMOKE.json",
+        "sha256": "2e42809c6b02612df98f8780c73a4c71c8d70722e74243974d939c8b3d1ccf2c"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 12411,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json",
+        "sha256": "ec7ab381b447c39c24a59dcade5f62e1dccdf985d53a5bc5c00a7b87b8d6639e"
+      },
+      "retained": {
+        "bytes": 12411,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json",
+        "sha256": "ec7ab381b447c39c24a59dcade5f62e1dccdf985d53a5bc5c00a7b87b8d6639e"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 2871,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/SEAL_RECEIPT.json",
+        "sha256": "71e38c4781b3d88bc8b0f2ee36e7be3b60ec1f86a60e80db56d54072aa498bb6"
+      },
+      "retained": {
+        "bytes": 2871,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/SEAL_RECEIPT.json",
+        "sha256": "71e38c4781b3d88bc8b0f2ee36e7be3b60ec1f86a60e80db56d54072aa498bb6"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 5860,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/FINAL_VALIDATION.json",
+        "sha256": "982497b7cc102a039fa1a71f07d06d929601096a9ce23e4c4c11605a3759f532"
+      },
+      "retained": {
+        "bytes": 5860,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FINAL_VALIDATION.json",
+        "sha256": "982497b7cc102a039fa1a71f07d06d929601096a9ce23e4c4c11605a3759f532"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 2463,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/FINAL_CODE.json",
+        "sha256": "84ff3b61c36ff3c5a9ee5c4ffa2d790bf81a16844ae0e39decfdcf85245e9649"
+      },
+      "retained": {
+        "bytes": 2463,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FINAL_CODE.json",
+        "sha256": "84ff3b61c36ff3c5a9ee5c4ffa2d790bf81a16844ae0e39decfdcf85245e9649"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 3395,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/EQUATION_ANCHOR.json",
+        "sha256": "ad17b62671abc192665239833273d4bf59fb2a64377da23b559b5d5e1810051e"
+      },
+      "retained": {
+        "bytes": 3395,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/EQUATION_ANCHOR.json",
+        "sha256": "ad17b62671abc192665239833273d4bf59fb2a64377da23b559b5d5e1810051e"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 3851,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/EQUATION_ANCHOR_CORRECTED.json",
+        "sha256": "46498ff7536ad62eb9d803147cc2302f060721078e1b15f3f3862f7d8828ba57"
+      },
+      "retained": {
+        "bytes": 3851,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/EQUATION_ANCHOR_CORRECTED.json",
+        "sha256": "46498ff7536ad62eb9d803147cc2302f060721078e1b15f3f3862f7d8828ba57"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 6178,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/REVIEW_TRACKER_RECEIPT.json",
+        "sha256": "900e50121d1229c8052b9d5b6e994492b68feebf73039520500ac4805a67ce04"
+      },
+      "retained": {
+        "bytes": 6178,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/REVIEW_TRACKER_RECEIPT.json",
+        "sha256": "900e50121d1229c8052b9d5b6e994492b68feebf73039520500ac4805a67ce04"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 1578,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/REVIEW_TRACKER_STAGE_FINAL.json",
+        "sha256": "374a81fa60b299bb455046464ad633a888d81b961db2a2908654169f62f9829b"
+      },
+      "retained": {
+        "bytes": 1578,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/REVIEW_TRACKER_STAGE_FINAL.json",
+        "sha256": "374a81fa60b299bb455046464ad633a888d81b961db2a2908654169f62f9829b"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 1242,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/LANE_RECEIPT.json",
+        "sha256": "fb861ee872c554442ea9fe1e324137ad82d8bc22210a7416d5066ded4fc83319"
+      },
+      "retained": {
+        "bytes": 1242,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/LANE_RECEIPT.json",
+        "sha256": "fb861ee872c554442ea9fe1e324137ad82d8bc22210a7416d5066ded4fc83319"
+      }
+    },
+    {
+      "mirror": {
+        "bytes": 3455,
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_sm1_20260909/HANDOFF_FIRE_ORDER.json",
+        "sha256": "6115b992b90382b937aeeb0494a8851491c153d21d955373eb499fa06a41d092"
+      },
+      "retained": {
+        "bytes": 3455,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/HANDOFF_FIRE_ORDER.json",
+        "sha256": "6115b992b90382b937aeeb0494a8851491c153d21d955373eb499fa06a41d092"
+      }
+    }
+  ],
+  "retention_inventory": {
+    "bytes": 127748,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RETENTION_INVENTORY.json",
+    "sha256": "b445c7e546cbf39bd9cba1fd335adc9ea16d86ebb7a16b70bd0ab2147bb60da9"
+  },
+  "root_store": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer",
+  "schema": "ddm_sm1_artifact_index.v1",
+  "score_claim": false
+}

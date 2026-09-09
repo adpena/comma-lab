@@ -1,0 +1,51 @@
+{
+  "impl_complete_claim": false,
+  "lane": {
+    "gates": {
+      "contest_cpu": {
+        "evidence": "",
+        "status": false
+      },
+      "contest_cuda": {
+        "evidence": "",
+        "status": false
+      },
+      "deploy_runbook": {
+        "evidence": "",
+        "status": false
+      },
+      "impl_complete": {
+        "evidence": "",
+        "status": false
+      },
+      "memory_entry": {
+        "evidence": "",
+        "status": false
+      },
+      "real_archive_empirical": {
+        "evidence": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/STAGED.json",
+        "status": true
+      },
+      "strict_preflight": {
+        "evidence": "",
+        "status": false
+      },
+      "three_clean_review": {
+        "evidence": "",
+        "status": false
+      }
+    },
+    "id": "ddm_sm1_semantic_shared_mixer",
+    "level": 1,
+    "name": "SM3R semantic counted shared mixer",
+    "notes": "research_only=true; scorer-free semantic coder charter 20260909; MAIN owns exact fire",
+    "phase": 2.0,
+    "research_only": true
+  },
+  "lane_id": "ddm_sm1_semantic_shared_mixer",
+  "score_claim": false,
+  "validation": {
+    "returncode": 0,
+    "stdout": "OK \u2014 2336 lane(s) validated cleanly.\n"
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "review_evidence": "Author and independent adversarial source reviews; sparse gate, derived custody, integer-baseline and convergence issues repaired before clean passes",
+  "reviews": [
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_semantic_bound.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_author",
+        "--pass",
+        "ddm_sm1_author_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 16350,
+        "path": "experiments/ddm_sm1_semantic_bound.py",
+        "sha256": "3da404108768acddae26b97ad93ff6bdcaa7307c2dd6903c41dd1d1e81bf7933"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_semantic_bound.py' current entity census 11 (last stored census 0)\nMarked 11 entities in 'experiments/ddm_sm1_semantic_bound.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_semantic_mixer_codec.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_author",
+        "--pass",
+        "ddm_sm1_author_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 9693,
+        "path": "experiments/ddm_sm1_semantic_mixer_codec.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_semantic_mixer_codec.py' current entity census 12 (last stored census 0)\nMarked 12 entities in 'experiments/ddm_sm1_semantic_mixer_codec.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_mixer_race.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_author",
+        "--pass",
+        "ddm_sm1_author_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 14588,
+        "path": "experiments/ddm_sm1_mixer_race.py",
+        "sha256": "04b7354163340520fd677cc96295708adb3b11520f1171212c001adf73fd3bfd"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_mixer_race.py' current entity census 7 (last stored census 0)\nMarked 7 entities in 'experiments/ddm_sm1_mixer_race.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_stage.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_author",
+        "--pass",
+        "ddm_sm1_author_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 26718,
+        "path": "experiments/ddm_sm1_stage.py",
+        "sha256": "b3a71141e2fe7350dd8a0cce4d4bdd5875f4f1d33496c0d21b8debd4c23426c8"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_stage.py' current entity census 15 (last stored census 0)\nMarked 15 entities in 'experiments/ddm_sm1_stage.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_semantic_bound.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_recall",
+        "--pass",
+        "ddm_sm1_independent_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 16350,
+        "path": "experiments/ddm_sm1_semantic_bound.py",
+        "sha256": "3da404108768acddae26b97ad93ff6bdcaa7307c2dd6903c41dd1d1e81bf7933"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_semantic_bound.py' current entity census 11 (last stored census 11)\nMarked 11 entities in 'experiments/ddm_sm1_semantic_bound.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_semantic_mixer_codec.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_recall",
+        "--pass",
+        "ddm_sm1_independent_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 9693,
+        "path": "experiments/ddm_sm1_semantic_mixer_codec.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_semantic_mixer_codec.py' current entity census 12 (last stored census 12)\nMarked 12 entities in 'experiments/ddm_sm1_semantic_mixer_codec.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_mixer_race.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_recall",
+        "--pass",
+        "ddm_sm1_independent_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 14588,
+        "path": "experiments/ddm_sm1_mixer_race.py",
+        "sha256": "04b7354163340520fd677cc96295708adb3b11520f1171212c001adf73fd3bfd"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_mixer_race.py' current entity census 7 (last stored census 7)\nMarked 7 entities in 'experiments/ddm_sm1_mixer_race.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_sm1_stage.py",
+        "--status",
+        "reviewed",
+        "--reviewer",
+        "codex_sm1_recall",
+        "--pass",
+        "ddm_sm1_independent_clean"
+      ],
+      "returncode": 0,
+      "source": {
+        "bytes": 26718,
+        "path": "experiments/ddm_sm1_stage.py",
+        "sha256": "b3a71141e2fe7350dd8a0cce4d4bdd5875f4f1d33496c0d21b8debd4c23426c8"
+      },
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_sm1_stage.py' current entity census 15 (last stored census 15)\nMarked 15 entities in 'experiments/ddm_sm1_stage.py' as 'reviewed'\n"
+    }
+  ],
+  "score_claim": false,
+  "stage_author": "codex governing_tail; independently reviewed by root and recall"
+}
