@@ -537,11 +537,22 @@ one that picks WHICH codes to move. Per Catalog #307 this is an IMPLEMENTATION-l
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
+- **OWED #1c — the finer grid, and it is the cure the closing measurement names.** The receiver already supports per-tensor depths 2–8
+  (`ddm_mp2_semantic_receiver._decode_depth_nibbles`), so depth 4 → 5 or 6 on `head.weight` / `blocks.3.{dw,pw}.weight` is a PACKER
+  change, not a receiver change, and it halves or quarters the minimum step. Two things must be measured before anything is claimed:
+  (a) the RATE of a depth change — §3's law prices *changed* codes at *fixed* depth, and a depth change alters the run length, so it
+  needs a real encode (2,592 + 864 + 9,216 codes × 1 extra bit = 1,584 B raw before compression); and (b) whether the damage scales
+  linearly with the step. If it does, quartering the step takes the cheapest single move from ~240 cells to ~60 — still positive, which
+  would mean depth 8+ or nothing. If the 238× spread between the gradient's ends reflects a superlinear response, a half-step could land
+  much better. Neither is known. STATUS: `READY`, `EV: high` — one packer change and one probe.
+- **OWED #1d — the same actuator with a SMALLER-THAN-GRID move.** The one thing the int4 grid forbids is a fractional step, but the
+  archive does not: a per-row fp16 SCALE change moves every code in that row by a fraction of a step, and the scales are already
+  shipped (390 B across the three tensors). A scale is a continuous knob over a whole row — coarser in reach, finer in amplitude — and it
+  is the exact complement of what failed here. Untried. STATUS: `READY`, `EV: high`, and cheap: it reuses this arm's whole chain.
 - **OWED #1b — close the 24 % collateral gap.** The control (§8b) says the surrogate avoids 75.6 % of a random direction's damage and
   needs 100 %. Live probe: the exact-n600-gradient run (`--full-field`, 25 steps at lr 0.04, ~21 min) removes the ~5 %-persistence draw
-  noise as an explanation. If the noise-free direction still damages, the actuator is closed at `verdict_scope: formulation` and the
-  charter's widening is the last thing to try; if it turns, the arm is alive and the next question is how far.
-  STATUS: `DOING-NOW`.
+  noise as an explanation. RUN — and answered, along with `gradient-topk` in both ranking directions and the discrete realized search.
+  All four say the same thing: the binding constraint is the int4 step, not the noise and not the layer set. STATUS: `DONE`.
 - **OWED #2 — the per-pair recovery on a GLOBAL change.** `FIRE_ORDER` step 4c. Nobody has measured whether the per-pair re-solve
   keeps fe1's 643–3,053× when all 600 renders move at once; §4 shows the structural precondition holds on every pair. It was NOT run
   here because a candidate that is worse on seg cannot be rescued on pose, so spending 1.4 h on it would have been means-hoarding.
