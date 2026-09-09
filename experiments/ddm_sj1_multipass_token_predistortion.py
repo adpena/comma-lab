@@ -343,6 +343,42 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.1e-06,
         score_t4=0.13885056455024844,
     ),
+    #: LIVE (MAIN 2026-09-09).  Also not this arm's row: ddm_pc2 set all 12 basis scales
+    #: to 1.0 and re-solved, lane ddm_pc2_t4_carrier_scales_resolve_20260909.  Pointer
+    #: move #34, -2.7300e-05 S on -41 B.  Both distortion legs print the SAME as the two
+    #: rows above (d_seg 0.00010913, d_pose 5.1e-06), so this is rate again.
+    #:
+    #: NOTE THE PATH: ``rebase_scales_resolve/``, not ``candidate_scales/``.  A carrier
+    #: solve seeded from the wrong sibling directory is the exact failure
+    #: ``assert_carrier_is_pointer`` exists to refuse, and the two directories differ by
+    #: one word.
+    #:
+    #: VERIFIED HERE before the carrier chain was pointed at it, again by splitting the
+    #: members rather than trusting the handoff:
+    #:   semantic 30,246 B and tail 120,321 B  BYTE-IDENTICAL to pass 3
+    #:   hpac     12,112 B                     BYTE-IDENTICAL to rc2 (rc2's section, kept)
+    #:   carrier  18,621 -> 18,580 B           (-41, exactly the declared delta)
+    #:   header       14 B                     differs (the codec-version rider)
+    #: The byte-identical tail is why this arm's pricing control does not move: pass 4 is
+    #: still measured against ``tail_sj1_pass3_subset.bin`` (120,225 B).  And nothing in
+    #: this arm assumes the new scales: ``up2.load_carrier_state`` READS basis, coefficient
+    #: scales and codes out of the pointer tree's own archive using that tree's own
+    #: ``runtime/*`` reader, so ``refine_pair`` starts from pc2's coefficients by
+    #: construction rather than by anyone remembering to change a constant.
+    PointerRow(
+        label="pc2_carrier_scales_resolve",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut"
+            "/rebase_scales_resolve/candidate_runtime"
+        ),
+        archive_sha256=(
+            "e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372"
+        ),
+        archive_bytes=181_373,
+        d_seg_t4=0.00010913,
+        d_pose_t4=5.1e-06,
+        score_t4=0.13882326433317044,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
