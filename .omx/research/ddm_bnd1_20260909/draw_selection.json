@@ -1,0 +1,31 @@
+{
+  "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+  "fire_trigger": "ITEM_1 causal grammar and retained actual prices complete; MAIN grants scorer allocation; recheck pointer before launch",
+  "numpy_version": "1.26.4",
+  "owner": "ddm_bnd1",
+  "pairs_drawn": 0,
+  "pairs_scored": 0,
+  "population": 600,
+  "research_only": true,
+  "rng": "numpy.default_rng/PCG64",
+  "schema": "ddm_bnd1_draw_selection.v1",
+  "score_claim": false,
+  "scorer_coordinator": "MAIN",
+  "seed": 20260909,
+  "selected_pairs": [
+    6,
+    52,
+    61,
+    82,
+    158,
+    275,
+    343,
+    455,
+    469,
+    499,
+    519,
+    589
+  ],
+  "selection_mode": "seeded_uniform_random_without_replacement",
+  "status": "QUEUED-WITH-A-FIRE-ORDER"
+}

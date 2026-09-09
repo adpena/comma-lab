@@ -1,0 +1,24 @@
+{
+  "charter_complete": false,
+  "fixed_defects": [
+    "stranded partial blocked resume",
+    "git HEAD and argv drift blocked completed receipt replay"
+  ],
+  "passes": [
+    {
+      "pass": 1,
+      "reviewer": "source_constants",
+      "scope": "source audit only",
+      "verdict": "clean"
+    },
+    {
+      "pass": 2,
+      "reviewer": "beyond_seed_recall",
+      "scope": "source audit only",
+      "verdict": "clean"
+    }
+  ],
+  "path": "experiments/ddm_bnd1_source_audit.py",
+  "schema": "ddm_bnd1_reviews.v1",
+  "sha256": "9a2f190de466c779763d4f864317aebd97f3bbeba8a7475be0a5274d5a29e307"
+}

@@ -1,0 +1,28 @@
+{
+  "actual_delta_s": null,
+  "blockers": [
+    "NONTRIVIAL_REALIZED_LOWER_BOUND_NOT_ESTABLISHED",
+    "LIVE_N600_SPATIAL_JACOBIAN_MISSING",
+    "MATCHED_ABSOLUTE_LATTICE_PENALTY_MISSING"
+  ],
+  "commit_shas": [],
+  "completed_at_utc": null,
+  "event_actor": "ddm_bnd1",
+  "event_notes": "{\"blocked_by\": [\"NONTRIVIAL_REALIZED_LOWER_BOUND_NOT_ESTABLISHED\", \"LIVE_N600_SPATIAL_JACOBIAN_MISSING\", \"MATCHED_ABSOLUTE_LATTICE_PENALTY_MISSING\"], \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"folded_evidence\": {\"disposition\": \"FOLDED\", \"reason\": \"Boundary source audit does not establish a representation floor; generator successor reuses this proof-input gate, with no new allocation or duplicate row.\", \"source\": \".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md\"}, \"owner\": \"MAIN\", \"trigger\": \"On harvest of gb1 receipt, resolve the certificate-vs-surrogate proof gate before allocating any scorer job. Only after gate resolution and MAIN scorer-slot allocation, obtain live n600 spatial/directional derivatives in chunks <=120 with <=2 CPU processes, retain per-pair tensors, rebase, price 36 rows and apply margin before admitting at most one original build/measure/seal chain.\"}",
+  "event_timestamp_utc": "2026-09-09T22:42:48.593867Z",
+  "event_type": "note",
+  "owner": "MAIN",
+  "predicted_cost_usd": null,
+  "predicted_delta_s_band": null,
+  "schema_version": "canonical_task_status_v1_20260518",
+  "session_id": "ddm_bnd1_20260909",
+  "source_design_memo": ".omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+  "started_at_utc": null,
+  "status": "blocked",
+  "task_id": "ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909::VALID_BOUND_INPUTS",
+  "test_status": "n_a",
+  "title": "Resolve the generated-carrier proof gate and missing live derivative inputs",
+  "written_at_utc": "2026-09-09T22:42:48.593867Z",
+  "written_host": "mac.lan",
+  "written_pid": 89154
+}

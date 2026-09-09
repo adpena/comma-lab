@@ -1,0 +1,174 @@
+{
+  "research_only": true,
+  "score_claim": false,
+  "sources": [
+    {
+      "bytes": 439048,
+      "original_path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/00_AGENTS.md",
+      "sha256": "de72c87820145c3fe680fe8bfc0d730b99aa8f19ff8acc55151f878e004ff31d"
+    },
+    {
+      "bytes": 439048,
+      "original_path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/01_CLAUDE.md",
+      "sha256": "de72c87820145c3fe680fe8bfc0d730b99aa8f19ff8acc55151f878e004ff31d"
+    },
+    {
+      "bytes": 5784,
+      "original_path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/02_PROGRAM.md",
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "bytes": 15577,
+      "original_path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/03_operating_manual_craft_handoff.md",
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "bytes": 5915,
+      "original_path": "/Users/adpena/Projects/pact/.omx/state/main_hot_state.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/04_main_hot_state.md",
+      "sha256": "b85a76b4d8f70c6f6a1f98a0d85a4fbd606dc224188a02b8d3d3cda0da435453"
+    },
+    {
+      "bytes": 13083,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/05_ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+      "sha256": "322d1acb62db7b911123be3cbb6ea73237e0208d1098bee1c2dd35f7167d66ec"
+    },
+    {
+      "bytes": 4124,
+      "original_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/06__common_contract.md",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "bytes": 38252,
+      "original_path": "/Users/adpena/Projects/pact/experiments/ddm_rp1_rate_rank.py",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/07_ddm_rp1_rate_rank.py",
+      "sha256": "8614d8b0c98bfc0633aee518086d14fd9c49b8a611f17e7c1e7a2e84f05df16c"
+    },
+    {
+      "bytes": 10733,
+      "original_path": "/Users/adpena/Projects/pact/experiments/ddm_rp1_mispredicted_census.py",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/08_ddm_rp1_mispredicted_census.py",
+      "sha256": "e71099024c219964b1d2e011931b9c1303d1e3a0e488c6d1d5c4dc30b9ff50a3"
+    },
+    {
+      "bytes": 5246,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cmp2_t4_sm1_semantic_coder_20260909_pointer_move_37_20260909.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/09_ddm_cmp2_t4_sm1_semantic_coder_20260909_pointer_move_37_20260909.md",
+      "sha256": "bd5eede7428ac2460b6b0f6fd54aa145e971eba8a9a510ad7b51693058d08545"
+    },
+    {
+      "bytes": 91680,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sj1_multipass_token_predistortion_20260905.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/10_ddm_sj1_multipass_token_predistortion_20260905.md",
+      "sha256": "d1fce4cc1470a8c77a58cd996fede12dd97e66a817523a430c9ea755dde1d7da"
+    },
+    {
+      "bytes": 129151,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_gs3_gestalt_after_submission_20260903.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/11_ddm_gs3_gestalt_after_submission_20260903.md",
+      "sha256": "0ef5cee7ecd66e73443001bd8d1d30b5fd5fbaf12342f28661eaf4ade82dc7b2"
+    },
+    {
+      "bytes": 11552,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_bz2d_distortion_verdict_20260830.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/12_ddm_bz2d_distortion_verdict_20260830.md",
+      "sha256": "2c1bbe7b5ae43751bb387dcc7ed6bcc8585bfdd537698f1f6a8b7c3504ef9b69"
+    },
+    {
+      "bytes": 65008,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/13_ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "sha256": "233ed1b53a35585b3c83116fad93de8c19c835238aec13e38976834ec7dd6e13"
+    },
+    {
+      "bytes": 32814,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_msr1_manufactured_seg_reduction_20260823.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/14_ddm_msr1_manufactured_seg_reduction_20260823.md",
+      "sha256": "750e26e9be1c674e15288de75b30a13793679f1a463e5453253bdf28f175abad"
+    },
+    {
+      "bytes": 21758,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_lb1_lane_band_carrier_ceiling_on_born_field_20260904.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/15_ddm_lb1_lane_band_carrier_ceiling_on_born_field_20260904.md",
+      "sha256": "cb279449e40e4ab6ba353d306a641089374bc5461414a1a220e196d4c09aaa43"
+    },
+    {
+      "bytes": 10859,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_qbw2_temporal_bound_verdict_20260827.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/16_ddm_qbw2_temporal_bound_verdict_20260827.md",
+      "sha256": "b110c75c24402ea1b654c7fcb5e04383ac08f14705bdddf4030394e65c6935c8"
+    },
+    {
+      "bytes": 16362,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/17_ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+      "sha256": "32ed36d2bcd3e249ea6e0d89355410f021eaf662eb181c4903003e352b4361ae"
+    },
+    {
+      "bytes": 25080,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_hc1_hpac_calibration_reliability_20260824.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/18_ddm_hc1_hpac_calibration_reliability_20260824.md",
+      "sha256": "e11cf55ba1dd8655490707a9117b0f3411060ee5720d0282280a6c5ee5c7feb3"
+    },
+    {
+      "bytes": 21557,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/19_ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+      "sha256": "d6f09422a1c0896ec791da5916e43b4460ee584a633a15ce0c024f3242e7d05d"
+    },
+    {
+      "bytes": 8012,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/20_SPEC_v8_perclass_decomposition_20260708.md",
+      "sha256": "74417253b351f25185106d150fa67dae2b3357aeb33faed982e9b4756e2c4e72"
+    },
+    {
+      "bytes": 24163,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_of1_offset_field_and_flicker_coherence_20260729.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/21_ddm_of1_offset_field_and_flicker_coherence_20260729.md",
+      "sha256": "0d991777051542a84dbe7d2d165c13e2f5de8e1f7a59c5e2f85f83b4258db712"
+    },
+    {
+      "bytes": 5563,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/contour_string_flip_coding_n600_20260707.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/22_contour_string_flip_coding_n600_20260707.md",
+      "sha256": "d92ac95c08797dd2cb43c40691436be1f7888a4f05c5fa4b7856372745f5447d"
+    },
+    {
+      "bytes": 10661,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/residual_kit_deshare_curverel_build_20260709.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/23_residual_kit_deshare_curverel_build_20260709.md",
+      "sha256": "9d4f65241e8986063a51f349d0350648e99201d710581c9e300d9baed18f5922"
+    },
+    {
+      "bytes": 10444,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260805/PK1_RECEIPT.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/24_PK1_RECEIPT.md",
+      "sha256": "54bbeca41670b02c230d5849aff7600f08097e6e1f69845b2fbdafe7655b764e"
+    },
+    {
+      "bytes": 21353,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_or1_orthogonal_representation_regime_20260826.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/25_ddm_or1_orthogonal_representation_regime_20260826.md",
+      "sha256": "eb1b5ba696b7c4051389040e3f5624a7ad7dddd9bee89797b71cec0b59eedcd9"
+    },
+    {
+      "bytes": 27196,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_gt2_gt_tongue_induction_20260803.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/26_ddm_gt2_gt_tongue_induction_20260803.md",
+      "sha256": "cdee53316eff3a88e9d64439a614bc68a71764c59e732784a048ba170bdf4c25"
+    },
+    {
+      "bytes": 41556,
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_de1_description_efficiency_derivation_20260803.md",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/27_ddm_de1_description_efficiency_derivation_20260803.md",
+      "sha256": "3b947770ea8ee6a1f0fde8e87b77259790171893a97a622369e8f8aad116213d"
+    }
+  ]
+}

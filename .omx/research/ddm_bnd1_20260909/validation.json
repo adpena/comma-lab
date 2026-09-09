@@ -1,0 +1,24 @@
+{
+  "changed_git_head_resume_reuses_original_provenance": true,
+  "changed_payload_rejected": true,
+  "matching_resume_byte_identical": true,
+  "orphan_partial_preserved": true,
+  "payloads": [
+    {
+      "bytes": 26,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/validation/resume.bin",
+      "sha256": "f27cb2d86c27925f251372cd457b9c4f80f5e6ec574eae961a5da95b7467182e"
+    },
+    {
+      "bytes": 28,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/validation/resume.bin.partial",
+      "sha256": "4719bd593616cc36658e04d216d46cdbe5fda38fd21216be393ea6ef8736489f"
+    }
+  ],
+  "receipt_path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/SOURCE_AUDIT.9a2f190de466c779.json",
+  "receipt_sha256": "d039d4e657c9cdf274873fe393824d7dfa47dd9f980fdf062e7d95907e237c1d",
+  "research_only": true,
+  "schema": "ddm_bnd1_validation.v1",
+  "score_claim": false,
+  "source_sha256": "9a2f190de466c779763d4f864317aebd97f3bbeba8a7475be0a5274d5a29e307"
+}

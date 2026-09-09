@@ -1,0 +1,266 @@
+{
+  "query": "boundary representation offset field class pair",
+  "seeds": [
+    {
+      "id": "research:yousfi_fridrich_field_equations_20260502_codex.md",
+      "score": 10.125,
+      "title": "Yousfi-Fridrich Field Equations For Contest-Faithful Compression"
+    },
+    {
+      "id": "research:ddm_of1_offset_field_and_flicker_coherence_20260729.md",
+      "score": 8.75,
+      "title": "ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase coherence (W1-COH)"
+    },
+    {
+      "id": "section:docs/paper/HUMAN_INSIGHTS.md#insight-2-mathematical-precision-on-hard-pairs",
+      "score": 8.4,
+      "title": "Insight 2: Mathematical Precision on Hard Pairs"
+    },
+    {
+      "id": "feed:zb1",
+      "score": 8.05,
+      "title": "FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field MEASURED + 3 cheap reads CONVERGE \"B is a hull-filler not a hull-mover\""
+    }
+  ],
+  "reconstructed_nodes": [
+    {
+      "id": "research:yousfi_fridrich_field_equations_20260502_codex.md",
+      "ntype": "research",
+      "title": "Yousfi-Fridrich Field Equations For Contest-Faithful Compression",
+      "summary": "# Yousfi-Fridrich Field Equations For Contest-Faithful Compression Date: 2026-05-02 This note formalizes two versions of the same optimization target. The first is the practical contest-compliant system we can run now. The second is the mathematically complete infinite-compute system that the practical system approximates. ## Version 0: Contest-Compliant Practical System Let each candidate correction/representation choice be an atom `a`. An atom may be a row run, pair, frame, class, connected component, boundary band, pose channel, renderer tensor block, decoder latent, entropy-code choice, or",
+      "source": "/Users/adpena/Projects/pact/.omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+      "path": [
+        "[research] Yousfi-Fridrich Field Equations For Contest-Faithful Compres"
+      ]
+    },
+    {
+      "id": "research:ddm_of1_offset_field_and_flicker_coherence_20260729.md",
+      "ntype": "research",
+      "title": "ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase coherence (W1-COH)",
+      "summary": "--- title: \"ddm_of1 — the two gc6 $0 coherence probes: P2C-OF boundary-offset-field + W1-COH flicker-phase\" date_utc: \"2026-07-29T18:40:00Z\" lane_id: \"lane_ddm_of1_coherence_probes_20260729\" research_only: true score_claim: false promotion_eligible: false authority_axis: \"[macOS-CPU advisory]; pure array analysis of data already on disk (ru1 atlas_flat.npz + gt_n600 lstars); NO SegNet/PoseNet forward ran, NO training, NO launches (pb1 owns the scorer slot)\" verdict_scope: \"FORMULATION (both probes test one representation of the endpoint residual; a falsified probe retires that representation, ",
+      "source": "/Users/adpena/Projects/pact/.omx/research/ddm_of1_offset_field_and_flicker_coherence_20260729.md",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co"
+      ]
+    },
+    {
+      "id": "section:docs/paper/HUMAN_INSIGHTS.md#insight-2-mathematical-precision-on-hard-pairs",
+      "ntype": "section",
+      "title": "Insight 2: Mathematical Precision on Hard Pairs",
+      "summary": "\"We can mathematically determine and model the hard vs easy pairs prior using sophisticated and mathematical analysis.\" \"We can be extremely precise and optimal here.\" This is not hand-waving. The camera model is KNOWN (AR0231AT, fx=910px, pp=(582,437)@1164x874, 20fps). The ego-motion for each pair is KNOWN (PoseNet outputs 6-DOF). The mask topology for each pair is KNOWN (SegNet 5-class output). From these, we can: 1. Derive expected optical flow fields analytically from the 6-DOF pose 2. Compute pair difficulty metrics from mask topology (boundary density, rare class prevalence, temporal tra",
+      "source": "/Users/adpena/Projects/pact/docs/paper/HUMAN_INSIGHTS.md#L11-L24",
+      "path": [
+        "[section] Insight 2: Mathematical Precision on Hard Pairs"
+      ]
+    },
+    {
+      "id": "feed:zb1",
+      "ntype": "finding",
+      "title": "FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field MEASURED + 3 cheap reads CONVERGE \"B is a hull-filler not a hull-mover\"",
+      "summary": "Memo `.omx/research/ddm_zb1_cheap_batch_20260730.md`. All [macOS-CPU advisory]; score_claim=False. - **QA80 EXACT flip-distance field (item 1, MEASURED n600, DONE):** real frozen CPU-torch SegNet over the 600 burn frame1s (materialized from QA24 endpoint e7640dee via render_frame1_camera_uint8; frames npy sha 937f9672…). Out `$PACT_TIER1/ddm_zb1_qa80_field_20260730/` (600 npz; per-pair sha custody 600/600; manifest v1). Budget for QA83 class_field_photo + ea1-N3: q50 median 1.8181, q05 0.4302, tightest ~1.9e-6 (zero budget at boundary). verdict_scope: producer MEASURED; consumers OPEN. - **S2 ",
+      "source": "/Users/adpena/Projects/pact/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md#L25651-L25685",
+      "path": [
+        "[finding] FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field M"
+      ]
+    },
+    {
+      "id": "feed:of1",
+      "ntype": "finding",
+      "title": "FEED-of1",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--feed_ref-->",
+        "[finding] FEED-of1"
+      ]
+    },
+    {
+      "id": "feed:of1b",
+      "ntype": "finding",
+      "title": "FEED-of1b",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--feed_ref-->",
+        "[finding] FEED-of1b"
+      ]
+    },
+    {
+      "id": "lane:lane_ddm_of1_coherence_probes_20260729",
+      "ntype": "lane",
+      "title": "lane_ddm_of1_coherence_probes_20260729",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_ddm_of1_coherence_probes_20260729"
+      ]
+    },
+    {
+      "id": "lane:lane_id",
+      "ntype": "lane",
+      "title": "lane_id",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_id"
+      ]
+    },
+    {
+      "id": "memory:insight-2",
+      "ntype": "memory",
+      "title": "insight-2",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[section] Insight 2: Mathematical Precision on Hard Pairs",
+        "<--aliases--",
+        "[memory] insight-2"
+      ]
+    },
+    {
+      "id": "memory:insight-2-mathematical-precision-on-hard-pairs",
+      "ntype": "memory",
+      "title": "insight-2-mathematical-precision-on-hard-pairs",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[section] Insight 2: Mathematical Precision on Hard Pairs",
+        "<--aliases--",
+        "[memory] insight-2-mathematical-precision-on-hard-pairs"
+      ]
+    },
+    {
+      "id": "feed:wr1gb",
+      "ntype": "finding",
+      "title": "FEED-wr1gb (2026-07-30) — wr1 Gate-B staged exact gate MEASURED: knee-B truncation REFUTED at this operating point (instance)",
+      "summary": "MAIN fired the wr1-staged Gate-B realized gate (`experiments/stage_wr1_realized_gate.sh kneeB cpu`, full 600-sample evaluate path, receipt `$PACT_TIER1/ddm_wr1_20260729/wr1_kneeB_realized_gate_receipt.json`, schema ddm_wr1_realized_gate.v1) per gc9 row-1 + su2 stage-1 + Hotz dissent. All [macOS-CPU advisory]. - MEASURED composed row @ 174,578 B: d_seg 0.01001419 (term 1.0014) · d_pose 0.48164272 (term 2.1946) · rate 0.1162 → **S = 3.3122** vs REF 2.256641 (pfs1 D1): **+1.056 net**. - Break-even miss ~4x PER AXIS: seg +0.612 and pose +0.707 vs rate savings −0.263. Pose degraded MORE than seg — ",
+      "source": "/Users/adpena/Projects/pact/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md#L25451-L25467",
+      "path": [
+        "[finding] FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field M",
+        "--feed_ref-->",
+        "[finding] FEED-wr1gb (2026-07-30) — wr1 Gate-B staged exact gate MEASU"
+      ]
+    },
+    {
+      "id": "file:.omx/research/ddm_zb1_cheap_batch_20260730.md",
+      "ntype": "entity",
+      "title": ".omx/research/ddm_zb1_cheap_batch_20260730.md",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[finding] FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field M",
+        "--references-->",
+        "[entity] .omx/research/ddm_zb1_cheap_batch_20260730.md"
+      ]
+    },
+    {
+      "id": "ref:#792",
+      "ntype": "entity",
+      "title": "#792",
+      "summary": "",
+      "source": "",
+      "path": [
+        "[finding] FEED-zb1 (2026-07-30) — cheap-batch arm (#792): QA80 field M",
+        "--references-->",
+        "[entity] #792"
+      ]
+    },
+    {
+      "id": "research:ddm_cn3_week_coherence_audit_20260731.md",
+      "ntype": "research",
+      "title": "ddm_cn3 — the week in three tables: what was orphaned · what the queue actually holds · where the campaign goes next",
+      "summary": "--- schema: ddm_cn3_week_coherence_audit.v1 date_utc: 2026-07-31 arm: ddm_cn3 (task #818 — week coherence: signal-loss/consumption audit · queue coherence · roadmap re-coherence) lane_id: \"lane_ddm_cn3_week_coherence_20260731\" research_only: true score_claim: false promotion_eligible: false pointer: \"0.1910828242 [contest-CPU] UNMOVED\" axis: \"[macOS-CPU advisory — $0 read-only audit; ZERO scorer forwards (window_03 owns the n600 slot); no byte-closed row produced]\" council_predicted_mission_contribution: apparatus_maintenance verdict_scope: FORMULATION operator_binding: \"07-31: 'review all of ",
+      "source": "/Users/adpena/Projects/pact/.omx/research/ddm_cn3_week_coherence_audit_20260731.md",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_id",
+        "<--lane_ref--",
+        "[research] ddm_cn3 — the week in three tables: what was orphaned · what"
+      ]
+    },
+    {
+      "id": "feed:603-g4-stationarity-confirmed-static-spatial-pattern",
+      "ntype": "decision",
+      "title": "FEED-603-g4-stationarity-confirmed-static-spatial-pattern (2026-07-22, MAIN custody of arm ddm_g4_spatial_stationarity, merged 4da5468e7c; lane-registry union-m",
+      "summary": "- **STATIONARITY CONFIRMED, dramatically:** across all 4,011,236 exact flips, the **top 1% / 5% / 10% of pixels carry 21.2% / 68.7% / 89.9%** of flip mass, and the **image-static fraction is ~98.8% in every stratum** (Lane 97.8, Movable 99.1, Boundary 98.7, Hood 98.4). **g3×g4 synthesis: the residual is broad across PAIRS but concentrated and STATIC in SPACE** — a near-static spatial pattern repeated across the video, the purest possible target for the amortized-structure law. - **Priced cell-space amortization table (real coded bytes):** Movable-midband parametric **12 B → d_seg reach 0.00135",
+      "source": "/Users/adpena/Projects/pact/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md#L21401-L21407",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_id",
+        "<--lane_ref--",
+        "[decision] FEED-603-g4-stationarity-confirmed-static-spatial-pattern (2"
+      ]
+    },
+    {
+      "id": "memory:A1 dual CPU+CUDA dispatch LANDED 2026-05-09 — silver-medal-band PR submission readiness; HNeRV-cluster R_pose=5.04 cluster-predictor independently validated as 6th anchor",
+      "ntype": "memory",
+      "title": "A1 dual CPU+CUDA dispatch LANDED 2026-05-09 — silver-medal-band PR submission readiness; HNeRV-cluster R_pose=5.04 cluster-predictor independently validated as 6th anchor",
+      "summary": "A1 archive (track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6, sha 87ec7ca5...492b5, 178,262 B) has BOTH a [contest-CPU GHA Linux x86_64] anchor (0.19284758) AND a [contest-CUDA Tesla T4] anchor (0.2263520) on EXACT same archive bytes. Δ score = +0.0335 lands within 0.0005 of HNeRV-cluster predicted CUDA from the 5-anchor cluster prior. Pose ratio CUDA/CPU = 5.20× (predicted 5.04±0.10), seg ratio = 1.18× (predicted 1.17±0.01). The cluster-predictor is empirically validated by A1 as the 6th anchor; posterior n_anchors 5→6, R_pose mean 5.0364→5.0645. CPU score 0.19285 sits BETWEEN PR101 gold (0.19284 CPU) and PR103 silver (0.19487 CPU) — silver-medal-band proximity confirmed. PR submission readiness verdict: PR-SUBMISSION-READY-PENDING-COUNCIL-REVIEW (5-turn skunkworks council g",
+      "source": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_a1_dual_cuda_dispatch_landed_20260509.md",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_id",
+        "<--lane_ref--",
+        "[memory] A1 dual CPU+CUDA dispatch LANDED 2026-05-09 — silver-medal-b"
+      ]
+    },
+    {
+      "id": "memory:A1 paired [contest-CUDA] axis VERIFIED-EXISTING 2026-05-13 — re-dispatch refused per Subagent coherence-by-default; A1 already dual-axis ship-readiness-cleared (0.192848 contest-CPU + 0.226352 contest-CUDA on Tesla T4)",
+      "ntype": "memory",
+      "title": "A1 paired [contest-CUDA] axis VERIFIED-EXISTING 2026-05-13 — re-dispatch refused per Subagent coherence-by-default; A1 already dual-axis ship-readiness-cleared (0.192848 contest-CPU + 0.226352 contest-CUDA on Tesla T4)",
+      "summary": "Subagent prompted to fire a [contest-CUDA] dispatch on A1 (sha 87ec7ca5...492b5, 178,262 B) to close the paired-axis ship-readiness gap. PRE-DISPATCH AUDIT discovered the dispatch had ALREADY SUCCEEDED on 2026-05-09T02:42:55Z via Modal Tesla T4 retry3. CUDA score = 0.2263520234784395 (validation passed=true, score_axis=contest_cuda, promotion_eligible=true, score_claim_valid=true, n_samples=600, evaluate.py SHA matches CPU-axis run). Both anchors already in `.omx/state/continual_learning_posterior.json` accepted_anchor_history. Dual-axis frontier ALREADY established; lane_a1_dual_cuda_dispatch_20260509 sits at L2 with both gates marked. Per CLAUDE.md \"Subagent coherence-by-default\" + \"Apples-to-apples evidence discipline\" + the lane registry being the deduplication layer non-negotiables — ",
+      "source": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_a1_paired_cuda_axis_dispatch_landed_20260513.md",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_id",
+        "<--lane_ref--",
+        "[memory] A1 paired [contest-CUDA] axis VERIFIED-EXISTING 2026-05-13 —"
+      ]
+    },
+    {
+      "id": "memory:CPU/CUDA xray P5 LANDED — SegNet+PoseNet layer drift + loader drift 2026-05-11",
+      "ntype": "memory",
+      "title": "CPU/CUDA xray P5 LANDED — SegNet+PoseNet layer drift + loader drift 2026-05-11",
+      "summary": "Three orchestrator tools for the handoff P5 CPU/CUDA xray (per-layer SegNet/PoseNet drift + DALI/PyAV loader drift) landed locally with shared-input tensor custody, dispatch plans for the missing CUDA captures, and a synthesis memo. $0 GPU spend; 19 unit tests pass; 3-clean-pass adversarial review CLEAN; lane_cpu_cuda_xray_p5_landing L1 (3/7 gates). Loop remains paused.",
+      "source": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_cpu_cuda_xray_p5_landed_20260511.md",
+      "path": [
+        "[research] ddm_of1 — offset-field coherence (P2C-OF) + flicker-phase co",
+        "--lane_ref-->",
+        "[lane] lane_id",
+        "<--lane_ref--",
+        "[memory] CPU/CUDA xray P5 LANDED — SegNet+PoseNet layer drift + loade"
+      ]
+    }
+  ],
+  "graph_counts": {
+    "nodes": 40252,
+    "edges": 163633,
+    "by_type": {
+      "catalog": 385,
+      "decision": 244,
+      "deferral": 64,
+      "entity": 7318,
+      "equation": 480,
+      "finding": 1696,
+      "index": 6,
+      "lane": 4444,
+      "memory": 12874,
+      "person": 22,
+      "regime": 3,
+      "research": 9848,
+      "section": 2534,
+      "task": 326,
+      "topic": 8
+    }
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "archive_bytes": 180388,
+  "audit_receipt_path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/SOURCE_AUDIT.9a2f190de466c779.json",
+  "axis": "[macOS-CPU scorer-free source audit]",
+  "base_source": {
+    "bytes": 117964800,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/decoded_tokens.u8",
+    "sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb"
+  },
+  "candidate_builds": 0,
+  "charter_complete": false,
+  "drawn_pairs": 0,
+  "equation_registered": false,
+  "new_scorer_pairs": 0,
+  "payloads": [
+    {
+      "bytes": 1773,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/census_counts.npz",
+      "sha256": "81778cf8d907e0020dc58a6a5a83eac953385c5232eccfbfb2659fd2bef03efc"
+    },
+    {
+      "bytes": 3825,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/census_counts.jsonl",
+      "sha256": "0ebbdfb4daeb70b5333a8eaf08803cb58461aca8996cdcdd5e82f22f938ca4a9"
+    }
+  ],
+  "pointer": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "custody": "local_anchor_record; inspect lane policy before submission",
+    "evidence_grade": "contest-CUDA",
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "role": "competitive_score_to_beat",
+    "score": 0.13791730003757818,
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "source": "our_local_frontier_contest_cuda",
+    "source_kind": "owned_or_banked_local_exact_anchor"
+  },
+  "population": {
+    "all_tokens": 117964800,
+    "edge_geometry_recomputed": false,
+    "fraction_retained": 0.9093318697775735,
+    "joint_residual_census_measured": false,
+    "mispredicted": 235044,
+    "missing_locations": 21311,
+    "on_gt_edge_population_fraction_lower_bound": 0.889956774050816,
+    "on_gt_edge_population_fraction_upper_bound": 0.9806249042732424,
+    "retained": 213733,
+    "retained_on_gt_edge_source_count": 209179,
+    "retained_symbols_match_pass4": true,
+    "row_band_counts": [
+      0,
+      182296,
+      31436,
+      1
+    ],
+    "tangent_runs_measured": false
+  },
+  "prices": {
+    "description_floor_bytes": null,
+    "misprediction_attribution_ideal_bytes": 83258.63239658909,
+    "misprediction_isolated_actual_bytes": null,
+    "segment_actual_bytes": null,
+    "ternary_offset_actual_bytes": null,
+    "whole_mixer_envelope_actual_bytes": 119784
+  },
+  "producer": {
+    "argv": [
+      "experiments/ddm_bnd1_source_audit.py",
+      "--resume-from",
+      "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation"
+    ],
+    "git_head": "50b37c1017da3c85867ed5c1a0357718f1192270",
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd1_source_audit.py",
+    "randomness": "none",
+    "seed": null,
+    "sha256": "9a2f190de466c779763d4f864317aebd97f3bbeba8a7475be0a5274d5a29e307",
+    "upstream_evaluate_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+  },
+  "recomputed_existing_score": 0.13791730003757818,
+  "research_only": true,
+  "residual": {
+    "shipped_pass4_source_cells": 12614,
+    "unshipped_pass5_source_cells": 12377,
+    "unshipped_pass5_source_d_seg": 0.00010492112901475695
+  },
+  "retention_policy": "all audit payloads retained; no move or deletion; source trees read-only",
+  "schema": "ddm_bnd1_source_audit.v1",
+  "score_claim": false,
+  "sources": [
+    {
+      "bytes": 4388,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/rank.json",
+      "sha256": "2ac591747069a53cb75a6528d8ee223886960e1387b3cee534adcbab9dcba273",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/rank_mixer/RANK.json"
+    },
+    {
+      "bytes": 10604,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/source_census.json",
+      "sha256": "0a47c878f0ced6de8b09cc35791ea63ac5d79aa4232f572176da3b4b32dce93e",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/retained/MISPREDICTED_CENSUS.json"
+    },
+    {
+      "bytes": 2201035,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/candidates.npz",
+      "sha256": "a6d19fa68744ef1238354253e2a398733aba45d3aff095b154cc46b8b39b94ae",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/rank_mixer/candidates.npz"
+    },
+    {
+      "bytes": 119784,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/tail_control.bin",
+      "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/rank_mixer/tail_rp1_mixer_control.bin"
+    },
+    {
+      "bytes": 853172,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/pass4_field.npz",
+      "sha256": "813bf1e6770161b604348491433386661110001a5eefd8a4fdcd7d70bc25365c",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/admission_pass4/field_admitted.npz"
+    },
+    {
+      "bytes": 1681,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/pass5_result.json",
+      "sha256": "796a46ddd7153160c1d384ea3f8a80dc3419e476c1768b5149a80162bead1b3b",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/passes/pass5_gt/PASS_RESULT.json"
+    },
+    {
+      "bytes": 853538,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/pass5_field.npz",
+      "sha256": "48b5852e3c3adc3482de66375e98bc1771c34bb47db8c6f234593e1be9d3b9bf",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/passes/pass5_gt/field_after.npz"
+    },
+    {
+      "bytes": 180388,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/archive.zip",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip"
+    },
+    {
+      "bytes": 17890,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/pointer.json",
+      "sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a",
+      "source_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json"
+    },
+    {
+      "bytes": 1598,
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/exact_anchor.json",
+      "sha256": "f115fc2b1502b170ab209784a5c8de747fcdc09f22be223fb2146fe8b416d848",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json"
+    }
+  ],
+  "verdict": "BLOCKED_SOURCE_PREMISES",
+  "verdict_scope": "CHARTER_PROOF_PREMISES_ONLY"
+}

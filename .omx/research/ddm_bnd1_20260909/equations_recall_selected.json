@@ -1,0 +1,2053 @@
+{
+  "equations": [
+    {
+      "canonical_consumers": [
+        "tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample.derive_cls_lowres_from_cls_full",
+        "experiments.train_substrate_nscs06_v8_chroma_lut.compress_only_pass.Stage_5b"
+      ],
+      "canonical_producers": [
+        "tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample.derive_cls_lowres_from_cls_full",
+        "tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample.verify_cls_lowres_downsample_invariants"
+      ],
+      "domain_of_validity": {
+        "applies_to": "NSCS06 v8 chroma_lut CH08 v3 cls_stream slot at trainer compress side",
+        "excluded_contexts": [
+          "nscs06_v7_strip_everything_arith_coded_cls_stream",
+          "non_nscs06_v8_substrates"
+        ],
+        "grayscale_downsample_range": [
+          1,
+          16
+        ],
+        "in_domain_contexts": [
+          "nscs06_v8_chroma_lut_v3_procedural_seed_with_cls_stream"
+        ],
+        "num_segnet_classes_range": [
+          2,
+          32
+        ]
+      },
+      "empirical_anchors": [],
+      "equation_id": "cls_lowres_downsample_policy_boundary_preservation_v1",
+      "last_calibration_utc": "2026-05-29T21:15:00Z",
+      "latex_form": "cls\\_lowres[i, j] = \\arg\\max_c \\sum_{(dy, dx) \\in [0, ds)^2} \\mathbb{1}[cls\\_full[i \\cdot ds + dy, j \\cdot dx + dx] == c]\\\\ (mode\\_per\\_cell) \\quad vs \\quad cls\\_lowres[i, j] = cls\\_full[i \\cdot ds, j \\cdot ds]\\\\ (nearest\\_strided\\_top\\_left)",
+      "name": "cls_lowres downsample policy boundary preservation per Wave 5 cargo-cult #6",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "MODE per cell preserves dominant SegNet class at boundary cells where NEAREST strided top-left point-sample throws away dominant class.",
+      "predicted_vs_empirical_residual": {},
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-05-29T21:15:00Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "unknown",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample.derive_cls_lowres_from_cls_full.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.substrates.nscs06_v8_chroma_lut.cls_lowres_downsample.derive_cls_lowres_from_cls_full",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "cls_full": "(n_pairs, H, W) uint8",
+        "grayscale_downsample": "int",
+        "grayscale_h": "int",
+        "grayscale_w": "int",
+        "num_segnet_classes": "int",
+        "policy": "Literal[nearest_strided_top_left, mode_per_cell]"
+      },
+      "units_out": {
+        "cls_lowres": "(n_pairs, grayscale_h, grayscale_w) uint8",
+        "verdict": "ClsLowresDownsampleVerdict"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.boundary_math.lever_b_levelset_generator",
+        "tac.witness_dsl",
+        "tac.unified_action"
+      ],
+      "canonical_producers": [
+        "tac.boundary_math.lever_b_levelset_generator",
+        "tac.witness_dsl"
+      ],
+      "domain_of_validity": {
+        "campaign_tasks": [
+          "#183",
+          "#184",
+          "#185"
+        ],
+        "code_manifold_dim": 22,
+        "dsl": "src/tac/witness_dsl (#189)",
+        "eikonal_weight": 0.01,
+        "lane_orbit_dim": 8,
+        "length_weight": 0.001,
+        "measurement_axes": [
+          "[macOS-MLX research-signal]"
+        ],
+        "memory": "theta_star_witness_lever_stack_and_variational_levelset_frame_20260627",
+        "morse_smale_chart": "2/1/0-cells",
+        "role": "boundary_energy_term_of_E0_E4",
+        "theta_star": "operational lever-stack instantiation of E0 (S_tau)"
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "theta_star_eikonal_length_active_weights_20260629",
+          "empirical_output": {
+            "eikonal_active": 0.01,
+            "length_active": 0.001,
+            "regime": "live in trainer"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "eikonal_weight": 0.01,
+            "frame": "theta_star_variational_levelset",
+            "length_weight": 0.001
+          },
+          "measurement_method": "[macOS-MLX research-signal]",
+          "measurement_utc": "2026-06-29T20:50:00Z",
+          "predicted_output": {
+            "boundary_energy_terms_active": true
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-06-29T16:42:14Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "macos_arm64_mlx",
+            "measurement_axis": "[macOS-MLX research-signal]",
+            "promotion_eligible": false,
+            "rejection_reason": "theta_star_per_lever_ab_campaign_tasks_183_184_185",
+            "score_claim_valid": false,
+            "source_path": "theta_star_witness_lever_stack_and_variational_levelset_frame_20260627.md",
+            "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/.../memory/theta_star_witness_lever_stack_and_variational_levelset_frame_20260627.md"
+        }
+      ],
+      "equation_id": "theta_star_eikonal_length_boundary_energy_v1",
+      "last_calibration_utc": "2026-06-29T20:50:00Z",
+      "latex_form": "E_{bdy} = 0.01\\!\\int(\\lVert\\nabla\\varphi\\rVert-1)^2\\,dx + 0.001\\!\\int\\lVert\\nabla H(\\varphi)\\rVert\\,dx \\;(\\text{eikonal}+\\text{Chan-Vese length})",
+      "name": "theta* eikonal+length boundary energy = the operational boundary terms of E0 (witness = viscosity solution of the level-set PDE)",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "theta* = operational lever-stack instantiation of E0; eikonal(0.01)+Chan-Vese length(0.001) are the live boundary-energy terms of E0/E4 (witness = viscosity soln of the level-set PDE).",
+      "predicted_vs_empirical_residual": {
+        "[macOS-MLX research-signal]": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-06-29T16:42:14Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "macos_arm64_mlx",
+        "measurement_axis": "[macOS-MLX research-signal]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:witness_system.theta_star_eikonal_length_boundary_energy_v1>",
+        "source_sha256": "864165dad54b46b4c03c8880b9c4268b30d0a5ed1cf4bcdabf1b7b799e024fa9"
+      },
+      "python_callable_module_path": "tac.boundary_math.lever_b_levelset_generator",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "eikonal_w": "0.01",
+        "length_w": "0.001",
+        "phi": "signed_distance_field"
+      },
+      "units_out": {
+        "E_bdy": "boundary_energy_scalar"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.codec.pr98_channel_balance_zero_byte_bolt_on",
+        "experiments.train_levelset_witness_realized_through_R_mlx"
+      ],
+      "canonical_producers": [
+        "experiments/results/l28_witness_probe_n600/result.json"
+      ],
+      "domain_of_validity": {
+        "ancestor_rule": "L28 constants are HNeRV-renderer-bias-tuned; do NOT transfer to the level-set witness",
+        "caveat": "NOT a byte-closed exact-eval score; DROP verdict is for the WITNESS d_seg lever",
+        "measurement_axis": [
+          "macOS-CPU advisory"
+        ],
+        "n_pairs": 600,
+        "witness_pose_blind": "w_pose=0 => d_pose~98.5 regime meaningless for L28 pose offsets"
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "l28_on_levelset_witness_n600_negative_20260701",
+          "empirical_output": {
+            "baseline_d_seg": 0.0040483178032769095,
+            "delta_d_seg": 5.9339735242712466e-08,
+            "l28_d_seg": 0.004048377143012152,
+            "note": "L28 RAISES d_seg by +5.9e-8 (does NOT lower it) => ancestor-tuned constants do NOT transfer; d_pose delta -0.614 is in the POSE-BLIND regime (d_pose~98.5, w_pose=0) and NOT a valid keep basis",
+            "self_check_pair0_pose_mse": 0.0,
+            "self_check_pair0_seg_disagree": 0.0
+          },
+          "inputs": {
+            "n_pairs": 600,
+            "offsets_f_rgb_minus": [
+              [
+                0,
+                0,
+                1.0
+              ],
+              [
+                0,
+                2,
+                1.0
+              ],
+              [
+                1,
+                1,
+                1.0
+              ]
+            ],
+            "witness": "levelset_packet_20260701T200034Z",
+            "witness_pose_blind_w_pose": 0
+          },
+          "measurement_method": "n600_through_frozen_cpu_torch_distortionnet_gt_from_cache",
+          "measurement_utc": "2026-07-01T00:00:00Z",
+          "predicted_output": {
+            "ancestor_expectation": "L28 lowers d_seg (PR98 -0.001 on HNeRV)",
+            "transfers_to_witness": false
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-02T01:29:16Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_cpu",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-measure L28 on a POSE-TRAINED witness (w_pose>0, d_pose near 3.4e-5) where the pose regime is meaningful",
+            "score_claim_valid": false,
+            "source_path": "experiments/results/l28_witness_probe_n600/result.json",
+            "source_sha256": "0f09d445cc9eb7c3807492e6b482b5cbad79615779ca17493ee774f40839aa4e"
+          },
+          "residual": 5.9339735242712466e-08,
+          "source_artifact": "experiments/results/l28_witness_probe_n600/result.json"
+        }
+      ],
+      "equation_id": "l28_channel_offset_does_not_transfer_to_levelset_witness_v1",
+      "last_calibration_utc": "2026-07-01T00:00:00Z",
+      "latex_form": "\\Delta d_{seg}^{L28}(witness) = +5.9\\times10^{-8}\\ (\\ge 0,\\ no\\ improvement);\\ \\Delta d_{pose}\\ in\\ pose\\text{-}blind\\ regime",
+      "name": "L28 zero-byte decode-side channel offset does NOT transfer to the level-set witness (measured negative)",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "n600: ancestor-tuned L28 offsets RAISE witness d_seg +5.9e-8 (no drop); d_pose -0.614 is pose-blind-regime (w_pose=0), not a valid keep => DROP for the witness.",
+      "predicted_vs_empirical_residual": {
+        "n600_through_frozen_cpu_torch_distortionnet_gt_from_cache": 5.9339735242712466e-08
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-02T01:29:16Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "m5_max_cpu",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:l28_channel_offset_does_not_transfer_to_levelset_witness.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.codec.pr98_channel_balance_zero_byte_bolt_on",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "decoded_frames": "uint8_0_255_channels"
+      },
+      "units_out": {
+        "delta_d_seg": "fraction_of_pixels_argmax_disagree"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.gauge"
+      ],
+      "canonical_producers": [
+        "experiments/train_levelset_witness_realized_through_R_mlx.py"
+      ],
+      "domain_of_validity": {
+        "field": "SegNet argmax margin on the codim-1 separatrix",
+        "measurement_axis": [
+          "macOS-CPU advisory",
+          "predicted"
+        ],
+        "note": "the t self-consistency is measured (n6 advisory); the vector-lever net d_seg is #205-gated; weakest on thin lanes",
+        "vehicle": [
+          "softmax_of_sdf_levelset_witness"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "separatrix_asymmetry_t_selfconsistent_subpixel_localizer_green_20260703",
+          "empirical_output": {
+            "along_boundary_autocorr_horizontal": 0.696,
+            "note": "unifies sub-pixel POSITION + flip-DIRECTION; upgrades margin-saliency #141 scalar -> vector (magnitude + boundary-normal + skew); QUALIFIED: weakest on thin lanes, effect concentrated in the 1-2px flip band",
+            "selfconsistency_disjoint_all": 0.56,
+            "selfconsistency_disjoint_hood": 0.848,
+            "selfconsistency_disjoint_lane": 0.448,
+            "t_distribution": "~Uniform(0,1) => informative"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "n_pairs": "n6 advisory",
+            "probe": "a8afad40 (vector-field / separatrix-asymmetry)",
+            "statistic": "t = M_p/(M_p+M_q) cross-boundary argmax-margin ratio"
+          },
+          "measurement_method": "cross_boundary_margin_ratio_selfconsistency_n6_advisory",
+          "measurement_utc": "2026-07-03T00:00:00Z",
+          "predicted_output": {
+            "t_is_a_free_subpixel_boundary_localizer": true
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-04T12:46:41Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_cpu",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-measure t self-consistency + the vector-lever net d_seg at n600",
+            "score_claim_valid": false,
+            "source_path": "lane_dash_residual_root_is_along_tangent_freq_deficit_R_allpass_20260703.md",
+            "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "residual": 0.0,
+          "source_artifact": "lane_dash_residual_root_is_along_tangent_freq_deficit_R_allpass_20260703.md"
+        },
+        {
+          "anchor_id": "asymmetry_t_vector_saliency_lever_net_dseg_205_gated_20260703",
+          "empirical_output": {
+            "net_n600_dseg": "205-class A/B arm (operator GO); composes with the along-tangent-freq lever on the SAME lane facet"
+          },
+          "empirical_verification_status": "ASSUMED_AWAITING_VERIFICATION",
+          "inputs": {
+            "lever": "margin-saliency SCALAR magnitude -> VECTOR (t sub-pixel skew)",
+            "status": "DESIGN-STAGE (the training lever is unbuilt; the t diagnostic is measured)"
+          },
+          "measurement_method": "205_class_byte_closed_ab_arm",
+          "measurement_utc": "2026-07-03T00:00:00Z",
+          "predicted_output": {
+            "vector_t_saliency_sharpens_lane_facet": true
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-04T12:46:41Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "unknown",
+            "measurement_axis": "[predicted]",
+            "promotion_eligible": false,
+            "rejection_reason": "build the vector-t saliency lever + #205-class byte-closed A/B",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+            "source_sha256": "529f1327bf500fd811cc55b816111ddf43d0f030260976a4bdc4aa4d443484dc"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
+        }
+      ],
+      "equation_id": "separatrix_asymmetry_t_subpixel_boundary_localizer_v1",
+      "last_calibration_utc": "2026-07-03T00:00:00Z",
+      "latex_form": "t=\\frac{M_p}{M_p+M_q}\\in(0,1)\\ :\\ \\text{sub-pixel boundary position + flip side}\\quad(\\text{self-consistency}\\ +0.560\\ \\text{disjoint},\\ t\\sim U(0,1))",
+      "name": "Cross-boundary asymmetry t = M_p/(M_p+M_q): free sub-pixel boundary localizer",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "t = M_p/(M_p+M_q) is a self-consistent (+0.560 disjoint) sub-pixel boundary position + flip-direction localizer -> upgrades margin-saliency #141 from scalar to vector",
+      "predicted_vs_empirical_residual": {
+        "asymmetry_t_selfconsistency_positive": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-04T12:46:41Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "m5_max_cpu",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:separatrix_asymmetry_t_subpixel_boundary_localizer.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.canonical_equations.lane_dash_residual_root_cause_findings_20260703:boundary_asymmetry_t",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "m_p": "segnet_argmax_margin_side_p",
+        "m_q": "segnet_argmax_margin_side_q"
+      },
+      "units_out": {
+        "t": "dimensionless_subpixel_boundary_position_0_1"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.gauge"
+      ],
+      "canonical_producers": [
+        "experiments/probe_boundary_distance_calibration.py",
+        "experiments/train_levelset_witness_realized_through_R_mlx.py"
+      ],
+      "domain_of_validity": {
+        "lever": "--boundary-distance-weight (Kervadec SDF-native band placement, build 535e142be)",
+        "measurement_axis": [
+          "macOS-CPU advisory"
+        ],
+        "note": "magnitudes are checkpoint-dependent (M_ce falls with training) \u2014 the mixing law is exact but w(r) must be re-evaluated per checkpoint; grad-share rows are phi-surface (NOT comparable to the focal probe's frame-surface shares)",
+        "vehicle": [
+          "softmax_of_sdf_levelset_witness"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "bd_weight_ep100_phi_surface_calibration_20260705",
+          "empirical_output": {
+            "bd_raw_mean": 17.723,
+            "bulk_boundary_grad_share_by_w": {
+              "0.0": 0.0565,
+              "0.01": 0.0566,
+              "0.05": 0.0575,
+              "0.1": 0.0587,
+              "0.2": 0.0614,
+              "0.5": 0.0699,
+              "1.0": 0.0845
+            },
+            "ce_term_live_mean": 33.046,
+            "ce_term_mean": 35.614,
+            "island_grad_share_by_w": {
+              "0.0": 0.0123,
+              "0.01": 0.0123,
+              "0.05": 0.0126,
+              "0.1": 0.013,
+              "0.2": 0.0138,
+              "0.5": 0.0164,
+              "1.0": 0.0208
+            },
+            "verdict": "w_bd* = 0.2 (measured 9.05% of total, mid-window); shares monotone in w; island share RISES (no collapse); live weights NOT seg-damaged (live/EMA CE 0.928)"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "checkpoint": "levelset_n600_witness_20260705T015247Z EMA BEST @ep100 (sha256 ab06c6ae...) + resume sidecar (sha256 d09a49b9...)",
+            "loss": "w_seg=100 * mean(ce * (1+4*exp(-margin))) + w * boundary_distance_term_mlx",
+            "subset": "12 pairs, gt_n24 stride-2; witness-alone (deploy/verdict) surface",
+            "surface": "PHI (SDF-field) leaf \u2014 the only common surface: bd reads model.sdf directly (zero frame-gradient); CE differentiates through softmax->palette->sigmoid->R->SegNet from the SAME leaf"
+          },
+          "measurement_method": "probe_boundary_distance_calibration.py phi-surface grad shares + term magnitudes (chunked, kill-durable; trainer-imported bd functions)",
+          "measurement_utc": "2026-07-05T08:30:00Z",
+          "predicted_output": {
+            "target_window": "bd term = 5-15% of (CE + w*BD)",
+            "w_window_from_inverse_law": [
+              0.1058,
+              0.3546
+            ]
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-06T23:09:55Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu_mlx",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-run the probe on any later checkpoint before firing/retuning w_bd \u2014 M_ce falls as training progresses so ratio(w) grows at fixed w; recompute w(r) from the fresh magnitudes",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/ce_window_intervention_package_20260705.md",
+            "source_sha256": "a3e7fbc9ff05ca43c9f8aa90c437aa2e9a9be532b0df0073205672ee0ff566b2"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/ce_window_intervention_package_20260705.md"
+        }
+      ],
+      "equation_id": "boundary_distance_weight_calibration_v1",
+      "last_calibration_utc": "2026-07-05T08:30:00Z",
+      "latex_form": "\\rho(w)=\\frac{w\\,M_{bd}}{M_{ce}+w\\,M_{bd}},\\qquadw(\\rho)=\\frac{\\rho\\,M_{ce}}{(1-\\rho)\\,M_{bd}}",
+      "name": "Boundary-distance weight calibration: ratio(w)=w*M_bd/(M_ce+w*M_bd); w(r)=r*M_ce/((1-r)*M_bd); MEASURED ep100 M_ce=35.61 M_bd=17.72 => w*=0.2 @9.05%",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "Additive bd term mixes hyperbolically with CE; ep100-measured magnitudes put the 5-15% operator window at w in [0.106,0.355]; w*=0.2; phi-surface shares monotone.",
+      "predicted_vs_empirical_residual": {
+        "ratio_law_at_w02": 1.9068608172925772e-05
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-06T23:09:55Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "apple_m5_max_cpu_mlx",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:boundary_distance_weight_calibration.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.canonical_equations.boundary_distance_calibration_20260705:bd_weight_for_ratio",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "m_bd": "loss_units",
+        "m_ce": "loss_units",
+        "r": "fraction_0_1",
+        "w": "loss_weight"
+      },
+      "units_out": {
+        "ratio": "fraction_0_1",
+        "w": "loss_weight"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.gauge"
+      ],
+      "canonical_producers": [
+        "experiments/train_levelset_witness_realized_through_R_mlx.py"
+      ],
+      "domain_of_validity": {
+        "measurement_axis": [
+          "macOS-CPU advisory",
+          "predicted"
+        ],
+        "note": "byte-identity OFF + numpy<->MLX |c_a|/eps parity are MEASURED; the `8` constant + the net n600 cure are FORMALIZATION_PENDING (owed to main's bounded probe)",
+        "stage": "viscous eikonal regularizer (pre-tau eikonal re-entry window; ep~110 at n600)",
+        "vehicle": [
+          "softmax_of_sdf_levelset_witness"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "adaptive_eps_byte_identity_off_plus_numpy_mlx_parity_20260705",
+          "empirical_output": {
+            "c_a_measured_gt_n6_ep1": 11.159448,
+            "ep1_gnorm_both": 5697.5688,
+            "ep1_loss_bit_identical_when_eps_equal": true,
+            "ep1_total_both": 363.537496,
+            "note": "the |c_a| no-grad measurement adds ZERO perturbation (ep0 same-eps => ep1 loss/grad bit-identical); |c_a| is a REAL measured field quantity, not a constant (NO-FAKE)"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "eps_law": "clamp(|c_a|*sqrt(eta*lambda_eik/8)*(1+margin), floor, upper)",
+            "proxy": "|c_a| = mean|(|grad m|-1)/|grad m|| on the witness decision margin interior",
+            "smoke": "gt_n6 CPU-class 4ep; OFF-vs-adaptive; ep0 both eps=0.3"
+          },
+          "measurement_method": "gt_n6_cpu_class_smoke_plus_numpy_mlx_parity_test_suite",
+          "measurement_utc": "2026-07-05T00:00:00Z",
+          "predicted_output": {
+            "byte_identical_off": true,
+            "numpy_mlx_parity_rel": 0.0001
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-05T21:39:41Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_cpu",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-run the gt_n6 OFF-vs-adaptive smoke + src/tac/tests/test_adaptive_visco_eps.py",
+            "score_claim_valid": false,
+            "source_path": "src/tac/boundary_math/eikonal_sharpness_proxy_reference.py",
+            "source_sha256": "7acda1421fc1bf0dd4698d5188e065bd351068a3502705383514b04081cc5c47"
+          },
+          "residual": 0.0,
+          "source_artifact": "src/tac/boundary_math/eikonal_sharpness_proxy_reference.py"
+        },
+        {
+          "anchor_id": "adaptive_eps_n600_cure_confirmation_owed_to_main_probe_20260705",
+          "empirical_output": {
+            "net_n600_dseg": "owed to main's bounded probe (advisory until byte-closed)"
+          },
+          "empirical_verification_status": "ASSUMED_AWAITING_VERIFICATION",
+          "inputs": {
+            "config": "v5 argv + --eikonal-viscosity-adaptive floor 0.3 upper 0.7 + --eikonal-weight-end 0.05, resume bd_calib ep100 (CLEAN A/B vs v5)",
+            "constant": "the `8` in sqrt(eta*lambda_eik/8) + the |c_a| aggregation are MEASUREMENT-OWED (FORMALIZATION_PENDING)"
+          },
+          "measurement_method": "bounded_n600_probe_to_ep150_promote_abort_gate",
+          "measurement_utc": "2026-07-05T00:00:00Z",
+          "predicted_output": {
+            "verdict": "no eikonal re-entry through ep150; d_seg descends past ep110"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-05T21:39:41Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "unknown",
+            "measurement_axis": "[predicted]",
+            "promotion_eligible": false,
+            "rejection_reason": "main runs the bounded n600 adaptive-eps probe; confirm no ep110 re-entry + d_seg descent past the ep110 point",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/adaptive_eps_mechanism_cure_20260705.md",
+            "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/witness_config_differential_equations_derivation_20260705.md"
+        }
+      ],
+      "equation_id": "adaptive_eps_cfl_edge_tracking_v1",
+      "last_calibration_utc": "2026-07-05T00:00:00Z",
+      "latex_form": "\\varepsilon(t)=\\mathrm{clamp}\\!\\Big(|c_a(t)|\\sqrt{\\tfrac{\\eta\\,\\lambda_{eik}}{8}}\\,(1+\\mu),\\ \\varepsilon_{\\text{floor}},\\ \\varepsilon_{\\text{upper}}\\Big),\\quad c_a=\\tfrac{|\\nabla m|-1}{|\\nabla m|},\\quad \\pi_{eik}=\\tfrac{\\eta\\lambda_{eik}|c_a|^2}{8\\varepsilon^2}\\le 1",
+      "name": "Adaptive vanishing-viscosity eps: CFL-edge tracking (eikonal re-entry cure)",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "eps(t)=clamp(|c_a(t)|*sqrt(eta*lambda_eik/8)*(1+margin), floor, upper) tracks the RISING CFL lower edge |c_a| grows under sharpening; a FIXED eps falls below it => the v5 ep110 re-entry",
+      "predicted_vs_empirical_residual": {
+        "adaptive_visco_eps": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-05T21:39:41Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "m5_max_cpu",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:adaptive_eps_cfl_edge_tracking.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.boundary_math.eikonal_sharpness_proxy_reference:adaptive_visco_eps",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "c_a": "dimensionless",
+        "eps_floor": "viscosity",
+        "eps_upper": "viscosity",
+        "eta": "lr",
+        "lam_eik": "eikonal_weight",
+        "margin_factor": "dimensionless"
+      },
+      "units_out": {
+        "eps": "viscosity"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.curriculum_dsl"
+      ],
+      "canonical_producers": [
+        "experiments/train_levelset_witness_realized_through_R_mlx.py",
+        "tac.boundary_math.step_native_activation"
+      ],
+      "domain_of_validity": {
+        "lever": "tac.witness_dsl.curriculum_dsl.StepNativeActivation (--hosc-beta/--hosc-beta-end/--hosc-beta-anneal)",
+        "measurement_axis": [
+          "macOS-MLX research-signal",
+          "predicted"
+        ],
+        "note": "approach the step limit by ANNEAL only (fixed high beta diverges, measured); a discrete --activation step_basis choice is BUILD-NEEDED (#310) \u2014 this trainer's argparse offers wire/hosc/relu only; the FINER++ bias-init sister is BUILT (--finer-bias-init/--finer-bias-k, DSL lever FinerBiasInit, 2026-07-07)",
+        "vehicle": [
+          "softmax_of_sdf_levelset_witness"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "capstone_nonstep_best_dseg_bound_20260625",
+          "empirical_output": {
+            "best_dseg_ep100": 0.004445,
+            "best_dseg_ep450": 0.002447,
+            "need": 0.001,
+            "verdict": "non-step chart converged ~2.8-4.4x ABOVE the ~0.001 need and mildly overfit past ep400 => further gain needs a NEW lever (the step-native chart is the named unswept #5 lever), not more epochs"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "activation": "non-step (relu/smooth chart; step/gauss UNSWEPT at measurement time)",
+            "authority": "frozen CPU-torch SegNet argmax (MLX gradient-only, NEVER MPS)",
+            "vehicle": "capstone all-class-dir(+cap) coord-INR (witness-build a922483dfc636ccc3 + ep450 daemons, DAG FEEDs 2026-06-25t/u)"
+          },
+          "measurement_method": "capstone lever sweep + ep450 daemons on frozen CPU-torch SegNet argmax",
+          "measurement_utc": "2026-06-25T00:00:00Z",
+          "predicted_output": {
+            "deep_math": "smooth charts pay Gibbs/blur per edge; gap to need remains"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-09T18:23:50Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu_mlx",
+            "measurement_axis": "[macOS-MLX research-signal]",
+            "promotion_eligible": false,
+            "rejection_reason": "supersede with the #310 step-native sweep rows when they land",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+            "source_sha256": "ce32e80c0f0c4388aae2530e5bd0dc66c71f56b018d5b3891d36197a33939434"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
+        },
+        {
+          "anchor_id": "step_native_delta_owed_310_sweep_20260707",
+          "empirical_output": {
+            "status": "OWED \u2014 the #310 step-native sweep (beta-anneal arm A/B) is the owed anchor"
+          },
+          "empirical_verification_status": "ASSUMED_AWAITING_VERIFICATION",
+          "inputs": {
+            "caveat": "MEASURED: FIXED beta=4 from scratch DIVERGES (tanh saturation); anneal the step limit, never start at it (DAG FEED 2026-06-25a + FEED-ly)",
+            "literature": "piecewise-constant approximation theory (L-infinity-at-edge, O(1) params/edge, no Gibbs) + deep-math 'Amortizing the Argmax' ch.1-6",
+            "trainer_route": "--hosc-beta -> --hosc-beta-end anneal (tanh(beta*sin) -> step limit)"
+          },
+          "measurement_method": "derivation only (no step-native run yet; #310 sweep owed)",
+          "measurement_utc": "2026-07-07T00:00:00Z",
+          "predicted_output": {
+            "claim": "step-native chart concentrates error in the flip band => d_seg drop at ~0 bytes"
+          },
+          "provenance": {
+            "artifact_kind": "predicted_from_model",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+            "captured_at_utc": "2026-07-09T18:23:50Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "predicted",
+            "hardware_substrate": "apple_m5_max_cpu_mlx",
+            "measurement_axis": "[predicted]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": "<predictor:step_native_activation_edge_optimality.step_delta>",
+            "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
+        },
+        {
+          "anchor_id": "step_native_numpy_oracle_and_fixed_beta_guard_20260709",
+          "empirical_output": {
+            "anneal_matches_trainer": "beta(1)=start, beta(A)=end, monotone; const when end None/==start",
+            "default_start_lowered": "beta_start default 4.0->1.0 (start where gradients flow, anneal UP)",
+            "guard_rejects_fixed_beta": "validate_step_native_config flags beta_end==beta_start; the prior StepNativeActivation guard (beta_start<=beta_end) allowed it \u2014 now REJECTED; step_basis requires FINER",
+            "step_differs_from_sine": "hosc(beta=64)~sign(sin), max|hosc-sin|>0.3 (tests)",
+            "verdict": "the lever is now a properly-wired, swept, fireable DSL Lever with a real fail-closed guard + numpy reference oracle; byte-identical when NOT composed"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+          "inputs": {
+            "dsl_guard": "tac.witness_dsl.curriculum_dsl.StepNativeActivation consumes validate_step_native_config",
+            "mechanism": "tac.boundary_math.step_native_activation (hosc_activation/step_native_limit/sine_basis/beta_anneal_schedule/validate_step_native_config)",
+            "tests": "src/tac/boundary_math/tests/test_step_native_activation.py"
+          },
+          "measurement_method": "source inspection + NO-FAKE unit tests ($0 numpy)",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "claim": "tanh(beta*sin) -> sign(sin) STEP (a.e., != sine); anneal twin of the trainer; the fireable DSL lever fails closed on a CONSTANT beta (the saturation-death)"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-09T18:23:50Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu_mlx",
+            "measurement_axis": "[macOS-MLX research-signal]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-verify if the activation/schedule form or the fixed-beta guard changes (tanh(beta*sin) must still -> sign(sin); a constant beta must stay REJECTED by validate_step_native_config)",
+            "score_claim_valid": false,
+            "source_path": "src/tac/boundary_math/step_native_activation.py",
+            "source_sha256": "eb4dc35a0ee08b8678280614535212a34a565259b6c6e4cdd57cd6abe215fa18"
+          },
+          "residual": 0.0,
+          "source_artifact": "src/tac/boundary_math/step_native_activation.py"
+        }
+      ],
+      "equation_id": "step_native_activation_edge_optimality_v1",
+      "last_calibration_utc": "2026-07-07T00:00:00Z",
+      "latex_form": "\\sigma_\\beta(u)=\\tanh(\\beta\\sin(\\omega u)),\\ \\ \\lim_{\\beta\\to\\infty}\\sigma_\\beta=\\mathrm{step};\\quad \\|e_{\\mathrm{step}}\\|_{L^\\infty(\\Omega\\setminus B_{w})}\\approx 0",
+      "name": "Step-native activation L-infinity-at-edge optimality: for piecewise-constant argmax targets the step chart is topology-matched (error inside the flip band, no Gibbs); trainer route = hosc beta-anneal (beta->inf is the step limit; fixed-high-beta diverges)",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "Step-native charts put all error at the edge (no Gibbs) for the piecewise-constant argmax; non-step best 0.004445 bounds the unswept lever; delta OWED to #310.",
+      "predicted_vs_empirical_residual": {
+        "nonstep_gap_to_need_ep450": 1.447
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-09T18:23:50Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "apple_m5_max_cpu_mlx",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:step_native_activation_edge_optimality.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.canonical_equations.step_native_activation_edge_optimality_20260707:hosc_step_limit_beta_ratio",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "beta_end": "dimensionless",
+        "beta_start": "dimensionless"
+      },
+      "units_out": {
+        "ratio": "dimensionless_gt_1_for_anneal"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tools/launch_witness_run.py",
+        "tools/costate_digest.py"
+      ],
+      "canonical_producers": [
+        ".omx/research/t5_crucible/position_S5_lever_ledger_20260707.md"
+      ],
+      "domain_of_validity": {
+        "apparatus": [
+          "lever_activation_ledger",
+          "launch_witness_run"
+        ],
+        "measurement_axis": [
+          "predicted"
+        ],
+        "note": "sister of the default-off-is-orphaned-signal non-negotiable: 'held but never fired' AND 'fired but never recorded' are both orphaned signal"
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "ledger_7_rows_vs_launch_sh_10_raw_fired_20260707",
+          "empirical_output": {
+            "note": "~10 of the '36 never-fired' DID raw-flag fire per launch.sh; the ledger records ONLY --dsl-lever-path launches (launch_witness_run.py:1075-1082); 'fired in a poisoned (spike-guard-frozen) run' earns a fired row, NEVER a measured verdict; fix R1 = argv->lever reverse-map + engagement-predicate backfill",
+            "raw_flag_fired_but_ledger_blind": [
+              "Muon",
+              "PoseDecouple",
+              "AnalyticLaneRenderBand (ep300+ in #205, UNATTRIBUTED)",
+              "AmplifyIsland",
+              "PersistenceTopology",
+              "SeedIslandBirth components",
+              "EikonalViscosity",
+              "StiefelW",
+              "BoundaryDistance",
+              "CacheGtSkeleton"
+            ]
+          },
+          "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+          "inputs": {
+            "ground_truth": "experiments/results/levelset_n600_witness_*/launch.sh + run.log",
+            "ledger": ".omx/state/lever_activation_ledger.jsonl (7 rows)"
+          },
+          "measurement_method": "launch_sh_run_log_audit_vs_ledger",
+          "measurement_utc": "2026-07-07T00:00:00Z",
+          "predicted_output": {
+            "ledger_reflects_runs": false
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-08T00:17:00Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_cpu",
+            "measurement_axis": "[predicted]",
+            "promotion_eligible": false,
+            "rejection_reason": "S5 R1: launch-time argv->lever ENGAGED ingest wired so the ledger finally reads real runs (crucible requirement G.5)",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/t5_crucible/position_S5_lever_ledger_20260707.md",
+            "source_sha256": "479a40350e1305cb4245d3226efadc6d9a5a7cacdc9d4e6c7c2c45b8d27e33eb"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/t5_crucible/position_S5_lever_ledger_20260707.md"
+        }
+      ],
+      "equation_id": "activation_ledger_not_run_truth_v1",
+      "last_calibration_utc": "2026-07-07T00:00:00Z",
+      "latex_form": "\\mathrm{ledger} \\subsetneq \\mathrm{runs};\\ \\mathrm{truth} = \\mathrm{launch.sh}",
+      "name": "Activation ledger != run truth (launch.sh is ground truth) \u2014 apparatus law",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "activation ledger records only --dsl-lever launches; raw-flag launch.sh runs are invisible (~10 of '36 never-fired' raw-fired) -> run-config claims cite launch.sh, never the ledger",
+      "predicted_vs_empirical_residual": {
+        "launch_sh_run_log_audit_vs_ledger": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-08T00:17:00Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "m5_max_cpu",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:activation_ledger_not_run_truth.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.canonical_equations.t5_crucible_measured_laws_20260707:raw_flag_runs_visible_to_ledger",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {},
+      "units_out": {
+        "visible": "bool"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.curriculum_dsl",
+        "experiments/train_levelset_witness_realized_through_R_mlx.py"
+      ],
+      "canonical_producers": [
+        "tac.boundary_math.chroma_boundary_match"
+      ],
+      "domain_of_validity": {
+        "lever": "tac.witness_dsl.curriculum_dsl.SegChromaBoundary (--seg-chroma-boundary-weight/-margin-band/-start-epoch)",
+        "measurement_axis": [
+          "macOS-MLX research-signal",
+          "predicted"
+        ],
+        "note": "0-byte train-time chroma-match loss on the fragile annulus; the d_seg SIGN/MAGNITUDE of the ADD-BACK is ASSUMED_AWAITING_VERIFICATION until a CONVERGED n600 byte-close A/B measures it (the 7.54%/4.38%/93.4% are a REMOVAL ABLATION, not an achieved move). NOT supported with --micro-batch-pairs>1 (fails closed).",
+        "vehicle": [
+          "softmax_of_sdf_levelset_witness",
+          "coord_inr_seg_witness"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "chroma_boundary_match_off_degeneracy_byte_identical_20260709",
+          "empirical_output": {
+            "empty_annulus_is_zero": "term==0.0 on all-out-of-band margins (test_empty_annulus_is_zero_no_divzero)",
+            "luma_invariant": "chroma(rgb + c\u00b7[1,1,1]) == chroma(rgb) (test_chroma_is_luma_invariant) \u21d2 ORTHOGONAL to every luma lever",
+            "only_annulus_upweighted": "only pixels with GT margin < band contribute (test_only_fragile_annulus_contributes)",
+            "perfect_match_is_zero": "term==0.0 when witness chroma == GT chroma (test_perfect_match_is_zero)",
+            "verdict": "the default-OFF trainer path is byte-identical by construction (the loss block is gated on chroma_bnd_w>0, default 0.0, providers None); the numpy twin's weight==0 / empty-annulus / perfect-match returns are the runtime guarantee, not a promise",
+            "weight_zero_is_zero": "loss==0.0 exactly (test_weight_zero_is_byte_identical_zero)"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+          "inputs": {
+            "mechanism": "tac.boundary_math.chroma_boundary_match.chroma_boundary_loss",
+            "tests": "src/tac/boundary_math/tests/test_chroma_boundary_match.py",
+            "trainer_twin": "experiments/train_levelset_witness_realized_through_R_mlx.py (L4933-4944 loss block; L5731-5752 GT-chroma/annulus provider precompute)"
+          },
+          "measurement_method": "source inspection + NO-FAKE unit tests (numpy $0) vs the trainer twin",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "claim": "weight==0 \u21d2 term==0.0 exactly (trainer skips the branch AND providers None \u2014 byte-identical); empty annulus \u21d2 term==0.0 (the +1e-6 guard, no /0); perfect chroma match on the annulus \u21d2 term==0.0"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-09T18:51:26Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu_mlx",
+            "measurement_axis": "[macOS-MLX research-signal]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-verify the degeneracies if the chroma/annulus/term formula changes (weight==0, empty-annulus, and perfect-match must stay exactly 0; chroma must stay luma-invariant)",
+            "score_claim_valid": false,
+            "source_path": "src/tac/boundary_math/chroma_boundary_match.py",
+            "source_sha256": "96a60f53612ef9912b1d380ff0f87b7dc4a551886218c1f58386be54e6d433f4"
+          },
+          "residual": 0.0,
+          "source_artifact": "src/tac/boundary_math/chroma_boundary_match.py"
+        },
+        {
+          "anchor_id": "chroma_boundary_match_effect_owed_converged_ab_276_20260709",
+          "empirical_output": {
+            "chroma_desat_only_annulus_flip": 0.031,
+            "chroma_flips_in_margin_lt025": 0.337,
+            "chroma_flips_in_margin_lt1_annulus": 0.934,
+            "chroma_removal_lane_to_road_flip": 0.0754,
+            "chroma_removal_movable_to_undriv_flip": 0.0438,
+            "margin_grad_energy_chroma_fraction": 0.212,
+            "status": "OWED \u2014 the 7.54%/4.38%/93.4% are a MEASURED chroma-REMOVAL ABLATION (the DOF EXISTENCE proof, eq chroma_decides_lane_and_movable_at_annulus_v1), NOT the ADD-BACK score \u0394S of THIS chroma-MATCH loss term through the witness. That \u0394S is UNMEASURED. The exit criterion is a CONVERGED n600 byte-close A/B (ON vs OFF ckpts; the surviving annulus flips must shift toward the GT chroma, else terminal-finding). This landing COMPLETES the fireable-lever triality (default-OFF, byte-identical); it makes NO score claim. means != ends: pointer 0.19110 UNMOVED.",
+            "verdict_scope": "instance-owed-converged-ab"
+          },
+          "empirical_verification_status": "ASSUMED_AWAITING_VERIFICATION",
+          "inputs": {
+            "reducible_locus": "fragile annulus GT top-2 margin < 1 (93.4% of chroma-flips)",
+            "source_dof_equation": "chroma_decides_lane_and_movable_at_annulus_v1",
+            "source_probe": "a3e9f0bd (n96, 100% L*-match to frozen SegNet) / #276 chroma-DOF / DAG FEED"
+          },
+          "measurement_method": "chroma-removal ablation (probe a3e9f0bd) \u2014 the DOF existence; no add-back witness A/B yet",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "hypothesis": "supervising the witness's per-pixel rendered chroma toward the GT chroma at the fragile annulus recovers the annulus d_seg flips chroma decides (Lane/Road, Movable/Undriv), independent of the luma levers"
+          },
+          "provenance": {
+            "artifact_kind": "predicted_from_model",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+            "captured_at_utc": "2026-07-09T18:51:26Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "predicted",
+            "hardware_substrate": "apple_m5_max_cpu_mlx",
+            "measurement_axis": "[predicted]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": "<predictor:chroma_boundary_match.effect_owed_converged_ab>",
+            "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
+        }
+      ],
+      "equation_id": "chroma_boundary_annulus_match_hinge_v1",
+      "last_calibration_utc": "2026-07-09T00:00:00Z",
+      "latex_form": "L_{c}=w\\,\\frac{\\sum_x \\lVert \\mathrm{chroma}(f_1)(x)-\\mathrm{chroma}(\\mathrm{GT})(x)\\rVert^2\\,\\mathbb{1}[m_{gt}(x)<\\text{band}]}{\\sum_x \\mathbb{1}[m_{gt}(x)<\\text{band}]+\\varepsilon},\\quad \\mathrm{chroma}(rgb)=rgb-\\mathrm{luma}_{601}(rgb)\\cdot[1,1,1]",
+      "name": "LEVER-4c annulus-directed chroma-boundary match: additive w\u00b7mean_{ann} \u2016chroma(f1) \u2212 chroma(GT)\u2016\u00b2 on the SHARED realized-through-R render over the fragile annulus 1[GT margin < band]; chroma := rgb \u2212 BT.601-luma (LUMA-INVARIANT); 0-byte shared-structure d_seg lever",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "Luma-invariant chroma-match hinge on the fragile annulus (GT margin<1, 93.4% of chroma-flips); 0 bytes; OFF/empty/perfect-match\u21d20; DOF-measured removal 7.54%/4.38%, add-back \u0394S owed n600 A/B.",
+      "predicted_vs_empirical_residual": {
+        "dseg_effect_owed_converged_ab": 0.0,
+        "off_degeneracy_byte_identity": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-09T18:51:26Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "apple_m5_max_cpu_mlx",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:chroma_boundary_annulus_match_hinge.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.boundary_math.chroma_boundary_match:chroma_boundary_loss",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "band": "segnet_logit_margin",
+        "f1_rgb": "witness_rendered_rgb_through_R",
+        "gt_margin": "segnet_top1_top2_logit_gap",
+        "gt_rgb": "gt_frame_rgb_at_segnet_res",
+        "weight": "loss_weight"
+      },
+      "units_out": {
+        "L_c": "seg_loss_contribution"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.curriculum_dsl",
+        "experiments/train_levelset_witness_realized_through_R_mlx.py",
+        "experiments/probe_laguerre_logit_offset_sweep.py"
+      ],
+      "canonical_producers": [
+        "tac.boundary_math.laguerre_logit_offset"
+      ],
+      "domain_of_validity": {
+        "lever": "tac.witness_dsl.curriculum_dsl.HeadOffsetSolver (--head-offset-solver {off,menon,ot_newton} / -tau)",
+        "measurement_axis": [
+          "contest-CPU advisory",
+          "predicted"
+        ],
+        "note": "the OT SOLVE is exact (mass-matching, zero-sum, quadratic Newton); the d_seg VERDICT is a MEASURED NEGATIVE for the mass-matching objective at mod32cap ep650 (verdict_scope FORMULATION). NON-PROMOTABLE until byte-closed exact eval.",
+        "vehicle": [
+          "softmax_of_sdf_levelset_witness",
+          "coord_inr_seg_witness"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "laguerre_ot_head_offset_solver_correctness_20260709",
+          "empirical_output": {
+            "mass_matching_property": "solved masses match target to tol (test_ot_solve_matches_target_masses)",
+            "menon_alias": "solve_head_offsets('menon') == menon_logit_adjustment_offsets (byte-equal)",
+            "no_silent_fallback": "ot_newton with phi=None RAISES (test_ot_newton_requires_phi_no_fake)",
+            "verdict": "the OT solver is EXACT; the negative below is about the mass-matching OBJECTIVE as a d_seg surrogate, NOT the solver",
+            "zero_sum_gauge": "sum(b*)~0 (test_ot_offsets_zero_sum)"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+          "inputs": {
+            "dispatcher": "tac.boundary_math.laguerre_logit_offset.solve_head_offsets",
+            "mechanism": "tac.boundary_math.laguerre_logit_offset.damped_newton_ot_offsets",
+            "tests": "src/tac/boundary_math/tests/test_solve_head_offsets_ot.py"
+          },
+          "measurement_method": "source inspection + NO-FAKE unit tests ($0 numpy)",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "claim": "damped-Newton on the concave OT dual converges to soft cell masses == target masses (max_mass_err -> 0) in <=~8 Newton iters (terminal quadratic); offsets zero-sum (mean-centered gauge); ot_newton NEVER silently falls back to menon"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-10T01:51:46Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu",
+            "measurement_axis": "[contest-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-verify convergence + zero-sum + no-fallback if the Newton step / dual / dispatcher change",
+            "score_claim_valid": false,
+            "source_path": "src/tac/boundary_math/laguerre_logit_offset.py",
+            "source_sha256": "aeec27b0c6bf7c244d1c80b8d62a330a8f5e9db4e41dbecde9a273d9cddd0d32"
+          },
+          "residual": 0.0,
+          "source_artifact": "src/tac/boundary_math/laguerre_logit_offset.py"
+        },
+        {
+          "anchor_id": "laguerre_ot_head_offset_dollar0_gate_mod32cap_ep650_20260709",
+          "empirical_output": {
+            "advisory": "[contest-CPU advisory] NON-PROMOTABLE; pointer 0.19110 UNMOVED",
+            "d_seg_menon": 0.0029322,
+            "d_seg_no_offset": 0.0027252,
+            "d_seg_ot_newton": 0.0048664,
+            "ot_converged": true,
+            "ot_max_mass_err": 0.0,
+            "verdict": "MEASURED-NEGATIVE: OT (mass-matching) > menon > no_offset (higher = worse). Cell-mass-matching over-inflates the rare Lane cell => SegNet-re-read penalises the over-prediction. Both offset arms HURT d_seg at this checkpoint; no-offset wins. hypothesis REFUTED at mod32cap ep650.",
+            "verdict_scope": "FORMULATION \u2014 'cell-mass-matching to GT frequencies as a d_seg surrogate' at THIS checkpoint/tau. NOT the OT solver's correctness (exact). Other checkpoints / tau / target-mass definitions (e.g. flip-weighted, not raw frequency) UNTESTED = ASSUMED_AWAITING_VERIFICATION."
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "authority": "realized-through-R, frozen CPU SegNet (fp32 EMA render)",
+            "ckpt": "levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz (ep650)",
+            "gate": "experiments/probe_laguerre_logit_offset_sweep.py (3-arm)",
+            "n_pairs": 48
+          },
+          "measurement_method": "$0 offline gate: 3-arm realized-through-R d_seg (frozen CPU SegNet), n48 (order+sign reproduced at n24; n96/n600 owed \u2014 background-task limit killed them; probe not resumable-chunked)",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "hypothesis": "the geometry-aware OT mass-matching offset beats the priors-only Menon heuristic on realized d_seg (memo #288 row-2 HIGHEST-$0)"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-10T01:51:46Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu",
+            "measurement_axis": "[contest-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-run at other converged checkpoints, other tau, or a flip-weighted target-mass definition before any promotion",
+            "score_claim_valid": false,
+            "source_path": "experiments/probe_laguerre_logit_offset_sweep.py",
+            "source_sha256": "d20e6d69dd4099104b340410480875e53d9fa69bfb88c29bab3198b54cc96073"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
+        },
+        {
+          "anchor_id": "laguerre_ot_head_offset_dollar0_gate_n600_mod32cap_ep650_20260709",
+          "empirical_output": {
+            "advisory": "[contest-CPU advisory] NON-PROMOTABLE; pointer 0.19110 UNMOVED",
+            "d_seg_menon": 0.0033119,
+            "d_seg_no_offset": 0.0031436,
+            "d_seg_ot_newton": 0.0048921,
+            "ot_converged": true,
+            "ot_iters": 8,
+            "ot_max_mass_err": 2.82e-11,
+            "verdict": "CONFIRMED at full scale: no_offset 0.0031436 < menon 0.0033119 (+1.68e-4) < ot_newton 0.0048921 (+1.75e-3) \u2014 identical order + sign to the n48/n24 subset. OT solver EXACT (8 Newton iters, max_mass_err 2.82e-11). Mass-matching inflates the rare-Lane cell (b_Lane +26.5) -> Lane d_seg 0.212->0.265, all classes worse -> SegNet re-read PENALISES the over-prediction. no-offset wins.",
+            "verdict_scope": "FORMULATION \u2014 'cell-mass-matching to GT frequencies as a d_seg surrogate' at THIS checkpoint/tau, CONFIRMED at n600. NOT the OT solver (exact). Flip-weighted target masses / other tau / other checkpoints / per-pair offsets UNTESTED = ASSUMED_AWAITING_VERIFICATION (reformulation queue)."
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "authority": "realized-through-R, frozen CPU SegNet (fp32 EMA render), ALL 600 pairs",
+            "ckpt": "levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz (ep650)",
+            "gate": "experiments/probe_laguerre_logit_offset_sweep.py (3-arm)",
+            "n_pairs": 600,
+            "result_json_sha256": "55158cdf613ab10585f1a0b56b9a5032338b975d6780a332838e3a118cc58c8a"
+          },
+          "measurement_method": "$0 offline gate: 3-arm realized-through-R d_seg (frozen CPU SegNet), FULL n600 (all 600 pairs); local macOS-CPU (Modal Linux-x86_64 dispatch cancelled ~12min as impractically slow, ~$0.15 est; predecessor's detached local run harvested by recovery subagent). Order+sign reproduce n2/n6/n24/n48/n600.",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "hypothesis": "does the n48/n24 subset verdict (no_offset < menon < ot_newton) HOLD at the full admissible n600 scale? (CLAUDE.md 'allergic to non-n600-scale')"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-10T01:51:46Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu",
+            "measurement_axis": "[contest-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-run with a FLIP-WEIGHTED target-mass definition (the primary queued reformulation), other tau, or other converged checkpoints before any promotion",
+            "score_claim_valid": false,
+            "source_path": "experiments/probe_laguerre_logit_offset_sweep.py",
+            "source_sha256": "d20e6d69dd4099104b340410480875e53d9fa69bfb88c29bab3198b54cc96073"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/ot_offset_n600_verdict_20260709.md"
+        },
+        {
+          "anchor_id": "laguerre_flip_bc_reformulation_gate_n600_mod32cap_ep650_20260709",
+          "empirical_output": {
+            "advisory": "[contest-CPU advisory] NON-PROMOTABLE; pointer 0.19110 UNMOVED",
+            "baseline_bit_identical_to_n1": true,
+            "d_seg_flip_median": 0.0215612,
+            "d_seg_flip_weighted": 0.0196734,
+            "d_seg_no_offset": 0.0031436,
+            "lane_perclass_flip_median": 0.6129,
+            "lane_perclass_no_offset": 0.21182,
+            "untested_formulations_alternatives": "(1) per-EDGE b_c on the FRESH v8 Stage-A decoupled fields (S1's original per-edge form \u2014 the crucible-3 v8 route, non-eroded by construction); (2) offsets solved JOINTLY WITH training (not post-hoc on a frozen eroded phi); (3) magnitude-CLAMPED offsets within the derivation's validity domain (the N-1 sweep's ~0 best bounds this at ~nil headroom on THIS trunk); (4) per-pair / spatially-varying b_c(x).",
+            "validity_domain": "the per-edge flip-margin-median placement is derived for |b| SMALL (local boundary shift; collateral correct-pixel mass ~negligible) on a NON-ERODED phi field; |b|~43 on an eroded trunk is outside it.",
+            "verdict": "BOTH arms LOSE, decisively: no_offset 0.0031436 << flip_weighted 0.0196734 (6.3x; +0.01653 = 40% of the 0.0411 gap, AS HARM) << flip_median 0.0215612 (6.9x; +0.01842 = 45% of gap, AS HARM) \u2014 both ~4x worse than even the N-1-falsified area objective (0.0048921). MECHANISM: the trunk's phi-space Lane erasure is DEEP (Lane per-class d_seg 0.212 at no_offset; realized-flip pixels carry LARGE phi margins, median ~43), so any global 5-scalar offset reaching the flip mass must boost Lane by ~+43..+49, over-predicting Lane everywhere (Lane per-class 0.212 -> 0.61). SHARED CONCLUSION: no GLOBAL per-class offset rescues an eroded trunk (menon/ot_newton/flip_weighted/flip_median all worse; N-1's exhaustive +-0.4 sweep best delta -3.4e-8 => the global post-hoc b_c lever is SATURATED at no_offset here).",
+            "verdict_scope_flip_median": "M-b FORMULATION with a REGIME qualifier \u2014 the Hamming-median derivation is VALID in the small-offset local-boundary-shift regime; the solved b_Lane +43 (driven by the trunk's phi-space Lane erasure) EXITS that validity domain. A REGIME VIOLATION on THIS eroded trunk, NOT a refutation of the median law itself.",
+            "verdict_scope_flip_weighted": "M-a FORMULATION \u2014 'flip-share targets through the mass-OT mechanism'. Crucible-3 P3 F3 empirically CONFIRMED: OT-to-flip-share re-inherits AND amplifies N-1's cell-inflation pathology (worse than area-matching)."
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "authority": "realized-through-R, frozen CPU SegNet (fp32 EMA render), ALL 600 pairs",
+            "ckpt": "levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz (ep650)",
+            "gate": "experiments/probe_flip_bc_n600_gate.py (3-arm, reuses the N-1 harness verbatim)",
+            "modes": "flip_weighted (OT to flip_share_by_class) + flip_median (S1 Hamming per-edge flip-margin median, distinct closed-form path per crucible-3 P3 F3); flips identified by the REALIZED baseline argmax (pred_is_realized=1)",
+            "n_pairs": 600,
+            "result_json_sha256": "ad3f863e9de0e0d8bc14df8ee16f8e2564fa01938f2bd7cf8a9511fb2b86fb8f"
+          },
+          "measurement_method": "$0 offline gate: 3-arm realized-through-R d_seg (frozen CPU SegNet, verdict-batch 32 chunked), FULL n600, local macOS-CPU, 44.5 min; baseline arm reproduced the N-1 verdict bit-identically (same harness/protocol)",
+          "measurement_utc": "2026-07-09T00:00:00Z",
+          "predicted_output": {
+            "hypothesis": "crucible-3 A.3/S1-S3: targeting the FLIP mass (the boundary-annulus residual the scorer re-reads) instead of GT AREA frequency fixes the N-1 negative; S1 derived flip-median as the Hamming-optimal 1-D threshold"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-10T01:51:46Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_m5_max_cpu",
+            "measurement_axis": "[contest-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-open ONLY via the untested formulations above (per-EDGE b_c on fresh v8 Stage-A fields / joint-with-training / magnitude-clamped within validity domain / per-pair or spatial b_c(x)) \u2014 NOT another global post-hoc target-mass variant on an eroded trunk",
+            "score_claim_valid": false,
+            "source_path": "experiments/probe_flip_bc_n600_gate.py",
+            "source_sha256": "ce263d95163c1ee62fe71aec98ad291946c5836e4b51e31b0501e2adbb578f6d"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/flip_weighted_bc_build_and_gate_20260709.md"
+        }
+      ],
+      "equation_id": "laguerre_ot_head_offset_v1",
+      "last_calibration_utc": "2026-07-09T00:00:00Z",
+      "latex_form": "b^*=\\arg\\max_b\\ \\langle\\pi,b\\rangle-\\tau\\,\\overline{\\mathrm{lse}}\\!\\left(\\tfrac{\\phi+b}{\\tau}\\right),\\quad b\\leftarrow b+t\\,\\tau\\,(\\mathrm{diag}(m)-\\overline{ss^\\top})^{+}(\\pi-m),\\ \\ \\bar b=0",
+      "name": "#288 damped-Newton semi-discrete OT per-class head-bias offset: solve the zero-sum b* whose Laguerre-reweighted soft cell masses equal the GT class frequencies (Kitagawa-Merigot-Thibert 2019); byte-free out_sdf.bias fold",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "Semi-discrete OT solves the byte-free per-class argmax-cell offset to match GT masses; solver EXACT but mass-matching MEASURED-worse than no-offset for realized d_seg (ep650).",
+      "predicted_vs_empirical_residual": {
+        "gate_menon_minus_no_offset": 0.00020699999999999972,
+        "gate_n600_flip_median_minus_no_offset": 0.0184176,
+        "gate_n600_flip_weighted_minus_no_offset": 0.0165298,
+        "gate_n600_menon_minus_no_offset": 0.00016830000000000013,
+        "gate_n600_ot_minus_no_offset": 0.0017485,
+        "gate_ot_minus_no_offset": 0.0021412,
+        "solver_correctness_source_verified": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-10T01:51:46Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "apple_m5_max_cpu",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:laguerre_ot_head_offset.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tac.boundary_math.laguerre_logit_offset:damped_newton_ot_offsets",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "phi": "witness_sdf_logits",
+        "target_masses": "gt_class_frequencies",
+        "tau": "softmax_temperature"
+      },
+      "units_out": {
+        "offsets": "per_class_additive_logit_bias (folds into out_sdf.bias, byte-free)"
+      }
+    },
+    {
+      "canonical_consumers": [
+        ".omx/research/frontier_overhead_stack_20260711T232000Z.md",
+        "click_polish_rounds_2plus_on_folded_table",
+        "pr110_lineage_click_polish_byte_neutral_slack_v1"
+      ],
+      "canonical_producers": [
+        "tac.click_polish",
+        "experiments/results/frontier_overhead_stack_run1"
+      ],
+      "domain_of_validity": {
+        "measurement_axis": [
+          "macOS-CPU advisory"
+        ],
+        "note": "defensive bank per NO-FAKE #7; pointer moves only through an exact row.",
+        "promotion_eligible": false,
+        "vehicle": [
+          "pr110_lineage_frontier_payload"
+        ],
+        "verdict_scope": "FORMULATION -- deterministic fold (any per-pair integer choice on the sidecar-designated cells) on THIS vehicle. NOT a family verdict on sidecar folding: PR128's fold succeeded inside a full exact-gated search. Sister negatives cited in the memo: L2 deletion RED (#153 P-SUFF), L3 re-quant RED (frontier_exact_bitalloc_solve rd_curve, best 0.313), L4 recode DONE (entropy ceiling)."
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "overhead_stack_fold_opt4_perpair_exact_n600_20260711",
+          "empirical_output": {
+            "base_advisory_S_n600": 0.19110945,
+            "bytes_all_fold_variants": "176,562 = base - 607 EXACTLY (AR coder length invariant)",
+            "choice_counts": {
+              "far": 17,
+              "nearest": 439,
+              "other": 121,
+              "zero": 20
+            },
+            "composed_naive_with_round1_clicks_S": 0.19138227,
+            "fold_naive_S": 0.1914469,
+            "fold_opt3_S": 0.1911486,
+            "fold_opt4_S": 0.19113692,
+            "fold_opt4_dS_vs_base": 2.75e-05,
+            "foldopt_candidate_sha256": "3c43cd26345d0d9f45fe74ba383d028c28d0406d54802489ae3d0211892f0199",
+            "rate_saving_S": -0.000404,
+            "unrecoverable_d_seg": 4.16e-06
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "harness": "tac.click_polish FrozenPacket/Renderer/Scorer, same GT cache as #399",
+            "mechanism": "fold the 607-B PR101 enum-rank latent sidecar (597/600 pairs, (dim, delta/100) corrections, 0.35-5.6 grid steps, median 1.26) into the base 8-bit latent codes; per-pair EXACT selection over 4 integer options {nearest, zero, other-rounding, far-side} using per-pair d_seg/d_pose rows (pair-locality => selection exact)",
+            "protocol": "chunked resumable FOREGROUND n600 passes (<=235 s/invocation, npz state)",
+            "substrate": "frontier archive b4689726\u2026 (177,169 B), pr110_payload_entropy_recode lineage"
+          },
+          "measurement_method": "full_n600_advisory_eval_per_option_rows_then_exact_perpair_argmin_selection_byte_closed",
+          "measurement_utc": "2026-07-12T01:03:23Z",
+          "predicted_output": {
+            "hypothesis": "PR128-style sidecar fold yields -607 B ~ -4.04e-4 S at recoverable distortion"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-12T01:06:58Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "macos_arm64",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "a click-search round run ON THE FOLDED table recovering > 2.75e-5 flips the fold to net-GREEN (then the -607 B is free); or an exact contest-CPU row on a folded candidate supersedes the advisory margin",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/frontier_overhead_stack_20260711T232000Z.md",
+            "source_sha256": "7428f20a5b2534e9ed10433d2c7c482e55398a51bddc5945ab56357dc2faf5bb"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/frontier_overhead_stack_20260711T232000Z.md"
+        }
+      ],
+      "equation_id": "pr110_lineage_sidecar_fold_integer_grid_boundary_v1",
+      "last_calibration_utc": "2026-07-12T01:03:23Z",
+      "latex_form": "\\min_{k \\in \\mathbb{Z}^{597}} S_{600}(Q_0{+}k) - S_{600}(Q_0,\\mathrm{sidecar}) = +2.75\\times10^{-5} \\;>\\; 0,\\qquad 100\\,\\Delta d_{seg}^{min} = 4.16\\times10^{-4} \\approx \\frac{25\\cdot 607}{37{,}545{,}489} = 4.04\\times10^{-4}",
+      "name": "PR110-lineage sidecar-fold integer-grid boundary: the 607-B PR101 sidecar is break-even-efficient (sub-grid d_seg value 4.16e-4 S vs rate 4.04e-4 S); deterministic fold RED by +2.75e-5 at per-pair exact optimal form; fold pays only composed with a post-fold click search (> 2.75e-5 recovery threshold)",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "Fold of the 607-B latent sidecar loses +2.75e-5 at exact per-pair integer optimum; the sidecar's sub-grid precision ~ its rate cost; fold+re-search is the winning combo.",
+      "predicted_vs_empirical_residual": {
+        "fold_opt4_measured": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-07-12T01:06:58Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "macos_arm64",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "folded-table click rounds or an exact contest-CPU row supersede this formulation-scope margin",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/frontier_overhead_stack_20260711T232000Z.md",
+        "source_sha256": "7428f20a5b2534e9ed10433d2c7c482e55398a51bddc5945ab56357dc2faf5bb"
+      },
+      "python_callable_module_path": "tac.click_polish",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "fold_steps": "integer_latent_grid_steps_on_sidecar_cells",
+        "options_per_pair": "4"
+      },
+      "units_out": {
+        "delta_S": "advisory_score_units",
+        "delta_bytes": "archive_bytes (-607 by construction)"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.jrd_priors",
+        ".omx.research.sub015_DAG_jrd_reusable_priors_20260713",
+        "task#110",
+        "task#242",
+        "task#311",
+        "task#336_route_only"
+      ],
+      "canonical_producers": [
+        "tools.probe_jrd_pr110_coefficient_prefix",
+        "tac.packet_compiler.jrd_pr110_coefficient_prefix",
+        ".omx/research/jrd_reusable_priors_harvest_20260713.json"
+      ],
+      "domain_of_validity": {
+        "measured_negative_scope": "FORMULATION x INSTANCE: exact PR110 archive and exhaustive post-hoc uniform/Laplace int8 prefix cuts",
+        "measurement_axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+        "not_killed": [
+          "training-time MDL or entropy penalties (task #242)",
+          "training-time latent-structure regularization (task #110)",
+          "low-tau structure-induced TropNNC reactivation (task #311)",
+          "learned conditional or non-prefix witness codecs"
+        ],
+        "operator_plane_ranges": "ASSUMED warm-start only: bias 5-6, weight 3-4",
+        "prior_activation_gate": "real-GT n600, NumPy-fp32 bit-identical receiver, exact R, separate d_seg/d_pose, positive-repeat noise floor, exact archive bytes",
+        "promotion_eligible": false,
+        "score_claim": false
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "jrd_pr110_per_tensor_response_screen_n1_20260713",
+          "empirical_output": {
+            "component_safe_and_byte_shrinking_rows": 0,
+            "response_rows": 448,
+            "verdict_scope": "INSTANCE-SCREEN: first pair only; no n600 tensor safety verdict",
+            "zero_delta_dseg_byte_shrinking_rows": 22,
+            "zero_delta_dseg_positive_dpose_rows": 29,
+            "zero_delta_dseg_rows": 33,
+            "zero_delta_dseg_unique_sections": [
+              "refine.1.bias",
+              "rgb_0.bias",
+              "rgb_0.weight"
+            ]
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+            "authority": "n=1 SCREEN ONLY; never load-bearing",
+            "eval_pairs": 1,
+            "families": [
+              "uniform",
+              "laplace_dead_zone"
+            ],
+            "planes_per_tensor_family": 8
+          },
+          "measurement_method": "n1_exact_r_component_split_response_curve_rederivation",
+          "measurement_utc": "2026-07-13T03:45:00Z",
+          "predicted_output": {
+            "operator_warm_start_hypothesis": {
+              "bias_planes": [
+                5,
+                6
+              ],
+              "evidence_label": "ASSUMED, not established dataset-wide by this JSON",
+              "weight_planes": [
+                3,
+                4
+              ]
+            },
+            "use": "rank n600 measurements; do not actuate precision"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-13T03:44:09Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "macos_arm64_cpu",
+            "measurement_axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+            "promotion_eligible": false,
+            "rejection_reason": "real-GT n600 NumPy-fp32 exact-R response curves confirm the section ordering and a receiver-closed exact archive strictly reduces bytes",
+            "score_claim_valid": false,
+            "source_path": "experiments/results/jrd_pr110_pointer_completion_20260713T023300Z/section_precision_response_curves.json",
+            "source_sha256": "ac6ed0960c96a8bcd357da954e6e036824b672b4a4c262757c25e3c233b78cb4"
+          },
+          "residual": 0.0,
+          "source_artifact": "experiments/results/jrd_pr110_pointer_completion_20260713T023300Z/section_precision_response_curves.json"
+        },
+        {
+          "anchor_id": "jrd_pr110_uniform_laplace_component_safe_null_n600_20260713",
+          "empirical_output": {
+            "archive_bytes": 177169,
+            "archive_bytes_saved": 0,
+            "bias_coefficients": 2446,
+            "component_safe_proposals_reaching_composition": 0,
+            "derived_bias_mass_fraction": 0.010683182068326942,
+            "derived_weight_mass_fraction": 0.989316817931673,
+            "fifo_parse_back_passes": 2,
+            "positive_repeat_noise_floor": {
+              "d_pose": 0.0,
+              "d_seg": 0.0
+            },
+            "verdict": "NULL_EXACT_PR110_POSTHOC_UNIFORM_LAPLACE",
+            "verdict_scope": "FORMULATION x INSTANCE: named PR110 bytes plus post-hoc uniform/Laplace prefix cuts; not a family kill for training-time or learned conditional codecs",
+            "weight_coefficients": 226512
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+            "decoder_tensors": 28,
+            "eval_pairs": 600,
+            "families": [
+              "uniform",
+              "laplace_dead_zone"
+            ],
+            "planes_per_tensor_family": 8,
+            "signed_int8_coefficients": 228958
+          },
+          "measurement_method": "n600_component_safe_exact_zip_null_rederivation",
+          "measurement_utc": "2026-07-13T03:45:00Z",
+          "predicted_output": {
+            "posthoc_gain_law": "max over component-safe q of max(B0-B(q),0)"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-13T03:44:09Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "macos_arm64_cpu",
+            "measurement_axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+            "promotion_eligible": false,
+            "rejection_reason": "a structurally different witness-integrated training-time codec produces an n600 component-safe receiver-closed exact archive with fewer bytes",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/jrd_reusable_priors_harvest_20260713.json",
+            "source_sha256": "21de7fb839789cca5e3998cbffa59b0ce7ce95ce3715af74b04793da75c7a02e"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/jrd_reusable_priors_harvest_20260713.json"
+        }
+      ],
+      "equation_id": "jrd_component_safe_entropy_edge_stop_v1",
+      "last_calibration_utc": "2026-07-13T03:45:00Z",
+      "latex_form": "G_{post}=\\max_{q\\in\\mathcal A}[B(\\theta)-B(q)]_+=0;\\quad \\mathcal L=100d_{seg}+\\sqrt{10d_{pose}}+\\beta\\widehat R(\\theta)+\\gamma\\Omega_{struct};\\quad U'_g(b_g^*)=\\mu",
+      "name": "JRD component-safe post-hoc entropy-edge stop and training-time rate route",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "PR110 post-hoc uniform/Laplace gain is exactly 0 B; keep n=1 ranks dormant and route rate pressure into training-time structure.",
+      "predicted_vs_empirical_residual": {
+        "n1_curve_rederivation": 0.0,
+        "n600_exact_null_rederivation": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-07-13T03:44:09Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "macos_arm64_cpu",
+        "measurement_axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+        "promotion_eligible": false,
+        "rejection_reason": "register a superseding anchor after an n600 witness-integrated exact-byte response measurement or a structurally different learned codec",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/jrd_reusable_priors_harvest_20260713.md",
+        "source_sha256": "7ebca908dc964080b4a5d5fd44d825e805ab7a5ce73c7adfa6612e8138f08794"
+      },
+      "python_callable_module_path": "tac.canonical_equations.jrd_entropy_edge_20260713:component_safe_posthoc_gain_bytes",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "archive_bytes": "exact_ZIP_bytes",
+        "coefficient_budget": "stored_int8_coefficients",
+        "d_pose": "frozen_PoseNet_exact_R_distortion",
+        "d_seg": "frozen_SegNet_exact_R_distortion"
+      },
+      "units_out": {
+        "component_safe_posthoc_gain": "exact_ZIP_bytes",
+        "mass_initialization": "dimensionless_fraction",
+        "route": "typed_policy_token"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.witness_dsl.curriculum_dsl",
+        ".omx/research/rgb_at_boundaries_derivation_20260715.md"
+      ],
+      "canonical_producers": [
+        "tools/rgb_at_boundaries_chroma_jacobian_n600.py"
+      ],
+      "domain_of_validity": {
+        "annulus": "GT top1-top2 margin < 1 at (384,512)",
+        "measurement_axis": [
+          "macOS-CPU advisory"
+        ],
+        "note": "ablation WORTHS (GT-chroma vs desat), not achieved witness moves; the witness palette sits between grey and GT so realized rung-0 gain <= the annulus worth (S5-N10). Pair rows with <=5 supporting frames (Movable|MyCar, Lane|Movable) carry no verdict.",
+        "vehicle": [
+          "frozen contest SegNet/PoseNet (scorer-side law, witness-independent)"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "rgb_chroma_necessity_desat_ablations_and_jacobian_n600_20260715",
+          "empirical_output": {
+            "boundary_px_chroma_dominant_frac_range": [
+              0.17,
+              0.33
+            ],
+            "chroma_R_transfer_gain": [
+              0.98,
+              1.0
+            ],
+            "d_pose_delta_desat_annulus_mean": 0.000426,
+            "d_pose_delta_keep_annulus_mean": 0.00957,
+            "d_seg_equiv_desat_annulus": 0.002972,
+            "d_seg_equiv_desat_full": 0.005384,
+            "d_seg_equiv_keep_annulus": 0.006293,
+            "flip_desat_full_by_pair": {
+              "Lane|MyCar": 0.089,
+              "Lane|Undrivable": 0.292,
+              "Road|Lane": 0.082,
+              "Road|Movable": 0.303,
+              "Road|MyCar": 0.22,
+              "Road|Undrivable": 0.242,
+              "Undrivable|Movable": 0.363
+            },
+            "frac_boundary_px_chroma_flippable_8lsb": [
+              0.06,
+              0.09
+            ],
+            "grad_chroma_energy_frac_range": [
+              0.07,
+              0.12
+            ],
+            "keep_annulus_worse_than_desat_full": true,
+            "verdict": "region-consistent palette chroma is TRUNK (load-bearing everywhere); per-pixel chroma is a pair-aimed annulus FINISHER; Movable edges most chroma-decided; refines #508 'finisher-only' (too coarse at the region scale)"
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "ablations": "desat_full / desat_annulus(margin<1) / keep_annulus, BT.601 Y-replicate",
+            "gt": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz (exact frozen-scorer cache)",
+            "no_fake_gate": "baseline forward reproduces the cached exact L* px-exact (frame-0 gate)",
+            "scorers": "frozen CPU-torch SegNet+PoseNet via the exact upstream modules.py forward",
+            "tool": "tools/rgb_at_boundaries_chroma_jacobian_n600.py"
+          },
+          "measurement_method": "n600 exact desat ablations (batched frozen SegNet forwards) + margin-Jacobian BT.601 orthogonal split (1 bwd/frame) + PoseNet pair forwards + real-R chroma transfer check; rows experiments/results/rgb_at_boundaries_chroma_jacobian_20260715/rows.jsonl",
+          "measurement_utc": "2026-07-15T00:00:00Z",
+          "predicted_output": {
+            "hypothesis": "chroma necessity is pair-structured; 'RGB only at boundaries' sufficiency unknown before measurement"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-16T03:33:50Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_cpu",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "re-measure if the annulus band definition (margin<1), the GT cache, or the frozen scorer checkpoints change; the rung-0 A/B realized gain supersedes the worth bound when measured",
+            "score_claim_valid": false,
+            "source_path": "experiments/results/rgb_at_boundaries_chroma_jacobian_20260715/summary.json",
+            "source_sha256": "6eba12b178563d0bdb5eacdc1b7bd7c4ae167d986d7caef893425201ecea084c"
+          },
+          "residual": 0.0,
+          "source_artifact": "experiments/results/rgb_at_boundaries_chroma_jacobian_20260715/summary.json"
+        }
+      ],
+      "equation_id": "rgb_chroma_necessity_per_boundary_pair_v1",
+      "last_calibration_utc": "2026-07-15T00:00:00Z",
+      "latex_form": "S_{ch}(p)=\\lVert g(p)-(g(p)\\cdot\\hat k)\\hat k\\rVert,\\; S_{lu}(p)=|g(p)\\cdot\\hat k|,\\;\\hat k\\propto(0.299,0.587,0.114);\\quad d_{flip}^{ch}(p)=m(p)/S_{ch}(p);\\quad\\mathrm{necessity}(a,b)=\\Pr[\\mathrm{argmax\\ flip}\\mid\\mathrm{desat},\\partial_{ab}]",
+      "name": "RGB/chroma necessity per class-pair boundary through the frozen scorer: region-consistent palette chroma is trunk-level (keep_annulus 0.006293 > desat_full 0.005384); per-pixel chroma is a pair-structured annulus finisher (Movable edges 0.30-0.36 > horizon 0.24 > hood 0.22 > lane 0.08); chroma survives R at gain 0.98-1.00",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "n600 frozen-scorer law: palette chroma = trunk; per-pixel chroma = pair-aimed annulus finisher worth <=0.0030 d_seg; 17-33% of boundary px chroma-dominant; R not a barrier.",
+      "predicted_vs_empirical_residual": {
+        "n276_aggregate_consistency": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-07-16T03:33:50Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "m5_max_cpu",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:rgb_chroma_necessity_per_boundary_pair.v1>",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "python_callable_module_path": "tools.rgb_at_boundaries_chroma_jacobian_n600:summarize",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "desat": "BT.601 Y-replicate",
+        "g": "d(margin)/d(rgb) at the (384,512) scorer grid, 0-255 RGB units",
+        "margin": "segnet_top1_top2_logit_gap"
+      },
+      "units_out": {
+        "necessity": "flip probability at the pair boundary",
+        "worth": "d_seg-equivalent"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tac.local_contest_instruments.assert_pose_absolute_quotable",
+        "tac.local_contest_instruments.ADVISORY_POSE_ADDITIVE_FLOOR",
+        "tac.win_families.terminal_compile.CompilePipeline.assert_stage_lineages"
+      ],
+      "canonical_producers": [
+        "experiments.ddm_up2_shipping_pose_solve",
+        "experiments.ddm_ra3_advisory_pose_pricing"
+      ],
+      "domain_of_validity": {
+        "authority": "[macOS-CPU advisory]",
+        "excluded": [
+          "any other source video -- the constant is clip-specific and must be re-measured (ddm_pi2 states this explicitly)",
+          "a general CPU-vs-CUDA hardware-drift law; the scorer-forward term is 3.57e-12, nine orders below this offset",
+          "per-pair use: the per-pair ratio C/d_dali spans 0.887 to 1,627, so 19.09x is a population median and not a per-pair conversion"
+        ],
+        "included": [
+          "the upstream/videos/0.mkv clip with the DALI/nvdec and PyAV/yuv420_to_rgb decoders as they stand",
+          "converting a DALI-lineage pose measurement into its PyAV counterpart",
+          "explaining why a PyAV pose DELTA is meaningful while the ABSOLUTE is not"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "cw1_gt_lineage_offset_ra3_closure_20260816",
+          "empirical_output": {
+            "d_pose_pyav": 0.00014747
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "d_pose_dali": 6.88e-06
+          },
+          "measurement_method": "independent closure: 6.88e-06 (contest-CUDA authority baseline) + 1.4061e-04 = 1.474900e-04 against a measured advisory base of 1.4747e-04, 0.014% apart; the scorer-forward CPU/CUDA term is 3.57e-12, falsified as the cause by nine orders of magnitude",
+          "measurement_utc": "2026-08-16T00:00:00Z",
+          "predicted_output": {
+            "d_pose_pyav": 0.00014748999999999999
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-08-20T12:57:57Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_macos_cpu_torch",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "law 1: any realized-acceptance run reporting a worsened coordinate reopens the acceptance/realization contract. law 2: the offset is 0.mkv-specific and must be re-measured for any other source video, or if either decoder changes. law 3: each new container search on a new body appends an anchor; the container term is body-specific and is never carried as a constant",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/ddm_cw1_win_family_canonicalization_20260819.md",
+            "source_sha256": "4d2b62feb6b1809512623792b4117c22d4749c838059c103c9cc5ee56c22a5cc"
+          },
+          "residual": 1.9999999999989644e-08,
+          "source_artifact": ".omx/research/ddm_ra3_subspace_trust_region_refit_20260816.md"
+        },
+        {
+          "anchor_id": "cw1_gt_lineage_offset_up2_finalize_20260819",
+          "empirical_output": {
+            "d_pose_pyav": 0.0001482928
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "d_pose_dali": 7.76948388629175e-06
+          },
+          "measurement_method": "up2 n600 finalize cross-price: the same solved carrier measured against both GT tables; av_over_dali_before 19.0866 is the population ratio the additive form explains",
+          "measurement_utc": "2026-08-19T00:00:00Z",
+          "predicted_output": {
+            "d_pose_pyav": 0.00014837948388629174
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-08-20T12:57:57Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_macos_cpu_torch",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "law 1: any realized-acceptance run reporting a worsened coordinate reopens the acceptance/realization contract. law 2: the offset is 0.mkv-specific and must be re-measured for any other source video, or if either decoder changes. law 3: each new container search on a new body appends an anchor; the container term is body-specific and is never carried as a constant",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/ddm_cw1_win_family_canonicalization_20260819.md",
+            "source_sha256": "4d2b62feb6b1809512623792b4117c22d4749c838059c103c9cc5ee56c22a5cc"
+          },
+          "residual": 8.66838862917255e-08,
+          "source_artifact": ".omx/research/ddm_up2_finalize_n600_20260819.json"
+        },
+        {
+          "anchor_id": "cw1_gt_lineage_offset_cpu1_frontier_mechanism_20260820",
+          "empirical_output": {
+            "d_pose_pyav": 0.0001470109098134673
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "d_pose_dali": 6.365873831275037e-06
+          },
+          "measurement_method": "ddm_cpu1 n600 on the sub-0.15 frontier bytes (archive f3bce5d2..., 180,625 B): ONE macOS-CPU scorer forward pass over the retained inflated raws, then the SAME candidate outputs scored against BOTH registry-pinned GT pose tables (PyAV 82ed61ce..., DALI 8d5cfa83...). First measurement of the law's MECHANISM rather than its value: writing e = P - B, the identity mean||P-A||^2 = C + mean||P-B||^2 + 2*mean<e, B-A> closes to the last digit with cross term 2.9942e-08 (0.02%), i.e. the candidate's residual pose error is ORTHOGONAL to the offset between the two GT tables -- which is WHY C acts as a floor. Same run: the per-pair RATIO spans 0.530 to 983,016 (median 54.1), confirming the ratio form is not a law. Positive control: the PyAV leg reproduces the jg5 macOS-CPU advisory row (d_seg 0.00034740 / d_pose 0.00014701) exactly at 8 dp, and the DALI leg reproduces the [contest-CUDA T4] row to -4.2e-08 seg / -4.1e-09 pose.",
+          "measurement_utc": "2026-08-20T00:00:00Z",
+          "predicted_output": {
+            "d_pose_pyav": 0.00014697587383127503
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-08-20T12:57:57Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "apple_macos_cpu_torch",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "law 1: any realized-acceptance run reporting a worsened coordinate reopens the acceptance/realization contract. law 2: the offset is 0.mkv-specific and must be re-measured for any other source video, or if either decoder changes. law 3: each new container search on a new body appends an anchor; the container term is body-specific and is never carried as a constant",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/ddm_cw1_win_family_canonicalization_20260819.md",
+            "source_sha256": "4d2b62feb6b1809512623792b4117c22d4749c838059c103c9cc5ee56c22a5cc"
+          },
+          "residual": 3.503598219227813e-08,
+          "source_artifact": ".omx/research/ddm_cpu1_cpu_axis_adjudication_20260820.md"
+        }
+      ],
+      "equation_id": "cw1_gt_lineage_additive_pose_offset_v1",
+      "last_calibration_utc": "2026-08-19T00:00:00Z",
+      "latex_form": "d_{pose}^{\\mathrm{PyAV}} = d_{pose}^{\\mathrm{DALI}} + C,\\ C = 1.4061\\times10^{-4}",
+      "name": "GT-lineage additive pose offset",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "d_pose_pyav = d_pose_dali + 1.4061e-04 on 0.mkv (ADDITIVE); the offset dominates a good carrier's PyAV total, so the PyAV absolute is near-constant",
+      "predicted_vs_empirical_residual": {
+        "max_anchor_residual": 8.66838862917255e-08
+      },
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-08-20T12:57:57Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "apple_macos_cpu_torch",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "law 1: any realized-acceptance run reporting a worsened coordinate reopens the acceptance/realization contract. law 2: the offset is 0.mkv-specific and must be re-measured for any other source video, or if either decoder changes. law 3: each new container search on a new body appends an anchor; the container term is body-specific and is never carried as a constant",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/ddm_cw1_win_family_canonicalization_20260819.md",
+        "source_sha256": "4d2b62feb6b1809512623792b4117c22d4749c838059c103c9cc5ee56c22a5cc"
+      },
+      "python_callable_module_path": "tac.canonical_equations.ddm_cw1_win_family_laws_20260819:pose_pyav_from_dali",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "d_pose_dali": "PoseNet MSE over the first 6 components"
+      },
+      "units_out": {
+        "d_pose_pyav": "PoseNet MSE over the first 6 components"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "experiments/ddm_rw1_renderer_edge_foldback.py",
+        ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+      ],
+      "canonical_producers": [
+        "experiments/ddm_rw1_renderer_edge_foldback.py"
+      ],
+      "domain_of_validity": {
+        "excluded": [
+          "FINER grids: depth 5-8 on these tensors is a packer change the receiver already supports and is NOT measured here",
+          "the per-row fp16 SCALES, which move a whole row by a FRACTION of a code step and are untried",
+          "the row-pruned blocks.{1,2,3}.film runs (2 of 192 rows kept), which this arm refuses to edit",
+          "any claim about the PARADIGM: a per-pair-admitted renderer change is untouched -- the rate leg is nearly free and the pose re-solve has full rank on all 600 pairs"
+        ],
+        "included": [
+          "the shipped SemanticTokenRenderer(96) SM3R section, depth-4 un-pruned runs of head.weight / blocks.3.dw.weight / blocks.3.pw.weight, fp16 scales frozen",
+          "the pc2 34th-move body (e138ee09..., 181,373 B) whose semantic section is byte-identical back through rc2 and sj1 pass-3",
+          "the expected-flip surrogate sigmoid(-margin/tau), tau in [0.05, 0.15], through the exact R, DALI GT"
+        ],
+        "known_boundary": "one body, one surrogate; a different objective could reorder the codes but cannot make the grid finer",
+        "measurement_axis": [
+          "[macOS-MPS research-signal]",
+          "[macOS-CPU advisory, cpu_torch n600, DALI]"
+        ],
+        "recalibration_meaning": "the domain admits a DIFFERENT grid depth on these tensors or a sub-code actuator (the fp16 scales); three such anchors re-open the law",
+        "result_type": "DISTORTION-reach law; it bounds an actuator, it does not authorise one",
+        "sister_laws": [
+          "model_section_edit_container_break_fee_v1 -- the RATE half: 0.0139 B per changed code",
+          "renderer_seg_pose_coupling_shipped_object_v1 -- the pre-re-solve coupling this arm pose geometry re-scoped",
+          "token_predistortion_multipass_yield_v1 -- sj1 1.081 cells per changed TOKEN"
+        ],
+        "verdict_scope": "formulation (this actuator at this grid resolution), NOT the family"
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "rw1_int4_code_minimum_action_costs_240_to_455_cells_20260909",
+          "empirical_output": {
+            "cells_broken_per_code_by_rule": {
+              "abs_asc": [
+                8.06,
+                75.2
+              ],
+              "abs_desc": [
+                1914,
+                55746
+              ],
+              "adamw_accumulated": [
+                27,
+                123
+              ],
+              "random": [
+                84,
+                366
+              ]
+            },
+            "discrete_search": {
+              "accepts": 0,
+              "cells_repaired_n600": 0,
+              "codes_changed": 0,
+              "dS": 0.0,
+              "evaluations": 150
+            },
+            "law": "one int4 code step already costs 240-455 flipped cells, so no search finds a move below the grid resolution; the gradient 238x ordering ranks DAMAGE, not benefit",
+            "minimum_quantum_of_action_cells": [
+              240,
+              455
+            ],
+            "reach_at_66_codes": -0.1137,
+            "stake_at_operating_point": {
+              "full_rewrite_rate_S": 0.00011766,
+              "full_rewrite_share_of_gap": 0.00625,
+              "residual_S": 0.01090664333767361,
+              "share_of_gap_to_0_12": 0.5794235869308744
+            }
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "actuator": "shipped signed-int4 codes of head.weight + blocks.3.dw.weight + blocks.3.pw.weight (12,672 codes, fp16 scales FROZEN)",
+            "body": "pc2 34th move, e138ee09..., 181,373 B, S 0.13882326433317044",
+            "producers": "experiments/ddm_rw1_renderer_edge_foldback.py {train, perturb-control, gradient-topk, code-search}",
+            "residual": "12,866 cells (d_seg 0.00010906643337673611, DALI, cpu_torch n600)",
+            "selection_rules_tried": [
+              "abs_desc",
+              "random",
+              "AdamW-accumulated 3000 steps",
+              "abs_asc",
+              "discrete realized search 150 evals bisecting to size 1"
+            ]
+          },
+          "measurement_method": "realized argmax over all 600 pairs through the receiver own forward (identity-controlled byte-exact at batch 1) against the DALI GT; the n600 seg instrument reproduces sj1 leg EXACTLY on the base decode (12,866 cells, 600/600 pairs unchanged); the MPS monitor device gap to the cpu_torch instrument is a measured +5 cells over four identical evaluations",
+          "measurement_utc": "2026-09-09T16:05:00Z",
+          "predicted_output": {
+            "charter": "8-20% residual cut (1,000-2,600 cells)",
+            "prereg_discrete_search": "120 / 340 / 1,500 cells at 66 / 200 / 1,000 accepted codes"
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-09-09T16:05:00Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_128gib_mps",
+            "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+            "promotion_eligible": false,
+            "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+            "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+          },
+          "residual": 1.0,
+          "source_artifact": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md"
+        }
+      ],
+      "equation_id": "renderer_edge_layer_foldback_reach_v1",
+      "last_calibration_utc": "2026-09-09T16:05:00Z",
+      "latex_form": "\\min_{one code} \\Delta flips \\approx 240-455 \\gg 0",
+      "name": "Renderer edge-layer int4 code fold-back: minimum quantum of action",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "One int4 code step in head/blocks.3 already moves 240-455 argmax cells, so a renderer-weight fold-back is limited by the grid resolution, not by the search",
+      "predicted_vs_empirical_residual": {
+        "cells_repaired": 1.0,
+        "reach_fraction": 1.8121
+      },
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-09-09T16:05:00Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "m5_max_128gib_mps",
+        "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+        "promotion_eligible": false,
+        "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+        "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+      },
+      "python_callable_module_path": "experiments.ddm_rw1_renderer_edge_foldback",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "changed_int4_codes": "count",
+        "selection_rule": "categorical"
+      },
+      "units_out": {
+        "flipped_segnet_argmax_cells_n600": "count"
+      }
+    }
+  ],
+  "export_rows": 480,
+  "matches": 15,
+  "query": "boundary|contour|offset|polyline|edge|tail.*floor|real.*count|hc1|tc1|qbw2|gb1",
+  "source": {
+    "bytes": 3646482,
+    "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/equations_recall.json",
+    "sha256": "7fe0a09d912d1ff1f97e4a3191c701f23565e34409ffa1ca4f77c7b34e5fd791"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "bundle": null,
+  "charter_complete": false,
+  "commit_hooks_ran": false,
+  "fallback_commit": null,
+  "first_attempt_correction": "three ignored diagnostic logs copied to SSD and excluded",
+  "first_attempt_rc": 13,
+  "head_at_handoff": "e7e097e6040d941b7cbb8f47789205b71650e5cb",
+  "index_staged_paths_after": [],
+  "main_worktree_commit": null,
+  "next_task": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_3",
+  "refusal": {
+    "artifact_cap_bytes": 67108864,
+    "event_type": "git_object_write_denial_bundle_fallback",
+    "projected_bytes": 602482,
+    "reason": "projected fallback artifacts would breach every candidate tier's reserve",
+    "reserve_bytes": 42949672960,
+    "schema": "subagent_commit_bundle_fallback.v1",
+    "serializer_rc": 19,
+    "status": "BUNDLE_FALLBACK_STORAGE_REFUSED",
+    "storage_candidates": [
+      {
+        "candidate": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/serializer_fallback",
+        "eligible": false,
+        "error": null,
+        "free_bytes": 40410808320,
+        "probe_path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation",
+        "projected_bytes": 602482,
+        "reserve_bytes": 42949672960,
+        "writable": true
+      }
+    ],
+    "written_at_utc": "2026-09-09T22:46:25Z"
+  },
+  "research_only": true,
+  "schema": "ddm_bnd1_landing_status.v1",
+  "score_claim": false,
+  "serializer_rc": 19,
+  "source_audit_complete": true,
+  "status": "UNLANDED_NO_BUNDLE"
+}

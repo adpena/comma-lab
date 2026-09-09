@@ -1,0 +1,10 @@
+{
+  "bytes": 3646482,
+  "cold_store_destination": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/retained/equations_recall.json",
+  "command": ".venv/bin/python tools/list_canonical_equations.py --json",
+  "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd1_20260909/equations_recall.json",
+  "reason": "Own generated registry snapshot moved losslessly to charter SSD tier",
+  "research_only": true,
+  "score_claim": false,
+  "sha256": "7fe0a09d912d1ff1f97e4a3191c701f23565e34409ffa1ca4f77c7b34e5fd791"
+}

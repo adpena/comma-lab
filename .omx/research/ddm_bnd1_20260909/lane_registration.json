@@ -1,0 +1,41 @@
+{
+  "gates": {
+    "contest_cpu": {
+      "evidence": "",
+      "status": false
+    },
+    "contest_cuda": {
+      "evidence": "",
+      "status": false
+    },
+    "deploy_runbook": {
+      "evidence": "",
+      "status": false
+    },
+    "impl_complete": {
+      "evidence": "",
+      "status": false
+    },
+    "memory_entry": {
+      "evidence": "",
+      "status": false
+    },
+    "real_archive_empirical": {
+      "evidence": "",
+      "status": false
+    },
+    "strict_preflight": {
+      "evidence": "",
+      "status": false
+    },
+    "three_clean_review": {
+      "evidence": "",
+      "status": false
+    }
+  },
+  "id": "lane_ddm_bnd1_boundary_representation_20260909",
+  "level": 0,
+  "name": "Boundary representation closed-form pricing",
+  "notes": "research_only=true; charter source-verification and scorer-free census; score_claim=false; no build or scorer authorization inferred",
+  "phase": 2.0
+}
