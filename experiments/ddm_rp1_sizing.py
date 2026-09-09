@@ -131,6 +131,64 @@ def load_candidates(rank_dir: Path) -> dict[str, np.ndarray]:
         return {key: blob[key] for key in blob.files}
 
 
+#: Absolute rank-in-pair bucket edges.  The coverage-corrected projection weights each
+#: bucket's MEASURED neutral fraction by the bucket's real population, so a sample that
+#: only ever tested 32 of ~365 ranked proposals per pair cannot be read as if 32 were all
+#: there is.
+RANK_EDGES = [0, 4, 12, 32, 100, 400, 2000, 10**9]
+
+
+def _coverage_corrected_bits_per_pair(
+    rows: list[dict[str, Any]], edges: list[int]
+) -> tuple[float, list[dict[str, Any]]]:
+    """Sum over rank strata of (neutral fraction) x (population) x (mean neutral saving).
+
+    Every term is measured: the fraction from the realized tests in that stratum, the
+    population from each pair's own ranked candidate count, the saving from the coder.
+    A stratum with zero tests contributes zero and is REPORTED as untested rather than
+    silently extrapolated from its neighbours.
+    """
+    detail: list[dict[str, Any]] = []
+    total = 0.0
+    n_pairs = max(1, len(rows))
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        tested = [
+            t for r in rows for t in r["tested"] if lo <= t["rank_in_pair"] < hi
+        ]
+        population = sum(
+            max(0, min(hi, int(r["candidates_available"])) - lo) for r in rows
+        )
+        if not tested:
+            detail.append(
+                {
+                    "range": [lo, hi],
+                    "tested": 0,
+                    "population": population,
+                    "untested_stratum": True,
+                    "bits_contributed": 0.0,
+                }
+            )
+            continue
+        neutral = [t for t in tested if t["neutral"]]
+        fraction = len(neutral) / len(tested)
+        mean_saving = float(np.mean([t["saving_bits"] for t in neutral])) if neutral else 0.0
+        bits = fraction * population * mean_saving / n_pairs
+        total += bits
+        detail.append(
+            {
+                "range": [lo, hi],
+                "tested": len(tested),
+                "neutral": len(neutral),
+                "neutral_fraction": fraction,
+                "population": population,
+                "population_per_pair": population / n_pairs,
+                "mean_neutral_saving_bits": mean_saving,
+                "bits_per_pair_contributed": bits,
+            }
+        )
+    return total, detail
+
+
 def _by_bucket(
     tested: list[dict[str, Any]], key: str, edges: list[float]
 ) -> list[dict[str, Any]]:
@@ -174,8 +232,15 @@ def cmd_sizing(args: argparse.Namespace) -> int:
     rng = np.random.default_rng(args.seed)
     if args.pair_list:
         pairs = np.array([int(x) for x in args.pair_list.split(",")], dtype=np.int64)
+    elif args.pairs >= jg1.N_PAIRS:
+        pairs = np.arange(jg1.N_PAIRS, dtype=np.int64)
     else:
         pairs = np.sort(rng.choice(jg1.N_PAIRS, size=args.pairs, replace=False))
+    if args.shards > 1:
+        # Interleaved, not blocked: a contiguous block of pairs is a prefix of a skewed
+        # population ([[m88]]), so a shard that dies leaves a biased partial rather than
+        # a uniform one.
+        pairs = pairs[args.shard :: args.shards]
 
     inst = Instrument(threads=args.threads)
     started = time.perf_counter()
@@ -317,6 +382,7 @@ def cmd_sizing(args: argparse.Namespace) -> int:
             "base_flipped_cells": base_flips,
             "segnet_batch_control_disagreements": control_disagreements,
             "candidates_in_pair": int(select.sum()),
+            "candidates_available": int(order.size),
             "candidates_that_are_sj1_edits": int(is_edit.sum()),
             "proposals_tested": len(tested),
             "neutral_count": len(neutral_idx),
@@ -378,6 +444,7 @@ def cmd_sizing(args: argparse.Namespace) -> int:
     neutral_savings = [t["saving_bits"] for t in all_tested if t["neutral"]]
     refused_savings = [t["saving_bits"] for t in all_tested if not t["neutral"]]
 
+    _cc_bits, _cc_detail = _coverage_corrected_bits_per_pair(rows, RANK_EDGES)
     summary = {
         "schema": "ddm_rp1_sizing.v1",
         "axis": "[macOS-CPU advisory, jg1 instrument, DALI GT lineage]",
@@ -405,7 +472,7 @@ def cmd_sizing(args: argparse.Namespace) -> int:
         else 0.0,
         "sample_mode": args.sample_mode,
         "neutrality_by_rank_decile": _by_bucket(
-            all_tested, "rank_in_pair", [0, 4, 12, 32, 100, 400, 2000, 10**9]
+            all_tested, "rank_in_pair", [float(e) for e in RANK_EDGES]
         ),
         "neutrality_by_saving_bits": _by_bucket(
             all_tested, "saving_bits", [0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 1e9]
@@ -413,9 +480,23 @@ def cmd_sizing(args: argparse.Namespace) -> int:
         "neutrality_by_neighbourhood_agreement": _by_bucket(
             all_tested, "neighbourhood_agreement", [0.0, 0.5, 0.8, 0.95, 0.99, 1.01]
         ),
-        "n600_projection_bytes_first_order": (
+        "projection_a_sampled_bytes_n600": (
             accepted_bits / 8.0 * jg1.N_PAIRS / max(1, len(rows))
         ),
+        "projection_b_coverage_corrected_bytes_n600": _cc_bits * jg1.N_PAIRS / 8.0,
+        "projection_b_strata": _cc_detail,
+        "projection_b_delta_S_if_realized": (
+            -_cc_bits * jg1.N_PAIRS / 8.0 * rp1.S_PER_BYTE
+        ),
+        "stop_rule": {
+            "threshold_bytes": 300,
+            "binds_on": "projection_b_coverage_corrected_bytes_n600",
+            "verdict": (
+                "STOP"
+                if _cc_bits * jg1.N_PAIRS / 8.0 < 300
+                else "CONTINUE_TO_N600"
+            ),
+        },
         "elapsed_seconds": time.perf_counter() - started,
         "pricing_field": {
             "path": str(field_path),
@@ -446,6 +527,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--sample-mode", choices=("top", "stratified"), default="stratified"
     )
     sizing.add_argument("--threads", type=int, default=3)
+    sizing.add_argument("--shards", type=int, default=1)
+    sizing.add_argument("--shard", type=int, default=0)
     sizing.add_argument("--resume", action="store_true")
     sizing.set_defaults(func=cmd_sizing)
     return parser
