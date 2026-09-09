@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""Execute only RC3 families admitted by retained closed-form pricing.
+
+All trials and twins are retained. Each family/rate is an atomic resumable stage;
+--resume-from names the gate and reloads complete trial receipts. No scorer runs.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+from scipy.optimize import minimize
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from experiments import ddm_rc3_shared_mixer_codec as codec
+from experiments import ddm_rc3_shared_mixer_forecast as forecast
+from experiments import ddm_rc3_shared_mixer_pricing as p
+
+
+def tune(family: dict) -> np.ndarray:
+    """Fit each admitted family to its own optimum; transmit only quantized weights."""
+    root = p.STORE / "retained/race" / family["family"]
+    path = root / "fit.json"
+    binding = {
+        "features": family["matrices"]["features"]["sha256"],
+        "outcomes": family["matrices"]["outcomes"]["sha256"],
+        "initial": family["matrices"]["float_weights"]["sha256"],
+        "source_body": hashlib.sha256((p.STORE / "retained/source/body.ihs1").read_bytes()).hexdigest(),
+        "layout": hashlib.sha256((p.STORE / "retained/source/layout.json").read_bytes()).hexdigest(),
+        "rc2_dependency": hashlib.sha256(Path(codec.base.__file__).read_bytes()).hexdigest(),
+    }
+    binding_path = root / "fit_inputs.json"
+    if path.exists() and binding_path.exists():
+        if json.loads(binding_path.read_text()) != binding:
+            raise ValueError("fit inputs changed; old fit cannot be resumed")
+        f = json.loads(path.read_text())["int8_weights"]
+        assert hashlib.sha256(Path(f["path"]).read_bytes()).hexdigest() == f["sha256"]
+        return np.load(f["path"])
+    x_i = np.load(family["matrices"]["features"]["path"])
+    x = x_i.astype(float) * (math.log(2) / 4096)
+    y = np.load(family["matrices"]["outcomes"]["path"])
+    initial = np.load(family["matrices"]["float_weights"]["path"])
+
+    def objective(w):
+        z = np.einsum("ij,j->i", x, w, optimize=False)
+        prob = 1 / (1 + np.exp(-z))
+        loss = float(np.sum(np.logaddexp(0, z) - y * z))
+        grad = np.einsum("ij,i->j", x, prob - y, optimize=False)
+        if not np.isfinite(loss) or not np.isfinite(grad).all():
+            raise ValueError("non-finite logistic objective")
+        return loss, grad
+
+    r = minimize(
+        objective,
+        initial,
+        jac=True,
+        method="L-BFGS-B",
+        bounds=[(-4, 127 / 32)] * 24,
+        options={"maxiter": 200, "ftol": 1e-12, "gtol": 1e-7, "maxls": 30},
+    )
+    floating = forecast.npy(root / "float_weights.npy", r.x)
+    wi = np.clip(np.rint(r.x * 32), -128, 127).astype(np.int8)
+
+    def exact_loss(w):
+        z = np.sum(x_i.astype(np.int64) * w.astype(np.int64), axis=1)
+        z = np.where(z >= 0, (z + 16) // 32, -((-z + 16) // 32))
+        lut = np.asarray(codec.base.STRETCH)
+        idx = np.searchsorted(lut, z)
+        mid = np.clip(idx, 1, len(lut) - 1)
+        before = z - lut[mid - 1] <= lut[mid] - z
+        prob = np.where(idx <= 0, 1, np.where(idx >= len(lut), 4095, np.where(before, mid, mid + 1)))
+        return float(np.sum(-np.log2(np.where(y == 1, prob, 4096 - prob) / 4096)))
+
+    best = exact_loss(wi)
+    for _ in range(2):
+        for j in range(24):
+            original = int(wi[j])
+            choice = original
+            for trial in (original - 1, original + 1):
+                if -128 <= trial <= 127:
+                    wi[j] = trial
+                    loss = exact_loss(wi)
+                    if loss < best:
+                        best, choice = loss, trial
+            wi[j] = choice
+    quantized = forecast.npy(root / "int8_weights.npy", wi)
+    p.save_json(
+        path,
+        {
+            "optimizer_success": bool(r.success),
+            "message": str(r.message),
+            "iterations": int(r.nit),
+            "float_weights": floating,
+            "int8_weights": quantized,
+            "integer_ideal_bytes": best / 8,
+            "seed": 20260909,
+        },
+    )
+    p.save_json(binding_path, binding)
+    return wi
+
+
+def race(resume_from: Path) -> dict:
+    gate = p.STORE / "CLOSED_FORM_GATE.json"
+    if resume_from.resolve() != gate.resolve():
+        raise ValueError("resume-from must name the retained closed-form gate")
+    g = forecast.run(gate)
+    check = json.loads((p.STORE / "NUMERICAL_RECHECK.json").read_text())
+    assert check["gate_sha256"] == hashlib.sha256(gate.read_bytes()).hexdigest()
+    if sorted(c["family"] for c in check["checks"]) != sorted(f["family"] for f in g["families"]):
+        raise ValueError("numerical recheck family census mismatch")
+    for c in check["checks"]:
+        if c["nonfinite"] is not False or any(
+            not math.isfinite(c[k]) or not 0 <= c[k] < 1e-7 for k in ("gradient_max_abs_diff", "hessian_max_abs_diff")
+        ):
+            raise ValueError("numerical recheck refused family admission")
+    admitted = [f for f in g["families"] if f["admitted"]]
+    assert len(admitted) <= 2
+    body = (p.STORE / "retained/source/body.ihs1").read_bytes()
+    counts = json.loads((p.STORE / "retained/source/layout.json").read_text())["row_counts"]
+    rows = []
+    for family in admitted:
+        weights = tune(family)
+        family_id = next(k for k, v in codec.FAMILIES.items() if v == family["family"])
+        for rate in (0, 18, 20, 22, 24):
+            slug = f"{family['family']}_lr{rate}"
+            root = p.STORE / "retained/race" / slug
+            receipt = root / "receipt.json"
+            if receipt.exists():
+                r = json.loads(receipt.read_text())
+                if (
+                    r["codec_sha256"] != hashlib.sha256(Path(codec.__file__).read_bytes()).hexdigest()
+                    or r["gate_sha256"] != hashlib.sha256(gate.read_bytes()).hexdigest()
+                ):
+                    raise ValueError("trial code/gate changed since recorded proof")
+                for fact in r["artifacts"].values():
+                    assert hashlib.sha256(Path(fact["path"]).read_bytes()).hexdigest() == fact["sha256"]
+                if Path(r["artifacts"]["decoded"]["path"]).read_bytes() != body:
+                    raise ValueError("trial decoded source changed")
+                if Path(r["artifacts"]["parameters"]["path"]).read_bytes() != bytes([rate]) + weights.tobytes():
+                    raise ValueError("trial fitted weights or counted learning rate changed")
+                rows.append(r)
+                continue
+            started = time.monotonic()
+            rider, a = codec.encode(body, counts, family_id, weights, rate, trace=(rate == 0))
+            artifacts = {
+                "rider": p.retain(root / "rider.rc3h", rider),
+                "payload": p.retain(root / "range.bin", a["payload"]),
+                "parameters": p.retain(root / "parameters.bin", a["parameters"]),
+            }
+            if rate == 0:
+                matrix = np.asarray(a["events"], dtype=np.int32)
+                artifacts["events"] = forecast.npy(root / "events.npy", matrix)
+                if not np.array_equal(matrix, np.load(family["matrices"]["features"]["path"])):
+                    raise ValueError("real encoder features differ from forecast instrument")
+            twin, b = codec.encode(body, counts, family_id, weights, rate)
+            artifacts["twin"] = p.retain(root / "rider.repeat.rc3h", twin)
+            artifacts["twin_payload"] = p.retain(root / "range.repeat.bin", b["payload"])
+            artifacts["twin_parameters"] = p.retain(root / "parameters.repeat.bin", b["parameters"])
+            assert rider == twin
+            restored = codec.restore_hpac(rider, counts)
+            artifacts["decoded"] = p.retain(root / "decoded.ihs1", restored)
+            assert restored == body
+            outer = p.prior.rc1.ck2_interleave(rider)
+            artifacts["ck2"] = p.retain(root / "rider.ck2", outer)
+            container = p.prior.brotli_bytes(outer, 11, 24)
+            artifacts["container"] = p.retain(root / "hpac.q11w24.br", container)
+            r = {
+                "slug": slug,
+                "family": family["family"],
+                "learning_shift": rate,
+                "range_bytes": len(a["payload"]),
+                "parameter_bytes": 25,
+                "J_bytes": len(a["payload"]) + 25,
+                "hpac_bytes": len(container),
+                "net_saving_bytes": 12112 - len(container),
+                "twin_identical": True,
+                "decode_identity": True,
+                "seconds": time.monotonic() - started,
+                "artifacts": artifacts,
+                "axis": p.AXIS,
+                "score_claim": False,
+                "codec_sha256": hashlib.sha256(Path(codec.__file__).read_bytes()).hexdigest(),
+                "gate_sha256": hashlib.sha256(gate.read_bytes()).hexdigest(),
+            }
+            p.save_json(receipt, r)
+            rows.append(r)
+            print(json.dumps({k: v for k, v in r.items() if k != "artifacts"}), flush=True)
+    result = {
+        "axis": p.AXIS,
+        "score_claim": False,
+        "rows": rows,
+        "winner": min(rows, key=lambda r: (r["hpac_bytes"], r["learning_shift"], r["slug"])) if rows else None,
+    }
+    p.save_json(p.STORE / "RACE.json", result)
+    return result
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--resume-from", type=Path, required=True)
+    result = race(parser.parse_args().resume_from)
+    print(json.dumps({"winner": result["winner"]["slug"] if result["winner"] else None}))

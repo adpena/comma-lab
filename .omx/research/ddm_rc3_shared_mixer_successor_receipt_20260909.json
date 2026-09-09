@@ -1,0 +1,328 @@
+{
+  "code": [
+    {
+      "bytes": 8010,
+      "file": "experiments/ddm_rc3_shared_mixer_codec.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "snapshot": {
+        "bytes": 8010,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_codec.py",
+        "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+      }
+    },
+    {
+      "bytes": 10019,
+      "file": "experiments/ddm_rc3_shared_mixer_forecast.py",
+      "sha256": "22dfef045d58907a04e9194071a7bac9066f8b45fa01078a5a0c9a9f3e7fe249",
+      "snapshot": {
+        "bytes": 10019,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_forecast.py",
+        "sha256": "22dfef045d58907a04e9194071a7bac9066f8b45fa01078a5a0c9a9f3e7fe249"
+      }
+    },
+    {
+      "bytes": 12796,
+      "file": "experiments/ddm_rc3_shared_mixer_pricing.py",
+      "sha256": "34fdf8539b4425d6f327beed5297e2064c411c54b7c5fb9343ada124e0e8666c",
+      "snapshot": {
+        "bytes": 12796,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_pricing.py",
+        "sha256": "34fdf8539b4425d6f327beed5297e2064c411c54b7c5fb9343ada124e0e8666c"
+      }
+    },
+    {
+      "bytes": 9736,
+      "file": "experiments/ddm_rc3_shared_mixer_race.py",
+      "sha256": "d299d12d11c0a0ad4a9b1e7411360d4b0fa89398c3f165bd1078d4c4a60b3e58",
+      "snapshot": {
+        "bytes": 9736,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_race.py",
+        "sha256": "d299d12d11c0a0ad4a9b1e7411360d4b0fa89398c3f165bd1078d4c4a60b3e58"
+      }
+    },
+    {
+      "bytes": 21166,
+      "file": "experiments/ddm_rc3_shared_mixer_stage.py",
+      "sha256": "5c94a4c1e208f41b50787c9d135f5a1d503c430d75ca71595ad9a2683a828e28",
+      "snapshot": {
+        "bytes": 21166,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_stage.py",
+        "sha256": "5c94a4c1e208f41b50787c9d135f5a1d503c430d75ca71595ad9a2683a828e28"
+      }
+    }
+  ],
+  "equation": {
+    "anchor": {
+      "anchor_id": "rc3_closed_form_shared_mixer_and_container_objective_20260909",
+      "empirical_output": {
+        "archive_bytes": 181213,
+        "archive_sha256": "bea79912d3b2230ebfb2434190f9fdbef18d16d8fa46f5e647c82a21ee11a6b9",
+        "charter_953_uses_unshipped_16_weight_J": true,
+        "container_cells": 198,
+        "families": 2,
+        "hpac_bytes": 11911,
+        "live_J_gap_to_H1_MM_bytes": 957.6565614434694,
+        "net_saving_bytes": 201,
+        "order2_600_headroom_established": false,
+        "order2_supported_denominator": [
+          1426,
+          17061
+        ],
+        "order2_supported_extra_MM_bytes": 4.162520629520249,
+        "public_smoke_problems": 0,
+        "raw_J_winner": "order2_lr18",
+        "real_twin_decoded_trials": 10,
+        "score_claim": false,
+        "seal_valid": true,
+        "verdict_scope": "INSTANCE for candidate bytes; FORMULATION for unsupported MM-bound inference",
+        "winner": "position_sibling_lr0_ck2_q10_w22"
+      },
+      "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+      "inputs": {
+        "coded_symbols": 17061,
+        "gate_receipt": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/CLOSED_FORM_GATE.json",
+        "payload_retained": true,
+        "rows": 517,
+        "scorer_runs": 0,
+        "source_archive_bytes": 181414,
+        "source_archive_sha256": "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e",
+        "values": 20416
+      },
+      "measurement_method": "closed_form_local_quadratic_forecast_then_real_retained_twin_codec_receiver_identity_and_full_container_grid",
+      "measurement_utc": "2026-09-09T15:00:50Z",
+      "noise_floor": 0.0,
+      "noise_floor_provenance": "exact twin archive bytes and decoded IHS1 body are identical; this is a deterministic byte comparison, not a scorer noise estimate",
+      "predicted_output": {
+        "net_saving_bytes": 165.5665005062623,
+        "order2_supported_headroom_claim_bytes": 600,
+        "prior_band_bytes": [
+          200,
+          400
+        ]
+      },
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-09-09T15:00:50Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "macOS_arm64_CPU",
+        "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+        "promotion_eligible": false,
+        "rejection_reason": "MAIN validates the pinned seal then measures one exact contest-CUDA T4 n600 row; rebase after any pointer movement",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md",
+        "source_sha256": "e032ee29d45e4d7ad8505cd542b2b1301c7e6bf3942b3cf83da2623e780b9893"
+      },
+      "residual": 35.43349949373771,
+      "source_artifact": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md"
+    },
+    "applied_in_working_registry": true,
+    "canonical_helper": "tac.canonical_equations.update_equation_with_empirical_anchor",
+    "equation_id": "model_section_adaptive_recode_ceiling_v1",
+    "registry": ".omx/state/canonical_equations_registry.jsonl"
+  },
+  "result": {
+    "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+    "candidate": {
+      "archive": {
+        "bytes": 181213,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/candidate_runtime/archive.zip",
+        "sha256": "bea79912d3b2230ebfb2434190f9fdbef18d16d8fa46f5e647c82a21ee11a6b9"
+      },
+      "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+      "cleanup": "all bytes retained; runtime is under owned SSD root",
+      "live_pointer": {
+        "archive_sha256": "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e",
+        "axis": "contest_cuda",
+        "evidence_grade": "contest-CUDA",
+        "extra": {
+          "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+          "archive_bytes": 181414,
+          "evidence_grade": "contest-CUDA",
+          "inflate_device_policy": "auto",
+          "inflate_sh_rel": "inflate.sh",
+          "lane_id": "ddm_rc2_t4_hpac_semistatic_mixing_20260909",
+          "measured_at_utc": null,
+          "promotion_eligible": false,
+          "runtime_custody": "pinned",
+          "runtime_tree_sha256": "efafd6ab98ef83a4b59f90bb792376f19f9c85d35b6e5ac658e8aa69326cfe63",
+          "source_receipt_sha256": "5345c38da8bf2f37b291b4164a21f101e7b14a9fb3f04527f82600faa6e72133"
+        },
+        "hardware_substrate": "linux_x86_64_t4",
+        "lane_id": "ddm_rc2_t4_hpac_semistatic_mixing_20260909",
+        "measured_at_utc": null,
+        "score": 0.13885056455024844,
+        "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_rc2_t4_20260909.json"
+      },
+      "model_decode": {
+        "bytes": 17770,
+        "identity": true,
+        "process": {
+          "argv": [
+            "/Users/adpena/Projects/pact/.venv/bin/python",
+            "-B",
+            "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/staged_public_decode/probe.py",
+            "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/candidate_runtime",
+            "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/staged_public_decode/decoded.ihs1"
+          ],
+          "returncode": 0,
+          "seconds": 3.5577027079998516,
+          "stderr": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/staged_public_decode/decode.stderr",
+          "stdout": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/staged_public_decode/decode.stdout",
+          "timed_out": false,
+          "timeout_policy": "60s; SIGKILL entire new process group; wait/reap"
+        },
+        "retained_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/staged_public_decode/decoded.ihs1",
+        "sha256": "817281908d993d89f62349fa466ad53f204b7e83d36e29ba0edc30cf2cb8f085"
+      },
+      "net_archive_bytes": -201,
+      "projected_score": 0.13871672690067088,
+      "projection_only": true,
+      "runtime": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/candidate_runtime",
+      "runtime_changed_files": [
+        "MANIFEST.sha256",
+        "archive.zip",
+        "inflate.py",
+        "runtime/ihs2.py",
+        "runtime/rc3_shared_mixer.py",
+        "runtime/residual_archive.py"
+      ],
+      "score_claim": false,
+      "section_census": {
+        "carrier": {
+          "candidate_bytes": 18621,
+          "candidate_sha256": "fa18c86fe9158a4bb9a22df47f1ee2a68948c25c8cbbb865877cd40ac438064d",
+          "identical": true,
+          "source_bytes": 18621,
+          "source_sha256": "fa18c86fe9158a4bb9a22df47f1ee2a68948c25c8cbbb865877cd40ac438064d"
+        },
+        "semantic": {
+          "candidate_bytes": 30246,
+          "candidate_sha256": "f1f0f85730981f2639edea2fdb36bf190c6c065a0c91b15afe4f6ffd0f99b186",
+          "identical": true,
+          "source_bytes": 30246,
+          "source_sha256": "f1f0f85730981f2639edea2fdb36bf190c6c065a0c91b15afe4f6ffd0f99b186"
+        },
+        "tail": {
+          "candidate_bytes": 120321,
+          "candidate_sha256": "af6b0997bf26c446f2b235d8cad7a83b927c17a0bb53b40e18ef4e05ff4832dc",
+          "identical": true,
+          "source_bytes": 120321,
+          "source_sha256": "af6b0997bf26c446f2b235d8cad7a83b927c17a0bb53b40e18ef4e05ff4832dc"
+        }
+      },
+      "twin_identical": true,
+      "winner": {
+        "bytes": 11911,
+        "ck2": true,
+        "identical_to_shipped": false,
+        "lgwin": 22,
+        "payload": {
+          "bytes": 11911,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/grid/position_sibling_lr0/ck1_q10_w22.br",
+          "sha256": "aadf679f982cf2546554913a00f2c94ffd0161a0ebeac07eaaf96f422a1f1598"
+        },
+        "q": 10,
+        "shippable": true,
+        "slug": "position_sibling_lr0"
+      }
+    },
+    "container_sweep": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/CONTAINER_SWEEP.json",
+    "entropy": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/ENTROPY_PRICING.json",
+    "gate": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/CLOSED_FORM_GATE.json",
+    "measured_archive_saving_bytes": 201,
+    "memo": "/Users/adpena/Projects/pact/.omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md",
+    "next_owner": "MAIN",
+    "public_smoke": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/PUBLIC_ENTRYPOINT_SMOKE.json",
+    "race": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/RACE.json",
+    "score_claim": false,
+    "seal": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/SEAL_ddm_rc3_shared_mixer_successor_contest_cuda.json",
+    "supported_contexts": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/SUPPORTED_CONTEXTS.json",
+    "verdict": "SEAL_READY_MAIN_FIRES"
+  },
+  "retained_bytes": 44409132,
+  "retention_file_count": 489,
+  "retention_inventory": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/RETENTION_INVENTORY.json",
+  "review": {
+    "code": [
+      {
+        "bytes": 8010,
+        "file": "experiments/ddm_rc3_shared_mixer_codec.py",
+        "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+        "snapshot": {
+          "bytes": 8010,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_codec.py",
+          "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+        }
+      },
+      {
+        "bytes": 10019,
+        "file": "experiments/ddm_rc3_shared_mixer_forecast.py",
+        "sha256": "22dfef045d58907a04e9194071a7bac9066f8b45fa01078a5a0c9a9f3e7fe249",
+        "snapshot": {
+          "bytes": 10019,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_forecast.py",
+          "sha256": "22dfef045d58907a04e9194071a7bac9066f8b45fa01078a5a0c9a9f3e7fe249"
+        }
+      },
+      {
+        "bytes": 12796,
+        "file": "experiments/ddm_rc3_shared_mixer_pricing.py",
+        "sha256": "34fdf8539b4425d6f327beed5297e2064c411c54b7c5fb9343ada124e0e8666c",
+        "snapshot": {
+          "bytes": 12796,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_pricing.py",
+          "sha256": "34fdf8539b4425d6f327beed5297e2064c411c54b7c5fb9343ada124e0e8666c"
+        }
+      },
+      {
+        "bytes": 9736,
+        "file": "experiments/ddm_rc3_shared_mixer_race.py",
+        "sha256": "d299d12d11c0a0ad4a9b1e7411360d4b0fa89398c3f165bd1078d4c4a60b3e58",
+        "snapshot": {
+          "bytes": 9736,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_race.py",
+          "sha256": "d299d12d11c0a0ad4a9b1e7411360d4b0fa89398c3f165bd1078d4c4a60b3e58"
+        }
+      },
+      {
+        "bytes": 21166,
+        "file": "experiments/ddm_rc3_shared_mixer_stage.py",
+        "sha256": "5c94a4c1e208f41b50787c9d135f5a1d503c430d75ca71595ad9a2683a828e28",
+        "snapshot": {
+          "bytes": 21166,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/final_source/ddm_rc3_shared_mixer_stage.py",
+          "sha256": "5c94a4c1e208f41b50787c9d135f5a1d503c430d75ca71595ad9a2683a828e28"
+        }
+      }
+    ],
+    "lint": "ruff check five files passes",
+    "passes": [
+      {
+        "reviewer": "author",
+        "scope": "final integer arithmetic, causal geometry, counted parameters, retention and proof provenance",
+        "status": "CLEAN"
+      },
+      {
+        "did_not_execute": "coder/scorer/smoke/seal validator",
+        "reviewer": "independent rc3_review",
+        "scope": "five scripts, static inspection; resume and public-smoke evidence fixes",
+        "status": "CLEAN"
+      }
+    ],
+    "real_data_validation": {
+      "container_cells": 198,
+      "malformed_real_rider_refusals": 5,
+      "post_stage_twin_encodes": 2,
+      "public_smoke_pairs": 2,
+      "seal": "SEAL VALID: ddm_rc3_shared_mixer_successor [contest_cuda] \u2014 archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree",
+      "twin_decoded_trials": 10
+    }
+  },
+  "schema": "ddm_rc3_handoff.v1",
+  "score_claim": false,
+  "shared_store_custody": "equation anchor and lane record applied via canonical helpers; exclusive receipt retained for MAIN replay without absorbing sibling edits"
+}
