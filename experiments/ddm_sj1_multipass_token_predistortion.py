@@ -438,6 +438,31 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.05e-06,
         score_t4=0.13817298987557713,
     ),
+    #: LIVE (MAIN 2026-09-09).  ddm_cmp2 recoded the SEMANTIC section with sm1's 24-weight
+    #: mixer over rc1's coder, lane ddm_cmp2_t4_sm1_semantic_coder_20260909.  Pointer move
+    #: #37, -2.556898e-04 S on -384 B.  MEASURED section deltas:
+    #:   semantic 30,246 -> 29,862 B  (-384, the ONLY changed section besides the header)
+    #:   hpac 11,911 B, carrier 18,586 B, tail 119,915 B  ALL BYTE-IDENTICAL to cmp1
+    #: and both distortion legs are STILL this arm's move-35 prints.  Three consecutive
+    #: pointer moves (36, 37 and cmp1's tail half) have now bought -1.13 mS of pure RATE on
+    #: a token field and a carrier this arm has not touched since move 35.
+    #:
+    #: NAME-vs-CONTENT, recorded because this arm has met the genus three times today: the
+    #: seal's ``candidate_id`` is ``ddm_cmp2_sm1_fe1_composed`` and names fe1, but the
+    #: measured deltas show ONLY the semantic section's coding changed, with d_seg and
+    #: d_pose unchanged -- so nothing in these bytes alters a render.  The label is wider
+    #: than the object; the sections are the object.
+    PointerRow(
+        label="cmp2_sm1_semantic_coder",
+        tree=Path("/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime"),
+        archive_sha256=(
+            "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+        ),
+        archive_bytes=180_388,
+        d_seg_t4=0.00010698,
+        d_pose_t4=5.05e-06,
+        score_t4=0.13791730003757818,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
