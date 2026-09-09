@@ -638,6 +638,47 @@ predicting a minimum damage of **0.8 cells** — below the point where a steered
 × 195 rows = **+390 B = 2.597e-04 S = 1.38 % of the gap**, and it needs a RECEIVER change (the parser reads `<f2`), so it is a different
 arm's charter, not a knob here.
 
+## 8e. OWED #1e sizing — the damage curve does NOT floor, and the window is 6 bits wide, not 13
+
+Before a line of receiver code: the premise the whole fp32 chain rests on — that damage keeps falling below the fp16 step — is a property
+of the **render**, not of the archive format. A sub-fp16 scale move is expressible in the float32 forward; only *shipping* it needs a
+receiver change. So it was measured with zero receiver work (`receipts/SCALE_SIZING.json`, 135 s, `blocks.3.dw`, 6 seeded random rows ×
+both signs, seeded random 60-pair screen):
+
+| relative scale move | × below the fp16 ULP | median cells (n600-scaled) | min |
+|---|---:|---:|---:|
+| 7.09e-04 (the fp16 ULP) | 1.0 | **25.0** | 10 |
+| 1e-04 | 7.1 | **10.0** | 0 |
+| **1e-05** | **70.9** | **0.0** | 0 |
+| 1e-06 | 709 | 0.0 | 0 |
+| 1e-07 | 7,090 | 0.0 | 0 |
+
+**The pre-registered falsifier did NOT fire.** It said *"if the median damage at rel = 1e-05 has not fallen below 36 cells at n600, a
+floor exists and fp32 scales are refuted."* Measured: **0**, with a max of 0 across all twelve probes. The fitted exponent on this sweep
+alone is **0.468**, and it predicts **0.31 cells** at the fp32 ULP. There is no damage floor — the fp16 grid was simply too coarse, which
+is exactly what OWED #1e was written against.
+
+**But zero damage is also zero effect**, and that is what the sweep really buys. A move that changes nothing cannot repair anything, so
+the useful regime is the window where a move changes *something* and can net negative:
+
+> **rel ∈ [1e-05, 7.09e-04] — a factor of 70.9, i.e. 6.15 extra mantissa bits, NOT 13.**
+
+That re-prices the format change by 2.5×:
+
+| extra bits/row | reaches rel | +bytes | ΔS | share of gap | break-even |
+|---:|---:|---:|---:|---:|---:|
+| **+3** | 8.9e-05 | **+73.1 B** | 4.87e-05 | **0.26 %** | **57 cells** |
+| +4 | 4.4e-05 | +97.5 B | 6.49e-05 | 0.34 % | 77 cells |
+| +6 | 1.1e-05 | +146.2 B | 9.74e-05 | 0.52 % | 115 cells |
+| +13 (full fp32) | 8.7e-08 | +316.9 B | 2.11e-04 | 1.12 % | 249 cells |
+
+So the receiver change to aim for is **+3 to +6 mantissa bits per row**, not fp32 — a third of the bytes, and the extra bits below
+rel = 1e-05 buy nothing because the render stops responding there.
+
+**A sampling note that earned itself.** The seeded random 60-pair draw nulls at **1,254** flips; the first-60 **prefix** nulls at
+**1,080** — the prefix is **13.9 % easier**, a stronger seg prefix bias than the 0.95–0.97× in memory. The verdict is taken on the random
+draw; the prefix number is reported because it was asked for, and labelled.
+
 ## 9. OWED (the queue this arm hands forward, each with its blocker named)
 
 - **OWED #1 — the reach. DONE, and it is negative** (§8b). Run, measured, counted. No further work owed on this row.
