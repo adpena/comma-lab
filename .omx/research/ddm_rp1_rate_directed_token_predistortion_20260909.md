@@ -126,6 +126,13 @@ The yield landed inside the band for the wrong reason: the neutral fraction came
 the band and the per-change saving came in at the top of its band, and the two errors
 cancelled. Recording that rather than the headline is the point of pre-registering.
 
+**Where the accepted changes actually are (n=217, the live-coder pass).** Rows **162–291**,
+every single one inside the 128–319 band gs3 Addendum 17 names for the seg residual, and
+**64.1 % are Lane→Road** (then Road→Lane 6.9 %, Movable→Undrivable 5.5 %, Road→Undrivable
+5.5 %, MyCar→Road 5.1 %). The rate lever and the seg residual are the SAME population — the
+tokens the coder finds expensive are the lane-marking boundary tokens, which is hc1's "one
+binary question" and gs3's Lane-40.4× knife edge arriving from the rate side.
+
 **Two structural findings the search now has to obey.**
 
 1. **Neutrality is FLAT in rank.** By absolute rank in the pair: 2.08 % (ranks 0–4),
@@ -315,10 +322,11 @@ a real subset re-encode, stage/close/parseback/seg-final/public-smoke and the se
 **Recommendation, stated plainly.** Finish it only if the queue has no better use of those
 hours. The arm's science is done and it is portable; the remaining work buys 0.81 % of the
 corner. The rate corner is NOT closed by this result — but it is now closed **to this
-actuator at formulation scope**, and the reason is a coefficient, not a wall: the field's
-expensive tokens are the boundary tokens (95.6 % of accepted changes land in rows 128–319,
-72.7 % of them Lane→Road), the argmax refuses 95.6 % of them, and the adaptive coder returns
-only 15–27 % of what the survivors are worth. Any successor aiming at the 26,908 B corner
+actuator at formulation scope**, and the reason is a coefficient, not a wall: **every one** of the 217
+accepted changes lands in rows 162–291 (100 % inside the 128–319 band, the exact rows gs3
+Addendum 17 names for the seg residual) and **64.1 % of them are Lane→Road**; the argmax
+refuses **95.4 %** of what the coder calls expensive; and the adaptive coder returns only
+**15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
 ## 10. Frontier line
