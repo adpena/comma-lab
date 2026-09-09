@@ -96993,15 +96993,15 @@
       "id": "lane_ddm_pc2_carrier_kwidth_rankcut_20260908",
       "name": "ddm_pc2 CAP1 wide Rice-k field + carrier rank cut on the live pointer",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/ddm_pc2_carrier_kwidth_rankcut.py + src/tac/kw1_wide_rice_k.py + experiments/ddm_pc2_carrier_receiver_patch.py; 4 identity controls pass incl. r=12 rebuild reproducing the pointer byte-for-byte (identity/identity.json)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[macOS-CPU advisory] ITEM 1 n600 d_pose 5.0939863022125565e-06 vs base 5.09276404439735e-06, exact archive 181,604 B sha 6d3717cf; SEAL_VALID at /Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/SEAL_ddm_pc2_carrier_kwidth_rankcut.json"
         },
         "contest_cuda": {
           "status": false,
@@ -97020,8 +97020,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_pc2_carrier_rice_k_width_rank_cut_and_scales_20260908.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -97079,5 +97079,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-09T12:58:33Z"
+  "updated_at": "2026-09-09T13:40:59Z"
 }
