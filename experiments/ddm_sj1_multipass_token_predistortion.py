@@ -407,6 +407,37 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.05e-06,
         score_t4=0.13867171823146562,
     ),
+    #: LIVE (MAIN 2026-09-09).  ddm_cmp1 composed rc3's 24-weight model-section mixer with
+    #: tc1's 35-weight TOKEN-TAIL mixer over HPAC, lane
+    #: ddm_cmp1_t4_rc3_tc1_composed_20260909.  Pointer move #36, **-4.987284e-04 S on
+    #: -749 B**, the largest rate move of the wave.
+    #:
+    #: BOTH DISTORTION LEGS ARE THIS ARM'S OWN, UNCHANGED: d_seg 0.00010698 and d_pose
+    #: 5.05e-06 are move 35's prints exactly, because cmp1 re-CODES the very field this arm
+    #: shipped without altering a single token.  VERIFIED by splitting the members:
+    #:   semantic 30,246 B and carrier 18,586 B  BYTE-IDENTICAL to move 35
+    #:   hpac     12,112 -> 11,911 B  (-201, rc3's model-section mixer)
+    #:   tail    120,463 -> 119,915 B  (-548, tc1's coder on an IDENTICAL token field)
+    #:   header       14 B differs; -201 + -548 = -749, exactly the declared delta.
+    #:
+    #: CONSEQUENCE FOR THIS ARM, and it is not small: the shipped TAIL CODER is no longer
+    #: the jg2/HPAC path every byte number in this memo was measured through.  A pass-5
+    #: price carried from pass 4's 6.4000 bits/token would be measured against a coder the
+    #: pointer no longer ships.  The break-even must be RE-DERIVED under tc1's
+    #: probabilities and the control stream READ FROM THIS TREE, never carried.  The
+    #: existing ``stage-tail --expect-pointer-stream`` guard already fail-closes on the
+    #: mismatch: a jg2-coded stream cannot be spliced into a tc1-coded member.
+    PointerRow(
+        label="cmp1_rc3_tc1_composed",
+        tree=Path("/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime"),
+        archive_sha256=(
+            "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+        ),
+        archive_bytes=180_772,
+        d_seg_t4=0.00010698,
+        d_pose_t4=5.05e-06,
+        score_t4=0.13817298987557713,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
