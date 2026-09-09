@@ -1,0 +1,44 @@
+{
+  "verdict": "CONSOLIDATE-NOW",
+  "severity": 2,
+  "components": {
+    "pile_files": [
+      23,
+      1
+    ],
+    "pile_lines": [
+      1731,
+      1
+    ],
+    "landings": [
+      1,
+      1
+    ],
+    "stale_commits": [
+      9,
+      0
+    ],
+    "signal_ratio": [
+      10.0,
+      0
+    ],
+    "ssd_only_code": [
+      325,
+      2
+    ]
+  },
+  "degraded": [],
+  "signal_detail": {
+    "memos_24h": 50,
+    "system_intelligence_commits_24h": 5
+  },
+  "ssd_detail": {
+    "state": "fresh",
+    "measured_at_utc": "2026-09-09T18:20:57+00:00",
+    "age_hours": 0.0,
+    "scanned": 286457,
+    "gc_eligible": 5,
+    "certified_in_place": 1,
+    "roots_absent": []
+  }
+}

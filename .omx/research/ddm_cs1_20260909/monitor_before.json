@@ -1,0 +1,46 @@
+{
+  "verdict": "CONSOLIDATE-NOW",
+  "severity": 2,
+  "components": {
+    "pile_files": [
+      19,
+      1
+    ],
+    "pile_lines": [
+      1355,
+      1
+    ],
+    "landings": [
+      1,
+      1
+    ],
+    "stale_commits": [
+      1,
+      0
+    ],
+    "signal_ratio": [
+      9.8,
+      0
+    ],
+    "ssd_only_code": [
+      118,
+      2
+    ]
+  },
+  "degraded": [
+    "ssd sweep cache stale (190.5h > 72h)"
+  ],
+  "signal_detail": {
+    "memos_24h": 49,
+    "system_intelligence_commits_24h": 5
+  },
+  "ssd_detail": {
+    "state": "stale",
+    "measured_at_utc": "2026-09-01T19:39:33+00:00",
+    "age_hours": 190.5,
+    "scanned": 140470,
+    "gc_eligible": 5,
+    "certified_in_place": 1,
+    "roots_absent": []
+  }
+}

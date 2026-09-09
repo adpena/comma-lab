@@ -1,0 +1,3055 @@
+{
+ "tool": "tools/audit_ssd_authored_signal.py",
+ "date_utc": "2026-09-09T18:20:57+00:00",
+ "elapsed_s": 734.3,
+ "method": {
+  "identity": "git blob sha1 vs blobs REACHABLE from a ref (`git rev-list --objects --all`)",
+  "why_not_odb": "`--batch-all-objects` also returns staged-never-committed and orphaned blobs that `git gc --prune` deletes and no clone receives; counting those as preserved under-reports the debt.",
+  "roots": [
+   "/Volumes/APDataStore/pact",
+   "/Volumes/VertigoDataTier/pact"
+  ],
+  "extensions": [
+   ".c",
+   ".h",
+   ".md",
+   ".py",
+   ".rs",
+   ".sh",
+   ".toml",
+   ".yaml",
+   ".yml"
+  ],
+  "pruned_dirs": [
+   ".cargo",
+   ".conda",
+   ".git",
+   ".mypy_cache",
+   ".pytest_cache",
+   ".ruff_cache",
+   ".rustup",
+   ".tox",
+   ".venv",
+   "__pycache__",
+   "build",
+   "conda-meta",
+   "dist",
+   "node_modules",
+   "site-packages",
+   "target",
+   "venv",
+   "wheels"
+  ]
+ },
+ "denominator": {
+  "ssd_code_like_files_scanned": 286457,
+  "files_unreadable": 0,
+  "roots_absent_from_this_machine": [],
+  "reachable_blobs_in_repo": 108856,
+  "odb_blobs_in_repo": 117727,
+  "gc_eligible_blobs_in_repo": 8949,
+  "absent_file_instances": 5539,
+  "absent_DISTINCT_blobs": 1580,
+  "bucket_A_third_party_or_clone": 934,
+  "bucket_B_run_output_or_coldstore": 320,
+  "bucket_C_authored_OWED": 325,
+  "bucket_C_of_which_gc_eligible": 5,
+  "bucket_D_certified_in_place": 1
+ },
+ "bucket_definitions": {
+  "A": "third-party intake / OSS harvest / upstream mirror / nested clone \u2014 operator policy leaves these in place.",
+  "B": "experiments/results/** and cold_store/** \u2014 bulky rebuildable run output, untracked by repo convention.",
+  "C": "candidate AUTHORED sources in arm workspaces. Default disposition is COMMIT. THIS IS THE DEBT.",
+  "D": "bucket-C blobs certified in place by an owner with a substantive rationale (append-only ledger)."
+ },
+ "unreadable_sample": [],
+ "owed": [
+  {
+   "blob_sha1": "3e03bdd8750c85f01683b0d1678fc23aea81bebe",
+   "ext": "py",
+   "size_bytes": 238604,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/packet/compress.py",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "eb7d1b5ab2bc740a47d17caa2b5ffd23fb7d1d6a",
+   "ext": "py",
+   "size_bytes": 204212,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/packet/compress.py",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "073e9d0dad16a174db986029bd112e8056563d27",
+   "ext": "py",
+   "size_bytes": 183053,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_extra/compress.py",
+   "instance_count": 6
+  },
+  {
+   "blob_sha1": "f831840ad5cff98625e80426439666ef14cc4074",
+   "ext": "py",
+   "size_bytes": 182615,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/bare_source_heavy_launch/compress.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "cf90e97010d7f1b652993ba7c55527a70f010e0c",
+   "ext": "py",
+   "size_bytes": 179863,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/negative_controls/manifest_extra/compress.py",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "ee3e16e6650a3ea462288350f32f88a4a8b0b6ce",
+   "ext": "py",
+   "size_bytes": 59732,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ad2_addressing_cost_decomposition/measurement_v6/retained/source/producer.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c067cc55a2eaab9c75965adf8479e36c3034cb01",
+   "ext": "py",
+   "size_bytes": 59151,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_xs1_cross_section_conditioning/measurement_v1/retained/source/history/ddm_xs1_cross_section_conditioning_29ab84d510a5.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "534453a3ba2880573ac6483fdaa8477818a162c1",
+   "ext": "py",
+   "size_bytes": 58160,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jc1/restartable_exact_coder/retained/source/ddm_jg2_tail_reencode.e762bead28ab9819.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "cc3bf0970132f163682c7da2821f110b9e531208",
+   "ext": "md",
+   "size_bytes": 57000,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/TABLES_all_dali.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "a568c789508dd2d353ce6e12e3d90a1b0f7d0429",
+   "ext": "py",
+   "size_bytes": 54162,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ad2_addressing_cost_decomposition/measurement_v1/retained/source/producer.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "3778e637f7b97e42601aaf53b1abe43881088eaf",
+   "ext": "md",
+   "size_bytes": 51202,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq12/generation_7_afr1/BORROWED_SUBSTRATE_ACCOUNTING.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2a9f530a158183989434895b8fae4e32390e1ff2",
+   "ext": "c",
+   "size_bytes": 49539,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/runtime_bz2_field/runtime/f26_corrector_native.c",
+   "instance_count": 6
+  },
+  {
+   "blob_sha1": "af336b544984ad0b7181ed5db27843e1c579d329",
+   "ext": "py",
+   "size_bytes": 49328,
+   "bucket": "C",
+   "durability": "gc_eligible",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_bl1_per_position_bit_allocation/measurement_v1/retained/source/ddm_bl1_per_position_bit_allocation.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "4e4a02c0aa2701944958289b74b52db635415990",
+   "ext": "c",
+   "size_bytes": 47703,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bhw1_winwin_cone_rescreen/runtimes/lane2road_topcost_k060000/runtime/f26_corrector_native.c",
+   "instance_count": 80
+  },
+  {
+   "blob_sha1": "da8c4250949df4b2de912064bee360cabcd4513f",
+   "ext": "py",
+   "size_bytes": 46331,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_g8c_gen8_compress_vendoring/bare_proof_v2/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+   "instance_count": 5
+  },
+  {
+   "blob_sha1": "8e685cc4a87747e4c1ecd47ad6fe822232ed7033",
+   "ext": "py",
+   "size_bytes": 46129,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_g8r_compress_adversarial_review/ap_unit_v2/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+   "instance_count": 19
+  },
+  {
+   "blob_sha1": "2bc9fe9daf353366beb4bc9c4305197a870246de",
+   "ext": "py",
+   "size_bytes": 45641,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_tb2_token_bit_attribution/measurement_v1/retained/source/ddm_tb2_token_bit_attribution.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "df484c481a8d5e1244fae2c879c4a5366ad9c06e",
+   "ext": "md",
+   "size_bytes": 43862,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen5_jg5_waterfill_pre_pq9_reviewfix/README.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ec3b2ac42acc5399de97eff4a8e2eb360f1195cd",
+   "ext": "md",
+   "size_bytes": 43836,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen5_jg5_waterfill_pre_pq9_reviewfix2/README.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "06b09c03a9f948b27700b88064e541ef8200a880",
+   "ext": "py",
+   "size_bytes": 42067,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sg2b_scmdl_distortion_leg_build/runtimes/p00_null/compress.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "4fe84157875ba86f2ef3886f56d517454d8e3ac0",
+   "ext": "py",
+   "size_bytes": 40228,
+   "bucket": "C",
+   "durability": "gc_eligible",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_lq1_lane_quotient_representability/measurement_v1/retained/producer_source/ddm_lq1_lane_quotient_representability.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "998347359d485b2040f6bccc9860d9035154f30e",
+   "ext": "py",
+   "size_bytes": 38431,
+   "bucket": "C",
+   "durability": "gc_eligible",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_to2_token_ordering_race/measurement_v1/retained/source/producer_81259d5d4bceee06.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f7849b78fe406b961a0b88e54db8779a47501a9b",
+   "ext": "py",
+   "size_bytes": 37890,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_to2_token_ordering_race/measurement_v1/retained/source/producer_54be49c474bafebd.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "3160836cf10615816e511051b3fa7e569d5fb8b6",
+   "ext": "py",
+   "size_bytes": 37214,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jc1/restartable_exact_coder/retained/source/ddm_rxc1_restartable_exact_coder.1db409d848c7add5.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ac39f09525e2d6689fc32418bfa8ba780fcbf31f",
+   "ext": "py",
+   "size_bytes": 36873,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_to2_token_ordering_race/measurement_v1/retained/source/producer_130a7c5118f025d4.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "dfa973ef90d5678f2ff6d449621b36296c3fcabb",
+   "ext": "py",
+   "size_bytes": 35851,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rr8/candidate_runtime_jg5_native_corrector_instrumented/runtime/residual_archive.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "689c05851228e94782f4992f1ee8274a13c8440e",
+   "ext": "py",
+   "size_bytes": 34887,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_to2_token_ordering_race/measurement_v1/retained/source/producer_1f367c387aa0464c.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "0d4fb80a507b69d5a8cd2d48d400e043b6c9e5fd",
+   "ext": "py",
+   "size_bytes": 34754,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_to2_token_ordering_race/measurement_v1/retained/source/producer.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ee2c28f496bd842ed2ac2943a4b2cda258303b97",
+   "ext": "py",
+   "size_bytes": 33876,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_tc1_tail_shared_mixer/rebase_pc2/candidate_runtime/runtime/residual_archive.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f4d67b90ad0effee2a0bb1c2cedcc576428f5023",
+   "ext": "py",
+   "size_bytes": 33739,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/rebase_identity/runtime_r12/runtime/residual_archive.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "a6a101f02db3973a191f692d8f2c50e92136067e",
+   "ext": "py",
+   "size_bytes": 33636,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/runtime/residual_archive.py",
+   "instance_count": 33
+  },
+  {
+   "blob_sha1": "181a339da444c7d2104939cf5b78968f4a697afa",
+   "ext": "py",
+   "size_bytes": 32311,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/candidate_runtime/runtime/residual_archive.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "938503ce024e063b5f2a8a7dff6da60699a90ae0",
+   "ext": "py",
+   "size_bytes": 32233,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/rebase_scales_only/candidate_runtime/runtime/residual_archive.py",
+   "instance_count": 8
+  },
+  {
+   "blob_sha1": "cc35c2390e7ee143c5f9732864c939f2c5890cba",
+   "ext": "py",
+   "size_bytes": 32130,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/candidate_scales/candidate_runtime/runtime/residual_archive.py",
+   "instance_count": 16
+  },
+  {
+   "blob_sha1": "848185d6f5d84911db22db388d516135112e1895",
+   "ext": "py",
+   "size_bytes": 31647,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_oc2_orthogonal_conditioning_charts/rank_after_patch/runtime_candidate/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "33f1a099ad57d81775db108a0c14366c1795f794",
+   "ext": "md",
+   "size_bytes": 31617,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/memo_body_presplice.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "4c8be608f75f7eedefb4c992f2049229fdce6900",
+   "ext": "py",
+   "size_bytes": 31564,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_jt22_ctxB/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "12b1ed9f6aaddefd686e21ea27bf657d46ca3725",
+   "ext": "py",
+   "size_bytes": 31400,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_jt22_ctxA/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "254b7540d79d9ec8158fd0fc3197cce41daed4cd",
+   "ext": "py",
+   "size_bytes": 31369,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_oc2_orthogonal_conditioning_charts/rank_solo/runtime_candidate/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f0dc4acaf70b7e8cdd21e5134dd035355784948a",
+   "ext": "py",
+   "size_bytes": 31142,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/runtime_bz2_field/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 34
+  },
+  {
+   "blob_sha1": "c9d0112acd21501586e69e4a77a3a64d272b9536",
+   "ext": "py",
+   "size_bytes": 30864,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/base_jt21/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 42
+  },
+  {
+   "blob_sha1": "bcfc9cab83a635965b0834c43d82b83a87994ea2",
+   "ext": "py",
+   "size_bytes": 30839,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ce1_afr1_compress_chain/work/run_1/gb1/runtime_groupbin8_surprise/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 91
+  },
+  {
+   "blob_sha1": "e8c8d5f2580141d20a62f0706a5e984539dce394",
+   "ext": "py",
+   "size_bytes": 30834,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ce1_afr1_compress_chain/work/run_1/gb1/runtime_cls_groupbin8/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "c364ab97e596ed77536d65085a9ee517259c8f51",
+   "ext": "py",
+   "size_bytes": 30640,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/retained/initializer_candidate/submission/runtime/residual_archive.py",
+   "instance_count": 53
+  },
+  {
+   "blob_sha1": "7aff7db2d5989934aa5a4ab375302bbe80e72872",
+   "ext": "py",
+   "size_bytes": 30631,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rf1_renderer_film_rung/candidate_runtime_r1/runtime/residual_archive.py",
+   "instance_count": 7
+  },
+  {
+   "blob_sha1": "dae27f73fa41a6a800fb5fbbf9e7d86d8186ad58",
+   "ext": "py",
+   "size_bytes": 30454,
+   "bucket": "C",
+   "durability": "gc_eligible",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rc1_rate_crush/measurement_v2/retained/producer_source/rc1_terminal_program_vq.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "d35a2769d1fb2b68c798e3e33a090a3e4e45c783",
+   "ext": "py",
+   "size_bytes": 30067,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/retained/runtime_gate_candidate/runtime/residual_archive.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "53338ca3c5ccdfb22379b30719ffe92c73fc0666",
+   "ext": "py",
+   "size_bytes": 30058,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_rc2_composed/runtime/residual_archive.py",
+   "instance_count": 66
+  },
+  {
+   "blob_sha1": "f1bc3a63c5457b01bdf4364077cd3d37576b0ae2",
+   "ext": "py",
+   "size_bytes": 29515,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bhw1_winwin_cone_rescreen/runtimes/lane2road_topcost_k060000/runtime/fx2_model_axis_corrector.py",
+   "instance_count": 96
+  },
+  {
+   "blob_sha1": "dcf8a87fc1ce8c6e9e4fb173848561bf4e6ffcc9",
+   "ext": "py",
+   "size_bytes": 29428,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rr8/candidate_runtime_jg5_native_corrector/runtime/residual_archive.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "98096228ae3e4a92ec637f160ce0185e71097a12",
+   "ext": "py",
+   "size_bytes": 28802,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/runtime/f26_inflate.py",
+   "instance_count": 61
+  },
+  {
+   "blob_sha1": "61175df7f505d194c0760a04d0b5d804c0dabf38",
+   "ext": "py",
+   "size_bytes": 28565,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/retained/initializer_candidate/submission/runtime/f26_inflate.py",
+   "instance_count": 53
+  },
+  {
+   "blob_sha1": "8b1f9d5164f38fa54b5d4318ccdf7a538a69e3ff",
+   "ext": "py",
+   "size_bytes": 28515,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rc1_rate_crush/measurement_v2/retained/producer_source/ddm_rc1_rate_crush.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f70029c32988743befbf91bbb2c04c40138d7699",
+   "ext": "py",
+   "size_bytes": 28482,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/retained/runtime_gate_candidate/runtime/f26_inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "6e3885f5d163c94cc53363e5df80b4d7a7171f1d",
+   "ext": "py",
+   "size_bytes": 28477,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rf1_renderer_film_rung/candidate_runtime_r1/runtime/f26_inflate.py",
+   "instance_count": 7
+  },
+  {
+   "blob_sha1": "96c8824f92011e8b630e2a19ad9812d76456d823",
+   "ext": "py",
+   "size_bytes": 28024,
+   "bucket": "C",
+   "durability": "gc_eligible",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/vq8_k64_e8192_v1/retained/producer_source/ddm_nr1_taskcell_quotient_prebuild.py",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "b6b3c3aa26ea9dbc23b4e468ca158ef4511c9644",
+   "ext": "py",
+   "size_bytes": 27686,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_fpc2_full_pipeline_ports/full/driver/runtime_copy/runtime/f26_inflate.py",
+   "instance_count": 11
+  },
+  {
+   "blob_sha1": "874fda12b6af9b58dd9b12c68e802c711ccb92c6",
+   "ext": "md",
+   "size_bytes": 27065,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/TABLES_cold_dali.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "748dc699fc3cb6799e3b4dc50197b1151fee1954",
+   "ext": "py",
+   "size_bytes": 26892,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ni1_nr1_k32_receiver_distortion/build_r1/runtime/runtime/f26_inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "4347a61b05a5419847ffd2b7643a3e224dea51e1",
+   "ext": "py",
+   "size_bytes": 26886,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ri1_rc1_full_rgb_receiver/build_r1/runtime/runtime/f26_inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "4a6f00a6149dc9363949ada950a4e1aab38f9df8",
+   "ext": "py",
+   "size_bytes": 25949,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cb2_class_balanced_dictionary/measurement_v4/retained/producer_source/ddm_cb2_class_balanced_dictionary_gate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "5b790f801457ca7766bc1763da2c8e56f30b5d7e",
+   "ext": "py",
+   "size_bytes": 23805,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cb2_class_balanced_dictionary/measurement_v2/retained/producer_source/ddm_cb2_class_balanced_dictionary_gate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7e10d2e6c0fdc82304e243d4d0a4b0af79eefcb3",
+   "ext": "py",
+   "size_bytes": 23513,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cb2_class_balanced_dictionary/retained/producer_source/ddm_cb2_class_balanced_dictionary_gate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "bf910dad7b0083f9e0a2ede30507e8391ab0987f",
+   "ext": "py",
+   "size_bytes": 21607,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/runtime/rr5_arith_basis.py",
+   "instance_count": 35
+  },
+  {
+   "blob_sha1": "1527c7e04112115967956e0aa4a0c61884c5293b",
+   "ext": "py",
+   "size_bytes": 19965,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "020743d2918241524840558701275d2212db355f",
+   "ext": "py",
+   "size_bytes": 16594,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rn1_n600_reopen_sweep/rn1_closure_census.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "cdd5ad08b8fdaca7a046b2f8f9ec26d28f720ed6",
+   "ext": "py",
+   "size_bytes": 16219,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "932a933162ab3903275933c19e3f0def6640b29d",
+   "ext": "py",
+   "size_bytes": 15924,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/runtime_bz2_field/runtime/native_free_corrector.py",
+   "instance_count": 6
+  },
+  {
+   "blob_sha1": "df91f4b49c9100625aeccd3a5096e9e98644d2b7",
+   "ext": "py",
+   "size_bytes": 15718,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bhw1_winwin_cone_rescreen/runtimes/lane2road_topcost_k060000/runtime/native_free_corrector.py",
+   "instance_count": 81
+  },
+  {
+   "blob_sha1": "767d9687a265943a0897d4e87dcdbc4aa2c0ea99",
+   "ext": "py",
+   "size_bytes": 13851,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_fpc2_full_pipeline_ports/full/driver/runtime_copy/cpr1/inflate.py",
+   "instance_count": 11
+  },
+  {
+   "blob_sha1": "fa96c9fa0332dfc7a6bba5d88d2989c7810cb566",
+   "ext": "py",
+   "size_bytes": 13801,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/cpr1/inflate.py",
+   "instance_count": 61
+  },
+  {
+   "blob_sha1": "b479644372cd23c34c8a28d3b86e371fc6662c88",
+   "ext": "py",
+   "size_bytes": 13497,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/runtime/dx2_cabac_coefficients.py",
+   "instance_count": 35
+  },
+  {
+   "blob_sha1": "f5cfc9ebeb9993b2f60d8a063b26d79e1ad2fe2a",
+   "ext": "py",
+   "size_bytes": 13327,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/candidate_runtime/runtime/ihs2.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "eae9362fc69d8a91564029612cc92443c17543b1",
+   "ext": "py",
+   "size_bytes": 13169,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_dcf1_duplicate_carry_factorization/retained/experiment_source_7906d01d91b9ae02ade308763a59c9e1ca3f1cff6fd5d4f4f77c1b6e702e242b.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "71513c1e0a1acbf3ce34ef79d85d162c9e4513c5",
+   "ext": "py",
+   "size_bytes": 13146,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/cpr1/ddm_mp2_semantic_receiver.py",
+   "instance_count": 61
+  },
+  {
+   "blob_sha1": "ded952ee1fa5f1c608335ab79841e29ccec2befa",
+   "ext": "py",
+   "size_bytes": 13091,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/rebase_scales_only/candidate_runtime/runtime/ihs2.py",
+   "instance_count": 11
+  },
+  {
+   "blob_sha1": "d151fb86fdab0c10a4b4dd74560c3a2007c6af8c",
+   "ext": "py",
+   "size_bytes": 12835,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/runtime/ihs2.py",
+   "instance_count": 49
+  },
+  {
+   "blob_sha1": "2d319d2a3cb270855a5e974106d8aa253e03d120",
+   "ext": "md",
+   "size_bytes": 11829,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/memo_draft_facts.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "714c9bce4bd8e9678858f4e05af314d6e7145bdf",
+   "ext": "py",
+   "size_bytes": 10112,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ni1_nr1_k32_receiver_distortion/build_r1/runtime/runtime/ni1_nr1_receiver.py",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "826588422af64f9907925bc231dcb6fbc7654412",
+   "ext": "py",
+   "size_bytes": 9853,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/source_code/ddm_rc3_shared_mixer_pricing.b5dc6562e045ce4107cf94319d86f378dccc305f65c2353775cff465bf1a230a.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b1d8cd3f46eea81a66b7ffc32c847c1ff3f646ba",
+   "ext": "py",
+   "size_bytes": 9273,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rn1_n600_reopen_sweep/rn1_arithmetic_rederive.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "07af867cb220a7c6ab9b57c2ae6bcca7cd61fa09",
+   "ext": "py",
+   "size_bytes": 8676,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/source_code/ddm_rc3_shared_mixer_forecast.2703f17ab778016ec09c01bce23dc7047fedf7fe6394adfd4cb5b74b78d57ee6.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8fa314942b1b3d4821a8c905d0101edae54be9d7",
+   "ext": "py",
+   "size_bytes": 8384,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/render_tables.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "62c2dda464147cd5c6a77b08a5d7a5cc506fe061",
+   "ext": "md",
+   "size_bytes": 8370,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/tables.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e6a78f2058eca9aa66ee62404e0ac6de710eb0de",
+   "ext": "md",
+   "size_bytes": 7242,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/PREREGISTERED_ADJUDICATION.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "3d4c63f1780f3db89613671a2a4dcabc6743271c",
+   "ext": "py",
+   "size_bytes": 7076,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/source_code/ddm_rc3_shared_mixer_race.a43294fcabce424d6a30caa6d66410253d310592ce9ce34403bf89fcf67d4d3a.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "6d90fe900b8413bcc8b9a22303a96d37c71d7b7a",
+   "ext": "md",
+   "size_bytes": 6974,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq12/generation_7_afr1/COMPRESS.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "af6d9f6ee7db21755b01f220ff5a5be07fcce773",
+   "ext": "md",
+   "size_bytes": 6563,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/RELEASE_PLAN.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "242d4e587aabf333ac385142c86fe4d1f96310fd",
+   "ext": "md",
+   "size_bytes": 6517,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/RELEASE_PLAN.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "de850c410f9157b6c7ca73f6ad7156804d519cf0",
+   "ext": "py",
+   "size_bytes": 6392,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/token_identity_control.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2bd2114bc5f24c3145cacfc5b28b56b4ee035ebf",
+   "ext": "md",
+   "size_bytes": 5827,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_v3_lattice_x4_on_rc1_20260905/packet_memo_REFUSED_BY_CHECKPOINT_MATURITY_GATE_lane_id_v3.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b892e2bc76fe0f6ccea091042120dd401631e1f1",
+   "ext": "md",
+   "size_bytes": 5770,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/PR_BODY_DELTA.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "1ef2d9894a6b547a2152d451e8b09a7fc20aac76",
+   "ext": "md",
+   "size_bytes": 5625,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/packet/README.md",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "c143e01ff40d4eaed2f4da92a85cca11fe0ad3a4",
+   "ext": "md",
+   "size_bytes": 5563,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/packet/README.md",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "36883dd0492159257655f5c310ad6ed9714712f1",
+   "ext": "md",
+   "size_bytes": 5491,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read/TABLES_pyav.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e2cb5a128778fc9c3bab2313014aba78eee8e592",
+   "ext": "md",
+   "size_bytes": 5484,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read/TABLES_dali.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ba1fe5ab933fc67da10571d6ac7018c9eed12275",
+   "ext": "py",
+   "size_bytes": 5311,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/apply_quarantine.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "84688ca126de64bbac4e23f7cb68876746373d2b",
+   "ext": "md",
+   "size_bytes": 5292,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq12/generation_7_afr1/README.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "96b7c8fa31651157109fdb0b504066ecbdf581dc",
+   "ext": "md",
+   "size_bytes": 5100,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/PR_BODY_DELTA.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "89e05263e2b9cc8ad66277d7c6b41d277eaa6b97",
+   "ext": "sh",
+   "size_bytes": 4918,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng5_tau_band_x_continuous_objective/wait_for_ng4_then_smoke_then_fire.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "60d579337047c58a9ec6cca6661618d0499f8d86",
+   "ext": "py",
+   "size_bytes": 4880,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/probe/probe_semantic.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2ebac46958b33c3b64a917779d0993b4871a04bd",
+   "ext": "py",
+   "size_bytes": 4703,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "a8858b16556454f19d84fb80807789065212597f",
+   "ext": "py",
+   "size_bytes": 4414,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/scratch/append_anchor.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8ca7c27a41aeb0661fb34d84f75c11a5c7393937",
+   "ext": "sh",
+   "size_bytes": 4367,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng4_continuous_objective/run_bounded_smoke_when_admitted.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "1fa8c9ea77faf5895a9f721b60104fdc8b55113d",
+   "ext": "py",
+   "size_bytes": 4090,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/negative_control_stage7.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8e931d29b1086355be173abf8742bf1aa2910a3a",
+   "ext": "py",
+   "size_bytes": 4064,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng4_continuous_objective/render_smoke_appendix.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "99fb33aaa9c706d0c463b20749a6f6127031043e",
+   "ext": "py",
+   "size_bytes": 3943,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/run_stage7.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "973a4778ca2f66774272f43f6f73fbc314510288",
+   "ext": "py",
+   "size_bytes": 3880,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/run_stage6.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ba82a29a39d18e0535229c995c80b15b4900fdb6",
+   "ext": "py",
+   "size_bytes": 3750,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/bounded_target_g_delta.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "1f6f019da614b0a6500a3476a9deaa181323bf67",
+   "ext": "md",
+   "size_bytes": 3584,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_post_readme_clean2_controls/source_extra/README.md",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "8f3ec84fcdde700dba644fa5df874c68f15ed2e7",
+   "ext": "py",
+   "size_bytes": 3561,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/_dead_param_bytes.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "de081c5bd17613066e8be246e7f0db62fa66bc6d",
+   "ext": "md",
+   "size_bytes": 3547,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/prereg_derived_prediction.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "3635964486d90c872fc0d56710c55a78163f1900",
+   "ext": "md",
+   "size_bytes": 3439,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_extra/README.md",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "3c82505cd79b30988e09aef93b5835d8126d4184",
+   "ext": "sh",
+   "size_bytes": 3376,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ni1_nr1_k32_receiver_distortion/build_r1/runtime/inflate.sh",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "0664d721ad0032af45cd78691544bb98dc95d57d",
+   "ext": "sh",
+   "size_bytes": 3376,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ri1_rc1_full_rgb_receiver/build_r1/runtime/inflate.sh",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "dd38d9538b9184142fcaa611519bbd8a66ed46a1",
+   "ext": "py",
+   "size_bytes": 3332,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/splice_memo.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d63cee2f58c7d2833536897c6c68925abc7b13d6",
+   "ext": "sh",
+   "size_bytes": 3264,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/scratch_gb1_identity_20260824/runtime/inflate.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c9232ce02b4baac6acd83a56b9c328067dd437c6",
+   "ext": "sh",
+   "size_bytes": 3258,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/base_jt21/inflate.sh",
+   "instance_count": 14
+  },
+  {
+   "blob_sha1": "1e45c35fc961645a7a318e99a5a5d51da0ecce2f",
+   "ext": "sh",
+   "size_bytes": 3255,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bhw1_winwin_cone_rescreen/runtimes/lane2road_topcost_k060000/inflate.sh",
+   "instance_count": 129
+  },
+  {
+   "blob_sha1": "3144c28b8fa7a12c74d48f252735c6aa99bd25be",
+   "ext": "md",
+   "size_bytes": 3242,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sf2/controls/scaffold_control.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "4438bd66827c04ad64696baae0a03b89b2a12180",
+   "ext": "sh",
+   "size_bytes": 3166,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read/md4_terminal_read_driver.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "abc3e951598eeccd53ab6a6b82a6fc92cf0071f4",
+   "ext": "py",
+   "size_bytes": 3165,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/negative_control_stage6.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "134f852fa1f822f2ceae467ee9e128c4b9427065",
+   "ext": "py",
+   "size_bytes": 3089,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/_dead_param_probe.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7c9cca817219c6142a53aa33ff014d48d7711721",
+   "ext": "sh",
+   "size_bytes": 3087,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune/FIRE_ORDER.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d8b535631209c5ea097a723cd4b4041ca6a31c46",
+   "ext": "py",
+   "size_bytes": 3002,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/apply_timeouts.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "106ea3b7905d4de54b1e2379f6910492d9469530",
+   "ext": "py",
+   "size_bytes": 2959,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_receipt_sha_derivation.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "cadd366be5beb0a315f34058329fe7a7ed307440",
+   "ext": "py",
+   "size_bytes": 2763,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/_same_step_overlap.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8202c30c5a791c062b0004633251bab14ba4d8f6",
+   "ext": "sh",
+   "size_bytes": 2701,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fx5/finish_decode_receipt.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "586df9a9ef9722435986f9497d51a2e72e7f648c",
+   "ext": "sh",
+   "size_bytes": 2582,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage2.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b34d4feca6c8d3172763ab939a1cf2dfebae7042",
+   "ext": "sh",
+   "size_bytes": 2566,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/pc1_harvest_v3.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "bcd87c35d7ed6d9ef2ade983263d393652f67569",
+   "ext": "md",
+   "size_bytes": 2537,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/RUNBOOK.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e71a949f05ef5cf6febd71df76b9e22d9719061a",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/submission_dir_identity_report/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "ce6703bdff7a5cfe8eb4e9d23602714ab4da109e",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/submission_dir_identity_report/inflate.py",
+   "instance_count": 10
+  },
+  {
+   "blob_sha1": "1cb27fc253699940245ac9f77fc4fdb0eb39c52e",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/cpu_control_jf2_null/retained/receiver_copy_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "6b34d85b417b2e1f88dbbdb9d59727bfc9fb1ef8",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_0p5/retained/receiver_copy_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c8294f36fecb50f73bf5d339e9cbceb7abaf63d6",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/receiver_copy_runtime/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "cd5db8a1de5c8a4138dc7d99be872658938feeaf",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_fs1_frame0_selector/fire_runtime_A_ratio_gate_101/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "92065f7d6222ece89e5472e92f5e4c215b054d17",
+   "ext": "py",
+   "size_bytes": 2476,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/staged_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d52ad09debda801b64e1fdf000444595d60bd899",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_1p0_s17/retained_rc1/model_only_runtime/inflate.py",
+   "instance_count": 5
+  },
+  {
+   "blob_sha1": "8822f822dc0636d83ad7ffede82511bd62b88dac",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_1p0_s17/retained_rc1/receiver_copy_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "99715e3da9e70172541728a29ea53e51acf7d3f3",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_1p0_s18/retained_rc1/receiver_copy_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "1fbe2adf649abb1c1887d9864b8bf7a010906817",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_2p0/retained_rc1/receiver_copy_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7bf8cba48af4bb205a1bc89da350c6b5f7227705",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d2d71e8a59aa0acfc21e27a4d63be6eb4cac330a",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained/v3_candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "bd39a36be5ccf0598d04b4480e13df9c28a1741c",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained/v3_on_rc1_candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "5584dad022f533ad5012e65d50b90ecf8161bee7",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained/v3x8_on_rc1_candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ef6551b91eeeb6b09ecaf9d40f347fefce12ad28",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f2_n12/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "64a1903698fbabb371a64d585fe65d70fc7acc8c",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f2_n4/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e39696e16a24ea1d78e54a7840c38bab423c099e",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f2_n6/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "5a25e60c1a9ea617a2c8e04f82664b85e4e33969",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f2_n8/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8a784231bbab0035150a37e3dfc1f68571c62984",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f4_n12/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c321d590f5353ea815086922cb771651d608f362",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f4_n4/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e3449ecf7ea47f0a12107de203c59daffe0addef",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f4_n6/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "51608584be1103ea2218ba47cc11b4807ae00835",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/coarsen/runtime_f8_n4/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d5b2d29092d49826304e2661d3a15e5cf34b0c94",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid/runtime_r8_refine0.25/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e47827daaa027140dada646db1b27a2a3d5e3eb9",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_hybrid/inflate.py",
+   "instance_count": 11
+  },
+  {
+   "blob_sha1": "8e0fd261edd60c5d78858329e80fb15090866ace",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.125/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "99bc6a9ec7ae2ee3f598273478c32f3070dc6061",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.25/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d7d2b18666eda14a5896c41613d9cab8d02fdb5a",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/hybrid_swept/runtime_r8_refine0.5/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "f54966f445ba32fb285fb30f2de34c1bc9fc6b9e",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/price_swept/runtime_r10/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "bbe36b2aa416ef9cffe66fb389fa2f3adcb34f9e",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/price_swept/runtime_r11/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "9298817c70f531986273a7fed7c899991808107b",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/price_swept/runtime_r8/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "0a04acd2d5db2a01aa767d62c20a8abf91b817c5",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/price_swept/runtime_r9/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "3d745f134c63eb5d1822cdaf96644afda2a79008",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/rebase_identity/runtime_r12/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "7567274a38f5b6f5de3f65b295ef42487ed2ce9b",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/rebase_scales_only/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "065aaae16c8834da40aa0fd55fcb6bf22a289a41",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/rebase_scales_resolve/candidate_runtime/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "cbaeca96e82fa0a94b2825b4a44ab4b5ab2edb1b",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/scales/runtime_scales/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "4a34fd23c8d1434a4b5529ab01666ce9e6c1370c",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "228879f62c604c83cb738f4853bfd575cdea5177",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "eac1cb8dd143a2bcc51b412f293b0fb29ac6e9fa",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/staged_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "905d40e858ffc6364c2ad77315fe774d4e7fbe67",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/staged_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "4c0da0b4cc9d8b82b5652e8e9ff0a2861b44bb39",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass4/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "dd02207cb58d39f2b7faeb8bd2af753e23bc5c08",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass4/staged_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "bc90650704689fa3a8e4dd53f1f2409c1f9a35d7",
+   "ext": "py",
+   "size_bytes": 2475,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_tc1_tail_shared_mixer/rebase_pc2/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "675750eeb3449953b29e77372041ca4e59d08222",
+   "ext": "py",
+   "size_bytes": 2446,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/_fidelity_probe.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "0e0138cf17ee1a6ebd908d8cb942ce28141b42e4",
+   "ext": "md",
+   "size_bytes": 2439,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/bare_source_heavy_launch/README.md",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "52c506b9fb8fb9c08492bdf1a41f9552873fdd00",
+   "ext": "sh",
+   "size_bytes": 2425,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage9.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b9b81f611356d146ce09dcb8d17f82a64a352c96",
+   "ext": "sh",
+   "size_bytes": 2376,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng1_warm_transition/fire/fire_ng1_warm_cell.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "3d57c3fdcd349765bac5885ade648c06e4742588",
+   "ext": "sh",
+   "size_bytes": 2341,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_final_harvest.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "56596a0824e4bc759b156326f118cc0778370a8b",
+   "ext": "py",
+   "size_bytes": 2300,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/mps_probe/wd4_mps_probe_v2.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fe0495e6fa70a019f07e28facde2d88d55d4b6c8",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bhw1_winwin_cone_rescreen/runtimes/lane2road_topcost_k060000/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8380952ae78465fb0eee17fd65755021e77f9432",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ce1_afr1_compress_chain/work/run_1/dx2/candidate_runtime_dx2/inflate.py",
+   "instance_count": 29
+  },
+  {
+   "blob_sha1": "bb7a1d61d1e0595addef2508137cbea3b1244038",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ce1_afr1_compress_chain/work/run_1/fx5/runtime_fx5/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "c202f003d88a8e28ddda602b4dd1ead198e5ddfd",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/fcd3_pose_screened_reselection/runtimes/candidate_tau_1e-6/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fb30f55c902176a1a6171c23cdab9a8cc5e4f559",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/fcd3_pose_screened_reselection/runtimes/candidate_tau_1e-7/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "81f0e4b12524c45562988b23ebf2522de4ddc25c",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/fcd3_pose_screened_reselection/runtimes/candidate_tau_1e-8/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "beaef7f5f26731f4e02d2feee70b04d50995d5b6",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/fcd3_pose_screened_reselection/runtimes/published_tau_1e-6/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ac9ec02720c0a4779d98870cf47d9534ace3fce3",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/base_jt21/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "67adfa651fac02027e652366e983f5eb41b59823",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/candidate_batch0/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "1ec65882483077b4883a2ebfb64a8b91bc6ba828",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/candidate_batch1/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "5ebf078d9631c0a52bfac81f261e8fc70d8c242d",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/candidate_batch2/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "057f338e4f7977698b7eb2138555716c3d28d066",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal/runtimes/candidate_union/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "da992cffe92b1ba3ac66d70b1bcc0d5424417074",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/k002500/retained/candidate_runtime/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "9afceacf28800193dbf0e17b2694c23969be3bb9",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/k005000/retained/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ca3422315bdc34520d72abcf0c2820d191b7bd03",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/k010000/retained/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "eca553b35b17fb03aa8590e478c3c6bcb8b594e5",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/k020000/retained/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "499ddba1fb27afe8f85f1009a37e812a7e4797b8",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/k040000/retained/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "76d4064da747aac3a6dca21081a4219de5eafda1",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/k060000/retained/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "86f6fe577bea43b4415b23d56f2a42299a309c0a",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/retained/null/retained/candidate_runtime/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "57aa42f0c93c3ca2a15b9b1a1914bd9171e35364",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_lb1_banked_lossless_joint_collect/runtime_candidate_native/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "a8bec5aac22a62d68777d4c61aee00c7d3da3c7f",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ni1_nr1_k32_receiver_distortion/build_r1/runtime/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "0978c5cccd096b36126803aa6694aa1d5a4fa70d",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq12/receipts/afr1_cpu_fire_staging/inflate.py",
+   "instance_count": 6
+  },
+  {
+   "blob_sha1": "ee8c52aa427081960851ccf845a10fe3803a8c47",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_rc2_composed/inflate.py",
+   "instance_count": 3
+  },
+  {
+   "blob_sha1": "67cc6827bbeee3b360a431483bfc8ed182cc620a",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ri1_rc1_full_rgb_receiver/build_r1/runtime/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "90cd82d47c534ff91ed2bf211ed9601b6ea0aa2a",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rj2_joint_renderer_object_change/candidate_runtime_rj2/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "9378edab21f48c8ecef3a6167ace544316c7893e",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sg2b_scmdl_distortion_leg_build/runtimes/p01/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "abcd1b2259b4fe0a7d02373c739ce387cfe8c491",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sg2b_scmdl_distortion_leg_build/runtimes/p02/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c88b559b6b2107f0fc0e135f7786675aed5358a4",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sg2b_scmdl_distortion_leg_build/runtimes/p03/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "31457ec5e2ad00151e24494b6283bd237d6ca31d",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/retained/runtime_gate_candidate/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "625cd431643f3f0f2de399c277616f126bb926d0",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/retained/runtime_gate_candidate_group8/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7575f1e02a7511b660fd653d14e4eb06391aeb6f",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/retained/runtime_gate_candidate_group8_salience/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b1be2187f0e174789ad6c699b1485c024288d5b8",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/retained/runtime_trained_stage01/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c1380383bb477f6819abf9a6bccf6edef9ab9b1a",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rj1_renderer_joint_move/precompile_r1/rungs/film_amortized_flat_w96/runtime_sealed/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "6f9840beb0b7b577b5968acfdbda61a9c3709c0a",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rj1_renderer_joint_move/precompile_r1/rungs/nested_group_dense_w72/runtime_sealed/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fddc1c2018ee4f975a247e684f220c02bd886c1e",
+   "ext": "py",
+   "size_bytes": 2282,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rj1_renderer_joint_move/precompile_r1/rungs/pointwise_svd_w96_r32/runtime_sealed/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "40d69e05b77d224af34da1cbff6534fe06d55796",
+   "ext": "py",
+   "size_bytes": 2281,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/runtime_bz2_field/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f22a57666a36192195165c54ad9f67c01e7c200a",
+   "ext": "py",
+   "size_bytes": 2281,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_fire_v1/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "e77f61ef6b40ee1ee7d89e8268460d8b8998a6a2",
+   "ext": "py",
+   "size_bytes": 2281,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rf1_renderer_film_rung/candidate_runtime_r1/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "28c1b0b2054c35c08c2b0e8c94e304110cf6c3e2",
+   "ext": "py",
+   "size_bytes": 2279,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs3/candidate_runtime_drop137/inflate.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ad539725a4d688db093dfadcd6950e56c4f6f288",
+   "ext": "sh",
+   "size_bytes": 2194,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage7.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "48da122b9d518dbf59b262c20d95aa7b7e70f5cd",
+   "ext": "py",
+   "size_bytes": 2179,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/mps_probe/wd4_mps_probe.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "852e5ef8ed6a8f952c3699f0192946f53ea5c342",
+   "ext": "md",
+   "size_bytes": 2177,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/HOLD_RECEIPT.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8108f733f31392d45e7531b5a38314eefa27bab2",
+   "ext": "sh",
+   "size_bytes": 2147,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage6.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "462105aac5eae3c413e57d6a0fac76ab15ffa7fd",
+   "ext": "sh",
+   "size_bytes": 2130,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/wait_for_metal_then_fire.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "dfff83d6bd8f273b44c30142929d850020298dae",
+   "ext": "py",
+   "size_bytes": 2026,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/scratch/facts.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "3fceaa3a15b6db21830b369f9580319f92dfb437",
+   "ext": "sh",
+   "size_bytes": 1971,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md2_persistent_under_burn_default/md2_driver.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "67b1a9287904653bd46a55d796b199136381547c",
+   "ext": "sh",
+   "size_bytes": 1947,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/md3_step1_data_order_driver.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fb3cf5e7cecec670f9b429addcd70beef48be431",
+   "ext": "sh",
+   "size_bytes": 1939,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/launch_rung.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "da8bec4c625e340ee59501d8b2a74c049edbff18",
+   "ext": "sh",
+   "size_bytes": 1928,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gv1_governor/commit_cmd.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e0bbcde7e8f63729ee7accdc8215e95a2cfafc89",
+   "ext": "sh",
+   "size_bytes": 1796,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_screen.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "bfb6f5376662d2df5aeea45626ae9ffab4f8c9f4",
+   "ext": "py",
+   "size_bytes": 1771,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/probe/posttrain.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b6afbcf0b42b8108b20de9e50df564f84b359937",
+   "ext": "py",
+   "size_bytes": 1768,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/_timing_probe.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "1f45e33697bdcd7aca09fd1141aa20e71e4572cf",
+   "ext": "sh",
+   "size_bytes": 1720,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/replay/run_selector_replay.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ebfd90f675cfc94809ce8caf2993b064f600ff4f",
+   "ext": "sh",
+   "size_bytes": 1707,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage8.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "9d018f64bd1f122a5308792e63d3a565c32538d1",
+   "ext": "md",
+   "size_bytes": 1704,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng4_continuous_objective/SMOKE_APPENDIX_STDOUT.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "eb268e652c6494fa2375695b142d174911748165",
+   "ext": "sh",
+   "size_bytes": 1692,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/md1_warm_finish.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2ae755911706e3e2608c6f1422c5c9bb44b0b722",
+   "ext": "md",
+   "size_bytes": 1642,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x4_on_rc1_20260905_custody/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e482e7b2df2cdf2c9b4dcfc3692a411e4f33f395",
+   "ext": "md",
+   "size_bytes": 1619,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rc1_t4_model_section_adaptive_recode_20260905_r2/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "0995842edc557165b25d97e7c6d2d91d8f52f081",
+   "ext": "py",
+   "size_bytes": 1600,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng1_warm_transition/fire/authorize_warm_cell.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "50ece085b5c5f3034445c4360e960befbb33147a",
+   "ext": "sh",
+   "size_bytes": 1587,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage4.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7bf17f8177995000e5bd116729d51af4d0810cc4",
+   "ext": "md",
+   "size_bytes": 1577,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng4_continuous_objective/bounded_smoke/SMOKE_APPENDIX.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "6111d8dbc38fc01632cbd5f805beebd72fcae8ce",
+   "ext": "sh",
+   "size_bytes": 1565,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/md3_step0_probe_driver.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fae824929aaf3c2db67010b79b8c087dcf597c0e",
+   "ext": "md",
+   "size_bytes": 1501,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c03589b75b61acd30f5bfcbb64f17cbd97dd0d4d",
+   "ext": "sh",
+   "size_bytes": 1499,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/md1_sweep_driver.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d79bb0a463073d72cb8f9014bf742e7be367b5b4",
+   "ext": "sh",
+   "size_bytes": 1464,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage3.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7fdbd3f623593287b1913e7bd4641c73c83dce9e",
+   "ext": "sh",
+   "size_bytes": 1389,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gv1_governor/commit_cmd3.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8dc02d0f12c9e64428e2de67807a10c0b4a42c3d",
+   "ext": "sh",
+   "size_bytes": 1380,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sr2f/run/leg_rc2_pose.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2826d70cb5f55ccb5eb7c80baab0da831112ed3f",
+   "ext": "sh",
+   "size_bytes": 1351,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/md1_topup_driver.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2a5b092d10cbe45a3459253328633c57736b787d",
+   "ext": "md",
+   "size_bytes": 1346,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "df1ac6c9a221e63b57177e2d320f606b6a34714d",
+   "ext": "md",
+   "size_bytes": 1339,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/receipts/jf2_commit_fallback/COMMIT_BLOCKER.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ecfb76b5b170e86a3d4789c37a3b366a9cc87ecf",
+   "ext": "sh",
+   "size_bytes": 1311,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_stage5.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "a6281e68c5d8df69706e531de89e19a11f52a32a",
+   "ext": "sh",
+   "size_bytes": 1252,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/wait_admission_then_fire_md3.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c720aa1ac2d14b984fa64dcf90aa0c74de3db26d",
+   "ext": "sh",
+   "size_bytes": 1250,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/seal_cmd.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ad3b7d05b9ee9516217d6d91418a7aca722a5163",
+   "ext": "sh",
+   "size_bytes": 1211,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng5_tau_band_x_continuous_objective/run_smoke_arms.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "af6ba3320c1e667f8b24aed55ef84f50639f748b",
+   "ext": "sh",
+   "size_bytes": 1207,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gv1_governor/commit_cmd2.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8feb3d7d57efba9dcf395c248f01ce055630a118",
+   "ext": "py",
+   "size_bytes": 1196,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/_custody.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "72548e4fc0a6d6b8fbb29722407e68177517960f",
+   "ext": "md",
+   "size_bytes": 1179,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/aborted/lambda_2p0_metal_coresident_partial_20260905T1616Z/ABORT_NOTE.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "cfde020f11f59cb16b3aad3eb764b26cb1c03e61",
+   "ext": "sh",
+   "size_bytes": 1177,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/run_measures_n600.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "47d73182fa9c34c84a0f30573093ed6dbb2ec960",
+   "ext": "md",
+   "size_bytes": 1173,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/cleanup_manifest.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "50793d74c8df2ea41d59f98c28adb17eda5efc36",
+   "ext": "sh",
+   "size_bytes": 1168,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_measures_pre.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fb3e8fa2f7e6f42c04347fcbcb82fead57f6f8cd",
+   "ext": "sh",
+   "size_bytes": 1165,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_reflected_n600.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "abdc6d31301c68d54bf38f96f0bbff092e57076c",
+   "ext": "md",
+   "size_bytes": 1121,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cl2_t4_lambda1_control_repack_20260905/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "35328537ec6cf74c6c53b0cfe765fb6deebaab52",
+   "ext": "md",
+   "size_bytes": 1106,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_v3_lattice_x4_on_rc1_20260905/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "8f4f6e365f9acbf2a68d4d4b24a618120764523e",
+   "ext": "sh",
+   "size_bytes": 1091,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/price_rung.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c8f5936b83ec7f0a066b21db9ccd2277040e7613",
+   "ext": "sh",
+   "size_bytes": 1064,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sr2f/run/leg_rc2_resumable.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "5f455edcf1916b175a18df2dcb3c0318ba8616dc",
+   "ext": "md",
+   "size_bytes": 1053,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x8_on_rc1_20260905/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "47c50e602e6dce1e4a7d5fd5fee7aaaf430e655b",
+   "ext": "md",
+   "size_bytes": 1023,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x16_on_rc1_20260905/packet_text/mechanism.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d5086dfde59eef7112c88e6f3411c4283562e658",
+   "ext": "py",
+   "size_bytes": 1010,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/scratch/pairs.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "6664e955a1301fe1dff4348a1d52b75ce41efd78",
+   "ext": "md",
+   "size_bytes": 970,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rc1_t4_model_section_adaptive_recode_20260905_r2/packet_text/next.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "62ed7c88e52f4b2ff6a6bbba064d08d863ece643",
+   "ext": "sh",
+   "size_bytes": 960,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/md1_analyze_when_cold_done.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2db4a151c7f3ca474e8e9715c8e9e0f84b997189",
+   "ext": "md",
+   "size_bytes": 943,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/aborted/lambda_2p0_exfat_partial_20260905T1612Z/ABORT_NOTE.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "fe199f3df83d49dc51bc80c9d7bcef5b9933efcf",
+   "ext": "sh",
+   "size_bytes": 900,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/training/run_off_sequential.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c60ced2f95a18b5957c32cf6221c275c76db758e",
+   "ext": "sh",
+   "size_bytes": 872,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/training/run_off_seed2_resume_r8.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ca336e6533b7b18509c62f7fa61b4985675851ac",
+   "ext": "sh",
+   "size_bytes": 863,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs2/run_reencode.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "6c952524be36dd52085b8f7ea952239c74e045d6",
+   "ext": "md",
+   "size_bytes": 837,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_rc1_t4_model_section_adaptive_recode_20260905_r2/packet_text/not_claimed.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "74686797414075eae6eb68581e91a61fbe198d39",
+   "ext": "md",
+   "size_bytes": 802,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/not_claimed.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "a5e851c4711c054e37a40ba970624a0878d551a4",
+   "ext": "sh",
+   "size_bytes": 779,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/scratch_gb1_native_identity_20260824/run_native.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f8b4b07832c72c0e89a95ed13189a8a90e0fe45e",
+   "ext": "md",
+   "size_bytes": 761,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/admission/pose_superseded_rc2_carrier/README.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "95644b25f108c6f8df56af58adaaaf768c9dece3",
+   "ext": "md",
+   "size_bytes": 746,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_v3_lattice_x4_on_rc1_20260905/packet_text/not_claimed.md",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "b481681744dc3ccefc88f4a6683f84d6ab8b03a3",
+   "ext": "md",
+   "size_bytes": 732,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/next.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ed205b05b02d1aca8e54727bdff0ad7861d544e3",
+   "ext": "sh",
+   "size_bytes": 726,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_selector_base_n600.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ab4e47caaacb17b869f4c127dcc699988879f407",
+   "ext": "md",
+   "size_bytes": 719,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cl2_t4_lambda1_control_repack_20260905/packet_text/next.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "08527e71e5b8ecf604328db9bb20ad429b07c0b4",
+   "ext": "md",
+   "size_bytes": 704,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_v3_lattice_x4_on_rc1_20260905/packet_text/next.md",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "ffa26d73a77aac222ac8d7b00f377184be5f5d74",
+   "ext": "sh",
+   "size_bytes": 700,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_base_control_solve.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2cedf6709d02381de694feea2194d84555b33505",
+   "ext": "md",
+   "size_bytes": 688,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cl2_t4_lambda1_control_repack_20260905/packet_text/not_claimed.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "33e951403080de225331d6bd0d31f103cd4dbeed",
+   "ext": "py",
+   "size_bytes": 687,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/scratch/bound.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f2194e8eada06d0007cc16b04be00928de5a254c",
+   "ext": "py",
+   "size_bytes": 686,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/smoke/candidate/attempt_001/direct_probe.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "bdb5abf688350bb9b9f25f5b6688fec675252965",
+   "ext": "sh",
+   "size_bytes": 673,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_tail_serial.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "0acd45f0e6bf709e0731da91680ea9c239d7b70c",
+   "ext": "md",
+   "size_bytes": 667,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x16_on_rc1_20260905/packet_text/not_claimed.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "0b8e1b5a2e87dd04dde29dfc4e6b32f71f9693bf",
+   "ext": "md",
+   "size_bytes": 640,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x8_on_rc1_20260905/packet_text/next.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ee09842dce41ed4f2be7cd7090f0150db4c31c39",
+   "ext": "md",
+   "size_bytes": 631,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/not_claimed.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ff3609e6ddb90198c53df30150402016687bb30f",
+   "ext": "md",
+   "size_bytes": 624,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/next.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "9726dc2187e1958565bf8e75b7b0ce0731b3f233",
+   "ext": "sh",
+   "size_bytes": 619,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_ft1_step1800_n600.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c0ef8d96253b67c4e9de555ea1a9753b871bfcad",
+   "ext": "sh",
+   "size_bytes": 611,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow/qbt1_trainer/repack_chain.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "557a501de4afcfb0d9f9bab56e9f6f11f674b463",
+   "ext": "sh",
+   "size_bytes": 601,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_ft1_fo1_n600.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "a5b2a4b8744a04ffdf072cba3a4e00d288491dad",
+   "ext": "sh",
+   "size_bytes": 598,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs2/run_reencode_u12.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f85c16ed78a53e8c5225f712400ba4ec8bb22110",
+   "ext": "md",
+   "size_bytes": 566,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x16_on_rc1_20260905/packet_text/next.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "f74d53f337c495c0acf1adbbed06c11ae9800597",
+   "ext": "md",
+   "size_bytes": 550,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x8_on_rc1_20260905/packet_text/not_claimed.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "5f9ffe096678ff8214d7c931a6abe704ccc964cd",
+   "ext": "sh",
+   "size_bytes": 536,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sd1_surrogate_decoupling/run_both_cells.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e56756d0ec1139588fb478f84b5bc08d288a4242",
+   "ext": "md",
+   "size_bytes": 507,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/memo_draft_skeleton.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b067b9278598c725f6e080a52e98be258fa5dd9a",
+   "ext": "sh",
+   "size_bytes": 490,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gm1_gradient_mass/run_both_cells.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "10746cc1fc34683ccbff8075bca9e89ef3410543",
+   "ext": "md",
+   "size_bytes": 484,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/aborted/lambda_2p0_tripwire_partial_20260905T1619Z/ABORT_NOTE.md",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "7ff0cbeb08ecaa3a2fd8d7186c6279570bb28e8a",
+   "ext": "sh",
+   "size_bytes": 472,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_md1_micro_macro/md1_wait_cold.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "bee90b090646ca6513aad7d79d28c4dbb43827c4",
+   "ext": "sh",
+   "size_bytes": 460,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_screen.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7",
+   "ext": "py",
+   "size_bytes": 407,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/probe/test_xfail_setup_probe.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "a3dcffd707556b33b43437ecdf5fd563c0e6c3cf",
+   "ext": "sh",
+   "size_bytes": 405,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_fs3/rescreen38/await_shards.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "73f1b7bede5b9f6614c139da57984b125ce20c1f",
+   "ext": "sh",
+   "size_bytes": 369,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_gv1_governor/dropin_demo.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "408b1aa8382d64853be7895a303871da60a29cef",
+   "ext": "py",
+   "size_bytes": 354,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/staged_public_decode/probe.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "2962a98ea7ca8645c394ef4607ef8e8af07abfba",
+   "ext": "sh",
+   "size_bytes": 350,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage2.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "55f15188fc673e69c0441b8ed970138fb4203cb4",
+   "ext": "sh",
+   "size_bytes": 345,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage4.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "15d2e243935a75f73eee654fec88e9f3ed0bce7c",
+   "ext": "py",
+   "size_bytes": 338,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_gt2/positive_control_repo/tools/undeclared_gt_consumer.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "ca9b3ce0f024879391266c8045082d32d8a5c2f3",
+   "ext": "sh",
+   "size_bytes": 307,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage3.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "0d30e1ab93d51d2627abf49378ab4608c4aa0b91",
+   "ext": "sh",
+   "size_bytes": 281,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/chain_done_waiter/wait_chain_done.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e65c08fa0d6b3e86771ea4e558241fe4fbd2187d",
+   "ext": "sh",
+   "size_bytes": 261,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng2_area_cap/milestone_waiter/wait_2k.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b67006c50bb2830ed41137f8316600228efa394f",
+   "ext": "sh",
+   "size_bytes": 258,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng1_warm_transition/milestone_waiter/wait_1k.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "31111fdc276e62b6ef3d4e9330aece8e522f0aa4",
+   "ext": "sh",
+   "size_bytes": 258,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_ng1_warm_transition/milestone_waiter/wait_2k.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "26649c67c67895324375332de44d632506f8ed45",
+   "ext": "sh",
+   "size_bytes": 249,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage5.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "526c50238d79b0703a614d2b9a45e802182ab736",
+   "ext": "sh",
+   "size_bytes": 232,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage7.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "d7f9557fd084fc375df9787cd14252f6107bd0a7",
+   "ext": "sh",
+   "size_bytes": 225,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage6.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "b24202899509e1f9df74c0abf1b8085599566bf0",
+   "ext": "sh",
+   "size_bytes": 225,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/wait_then_stage8.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "c698474524c26af43cbd7e69b5d37591013fb9f1",
+   "ext": "sh",
+   "size_bytes": 210,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/run_chain_reflected_then_basecontrol.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "22f31ef6084e88e4af77fbf2d6203d0183f0d24a",
+   "ext": "py",
+   "size_bytes": 37,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_sw1_20260820/retained_controls/ddm_sw1_absolute_path_positive_control.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "34a2a07a1c9185a9a50280ac314755ca7fc453c6",
+   "ext": "py",
+   "size_bytes": 21,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/negative_controls_v2/stage_extra/work/embedded_encoder_sources/compress_vendor/unmanifested.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55",
+   "ext": "py",
+   "size_bytes": 21,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_terminal_clean2c_controls_v2/materialize_refusal/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "4287ca8617970fa8fc025b75cb319c7032706910",
+   "ext": "md",
+   "size_bytes": 1,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_hash_tamper/README.md",
+   "instance_count": 4
+  }
+ ],
+ "certified_in_place": [
+  {
+   "blob_sha1": "481860310e613dc8583b4b1da57b23f1457dc014",
+   "ext": "py",
+   "size_bytes": 4475775,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/superseded_preformat_20260724T1340Z/W_joint/inflate.py",
+   "instance_count": 4,
+   "certification": {
+    "blob_sha1": "481860310e613dc8583b4b1da57b23f1457dc014",
+    "certified_at_utc": "2026-08-20T13:30:04+00:00",
+    "owner": "ddm_sd1",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/superseded_preformat_20260724T1340Z/W_joint/inflate.py",
+    "rationale": "Generated packet inflate.py, 4,475,775 B of embedded payload, inside a directory named superseded_preformat_20260724T1340Z. It is a build product of the ddm_e5/e4/ws1 exporter adapter whose generator is committed, so it is rebuildable by definition and carries no authored signal. It escapes the generated-file bucket only because its parent directory is W_joint rather than one of the measured packet-dir names; certifying is more honest than widening the rule to any file called inflate.py, which would excuse a genuinely new receiver an arm authored."
+   }
+  }
+ ],
+ "bucket_A_sample": [
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone/src/tac/probe_outcomes_ledger.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone/src/tac/tests/test_probe_outcomes_ledger.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone/tools/costate_digest.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone_narrow/tools/costate_digest.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone_final/src/tac/probe_outcomes_ledger.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/parse_sections.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/INTAKE_ANATOMY.md",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/compress.sh",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/inflate.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/inflate.sh",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/residual_archive.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/entropy/opal_model_impl.c",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/entropy/rc64_backend.c",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/README.md",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/compress.sh",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/inflate.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/src/codec.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/src/codec_rc.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/src/data.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr133/submissions/cpr1_cbq_matched8/CREDITS.md"
+ ],
+ "bucket_B_sample": [
+  "/Volumes/APDataStore/pact/submittable_custody_mirror_20260811/pz4_receiver/ddm_pz4_joint_target_conditioned_receiver/direct_v2/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/codex_reorientation_plan_20260606Tcurrent/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/hi_nerv_contrast_floor_16p3e_20260605T052731Z/hi_nerv_mlx_training/ema_archive_selection/ema/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/hi_nerv_contrast_floor_16p3e_20260605T052731Z/hi_nerv_mlx_training/ema_archive_selection/ema/submission/inflate.sh",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z/hi_nerv_mlx_training/ema_archive_selection/ema/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/plan_20260605T0559Z_direct_live_semantic_controls/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_16pair_nondegenerate_feedback_20260605Tapproved_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_16pair_nondegenerate_feedback_v2_20260605Tapproved_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_bounded_channelmean_v23_all_evidence_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_candidate_channelmean_v29_renderer_value_waived_20260605Tcodex/snerv_snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_skchannelmean_int8_symmetric_ceil178000_native_rate_aware_training/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_candidate_channelmean_v29_renderer_value_waived_20260605Tcodex/snerv_snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_skchannelmean_int8_symmetric_ceil178000_native_rate_aware_training/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/inflate.sh",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_candidate_channelmean_v29_renderer_value_waived_20260605Tcodex/snerv_snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_skchannelmean_int8_symmetric_ceil178000_native_rate_aware_training/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/src/tac/substrates/snerv_inverse_steg_carrier/lf_payload_codec.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_full600_native_temporal_lion_segw32_pose4_20260603T222429Z/checkpoint_exports/epoch010599_20260603T232320Z_ema_archive_export_20260603T232341Z/snerv_checkpoint_archive_bound_package/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_conditioned_hf_channel_value_pass_v20_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_conditioned_hf_channel_value_pass_v21_runnable_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_hf_tiny_anchor_v23_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snerv_lf_payload_archive_recode.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_official_snar2_zero_mfu_smoke_20260605Tcodex/snerv_2pair_1epoch_official_channelmean_snar2_zero_mfu/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_renderer_gate_hinerv_feedback_20260605T0343Z_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_renderer_gate_hinerv_feedback_20260605T0352Z_codex/nerv_long_training_campaign_plan.md"
+ ]
+}

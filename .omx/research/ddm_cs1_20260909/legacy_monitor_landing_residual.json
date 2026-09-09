@@ -1,0 +1,17 @@
+[
+  {
+    "blocked_by": [
+      "ddm_de1_20260803T112347Z"
+    ],
+    "by": "cli",
+    "commit": null,
+    "consumed_by": null,
+    "label": "ddm_de1_20260803T112347Z",
+    "landing_diff_manifest": null,
+    "reason": "HELD 2026-08-03: the AUTHORING ARM IS STILL LIVE and owns the branch. Inspected without merging: 2 commits ahead (181c3e6555 derive, 7a0d6f0abc complete), 0 uncommitted, diff = exactly ONE file (+783 lines, .omx/research/ddm_de1_description_efficiency_derivation_20260803.md), research-only, no code, no scorer run, no candidate, no pointer claim. Memo self-declares 'MAIN landing review is required'. Merging under a live author is the absorb class (see task#911: a sister commit absorbed 215 lines it did not author). Review + merge fires at arm completion, when this row auto-re-surfaces. NEW SIGNAL worth carrying regardless of the review outcome: de1 reports the delegated codex worktree at HEAD 4e2a609 did NOT contain upstream/modules.py or upstream/evaluate.py in filesystem, git tree, OR git object history -- it recovered them from comma.ai immutable commit 5387a097398ec6581c7e4e428231e1821fc62670 and hash-verified (modules.py 065961ba..., evaluate.py 7da71a84..., segnet 38,502,892 B, posenet 55,835,560 B, 0.mkv 37,545,489 B / 2611f5f3...). If codex worktrees systematically lack the pinned upstream snapshot, every codex arm chartered to 'derive from upstream/modules.py' is exposed; de1 handled it correctly, a weaker arm would not have.",
+    "respawn": null,
+    "stamp": "20260803T112347Z",
+    "status": "held_entangled",
+    "written_utc": "2026-08-03T12:08:05.639534+00:00"
+  }
+]

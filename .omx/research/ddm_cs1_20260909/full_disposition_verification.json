@@ -1,0 +1,10 @@
+{
+  "source_rows_verified": 264,
+  "counts": {
+    "BLOCKED": 180,
+    "CERTIFIED": 82,
+    "BUNDLE_READY_MAIN_MUST_LAND": 2
+  },
+  "independent_reconstruction_all_certificates": true,
+  "unsupported_change_refused": true
+}

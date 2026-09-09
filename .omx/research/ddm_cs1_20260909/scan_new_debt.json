@@ -1,0 +1,20 @@
+[
+  {
+    "blob_sha1": "152be5ab69f9244a6aeda464ebdbac9c71d41824",
+    "ext": "py",
+    "size_bytes": 33954,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/runtime/residual_archive.py",
+    "instance_count": 1
+  },
+  {
+    "blob_sha1": "6062150b8591d58ee4fa7ff66a1714657ff88730",
+    "ext": "py",
+    "size_bytes": 14688,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/encode_repeat.py",
+    "instance_count": 2
+  }
+]

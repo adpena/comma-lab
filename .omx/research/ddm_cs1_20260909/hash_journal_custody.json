@@ -1,0 +1,6 @@
+{
+  "path": ".omx/research/ddm_cs1_20260909/hash_resume.jsonl",
+  "bytes": 83990713,
+  "sha256": "a09a32ece145164665eafa1557ad2bd9316b893c988eb2899b73134ab390c8ba",
+  "reason": "Resumable hash cache retained locally; scan reports and exact code dispositions are in the packet; no deletion or SSD write."
+}

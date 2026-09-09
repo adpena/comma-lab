@@ -1,0 +1,53 @@
+{
+  "pointer": {
+    "archive_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 181521,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_sj1_t4_token_predistortion_pass4_20260909",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "5797e46a509261350ca7dfe2d1771f50b205d913e48cd266c7042dcd108ba1c7",
+      "source_receipt_sha256": "b149b4303b67451aedf4689be9d94f40d2006acc0149737ae5ec31fe0229a92c"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_sj1_t4_token_predistortion_pass4_20260909",
+    "measured_at_utc": null,
+    "score": 0.13867171823146562,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_sj1_pass4_t4_20260909.json"
+  },
+  "receipt_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_sj1_pass4_t4_20260909.json",
+  "receipt_sha256": "45b9b4f7fe0db8ae37cd201c8736751211551f88a087f1116fecbcf17d52ef65",
+  "receipt": {
+    "schema": "modal_auth_eval_anchor_mirror.v2",
+    "score": 0.13867171823146562,
+    "score_axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "archive_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20",
+    "archive_size_bytes": 181521,
+    "runtime_tree_sha256": "5797e46a509261350ca7dfe2d1771f50b205d913e48cd266c7042dcd108ba1c7",
+    "inflate_sh_rel": "inflate.sh",
+    "inflate_device_policy": "auto",
+    "submission_dir_zip_sha256": "08e459baf818cb4e832977126af8f6de0399e3cf880f52c0c37c4a2cc3405b0c",
+    "avg_segnet_dist": 0.00010698,
+    "avg_posenet_dist": 5.05e-06,
+    "n_samples": 600,
+    "hardware_substrate": "linux_x86_64_t4",
+    "gpu_t4_match": true,
+    "gpu_model_raw": "Tesla T4",
+    "lane_id": "ddm_sj1_t4_token_predistortion_pass4_20260909",
+    "measured_at_utc": null,
+    "source_receipt": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass4_20260909/MODAL_REMOTE_RESULT.json",
+    "source_receipt_sha256": "b149b4303b67451aedf4689be9d94f40d2006acc0149737ae5ec31fe0229a92c",
+    "promotion_eligible": false,
+    "note": "Scalar anchor mirror written at harvest time. The P0 payload stays at the harvest --output-dir; only scalars are mirrored here so tac.frontier_scan can see a row that landed on an SSD path outside experiments/results. Fields copied from the harvested result, never hand-typed; score is recomputed-from-components, never final_score. v2 adds runtime_tree_sha256: a score is a function of (archive, runtime tree), and v1 keyed on the archive alone -- which let ONE archive sha carry two contradictory passing contest-CUDA scores (rv13 F4, measured)."
+  },
+  "cs1_measured_new_score": false,
+  "recomputed_score": 0.13867171823146562
+}

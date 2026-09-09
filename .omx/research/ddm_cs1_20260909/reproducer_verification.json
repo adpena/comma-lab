@@ -1,0 +1,23 @@
+[
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/runtime_bz2_field/inflate.py",
+    "sha256": "423a65af64af70eeb01fdc4760ca0f48ce333d0f1d8b4d27f3fa268007884a04",
+    "exact_reproduction": true,
+    "code_mutation_refused": true,
+    "duplicate_pin_refused": true
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_rf1_renderer_film_rung/candidate_runtime_r1/inflate.py",
+    "sha256": "3874489efc96a50403cb0c5af6f823f4dc7ca0058736acf9292ffa0e05914ea0",
+    "exact_reproduction": true,
+    "code_mutation_refused": true,
+    "duplicate_pin_refused": true
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_fire_v1/inflate.py",
+    "sha256": "aba8559ab8b8c39a339ae53b5a5c744bfed5d0fa7c88c00cb97bf1d2391dcef5",
+    "exact_reproduction": true,
+    "code_mutation_refused": true,
+    "duplicate_pin_refused": true
+  }
+]

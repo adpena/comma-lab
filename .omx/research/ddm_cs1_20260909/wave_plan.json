@@ -1,0 +1,136 @@
+[
+  {
+    "arm": "rc2",
+    "lane": "ddm_rc2_t4_hpac_semistatic_mixing_20260909",
+    "memo": ".omx/research/ddm_rc2_hpac_semistatic_depth_mixing_prior_and_container_sweep_20260908.md",
+    "main_commit": "fb39f21397f5167b48505e0c716447dcac02292f",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete",
+      "real_archive_empirical"
+    ]
+  },
+  {
+    "arm": "pc2",
+    "lane": "ddm_pc2_t4_carrier_scales_resolve_20260909",
+    "memo": ".omx/research/ddm_pc2_carrier_rice_k_width_rank_cut_and_scales_20260908.md",
+    "main_commit": "64cf42609e2bffe8230c8f328e33ef05e9ab7937",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete",
+      "real_archive_empirical"
+    ]
+  },
+  {
+    "arm": "rc3",
+    "lane": "ddm_rc3_shared_mixer_successor",
+    "memo": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md",
+    "main_commit": "35c631244c21efadadeec111a1f5b51777f38883",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete",
+      "real_archive_empirical"
+    ]
+  },
+  {
+    "arm": "tc1",
+    "lane": "ddm_tc1_token_tail_bound_and_shared_mixer_pricing",
+    "memo": ".omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+    "main_commit": "faac7396395378726639c3094e98d645c6b51a6a",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete",
+      "real_archive_empirical"
+    ]
+  },
+  {
+    "arm": "gf2",
+    "lane": "ddm_gf2_static_dynamic_generator_form",
+    "memo": ".omx/research/ddm_gf2_static_dynamic_generator_form_20260903.md",
+    "main_commit": "30c861062c7f943f23e3fdd9179a866513053756",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete"
+    ]
+  },
+  {
+    "arm": "gf3",
+    "lane": "ddm_gf3_time_conditioned_factorized_field_closed_form_pricing",
+    "memo": ".omx/research/ddm_gf3_time_conditioned_factorized_field_closed_form_pricing_20260908.md",
+    "main_commit": "14a07fa422e4f815bcf513c499b921c26499f451",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete"
+    ]
+  },
+  {
+    "arm": "gb1",
+    "lane": "ddm_gb1_generated_carrier_basis_lattice_priced_closed_form",
+    "memo": ".omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
+    "main_commit": "7e27eb732ea7fa126708fdeb6d36851e1b74713a",
+    "disposition": "LANDED-BLOCKED-PRICING",
+    "gates": []
+  },
+  {
+    "arm": "ane3",
+    "lane": "ddm_ane3_residue_fixed_conversion_remeasure",
+    "memo": ".omx/research/ddm_ane3_residue_fixed_conversion_remeasure_20260908.md",
+    "main_commit": "d368b06fd2a1b83028d765ea2fdc3a3eba4e3a56",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete"
+    ]
+  },
+  {
+    "arm": "cl3c",
+    "lane": "ddm_cl3c_closer_s18_ladder_registration",
+    "memo": ".omx/research/ddm_cl3c_closer_20260908.md",
+    "main_commit": "e57f42d32a770b00a44ed9ebba010379d06f469b",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete",
+      "real_archive_empirical"
+    ]
+  },
+  {
+    "arm": "gov3",
+    "lane": "ddm_gov3_metal_occupancy_progress_budget_sum_refuse",
+    "memo": ".omx/research/ddm_gov3_metal_occupancy_progress_budget_sum_refuse_20260908.md",
+    "main_commit": "60deb570df8e6757d348accd27b859c1649de42d",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete"
+    ]
+  },
+  {
+    "arm": "scg1",
+    "lane": "ddm_scg1_seal_contract_inflate_sh_smoke_receipts",
+    "memo": ".omx/research/ddm_scg1_seal_contract_inflate_sh_smoke_receipts_20260908.md",
+    "main_commit": "89f9656f398785b3b5145fda0f0b91da1aca89a7",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete"
+    ]
+  },
+  {
+    "arm": "scg2",
+    "lane": "ddm_scg2_seal_custody_followon_digest_naming",
+    "memo": ".omx/research/ddm_scg2_seal_custody_followon_digest_naming_20260909.md",
+    "main_commit": "c3b4eb70b4878bf8eb621c18409fc6e8ae4aec75",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete"
+    ]
+  },
+  {
+    "arm": "ql1",
+    "lane": "ddm_ql1_retired_lineage_test_quarantine",
+    "memo": ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md",
+    "main_commit": "f1f0abd2786effb533df2263547a082a39136ccf",
+    "disposition": "LANDED",
+    "gates": [
+      "impl_complete",
+      "real_archive_empirical"
+    ]
+  }
+]

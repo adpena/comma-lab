@@ -1,0 +1,11 @@
+{
+  "distinct_code_blobs": 266,
+  "instances": 1479,
+  "dispositions": {
+    "BLOCKED": 182,
+    "CERTIFIED": 82,
+    "BUNDLE_READY_MAIN_MUST_LAND": 2
+  },
+  "after_scan_utc": "2026-09-09T18:27:25+00:00",
+  "after_owed_all_extensions": 245
+}

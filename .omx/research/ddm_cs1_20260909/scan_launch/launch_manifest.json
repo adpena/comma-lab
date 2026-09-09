@@ -1,0 +1,104 @@
+{
+  "actual_nice": null,
+  "argv": [
+    ".venv/bin/python",
+    ".omx/research/ddm_cs1_20260909/scan_resume.py",
+    "--resume-from",
+    ".omx/research/ddm_cs1_20260909/hash_resume.jsonl",
+    "--manifest",
+    ".omx/research/ddm_cs1_20260909/ssd_scan_before.json"
+  ],
+  "authority": "apparatus",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": null,
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    ".omx/research/ddm_cs1_20260909/scan_resume.py",
+    "--resume-from",
+    ".omx/research/ddm_cs1_20260909/hash_resume.jsonl",
+    "--manifest",
+    ".omx/research/ddm_cs1_20260909/ssd_scan_before.json"
+  ],
+  "fleet_reaper_guard": {
+    "exemption_hits": [],
+    "matched_tokens": [],
+    "matching_argv_parts": [],
+    "refused": false,
+    "requested_argv": [
+      ".venv/bin/python",
+      ".omx/research/ddm_cs1_20260909/scan_resume.py",
+      "--resume-from",
+      ".omx/research/ddm_cs1_20260909/hash_resume.jsonl",
+      "--manifest",
+      ".omx/research/ddm_cs1_20260909/ssd_scan_before.json"
+    ],
+    "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+    "stable_argv": [
+      ".venv/bin/python",
+      ".omx/research/ddm_cs1_20260909/scan_resume.py",
+      "--resume-from",
+      ".omx/research/ddm_cs1_20260909/hash_resume.jsonl",
+      "--manifest",
+      ".omx/research/ddm_cs1_20260909/ssd_scan_before.json"
+    ]
+  },
+  "fresh_roots": [],
+  "generated_utc": "2026-09-09T18:08:43Z",
+  "git_sha": "a5838cb1190d32ba3521998b7663fd228da3cad8",
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/scan_launch/launch_manifest.json",
+    "monotonic_launch_counter": 1149,
+    "pid": 60738
+  },
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/scan_launch/run.log",
+  "metal_occupancy": {
+    "evidence": [],
+    "metal_footprint_gib": null,
+    "metal_occupant": false
+  },
+  "nice_status": "unapplied:best_effort (requested 10, actual None)",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/scan_launch",
+  "pid": 60738,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/scan_launch/run.pid",
+  "purpose": "ddm_cs1_read_only_ssd_code_audit",
+  "reaper_name_match_allow_requested": false,
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": 10,
+  "resource_budget": {
+    "metal_footprint_gib": null,
+    "metal_occupancy_evidence": [],
+    "metal_occupant": false,
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "storage_waterfall": {
+    "artifact_budget_gib": 0.1,
+    "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+    "boot_data_volume_free_gib": 170.38,
+    "boot_min_free_gib": 40.0,
+    "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+    "on_boot_volume": true,
+    "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/scan_launch",
+    "ssd_tiers": [
+      {
+        "free_gib": 51.81,
+        "path": "/Volumes/VertigoDataTier/pact"
+      },
+      {
+        "free_gib": 38.13,
+        "path": "/Volumes/APDataStore/pact"
+      }
+    ],
+    "target_free_gib": 170.38,
+    "verdict": "PASS"
+  },
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}

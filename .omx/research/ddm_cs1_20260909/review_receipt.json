@@ -1,0 +1,12 @@
+{
+  "axis": "macOS-CPU filesystem apparatus",
+  "score_claim": false,
+  "code_review": "Two clean source passes after C408 cleanup; examined stat-signature invalidation, reachable blob authority, exact reproduction equality, mutation refusal, local-only output routes, and non-execution of recovered files.",
+  "verification": "Ruff and compile pass; three real-source reproduction controls plus code-mutation and duplicate-pin refusal pass.",
+  "files": {
+    "experiments/ddm_cs1_resumable_ssd_audit.py": "d64d6d6562e16d65ddd368c479dcc3911ac62efe4096637eb67f129b83a2d5a6",
+    "experiments/ddm_cs1_disposition_ssd_code.py": "151684f324f4810f3923e8859b1a641af2641a7b08e6d4863b5743057ef7614e"
+  },
+  "historical_shells": "Both S1A source files read in full and bash -n passed. No training or historical driver was executed.",
+  "final_integration": "Full real scan input yields exactly264 code rows; all82 independently reproduced. Extension spelling and numeric separators fixed; exact root-owner matching avoids nested-step aliases; two clean reviews after final code edits."
+}

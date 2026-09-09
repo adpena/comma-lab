@@ -1,0 +1,28 @@
+[
+  {
+    "source": "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/training/run_off_sequential.sh",
+    "destination": ".omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_sequential.sh",
+    "bytes": 900,
+    "sha256": "d31d7cb052ca323e3a565011fe220623c38105f5d357e16e04eeb15db9a1fac1",
+    "owner": "ddm_s1a_stage_a_adapter",
+    "keeper_status": "landed",
+    "evidence": ".omx/research/ddm_s1a_seed2_sigkill_adjudication_and_wd3_resumability_cure_20260825.md",
+    "disposition": "BUNDLE_READY_MAIN_MUST_LAND",
+    "reason": "Authored historical sequential/resume drivers; shell syntax checked and complete source reviewed; not executed and not promoted as a current launch path.",
+    "bundle_commit": "60937321b713099f6f735c34198c0089f4e8a840",
+    "bundle_receipt": ".omx/research/ddm_cs1_20260909/serializer_code/20260909T182003.637504Z-78055/receipts.jsonl"
+  },
+  {
+    "source": "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/training/run_off_seed2_resume_r8.sh",
+    "destination": ".omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_seed2_resume_r8.sh",
+    "bytes": 872,
+    "sha256": "d81edc395eba792de5a8a67e64f48a785ab5e144db90ea309b9944ca2870f579",
+    "owner": "ddm_s1a_stage_a_adapter",
+    "keeper_status": "landed",
+    "evidence": ".omx/research/ddm_s1a_seed2_sigkill_adjudication_and_wd3_resumability_cure_20260825.md",
+    "disposition": "BUNDLE_READY_MAIN_MUST_LAND",
+    "reason": "Authored historical sequential/resume drivers; shell syntax checked and complete source reviewed; not executed and not promoted as a current launch path.",
+    "bundle_commit": "60937321b713099f6f735c34198c0089f4e8a840",
+    "bundle_receipt": ".omx/research/ddm_cs1_20260909/serializer_code/20260909T182003.637504Z-78055/receipts.jsonl"
+  }
+]
