@@ -494,6 +494,58 @@ substantially smaller than 222 moves.
 does not reach ΔB ≤ −88 B — then the FiLM candidate's draw was already near the achievable floor, the byte spread
 of §6 is not exploitable by selection, and **ITEM 5 closes with the table**.
 
+### 13.2 MEASURED — the falsifier FIRED, and it taught the law something
+
+Ran on pc2's archive, 250 REAL builds in total (133 stage-A singles + 117 greedy/neighbourhood),
+container searched on every one.
+
+**Stage A — every neutral move priced alone, 133 pairs, one move per pair:**
+
+| | |
+|---|---:|
+| best single | **−61 B** |
+| 5th percentile | −50 B |
+| median | −1 B |
+| worst | +98 B |
+| moves that REDUCE the archive | **67 of 133** |
+| **mean · sd** | **+0.1 B · 34.8 B** |
+
+Ten best: −61, −60, −60, −54, −53, −52, −51, −50, −50, −49.
+
+**Stages B and C — greedy accumulation and neighbourhood, 117 real builds: NOTHING beat the single best move.**
+Stage B accepted exactly one move (pair 331, −61 B) and every one of the 66 further additions raised the archive.
+Stage C's drop-and-add-back round found no improvement either. Final set: **one move, −61 B**, verified
+seg-neutral by re-rendering (pair 331, 21 → 21 flips, Δ 0).
+
+| pre-registered | measured | verdict |
+|---|---|---|
+| best single near −70 B | **−61 B** | close; the prediction was mildly optimistic |
+| best subset ≤ −150 B | **−61 B** | **REFUTED** |
+| falsifier: fails to reach −88 B → the FiLM draw was near the floor | −61 B | **FIRED** |
+
+**ITEM 5 CLOSES.** And the reason is a refinement to §6's law worth more than the bytes would have been:
+
+> **The container-break delta is a property of the PERTURBED PAYLOAD, not of the number of perturbations.
+> It is a ONE-SAMPLE LOTTERY, not a searchable additive budget.**
+
+The measurement is unambiguous: single moves are distributed with **mean +0.1 B and sd 34.8 B** — a zero-mean
+lottery, exactly as a re-randomised range-coded payload under a match-finding compressor should be. Adding a
+second move to a good draw does not compound the good draw; it RE-SAMPLES, and 117 builds conditioned on the best
+draw never beat it. There is no gradient for a greedy search to climb because there is no landscape — every subset
+is one more ticket in the same lottery.
+
+That also explains, retroactively, why the FiLM candidate's **−68 B** and the best single neutral move's **−61 B**
+are so close despite one carrying 23 repaired cells and the other carrying none: **both are single draws from the
+same ±35 B distribution.** The FiLM candidate was not lucky in a way a byte search could have improved on — it was
+one ticket, and one ticket is all anyone gets.
+
+**What this means operationally.** Do not build a byte-search arm on this axis; the search space has no structure.
+Do take ONE cheap sample: when any arm edits a model section, price a handful of seg-neutral variants of its own
+edit and ship the smallest, which costs a few real builds and buys a draw from a −60…+98 B distribution instead of
+whatever draw the edit happened to land on. And do NOT add the neutral move to the FiLM set expecting −129 B: the
+two are not additive, and at re-base time the honest test is to build FiLM-alone, FiLM-plus-331 and 331-alone and
+take the smallest measured archive — three builds, no arithmetic.
+
 ### The observation that makes it a lever
 
 fe1's admitted candidate is 181,305 B against pc2's 181,373 — **−68 B** — and its seg leg is worth only −1.95e-05

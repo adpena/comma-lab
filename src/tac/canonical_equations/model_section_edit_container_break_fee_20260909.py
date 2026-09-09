@@ -182,6 +182,58 @@ def _anchor_break_fee() -> EmpiricalAnchor:
     )
 
 
+def _anchor_one_sample_lottery() -> EmpiricalAnchor:
+    """The refinement ddm_fe1's ITEM 5 measured: the delta does not accumulate."""
+    return EmpiricalAnchor(
+        anchor_id="fe1_container_break_delta_is_a_one_sample_lottery_20260909",
+        measurement_utc="2026-09-09T12:45:00Z",
+        inputs={
+            "archive": "pc2 move 34, 181,373 B, sha e138ee09...",
+            "candidate_moves": "133 seg-NEUTRAL single frame_embed code moves, one per pair, each measured by the n600 realized search to leave the pair's SegNet argmax flip count exactly unchanged",
+            "builds": "250 REAL archive builds with the container searched on every one: 133 singles, then 117 greedy-accumulation and neighbourhood builds",
+            "producer": "experiments/ddm_fe1_item5_neutral_rate.py run/verify",
+        },
+        predicted_output={
+            "prior": "a greedy search over 133+ reducing moves compounds and reaches <= -150 B",
+        },
+        empirical_output={
+            "single_move_distribution": "mean +0.1 B, sd 34.8 B; min -61, p5 -50, median -1, max +98; 67 of 133 reduce",
+            "best_single": -61,
+            "best_subset_after_117_greedy_builds": -61,
+            "moves_in_the_winning_set": 1,
+            "neutrality_verified": "pair 331 re-rendered, 21 -> 21 flips, delta 0",
+            "reading": (
+                "the delta is a property of the PERTURBED PAYLOAD, not of the number of "
+                "perturbations: a ONE-SAMPLE LOTTERY, not an additive budget. Adding a "
+                "second move to a good draw RE-SAMPLES rather than compounds, and 117 "
+                "builds conditioned on the best draw never beat it -- there is no "
+                "gradient because there is no landscape. It also explains why a "
+                "23-cell FiLM edit (-68 B) and a zero-distortion single move (-61 B) "
+                "land so close: both are one ticket in the same lottery."
+            ),
+            "operational": (
+                "do not build a byte-search arm on this axis; DO take one cheap sample -- "
+                "price a handful of seg-neutral variants of whatever edit you are already "
+                "making and ship the smallest"
+            ),
+        },
+        residual=89.0,  # |predicted -150 B minus measured -61 B|
+        source_artifact=_LEDGER,
+        measurement_method="250 real archive builds on the live pointer, container searched on each; the winning move's seg-neutrality re-verified through the receiver's own render",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_LEDGER,
+            reactivation_criteria=(
+                "a section whose coder has synchronisation points (so a symbol change "
+                "does NOT re-randomise everything downstream) could have an additive "
+                "structure this one lacks"
+            ),
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
 def _anchor_container_search() -> EmpiricalAnchor:
     return EmpiricalAnchor(
         anchor_id="fe1_container_search_recovers_63p5_bytes_at_n1_20260909",
@@ -232,6 +284,7 @@ def build_model_section_edit_container_break_fee_v1() -> CanonicalEquation:
     """Build the container-break-fee law for edited RX1 model sections (ddm_fe1)."""
     fee = _anchor_break_fee()
     search = _anchor_container_search()
+    lottery = _anchor_one_sample_lottery()
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -271,7 +324,7 @@ def build_model_section_edit_container_break_fee_v1() -> CanonicalEquation:
                 "ddm_rc1 -- the adaptive model-section recode that put the RC1 rider on this body",
                 "reordering-pays-iff-the-coder-has-no-context-model -- the sister statement about what a coder's model does to a permutation",
             ],
-            "known_boundary": "one section, one body, one edit family; the draw-to-draw spread is +-25..40 B, so a SPECIFIC edit must still be priced by a real encode",
+            "known_boundary": "one section, one body, one edit family; the draw-to-draw spread is +-35 B (sd measured over 133 real single-move builds), so a SPECIFIC edit must still be priced by a real encode -- and the delta does NOT accumulate over edits, see the one-sample-lottery anchor",
             "verdict_scope": "measurement (exact bytes), not a family verdict",
         },
         units_in={
@@ -283,10 +336,11 @@ def build_model_section_edit_container_break_fee_v1() -> CanonicalEquation:
             "container_search_recovers_bytes": "bytes",
             "cells_to_break_even": "seg_cells",
         },
-        empirical_anchors=(fee, search),
+        empirical_anchors=(fee, search, lottery),
         predicted_vs_empirical_residual={
             fee.anchor_id: fee.residual,
             search.anchor_id: search.residual,
+            lottery.anchor_id: lottery.residual,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
