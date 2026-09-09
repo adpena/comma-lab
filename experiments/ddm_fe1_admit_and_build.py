@@ -27,7 +27,9 @@ import argparse
 import hashlib
 import io
 import json
+import math
 import sys
+import time
 import zipfile
 from collections.abc import Sequence
 from pathlib import Path
@@ -39,8 +41,11 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
 
+import ddm_br1_pose_basis_reorientation as br1
 import ddm_fe1_frame_embedding_search as fe1
 import ddm_fe1_pose_price as price
+import ddm_jg1_seg_solve as jg1
+import ddm_jg5_pose_resolve_on_edited_renders as jg5
 import ddm_up3_carrier_splice as up3
 
 N_PAIRS = fe1.N_PAIRS
@@ -231,6 +236,249 @@ def build_candidate_archive(
     }
 
 
+
+# ----------------------------------------------------------------------------------
+# admit -- render, pose, re-solve, then a subset sweep priced by REAL archive builds
+# ----------------------------------------------------------------------------------
+
+
+def cmd_pose(args) -> int:
+    """Render every candidate pair's moved frame, then price its pose leg.
+
+    One JSONL row per pair, appended as the pair finishes.  The rendered frames are KEPT
+    (a memmap beside the rows), because they are the payload the admission and every
+    re-price after it consume; measuring their d_pose and discarding them would force a
+    full re-render on the next question asked of this ledger.
+    """
+    fe1._set_threads(args.threads)
+    candidates = json.loads(Path(args.candidates).read_text())["candidates"]
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rows_path = out_dir / "pose_rows.jsonl"
+    done: set[int] = set()
+    if rows_path.is_file() and args.resume:
+        with rows_path.open("r", encoding="utf-8") as stream:
+            for line in stream:
+                if line.strip():
+                    done.add(int(json.loads(line)["pair"]))
+
+    body = fe1.load_body(with_raw=False, verify_shas=not args.no_sha)
+    base_raw = fe1._open_raw(fe1.LIVE_RAW)
+    pairs = [int(c["pair"]) for c in candidates]
+    frames_path = out_dir / "odd_frames.u8"
+    shape = (len(pairs), jg1.CAMERA_H, jg1.CAMERA_W, 3)
+    mode = "r+" if frames_path.is_file() else "w+"
+    frames = np.memmap(frames_path, dtype=np.uint8, mode=mode, shape=shape)
+    slot = {pair: index for index, pair in enumerate(pairs)}
+    for candidate in candidates:
+        pair = int(candidate["pair"])
+        if pair in done:
+            continue
+        fe1.set_pair_codes(body, pair, candidate["final_row"])
+        frames[slot[pair]] = fe1.render_pair(body, pair)[0]
+        fe1.restore_pair_codes(body, pair)
+    frames.flush()
+    (out_dir / "OVERLAY.json").write_text(
+        json.dumps({"pairs": pairs, "shape": list(shape)}, indent=1)
+    )
+
+    overlay = price._MemoryOverlayRaw(
+        base_raw, {pair: np.asarray(frames[slot[pair]]) for pair in pairs}
+    )
+    base_inst = price.build_pose_instrument(base_raw)
+    moved_inst = price.build_pose_instrument(overlay)
+    live_codes = np.asarray(base_inst.state.codes, dtype=np.int32)
+    dd_threshold = jg5.materiality_dd_threshold(args.base_mean_d_pose)
+    started = time.time()
+    completed = 0
+    for candidate in candidates:
+        pair = int(candidate["pair"])
+        if pair in done:
+            continue
+        d_pose_base = float(
+            br1.evaluate_codes(base_inst, pair, live_codes[pair][None])[0]
+        )
+        # CONTROL: re-solving the pair on its UNMOVED render tells us how much of any
+        # apparent pose gain belongs to the move and how much was simply left on the
+        # table by the live carrier.  Without it a lucky re-solve reads as a move's win.
+        control = jg5.refine_pair(
+            base_inst,
+            pair,
+            live_codes[pair],
+            dd_threshold=dd_threshold,
+            outer_rounds=args.outer_rounds,
+            max_gn_iterations=args.max_gn_iterations,
+        )
+        d_pose_stale = float(
+            br1.evaluate_codes(moved_inst, pair, live_codes[pair][None])[0]
+        )
+        refined = jg5.refine_pair(
+            moved_inst,
+            pair,
+            live_codes[pair],
+            dd_threshold=dd_threshold,
+            outer_rounds=args.outer_rounds,
+            max_gn_iterations=args.max_gn_iterations,
+        )
+        row = {
+            "pair": pair,
+            "cells": int(candidate["cells"]),
+            "changed_codes": int(candidate["changed_codes"]),
+            "final_row": candidate["final_row"],
+            "d_pose_base": d_pose_base,
+            "d_pose_base_resolved": float(control["final_d_pose"]),
+            "control_codes": [int(c) for c in control["codes"]],
+            "d_pose_stale": d_pose_stale,
+            "d_pose_resolved": float(refined["final_d_pose"]),
+            "resolved_codes": [int(c) for c in refined["codes"]],
+            "stale_x": d_pose_stale / d_pose_base if d_pose_base > 0 else math.inf,
+            "recovery_x": (
+                d_pose_stale / refined["final_d_pose"]
+                if refined["final_d_pose"] > 0
+                else math.inf
+            ),
+            "stop_reason": refined["stop_reason"],
+        }
+        with rows_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(row, sort_keys=True) + "\n")
+        completed += 1
+        if args.progress:
+            print(
+                f"  {completed}/{len(candidates) - len(done)} pair {pair}: base "
+                f"{d_pose_base:.4e} (control re-solve {control['final_d_pose']:.4e}) -> "
+                f"stale {d_pose_stale:.4e} -> resolved {refined['final_d_pose']:.4e} "
+                f"({(time.time() - started) / completed:.1f} s/pair)",
+                flush=True,
+            )
+    receipt = {
+        "schema": "ddm_fe1_pose_rows.v1",
+        "axis": "[cpu_torch fp32 PoseNet, DALI-lineage GT]",
+        "score_claim": False,
+        "pairs": pairs,
+        "rows_path": str(rows_path),
+        "frames_path": str(frames_path),
+        "dd_threshold": dd_threshold,
+        "elapsed_s": round(time.time() - started, 1),
+    }
+    (out_dir / "POSE_ROWS.json").write_text(json.dumps(receipt, indent=1))
+    print(json.dumps({k: receipt[k] for k in ("pairs", "elapsed_s")}, default=len))
+    return 0
+
+
+def cmd_admit(args) -> int:
+    """Sweep subsets of the priced pairs and pick the one the REAL archive likes best."""
+    fe1._set_threads(args.threads)
+    rows = [
+        json.loads(line)
+        for line in Path(args.pose_rows).read_text().splitlines()
+        if line.strip()
+    ]
+    if not rows:
+        raise fe1.Fe1Error("no priced pairs")
+    section = fe1.load_semantic_section()
+    body = up3.parse_shipped_body(fe1.LIVE_RUNTIME, verify_sha=False)
+    live_carrier = np.asarray(body.codes, dtype=np.int32)
+    base_pose = float(args.base_mean_d_pose)
+    base_leg = math.sqrt(10.0 * base_pose)
+
+    # Rank by what each pair is worth on its own: seg gain minus the pose it costs after
+    # the re-solve, both in score units.  Bytes are NOT apportioned here -- they are not
+    # additive on this section (the container-break law), so they are priced per subset
+    # by a real build below.
+    for row in rows:
+        pose_delta = row["d_pose_resolved"] - row["d_pose_base"]
+        row["dS_seg"] = -row["cells"] * 100.0 / CELL_COUNT
+        row["dS_pose"] = (
+            math.sqrt(10.0 * (base_pose + pose_delta / N_PAIRS)) - base_leg
+        )
+        row["value"] = row["dS_seg"] + row["dS_pose"]
+    ranked = sorted(rows, key=lambda r: r["value"])
+
+    cuts = sorted(
+        {
+            count
+            for count in (
+                [len(ranked)]
+                + [int(len(ranked) * f) for f in (0.25, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95)]
+            )
+            if count > 0
+        }
+    )
+    results = []
+    best = None
+    for count in cuts:
+        subset = ranked[:count]
+        codes = section.codes.astype(np.int64).copy()
+        carrier = live_carrier.copy()
+        for row in subset:
+            codes[int(row["pair"])] = np.asarray(row["final_row"], dtype=np.int64)
+            carrier[int(row["pair"])] = np.asarray(row["resolved_codes"], dtype=np.int32)
+        built = build_candidate_archive(
+            section, codes, carrier, verify=not args.no_verify
+        )
+        cells = sum(int(r["cells"]) for r in subset)
+        pose_mean = base_pose + sum(
+            r["d_pose_resolved"] - r["d_pose_base"] for r in subset
+        ) / N_PAIRS
+        d_seg_new = (fe1.LIVE_D_SEG_CELLS - cells) / CELL_COUNT
+        dS = (
+            100.0 * (d_seg_new - fe1.LIVE_D_SEG_LOCAL)
+            + (math.sqrt(10.0 * pose_mean) - base_leg)
+            + (built["archive_size"] - fe1.LIVE_ARCHIVE_BYTES) * fe1.RATE_PER_BYTE
+        )
+        entry = {
+            "pairs": count,
+            "cells": cells,
+            "archive_bytes": built["archive_size"],
+            "archive_sha256": built["archive_sha256"],
+            "d_archive_bytes": built["archive_size"] - fe1.LIVE_ARCHIVE_BYTES,
+            "semantic_stream_bytes": built["semantic_stream_bytes"],
+            "semantic_container": built["semantic_container"],
+            "carrier_stream_bytes": built["carrier_stream_bytes"],
+            "d_seg_local": d_seg_new,
+            "d_pose_mean": pose_mean,
+            "dS_seg": 100.0 * (d_seg_new - fe1.LIVE_D_SEG_LOCAL),
+            "dS_pose": math.sqrt(10.0 * pose_mean) - base_leg,
+            "dS_rate": (built["archive_size"] - fe1.LIVE_ARCHIVE_BYTES)
+            * fe1.RATE_PER_BYTE,
+            "dS_total": dS,
+            "admits": bool(dS < ADMIT_BAR),
+            "pairs_included": [int(r["pair"]) for r in subset],
+        }
+        results.append(entry)
+        print(
+            f"  cut {count:>4} pairs / {cells:>4} cells: archive "
+            f"{built['archive_size']} B ({entry['d_archive_bytes']:+d}) -> dS "
+            f"{dS:+.6e} {'ADMITS' if entry['admits'] else 'below bar'}",
+            flush=True,
+        )
+        if best is None or dS < best["dS_total"]:
+            best = entry
+            Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+            (Path(args.out_dir) / "archive.zip").write_bytes(built["archive_bytes"])
+            np.save(Path(args.out_dir) / "frame_embed_codes.npy", codes.astype(np.int8))
+            np.save(Path(args.out_dir) / "carrier_codes.npy", carrier)
+    result = {
+        "schema": "ddm_fe1_admission.v1",
+        "axis": (
+            "d_seg [macOS-CPU advisory, jg1/sj1 instrument, DALI GT]; d_pose "
+            "[cpu_torch fp32]; bytes EXACT through a real archive build"
+        ),
+        "score_claim": False,
+        "live_archive_bytes": fe1.LIVE_ARCHIVE_BYTES,
+        "live_score_t4": fe1.LIVE_SCORE_T4,
+        "admit_bar": ADMIT_BAR,
+        "pricing": "REAL archive build per cut; no ledger sum anywhere",
+        "cuts": results,
+        "best": best,
+        "projected_score_t4": fe1.LIVE_SCORE_T4 + (best["dS_total"] if best else 0.0),
+    }
+    out = Path(args.out_dir) / "ADMISSION.json"
+    out.write_text(json.dumps(result, indent=1))
+    print(json.dumps({"best": best and {k: best[k] for k in ("pairs", "cells", "archive_bytes", "dS_total", "admits")}, "projected_score_t4": result["projected_score_t4"]}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -238,6 +486,26 @@ def build_parser() -> argparse.ArgumentParser:
     merge.add_argument("--search-dir", default=str(fe1.WORK / "search"))
     merge.add_argument("--out", default=str(fe1.WORK / "admission/CANDIDATES.json"))
     merge.set_defaults(func=cmd_merge)
+
+    pose = sub.add_parser("pose", help="render + price the pose leg of every candidate")
+    pose.add_argument("--candidates", default=str(fe1.WORK / "admission/CANDIDATES.json"))
+    pose.add_argument("--out-dir", default=str(fe1.WORK / "admission/pose"))
+    pose.add_argument("--threads", type=int, default=3)
+    pose.add_argument("--no-sha", action="store_true")
+    pose.add_argument("--resume", action="store_true", default=True)
+    pose.add_argument("--progress", action="store_true", default=True)
+    pose.add_argument("--outer-rounds", type=int, default=40)
+    pose.add_argument("--max-gn-iterations", type=int, default=400)
+    pose.add_argument("--base-mean-d-pose", type=float, default=fe1.LIVE_D_POSE)
+    pose.set_defaults(func=cmd_pose)
+
+    admit = sub.add_parser("admit", help="sweep subsets, priced by real archive builds")
+    admit.add_argument("--pose-rows", default=str(fe1.WORK / "admission/pose/pose_rows.jsonl"))
+    admit.add_argument("--out-dir", default=str(fe1.WORK / "candidate"))
+    admit.add_argument("--threads", type=int, default=3)
+    admit.add_argument("--no-verify", action="store_true")
+    admit.add_argument("--base-mean-d-pose", type=float, default=fe1.LIVE_D_POSE)
+    admit.set_defaults(func=cmd_admit)
     return parser
 
 
