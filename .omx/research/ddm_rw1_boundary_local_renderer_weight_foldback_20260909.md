@@ -309,6 +309,41 @@ leverage per changed symbol at 1/48th the byte cost** (0.0139 B/code vs 0.664 B/
 That reframes the arm's open question. It is not *can a weight change move a class edge* — measured yes, violently. It is *can any search
 aim it*, against a collateral population that sj1 §16d measured at **44.5 correct boundary cells at risk per residual cell in reach**.
 
+### The actuation, read off the checkpoints (`receipts/POSTTRAIN.json`)
+
+| step | latent codes changed | latent max drift | shadow codes changed | shadow max drift |
+|---:|---:|---:|---:|---:|
+| 300 | 11 | 0.538 | 0 | 0.120 |
+| 600 | 90 | 0.573 | 0 | 0.287 |
+| 900 | 116 | 0.594 | 0 | 0.395 |
+| 1,200 | **141** | 0.632 | 0 | 0.462 |
+| 1,500 | 134 | 0.625 | 4 | 0.520 |
+| 1,800 | 136 | 0.633 | 18 | 0.556 |
+| 2,100 | 129 | 0.627 | 35 | 0.583 |
+| 2,400 | 122 | 0.635 | 46 | 0.602 |
+
+Two things fall out that the loss curve alone does not show.
+
+**The optimizer is oscillating, not converging.** The latent's changed-code count PEAKS at 141 (step 1,200) and then *declines* to 122
+while the max drift sits flat at ~0.63 from step 1,200 on. Codes are crossing the rounding boundary back and forth. That is a random walk
+pinned near ±0.5, not a descent — and it is the same fact as the ~5 % direction persistence, seen in the parameter rather than in the loss.
+
+**The EMA's monotone catch-up accidentally swept the dose-response curve.** Because the shadow is an exponential average converging toward
+a nearly-static latent, its changed-code count rises monotonically 0 → 4 → 18 → 35 → 46 while the underlying object barely moves. Each
+evaluation therefore prices a different *dose* of the same direction:
+
+| codes changed | extra flips | marginal cells per code |
+|---:|---:|---:|
+| 4 | 493 | 123 |
+| 18 | 847 | 47 |
+| 35 | 1,126 | 32 |
+| 46 | 1,238 | 27 |
+
+Strongly **sublinear with a large intercept** — the first handful of codes does most of the damage and further codes add little. That
+shape says the damage is not an accumulation of independent local edits; it is one global photometric shift of the rendered frames that
+the first few head/`blocks.3.pw` codes already impose. 119 of the 122 changed codes sit in `blocks.3.pw.weight` (73 % of the code budget,
+so a mild 1.34× over-representation) — the pointwise mixer, not the head.
+
 ### The confound this measurement names about itself
 
 At batch 4 the fixed-τ surrogate has **no trend** over 1,300 steps (first-10 mean 4.796e-4, last-10 4.976e-4) and the code drift
