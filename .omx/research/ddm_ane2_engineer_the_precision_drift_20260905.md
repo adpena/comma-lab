@@ -371,6 +371,20 @@ exonerated and the conversion CALL is the cause — and the MIL diff says exactl
 | fp32, selector | 1058 | 771 | **1** | 286 | **65552 = FLOAT16** |
 | fp32, plain | 1056 | 770 | **0** | 286 | 65568 = FLOAT32 |
 
+**ane3 source-verification addendum (2026-09-09).** `verified-at-source:` the
+65552/65568 ids above are the saved MIL output types in
+`stage9/refconvert_posenet_gt.json` (SHA-256
+`e5fd7b5d9d2d6e9c23631b4331936bcdc16a4c5bf356af1367a4f03f9fd97ac1`).
+`verified-at-source:` the SegNet acceptance bar is the operator-set
+`SEG_AUTHORITY_FLIP_BAR = 3.3e-5` in `src/tac/ane_screening.py`; the 75% ANE
+minimum is the ITEM 1 acceptance threshold in the ane3 charter, not an
+empirical constant. `verified-at-source:` hd128 is `7.0226e-05` in
+`stage6/targeted_posenet_gt_n120.json` (SHA-256
+`f4c8fd4a62f5b9704eade547a4ca10f279ff75c80f2f65567eab211cc2149274`).
+Against the exact `d_pose = 7.77e-06` used by that receipt it is **9.04x**, not
+the later charter's rounded **11x**; either ratio leaves the PoseNet ANE value
+axis refused.
+
 **One cast, on the model OUTPUT.** Passing an `FP16ComputePrecision` instance makes coremltools
 declare the mlprogram's output fp16 *even when the selector transforms zero ops*, so the result is
 rounded to half precision on the way out. The arithmetic checks: fp16 spacing at |31.16| is
@@ -668,4 +682,3 @@ RSS, not rounded.
 ## Own-vehicle frontier
 
 **fs2 S 0.14784474152757654 @ 180,023 B `[contest-CUDA T4 n600]` — UNMOVED by this arm.**
-

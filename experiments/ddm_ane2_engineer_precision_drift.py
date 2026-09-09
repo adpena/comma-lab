@@ -185,6 +185,12 @@ def _convert_mixed(traced, shape, fp16_names, out_path: Path, expected_ops=None)
     mlmodel = ct.convert(
         traced,
         inputs=[ct.TensorType(name="x", shape=shape, dtype=np.float32)],
+        # verified-at-source: coremltools 9.0 accepts an explicit fp32
+        # TensorType in ``outputs``.  Without this argument,
+        # FP16ComputePrecision(op_selector=...) declares the model output fp16
+        # even when the selector transforms zero compute ops (MIL 65552 rather
+        # than FLOAT32 65568), contaminating every mixed-precision comparison.
+        outputs=[ct.TensorType(dtype=np.float32)],
         convert_to="mlprogram",
         compute_precision=ct.transform.FP16ComputePrecision(op_selector=selector),
         minimum_deployment_target=target,
@@ -194,6 +200,12 @@ def _convert_mixed(traced, shape, fp16_names, out_path: Path, expected_ops=None)
     observed = compute_op_names(records)
     if expected_ops is not None:
         assert_op_sequence_stable(expected_ops, observed, context=str(out_path.name))
+    output_dtype = int(mlmodel.get_spec().description.output[0].type.multiArrayType.dataType)
+    if output_dtype != 65568:
+        raise Ane2Error(
+            f"{out_path.name}: mixed conversion output dtype {output_dtype}, expected "
+            "Core ML FLOAT32 (65568)"
+        )
     if out_path.exists():
         import shutil
 
@@ -318,15 +330,24 @@ def _compiled(path: Path) -> Path:
     stale ``.mlmodelc`` would silently prove the placement of a DIFFERENT graph.
     """
     import shutil
-
-    from coremltools.models.utils import compile_model
+    import subprocess
 
     destination = path.with_suffix(".mlmodelc")
     if destination.exists():
         if destination.stat().st_mtime >= path.stat().st_mtime:
             return destination
         shutil.rmtree(destination)
-    compile_model(str(path), destination_path=str(destination))
+    # ``coremltools.models.utils.compile_model`` asks the Core ML framework to
+    # allocate an implicit NSItemReplacement scratch tree.  A managed shell can
+    # deny that service-created path even while the retained artifact directory
+    # is writable.  The public compiler CLI accepts an explicit destination and
+    # produces the same retained ``<stem>.mlmodelc`` tree there.
+    subprocess.run(
+        ["xcrun", "coremlcompiler", "compile", str(path), str(path.parent)],
+        check=True,
+    )
+    if not destination.exists():
+        raise Ane2Error(f"coremlcompiler did not create expected tree: {destination}")
     return destination
 
 
@@ -362,8 +383,16 @@ def _placement(path: Path, mode: str) -> dict[str, Any]:
 def _latency(path: Path, mode: str, shape, reps: int) -> dict[str, Any]:
     import coremltools as ct
 
-    model = ct.models.MLModel(str(path), compute_units=getattr(ct.ComputeUnit, mode))
-    name = model.get_spec().description.input[0].name
+    # Loading the retained compiled tree avoids Core ML's implicit temporary
+    # compilation, whose scratch URL is not reproducible and can be unwritable
+    # under a managed workspace sandbox.
+    model = ct.models.CompiledMLModel(
+        str(_compiled(path)), compute_units=getattr(ct.ComputeUnit, mode)
+    )
+    # CompiledMLModel intentionally does not expose ``get_spec``; read the
+    # retained source package for I/O names while executing the retained
+    # compiled tree.
+    name, _output_name = _io_names(path)
     sample = np.random.default_rng(20260905).standard_normal(shape).astype(np.float32)
     for _ in range(3):
         model.predict({name: sample})
@@ -586,7 +615,9 @@ def _eval_segnet(
     """Argmax flips of one CoreML package against the cached CPU-torch reference."""
     import coremltools as ct
 
-    model = ct.models.MLModel(str(package), compute_units=getattr(ct.ComputeUnit, mode))
+    model = ct.models.CompiledMLModel(
+        str(_compiled(package)), compute_units=getattr(ct.ComputeUnit, mode)
+    )
     in_name, out_name = _io_names(package)
     ref_argmax = ref["argmax"]
     if ref_argmax.shape[0] != pairs.size:
@@ -611,6 +642,7 @@ def _eval_segnet(
     if payload_path is not None:
         # ALWAYS KEEP THE PAYLOAD: the per-pair flip rates are the measurement,
         # the summary quantiles are only a reading of them.
+        payload_path.parent.mkdir(parents=True, exist_ok=True)
         np.save(payload_path, per_pair)
         row["per_pair_payload"] = str(payload_path)
         row["per_pair_payload_sha256"] = sha256_tree(payload_path)
@@ -622,7 +654,9 @@ def _eval_posenet(
 ) -> dict[str, Any]:
     import coremltools as ct
 
-    model = ct.models.MLModel(str(package), compute_units=getattr(ct.ComputeUnit, mode))
+    model = ct.models.CompiledMLModel(
+        str(_compiled(package)), compute_units=getattr(ct.ComputeUnit, mode)
+    )
     in_name, out_name = _io_names(package)
     prepared = ref["prepared"]
     reference = np.asarray(ref["poses"])
@@ -642,6 +676,7 @@ def _eval_posenet(
     row["eval_seconds"] = time.time() - started
     row["compute_units"] = mode
     if payload_path is not None:
+        payload_path.parent.mkdir(parents=True, exist_ok=True)
         np.save(payload_path, got)
         row["poses_payload"] = str(payload_path)
         row["poses_payload_sha256"] = sha256_tree(payload_path)
@@ -833,7 +868,8 @@ def run_ladder(args) -> int:
                 rung["latency"][mode] = _latency(package, mode, shape, args.reps)
             except Exception as exc:
                 rung["latency"][mode] = {"error": repr(exc)}
-        payload = out_dir / f"{args.model}_{backend}_payload.npy"
+        payload_dir = Path(args.payload_dir) if args.payload_dir else out_dir
+        payload = payload_dir / f"{args.model}_{backend}_payload.npy"
         if args.model == "segnet":
             rung["fidelity"] = _eval_segnet(
                 package, args.compute_units, raw, pairs, ref, payload
@@ -923,7 +959,8 @@ def run_selective(args) -> int:
                 row["latency"][mode] = _latency(package, mode, shape, args.reps)
             except Exception as exc:
                 row["latency"][mode] = {"error": repr(exc)}
-        payload = out_dir / f"{args.model}_sel_{label}_payload.npy"
+        payload_dir = Path(args.payload_dir) if args.payload_dir else out_dir
+        payload = payload_dir / f"{args.model}_sel_{label}_payload.npy"
         if args.model == "segnet":
             row["fidelity"] = _eval_segnet(
                 package, args.compute_units, raw, pairs, ref, payload
@@ -1390,6 +1427,11 @@ def build_parser() -> argparse.ArgumentParser:
     ladder_p.add_argument("--compute-units", default="CPU_AND_NE")
     ladder_p.add_argument("--out-dir", required=True)
     ladder_p.add_argument(
+        "--payload-dir",
+        default=None,
+        help="payload-blob directory (for example APDataStore); defaults to --out-dir",
+    )
+    ladder_p.add_argument(
         "--eval-pairs",
         type=int,
         default=None,
@@ -1414,6 +1456,11 @@ def build_parser() -> argparse.ArgumentParser:
     sel_p.add_argument("--threads", type=int, default=1)
     sel_p.add_argument("--compute-units", default="CPU_AND_NE")
     sel_p.add_argument("--out-dir", required=True)
+    sel_p.add_argument(
+        "--payload-dir",
+        default=None,
+        help="payload-blob directory (for example APDataStore); defaults to --out-dir",
+    )
     sel_p.add_argument(
         "--eval-pairs",
         type=int,
