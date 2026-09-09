@@ -1511,6 +1511,83 @@ translating direction, and the remaining 12,443 cells belong to the renderer.
 
 ---
 
+## 25. The pass-5 split of the shipped residual — and a level switch corrected in §21
+
+Measured before the pass-5 rate leg returned, on artifacts already on disk: the SHIPPED
+parse-back argmax of the live body (`pass4/seg_final/argmax_n600.npy`) against the DALI GT
+table, split by the 235 accepted pass-5 moves. Instrument:
+`experiments/ddm_sj1_pass5_census.py`; receipt
+`/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/CENSUS.json`.
+
+Two gates passed before any row below is readable. The residual reproduces at **exactly
+12,614** cells — the same number §21 measured and the same `flips_before` the pass-5 search
+reported on the jg1 instrument. And **every one of the 234 distinct sites the accepted moves
+aim at is a residual cell of the shipped body** (`repaired_sites_not_in_shipped_residual =
+0`): the search and the parse-back are describing one object, not two.
+
+(235 moves land on 234 distinct sites, and two moves repaired two cells each, so the site
+mask is a lower bound on `PASS_RESULT`'s 237 repaired cells. The kind-comparison below is
+unaffected by the three-cell difference.)
+
+### 25a. THE CORRECTION — §21's "singletons rose" is a change of statistic, not of object
+
+§21 reads: *"**Singletons rose 86.55% → 93.92%**: the search eats clusters first and leaves
+specks."* Both numbers are real and neither is wrong; they are **different statistics**.
+§16's 86.55% is the share of residual CELLS that sit in a size-1 component (11,135 of
+12,866). §21's 93.92% is the share of COMPONENTS that are singletons (11,135 of 11,859 =
+93.89%). Measured on the SAME pass-4 object, here, both ways:
+
+| statistic | pass-3 residual (12,866) | pass-4 residual (12,614) | movement |
+|---|---:|---:|---|
+| singleton share of **cells** | 86.55% | **86.63%** | +0.08 pp |
+| singleton share of **components** | 93.89% | **93.92%** | +0.03 pp |
+| components | 11,859 | **11,635** | |
+| cells per component | 1.0849 | **1.0841** | |
+
+**On either statistic held fixed the granularity is FLAT.** The residual did not get more
+speck-like between pass 3 and pass 4; §21's sentence compared a cell share against a
+component share and read the level difference as a trend. The claim is withdrawn. What
+§21's other facets say — 99.56% one-pixel displacement, Lane 40.43×, rows 128–319 carrying
+100%, no clean pair — is unaffected and stands.
+
+This is the [[m99]] genus (units × level × aggregation are part of the claim) landing inside
+this arm's own memo, and the reason the census now emits both numbers side by side so the
+next pass cannot repeat it.
+
+### 25b. What the last reachable cells ARE — they do differ in kind
+
+The interesting question is not the sizes. It is whether the 234 cells one more token move
+can still reach differ from the 12,380 it cannot. **They do, on three facets.**
+
+| facet | repaired (234) | remaining (12,380) | ratio |
+|---|---:|---:|---:|
+| **Lane over-representation** | **56.93×** | 40.11× | **1.42×** |
+| Movable over-representation | 6.21× | 10.97× | 0.57× |
+| Road over-representation | 1.56× | 1.77× | 0.88× |
+| **singleton share of cells** | **95.30%** | 86.47% | **1.10×** |
+| cells per component | 1.0271 | 1.0853 | 0.95× |
+| **row centroid** | **208.1** | 200.9 | +7.2 rows |
+| rows 128–191 | 40.17% | 54.57% | 0.74× |
+| rows 192–255 | **45.30%** | 34.79% | **1.30×** |
+| pairs contributing | 126 of 600 | 600 of 600 | |
+
+**What a single token move can still reach is an ISOLATED, LOW-IN-FRAME, LANE speck.** It is
+1.42× more Lane, 1.10× more likely to be a lone cell, and sits 7.2 rows lower — nearer the
+camera, where a token covers fewer pixels of world and the boundary it moves is coarser
+relative to the error. What it cannot reach is the clustered, higher-in-frame, Movable-
+bearing part: Movable is *under*-represented among the reachable by 0.57×, and the
+128–191 band — the far field, which carries the majority of the residual — is 0.74×.
+
+That is a sharper handoff than §21c's list, because it is a statement about the SUB-family
+rather than the family: the token grid is not merely out of budget on a homogeneous
+residual; it has been eating a specific, identifiable corner of it — near-field isolated
+lane specks — and the corner is nearly gone. A representation-level successor that only
+reproduces this corner's capability inherits 234 cells out of 12,614 and nothing else. The
+one it must beat is the far-field cluster: **rows 128–191 hold 54.57% of what remains, and
+the token grid's yield there is 0.74× its own average.**
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
