@@ -2476,6 +2476,127 @@ def cmd_perturb_control(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=gradient-topk -- the direct question, with no optimizer in the way
+# ----------------------------------------------------------------------------------
+
+
+def cmd_gradient_topk(args) -> int:
+    """One exact n600 gradient, then realized flips for the top-k signed code moves.
+
+    This asks the arm's question with nothing between the objective and the actuator:
+    if the k codes with the largest |dL/dcode| are each moved ONE step down their own
+    gradient, does the realized argmax improve?  No optimizer, no schedule, no EMA, no
+    minibatch draw -- so a negative here is about the OBJECTIVE and the actuator, which
+    is the only thing left to be about.
+
+    It also sidesteps the fault the full-field probe exposed: AdamW normalises per
+    parameter and therefore marches every code at the same rate, destroying the
+    sparsity this actuator's rate law and collateral measurement both call for.  Top-k
+    on the raw gradient preserves it by construction.
+    """
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    device = torch.device(args.device)
+    torch.manual_seed(args.seed)
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    model = load_live_renderer(section).to(device)
+    tokens = load_live_tokens()
+    labels = load_gt_seg_dali()
+    segnet = jg1.load_segnet().to(device).eval()
+    for param in segnet.parameters():
+        param.requires_grad_(False)
+    fold = CodeFoldBack(section, names, device)
+
+    # One exact field gradient of the SEG surrogate alone.  Pose is deliberately out:
+    # the per-pair re-solve is what pays pose, and this probe is about seg reach.
+    tau = float(args.tau)
+    for param in fold.parameters():
+        param.grad = None
+    for start in range(0, N_PAIRS, int(args.batch)):
+        index = np.arange(start, min(start + int(args.batch), N_PAIRS), dtype=np.int64)
+        tokens_batch = torch.from_numpy(tokens[index].astype(np.int64)).to(device)
+        index_batch = torch.from_numpy(index).to(device)
+        labels_batch = torch.from_numpy(labels[index].astype(np.int64)).to(device)
+        frame = _render_eval(model, fold, tokens_batch, index_batch)
+        logits = _seg_logits(segnet, _exact_r_camera(frame))
+        loss = _expected_flip(logits, labels_batch, tau).mean() * (len(index) / N_PAIRS)
+        loss.backward()
+        if args.progress and (start // int(args.batch)) % 25 == 0:
+            print(
+                f"grad {start}/{N_PAIRS} in {time.perf_counter() - started:.1f}s",
+                flush=True,
+            )
+    grads = {n: fold.latent[n].grad.detach().to("cpu").numpy().ravel() for n in names}
+    sizes = [int(section.runs[n].count) for n in names]
+    flat_grad = np.concatenate([grads[n] for n in names])
+    base_flat = np.concatenate(
+        [np.asarray(section.codes[n], dtype=np.int64).ravel() for n in names]
+    )
+    order = np.argsort(-np.abs(flat_grad))
+    grad_time = time.perf_counter() - started
+
+    with torch.no_grad():
+        null = _evaluate_realized(model, fold, segnet, tokens, labels, device)
+    rows = []
+    for k in [int(v) for v in str(args.k).split(",") if v.strip()]:
+        picked = order[:k]
+        perturbed = base_flat.copy()
+        # ONE step DOWN the gradient: a positive dL/dcode wants the code smaller.
+        move = -np.sign(flat_grad[picked]).astype(np.int64)
+        perturbed[picked] = np.clip(perturbed[picked] + move, CODE_MIN, CODE_MAX)
+        changed = int((perturbed != base_flat).sum())
+        latent = {}
+        cursor = 0
+        for name, size in zip(names, sizes, strict=True):
+            latent[name] = torch.from_numpy(
+                perturbed[cursor : cursor + size]
+                .reshape(section.runs[name].shape)
+                .astype(np.float32)
+            ).to(device)
+            cursor += size
+        with torch.no_grad():
+            evaluation = _evaluate_realized(
+                model, fold, segnet, tokens, labels, device, latent=latent
+            )
+        rows.append(
+            {
+                "k": k,
+                "changed_codes": changed,
+                "flips": evaluation["flips"],
+                "flips_vs_null": evaluation["flips"] - null["flips"],
+                "cells_per_code": (evaluation["flips"] - null["flips"]) / max(changed, 1),
+                "rate_bytes_predicted": BYTES_PER_CHANGED_CODE * changed
+                + (CONTAINER_BREAK_FIXED_BYTES if changed else 0.0),
+            }
+        )
+        print(json.dumps(rows[-1]), flush=True)
+
+    result = {
+        "schema": "ddm_rw1_gradient_topk.v1",
+        "axis": f"[{args.device} research-signal; n600 exact gradient + realized argmax]",
+        "score_claim": False,
+        "pointer": pointer,
+        "tau": tau,
+        "null_flips_same_path": null["flips"],
+        "device_gap_vs_cpu_instrument": null["flips"] - LIVE_D_SEG_CELLS,
+        "gradient_seconds": grad_time,
+        "gradient_nonzero_codes": int((flat_grad != 0).sum()),
+        "gradient_abs_max": float(np.abs(flat_grad).max()),
+        "gradient_abs_median": float(np.median(np.abs(flat_grad))),
+        "rows": rows,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2610,6 +2731,17 @@ def build_parser() -> argparse.ArgumentParser:
     perturb.add_argument("--seed", type=int, default=20260909)
     common(perturb)
     perturb.set_defaults(func=cmd_perturb_control)
+
+    topk = sub.add_parser("gradient-topk")
+    topk.add_argument("--out", type=Path, default=WORK / "receipts/GRADIENT_TOPK.json")
+    topk.add_argument("--device", default="mps")
+    topk.add_argument("--batch", type=int, default=4)
+    topk.add_argument("--tau", type=float, default=TAU_REFERENCE)
+    topk.add_argument("--k", default="1,4,16,64,256")
+    topk.add_argument("--seed", type=int, default=20260909)
+    topk.add_argument("--progress", action="store_true", default=True)
+    common(topk)
+    topk.set_defaults(func=cmd_gradient_topk)
 
     return parser
 
