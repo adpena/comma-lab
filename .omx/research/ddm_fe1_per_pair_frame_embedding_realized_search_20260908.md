@@ -27,7 +27,26 @@ change on pair 331 — seg leg exactly **+0.000000e+00** — worth **−61 bytes
 falsifier had already fired. Describing it as a pre-distortion result would be false, and the seal says so in its
 own falsifier list.
 
-The arm's durable output is three laws (§0, §6, §13.2), not a distortion mechanism.
+**THE HANDOFF.** That move is not sealed by this arm. sm1's counted 24-weight mixer re-codes the semantic
+section arithmetically, which prices the change **per symbol** instead of by the container draw, so it goes to the
+composition arm as a machine-readable row — no transcript needed:
+
+> **`/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/handoff/pair331_move.json`**
+> — `frame_embed.weight_q[331, 6] = 0` (was −1), signed 3-bit domain, column scales untouched, applied to the
+> SM3R body BEFORE the section is re-coded.
+
+The row carries: both neutrality receipts (21 → 21 on the move-35 field with its own persisted artifact, and the
+same on pc2's field) and the fact that a **parse-back proof is OWED, not held**; the unmoved-render control
+(re-solving pair 331 on its unmoved render moves d_pose by exactly 0, so the carrier is converged there and any
+post-move change is the move's own); the carrier re-solve receipt with the twelve int12 coefficients, the tree they
+came from, and an explicit **MUST_BE_RE_SOLVED** if the carrier changes; the move-35 price marked
+**DO_NOT_CARRY** with the reason (a −61 B container draw from a distribution of mean +0.1 B, sd 34.8 B); and a
+first-order cost model for an arithmetic coder — the move goes from a symbol with 892/4800 mass to one with
+2505/4800, so log2(2505/892) = **1.49 bits saved at order 0**, which is a prediction to re-encode against, not a
+number to trust.
+
+The arm's durable output is three laws (§0, §6, §13.2) plus an honest mechanism negative, not a distortion
+mechanism.
 
 ---
 
