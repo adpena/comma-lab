@@ -1248,7 +1248,130 @@ marginal.
 
 ---
 
-*(Section 20+ — the pass-5 decision and the renderer door — are
+## 20. PASS 5 — the CONTINUE/STOP arithmetic, PRE-REGISTERED (rising-price model)
+
+Written while the pass-4 T4 row is in flight, before anything is launched. The model
+changed because §19a falsified the old one: the marginal price RISES.
+
+### 20a. Inputs (all MEASURED)
+
+| pass | sites | repaired | frac | tokens | cells/tok | bits/tok | break-even |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 2a | 23,749 | 9,593 | 40.393% | 7,804 | 1.2292 | 6.2307 | 12.5197 |
+| 3 | 14,157 | 1,447 | 10.221% | 1,339 | 1.0807 | 5.3055 | 11.0063 |
+| 4 | 12,866 | 423 | 3.288% | 415 | **6.4000** | 1.0193 | 10.3812 |
+
+Ratios: repair fraction 0.2530 then **0.3217** (the decay is SLOWING); cells/token 0.8791
+then 0.9432; bits/token last step **×1.2063 — rising**, per the cheapest-repairs-first
+reading. The pose leg is taken as a **COST** in the central case (pass 4's full field
+measured **+1.043752e-04**), with the subset sweep's selection as the only credit.
+
+### 20b. Projection on the 12,614-cell shipped residual
+
+repair fraction **1.058%** → 133.4 cells; cells/token 0.9614 → 138.8 tokens; price
+**7.7203 bits/token** against a 9.7916 break-even (**margin 1.27×**, down from 1.62×);
+133.9 B.
+
+| composition | seg ΔS | rate ΔS | pose ΔS | **net** |
+|---|---:|---:|---:|---:|
+| **full 600-pair field** | −1.1308e-04 | +8.9162e-05 | **+3.4898e-05** | **+1.0977e-05 — POSITIVE** |
+| **Lagrange subset** | −6.7369e-05 | +3.8135e-05 | −1.1789e-05 | **−4.1022e-05** |
+
+**The full field FAILS outright.** Only the subset admits, at **3.30× the 1.242e-05 margin
+and 2.05× the −2e-05 bar**. The subset is modelled from pass 4's MEASURED subset structure:
+it kept 59.6% of cells but only 42.8% of tokens, i.e. **1.420 cells/token against the full
+field's 1.019** — the sweep picks the efficient pairs, and that is the entire source of the
+remaining margin.
+
+### 20c. The margin was under-specified, and this is the correction
+
+The 1.242e-05 margin was built from the projection-vs-T4 residual (5.27e-06) and the pose
+print band (7.14e-06). Those are **measurement** errors. Pass 4 showed the dominant term is
+**MODEL** error: projected −3.2352e-04, realized **−1.5046e-04** — a **1.7306e-04 miss,
+53% of the projection**, thirteen times the margin. A rule that compares a projection
+against a measurement-error margin is under-specified, and §15's "floor" case inherited
+that flaw.
+
+Carrying pass 4's own 53.5% band onto pass 5 gives **[−6.2968e-05, −1.9075e-05]**. The
+whole band clears the 1.242e-05 CONTINUE margin. But the **pessimistic end misses the
+−2e-05 admit bar** (0.95×), so pass 5 can fail its own admission after the search is spent.
+
+### 20d. VERDICT: CONTINUE, marginal, subset-only
+
+- central **−4.1022e-05**, band [−6.30e-05, −1.91e-05], CONTINUE margin cleared throughout;
+- **full-field composition must not be sealed** — it is projected POSITIVE;
+- convergence rule: **1.058%**, above the 1% bar but sitting ON it; pass 6 projects ~0.34%
+  and fires;
+- cost ≈ 0.9× pass 4's search (proposals per flipped cell keep rising) plus the chain;
+- pre-registered stop UNCHANGED: if the admission's total is not negative past the bar, no
+  candidate is built and no T4 row is bought.
+
+**Do not launch until MAIN confirms the pointer moved**: the pass-5 field must be proposed
+on the promoted tree's parse-back argmax, because the base changes on promotion.
+
+---
+
+## 21. The pass-4 residual census — 12,614 cells, and the reachable/unreachable split
+
+Measured with the §16 instrument on the SHIPPED parse-back (`argmax_n600.npy`) against the
+DALI GT and the shipped field `admission_pass4/field_admitted.npz`.
+
+### 21a. THE NEW COLUMN — what the search has already refused
+
+| | cells | share |
+|---|---:|---:|
+| **TOUCHED** — was a flip at pass-2a start, so all three passes enumerated proposals on it and rejected them | **11,285** | **89.46%** |
+| **BORN** — created by this arm's OWN edits; never a flip when the search enumerated | **1,329** | **10.54%** |
+| …of the BORN, created since the pass-3 row shipped | 52 | |
+| base flips now REPAIRED | 12,464 of 23,749 | **52.48%** |
+
+**Nearly nine tenths of the residual is not unexplored — it is explicitly refused.** Three
+passes proposed on those 11,285 cells at ~4.2 proposals each and every proposal lost the
+composite re-render test. That is the unreachable set for single-cell token pre-distortion,
+and it is what the renderer door inherits.
+
+The other tenth is **collateral this arm created**: 1,329 cells born from our own edits
+against 12,464 repaired — a **9.4 : 1** repair-to-collateral ratio. Honest but not free.
+
+### 21b. The §16 tables, one pass later
+
+| facet | pass-3 residual (12,866) | **pass-4 residual (12,614)** |
+|---|---:|---:|
+| token ALREADY == GT | 86.39% | **86.25%** |
+| one-pixel boundary displacement | 99.58% | **99.56%** |
+| on a GT class edge (enrichment) | 99.67% (46.1×) | **99.66% (46.1×)** |
+| Lane over-representation | 40.15× | **40.43×** |
+| Movable over-representation | 10.92× | **10.88×** |
+| rows 128–319 share | 100.00% | **100.00%** |
+| components / mean size | 11,859 / 1.08 | **11,635 / 1.08** |
+| **isolated singletons** | 86.55% | **93.92%** |
+| per-pair Gini | 0.2518 | **0.2494** |
+| pairs with zero residual | 0 | **0** |
+
+Everything holds — and the two facets that MOVED both say the same thing. **Singletons rose
+86.55% → 93.92%**: the search eats clusters first and leaves specks. **Gini fell again**:
+the residual keeps getting more uniform, never concentrating. There is still no clean pair
+and the minimum is still 4.
+
+### 21c. What the renderer door's charter should carry
+
+1. **12,614 cells, of which 11,285 (89.46%) have been proposed on and refused** by three
+   passes of single-cell search. Not a coverage gap — a capability limit.
+2. **86.25% have a CORRECT stored token and a wrong render.** No token code reaches them.
+3. **99.56% is one-pixel boundary jitter** on a codim-1 curve (99.66% on a GT edge, 46.1×
+   enriched). The lever that fits is sub-pixel boundary placement, not class capacity.
+4. **Lane 40.43× and Movable 10.88×**; Undrivable 0.37× and MyCar 0.13× are solved.
+5. **Rows 128–319 carry 100%.** Two thirds of the frame contributes nothing.
+6. **93.92% isolated singletons, mean component 1.08.** Any mechanism whose unit of repair
+   exceeds ~1 cell pays for coverage it cannot use.
+7. **Diffuse**: worst 100 of 600 pairs carry 30.60%, zero clean pairs. No per-pair
+   specialisation available.
+8. A composed successor must also not re-create collateral: pre-distortion currently runs
+   **9.4 repairs per cell it breaks**, and the broken ones land in the same fragile band.
+
+---
+
+*(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
