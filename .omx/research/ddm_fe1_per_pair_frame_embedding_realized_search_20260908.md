@@ -66,6 +66,10 @@ against embedding entries that never exceed 3.6. The lattice is coarse; a "small
   Receipt `probe/CONTROL.json`.
 * **Instrument agreement.** My render→SegNet argmax equals sj1's decode argmax **pixel for pixel** on pairs 0, 199, 599,
   and the flip counts match (33/33, 26/26, 23/23).
+* **Instrument agreement at scale, not on spot checks.** For every pair the n600 search has read, its base flip
+  count (computed from MY render → SegNet argmax) is compared against sj1's count from the receiver's DECODE
+  argmax. Over the first 97 searched pairs: **97 of 97 agree exactly**, 1,871 flips both ways. The realized
+  objective this arm accepts on is the one the shipped bytes produce.
 * **Base seg leg reproduced exactly** (five figures and beyond): **12,866 flipped cells,
   d_seg 0.00010906643337673611**, carried to T4 by sj1's own instrument ratio as 1.0913879636e-04.
   All 600 pairs carry flips; median 19, max 100. Receipt `probe/base_flips_per_pair.npy`.
