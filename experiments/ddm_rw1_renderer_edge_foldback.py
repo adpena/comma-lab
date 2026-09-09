@@ -2944,6 +2944,9 @@ def cmd_scale_search(args) -> int:
         param.requires_grad_(False)
     fold = CodeFoldBack(section, names, device)
     base_scales = {n: section.scales[n].astype(np.float16).copy() for n in names}
+    if str(args.rel_steps or "").strip():
+        # a relative sweep is not on the fp16 grid, so the base is carried in float32
+        base_scales = {n: section.scales[n].astype(np.float32).copy() for n in names}
     current = {n: base_scales[n].copy() for n in names}
 
     def apply(scales: dict[str, np.ndarray]) -> None:
@@ -2966,7 +2969,15 @@ def cmd_scale_search(args) -> int:
         model, fold, segnet, tokens, labels, device, screen
     )
     best = screen_null
-    steps = [int(v) for v in str(args.ulp_steps).split(",") if v.strip()]
+    # Two step families.  ULP steps are what the SHIPPED fp16 scales can express; REL
+    # steps are the continuous moves a wider mantissa would let the receiver carry, and
+    # the sizing sweep MEASURED that the productive window is rel in [1e-05, 7.09e-04]
+    # -- below it the render stops responding at all, above it the fp16 grid already is.
+    rel_steps = [float(v) for v in str(args.rel_steps or "").split(",") if v.strip()]
+    steps: list[float] = (
+        rel_steps if rel_steps else [int(v) for v in str(args.ulp_steps).split(",") if v.strip()]
+    )
+    step_kind = "relative" if rel_steps else "fp16_ulp"
     proposals = [(n, int(i)) for n in pool_names for i in range(base_scales[n].size)]
     rng.shuffle(proposals)
 
@@ -2980,10 +2991,20 @@ def cmd_scale_search(args) -> int:
             if evaluations >= int(args.max_evaluations):
                 break
             trial = {n: current[n].copy() for n in names}
-            moved = _fp16_step(trial[name][index : index + 1], k)
-            if moved[0] == trial[name][index]:
-                continue
-            trial[name][index] = moved[0]
+            if step_kind == "relative":
+                # NOT quantised to fp16: this is the move a wider-mantissa receiver
+                # would carry, and the search is measuring whether such a receiver is
+                # worth building.  The float32 forward expresses it exactly.
+                moved = np.float32(trial[name][index]) * np.float32(1.0 + k)
+                if np.float32(moved) == np.float32(trial[name][index]):
+                    continue
+                trial[name] = trial[name].astype(np.float32)
+                trial[name][index] = moved
+            else:
+                moved_arr = _fp16_step(trial[name][index : index + 1], int(k))
+                if moved_arr[0] == trial[name][index]:
+                    continue
+                trial[name][index] = moved_arr[0]
             apply(trial)
             flips = _evaluate_subset(
                 model, fold, segnet, tokens, labels, device, screen
@@ -3023,11 +3044,22 @@ def cmd_scale_search(args) -> int:
     changed = sum(int((current[n] != base_scales[n]).sum()) for n in names)
     code_edits = {n: section.codes[n] for n in names}
     priced_base = semantic_section_bytes(section, code_edits)
-    stream = section.stream_with_scales(code_edits, {n: current[n] for n in names})
-    priced = _price_stream(stream)
-    rate_bytes = priced["searched_bytes"] - priced_base["searched_bytes"]
+    if step_kind == "relative":
+        # A relative move is NOT an fp16 value, so it cannot be priced against the
+        # SHIPPED format at all -- doing so would silently round the candidate back to
+        # the fp16 grid and price a DIFFERENT object.  The rate for this family is the
+        # wider-mantissa format change, which is a receiver change and is priced
+        # separately by real builds; recorded as None rather than as a wrong number.
+        rate_bytes = None
+        priced = {"searched_bytes": None, "shipped_shape_bytes": None, "container": None}
+    else:
+        stream = section.stream_with_scales(code_edits, {n: current[n] for n in names})
+        priced = _price_stream(stream)
+        rate_bytes = priced["searched_bytes"] - priced_base["searched_bytes"]
     repaired = n600_null["flips"] - n600_final["flips"]
-    break_even_cells = rate_bytes * RATE_PER_BYTE / S_PER_SEG_CELL
+    break_even_cells = (
+        rate_bytes * RATE_PER_BYTE / S_PER_SEG_CELL if rate_bytes is not None else None
+    )
     result = {
         "schema": "ddm_rw1_scale_search.v1",
         "axis": f"[{args.device} research-signal; screened on a seeded RANDOM subset, "
@@ -3035,7 +3067,8 @@ def cmd_scale_search(args) -> int:
         "score_claim": False,
         "pointer": pointer,
         "tensors": list(pool_names),
-        "ulp_steps": steps,
+        "step_kind": step_kind,
+        "steps": steps,
         "screen_pairs": len(screen),
         "screen_null_flips": int(screen_null),
         "screen_best_flips": int(best),
@@ -3049,10 +3082,23 @@ def cmd_scale_search(args) -> int:
         "cells_repaired_n600": repaired,
         "rate_bytes_measured": rate_bytes,
         "rate_break_even_cells": break_even_cells,
+        "rate_note": (
+            "None for a relative sweep: the candidate is not an fp16 value, so pricing it "
+            "against the shipped format would round it back to the fp16 grid and price a "
+            "DIFFERENT object; the rate for this family is the wider-mantissa receiver "
+            "change, priced separately by 3-5 real builds (fe1's one-sample lottery, sd 34.8 B)"
+        ),
         "dS_seg": -repaired * S_PER_SEG_CELL,
-        "dS_rate": rate_bytes * RATE_PER_BYTE,
-        "dS_seg_plus_rate": -repaired * S_PER_SEG_CELL + rate_bytes * RATE_PER_BYTE,
-        "falsifier_fired": bool(repaired < break_even_cells),
+        "dS_rate": rate_bytes * RATE_PER_BYTE if rate_bytes is not None else None,
+        "dS_seg_plus_rate": (
+            -repaired * S_PER_SEG_CELL + rate_bytes * RATE_PER_BYTE
+            if rate_bytes is not None
+            else None
+        ),
+        "cells_repaired_is_the_verdict": repaired,
+        "falsifier_fired": (
+            bool(repaired < break_even_cells) if break_even_cells is not None else None
+        ),
         **_stake(-repaired),
         "rows": rows,
         "elapsed_seconds": time.perf_counter() - started,
@@ -3386,6 +3432,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--tensors", default="blocks.3.dw.weight,blocks.3.pw.weight"
     )
     scale.add_argument("--ulp-steps", default="-1,1,-2,2")
+    scale.add_argument("--rel-steps", default="")
     scale.add_argument("--screen-pairs", type=int, default=120)
     scale.add_argument("--max-evaluations", type=int, default=400)
     scale.add_argument("--seed", type=int, default=20260909)
