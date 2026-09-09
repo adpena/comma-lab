@@ -10,6 +10,27 @@ lane `ddm_sj1_t4_token_predistortion_pass3_20260906`, archive sha `06c44dc4…`.
 
 ---
 
+## VERDICT AT THE TOP — the mechanism this charter tested contributes NOTHING that survives
+
+Read this before any number below it. This arm was chartered to test **per-pair FiLM pre-distortion**: move a
+pair's `frame_embed` codes so the renderer places that pair's SegNet boundary better. It searched all 600 pairs
+under realized acceptance and it does not work on this body.
+
+* **18,624 of 18,906 single-code moves make d_seg WORSE** (median +6, max +59). The shipped codes sit at a per-pair
+  local minimum on 95% of pairs. The 3-bit lattice cannot express a small enough step.
+* Its first candidate cleared the bar, but its rate leg (−4.53e-05) was **2.3× its seg leg** (−1.95e-05).
+* After two further pointer moves (rc2→pc2→sj1 pass 4), **every FiLM leg collapsed**: 2 of 15 admitted pairs were
+  dropped because sj1 had already repaired them, and the 13 survivors are worth 20 cells that no byte draw rewards.
+
+**What ships under this arm's name is not the mechanism.** It is a single **zero-distortion** `frame_embed` code
+change on pair 331 — seg leg exactly **+0.000000e+00** — worth **−61 bytes**, found by the ITEM 5 probe whose own
+falsifier had already fired. Describing it as a pre-distortion result would be false, and the seal says so in its
+own falsifier list.
+
+The arm's durable output is three laws (§0, §6, §13.2), not a distortion mechanism.
+
+---
+
 ## 0. THE HEADLINE LAW — the renderer-coupling wall does NOT transfer to a per-pair change
 
 The renderer arms are closed on coupling: rf1 measured 166.8, ft1 217.3, and pr1 still sat 41.5× over the payable
@@ -641,11 +662,33 @@ this charter was written to test contributes nothing that survives.** What survi
 code change worth 61 bytes — a by-product found by the ITEM 5 probe whose own falsifier had fired. The candidate
 is now, in kind, a rate move; calling it a per-pair pre-distortion result would be false.
 
+## 15. The rebuild on cmp1's tree — the kill rule, pre-registered
+
+cmp1 changes the hpac section and the token tail under the same brotli container. §13.2's law says the container
+delta is a one-sample lottery over the perturbed payload, so **the draw RE-SAMPLES when the payload's neighbours
+change.** Pair 331's 61 bytes therefore have no claim to survive a re-deal, and this arm will not carry them:
+
+> **PRE-REGISTERED KILL RULE.** On cmp1's tree the move is re-priced by a REAL build. If the re-priced draw does
+> not clear the −2e-5 admit bar, **nothing ships** — the candidate closes with its three builds (neutral-alone,
+> best FiLM survivor, both together) recorded as the closed row's evidence. Shipping on the strength of the OLD
+> draw would be exactly the borrowed-number failure this campaign extincts.
+
+Wired as `experiments/ddm_fe1_cmp1_rebuild.py`, which returns rc=3 and ships nothing on a failed re-deal. It also
+refuses if cmp1 moved the semantic section, and refuses unless its null build reproduces cmp1's archive
+byte-identically before anything is priced.
+
+**Neutrality will be proven from the PARSE-BACK, not carried.** The candidate's own decode is measured over all
+600 pairs and its flipped-cell count must EQUAL cmp1's base exactly — a zero-distortion claim is only honest if
+the shipped bytes produce the base's own d_seg to the cell. The 21 → 21 re-verification on pass 4's field is
+evidence that the move is neutral; the parse-back on cmp1's shipped bytes is the proof.
+
 ## 12. Verdict
 
-**ADMITTED.** `ddm_fe1_frame_embedding_predistortion`, 181,305 B, sha `a0c33d7b…`, projected S
-**0.13874809002955826**, net ΔS **−7.517430361217436e-05** against pc2's 0.13882326433317044 — 3.8× the admit bar.
-SEAL VALID; MAIN fires.
+**SUPERSEDED by §14.** The pc2-era candidate below is kept as the historical row: 181,305 B, sha `a0c33d7b…`,
+projected S 0.13874809002955826, net ΔS −7.517430361217436e-05, SEAL VALID. Two pointer moves later its FiLM legs
+had collapsed and what survives is the zero-distortion move of §14, to be re-priced on cmp1's tree under the §15
+kill rule. **The mechanism this charter tested is closed at formulation scope; the arm ships a rate draw or it
+ships nothing.**
 
 Three findings outlast the candidate:
 
