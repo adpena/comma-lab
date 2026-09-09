@@ -271,8 +271,22 @@ def verify_shared_decode_sections() -> dict[str, Any]:
     """
     ra, _rc1, _renderer = import_live()
     live = ra.read_residual_archive(LIVE_ARCHIVE)
+    self_sourced = Path(SHARED_SECTION_SOURCE).resolve() == Path(LIVE_ARCHIVE).resolve()
+    if self_sourced:
+        # The raw is THIS tree's own parse-back, so there is no cross-tree reuse claim to
+        # validate and the comparison would be a self-comparison.  Returning a labelled
+        # no-op is the honest shape: a vacuous PASS counted as evidence is the failure
+        # this check exists to prevent, not one it should commit ([[m50]]).
+        return {
+            "self_sourced": True,
+            "raw_source_tree": str(SHARED_SECTION_SOURCE),
+            "reading": (
+                "LIVE_RAW is this tree's OWN decode; no section-identity claim is being "
+                "made or needed, and none is reported as evidence"
+            ),
+        }
     source = ra.read_residual_archive(SHARED_SECTION_SOURCE)
-    report: dict[str, Any] = {}
+    report: dict[str, Any] = {"self_sourced": False}
     mismatched = []
     for field in SHARED_SECTIONS:
         same = bytes(getattr(live, field)) == bytes(getattr(source, field))
