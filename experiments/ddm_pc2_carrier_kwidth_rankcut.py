@@ -132,7 +132,82 @@ def assert_pointer_unmoved() -> dict[str, Any]:
 
 
 
-def rebase_to(runtime: Path) -> dict[str, Any]:
+
+def _materialized_hpac(tree: Path, hpac_blob: bytes) -> bytes:
+    """The HPAC object the RENDERER receives, past every section rider.
+
+    ``read_residual_archive`` hands back the hpac SECTION BODY, which is upstream
+    of the rc1/rc2 riders -- they are undone at the renderer seam in
+    ``ihs2.materialize_ihs1``.  Comparing two bodies at the section layer
+    therefore reports a difference that does not exist downstream, which is
+    exactly the trap ddm_pc1 section 7b recorded.  This reads at the seam.
+    """
+    tree = Path(tree).resolve()
+    (ihs2,) = import_receiver(tree, ("ihs2",))
+    # ``layout_from_runtime`` wants the CPR1 RENDERER module (it builds an
+    # IntegerHPAC shell from it), which is what f26_inflate passes as `runtime`.
+    sys.path.insert(0, str(tree))
+    sys.path.insert(0, str(tree / "cpr1"))
+    try:
+        import inflate as renderer_module  # type: ignore[import-not-found]
+    finally:
+        sys.path.pop(0)
+        sys.path.pop(0)
+    origin = Path(getattr(renderer_module, "__file__", "")).resolve()
+    if tree not in origin.parents:
+        raise Pc2Error(f"cpr1 inflate loaded from {origin}, not from {tree}")
+    return bytes(ihs2.materialize_ihs1(bytes(hpac_blob), renderer_module))
+
+
+def decoded_section_identity(left: Path, right: Path) -> dict[str, Any]:
+    """Do two bodies RENDER the same frames? Compared after every restore.
+
+    The stored streams are the wrong place to ask.  ``ddm_rc1``'s rider recodes a
+    model section losslessly, so the STORED bytes differ while the RESTORED bytes
+    do not, and pc1 section 7b records exactly this trap: a byte comparison one
+    stage upstream of a lossless restore reports a difference that does not exist
+    downstream.  So each body is walked through the receiver's own restore and the
+    DECODED objects are compared: the carrier (which makes frame_0), the semantic
+    renderer, the token tail and the HPAC model (which make frame_1).
+    """
+    fields: dict[str, Any] = {}
+    decoded: dict[str, dict[str, str]] = {}
+    for label, tree in (("left", Path(left)), ("right", Path(right))):
+        body = load_body(tree)
+        (ra,) = import_receiver(tree, ("residual_archive",))
+        parts = ra.read_residual_archive(Path(tree) / "archive.zip")
+        decoded[label] = {
+            "carrier_body": _sha256(bytes(body.carrier_body)),
+            "carrier_codes": _sha256(np.asarray(body.codes, dtype=np.int32).tobytes()),
+            "carrier_scales": _sha256(bytes(body.scales)),
+            "carrier_basis": _sha256(bytes(body.basis_blob)),
+            "section_tail": _sha256(bytes(body.section_tail)),
+            "decoded_carrier_blob": _sha256(bytes(parts.carrier_blob)),
+            "decoded_semantic_blob": _sha256(bytes(parts.semantic_blob)),
+            "decoded_hpac_blob": _sha256(bytes(parts.hpac_blob)),
+            "materialized_hpac": _sha256(_materialized_hpac(tree, parts.hpac_blob)),
+        }
+    for key in decoded["left"]:
+        fields[key] = decoded["left"][key] == decoded["right"][key]
+    # frame_0 comes from the carrier; frame_1 from the semantic renderer driven by
+    # the token tail and the HPAC model.  All four must survive their restores.
+    render_keys = (
+        "decoded_carrier_blob",
+        "decoded_semantic_blob",
+        "materialized_hpac",
+        "section_tail",
+    )
+    return {
+        "left": str(left),
+        "right": str(right),
+        "fields": fields,
+        "left_digests": decoded["left"],
+        "right_digests": decoded["right"],
+        "renders_are_the_same_object": all(fields[k] for k in render_keys),
+    }
+
+
+def rebase_to(runtime: Path, *, donor_raw_from: Path | None = None) -> dict[str, Any]:
     """Re-point this module at a NEW pointer tree, reading every number off disk.
 
     sj1 and this arm work the same object, so whoever lands second re-bases.  A
@@ -159,12 +234,36 @@ def rebase_to(runtime: Path) -> dict[str, Any]:
         )
     raw = runtime.parent / "parseback" / "0.raw"
     if not raw.is_file():
-        raise Pc2Error(
-            f"no raw decode beside the new tree ({raw}); the solver needs its "
-            "frame_1 planes and will not silently reuse another body's"
-        )
+        if donor_raw_from is None:
+            raise Pc2Error(
+                f"no raw decode beside the new tree ({raw}); the solver needs its "
+                "frame_1 planes and will not silently reuse another body's. Pass "
+                "--donor-raw-from <tree> to reuse a donor's decode; it is accepted "
+                "only if the two bodies are PROVEN to render the same frames."
+            )
+        donor = Path(donor_raw_from).resolve()
+        raw = donor.parent / "parseback" / "0.raw"
+        if not raw.is_file():
+            raise Pc2Error(f"donor tree has no raw decode either: {raw}")
+        identity = decoded_section_identity(donor, runtime)
+        if not identity["renders_are_the_same_object"]:
+            raise Pc2Error(
+                "the donor's decode may NOT be reused: "
+                f"{json.dumps(identity, indent=2)}"
+            )
     POINTER_RUNTIME = runtime
     POINTER_RAW = raw
+    # Prove the re-base REACHED the readers.  Python binds default arguments at
+    # definition time, so a module global reassigned here does not by itself move
+    # anything; this arm shipped exactly that bug once and the r=12 identity
+    # control is what caught it.  Re-parsing through the public entry point and
+    # checking the sha is the control that keeps it caught.
+    reached = load_body()
+    if _sha256(bytes(reached.archive_bytes)) != measured_sha:
+        raise Pc2Error(
+            "re-base did NOT reach the body readers: load_body() still returns "
+            f"{_sha256(bytes(reached.archive_bytes))[:16]}, not {measured_sha[:16]}"
+        )
     POINTER_ARCHIVE_SHA256 = measured_sha
     POINTER_ARCHIVE_BYTES = measured_bytes
     POINTER_SCORE = float(live["score"])
@@ -246,7 +345,7 @@ def break_even_d_pose(*, delta_bytes: int, d_pose_base: float) -> float:
 # --------------------------------------------------------------------------- #
 # The carrier body, its energy ordering, and the rank-cut construction
 # --------------------------------------------------------------------------- #
-def load_body(runtime: Path = POINTER_RUNTIME):
+def load_body(runtime: Path | None = None):
     """Parse a body through ``up3``, with the receiver module cache purged first.
 
     ``up3._import_runtime`` and ``up2.load_carrier_state`` both import
@@ -255,7 +354,7 @@ def load_body(runtime: Path = POINTER_RUNTIME):
     the KW1 patch-inertness control a false pass.
     """
     _purge_receiver_modules()
-    return up3.parse_shipped_body(runtime, verify_sha=False)
+    return up3.parse_shipped_body(runtime or POINTER_RUNTIME, verify_sha=False)
 
 
 def load_state(runtime: Path):
@@ -308,9 +407,9 @@ def detect_container_shape(body, runtime: Path) -> tuple[bool, int, int]:
     )
 
 
-def basis_symbols(body, runtime: Path = POINTER_RUNTIME) -> np.ndarray:
+def basis_symbols(body, runtime: Path | None = None) -> np.ndarray:
     """The 27,648 five-bit basis symbols, decoded through the receiver's table."""
-    (rr5,) = import_receiver(runtime, ("rr5_arith_basis",))
+    (rr5,) = import_receiver(runtime or POINTER_RUNTIME, ("rr5_arith_basis",))
     return np.asarray(
         rr5.huffman_decode(
             body.lengths.astype(np.uint8),
@@ -1639,7 +1738,7 @@ def run_smoke(args) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     candidate = Path(args.candidate_runtime)
-    frontier = Path(args.frontier_runtime)
+    frontier = Path(args.frontier_runtime or POINTER_RUNTIME)
     # BOUND TRAP.  The validator refuses ``seconds > public_path_probe_seconds``,
     # and a probe that hits its subprocess timeout records
     # ``elapsed = timeout + epsilon``.  Declaring the same number for both would
@@ -2064,9 +2163,22 @@ def run_scales_candidate(args) -> int:
     state = load_state(POINTER_RUNTIME)
     coefficient_scales = state.coefficient_scales.double().numpy()
     scales_block = scales_block_with(np.ones(CARRIER_DIM), coefficient_scales)
+    codes = np.asarray(body.codes, dtype=np.int32)
+    resolve_rows = 0
+    if args.codes_npz:
+        # ITEM 1's re-solved codes, folded into the SAME candidate so the pair
+        # ships as one seal.  The codes must be a strict refinement of this
+        # body's own: same shape, same lattice, and every changed coordinate
+        # accepted by realized evaluation in the solver that produced them.
+        payload = np.load(args.codes_npz)
+        solved = np.asarray(payload["codes"], dtype=np.int32)
+        if solved.shape != codes.shape:
+            raise Pc2Error(f"solved codes are {solved.shape}, expected {codes.shape}")
+        resolve_rows = int((solved != codes).sum())
+        codes = solved
     built = build_kw1_archive(
         body,
-        codes=np.asarray(body.codes),
+        codes=codes,
         symbols=symbols,
         biases=np.asarray(body.biases, dtype=np.int64),
         runtime=staged,
@@ -2077,7 +2189,7 @@ def run_scales_candidate(args) -> int:
     )
     twin = build_kw1_archive(
         body,
-        codes=np.asarray(body.codes),
+        codes=codes,
         symbols=symbols,
         biases=np.asarray(body.biases, dtype=np.int64),
         runtime=staged,
@@ -2099,7 +2211,8 @@ def run_scales_candidate(args) -> int:
     report = {
         "arm": "ddm_pc2",
         "item": 1,
-        "candidate": "ddm_pc2_carrier_kwidth_rankcut",
+        "candidate": args.candidate_id,
+        "coordinates_changed_by_resolve": resolve_rows,
         "archive_bytes": built["archive_size"],
         "archive_sha256": built["archive_sha256"],
         "delta_bytes": delta,
@@ -2137,6 +2250,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="re-base onto a NEW pointer tree; its archive sha and size are "
         "measured from the bytes and must match the live canonical pointer",
+    )
+    parser.add_argument(
+        "--donor-raw-from",
+        default=None,
+        help="reuse this tree's raw decode when the new pointer tree has none; "
+        "accepted ONLY if the two bodies are MEASURED to render the same frames "
+        "(decoded carrier, semantic, HPAC and token tail all identical)",
     )
     sub = parser.add_subparsers(dest="mode", required=True)
 
@@ -2194,7 +2314,11 @@ def build_parser() -> argparse.ArgumentParser:
     smoke = sub.add_parser("smoke", help="the seal's public-entrypoint smoke PAIR")
     smoke.add_argument("--out", required=True)
     smoke.add_argument("--candidate-runtime", required=True)
-    smoke.add_argument("--frontier-runtime", default=str(POINTER_RUNTIME))
+    # LATE-BOUND on purpose.  A default captured here would freeze the pointer
+    # tree at parser-build time, which is BEFORE --pointer-runtime re-bases the
+    # module -- the same early-binding trap that made a "re-based" build come out
+    # byte-identical to the old body (caught by the r=12 identity control).
+    smoke.add_argument("--frontier-runtime", default=None)
     smoke.add_argument(
         "--bound-seconds",
         type=float,
@@ -2252,6 +2376,14 @@ def build_parser() -> argparse.ArgumentParser:
     candidate.add_argument("--out", default=str(WORK / "candidate_scales"))
     candidate.add_argument("--base-d-pose", type=float, required=True)
     candidate.add_argument("--d-pose-new", type=float, required=True)
+    candidate.add_argument(
+        "--codes-npz",
+        default=None,
+        help="fold ITEM 1's re-solved codes into the same candidate (npz with 'codes')",
+    )
+    candidate.add_argument(
+        "--candidate-id", default="ddm_pc2_carrier_kwidth_rankcut"
+    )
     candidate.set_defaults(func=run_scales_candidate)
     return parser
 
@@ -2259,7 +2391,16 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if getattr(args, "pointer_runtime", None):
-        print(json.dumps(rebase_to(Path(args.pointer_runtime)), indent=2))
+        donor = getattr(args, "donor_raw_from", None)
+        print(
+            json.dumps(
+                rebase_to(
+                    Path(args.pointer_runtime),
+                    donor_raw_from=Path(donor) if donor else None,
+                ),
+                indent=2,
+            )
+        )
     return int(args.func(args))
 
 

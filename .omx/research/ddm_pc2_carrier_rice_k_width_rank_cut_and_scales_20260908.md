@@ -437,10 +437,76 @@ puts columns at genuinely different `k` now has a 43-byte block that can express
 at the next carrier lever before that lever is designed around a two-value `k` constraint that no
 longer exists.
 
+## 12. Re-based onto rc2 (33rd move), and ITEM 1 measured FREE
+
+MAIN moved the pointer to rc2 mid-arm: `S 0.13885056455024844 @ 181,414 B`, sha `c810c2c7…`, lane
+`ddm_rc2_t4_hpac_semistatic_mixing_20260909`. Only the HPAC model section and its reader changed.
+
+**ITEM 1 (pc1's owed ITEM 4) — the zero-byte 40-round re-solve, MEASURED at n600.**
+
+| | value |
+|---|---|
+| start d_pose n600 (scales=1.0 body, shipped codes) | 5.0939863022125565e-06 |
+| final d_pose n600 (40-round `refine_pair`) | **5.0901316014139157e-06** |
+| pairs improved | **9 of 600** |
+| coordinates changed | **17 of 7,200** |
+| stop reasons | 581 `no_improving_step`, 19 `lattice_floor` |
+| mean evaluations per pair | 56.8 |
+| **byte cost, MEASURED by building the archive** | **exactly 0 B** (181,373 B either way) |
+| dS from the re-solve | **-2.70093401594923e-06**, pure gain |
+
+**This closes pc1's open attribution confound.** pc1 asked whether V3's pose gain was "the coarser
+lattice is free" or "more solving helps", and could not tell. Measured here on the live body: 40
+rounds of the same solver on the shipped lattice move **17 of 7,200 coordinates** and win 0.076% of
+d_pose. More solving contributes essentially nothing — **the lattice was doing the work.** The shipped
+codes are already a `refine_pair` fixed point, which is also why the re-solve is cheap (56.8
+evaluations per pair against 400+ for a rank cut).
+
+**Does rc2 render the same frames as the pass-3 tree? MEASURED, at the right layer.** rc2 has no raw
+decode of its own, so reusing pass-3's had to be earned rather than assumed:
+
+| object | identical? |
+|---|---|
+| decoded carrier blob / codes / scales / basis | yes |
+| decoded semantic blob | yes |
+| section tail (token stream) | yes |
+| decoded HPAC **section body** | **no** |
+| **materialized HPAC at the renderer seam** (`ihs2.materialize_ihs1`) | **yes** |
+
+The section body differs and the materialized object does not — pc1 section 7b's trap, hit live and
+resolved by reading one stage further in. The donor decode is admissible on that proof, and the guard
+refuses without it.
+
+**The composed candidate, on rc2:**
+
+| | value |
+|---|---|
+| archive | **181,373 B** (-41 B), sha `e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372` |
+| receiver | SHIPPED, unmodified — reserved `0x7a`, no KW1 bit, no patch |
+| dS rate / pose / **net** | -2.7300217e-05 / -1.8446260e-06 / **-2.914484310771451e-05** |
+| **verdict** | **ADMIT** — clears the -2e-05 bar by 1.46x |
+
+    SEAL READY
+      /Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut/SEAL_ddm_pc2_carrier_scales_resolve.json
+      candidate  ddm_pc2_carrier_scales_resolve  [contest_cuda]  SEAL_VALID
+      archive    181,373 B  sha e138ee097905902a…
+      runtime    44 files, 957,202 B, digest 1ac22023dcf201aa…
+      seal sha   874d75777b5f2244b950f2c15cf1562ace60a306ec699e6f286415520bb07513
+      admit bar  net dS < -2e-05 vs contest_cuda 0.13885056 (tolerance 0)
+
+**A re-base bug the identity control caught, worth keeping.** Python binds default arguments at
+DEFINITION time, so `load_body(runtime=POINTER_RUNTIME)` kept the old tree after `rebase_to`
+reassigned the global: the first "re-based" build came out byte-identical to the pass-3 candidate
+(`6d3717cf`, +190 B against rc2). The r = 12 identity control is what surfaced it. Every pointer
+default is now late-bound, and `rebase_to` ends by re-parsing through the public entry point and
+refusing unless the sha it gets back is the new pointer's — a re-base that does not reach the readers
+now fails closed instead of shipping the wrong body.
+
 ## Frontier
 
-    sj1  S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]   <- the live pointer, unmoved
+    rc2  S 0.13885056455024844 @ 181,414 B [contest-CUDA T4 n600]   <- the live pointer (33rd move)
+    sj1  S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]   <- the base this arm solved on
 
-    ddm_pc2 ITEM 1 candidate (ADVISORY, score_claim=false, promotable=false):
-      S 0.13897793405941966 @ 181,604 B  [macOS-CPU advisory projection: measured d_pose n600
-      cpu_torch + exact archive bytes + d_seg carried from the sj1 T4 row]
+    ddm_pc2 candidate (ADVISORY, score_claim=false, promotable=false):
+      S 0.13882141970714073 @ 181,373 B  [macOS-CPU advisory projection: measured d_pose n600
+      cpu_torch + exact archive bytes + d_seg carried from the rc2 T4 row]
