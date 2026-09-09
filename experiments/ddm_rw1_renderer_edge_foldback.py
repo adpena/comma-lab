@@ -184,6 +184,24 @@ CENSUS_CLASS_SHARES = {  # GT-side share of the 12,866 residual cells
 }
 
 
+#: The sub-0.12 target the whole campaign is aimed at.  Every verdict this module emits
+#: carries BOTH the score delta AND its share of the remaining gap, because a magnitude
+#: without its relative significance is not a verdict (MAIN, 2026-09-09).
+TARGET_SCORE = 0.12
+
+
+def _stake(cells: int) -> dict[str, float]:
+    """Score stake of ``cells`` flipped cells, absolutely and as a share of the gap."""
+    gap = LIVE_SCORE_T4 - TARGET_SCORE
+    delta = cells * S_PER_SEG_CELL
+    return {
+        "dS": delta,
+        "dS_share_of_gap_to_target": delta / gap if gap else float("nan"),
+        "gap_to_target": gap,
+        "operating_point_S": LIVE_SCORE_T4,
+    }
+
+
 class Rw1Error(RuntimeError):
     """A ddm_rw1 precondition failed.  Always fail closed."""
 
@@ -2537,13 +2555,36 @@ def cmd_gradient_topk(args) -> int:
     base_flat = np.concatenate(
         [np.asarray(section.codes[n], dtype=np.int64).ravel() for n in names]
     )
-    order = np.argsort(-np.abs(flat_grad))
+    # RANKING is the thing under test, not a detail.  ``abs_desc`` is the textbook
+    # first-order choice; this arm MEASURED it to be the worst possible one (the
+    # highest-|gradient| codes are 20-35x more destructive than random to move by one
+    # int4 step, because the linearisation is most invalid exactly where the gradient is
+    # largest).  ``abs_asc`` and ``band`` test the ranking the AdamW run's own behaviour
+    # implies: it beat random by selecting codes with SMALL, PERSISTENT gradients.
+    magnitude = np.abs(flat_grad)
+    ranking = str(args.rank)
+    if ranking == "abs_desc":
+        order = np.argsort(-magnitude)
+    elif ranking == "abs_asc":
+        nonzero = np.flatnonzero(magnitude > 0)
+        order = nonzero[np.argsort(magnitude[nonzero])]
+    elif ranking.startswith("band:"):
+        lo_pct, hi_pct = (float(v) for v in ranking.split(":", 1)[1].split(","))
+        lo, hi = np.percentile(magnitude, [lo_pct, hi_pct])
+        inside = np.flatnonzero((magnitude >= lo) & (magnitude <= hi))
+        order = inside[np.argsort(-magnitude[inside])]
+    else:
+        raise Rw1Error(
+            f"unknown --rank {ranking!r}; use abs_desc, abs_asc or band:<lo_pct>,<hi_pct>"
+        )
     grad_time = time.perf_counter() - started
 
     with torch.no_grad():
         null = _evaluate_realized(model, fold, segnet, tokens, labels, device)
     rows = []
     for k in [int(v) for v in str(args.k).split(",") if v.strip()]:
+        if k > order.size:
+            continue
         picked = order[:k]
         perturbed = base_flat.copy()
         # ONE step DOWN the gradient: a positive dL/dcode wants the code smaller.
@@ -2572,6 +2613,7 @@ def cmd_gradient_topk(args) -> int:
                 "cells_per_code": (evaluation["flips"] - null["flips"]) / max(changed, 1),
                 "rate_bytes_predicted": BYTES_PER_CHANGED_CODE * changed
                 + (CONTAINER_BREAK_FIXED_BYTES if changed else 0.0),
+                **_stake(evaluation["flips"] - null["flips"]),
             }
         )
         print(json.dumps(rows[-1]), flush=True)
@@ -2582,6 +2624,8 @@ def cmd_gradient_topk(args) -> int:
         "score_claim": False,
         "pointer": pointer,
         "tau": tau,
+        "rank": ranking,
+        "ranked_pool": int(order.size),
         "null_flips_same_path": null["flips"],
         "device_gap_vs_cpu_instrument": null["flips"] - LIVE_D_SEG_CELLS,
         "gradient_seconds": grad_time,
@@ -2738,6 +2782,7 @@ def build_parser() -> argparse.ArgumentParser:
     topk.add_argument("--batch", type=int, default=4)
     topk.add_argument("--tau", type=float, default=TAU_REFERENCE)
     topk.add_argument("--k", default="1,4,16,64,256")
+    topk.add_argument("--rank", default="abs_desc")
     topk.add_argument("--seed", type=int, default=20260909)
     topk.add_argument("--progress", action="store_true", default=True)
     common(topk)
