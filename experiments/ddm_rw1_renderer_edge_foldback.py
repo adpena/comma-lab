@@ -60,6 +60,7 @@ import argparse
 import hashlib
 import importlib
 import json
+import math
 import os
 import sys
 import time
@@ -619,6 +620,1064 @@ def cmd_section(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=prep -- the per-pair pose geometry the in-loop term needs, measured ONCE
+# ----------------------------------------------------------------------------------
+
+
+def _carrier_reach_budget(codes: np.ndarray) -> np.ndarray:
+    """How far each pair's twelve codes can move before the int12 lattice ends.
+
+    ``COEFF_CODE_MIN/MAX`` are the shipped signed-int12 bounds (up2:68).  The
+    re-solve's correcting step is only realisable inside them, so this is the
+    physical reach the in-loop pose barrier is written against -- not a tuned number.
+    """
+    low = codes.astype(np.float64) - up2.COEFF_CODE_MIN
+    high = up2.COEFF_CODE_MAX - codes.astype(np.float64)
+    return np.minimum(low, high).min(axis=1)
+
+
+def cmd_prep(args) -> int:
+    """Per-pair pose geometry: base pose, target, Jacobian, re-solve operator, floor.
+
+    ``up2.jacobian_and_residual`` returns the 6x12 map from the pair's twelve carrier
+    coefficients to its six scored pose dimensions.  Twelve knobs against six
+    constraints is generically SURJECTIVE, so the min-image-norm re-solve
+
+        dc = G^-1 J^T (J G^-1 J^T)^-1 (-dr)
+
+    cancels ANY first-order pose residual a render change produces.  What it cannot
+    do is leave the lattice, so this stage stores (a) ``A = dc/dr`` in CODE units --
+    the operator the in-loop reach barrier uses -- and (b) the closed-form
+    LATTICE FLOOR, the d_pose that survives after a perfect re-solve because the
+    realised codes are rounded.  The floor is a PREDICTION of the post-re-solve pose
+    leg, written before any training step.
+    """
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    state = up2.load_carrier_state(LIVE_TREE, verify_archive=False)
+    targets, lineage = up2.load_gt_poses(GT_CACHE_DALI)
+    up2.verify_gt_lineage(axis="contest_cuda", declared_lineage=lineage)
+    posenet = up2.load_posenet()
+    up2.enable_posenet_gradients()
+    raw = up2.open_raw(LIVE_RAW, verify_sha=False)
+
+    import ddm_br1_pose_basis_reorientation as br1
+
+    blow = br1.low_basis(state)
+    gram, _bmat = br1.span_gram(blow)
+    gram = gram.double()
+    ginv = torch.linalg.inv(gram)
+    scales = state.coefficient_scales.double().numpy()  # (12,)
+
+    pairs = np.arange(N_PAIRS, dtype=np.int64)
+    batch = int(args.batch)
+    jac_all = np.zeros((N_PAIRS, up2.POSE_DIMS, CARRIER_DIM), dtype=np.float64)
+    pose_all = np.zeros((N_PAIRS, up2.POSE_DIMS), dtype=np.float64)
+    for start in range(0, N_PAIRS, batch):
+        index = pairs[start : start + batch]
+        frame1 = up2.frames_to_bchw(raw[2 * index + 1])
+        coeff = state.coefficients[index]
+        tb = torch.from_numpy(targets[index]).float()
+        jac, _res, pose = up2.jacobian_and_residual(
+            posenet, state, coeff, frame1, tb, index
+        )
+        jac_all[index] = jac.double().numpy()
+        pose_all[index] = pose.double().numpy()
+        if args.progress:
+            print(
+                f"prep jacobian {min(start + batch, N_PAIRS)}/{N_PAIRS} "
+                f"in {time.perf_counter() - started:.1f}s",
+                flush=True,
+            )
+
+    # A maps a pose residual dr to the min-image-norm carrier step in CODE units.
+    a_all = np.zeros((N_PAIRS, CARRIER_DIM, up2.POSE_DIMS), dtype=np.float64)
+    rank_deficient = []
+    floor = np.zeros(N_PAIRS, dtype=np.float64)
+    ginv_np = ginv.numpy()
+    for pair in range(N_PAIRS):
+        jac = jac_all[pair]
+        middle = jac @ ginv_np @ jac.T
+        if np.linalg.matrix_rank(middle, tol=1e-12) < up2.POSE_DIMS:
+            rank_deficient.append(int(pair))
+            operator = np.zeros((CARRIER_DIM, up2.POSE_DIMS))
+        else:
+            operator = ginv_np @ jac.T @ np.linalg.inv(middle)
+        a_all[pair] = operator / scales[:, None]
+        # Lattice floor: after a perfect re-solve the realised codes are rounded, so a
+        # uniform +-0.5-code error remains.  E||J d||^2 / 6 with d ~ U(-.5,.5)*scales
+        # per coefficient and independent components gives (1/12)*scales^2 per dim.
+        floor[pair] = float(
+            ((jac * scales[None, :]) ** 2).sum() / 12.0 / up2.POSE_DIMS
+        )
+
+    reach = _carrier_reach_budget(np.asarray(state.codes))
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        out_dir / "pose_geometry.npz",
+        jacobian=jac_all.astype(np.float32),
+        resolve_operator_codes=a_all.astype(np.float32),
+        pose_base=pose_all.astype(np.float32),
+        targets=np.asarray(targets, dtype=np.float32),
+        coefficient_scales=scales.astype(np.float32),
+        codes=np.asarray(state.codes, dtype=np.int32),
+        reach_budget=reach.astype(np.float32),
+        lattice_floor=floor.astype(np.float32),
+    )
+    d_pose_base = float(((pose_all - targets) ** 2).mean(axis=1).mean())
+    result = {
+        "schema": "ddm_rw1_prep.v1",
+        "axis": "[cpu_torch fp32 authority, n600; pose geometry]",
+        "score_claim": False,
+        "pointer": pointer,
+        "pairs": N_PAIRS,
+        "gt_lineage": lineage,
+        "d_pose_base_recomputed": d_pose_base,
+        "d_pose_base_live_receipt": LIVE_D_POSE,
+        "d_pose_base_relative_error": abs(d_pose_base - LIVE_D_POSE)
+        / max(LIVE_D_POSE, 1e-30),
+        "rank_deficient_pairs": rank_deficient,
+        "reach_budget_codes": {
+            "min": float(reach.min()),
+            "median": float(np.median(reach)),
+            "max": float(reach.max()),
+        },
+        "lattice_floor_d_pose": {
+            "mean": float(floor.mean()),
+            "median": float(np.median(floor)),
+            "max": float(floor.max()),
+            "over_base": float(floor.mean() / LIVE_D_POSE),
+        },
+        "prediction_post_resolve_d_pose_floor": float(floor.mean()),
+        "prediction_post_resolve_pose_leg_S": float(
+            math.sqrt(10.0 * floor.mean())
+        ),
+        "live_pose_leg_S": float(math.sqrt(10.0 * LIVE_D_POSE)),
+        "geometry_path": str(out_dir / "pose_geometry.npz"),
+        "geometry_sha256": sha256_file(out_dir / "pose_geometry.npz"),
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    receipt = Path(args.out)
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps(result, indent=1, sort_keys=True))
+    return 0
+
+
+# ----------------------------------------------------------------------------------
+# mode=train -- the joint fold-back, in the shipped int4 code domain
+# ----------------------------------------------------------------------------------
+#: The reference temperature every reported surrogate is read at.  sd1 measured that an
+#: annealing tau DEFLATES the surrogate, so a loss curve read at the live tau is not a
+#: curve of the same quantity twice
+#: (``tau_anneal_deflates_the_surrogate_read_losses_at_fixed_tau_20260904``).
+TAU_REFERENCE = 0.10
+TAU_START, TAU_END = 0.15, 0.05
+
+
+def _ste_round(value):
+    import torch
+
+    return value + (torch.round(value) - value).detach()
+
+
+def _ste_uint8(value):
+    """clamp(0,255) then round, with a straight-through gradient.
+
+    This is the receiver's own ``clamp(0.0, 255.0).round()`` at
+    ``cpr1/inflate.py:322-323``; the STE only supplies the gradient the round does
+    not have.
+    """
+    import torch
+
+    clamped = value.clamp(0.0, 255.0)
+    return clamped + (torch.round(clamped) - clamped).detach()
+
+
+class CodeFoldBack:
+    """The trainable object: signed int4 codes with the SHIPPED scales frozen."""
+
+    def __init__(self, section, names, device):
+        import torch
+
+        self.names = tuple(names)
+        self.device = device
+        self.base_codes = {
+            name: torch.from_numpy(
+                np.asarray(section.codes[name], dtype=np.float32)
+            ).to(device)
+            for name in self.names
+        }
+        self.scales = {}
+        for name in self.names:
+            run = section.runs[name]
+            scale_shape = [1] * len(run.shape)
+            scale_shape[0] = section.scales[name].size
+            self.scales[name] = (
+                torch.from_numpy(section.scales[name].astype(np.float32))
+                .reshape(scale_shape)
+                .to(device)
+            )
+        self.latent = {
+            name: torch.nn.Parameter(self.base_codes[name].clone())
+            for name in self.names
+        }
+
+    def parameters(self):
+        return list(self.latent.values())
+
+    def codes(self, latent=None):
+        import torch
+
+        latent = latent or self.latent
+        return {
+            name: torch.clamp(_ste_round(latent[name]), CODE_MIN, CODE_MAX)
+            for name in self.names
+        }
+
+    def weights(self, latent=None):
+        codes = self.codes(latent)
+        return {name: codes[name] * self.scales[name] for name in self.names}
+
+    def realized_codes(self, latent=None) -> dict[str, np.ndarray]:
+        import torch
+
+        latent = latent or self.latent
+        with torch.no_grad():
+            return {
+                name: torch.clamp(torch.round(latent[name]), CODE_MIN, CODE_MAX)
+                .to("cpu")
+                .numpy()
+                .astype(np.int64)
+                for name in self.names
+            }
+
+    def changed_codes(self, latent=None) -> int:
+        realized = self.realized_codes(latent)
+        total = 0
+        for name in self.names:
+            base = self.base_codes[name].to("cpu").numpy().astype(np.int64)
+            total += int((realized[name] != base).sum())
+        return total
+
+
+def _render_eval(model, fold, tokens_batch, index_batch, latent=None):
+    """The renderer's (b, 3, 384, 512) output with the folded-back weights."""
+    from torch.func import functional_call
+
+    overrides = fold.weights(latent)
+    return functional_call(model, overrides, (tokens_batch, index_batch))
+
+
+def _exact_r_camera(frame_eval):
+    """EVAL -> camera, exactly the receiver's bilinear + clamp/round, STE gradient."""
+    import torch.nn.functional as functional
+
+    up = functional.interpolate(
+        frame_eval, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False
+    )
+    return _ste_uint8(up)
+
+
+def _seg_logits(segnet, camera_bchw):
+    """SegNet logits through the evaluator's own preprocess (modules.py:105-107)."""
+    return segnet(segnet.preprocess_input(camera_bchw.unsqueeze(1)))
+
+
+def _expected_flip(logits, labels, tau: float):
+    """``sigmoid(-margin / tau)`` -- the expected-flip surrogate for d_seg.
+
+    ``margin = gt_logit - max(other logit)``.  It needs no band mask and no class
+    weight: the sigmoid is already the at-risk selector (a confident cell contributes
+    ~0), and one flipped cell costs the SAME 8.477e-07 S whatever its class, so a
+    per-class multiplier would optimise a different objective than S.  The census's
+    Lane 40.15x / Movable 10.92x enrichment is therefore a DIAGNOSTIC here, not a
+    weight -- deriving the weight from the score, not from the census, is the
+    closed-form-first answer.
+    """
+    import torch
+
+    gt = torch.gather(logits, 1, labels.unsqueeze(1).long()).squeeze(1)
+    masked = logits.scatter(
+        1, labels.unsqueeze(1).long(), torch.full_like(gt.unsqueeze(1), -1e30)
+    )
+    other = masked.max(dim=1).values
+    return torch.sigmoid(-(gt - other) / tau)
+
+
+@dataclass
+class PoseGeometry:
+    resolve_operator: Any  # (600, 12, 6) float32 -- dr -> carrier step in CODE units
+    pose_base: Any  # (600, 6)
+    reach_budget: Any  # (600,)
+    lattice_floor: Any  # (600,)
+
+
+def load_pose_geometry(path: Path, device):
+    import torch
+
+    with np.load(path) as blob:
+        return PoseGeometry(
+            resolve_operator=torch.from_numpy(
+                np.asarray(blob["resolve_operator_codes"], dtype=np.float32)
+            ).to(device),
+            pose_base=torch.from_numpy(
+                np.asarray(blob["pose_base"], dtype=np.float32)
+            ).to(device),
+            reach_budget=torch.from_numpy(
+                np.asarray(blob["reach_budget"], dtype=np.float32)
+            ).to(device),
+            lattice_floor=torch.from_numpy(
+                np.asarray(blob["lattice_floor"], dtype=np.float32)
+            ).to(device),
+        )
+
+
+def _ema_decay_from_run_geometry(steps: int) -> float:
+    """``ema_decay_run_geometry_v1``: the decay follows the RUN's geometry.
+
+    The shadow's effective window is one fifth of the horizon, so
+    ``decay = 1 - 5/steps``.  Deriving it here rather than importing ft1's
+    0.9974448421062369 is deliberate: that value is this LawRef evaluated on a
+    1,800-step run, and a decay carried across a different horizon is exactly the
+    transferred-constant class ([[m21]] constants -> laws).
+    """
+    if steps < 25:
+        raise Rw1Error(f"a {steps}-step run has no EMA geometry to derive from")
+    return float(1.0 - 5.0 / steps)
+
+
+def _evaluate_realized(
+    model, fold, segnet, tokens, labels, device, *, latent=None, batch: int = 4
+) -> dict[str, Any]:
+    """Realized argmax flips over ALL 600 pairs through the trainer's exact R.
+
+    ``[macOS-MPS research-signal]`` when ``device`` is mps: this is the checkpoint
+    SELECTOR, never a verdict.  The verdict re-renders at batch 1 on cpu_torch and
+    runs sj1's own n600 instrument on the decoded bytes.
+    """
+    import torch
+
+    flips = 0
+    per_pair = np.zeros(N_PAIRS, dtype=np.int64)
+    with torch.no_grad():
+        for start in range(0, N_PAIRS, batch):
+            index = np.arange(start, min(start + batch, N_PAIRS), dtype=np.int64)
+            tokens_batch = torch.from_numpy(tokens[index].astype(np.int64)).to(device)
+            index_batch = torch.from_numpy(index).to(device)
+            frame = _render_eval(model, fold, tokens_batch, index_batch, latent)
+            logits = _seg_logits(segnet, _exact_r_camera(frame))
+            argmax = logits.argmax(dim=1).to(torch.uint8).cpu().numpy()
+            wrong = (argmax != labels[index]).reshape(len(index), -1).sum(axis=1)
+            per_pair[index] = wrong
+            flips += int(wrong.sum())
+    return {
+        "flips": int(flips),
+        "d_seg": float(flips / SEG_CELLS_TOTAL),
+        "per_pair": per_pair,
+    }
+
+
+def cmd_train(args) -> int:
+    """The joint fold-back.  Resumable, per-stage checkpoints, EMA shadow saved."""
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    device = torch.device(args.device)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    model = load_live_renderer(section).to(device)
+    tokens = load_live_tokens()
+    labels = load_gt_seg_dali()
+    segnet = jg1.load_segnet().to(device).eval()
+    for param in segnet.parameters():
+        param.requires_grad_(False)
+    posenet = up2.load_posenet()
+    up2.enable_posenet_gradients()
+    posenet = posenet.to(device).eval()
+    for param in posenet.parameters():
+        param.requires_grad_(False)
+    geom = load_pose_geometry(Path(args.geometry), device)
+    raw = up2.open_raw(LIVE_RAW, verify_sha=False)
+
+    fold = CodeFoldBack(section, names, device)
+    optimizer = torch.optim.AdamW(fold.parameters(), lr=args.lr, weight_decay=0.0)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=args.steps, eta_min=args.lr * 0.01
+    )
+    decay = _ema_decay_from_run_geometry(int(args.steps))
+    shadow = {name: fold.latent[name].detach().clone() for name in names}
+
+    run_dir = Path(args.run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    step0 = 0
+    history: list[dict[str, Any]] = []
+    if args.resume_from:
+        blob = torch.load(args.resume_from, map_location=device, weights_only=False)
+        for name in names:
+            fold.latent[name].data.copy_(blob["latent"][name].to(device))
+            shadow[name] = blob["shadow"][name].to(device)
+        optimizer.load_state_dict(blob["optimizer"])
+        scheduler.load_state_dict(blob["scheduler"])
+        step0 = int(blob["step"])
+        history = list(blob.get("history", []))
+        print(f"resumed from {args.resume_from} at step {step0}", flush=True)
+
+    # The pose barrier's weight is DERIVED, not tuned: at full reach the correcting
+    # carrier step leaves the shipped int12 lattice, so the pair becomes unpayable on
+    # pose; that is worth exactly the whole seg residual this arm is trying to buy.
+    weight_pose = 100.0 * LIVE_D_SEG_LOCAL
+
+    def save(tag: str, step: int) -> Path:
+        path = run_dir / f"ckpt.{tag}.step{step:06d}.pt"
+        tmp = path.with_suffix(".pt.tmp")
+        torch.save(
+            {
+                "schema": "ddm_rw1_ckpt.v1",
+                "step": step,
+                "latent": {n: fold.latent[n].detach().cpu() for n in names},
+                "shadow": {n: shadow[n].detach().cpu() for n in names},
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler.state_dict(),
+                "history": history,
+                "names": list(names),
+                "config": {
+                    str(k): str(v) for k, v in vars(args).items() if k != "func"
+                }
+                | {"ema_decay": decay},
+                "deployment_weights": "ema_shadow",
+            },
+            tmp,
+        )
+        tmp.rename(path)
+        return path
+
+    rng = np.random.default_rng(args.seed + step0)
+    best = {"step": -1, "flips": None, "path": None}
+    for step in range(step0, int(args.steps)):
+        progress = step / max(int(args.steps) - 1, 1)
+        tau = TAU_START + (TAU_END - TAU_START) * progress
+        index = rng.choice(N_PAIRS, size=int(args.batch), replace=False)
+        index = np.sort(index)
+        tokens_batch = torch.from_numpy(tokens[index].astype(np.int64)).to(device)
+        index_batch = torch.from_numpy(index).to(device)
+        labels_batch = torch.from_numpy(labels[index].astype(np.int64)).to(device)
+
+        frame = _render_eval(model, fold, tokens_batch, index_batch)
+        camera = _exact_r_camera(frame)
+        logits = _seg_logits(segnet, camera)
+        seg_surrogate = _expected_flip(logits, labels_batch, tau).mean()
+        with torch.no_grad():
+            seg_reference = _expected_flip(
+                logits.detach(), labels_batch, TAU_REFERENCE
+            ).mean()
+
+        frame0 = up2.frames_to_bchw(np.asarray(raw[2 * index])).to(device)
+        pose_new = up2.pose_from_frames(posenet, frame0, camera)
+        delta_r = pose_new - geom.pose_base[index_batch]
+        step_codes = torch.einsum(
+            "bij,bj->bi", geom.resolve_operator[index_batch], delta_r
+        )
+        reach = step_codes.abs().amax(dim=1)
+        budget = geom.reach_budget[index_batch].clamp_min(1.0)
+        pose_term = (reach / budget).pow(2).mean()
+
+        loss = 100.0 * seg_surrogate + weight_pose * pose_term
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(fold.parameters(), 2.0)
+        optimizer.step()
+        scheduler.step()
+        with torch.no_grad():
+            for name in names:
+                shadow[name].mul_(decay).add_(fold.latent[name].detach(), alpha=1 - decay)
+
+        if (step + 1) % int(args.log_every) == 0:
+            drift = max(
+                float((fold.latent[n].detach() - fold.base_codes[n]).abs().max())
+                for n in names
+            )
+            row = {
+                "step": step + 1,
+                "tau": tau,
+                "loss": float(loss.detach()),
+                "seg_surrogate_at_tau": float(seg_surrogate.detach()),
+                "seg_surrogate_at_tau_reference": float(seg_reference),
+                "pose_barrier": float(pose_term.detach()),
+                "reach_codes_max": float(reach.max()),
+                "reach_codes_mean": float(reach.mean()),
+                "stale_d_pose_batch": float(
+                    ((pose_new - geom.pose_base[index_batch]) ** 2).mean()
+                ),
+                "latent_drift_max_codes": drift,
+                "changed_codes": fold.changed_codes(),
+                "changed_codes_shadow": fold.changed_codes(shadow),
+                "lr": float(scheduler.get_last_lr()[0]),
+                "elapsed_seconds": time.perf_counter() - started,
+            }
+            history.append(row)
+            print(json.dumps(row), flush=True)
+
+        if (step + 1) % int(args.eval_every) == 0 or (step + 1) == int(args.steps):
+            evaluation = _evaluate_realized(
+                model, fold, segnet, tokens, labels, device, latent=shadow
+            )
+            changed = fold.changed_codes(shadow)
+            row = {
+                "step": step + 1,
+                "eval_weights": "ema_shadow",
+                "eval_axis": f"[{args.device} research-signal; n600 realized argmax]",
+                "flips": evaluation["flips"],
+                "d_seg": evaluation["d_seg"],
+                "flips_vs_live": evaluation["flips"] - LIVE_D_SEG_CELLS,
+                "reach_fraction_of_residual": (
+                    LIVE_D_SEG_CELLS - evaluation["flips"]
+                )
+                / LIVE_D_SEG_CELLS,
+                "changed_codes_shadow": changed,
+                "rate_bytes_predicted": BYTES_PER_CHANGED_CODE * changed
+                + (CONTAINER_BREAK_FIXED_BYTES if changed else 0.0),
+                "elapsed_seconds": time.perf_counter() - started,
+            }
+            history.append(row)
+            print(json.dumps(row), flush=True)
+            np.save(run_dir / f"per_pair_flips.step{step + 1:06d}.npy", evaluation["per_pair"])
+            if best["flips"] is None or evaluation["flips"] < best["flips"]:
+                best = {
+                    "step": step + 1,
+                    "flips": evaluation["flips"],
+                    "path": str(save("best", step + 1)),
+                }
+
+        if (step + 1) % int(args.checkpoint_every) == 0:
+            save("periodic", step + 1)
+
+    final = save("final", int(args.steps))
+    result = {
+        "schema": "ddm_rw1_train.v1",
+        "axis": f"[{args.device} research-signal; checkpoint selector, no score]",
+        "score_claim": False,
+        "pointer": pointer,
+        "config": {str(k): str(v) for k, v in vars(args).items() if k != "func"}
+        | {"ema_decay": decay, "weight_pose": weight_pose},
+        "trainable_tensors": list(names),
+        "trainable_codes": sum(section.runs[n].count for n in names),
+        "ema_decay_derivation": "ema_decay_run_geometry_v1: 1 - 5/steps",
+        "lr_derivation": (
+            "AdamW's normalised update is ~lr per step, so a cosine run of T steps "
+            "drifts ~0.5*lr*T code units; lr is set for an O(1)-code drift over the "
+            "horizon, which is derived from the int4 grid this arm actuates, not "
+            "transferred from another vehicle (hr1: 2e-7 is an ancestor anchor)"
+        ),
+        "best": best,
+        "final_checkpoint": str(final),
+        "history": history,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=1))
+    return 0
+
+
+# ----------------------------------------------------------------------------------
+# mode=export -- the trained codes as archive BYTES, container-searched, parsed back
+# ----------------------------------------------------------------------------------
+
+
+def build_candidate_archive(
+    section: MultiSemanticSection,
+    edits: dict[str, np.ndarray],
+    carrier_codes: np.ndarray,
+    *,
+    tree_dir: Path = LIVE_TREE,
+    container_search: bool = True,
+    verify: bool = True,
+    scratch: Path | None = None,
+) -> dict[str, Any]:
+    """Archive bytes carrying the folded-back weight codes AND the re-solved carrier.
+
+    Structurally fe1's ``build_candidate_archive`` with the semantic edit generalised
+    from ``frame_embed`` to an arbitrary set of code runs.  The tie-break is fe1's and
+    it is not cosmetic: two container shapes produce the SAME 30,246 B from different
+    bytes, so a length-only tie-break ships a stream that differs from the pointer's
+    for no reason and destroys the null-build identity every later byte number rests on.
+    """
+    import io
+    import zipfile
+
+    import brotli
+    import ddm_fe1_pose_price as price
+    import ddm_up3_carrier_splice as up3
+
+    body = up3.parse_shipped_body(tree_dir, verify_sha=False)
+    built = up3.build_archive(
+        body,
+        carrier_codes,
+        runtime_dir=tree_dir,
+        container_search=container_search,
+        verify=verify,
+    )
+    with zipfile.ZipFile(io.BytesIO(built["archive_bytes"])) as archive:
+        outer = archive.read("p")
+
+    ra, _cr, _ar1, _cp = up3._import_runtime(tree_dir)
+    header = ra.RX1_MODEL_HEADER.unpack_from(outer)
+    magic, version, codec, table_mode, reserved, hpac_bytes, semantic_bytes, carrier_bytes = header
+    offset = ra.RX1_MODEL_HEADER.size
+    hpac_stream = outer[offset : offset + hpac_bytes]
+    offset += hpac_bytes + semantic_bytes
+    carrier_stream = outer[offset : offset + carrier_bytes]
+    offset += carrier_bytes
+    section_tail = outer[offset:]
+
+    stream = section.stream_with_codes(edits)
+    interleaved = up3._ck2_interleave_planes(stream)
+    shapes: dict[tuple[str, int, int], bytes] = {}
+    for quality in price.CONTAINER_QUALITIES:
+        for lgwin in price.CONTAINER_LGWINS:
+            shapes[("ck2", quality, lgwin)] = brotli.compress(
+                interleaved, quality=quality, lgwin=lgwin
+            )
+            shapes[("plain", quality, lgwin)] = brotli.compress(
+                stream, quality=quality, lgwin=lgwin
+            )
+    chosen = min(
+        shapes, key=lambda key: (len(shapes[key]), key != price.SHIPPED_SHAPE, key)
+    )
+    semantic_stream = shapes[chosen]
+    reserved = (
+        reserved | ra.CK2_RESERVED_SEMANTIC_PLANE2
+        if chosen[0] == "ck2"
+        else reserved & ~ra.CK2_RESERVED_SEMANTIC_PLANE2
+    )
+    new_outer = b"".join(
+        (
+            ra.RX1_MODEL_HEADER.pack(
+                magic,
+                version,
+                codec,
+                table_mode,
+                reserved,
+                hpac_bytes,
+                len(semantic_stream),
+                len(carrier_stream),
+            ),
+            hpac_stream,
+            semantic_stream,
+            carrier_stream,
+            section_tail,
+        )
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+        entry = zipfile.ZipInfo("p", date_time=tuple(body.zip_info["date_time"]))
+        entry.compress_type = body.zip_info["compress_type"]
+        entry.external_attr = body.zip_info["external_attr"]
+        entry.create_system = body.zip_info["create_system"]
+        archive.writestr(entry, new_outer)
+    archive_bytes = buffer.getvalue()
+
+    if verify:
+        scratch = Path(scratch or (WORK / "candidate/.verify_archive.zip"))
+        scratch.parent.mkdir(parents=True, exist_ok=True)
+        scratch.write_bytes(archive_bytes)
+        recovered = load_semantic_section(archive_path=scratch, runtime_dir=tree_dir / "runtime")
+        for name, codes in edits.items():
+            if not np.array_equal(
+                np.asarray(recovered.codes[name], dtype=np.int64),
+                np.asarray(codes, dtype=np.int64).reshape(recovered.runs[name].shape),
+            ):
+                raise Rw1Error(
+                    f"the written archive does not parse back to the requested {name} "
+                    "codes; refusing to return unverified bytes"
+                )
+        for name, run in section.runs.items():
+            if run.row_pruned or name in edits:
+                continue
+            if not np.array_equal(
+                np.asarray(recovered.codes[name], dtype=np.int64),
+                np.asarray(section.codes[name], dtype=np.int64),
+            ):
+                raise Rw1Error(f"{name} moved without being edited; refusing")
+        recovered_carrier, _info = up3.parse_back_codes(archive_bytes, runtime_dir=tree_dir)
+        if not np.array_equal(
+            np.asarray(recovered_carrier, dtype=np.int64),
+            np.asarray(carrier_codes, dtype=np.int64),
+        ):
+            raise Rw1Error("the written archive does not parse back to the carrier codes")
+        if bytes(ra.read_residual_archive(scratch).token_stream) != bytes(
+            ra.read_residual_archive(LIVE_ARCHIVE).token_stream
+        ):
+            raise Rw1Error(
+                "the token stream is not byte-identical to the live row; this arm "
+                "changes the semantic and carrier sections only"
+            )
+
+    return {
+        "archive_bytes": archive_bytes,
+        "archive_size": len(archive_bytes),
+        "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "semantic_stream_bytes": len(semantic_stream),
+        "semantic_container": list(chosen),
+        "carrier_stream_bytes": len(carrier_stream),
+        "carrier_container": built["container"],
+        "rx1_reserved": f"{reserved:#x}",
+        "bytes_vs_live": len(archive_bytes) - LIVE_ARCHIVE_BYTES,
+    }
+
+
+def _codes_from_checkpoint(section, names, path: Path, which: str) -> dict[str, np.ndarray]:
+    import torch
+
+    blob = torch.load(path, map_location="cpu", weights_only=False)
+    if which not in {"shadow", "latent"}:
+        raise Rw1Error(f"unknown weight set {which!r}")
+    if which == "shadow" and blob.get("deployment_weights") != "ema_shadow":
+        raise Rw1Error("checkpoint does not declare the EMA shadow as deployment")
+    out = {}
+    for name in names:
+        latent = blob[which][name].float()
+        out[name] = (
+            torch.clamp(torch.round(latent), CODE_MIN, CODE_MAX).numpy().astype(np.int64)
+        )
+    return out
+
+
+def cmd_export(args) -> int:
+    """Trained codes -> archive bytes, priced by a REAL encode with the container search.
+
+    The null build (``--checkpoint`` omitted) re-encodes the SHIPPED codes and MUST
+    reproduce the live archive byte for byte; without that identity no later byte
+    number is attributable to the weight delta.
+    """
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+
+
+    state = up2.load_carrier_state(LIVE_TREE, verify_archive=False)
+    carrier_codes = np.asarray(state.codes, dtype=np.int64)
+    if args.carrier_codes:
+        carrier_codes = np.load(args.carrier_codes).astype(np.int64)
+        if carrier_codes.shape != (N_PAIRS, CARRIER_DIM):
+            raise Rw1Error(f"carrier codes are {carrier_codes.shape}, expected (600, 12)")
+
+    if args.checkpoint:
+        edits = _codes_from_checkpoint(section, names, Path(args.checkpoint), args.weights)
+    else:
+        edits = {name: np.asarray(section.codes[name], dtype=np.int64) for name in names}
+
+    changed = section.changed_code_count(edits)
+    built = build_candidate_archive(
+        section,
+        edits,
+        carrier_codes,
+        container_search=not args.no_container_search,
+        verify=not args.no_verify,
+    )
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "archive.zip").write_bytes(built.pop("archive_bytes"))
+    np.savez(
+        out_dir / "codes.npz",
+        **{name.replace(".", "__"): edits[name].astype(np.int8) for name in names},
+    )
+    np.save(out_dir / "carrier_codes.npy", carrier_codes.astype(np.int32))
+
+    null_build = args.checkpoint is None
+    result = {
+        "schema": "ddm_rw1_export.v1",
+        "axis": "[exact bytes]",
+        "score_claim": False,
+        "pointer": pointer,
+        "null_build": null_build,
+        "weights": args.weights,
+        "checkpoint": str(args.checkpoint) if args.checkpoint else None,
+        "changed_codes": changed,
+        "changed_codes_by_tensor": {
+            name: int(
+                (
+                    np.asarray(edits[name], dtype=np.int64)
+                    != np.asarray(section.codes[name], dtype=np.int64)
+                ).sum()
+            )
+            for name in names
+        },
+        "rate_predicted_bytes": BYTES_PER_CHANGED_CODE * changed
+        + (CONTAINER_BREAK_FIXED_BYTES if changed else 0.0),
+        "rate_predicted_S": (
+            BYTES_PER_CHANGED_CODE * changed
+            + (CONTAINER_BREAK_FIXED_BYTES if changed else 0.0)
+        )
+        * RATE_PER_BYTE,
+        "archive_dir": str(out_dir),
+        "elapsed_seconds": time.perf_counter() - started,
+        **built,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps(result, indent=1, sort_keys=True))
+    if null_build and result["archive_sha256"] != LIVE_ARCHIVE_SHA256:
+        raise Rw1Error(
+            "the NULL build did not reproduce the live archive byte for byte "
+            f"({result['archive_sha256']} vs {LIVE_ARCHIVE_SHA256}); no later byte "
+            "delta would be attributable to the weight change"
+        )
+    return 0
+
+
+# ----------------------------------------------------------------------------------
+# mode=render -- the candidate decode, at the receiver's OWN batch-1 CPU numerics
+# ----------------------------------------------------------------------------------
+
+
+def _candidate_raw_path(out_dir: Path) -> Path:
+    return Path(out_dir) / "0.raw"
+
+
+def cmd_render(args) -> int:
+    """Write the candidate's own decode: even frames copied, odd frames re-rendered.
+
+    ``semantic_batch`` is 1 and that is not a performance oversight -- up2 sec.6
+    MEASURED batch 8 as byte-changing on this half (1,326 pixels by +-1), so a batch-8
+    render would not reproduce the decode every later realized number is measured
+    against (``jg1.render_frame1``'s docstring).
+
+    The even frames are the pose carrier and this arm's weight delta does not touch
+    them, so they are COPIED from the live decode rather than re-rendered: copying is
+    exact, re-rendering would introduce a difference the candidate does not have.
+    """
+    import shutil
+
+    import torch
+
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    tokens = load_live_tokens()
+
+    if args.checkpoint:
+        edits = _codes_from_checkpoint(section, names, Path(args.checkpoint), args.weights)
+    else:
+        edits = {name: np.asarray(section.codes[name], dtype=np.int64) for name in names}
+
+    model = load_live_renderer(section)
+    with torch.no_grad():
+        state = model.state_dict()
+        for name in names:
+            run = section.runs[name]
+            scale_shape = [1] * len(run.shape)
+            scale_shape[0] = section.scales[name].size
+            state[name].copy_(
+                torch.from_numpy(
+                    np.asarray(edits[name], dtype=np.float32).reshape(run.shape)
+                )
+                * torch.from_numpy(section.scales[name].reshape(scale_shape))
+            )
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    destination = _candidate_raw_path(out_dir)
+    expected = 2 * N_PAIRS * CAMERA_H * CAMERA_W * 3
+    if args.shard_index == 0 and (
+        not destination.is_file() or destination.stat().st_size != expected
+    ):
+        staging = destination.with_suffix(".raw.partial")
+        shutil.copyfile(LIVE_RAW, staging)
+        staging.rename(destination)
+    if not destination.is_file() or destination.stat().st_size != expected:
+        raise Rw1Error(
+            f"candidate raw is not the {expected} B copy of the live decode; shard 0 "
+            "seeds it and every other shard requires it to exist first"
+        )
+
+    raw = np.memmap(
+        destination, dtype=np.uint8, mode="r+", shape=(2 * N_PAIRS, CAMERA_H, CAMERA_W, 3)
+    )
+    pairs = np.arange(args.shard_index, N_PAIRS, args.shard_count, dtype=np.int64)
+    changed_pixels = 0
+    for offset, pair in enumerate(pairs):
+        index = np.array([int(pair)], dtype=np.int64)
+        rendered = jg1.render_frame1(model, tokens[index], index)[0]
+        before = np.asarray(raw[2 * int(pair) + 1])
+        changed_pixels += int((before != rendered).sum())
+        raw[2 * int(pair) + 1] = rendered
+        if args.progress and (offset + 1) % 25 == 0:
+            print(
+                f"rendered {offset + 1}/{len(pairs)} in "
+                f"{time.perf_counter() - started:.1f}s",
+                flush=True,
+            )
+    raw.flush()
+    del raw
+
+    result = {
+        "schema": "ddm_rw1_render.v1",
+        "axis": "[cpu_torch batch-1; the receiver's own numerics]",
+        "score_claim": False,
+        "pointer": pointer,
+        "shard_index": int(args.shard_index),
+        "shard_count": int(args.shard_count),
+        "pairs": len(pairs),
+        "semantic_batch": 1,
+        "changed_pixels_vs_live": changed_pixels,
+        "changed_codes": section.changed_code_count(edits),
+        "raw": str(destination),
+        "checkpoint": str(args.checkpoint) if args.checkpoint else None,
+        "weights": args.weights,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    receipt = Path(args.out)
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps(result, indent=1, sort_keys=True))
+    return 0
+
+
+# ----------------------------------------------------------------------------------
+# mode=seg -- the n600 realized seg leg on a candidate decode, DALI lineage
+# ----------------------------------------------------------------------------------
+
+
+def cmd_seg(args) -> int:
+    """Realized argmax flips over all 600 pairs, on cpu_torch against the DALI table.
+
+    A sub-n600 seg verdict is a toy on this axis, so the shards are strided (never a
+    contiguous prefix -- ``m88``) and the merge refuses partial coverage.
+    """
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    labels = load_gt_seg_dali()
+    net = jg1.load_segnet()
+    raw_path = Path(args.raw)
+    expected = 2 * N_PAIRS * CAMERA_H * CAMERA_W * 3
+    if raw_path.stat().st_size != expected:
+        raise Rw1Error(f"raw is {raw_path.stat().st_size} B, expected {expected}")
+    raw = np.memmap(
+        raw_path, dtype=np.uint8, mode="r", shape=(2 * N_PAIRS, CAMERA_H, CAMERA_W, 3)
+    )
+    pairs = np.arange(args.shard_index, N_PAIRS, args.shard_count, dtype=np.int64)
+    argmax = np.zeros((len(pairs), EVAL_H, EVAL_W), dtype=np.uint8)
+    for offset, pair in enumerate(pairs):
+        frames = np.asarray(raw[2 * int(pair) + 1])[None]
+        argmax[offset] = jg1.argmax_from_camera_frames(net, frames)[0]
+        if args.progress and (offset + 1) % 25 == 0:
+            print(
+                f"argmax {offset + 1}/{len(pairs)} in "
+                f"{time.perf_counter() - started:.1f}s",
+                flush=True,
+            )
+    wrong = (argmax != labels[pairs]).reshape(len(pairs), -1).sum(axis=1)
+    out = Path(args.out_argmax)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    np.save(out, argmax)
+    result = {
+        "schema": "ddm_rw1_seg_shard.v1",
+        "axis": "[macOS-CPU advisory; cpu_torch argmax, DALI lineage]",
+        "score_claim": False,
+        "pointer": pointer,
+        "shard_index": int(args.shard_index),
+        "shard_count": int(args.shard_count),
+        "pairs": [int(p) for p in pairs],
+        "cells": int(len(pairs) * EVAL_H * EVAL_W),
+        "cells_disagreeing": int(wrong.sum()),
+        "per_pair_cells": [int(v) for v in wrong],
+        "argmax_path": str(out),
+        "raw": str(raw_path),
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    receipt = Path(args.out)
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "per_pair_cells"}, indent=1))
+    return 0
+
+
+def cmd_seg_merge(args) -> int:
+    """Merge strided seg shards into the n600 leg.  Refuses partial coverage."""
+    started = time.perf_counter()
+    covered: dict[int, int] = {}
+    total_cells = 0
+    for path in args.shards:
+        row = json.loads(Path(path).read_text())
+        for pair, cells in zip(row["pairs"], row["per_pair_cells"], strict=True):
+            if pair in covered:
+                raise Rw1Error(f"pair {pair} appears in two shards")
+            covered[int(pair)] = int(cells)
+        total_cells += int(row["cells"])
+    missing = sorted(set(range(N_PAIRS)) - set(covered))
+    if missing:
+        raise Rw1Error(
+            f"{len(missing)} pairs are missing ({missing[:8]}...); a sub-n600 seg "
+            "verdict is a TOY on this axis and is refused"
+        )
+    per_pair = np.array([covered[p] for p in range(N_PAIRS)], dtype=np.int64)
+    flips = int(per_pair.sum())
+    d_seg = flips / SEG_CELLS_TOTAL
+    repaired = LIVE_D_SEG_CELLS - flips
+    # The per-pair comparison needs the LIVE per-pair leg, not a sign test on a count
+    # that cannot be negative.  sj1's own n600 argmax of the live decode is the
+    # baseline; deriving it here keeps the two legs on one GT table.
+    labels = load_gt_seg_dali()
+    live_argmax = np.load(LIVE_ARGMAX, mmap_mode="r")
+    live_per_pair = np.zeros(N_PAIRS, dtype=np.int64)
+    for pair in range(N_PAIRS):
+        live_per_pair[pair] = int(
+            (np.asarray(live_argmax[pair]) != labels[pair]).sum()
+        )
+    if int(live_per_pair.sum()) != LIVE_D_SEG_CELLS:
+        raise Rw1Error(
+            f"the live argmax reproduces {int(live_per_pair.sum())} cells, not the "
+            f"pinned {LIVE_D_SEG_CELLS}; the baseline is not the one this delta claims"
+        )
+    result = {
+        "schema": "ddm_rw1_seg.v1",
+        "axis": "[macOS-CPU advisory; cpu_torch argmax, DALI lineage, n600]",
+        "score_claim": False,
+        "pairs": N_PAIRS,
+        "cells": total_cells,
+        "cells_disagreeing": flips,
+        "d_seg_local": d_seg,
+        "d_seg_t4_carried": d_seg * SEG_T4_RATIO,
+        "live_cells": LIVE_D_SEG_CELLS,
+        "cells_repaired": repaired,
+        "reach_fraction_of_residual": repaired / LIVE_D_SEG_CELLS,
+        "dS_seg": -repaired * S_PER_SEG_CELL,
+        "per_pair_cells": [int(v) for v in per_pair],
+        "live_per_pair_cells": [int(v) for v in live_per_pair],
+        "pairs_improved": int((per_pair < live_per_pair).sum()),
+        "pairs_worsened": int((per_pair > live_per_pair).sum()),
+        "pairs_unchanged": int((per_pair == live_per_pair).sum()),
+        "cells_repaired_on_improved_pairs": int(
+            (live_per_pair - per_pair)[per_pair < live_per_pair].sum()
+        ),
+        "cells_broken_on_worsened_pairs": int(
+            (per_pair - live_per_pair)[per_pair > live_per_pair].sum()
+        ),
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    np.save(Path(args.out).with_suffix(".per_pair.npy"), per_pair)
+    np.save(Path(args.out).with_suffix(".live_per_pair.npy"), live_per_pair)
+    print(json.dumps({k: v for k, v in result.items() if k != "per_pair_cells"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -636,6 +1695,67 @@ def build_parser() -> argparse.ArgumentParser:
     section.add_argument("--out", type=Path, default=WORK / "receipts/SECTION.json")
     common(section)
     section.set_defaults(func=cmd_section)
+
+    prep = sub.add_parser("prep")
+    prep.add_argument("--out", type=Path, default=WORK / "receipts/PREP.json")
+    prep.add_argument("--out-dir", type=Path, default=WORK / "prep")
+    prep.add_argument("--batch", type=int, default=25)
+    prep.add_argument("--progress", action="store_true", default=True)
+    common(prep)
+    prep.set_defaults(func=cmd_prep)
+
+    train = sub.add_parser("train")
+    train.add_argument("--out", type=Path, default=WORK / "receipts/TRAIN.json")
+    train.add_argument("--run-dir", type=Path, default=WORK / "runs/foldback")
+    train.add_argument("--geometry", type=Path, default=WORK / "prep/pose_geometry.npz")
+    train.add_argument("--device", default="mps")
+    train.add_argument("--steps", type=int, default=3000)
+    train.add_argument("--batch", type=int, default=4)
+    train.add_argument("--lr", type=float, default=6.7e-4)
+    train.add_argument("--seed", type=int, default=20260909)
+    train.add_argument("--log-every", type=int, default=25)
+    train.add_argument("--eval-every", type=int, default=300)
+    train.add_argument("--checkpoint-every", type=int, default=300)
+    train.add_argument("--resume-from", type=Path, default=None)
+    common(train)
+    train.set_defaults(func=cmd_train)
+
+    export = sub.add_parser("export")
+    export.add_argument("--out", type=Path, default=WORK / "receipts/EXPORT.json")
+    export.add_argument("--out-dir", type=Path, default=WORK / "candidate")
+    export.add_argument("--checkpoint", type=Path, default=None)
+    export.add_argument("--weights", default="shadow", choices=("shadow", "latent"))
+    export.add_argument("--carrier-codes", type=Path, default=None)
+    export.add_argument("--no-container-search", action="store_true")
+    export.add_argument("--no-verify", action="store_true")
+    common(export)
+    export.set_defaults(func=cmd_export)
+
+    render = sub.add_parser("render")
+    render.add_argument("--out", type=Path, default=WORK / "receipts/RENDER.json")
+    render.add_argument("--out-dir", type=Path, default=BULK / "renders/candidate")
+    render.add_argument("--checkpoint", type=Path, default=None)
+    render.add_argument("--weights", default="shadow", choices=("shadow", "latent"))
+    render.add_argument("--shard-index", type=int, default=0)
+    render.add_argument("--shard-count", type=int, default=1)
+    render.add_argument("--progress", action="store_true", default=True)
+    common(render)
+    render.set_defaults(func=cmd_render)
+
+    seg = sub.add_parser("seg")
+    seg.add_argument("--out", type=Path, required=True)
+    seg.add_argument("--out-argmax", type=Path, required=True)
+    seg.add_argument("--raw", type=Path, required=True)
+    seg.add_argument("--shard-index", type=int, default=0)
+    seg.add_argument("--shard-count", type=int, default=1)
+    seg.add_argument("--progress", action="store_true", default=True)
+    common(seg)
+    seg.set_defaults(func=cmd_seg)
+
+    seg_merge = sub.add_parser("seg-merge")
+    seg_merge.add_argument("--shards", nargs="+", required=True)
+    seg_merge.add_argument("--out", type=Path, required=True)
+    seg_merge.set_defaults(func=cmd_seg_merge)
 
     return parser
 
