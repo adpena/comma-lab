@@ -1306,6 +1306,25 @@ whole band clears the 1.242e-05 CONTINUE margin. But the **pessimistic end misse
 - pre-registered stop UNCHANGED: if the admission's total is not negative past the bar, no
   candidate is built and no T4 row is bought.
 
+### 20e. AMENDMENT before launch — the placement-price caveat (MEASURED at §24b)
+
+The 7.7203 bits/token this projection uses is extrapolated from passes whose tokens were
+chosen GREEDILY: the search tries moves in a fixed order and keeps whatever lowers the
+realized flip count, so it implicitly harvests cheap placements first. §24b measured what
+happens when placements are FORCED instead — the slide family's writes, pinned to specific
+offsets, priced at **10.86 and 11.20 bits, about 1.73× pass-4's greedily-chosen 6.4000**.
+
+So marginal price depends strongly on WHERE a token sits, not only on how many there are,
+and **7.7203 is optimistic to the extent pass 5's remaining sites are more constrained than
+pass 4's were**. The pass-5 rate leg is +3.8135e-05 against a central net of −4.1022e-05: at
+1.3× the assumed price the net reaches the −2e-05 bar, and at ~1.7× — the factor §24b
+actually measured on forced placements — it goes POSITIVE. This does not change the CONTINUE
+call, which is made on the pre-registered rule, but it means the pass-5 admission is more
+likely to bind than §20d's band alone suggests, and the stop is expected to do real work.
+
+Binding, unchanged and reinforced: **the seal prices by real encode under whichever coder is
+live at pricing time — never by this projection, and never by a number carried from pass 4.**
+
 **Do not launch until MAIN confirms the pointer moved**: the pass-5 field must be proposed
 on the promoted tree's parse-back argmax, because the base changes on promotion.
 
