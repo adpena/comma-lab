@@ -64,3 +64,24 @@ def test_explicit_allow_flag_bypasses_the_lane_check(tmp_path) -> None:
         mod.main(_argv("ddm_pc1_t4_v3_lattice_x4_on_rc1_20260905", "--allow-nonpromotable-lane-id", "--output-dir", str(tmp_path)))
     if isinstance(exc.value, SystemExit):
         assert exc.value.code != 2 or "checkpoint-maturity" not in str(exc.value)
+
+
+def test_fire_tool_imports_experiments_from_a_foreign_cwd(tmp_path):
+    """Regression: stage 3 imports `experiments.contest_auth_eval`; the tool must make the repo
+    root importable itself (pytest's implicit rootdir hid the ModuleNotFoundError that aborted
+    the pc2 fire on 2026-09-09 before any dispatch)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[3]
+    code = (
+        "import importlib.util, sys\n"
+        f"spec = importlib.util.spec_from_file_location('fire_tool', {str(repo / 'tools' / 'fire_modal_auth_eval.py')!r})\n"
+        "mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)\n"
+        "from experiments.contest_auth_eval import _runtime_dependency_manifest\n"
+        "print('ok')\n"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "ok"

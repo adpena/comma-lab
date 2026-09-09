@@ -80,6 +80,11 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+# The repo root too: stage 3 imports `experiments.contest_auth_eval` (the fire manifest names
+# both runtime-digest definitions). Under pytest the rootdir is on sys.path implicitly, so the
+# 2026-09-09 landing passed its tests and then crashed the first real fire (pc2, rc=1, no
+# dispatch) with ModuleNotFoundError. The tool must import what it imports from any cwd.
+sys.path.insert(0, str(REPO))
 
 from tac.candidate_seal import (  # noqa: E402
     MISMATCH,
