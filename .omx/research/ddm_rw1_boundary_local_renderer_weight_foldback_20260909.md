@@ -486,8 +486,23 @@ only if realized flips strictly FALL**, bisect a rejected group so a good move i
 random pairs (null 2,646 flips), confirmed at n600. Pre-registered before launch (`receipts/PREREG_DISCRETE_SEARCH.json`): expected 120 /
 340 / 1,500 cells repaired at 66 / 200 / 1,000 accepted codes; falsifier at < 139 cells net.
 
-The search bisected 128 → 64 → 32 → 16 → 8 → 4 → 2 → **1** and kept going. Result at 41 evaluations: **zero accepts**, and the best move
-of any size found was **+48 flips on the screen** (≈ +240 at n600).
+The search bisected 128 → 64 → 32 → 16 → 8 → 4 → 2 → **1** and kept going to its evaluation budget. Final
+(`receipts/CODE_SEARCH.json`, 660 s):
+
+| | |
+|---|---|
+| evaluations | **150** |
+| accepts | **0** |
+| codes changed | **0** |
+| screen best vs screen null | 2,646 vs 2,646 (**unmoved**) |
+| n600 final vs n600 null | 12,871 vs 12,871 (**unmoved**) |
+| cells repaired at n600 | **0** |
+| ΔS | **0.0** (0.00 % of the gap) |
+| pre-registered falsifier (< 139 cells) | **FIRED** |
+
+The best move of any size found anywhere in the sweep was **+48 flips on the 120-pair screen** (≈ +240 at n600). The search returned the
+base object exactly — which is the property it was built for: realized acceptance cannot lose, so a zero here is a clean negative and not
+a damaged candidate.
 
 That is the arm's closing measurement, and it is a statement about the REPRESENTATION rather than about any search:
 
