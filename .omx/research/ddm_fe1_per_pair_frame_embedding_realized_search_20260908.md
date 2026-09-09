@@ -174,6 +174,12 @@ Two findings, both reusable:
    Searching q ∈ {9,10,11} × lgwin ∈ {16,18,20,22,24} × {ck2, plain} recovers **63.5 B at N=1** and **29.2 B at N=72**.
    The shipped body's own shape is `(ck2, 11, 16)`. Pricing an edit at the shipped shape overstates it about 2×.
 
+**Control — the container search is NOT a free rate lever on the shipped bytes.** Re-compressing all three model
+sections of the live archive over a 56-shape grid (q ∈ {5…11} × lgwin ∈ {10…24}) finds **+0 B** on every one:
+hpac 12,343, semantic 30,246, carrier 18,621, all already at their brotli optimum. The search matters only for
+EDITED bytes, where the shipped shape was chosen for a payload that no longer exists. Nobody should read this law
+as free bytes lying on the pointer.
+
 ## 7. The exchange, and what the arm must clear
 
 * one repaired cell = 100/117,964,800 = **−8.4771e-07 S**
