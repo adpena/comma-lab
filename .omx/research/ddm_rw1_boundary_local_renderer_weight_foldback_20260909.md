@@ -457,3 +457,7 @@ one that picks WHICH codes to move. Per Catalog #307 this is an IMPLEMENTATION-l
 ---
 
 Own-vehicle frontier: **S 0.13885056455024844 @ 181,414 B [contest-CUDA T4 n600]**, archive sha `c810c2c7…f671e` (rc2, 33rd move).
+
+### MAIN note (2026-09-09 17:40Z) — relative significance of the step-7 stop, and the verdict's scope
+
+The full-field probe's stop at step 7 is an INSTANCE verdict on a DIAGNOSTIC (it answered "is the oscillation minibatch draw noise?" — no: step 1 moves the latent by exactly lr and step 2 is byte-identical, so the forward is piecewise constant in the latent), not a magnitude dismissal of the lever. The lever's stake, stated at the current operating point: the residual this arm aims at is 12,443 cells = 100·12,443/(600·196,608) = **0.010547 S = 56.0 % of the remaining gap 0.01882326** (S 0.13882326433317044 → 0.12). Nothing of that stake is dismissed by the stop. What the arm MEASURED instead: the trained direction beats random ±1 code changes by 2.13×/2.66×/4.10× at 4/18/66 codes (growing with dose); 18 codes move 847 argmax cells; 66 codes cost 17.9 B = 1.19e-05 S = 0.063 % of the gap. verdict_scope: FORMULATION (AdamW on a continuous latent over a piecewise-constant forward) — the discrete realized search over the same 12,672 codes, guided by the measured surrogate direction, is the open successor and is not closed by this row.
