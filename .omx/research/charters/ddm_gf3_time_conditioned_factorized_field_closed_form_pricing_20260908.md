@@ -1,0 +1,42 @@
+# ddm_gf3 — gf2's QUEUED-CONDITIONAL successor: CLOSED-FORM pricing of a TIME-CONDITIONED factorized generator field (shared statistic that changes over time) against the sub-0.12 generator inequality, BEFORE any build (charter, 2026-09-08)
+
+Tokens: `[no-triality] [p0-ledger-ok]` · Owner: codex arm · Spawned by MAIN 2026-09-09 under the operator's standing GO ("big structural and possibly new paradigms"). Source: gf2's final message + memo `.omx/research/ddm_gf2_static_dynamic_generator_form_20260903.md` (landing `30c861062`) NEXT_IF_RESUMED row "QUEUED-CONDITIONAL … fire trigger: closed-form current-n600 arithmetic predicts a real-coded packet ≤ 71,404.5 B and either ≤ 46,804 mismatches or packet plus domain residual ≤ 85,020 B, including LTG1/BLP1 boundary costs". Axis `[macOS-CPU scorer-free exact field, n600]`; `score_claim=false`; no scorer; this arm prices, it does not train.
+
+## MANDATE
+
+gf2 CEILING-REFUSED the single-shared-field form with a CERTIFIED global lower bound (923,953 mismatches for one shared categorical field plus any integer translation in [−12,+12]², vs the 292,264 ceiling; best residual route 335,547 B vs the 85,020 B cap) and withdrew its own earlier small-GOP closure as unproven (consecutive-pair IoU does not bound a jointly optimized multi-field result). Its one live hypothesis is a factorized field whose SHARED STATISTIC CHANGES OVER TIME (small-GOP or time-conditioned): plausible for non-rigid scene evolution, unpriced. The operator's standing ask is structural paradigms; the sub-0.12 arithmetic's only room is generator ACCURACY at ≈ 50–71 KB. Before anyone builds a trainer, this arm answers by CLOSED-FORM ARITHMETIC on the exact n600 field whether ANY time-conditioned factorization can satisfy the inequality — and if not, closes the family at the pricing level with a certified bound, the way gf2 did.
+
+## SCOPE
+
+1. RECALL (do not re-derive): the gf2 memo whole (the certified-bound machinery `experiments/ddm_gf2_alignment_globality_audit.py`, the domain-matched residual pricing, the withdrawn small-GOP closure); gf1/gc1 (`experiments/ddm_gf1_generator_form_on_lb1_field.py` 5b884ec957; gc1's capacity control); rn1 (`ddm_rn1_n600_reopen_sweep_20260903.md`: the inequality's derivation — 1.5× GF1 = 71,404.5 B packet must leave ≤ 46,804 mismatches, a 28.31× reduction from GF1's 1,325,033); ol1's NerVast-style shared-scene projection (18,994 B); the LTG1/BLP1 boundary-cost rows named in the fire trigger (find them: `grep -rln "LTG1\|BLP1" .omx/research/`). `tools/subagent_checkpoint.py read --subagent-id ddm_gf3` first. Re-derive every number above at source (m143).
+2. The exact n600 field: the DALI-lineage GT argmax at 384×512 (`ddm_up2.verify_gt_lineage` gate) — the object gf2 priced; confirm identity with gf2's retained field sha.
+3. Closed-form pricing of the time-conditioned family, for GOP lengths L ∈ {2, 3, 5, 10, 20, 50} and for a parametric time-conditioning (shared field + per-pair low-dimensional warp/offset codes): for each, (a) a CERTIFIED LOWER BOUND on mismatches (gf2's globality-audit form generalized: the per-GOP optimum is bounded below by the per-cell plurality within the GOP under every allowed translation — compute it exactly, not by coordinate descent), (b) the counted bytes of the shared fields + per-pair codes under a REAL coder (gf2's domain-matched residual coder; brotli/RC64 as in the gf family), (c) the domain-matched residual bytes needed to reach ≤ 46,804 mismatches. Table: L · lower-bound mismatches · packet B · packet+residual B · verdict vs {≤ 71,404.5 B ∧ ≤ 46,804} ∨ {≤ 85,020 B}.
+4. Verdict: if NO row can satisfy the inequality even at its certified lower bound → CLOSED at the pricing level (family scope, with the bound); if some L satisfies it on the bound, report the gap between bound and the best observed fit and hand MAIN a build charter outline (trainer form, budget) — do NOT build.
+5. Memo `.omx/research/ddm_gf3_time_conditioned_factorized_field_closed_form_pricing_20260908.md`; equations leg: anchor on gf2's registered law (find under `tac.canonical_equations`: `grep -rn "gf2\|shared_field\|globality" src/tac/canonical_equations/`) via `update_equation_with_empirical_anchor`, or register `time_conditioned_factorized_field_lower_bound_v1`.
+
+## HARD CONSTRAINTS
+
+- `upstream/` READ-ONLY. NO Modal fire. NO scorer, NO Metal/MPS, NO training. Never write into `submissions/semantic_joint_ctxmix/`, the live pointer tree, or the sj1/pc2/fe1 trees; your tree `/Volumes/VertigoDataTier/pact/ddm_gf3_time_conditioned_pricing/` (check `df -h`; keep it small — retained fields are npz, not raws).
+- The local SCORER LANE belongs to MAIN, always. Do NOT write who holds it into a charter (the #1210 stale-precondition genus, memo ddm_bz2_bornsmall_capacity_ceiling 2026-08-29).
+- CPU ≤ 2 processes (three frontier arms are live; a pass-4 chain and two admission searches need the cores). DETACHED > 30 min ONLY via `tools/launch_detached_process.py --output-dir <dir> --done-receipt <name> --nice 10 --nice-best-effort -- <cmd>`; no `nohup`/`&`/clock waiters; artifact-bound waits ≤ 780 s; resumable per-L checkpoints.
+- Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes. Tokens `[no-triality] [p0-ledger-ok]`. NEVER a Co-Authored-By or AI-attribution trailer. If the sandbox refuses git object writes, produce the serializer fallback bundle + receipt (the scg1 path) and name it in the final message.
+- ALWAYS KEEP THE PAYLOAD (per-L bound certificates, coded packets, residual streams; sha256 + bytes). VERIFIED-AT-SOURCE LAW for every number in this charter. CLOSED-FORM-FIRST is the whole mandate: a bound is a proof, a fit is an upper bound — label each row.
+- Checkpoint discipline: `tools/subagent_checkpoint.py --subagent-id ddm_gf3 …` every ~10 tool uses.
+
+## PRIOR NEGATIVE SIGNAL (bearing dead-ends this charter consumes)
+
+- One shared categorical field + any integer translation: CLOSED, certified ≥ 923,953 mismatches (3.16× the ceiling) — gf2 memo + final message `.omx/research/arm_final_messages/ddm_gf2_static_dynamic_generator_form_20260908T233941Z.md`. L = 600 is therefore already priced; do not re-run it.
+- Treating a coordinate-descent fixed point as the optimum is CLOSED (gf2: 3,072,488 observed vs 923,953 bound) — every verdict here rests on a certified bound, never on a fit.
+- Generic residual repair of a rigid-static fit is CLOSED at 335,547 B — the residual coder must be domain-matched (gf2's) and its bytes counted.
+- Inferring small-GOP behaviour from consecutive-pair IoU is CLOSED (gf2 withdrew it) — bound the joint per-GOP optimum directly.
+- Generator form is 2.178× cheaper than model+tokens (memory `generator-form-is-2x-cheaper-than-model-plus-coded-tokens`) but the born vehicle's accuracy half is CLOSED by the persistent partition (md1/md4) — this arm prices a DIFFERENT object (a factorized field), not the born trainer.
+
+## OPTIMAL FORM
+
+- Family exemplar: gf2's globality audit and certified-bound pricing (`experiments/ddm_gf2_alignment_globality_audit.py`, memo `.omx/research/ddm_gf2_static_dynamic_generator_form_20260903.md`, commit `30c861062`) — the reference form: exact n600 field, certified lower bound, real-coded packet bytes, domain-matched residual, verdict against the inequality.
+- SCOPE reductions declared per row: the L grid is discrete (SCOPE; interpolate nothing); parametric conditioning limited to the warp/offset family gf2 already allows (SCOPE). MECHANISM reductions FORBIDDEN: no proxy field, no sampled subset of pairs in a bound, no un-coded byte estimate, no fit presented as a bound.
+- **PRIOR-LAW PREDICTION (falsifiable):** the certified lower bound falls monotonically with shorter GOPs but the shared-field bytes rise faster than the mismatch bound falls: at L = 10 the bound is ≥ 400,000 mismatches (1.37× the ceiling) and at L = 2 the packet alone exceeds 71,404.5 B — no row satisfies the inequality; the family closes at the pricing level. FALSIFIER: any L whose certified bound ≤ 46,804 with a real-coded packet ≤ 71,404.5 B (or packet + residual ≤ 85,020 B) — report it as the build trigger with the numbers.
+
+## DELIVERABLE
+
+The memo with the per-L table (bound / packet / residual / verdict), retained certificates, and either the CLOSED verdict with its bound or a build-charter outline. Commit via the serializer. End with `sj1 S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]` (or the live row).
