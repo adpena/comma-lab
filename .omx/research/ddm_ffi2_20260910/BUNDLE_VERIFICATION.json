@@ -1,0 +1,89 @@
+{
+  "bundle_hash_matches_serializer": true,
+  "bundle_path": "/Volumes/VertigoDataTier/pact/ddm_ffi2_prefire_contract/serializer/20260910T154044.914122Z-74989/intended-commit.bundle",
+  "bundle_sha256": "7ebbe7afad2f03f75ac547ab5323f5c111708bc5e85d811510e62b8e036a1afe",
+  "changed_paths": [
+    ".omx/research/ddm_ffi2_20260910/CONTRACT_SCOPE_OBSERVATION.json",
+    ".omx/research/ddm_ffi2_implement_prefire_intent_contract_20260910.md"
+  ],
+  "files": [
+    {
+      "matches_expected": true,
+      "matches_worktree": true,
+      "path": ".omx/research/ddm_ffi2_implement_prefire_intent_contract_20260910.md",
+      "sha256": "efb9fee9fc694d6e397fd0fdc300e77ce9523281de68595b175d52e939fc049f"
+    },
+    {
+      "matches_expected": true,
+      "matches_worktree": true,
+      "path": ".omx/research/ddm_ffi2_20260910/CONTRACT_SCOPE_OBSERVATION.json",
+      "sha256": "42c8b989967915fade21cc396a0927ff3752bc8a55fff118708b0b48303de903"
+    }
+  ],
+  "frozen_receipt_sha256": null,
+  "head_unchanged": true,
+  "implementation_commit": null,
+  "inspected_sources_unchanged": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_implement_prefire_intent_contract_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_implement_prefire_intent_contract_charter_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi2_implement_prefire_intent_contract_resume_charter_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/decode_wall_clock.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/make_candidate_seal.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/modal_auth_eval.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/modal_harvest_poller.py",
+      "unchanged": true
+    }
+  ],
+  "landing_fire_order": {
+    "action": "Land exactly the two report artifacts; this is not an implementation or a contract freeze.",
+    "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ffi2_prefire_contract/serializer/20260910T154044.914122Z-74989/intended-commit.bundle",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "fire_trigger": "Harvest this verified report-only bundle in a Git-writable MAIN environment",
+    "owner": "MAIN"
+  },
+  "no_coauthor_trailer": true,
+  "only_intended_files": true,
+  "promotion_eligible": false,
+  "report_commit": "2995c0a81e5aff07187c463393bc3857ae27c42e",
+  "research_only": true,
+  "schema": "ddm_ffi2.report_bundle_verification.v1",
+  "score_claim": false,
+  "staged_diff_unchanged": true,
+  "status": "VERIFIED_BUNDLE_NOT_LANDED",
+  "unit_tests_run": 0
+}

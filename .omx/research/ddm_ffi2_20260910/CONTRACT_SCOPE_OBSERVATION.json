@@ -1,0 +1,115 @@
+{
+  "axis": "source inspection and retained-file byte hashing; scorer-free",
+  "build_t4_direct_leg_source_lines": [
+    326,
+    343
+  ],
+  "clarification_accepted": {
+    "authorization.intent.digest": "canonical self-omitting intent digest",
+    "authorization.intent.file_bytes": "exact committed byte count",
+    "authorization.intent.file_sha256": "exact committed file-byte SHA-256"
+  },
+  "ffi1_report_matches_HEAD": true,
+  "frozen_contract_receipt": null,
+  "head": "c3e84d6c24e008f416b55d50c68a6a215aff897b",
+  "implementation_commit": null,
+  "nested_bytes_key_present": false,
+  "nested_receipt_measured_reference": {
+    "bytes": 159313,
+    "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910/MODAL_REMOTE_RESULT.json",
+    "sha256": "cd6d5ef5243e26fa1868100a2bbb34efe0d6446b4a7fb9bd1eab7f309f5d3d00"
+  },
+  "nested_receipt_sha_matches": true,
+  "nested_reference": {
+    "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910/MODAL_REMOTE_RESULT.json",
+    "sha256": "cd6d5ef5243e26fa1868100a2bbb34efe0d6446b4a7fb9bd1eab7f309f5d3d00"
+  },
+  "nested_reference_keys": [
+    "path",
+    "sha256"
+  ],
+  "probe_method": "Python stdlib reads and SHA-256 of named retained files; ast.parse of unchanged decode_wall_clock.py; git show and git diff --cached are read-only. No timing validator, producer, decoder, or scorer executed.",
+  "promotion_eligible": false,
+  "provenance": [
+    {
+      "bytes": 42309,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+      "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+    },
+    {
+      "bytes": 9018,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_implement_prefire_intent_contract_20260910.md",
+      "sha256": "b61562bb9bce9450689648b43b395e19ce81fb7099d82006446b6631c190d78d"
+    },
+    {
+      "bytes": 5011,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_implement_prefire_intent_contract_charter_20260910.md",
+      "sha256": "c2d0af1ac80c719e6865e0371f8615ef49b4f8aeb2c88daaa40e5b39418308a4"
+    },
+    {
+      "bytes": 3191,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi2_implement_prefire_intent_contract_resume_charter_20260910.md",
+      "sha256": "3c0f391541a5af87f0cccee30e5b0c639c2d576d5008d3c6ad8617cf27b9d535"
+    },
+    {
+      "bytes": 4124,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "bytes": 30533,
+      "path": "/Users/adpena/Projects/pact/src/tac/decode_wall_clock.py",
+      "sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff"
+    },
+    {
+      "bytes": 69947,
+      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+      "sha256": "d94f479ef13d1cc3a5331403eddf18bc5816c5bbe16aa75772c51d64d33357e6"
+    },
+    {
+      "bytes": 14722,
+      "path": "/Users/adpena/Projects/pact/tools/make_candidate_seal.py",
+      "sha256": "7c2aa6aa79c33d8d478e94cb9dda5c752c205ebe399775d2848bdd0f7e019288"
+    },
+    {
+      "bytes": 56868,
+      "path": "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+      "sha256": "8bcce76759bd10e4a79620f58223ee8c29426c09d48038ca88e5cde644deacb4"
+    },
+    {
+      "bytes": 76842,
+      "path": "/Users/adpena/Projects/pact/experiments/modal_auth_eval.py",
+      "sha256": "f86d01c8055dacbd779b08512d5d81edb16ac1742aa1e9cc13fedecbfa800a0b"
+    },
+    {
+      "bytes": 33629,
+      "path": "/Users/adpena/Projects/pact/tools/modal_harvest_poller.py",
+      "sha256": "68cb6a626e248510b5a3dab2a5b604984aa0272e99ddb7dad9107db2eea948ab"
+    }
+  ],
+  "receipt_reference_return_fields": [
+    [
+      "path",
+      "sha256"
+    ]
+  ],
+  "receipt_reference_source_lines": [
+    65,
+    68
+  ],
+  "research_only": true,
+  "schema": "ddm_ffi2.contract_scope_observation.v1",
+  "score_claim": false,
+  "source_leg": {
+    "bytes": 1553,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+    "sha256": "ed929b24cc876bf8ffabc3004b856decbb5e73d0fee13c1d3c87d91d659f9521"
+  },
+  "source_leg_matches_pr12_pin": true,
+  "staged_index_diff_bytes_before": 0,
+  "staged_index_diff_sha256_before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "status": "BLOCKED_CONTRACT_AMBIGUITY",
+  "unit_tests_run": 0,
+  "unresolved_scope": "Does every referenced JSON include nested references inside immutable legacy t4_direct legs, or only the new lifecycle reference blocks?",
+  "written_at_utc": "2026-09-10T15:38:18.073854+00:00"
+}
