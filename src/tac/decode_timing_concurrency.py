@@ -388,6 +388,17 @@ def _fact(path: Path) -> dict:
     return receipt_reference(Path(path))
 
 
+def _hardware_fingerprint(producer_doc: dict) -> dict:
+    """Carry the producer's fingerprint; when it recorded none and we are assembling ON the timing
+    host, record the machine architecture so calibration and candidate identities compare like for
+    like (`ddm_rlc1_public.py` writes `hardware_fingerprint`; `ddm_dwc1_move40_timing.py` did not)."""
+    if "hardware_fingerprint" in producer_doc:
+        return {"hardware_fingerprint": producer_doc["hardware_fingerprint"]}
+    if producer_doc.get("host") == platform.node():
+        return {"hardware_fingerprint": platform.machine()}
+    return {}
+
+
 def assemble_local_receipt(producer_doc: dict, concurrency: dict, *, producer_receipt_path: Path,
                            concurrency_receipt_path: Path, stage_checkpoint_dir: Path | None = None,
                            rule: ConcurrencyRule | None = None) -> dict:
@@ -434,6 +445,7 @@ def assemble_local_receipt(producer_doc: dict, concurrency: dict, *, producer_re
             "cpu_threads": producer_doc["cpu_threads"], "frames": list(range(pair_count)),
             "host": producer_doc["host"], "platform": producer_doc["platform"],
             "command": list(producer_doc["command"]), "wall_seconds": producer_doc["wall_seconds"],
+            **_hardware_fingerprint(producer_doc),
             "timed_scope": producer_doc.get("timed_scope"),
             "public_entrypoint_executed": producer_doc.get("public_entrypoint_executed", False),
             "public_shell_startup_included": producer_doc.get("public_shell_startup_included", False),

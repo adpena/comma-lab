@@ -32,7 +32,7 @@
     {
       "attempt": "move40 (dwc1, under rp1's three n600 shards)",
       "wall_seconds": 1243.9751226250082,
-      "verdict": "REFUSED by dwc1 (no count); 1.56x the quiesced time — the contention the calibration must exclude"
+      "verdict": "REFUSED by dwc1 (no count); 1.56x the quiesced time \u2014 the contention the calibration must exclude"
     }
   ],
   "calibration": {
@@ -44,13 +44,14 @@
   "leg": {
     "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_decode_wall_clock.json",
     "sidecar": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
-    "sha256_prefix": "4540e9512fe35cd6",
+    "sha256_prefix": "e58adf1df4523da6",
     "mode": "measured",
     "projected_t4_decode_seconds": 990.053829427,
     "measured_t4_decode_seconds": 990.053829427,
     "limit_seconds": 1260.0,
     "validation_problems": [],
-    "replaced_sidecar_backup": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/dwc1_refused_sidecar_backup.json"
+    "replaced_sidecar_backup": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/dwc1_refused_sidecar_backup.json",
+    "note": "regenerated 2026-09-10 ~06:35Z with hardware_fingerprint=arm64 in the local receipt so the calibration identity matches ddm_rlc1_public.py receipts; timing numbers unchanged"
   },
   "inheritance_proof": "inherit_decode_wall_clock(source_leg=sidecar, runtime_dir=move 40 candidate_runtime, pointer_archive_sha256=986d536b...) -> mode inherited, projected 990.054 s, validate problems []. rp1's round-2 seal (receiver identical except archive.zip + the two pins) inherits this leg.",
   "rlc1_next": "rlc1's cured receiver cannot inherit (different receiver code); its own quiesced timing via tools/quiesced_decode_timing.py run + assemble --stage-checkpoints, projected = local_600 x 1.2420 <= 1,260 s; needs MANIFEST.sha256 refresh (pr9 condition 1) and one twin raw moved off the 8 GiB store first.",
