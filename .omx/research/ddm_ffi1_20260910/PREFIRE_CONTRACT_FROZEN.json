@@ -218,106 +218,90 @@
       },
       "score_claim": false,
       "note": "amendment[3]: same scoped-digest definition; implementation re-pinned after ffi5 (content-only runtime digest for first-measurement runs; repo-root ledger registration; authorize import path \u2014 pr15 AMEND); adjudication memo unchanged (pr14); pr16 ratification owed"
-    }
-  ],
-  "consumer_fix_batches": [
+    },
     {
-      "binding_required": "MAIN sets implementation_commit to the exact successful serializer or MAIN landing commit, verifies all manifest rows against live files and that commit, then appends the typed row. This draft envelope is not a frozen row.",
-      "existing_rows_unchanged": [
-        "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
-        "ecc62f5b9cb136f8dc9d1bef92bae743e9ddf9028f9536cc1f86fbf3de5d1b72",
-        "0651e7360f4a95a8b5618355c40a30ad15bfce5ea4ae65cdf4917ed9e807be77",
-        "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2"
-      ],
-      "rows": [
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
+        "bytes": 24850,
+        "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
+      },
+      "consumer_fixes": [
         {
-          "adjudication_memo": {
-            "bytes": 24850,
-            "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
-            "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
-          },
-          "consumer_fixes": [
-            {
-              "causal_commit": "808da43c02a32ae328fd73c707331b9aaee2ac36",
-              "fix_id": "migration-amendment1-context",
-              "reason": "Do not require the context file before this producer exclusively creates it.",
-              "scope": "tools/fire_modal_auth_eval.py first-measurement dispatch-path verification",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_dry_run_consumes_nothing_and_explicit_argv"
-              ]
-            },
-            {
-              "causal_commit": "7a837a9de38f1be1d6a023e0a6caab0e7696a1a2",
-              "fix_id": "migration-amendment2-axis",
-              "reason": "The manifest writer refused run2 after reservation because its axis tag was absent.",
-              "scope": "tools/fire_modal_auth_eval.py first_measurement_manifest axis tagging",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_first_measurement_manifest_is_axis_tagged_and_writable"
-              ]
-            },
-            {
-              "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
-              "fix_id": "migration-amendment3-content",
-              "reason": "Run3 had identical runtime bytes at a differently spelled retained root.",
-              "scope": "first-measurement dispatcher, worker and evaluator content comparison",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_content_pin_accepts_relocation_but_refuses_one_changed_byte"
-              ]
-            },
-            {
-              "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
-              "fix_id": "migration-amendment3-import",
-              "reason": "Authorization must import experiments from a foreign working directory.",
-              "scope": "tools/authorize_candidate_first_measurement.py import closure",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_authorize_tool_imports_experiments_from_a_foreign_cwd"
-              ]
-            },
-            {
-              "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
-              "fix_id": "migration-amendment3-ledger",
-              "reason": "Imported source snapshots must register in the canonical repository ledger.",
-              "scope": "local first-measurement dispatch call-id registration",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_local_registration_uses_repo_ledger_when_imported_from_snapshot"
-              ]
-            },
-            {
-              "causal_commit": "74c284865937a7e852ab6ba7550e2517786d345a",
-              "fix_id": "pr16-completion-custody",
-              "reason": "pr16 requires fresh content joins, retained-root projection and identical seal/direct-leg custody.",
-              "scope": "candidate_seal first-measurement completion and v3 revalidation",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_run3_retained_provenance_projection_and_terminal_refusal"
-              ]
-            },
-            {
-              "causal_commit": "74c284865937a7e852ab6ba7550e2517786d345a",
-              "fix_id": "pr16-typed-consumer-history",
-              "reason": "pr16 separates immutable definition identity from fresh consumer implementation batches.",
-              "scope": "candidate_seal prefire contract validation and intent production",
-              "tests": [
-                "src/tac/tests/test_candidate_prefire_intent.py::test_consumer_fix_typed_refusals_with_real_git"
-              ]
-            }
-          ],
-          "definition_change": false,
-          "definition_parent_sha256": "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
-          "fix_batch_id": "ddm_ffi6_pr16_completion_and_migration_20260910",
-          "implementation_commit": "ea09174bbc5f9d990e4097a0c5e1756906ddd9b3",
-          "implementation_manifest": {
-            "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_LANDED.json",
-            "bytes": 2566,
-            "sha256": "79f2677a6025d73f87423c9f36bc91b20b43b0d9a0469cf7bdfd5c6d89a76d3f"
-          },
-          "previous_row_sha256": "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2",
-          "schema": "prefire_contract_consumer_fix.v1",
-          "score_claim": false
+          "causal_commit": "808da43c02a32ae328fd73c707331b9aaee2ac36",
+          "fix_id": "migration-amendment1-context",
+          "reason": "Do not require the context file before this producer exclusively creates it.",
+          "scope": "tools/fire_modal_auth_eval.py first-measurement dispatch-path verification",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_dry_run_consumes_nothing_and_explicit_argv"
+          ]
+        },
+        {
+          "causal_commit": "7a837a9de38f1be1d6a023e0a6caab0e7696a1a2",
+          "fix_id": "migration-amendment2-axis",
+          "reason": "The manifest writer refused run2 after reservation because its axis tag was absent.",
+          "scope": "tools/fire_modal_auth_eval.py first_measurement_manifest axis tagging",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_first_measurement_manifest_is_axis_tagged_and_writable"
+          ]
+        },
+        {
+          "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
+          "fix_id": "migration-amendment3-content",
+          "reason": "Run3 had identical runtime bytes at a differently spelled retained root.",
+          "scope": "first-measurement dispatcher, worker and evaluator content comparison",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_content_pin_accepts_relocation_but_refuses_one_changed_byte"
+          ]
+        },
+        {
+          "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
+          "fix_id": "migration-amendment3-import",
+          "reason": "Authorization must import experiments from a foreign working directory.",
+          "scope": "tools/authorize_candidate_first_measurement.py import closure",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_authorize_tool_imports_experiments_from_a_foreign_cwd"
+          ]
+        },
+        {
+          "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
+          "fix_id": "migration-amendment3-ledger",
+          "reason": "Imported source snapshots must register in the canonical repository ledger.",
+          "scope": "local first-measurement dispatch call-id registration",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_local_registration_uses_repo_ledger_when_imported_from_snapshot"
+          ]
+        },
+        {
+          "causal_commit": "74c284865937a7e852ab6ba7550e2517786d345a",
+          "fix_id": "pr16-completion-custody",
+          "reason": "pr16 requires fresh content joins, retained-root projection and identical seal/direct-leg custody.",
+          "scope": "candidate_seal first-measurement completion and v3 revalidation",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_run3_retained_provenance_projection_and_terminal_refusal"
+          ]
+        },
+        {
+          "causal_commit": "74c284865937a7e852ab6ba7550e2517786d345a",
+          "fix_id": "pr16-typed-consumer-history",
+          "reason": "pr16 separates immutable definition identity from fresh consumer implementation batches.",
+          "scope": "candidate_seal prefire contract validation and intent production",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_consumer_fix_typed_refusals_with_real_git"
+          ]
         }
       ],
-      "schema": "ddm_ffi6_consumer_fix_rows_draft.v1",
-      "score_claim": false,
-      "state": "DRAFT_REQUIRES_COMMITTED_IMPLEMENTATION"
+      "definition_change": false,
+      "definition_parent_sha256": "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
+      "fix_batch_id": "ddm_ffi6_pr16_completion_and_migration_20260910",
+      "implementation_commit": "ea09174bbc5f9d990e4097a0c5e1756906ddd9b3",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_LANDED.json",
+        "bytes": 2566,
+        "sha256": "79f2677a6025d73f87423c9f36bc91b20b43b0d9a0469cf7bdfd5c6d89a76d3f"
+      },
+      "previous_row_sha256": "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2",
+      "schema": "prefire_contract_consumer_fix.v1",
+      "score_claim": false
     }
   ]
 }
