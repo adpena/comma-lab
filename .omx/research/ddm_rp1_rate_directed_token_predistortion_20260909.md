@@ -564,7 +564,30 @@ Canonical equation governing that non-additivity: **`rate_directed_predistortion
 (`tac.canonical_equations`), anchor `ddm_rp1_realized_over_first_order_n600_20260909`,
 predicted 219.66 B vs empirical 32.0 B, residual 187.66.
 
-## 17. State on hand-off, and what it would cost to finish
+## 17. POINTER MOVE 39 -- and the composition receipt sj1 needs
+
+**MEASURED on T4: S 0.1376693148220904 @ 180,186 B, sha `8877f75d...`, Δ −2.21e−04 against move 38 -- 11× the bar.** Projected 0.13766654648761660, so the residual is **+2.77e−06** (the pose print), optimistic, inside the either-signed 1e−06...5e−06 band this lineage now carries. The three legs landed where the gates put them: seg exactly unchanged, pose from the re-solve, rate from a real twin encode.
+
+sj1 re-bases its 42-pair subset onto this field and owns that composition. **This arm owns only the receipt**, and it is written rather than described:
+
+**`/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/retained/COMPOSITION_RECEIPT.json`**
+(sha `1e93d17aad579af3a846039821ad1e44514a47ac711267e0e26d7aa573b137e6`) -- the per-pair token-change ledger (253 pairs, 473 tokens, each with `pos`/`row`/`col`/`from`/`to`), the **282-pair union list**, the **13 overlapping pairs**, the measured **0 position collisions**, path+sha for every artifact (admitted field npz, kept-pairs, admission, selected and resolved carrier codes, base/stale/resolved pose vectors, per-pair byte deltas, control and candidate rider bodies, candidate archive, seal, parse-back segcheck, census), and the exact **re-base CLI** -- every pointer-bound object is a flag, so no source edit is needed:
+
+```
+rank/price : ddm_rp1_rate_rank.py rank-mixer --source-runtime --weights --live-field-u8
+             --control-envelope --expect-pointer-sha [--field <600-plane npz>]
+pose       : ddm_rp1_pose.py {render|pose|refine|codes} --pointer-tree
+             --expect-pointer-sha --carrier-bytes
+stage/close: ddm_rp1_build.py stage-tail --pointer-runtime --expect-pointer-sha
+             --control-envelope/--control-body --candidate-envelope/--candidate-body
+             ddm_rp1_build.py close --body-runtime --codes --admitted-pairs
+seg gate   : ddm_rp1_segcheck.py check --base --candidate --require-identical
+```
+
+**Hand-off to the frame-0 selector round:** **`/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/retained/POSE_BOUND_DROPS.json`**
+(sha `2ba08c1f81d9d041d968aa0017a9bdd7cb8377d99d2738e0b7b568e84c29a256`) -- the **44 pose-bound dropped pairs**, named, with per-pair `d_pose` **base / stale / resolved**, the recovery ratio, the token list, and the byte credit each strands. Their rate already helps; the carrier re-solve alone could not return the pose. After the re-solve their residual over their own base runs from **1.01× (pair 64) to 38.22× (pair 445)** -- so they are not one population, and the cheap end is nearly recovered already. Total: **81 tokens, −27.71 B, ΔS −1.845e−05.**
+
+## 18. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -592,6 +615,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 18. Frontier line
+## 19. Frontier line
 
-`sj1 pass 5 S 0.1378902937630636 @ 180,436 B [contest-CUDA T4 n600]` (move 38)
+`ddm_rp1 S 0.1376693148220904 @ 180,186 B [contest-CUDA T4 n600]` (move 39)
