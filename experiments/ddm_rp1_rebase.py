@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -341,6 +342,155 @@ def cmd_merge(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_admit(args: argparse.Namespace) -> int:
+    """The three-leg sweep, with the subset field built on the SHIPPING base.
+
+    ``ddm_rp1_admit.py`` does this arithmetic already and this module reuses its
+    ``compose_score`` rather than retyping the composition.  What it may NOT reuse is that
+    module's field writer: it rebuilds the admitted field from ``rp1.load_live_field()``,
+    the pass-4 constant, which is precisely the defect this file exists to repair.  So the
+    SWEEP is shared and the FIELD is written here, from the base the candidate ships on.
+    """
+    import ddm_rp1_admit as admit
+
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    pointer = rp1.verify_pointer(expect_sha=args.expect_pointer_sha)
+    if not pointer["matches_expected"]:
+        raise rp1.Rp1Error(
+            f"pointer file reads {pointer['archive_sha256']}, this admission targets "
+            f"{args.expect_pointer_sha}"
+        )
+    base_field = load_base_field(Path(args.base_field_u8), args.expect_field_sha256)
+
+    rows: dict[int, dict[str, Any]] = {}
+    for path in args.rows:
+        for line in Path(path).read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("base_field_sha256") != args.expect_field_sha256:
+                raise rp1.Rp1Error(
+                    f"pair {row['pair']} was verified against a different base"
+                )
+            if row.get("accepted"):
+                rows[int(row["pair"])] = row
+
+    bits_ctrl = np.load(args.bits_control).astype(np.float64)
+    bits_cand = np.load(args.bits_candidate).astype(np.float64)
+    base_pose = np.load(args.base_pose).astype(np.float64)
+    resolved_pose = np.load(args.resolved_pose).astype(np.float64)
+    for name, arr in (
+        ("bits_control", bits_ctrl), ("bits_candidate", bits_cand),
+        ("base_pose", base_pose), ("resolved_pose", resolved_pose),
+    ):
+        if arr.shape != (N_PAIRS,):
+            raise rp1.Rp1Error(f"{name} has shape {arr.shape}, expected ({N_PAIRS},)")
+    if args.frame0_pose:
+        # Frame-0 re-selection changes ONE pair's frame 0, so its pose is measured per
+        # pair and merged here; every other pair keeps its carrier-resolved value.
+        for pair, value in json.loads(Path(args.frame0_pose).read_text()).items():
+            resolved_pose[int(pair)] = float(value)
+
+    delta_bytes = (bits_cand - bits_ctrl) / 8.0
+    edited = sorted(rows)
+    keep_all = np.zeros(N_PAIRS, dtype=bool)
+    keep_all[edited] = True
+    # An unedited pair's plane is the base plane, so any delta it shows is encoder drift,
+    # not a cost this arm caused; it is pinned out rather than allowed into the sweep.
+    drift = float(delta_bytes[~keep_all].sum())
+    delta_bytes = np.where(keep_all, delta_bytes, 0.0)
+
+    base_pose_mean = float(base_pose.mean())
+    base_score = admit.compose_score(
+        args.base_d_seg, base_pose_mean, args.base_archive_bytes
+    )
+    if abs(base_score - pointer["score"]) > args.base_score_tolerance:
+        raise rp1.Rp1Error(
+            f"the base legs recompose to {base_score!r} but the pointer reads "
+            f"{pointer['score']!r}; the base is not the pointer's own row"
+        )
+    d_pose_marginal = 5.0 / math.sqrt(10.0 * base_pose_mean) / N_PAIRS
+    marginal = delta_bytes * rp1.S_PER_BYTE + (resolved_pose - base_pose) * d_pose_marginal
+    order = sorted(edited, key=lambda p: marginal[p])
+
+    sweep: list[dict[str, Any]] = []
+    best: dict[str, Any] | None = None
+    for cut in range(len(order) + 1):
+        mask = np.zeros(N_PAIRS, dtype=bool)
+        mask[order[:cut]] = True
+        archive = args.base_archive_bytes + float(delta_bytes[mask].sum())
+        pose_mean = float(np.where(mask, resolved_pose, base_pose).mean())
+        score = admit.compose_score(args.base_d_seg, pose_mean, archive)
+        entry = {
+            "pairs_kept": cut,
+            "archive_bytes_ledger_sum": archive,
+            "delta_bytes": archive - args.base_archive_bytes,
+            "d_pose_mean": pose_mean,
+            "score": score,
+            "delta_S_vs_pointer": score - base_score,
+        }
+        sweep.append(entry)
+        if best is None or score < best["score"]:
+            best = dict(entry, cut=cut)
+
+    kept = sorted(order[: best["cut"]])
+    field = np.array(base_field, dtype=np.uint8)
+    tokens = 0
+    for pair in kept:
+        flat = field[pair].reshape(-1)
+        for edit in rows[pair]["accepted"]:
+            flat[int(edit["pos"])] = np.uint8(int(edit["best"]))
+            tokens += 1
+    changed = int((field != np.asarray(base_field)).sum())
+    if changed != tokens:
+        raise rp1.Rp1Error(
+            f"admitted field differs from its base at {changed} tokens but {tokens} edits "
+            "were kept"
+        )
+    field_path = out / "field_admitted.npz"
+    np.savez_compressed(field_path, **{str(p): field[p] for p in range(N_PAIRS)})
+    (out / "kept_pairs.json").write_text(json.dumps(kept))
+
+    verdict = {
+        "schema": "ddm_rp1_rebase_admit.v1",
+        "axis": (
+            "rate EXACT from two real per-frame bit ledgers (SELECTION ONLY -- see "
+            "priced_by); pose [macOS-CPU advisory, frozen CPU-torch PoseNet, DALI GT], "
+            "RESOLVED; seg zero by realized construction, verified separately"
+        ),
+        "score_claim": False,
+        "priced_by": "ledger_sum_selection_only -- the caller MUST re-encode the subset",
+        "pointer": pointer,
+        "base": {
+            "archive_bytes": args.base_archive_bytes,
+            "d_seg": args.base_d_seg,
+            "d_pose_mean": base_pose_mean,
+            "recomposed_score": base_score,
+        },
+        "base_field_sha256": args.expect_field_sha256,
+        "frame0_pose_merged": bool(args.frame0_pose),
+        "unedited_pair_encoder_drift_bytes": drift,
+        "pairs_with_edits": len(edited),
+        "pairs_kept": len(kept),
+        "tokens_kept": tokens,
+        "tokens_offered": sum(len(r["accepted"]) for r in rows.values()),
+        "best": best,
+        "all_edits_row": sweep[-1],
+        "sweep": sweep,
+        "field_admitted": {
+            "path": str(field_path),
+            "sha256": sha256_file(field_path),
+            "planes": N_PAIRS,
+            "tokens_changed_vs_base": changed,
+        },
+    }
+    (out / "ADMISSION.json").write_text(json.dumps(verdict, indent=2, sort_keys=True))
+    print(json.dumps({k: v for k, v in verdict.items()
+                      if k not in ("sweep", "pointer")}, indent=2, sort_keys=True))
+    return 0
+
+
 def cmd_verify_field(args: argparse.Namespace) -> int:
     """Prove the raw base field and a named npz field are the SAME 600 planes.
 
@@ -437,6 +587,24 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--out", required=True)
     _pointer_flags(verify)
     verify.set_defaults(func=cmd_verify_field)
+
+    adm = sub.add_parser(
+        "admit", help="three-leg sweep with the subset field built on the shipping base"
+    )
+    adm.add_argument("--rows", nargs="+", required=True)
+    adm.add_argument("--bits-control", required=True)
+    adm.add_argument("--bits-candidate", required=True)
+    adm.add_argument("--base-pose", required=True)
+    adm.add_argument("--resolved-pose", required=True)
+    adm.add_argument("--frame0-pose", default=None,
+                     help="JSON {pair: d_pose} adopted by the frame-0 re-selection")
+    adm.add_argument("--out-dir", required=True)
+    adm.add_argument("--expect-pointer-sha", required=True)
+    adm.add_argument("--base-archive-bytes", type=float, required=True)
+    adm.add_argument("--base-d-seg", type=float, required=True)
+    adm.add_argument("--base-score-tolerance", type=float, default=5e-6)
+    _pointer_flags(adm)
+    adm.set_defaults(func=cmd_admit)
     return parser
 
 
