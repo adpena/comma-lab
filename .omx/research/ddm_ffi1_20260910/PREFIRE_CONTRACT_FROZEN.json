@@ -1,0 +1,30 @@
+{
+  "schema": "prefire_contract_freeze.v1",
+  "state": "FROZEN",
+  "frozen_at_utc": "2026-09-10T16:51:11Z",
+  "implementation_commit": "a475431997d0e0c66563448524e44c2ca8ddb384",
+  "pr12_memo": {
+    "path": ".omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+    "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+  },
+  "clarifications": {
+    "1": "## Clarification 1 (ffi1; MAIN, pending pr12-family ratification) \u2014 the authorization's intent binding\nWhere pr12 writes `authorization.intent.sha256 = \"<intent digest>\"` (line ~308) while line ~85 requires\nexact byte count + SHA-256 for referenced JSON: bind BOTH and refuse on either mismatch \u2014\n`authorization.intent.file_sha256` + `authorization.intent.file_bytes` (exact file bytes of the committed\nintent JSON) AND `authorization.intent.digest` (the canonical self-omitting intent digest exactly as pr12\ndefines it). Dispatch custody records all three.\n",
+    "2": "## Clarification 2 (ffi2; MAIN, pending ratification) \u2014 scope of `{path, bytes, sha256}`\npr12 line ~84 (\"Every referenced JSON or manifest carries `{path, bytes, sha256}`\") governs every reference\nINTRODUCED by the new objects (`candidate_prefire_intent.v1`, the authorization, the completion producer's\n`candidate_seal.v3` fields, the risk receipt, the retention manifest). It does NOT rewrite the embedded\nLEGACY objects that pr12 explicitly preserves unchanged \u2014 the completed `t4_direct` leg and its\n`{path, sha256}` receipt references validated by the unchanged `tac.decode_wall_clock` (pr12: \"retains the\ncompleted t4_direct requirements\"). Where a new object embeds a legacy leg, it references the legacy leg's\nFILE with `{path, bytes, sha256}` and leaves the leg's own interior to the legacy validator.\n"
+  },
+  "charter_ffi3": {
+    "path": ".omx/research/ddm_ffi3_implement_prefire_intent_contract_bounded_charter_20260910.md",
+    "sha256": "dd0de8cd84b59c795750ac99ebe9c5e1f5a543951537da4c66fb72fa6951814f"
+  },
+  "implementation_manifest": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+    "bytes": 2072,
+    "sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d"
+  },
+  "prepared_inputs": {
+    "path": ".omx/research/ddm_ffi3_20260910/FREEZE_INPUTS_PREPARED.json",
+    "sha256": "e7d1f94d90c0e0f85be7b578b4373656dc8cbae9f94a7945c7184bc25c74daae"
+  },
+  "ratification": "MAIN clarifications 1-2 pending pr12-family ratification; the real positive control is rlc2's producer + MAIN's real harvest (pr12 \u00a7freeze)",
+  "score_claim": false,
+  "frozen_by": "MAIN"
+}
