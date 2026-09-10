@@ -1,0 +1,15 @@
+#!/bin/bash
+# MAIN re-arm of md3's one-shot waiter: md3's script exits on an admission REFUSE (it only polls for a free Metal). This wrapper polls the
+# queue driver's DRY-RUN every 2 min until the cell is READY (admission + storage + seal), then hands off to md3's own waiter, which re-checks
+# 3/3 clear polls and fires through the driver. No memory arithmetic here; the driver decides.
+cd /Users/adpena/Projects/pact
+S=/Volumes/APDataStore/pact/ddm_md3_different_initialisation; LOG=$S/wait_admission_then_fire.log; PY=.venv/bin/python
+started=$SECONDS; MAX=21600
+while [ $((SECONDS-started)) -lt $MAX ]; do
+  $PY tools/cell_queue_driver.py run --queue $S/QUEUE_SPEC.json --dry-run > $S/ADMISSION_POLL.json 2>>$LOG
+  ready=$($PY -c "import json; d=json.load(open('$S/ADMISSION_POLL.json')); print(int(d.get('cells_ready') or 0))" 2>/dev/null || echo 0)
+  echo "$(date -u +%H:%M:%SZ) dry-run cells_ready=$ready" >> $LOG
+  if [ "$ready" -ge 1 ]; then echo "$(date -u +%H:%M:%SZ) READY -> handing off to md3's waiter" >> $LOG; bash $S/wait_for_metal_then_fire.sh >> $LOG 2>&1; rc=$?; echo "$(date -u +%H:%M:%SZ) md3 waiter rc=$rc" >> $LOG; [ $rc -eq 0 ] && exit 0; fi
+  sleep 120
+done
+echo "$(date -u +%H:%M:%SZ) gave up after ${MAX}s" >> $LOG; exit 9

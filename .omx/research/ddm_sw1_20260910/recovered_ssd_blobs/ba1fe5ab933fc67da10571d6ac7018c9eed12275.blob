@@ -1,0 +1,109 @@
+"""ddm_ql1: apply strict-xfail quarantine marks to the retired-lineage tests."""
+
+from __future__ import annotations
+
+import pathlib
+import sys
+
+T = pathlib.Path("src/tac/witness_dsl/tests")
+
+V15_REASON = '''_QUARANTINE_V15_PRODUCER_PIN = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "QUARANTINED 2026-09-03 (ddm_ql1): retired July taskspace lineage, no live consumer. "
+        "The sealed V15 compile receipt's producer_custody pins "
+        "src/tac/optimization/direct_description_carrier_compose.py at 3e1f69bb/156,551 B; HEAD is "
+        "6fef110d/160,470 B. Drift commits: 9934d488b then 36f4b2947 (both 2026-08-20). "
+        "This is NOT a hash swap: 36f4b2947 adds key non_empty_member_payload_count to "
+        "prove_carrier_archive_fail_closed, which the V15 producer embeds as "
+        "receipt.fail_closed_mutation_proof, so a regenerated receipt legitimately differs. "
+        "FIRE TRIGGER: a scorer-authorized arm re-runs tools/measure_ddm_v15_scorer_solved_templates.py "
+        "(it solves through exact R + SegNet, which ddm_ql1's charter forbade) and either refreshes "
+        "producer_custody against a bit-exact compile receipt -- then DELETE this mark -- or records "
+        "real output drift. strict=True means this mark FAILS the moment the lineage is repaired. "
+        "Owning memos: .omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md and "
+        ".omx/research/ddm_cd1_working_tree_debt_landing_20260903.md"
+    ),
+)
+'''
+
+V9_REASON = '''_QUARANTINE_V9_RENDERER_MANIFEST_PIN = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "QUARANTINED 2026-09-03 (ddm_ql1): retired July taskspace lineage, no live consumer. "
+        "The sealed G1 teacher census pins predictor_renderer_sha256 = 92ab2350...; the live "
+        "renderer_source_manifest digest is 715e3e57.... Isolated to that ONE condition of the five "
+        "OR-ed in tools/measure_g1_teacher_atom_census.py -- pair_start 448, window 64 and both "
+        "receiver fields all still match. THREE of the manifest's 13 declared sources moved: "
+        "predictor_upgrade_xi_chart.py (merge 8181d8763, 2026-07-27), direct_description_minimizer.py "
+        "and direct_description_carrier_compose.py (both b8f24ae63 onward, 2026-08-20). "
+        "FIRE TRIGGER: a scorer-authorized arm rematerializes the V9/PBR2 teacher census and reseals "
+        "the manifest -- then DELETE this mark. No blind manifest rewrite. strict=True means this mark "
+        "FAILS the moment the lineage is repaired. Owning memos: "
+        ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md and "
+        ".omx/research/ddm_cd1_working_tree_debt_landing_20260903.md"
+    ),
+)
+'''
+
+PLAN = {
+    "test_taskspace_g17_g49_selected_program_product_bridge_v1.py": (
+        V15_REASON,
+        "_QUARANTINE_V15_PRODUCER_PIN",
+        "_MAX_PACKET_BYTES = 1 << 20\n",
+        (
+            "test_real_boundv10_product_stream_is_deterministic_and_packet_mutation_is_live",
+            "test_product_refuses_wrong_p_a_decoder_type_and_decoder_source",
+            "test_exact_g_a_e_reopen_and_real_nested_p_refusal_emit_typed_product_blockers",
+        ),
+    ),
+    "test_taskspace_g72_fresh_n600_g49_analytic_factor_compiler_v1.py": (
+        V15_REASON,
+        "_QUARANTINE_V15_PRODUCER_PIN",
+        "_SCORER_FIELD_SHAPE = (120, 384, 512)\n",
+        ("test_real_current_custody_reopens_and_fails_closed_at_true_missing_seams",),
+    ),
+    "test_taskspace_g82_tsppv2_pvsa1_lowering_v1.py": (
+        V15_REASON,
+        "_QUARANTINE_V15_PRODUCER_PIN",
+        "_MAX_PROGRAM_BYTES = 1 << 20\n",
+        (
+            "test_external_target_decoder_and_semantic_p_drift_fail_closed",
+            "test_mutated_rich_packet_fails_before_lowering",
+            "test_exact_lowering_binds_rich_operand_compact_and_baseline",
+            "test_no_rich_identity_or_custody_json_enters_compact_member",
+            "test_both_outer_encodings_and_rich_packet_strictly_parse_back",
+            "test_pair_zero_rich_and_compact_native_camera_hashes_are_equal",
+            "test_external_receipt_is_canonical_self_hashable_and_truthful",
+        ),
+    ),
+    "test_taskspace_inverse_stack_receipt.py": (
+        V9_REASON,
+        "_QUARANTINE_V9_RENDERER_MANIFEST_PIN",
+        None,
+        ("test_canonical_sources_strictly_reopen_after_regeneration",),
+    ),
+}
+
+for filename, (block, mark, anchor, tests) in PLAN.items():
+    path = T / filename
+    text = path.read_text()
+    if mark in text:
+        print(f"SKIP {filename}: already marked")
+        continue
+    if anchor is not None:
+        if text.count(anchor) != 1:
+            sys.exit(f"anchor not unique in {filename}: {anchor!r}")
+        text = text.replace(anchor, anchor + "\n\n" + block, 1)
+    else:
+        needle = '@pytest.fixture(scope="module")'
+        if text.count(needle) < 1:
+            sys.exit(f"no module fixture anchor in {filename}")
+        text = text.replace(needle, block + "\n\n" + needle, 1)
+    for name in tests:
+        needle = f"def {name}("
+        if text.count(needle) != 1:
+            sys.exit(f"test name not unique in {filename}: {name}")
+        text = text.replace(needle, f"@{mark}\ndef {name}(", 1)
+    path.write_text(text)
+    print(f"OK   {filename}: {len(tests)} tests marked")

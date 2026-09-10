@@ -1,0 +1,99 @@
+"""Append the ddm_fs1 pure-pose near-win anchor to exchange_ratio_noise_floor_v1."""
+import json
+import sys
+from datetime import datetime, timezone
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+
+from tac.canonical_equations.equation import (
+    EmpiricalAnchor,
+    VERIFIED_VIA_EMPIRICAL_ANCHOR,
+)
+from tac.canonical_equations.registry import update_equation_with_empirical_anchor
+from tac.provenance.builders import build_provenance_for_predicted
+
+STORE = "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/retained"
+import hashlib
+
+_COMPOSE_PATH = f"{STORE}/fs1_compose_B_byte_optimal_101.json"
+COMPOSE_SHA256 = hashlib.sha256(open(_COMPOSE_PATH, "rb").read()).hexdigest()
+compose = json.load(open(_COMPOSE_PATH))
+adm = compose["admissibility"]
+
+anchor = EmpiricalAnchor(
+    anchor_id="fs1_frame0_selector_pure_pose_near_win_pair_bootstrap_20260904",
+    measurement_utc="2026-09-04T00:00:00Z",
+    inputs={
+        "object": (
+            "afr1 frontier archive cbb8d928... (180,002 B) vs the ddm_fs1 frame-0 "
+            "selector re-selection 50fcaf1a... (180,022 B); 21 changed pairs, k=24 "
+            "active, byte-optimal set under ddm_pr1's >1% robustness gate"
+        ),
+        "edit_kind": "frame-0 selector blob re-selection (no carrier, renderer or token change)",
+        "delta_bytes_exact": compose["delta"]["delta_bytes"],
+        "delta_bytes_is_per_pair": False,
+        "delta_d_seg": 0.0,
+        "n_pairs": 600,
+        "batch_size": compose["batch_size"],
+        "scorer_runs": 2,
+        "resamples": adm["resamples"],
+        "seed": adm["seed"],
+    },
+    predicted_output={
+        "prior_law": (
+            "the law's two prior anchors both carry a PER-PAIR byte stream, so dB "
+            "resamples and widens the interval. This edit's dB is a whole-archive "
+            "constant and d_seg is zero by construction, so the interval should be "
+            "driven by the pose leg ALONE and should be the narrowest case the law "
+            "has yet seen relative to its point estimate."
+        ),
+        "predicted_admissible": True,
+    },
+    empirical_output={
+        "point_net_delta_S": adm["point_net_delta_S"],
+        "interval_95_low": adm["interval_95_low"],
+        "interval_95_high": adm["interval_95_high"],
+        "half_width": adm["half_width"],
+        "admissible": adm["admissible"],
+        "half_width_over_point": abs(adm["half_width"] / adm["point_net_delta_S"]),
+        "consequence": (
+            "ADMISSIBLE: the 95% upper edge is -5.663e-05, well clear of zero. But the "
+            "half-width is 6.613e-05 -- 0.599x the point estimate -- so even a pure-pose "
+            "edit with ZERO byte dispersion and ZERO seg leg carries a pair-sampling "
+            "interval of the same ORDER as its own effect. The pose mean is owned by a "
+            "handful of pairs (ddm_pr1 sec 5: ten pairs own 69% of it), and resampling "
+            "600 pairs with replacement moves that tail. A pose near win therefore needs "
+            "the bootstrap even when nothing about its bytes is uncertain."
+        ),
+    },
+    residual=0.0,
+    source_artifact=".omx/research/ddm_fs1_frame0_selector_reselection_20260904.md",
+    measurement_method=(
+        "seeded n600 pair bootstrap (200 resamples, seed 20260903) over the retained "
+        "per-pair d_pose vectors of two batch-8 n600 measures taken on ONE instrument "
+        "(frozen CPU-torch PoseNet, DALI-lineage GT), with the SAME draw matrix driving "
+        "both vectors; dB held constant per the law's fixed calibration term"
+    ),
+    provenance=build_provenance_for_predicted(
+        model_id="exchange_ratio_noise_floor.v1",
+        inputs_sha256=COMPOSE_SHA256,
+        measurement_axis="[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+        hardware_substrate="m5_max_128gib_cpu",
+    ),
+    empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+)
+
+updated = update_equation_with_empirical_anchor(
+    "exchange_ratio_noise_floor_v1",
+    anchor,
+    agent="ddm_fs1",
+    notes=(
+        "ddm_fs1: the law applied to a PURE-POSE near win -- dB a whole-archive "
+        "constant, d_seg zero by construction. ADMISSIBLE; half-width 0.599x the point."
+    ),
+)
+print(json.dumps({
+    "equation_id": updated.equation_id,
+    "anchor_count": len(updated.empirical_anchors),
+    "anchor_ids": [a.anchor_id for a in updated.empirical_anchors],
+}, indent=2))

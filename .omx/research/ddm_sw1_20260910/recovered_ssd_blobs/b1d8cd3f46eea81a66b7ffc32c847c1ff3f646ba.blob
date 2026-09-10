@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+"""Reprice RN1's named near-wins at the 2026-09-03 AFR1 pointer."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from decimal import Decimal, getcontext
+from pathlib import Path
+
+getcontext().prec = 40
+D = Decimal
+DENOM = D(37_545_489)
+RATE_PER_BYTE = D(25) / DENOM
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def ratio(a: int | Decimal, b: int | Decimal) -> str:
+    return str(D(a) / D(b))
+
+
+def rate_delta(delta_bytes: int) -> str:
+    return str(D(delta_bytes) * RATE_PER_BYTE)
+
+
+def atomic_json(path: Path, value: object) -> None:
+    data = (json.dumps(value, sort_keys=True, indent=2) + "\n").encode()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("wb") as fh:
+        fh.write(data)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--repo", type=Path, required=True)
+    ap.add_argument("--out", type=Path, required=True)
+    args = ap.parse_args()
+    repo = args.repo.resolve()
+
+    sources = [
+        ".omx/state/canonical_frontier_pointer.json",
+        ".omx/research/ddm_na11_negative_regrade_vs_rc2_20260821.md",
+        ".omx/research/ddm_rt3_route_rederivation_20260831.md",
+        ".omx/research/ddm_lc3_lane_carriage_rung_20260831.md",
+        ".omx/research/ddm_ltg1_lane_topology_generator_floor_20260831.md",
+        ".omx/research/ddm_blp1_born_lane_predictor_20260831.md",
+        ".omx/research/ddm_wwc1_winwin_cone_sweep_20260831.md",
+        ".omx/research/ddm_jbp1_joint_batch_price_verdict_20260901.md",
+        ".omx/research/ddm_bz2d_distortion_verdict_20260830.md",
+        ".omx/research/ddm_qbt2b_r10_doubling_adjudication_20260829.md",
+        ".omx/research/ddm_br2_born_object_scorer_realization_20260831.md",
+        ".omx/research/ddm_gf1_generator_form_capacity_verdict_20260830.md",
+    ]
+    source_receipts = []
+    for rel in sources:
+        path = repo / rel
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        source_receipts.append({"path": rel, "bytes": path.stat().st_size, "sha256": sha256(path)})
+
+    current_bytes = 180_002
+    held_distortion_byte_ceiling = 137_986
+    demand = current_bytes - held_distortion_byte_ceiling
+    d3_gross = 63_928
+    gf1_lane = 36_044
+    lane_bar = 21_699
+    d3_net = d3_gross - gf1_lane
+    gf1_packet = D(47_603)
+    gf1_mismatches = D(1_325_033)
+    residual_b_per_mismatch = D("0.2909")
+    generator_cap = D(85_020)
+
+    rows = {
+        "live": {
+            "pointer": "AFR1",
+            "score": "0.14797617125559104",
+            "archive_bytes": current_bytes,
+            "archive_sha256": "cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25",
+            "axis": "[contest-CUDA T4 n600]",
+            "held_distortion_byte_ceiling": held_distortion_byte_ceiling,
+            "rate_demand_bytes": demand,
+            "rate_demand_score": rate_delta(-demand),
+        },
+        "qs1": {
+            "authority": "PROJECTION_FROM_6_PAIRS",
+            "original_bytes": 77,
+            "repriced_bytes": "34.60",
+            "reported_projected_net_delta_s": "-0.000003978",
+            "reported_bar_ratio": "1.14",
+            "disposition": "FOLD_SAME_FIELD_INTO_REALIZED_ACCEPTANCE_ENGINE",
+        },
+        "qs5": {
+            "authority": "PROJECTION_FROM_3_PAIRS",
+            "original_bytes": 26,
+            "repriced_bytes": "17.30",
+            "reported_projected_net_delta_s": "-0.000003274",
+            "reported_bar_ratio": "0.94",
+            "disposition": "PARKED_FORMULATION_FOLD_SAME_FIELD",
+        },
+        "d3_with_gf1_lane_carriage": {
+            "authority": "N600_RATE_ONLY_COMPONENT_RECEIPTS_NOT_A_COMPOSED_AFR1_ARCHIVE",
+            "gross_saved_bytes": d3_gross,
+            "gross_to_live_demand_ratio": ratio(d3_gross, demand),
+            "lane_carriage_bytes": gf1_lane,
+            "lane_carriage_bar_bytes": lane_bar,
+            "lane_carriage_to_bar_ratio": ratio(gf1_lane, lane_bar),
+            "net_saved_bytes": d3_net,
+            "net_rate_delta_s": rate_delta(-d3_net),
+            "fraction_of_live_demand": ratio(d3_net, demand),
+            "remaining_demand_bytes": demand - d3_net,
+        },
+        "lane_exact_carriers": {
+            "gf1_lossy_stream_bytes": gf1_lane,
+            "d3b_smallest_exact_packet_bytes": 64_276,
+            "lc3_cropped_smevr_exact_bytes": 137_670,
+            "ltg1_topology_plus_shape_bytes": 233_262,
+            "blp1_weights_before_residual_bytes": 60_191,
+            "bar_bytes": lane_bar,
+        },
+        "fcd": {
+            "fcd1_reported_rate_saved_bytes": 3_756,
+            "fcd1_rate_delta_s": rate_delta(-3_756),
+            "fcd3_rate_saved_bytes": 2_940,
+            "fcd3_rate_delta_s": rate_delta(-2_940),
+            "fcd3_d_seg_delta": "0.00004006279",
+            "fcd3_d_pose_delta": "-0.0000008065981",
+            "fcd3_reported_net_delta_s": "0.00194332439",
+            "jf2_union_increment_vs_jf2_only_bytes": 27,
+            "disposition": "DO_NOT_SUM; SAME_OBJECT_JOINT_REENCODE_AND_REALIZED_TRANSFER_LOSE",
+        },
+        "jbp1_A": {
+            "authority": "N600_EXACT_RATE_ONLY; DISTORTION_UNMEASURED",
+            "saved_bytes": 2_950,
+            "rate_delta_s": rate_delta(-2_950),
+            "fraction_of_live_demand": ratio(2_950, demand),
+            "disposition": "OWNED_BY_DDM_SCM2_GM_REFIT",
+        },
+        "bz2": {
+            "authority": "N600_EXACT_RATE_PLUS_MACOS_CPU_ADVISORY_DISTORTION",
+            "archive_bytes": 100_862,
+            "saved_vs_afr1_bytes": current_bytes - 100_862,
+            "saved_vs_afr1_rate_delta_s": rate_delta(-(current_bytes - 100_862)),
+            "to_live_demand_ratio": ratio(current_bytes - 100_862, demand),
+            "charter_stale_anchor_saved_bytes": 79_228,
+            "stale_anchor_difference_bytes": 79_228 - (current_bytes - 100_862),
+            "d_seg": "0.01299522",
+            "token_error": "0.01122951",
+            "amplification": str(D("0.01299522") / D("0.01122951")),
+            "d_pose": "1.574",
+            "disposition": "RATE_REOPENS_ONLY_IF_GENERATOR_CHANGES_ACCURACY_OBJECT",
+        },
+        "gf1_capacity": {
+            "authority": "N600_SCORER_FREE_RATE_AND_MISMATCH_COUNT; CAPACITY_SCALING_UNMEASURED",
+            "measured_packet_bytes": int(gf1_packet),
+            "measured_mismatches": int(gf1_mismatches),
+            "measured_exact_residual_bytes": 385_448,
+            "measured_total_bytes": 433_051,
+            "cap_bytes": int(generator_cap),
+            "max_packet_scale_at_zero_residual": str(generator_cap / gf1_packet),
+            "scale_1_5": {
+                "projected_packet_bytes": str(gf1_packet * D("1.5")),
+                "residual_room_bytes": str(generator_cap - gf1_packet * D("1.5")),
+                "maximum_mismatches_at_measured_residual_price": str(
+                    (generator_cap - gf1_packet * D("1.5")) / residual_b_per_mismatch
+                ),
+                "required_mismatch_reduction_ratio": str(
+                    gf1_mismatches / ((generator_cap - gf1_packet * D("1.5")) / residual_b_per_mismatch)
+                ),
+                "status": "ARITHMETICALLY_OPEN_UNTESTED",
+            },
+            "scale_1_8": {
+                "projected_packet_bytes": str(gf1_packet * D("1.8")),
+                "over_cap_before_residual_bytes": str(gf1_packet * D("1.8") - generator_cap),
+                "status": "ARITHMETICALLY_CLOSED_AT_GF1_PACKET_FORM",
+            },
+        },
+        "born_object": {
+            "r10_authority": "N32_HORVITZ_THOMPSON_ADVISORY_TRAJECTORY",
+            "r10_B_hat": 121_928,
+            "r10_d_seg_hat": "0.002518",
+            "r10_d_pose_hat": "0.00057575",
+            "r10_S_hat": "0.408898",
+            "br2_authority": "N600_PHYSICAL_ARCHIVE_MACOS_CPU_ADVISORY_DISTORTION",
+            "br2_archive_bytes": 106_832,
+            "br2_d_seg": "0.17077688429090712",
+            "br2_d_pose": "115.83742417077798",
+            "br2_score": "51.18372088274943",
+            "disposition": "BR2_INSTANCE_CLOSED; ONLY_CHANGED_OBJECT_OR_OBJECTIVE_CAN_REOPEN",
+        },
+        "pricing_constants": {
+            "rate_per_byte": str(RATE_PER_BYTE),
+            "pose_derivative_at_live_point": "626.5 S_per_d_pose",
+            "one_argmax_site": "0.0000008477 S",
+            "union_law": "union != sum; physical same-object joint re-encode decides rate",
+        },
+    }
+    out = {
+        "schema": "ddm_rn1.near_win_arithmetic.v1",
+        "measurement_axis": "[scorer-free deterministic arithmetic over opened source receipts]",
+        "score_claim": False,
+        "pointer_moved": False,
+        "sources": source_receipts,
+        "rows": rows,
+    }
+    atomic_json(args.out, out)
+    print(
+        json.dumps({"out": str(args.out), "bytes": args.out.stat().st_size, "sha256": sha256(args.out)}, sort_keys=True)
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

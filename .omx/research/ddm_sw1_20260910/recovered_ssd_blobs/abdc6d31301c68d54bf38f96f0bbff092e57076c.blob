@@ -1,0 +1,8 @@
+The HPAC prior (the context-mixing arithmetic coder's learned model, 13,515 B IHS1-packed on the shipped fs2 mixer) was re-trained under
+the reproducing instrument cl2 identified: the JF1 warm-start law (60-epoch cosine from the shipped epoch-634 EMA init `ff2d3e45…`, seed
+20260716, batch 8, QAT 0.5, λ = 1.0) on the CURRENT token field, held bit-identical. Only two numbers move: the packed model (13,466 B, −49 B)
+and the RC64 token stream (113,419 B, +8 B) → joint 126,885 B vs the shipped 126,926 B = −41 B; archive 179,982 B. Every other section is the
+shipped byte. The receiver-copy decode reproduces the field byte-for-byte and the parse-back render (3,662,409,600 B, sha `f86bfaf3…`) is
+identical to the shipped render, so d_seg and d_pose are held by construction and the T4 row is a custody confirmation of a rate-only move.
+A fresh-root twin of the same law reproduced the stream (`e07274ca…`) and the archive (`08ec8533…`) byte-exactly. Seal
+`SEAL_ddm_cl2_lambda1_control_repack_contest_cuda.json` (sha `3cf630a6…`); memo `ddm_cl2_hpac_prior_capacity_ladder_on_shipped_object_20260905.md`.

@@ -1,0 +1,22 @@
+#!/bin/sh
+set -u
+SCR2=/Volumes/APDataStore/pact/scratch_gb1_native_identity_20260824
+export PATH="$SCR2/bin:$PATH"
+cd "$SCR2"
+rm -f out/0.raw
+bash runtime/inflate.sh "$SCR2/data" "$SCR2/out" "$SCR2/file_list.txt" > "$SCR2/inflate_native_sh.log" 2>&1
+rc=$?
+if [ -f out/0.raw ]; then
+  sha=$(shasum -a 256 out/0.raw | awk '{print $1}')
+else
+  sha=MISSING
+fi
+{
+  echo "rc=$rc"
+  echo "sha=$sha"
+  if [ "$sha" = "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7" ]; then
+    echo "VERDICT: C PORT EXACT - native corrector reproduces the Python corrector byte-for-byte on the full real payload; fire tree CLEARED for seal+T4"
+  else
+    echo "VERDICT: NATIVE DIFFERS or FAILED - do NOT fire; diagnose against inflate_native_sh.log"
+  fi
+} > "$SCR2/VERDICT_native.txt"

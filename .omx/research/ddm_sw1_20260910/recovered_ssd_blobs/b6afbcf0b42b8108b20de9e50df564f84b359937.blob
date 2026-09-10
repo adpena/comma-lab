@@ -1,0 +1,31 @@
+import os, sys, time, resource
+os.environ.setdefault("OMP_NUM_THREADS","4"); os.environ.setdefault("MKL_NUM_THREADS","4")
+import torch; torch.set_num_threads(4)
+REPO="/Users/adpena/Projects/pact"; sys.path.insert(0,REPO)
+from pathlib import Path
+import numpy as np
+from experiments import ddm_qbt1_qbflow_trainer as qbt
+t0=time.time()
+dev=torch.device("cpu")
+posenet, segnet = qbt.load_differentiable_scorers(Path(REPO)/"upstream", device=dev)
+posenet.eval(); segnet.eval()
+model = qbt.load_initial_model(dev)
+print("load %.1fs" % (time.time()-t0))
+C=Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/control_native100/stage_01_fairform_finish/checkpoints/periodic_000016.pt")
+t0=time.time(); pay=torch.load(C, map_location="cpu", weights_only=False); print("ckpt load %.2fs keys=%s" % (time.time()-t0, list(pay.keys())))
+print("opt keys", list(pay["optimizer_state_dict"].keys()))
+sd=pay["live_state_dict"]; print("n tensors", len(sd), "ema shadow n", len(pay["ema"]["shadow"]), "num_updates", pay["ema"]["num_updates"], "decay", pay["ema"]["decay"])
+model.load_state_dict({k:v.to(dev) for k,v in sd.items()}, strict=True)
+ids=torch.tensor(qbt.SELECTION_IDS[:16], dtype=torch.long, device=dev)
+t0=time.time()
+with torch.no_grad():
+    out=model(ids, height=qbt.EVAL_H, width=qbt.EVAL_W)
+    t1=time.time()
+    cam=qbt.roundtrip_to_camera_uint8_ste(out["rgb_pair_01"])
+    t2=time.time()
+    pose6, logits = qbt.scorer_forward(cam, posenet, segnet)
+    t3=time.time()
+    am = logits.argmax(dim=1).to(torch.uint8).numpy()
+print("render %.2fs roundtrip %.2fs scorer %.2fs total %.2fs" % (t1-t0,t2-t1,t3-t2,t3-t0))
+print("argmax", am.shape, am.dtype)
+print("peak RSS GiB %.2f" % (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**3)))

@@ -1,0 +1,132 @@
+# RELEASE_PLAN — PR #140 update to the fs1 bytes (PREPARED, NOTHING EXECUTED)
+
+**Nothing in this file has been run.** No push, no `gh release`, no `gh pr edit`, no comment.
+The p0 swap procedure binds: publication happens only on the operator's one-line confirm, and
+the operator writes any public prose themselves.
+
+Staging root: `/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/`
+
+| Artifact | Path | SHA-256 / size |
+|---|---|---|
+| staged PR tree (40 files) | `packet/` | MANIFEST `aa37af79…`, 39 hashed rows |
+| rebuilt archive (stage 6 output) | `evidence/rebuild/run1_archive.zip` | `50fcaf1a…708cf`, 180,022 B |
+| determinism repeat | `evidence/rebuild/run2_archive.zip` | byte-identical to run 1 |
+| evaluator report, verbatim | `report.txt` | `68ae91de…`, 664 B |
+| packet identity report | `PACKET_REPORT_fs1.txt` | 4,347 B |
+| harvested auth-eval JSON | `evidence/inputs/contest_auth_eval_fs1_t4_20260904.json` | `b93efb62…`, 51,375 B |
+| terminal compliance receipt | `evidence/compliance/pre_submission_compliance.ps1.r5.json` | 78 GREEN / 7 RED of 85 |
+
+---
+
+## Step 0 — operator gate (BLOCKING)
+
+The operator reads §"Open reds" below, decides whether the three `dispatch_claim_*` reds and
+the four pq12-known reds are acceptable, and gives the one-line confirm. Until then, stop here.
+
+## Step 1 — put the staged tree on the PR branch
+
+```bash
+cd /Users/adpena/Projects/pact
+git checkout semantic_joint_ctxmix          # the existing PR branch, head 7f29354
+rsync -a --delete --exclude '__pycache__' --exclude '._*' \
+    /Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/packet/ \
+    submissions/semantic_joint_ctxmix/
+git add submissions/semantic_joint_ctxmix
+git commit -m "semantic_joint_ctxmix: frame-0 selector re-selection — 180,022 B, 0.14786319521362173 [contest-CUDA T4 n600]"
+```
+
+Three files change: `README.md`, `compress.py`, `inflate.py`, plus their `MANIFEST.sha256`
+rows. Nothing under `runtime/` or `cpr1/` changes.
+
+## Step 2 — push the branch
+
+```bash
+git push origin semantic_joint_ctxmix
+```
+
+## Step 3 — host the archive as a new fork release asset
+
+A **new tag** is used rather than replacing the asset on `semantic_joint_ctxmix-afr1`, so any
+link already handed out keeps resolving to the bytes it named.
+
+```bash
+gh release create semantic_joint_ctxmix-fs1 \
+    --repo adpena/comma_video_compression_challenge \
+    --title "semantic_joint_ctxmix fs1 archive" \
+    --notes "archive.zip — SHA-256 50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf, 180022 bytes"
+
+gh release upload semantic_joint_ctxmix-fs1 \
+    /Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/rebuild/run1_archive.zip#archive.zip \
+    --repo adpena/comma_video_compression_challenge
+```
+
+The auto-mode classifier blocked the binary upload four times during the PR #140 posting; the
+operator's explicit instruction was required then and is required again.
+
+## Step 4 — fetchback verification (MANDATORY before the body is edited)
+
+```bash
+cd /Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence
+curl -fL -o fetchback_archive.zip \
+  https://github.com/adpena/comma_video_compression_challenge/releases/download/semantic_joint_ctxmix-fs1/archive.zip
+shasum -a 256 fetchback_archive.zip
+stat -f '%z' fetchback_archive.zip
+cmp fetchback_archive.zip rebuild/run1_archive.zip && echo HOSTED_BYTES_IDENTICAL
+```
+
+Required result: `50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf`, `180022`,
+`HOSTED_BYTES_IDENTICAL`. If any of the three differs, **stop** — do not edit the PR body.
+
+## Step 5 — update the PR body
+
+The operator writes the body. `PR_BODY_DELTA.md` lists the six number/link edits and states
+what must not change. When the operator has an approved file:
+
+```bash
+gh pr edit 140 --repo commaai/comma_video_compression_challenge \
+    --body-file /path/to/operator_approved_body.md
+```
+
+Title stays `semantic_joint_ctxmix (0.148)` — 0.14786319521362173 still rounds to 0.148.
+
+## Step 6 — record
+
+Append a terminal dispatch-claim row binding the full archive SHA-256 and the submission
+runtime tree SHA-256 (see "Open reds" #5), refresh the canonical frontier pointer's
+`submitted_pr_number_for_current_frontier`, and land the publication receipt memo.
+
+---
+
+## Open reds carried into the operator decision (terminal run r5: 78 GREEN / 7 RED of 85)
+
+Four are the pq12-frozen survivors, unchanged in kind:
+
+1. `auth_eval_raw_promotion_policy_blockers_absent` — STRUCTURAL-RECORD. The raw authority
+   emitter stamps its pre-adjudication blockers; the raw receipt is preserved.
+2. `contest_cpu_auth_eval_exists` — RECORD-WITH-REASON. No CPU score for these bytes; none
+   inherited; the prior same-lineage CPU attempt timed out at the 1,800 s inflation limit.
+3. `hosted_archive_manifest_supplied` — BLOCKED-ON-OPERATOR. Nothing is hosted yet; step 3/4
+   above is what clears it.
+4. `submission_runtime_tree_matches_auth_eval` — ENUMERATED-TREE-PROVED, with a **new cause
+   the operator should see**: the evaluated tree (`fbf4aaf4…`) is the g8v1-era tree, whose
+   `README.md` and `compress.py` predate the fr2c cures now in the PR tree. The staged tree
+   hashes `ec4c9d19…` (with custody files) / `bc663204…` (without). Every file `inflate.sh`
+   executes is byte-identical between the two; the difference is exactly those two documents
+   plus their MANIFEST rows. Curing the digest itself requires a fresh T4 row on the final
+   staged tree (~$0.30, 545 s) — that is the operator's call, not this arm's.
+
+Three are NOT in the pq12 set. All three are ledger-shape, none is a defect in the bytes:
+
+5. `dispatch_claim_terminal_archive_sha_bound` and
+   `dispatch_claim_terminal_runtime_tree_sha_bound` — the terminal claim row for lane
+   `ddm_fs1_t4_frame0_selector_20260904` records the archive SHA by 8-character prefix and
+   records no runtime tree SHA. The checker wants both in full:
+   archive `50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf`,
+   runtime tree `ec4c9d19d07bd0423b607c922f937f394b7ed8bbe582308ae7fd8004f5e9447e`.
+   pq12 hit the same class and cured it by appending a canonical terminal row.
+6. `dispatch_claim_prior_active_row` — the checker matches lane + job id and finds one row,
+   with no prior non-terminal row under the same job id. The spawn rows carry job id
+   `fs1_frame0_selector_t4_20260904`; only the auto-closed row carries the Modal call id.
+
+**None of the seven is waived here.** Reds 5 and 6 are appended to the shared claims ledger by
+MAIN, not by this preparation arm.

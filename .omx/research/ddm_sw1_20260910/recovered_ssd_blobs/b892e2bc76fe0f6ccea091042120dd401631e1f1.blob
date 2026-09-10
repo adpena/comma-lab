@@ -1,0 +1,110 @@
+# PR #140 body delta — afr1 bytes → fs2 bytes (PREPARED, NOT POSTED)
+
+Source of truth for the current body: `experiments/results/ddm_fr2_final_review_20260903/pr_body_FINAL_POSTED.md`.
+Every change below is a NUMBER or a LINK. The disclosure paragraph ("Note: the training,
+segmentation edit solve, and pose re-solve stages did not run on CUDA…"), the credits, the
+lineage, and the innovation narrative are **UNCHANGED**.
+
+This supersedes `ddm_ps1`'s fs1 delta: the posted body still carries the afr1 numbers, so the
+diffs below are stated against the POSTED text, not against ps1's intermediate.
+
+**Title stays `semantic_joint_ctxmix (0.148)`.** 0.14784474152757654 rounds to **0.148** at three
+decimals, the same string the current title carries. No title edit is needed.
+
+---
+
+## 1. "Upload zipped `archive.zip`" section
+
+```diff
+-Attached to this pull request via my fork's release: [archive.zip](https://github.com/adpena/comma_video_compression_challenge/releases/download/semantic_joint_ctxmix-afr1/archive.zip). Verify after download:
++Attached to this pull request via my fork's release: [archive.zip](https://github.com/adpena/comma_video_compression_challenge/releases/download/semantic_joint_ctxmix-fs2/archive.zip). Verify after download:
+
+-  - SHA-256: `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`
+-  - Size: 180,002 bytes (one stored member `p`, 179,902 bytes)
++  - SHA-256: `a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6`
++  - Size: 180,023 bytes (one stored member `p`, 179,923 bytes)
+```
+
+The member facts are MEASURED from the archive: member `p`, 179,923 bytes, stored,
+CRC32 2686596937, member SHA-256
+`85ac9ee6172999fcc794b36b370b568393075ef3ecc590ba6bc991835244229f`.
+
+## 2. "report.txt" section — replace the fenced block with the new evaluator output
+
+```
+=== Evaluation results over 600 samples ===
+
+Average PoseNet Distortion: 0.00000614
+
+Average SegNet Distortion: 0.00020139
+
+Submission file size: 180023 bytes
+
+Original uncompressed size: 37545489 bytes
+
+Compression Rate: 0.00479480
+
+Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.15
+```
+
+and the sentence under it:
+
+```diff
+-Verbatim from the evaluator (device: cuda, num_threads: 2), Tesla T4, Linux x86_64, all 600 samples. The final line displays two decimals; recomputed from the report's own printed components the score is 0.14797617125559104.
++Verbatim from the evaluator (device: cuda, num_threads: 2), Tesla T4, Linux x86_64, all 600 samples. The final line displays two decimals; recomputed from the report's own printed components the score is 0.14784474152757654.
+```
+
+The verbatim evaluator artifact is staged at `report.txt` beside this file
+(SHA-256 `e9ab42066d2bb6e23fa4375a01f6abb99b72e7cbd485b14943e6b6d7ac52a93b`, 664 bytes).
+
+## 3. "Does your submission require GPU" section
+
+```diff
+-Yes. Measured on T4: 532.3 s inflation + 40.6 s evaluation ≈ 573 s. CPU inflation exceeded the wallclock budget, so GPU is required.
++Yes. Measured on T4: 587.3 s inflation + 49.4 s evaluation ≈ 637 s. CPU inflation exceeded the wallclock budget, so GPU is required.
+```
+
+(Exact measured seconds: inflate 587.326284064 s, evaluate 49.42061551300003 s.)
+
+## 4. "Did you include the compression script" section — first sentence
+
+```diff
+-Yes. compress.py in the submission directory replays the five lossless coding stages that produced this archive from its pinned base and refuses unless the rebuilt archive matches its pinned SHA-256 exactly.
++Yes. compress.py in the submission directory replays the seven lossless stages that produced this archive from its pinned base and refuses unless the rebuilt archive matches its pinned SHA-256 exactly.
+```
+
+Nothing else in that section changes. The disclosure note and the three TODO bullets stay
+exactly as posted.
+
+## 5. "Is this submission competitive or innovative" — the Competitive line
+
+```diff
+-**Competitive:** 0.14797617125559104 [contest-CUDA T4, n600] versus the public PR #135 result of 0.162 on the same axis (author-reported unrounded 0.16226842169958583).
++**Competitive:** 0.14784474152757654 [contest-CUDA T4, n600] versus the public PR #135 result of 0.162 on the same axis (author-reported unrounded 0.16226842169958583).
+```
+
+## 6. "Innovative" bullet list — one bullet appended after the zero-byte pose re-solve bullet
+
+```
+  - **A joint frame-0 re-solve:** the receiver already carried a sparse per-pair selector
+    naming one integer pixel operation for a pair's first frame, but no encoder for it
+    existed. Writing that encoder let the selection be re-solved over the byte-optimal set,
+    and re-solving the twelve pose-carrier coefficients of the pairs whose first frame that
+    moved then paid again: per-pair frame-0 selector re-selection and a pose-carrier re-solve
+    on those pairs, +21 bytes total, PoseNet distortion 0.00000637 → 0.00000614, segmentation
+    output unchanged. SegNet reads each pair's second frame while both the selector and the
+    carrier write the first, so the segmentation output is unchanged by construction. The two
+    actuators reach a joint fixed point after one exchange: sweeping all eight selector modes
+    at the re-solved coefficients moves exactly one pair, and its label change costs zero
+    bytes because the blob's length depends on the active set, not on the labels.
+```
+
+---
+
+## What must NOT change
+
+- The disclosure paragraph about the local Apple-silicon solve stages — verbatim as posted.
+- The credits: PR #130 (Fesal Fayed, @fesalfayed), PR #135 (Shreyan Mohanty, @codexblack),
+  PR #133 (@JasonMo123).
+- The three TODO bullets (operator-approved codex fr2c rank-4 wording).
+- The `[contest-CPU]` posture: no CPU score is claimed for these bytes and none is inherited.

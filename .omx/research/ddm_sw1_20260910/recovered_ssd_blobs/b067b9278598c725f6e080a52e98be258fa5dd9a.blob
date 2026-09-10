@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_gm1_gradient_mass/measure
+R=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902
+for CELL in control_native100 treatment_zero_native; do
+  echo "=== ${CELL} ==="
+  .venv/bin/python experiments/ddm_gm1_gradient_mass_msafe.py \
+    --run-root "${R}/${CELL}" --cell-id "${CELL}" --store "${STORE}" \
+    --steps 0 1000 2000 3000 4000 5000 --threads 4
+done
+echo "ALL CELLS DONE"

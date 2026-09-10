@@ -1,0 +1,43 @@
+#!/bin/bash
+# ddm_ane2 STAGE 7 -- whose fp32 floor is 3.835e-06?
+#
+# ane1 measured `coreml_cpu_fp32` pose self-MSE at 2.4348e-12 on a decode of the
+# pointer body.  This arm's all-fp32 endpoint measures 3.835e-06 on GT frames --
+# 1.6 MILLION times larger -- and the compute-unit control has already ruled out
+# the ComputeUnit request (CPU_ONLY and CPU_AND_NE agree to 7 digits).  Two
+# suspects remain: the INPUT (GT vs generated frames) and the CONVERSION PATH
+# (this arm converts through FP16ComputePrecision with an always-False selector;
+# ane1 converted with compute_precision=FLOAT32).
+#
+# Running ane1's OWN fp32 package against THIS arm's GT reference separates them
+# in one measurement: same input, different conversion path.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+ANE1=/Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/mlpackages
+mkdir -p $OUT/stage7
+
+echo "=== ane1's fp32 package, this arm's GT reference ==="
+$PY $EXP units --model posenet --package $ANE1/posenet_b1_fp32.mlpackage \
+  --reference $OUT/reference/reference_posenet.npz --raw experiments/results/mlx_fleet_gt_cache/gt_n600.npz \
+  --modes CPU_ONLY CPU_AND_NE --eval-pairs 120 \
+  --out $OUT/stage7/units_ane1_fp32_package_gt.json
+
+echo "=== ane1's fp16 package, this arm's GT reference (the same control for fp16) ==="
+$PY $EXP units --model posenet --package $ANE1/posenet_b1_fp16.mlpackage \
+  --reference $OUT/reference/reference_posenet.npz --raw experiments/results/mlx_fleet_gt_cache/gt_n600.npz \
+  --modes CPU_AND_NE --eval-pairs 120 \
+  --out $OUT/stage7/units_ane1_fp16_package_gt.json
+
+echo "=== device-segment census over the pose ladder ==="
+$PY $EXP segments --packages $OUT/screen/posenet_ane_split_k*.mlpackage \
+  --mode CPU_AND_NE --out $OUT/stage7/segments_posenet_ladder.json
+
+echo "=== device-segment census over the pose fp32-HEAD mirror ==="
+$PY $EXP segments --packages $OUT/stage2/posenet_sel_hd*.mlpackage \
+  --mode CPU_AND_NE --out $OUT/stage7/segments_posenet_mirror.json
+
+echo "STAGE7 COMPLETE"

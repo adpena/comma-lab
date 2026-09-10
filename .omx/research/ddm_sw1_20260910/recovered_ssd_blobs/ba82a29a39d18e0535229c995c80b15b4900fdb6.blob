@@ -1,0 +1,93 @@
+"""ddm_ql1: measure EXACTLY which receipt fields moved for the bounded-target-G n2 control.
+
+Runs the real compile on the real custody and diffs the fresh receipt against the retained
+.omx/research receipt, field by field.  If the only deltas are digests that fold in
+predictor_state.binding_sha256, the change is a consequence of the EP725 source-pin refresh and
+carries no substantive drift.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+
+import numpy as np  # noqa: E402
+
+from tac.optimization.direct_description_carrier_compose import ReceiverRealizationProfileV1  # noqa: E402
+from tac.witness_dsl.bounded_target_g_encoder import (  # noqa: E402
+    FrozenTargetSliceCustodyV1,
+    compile_bounded_target_g_v2,
+    parse_bounded_target_g_encoder_receipt,
+)
+from tac.witness_dsl.ep725_levelset_predictor_adapter import (  # noqa: E402
+    _sha256,
+    decode_ep725_prefix_ephemeral_surface,
+)
+from tac.witness_dsl.tests.test_bounded_target_g_encoder import (  # noqa: E402
+    _GT_CACHE,
+    _GT_CACHE_SHA256,
+    _REAL_N2_RECEIPT,
+)
+from tools.run_ddm_v9_carrier_compose import open_stored_npy_memmap  # noqa: E402
+
+surface = decode_ep725_prefix_ephemeral_surface(pair_count=2, timeout_seconds=300.0)
+state = surface.bounded_decode.predictor_state
+lstars = open_stored_npy_memmap(_GT_CACHE, "lstars")
+target = np.ascontiguousarray(lstars[:2], dtype=np.uint8)
+target_sha = _sha256(memoryview(target).cast("B"))
+
+result = compile_bounded_target_g_v2(
+    state,
+    target,
+    target_custody=FrozenTargetSliceCustodyV1(
+        cache_sha256=_GT_CACHE_SHA256,
+        member_name="lstars",
+        source_pair_ids=state.source_pair_ids,
+        target_labels_sha256=target_sha,
+    ),
+    realization_profile=ReceiverRealizationProfileV1(
+        ((20, 80, 20), (240, 220, 40), (30, 30, 30), (220, 40, 40), (40, 80, 220))
+    ),
+)
+
+persisted_file = _REAL_N2_RECEIPT.read_bytes()
+persisted_receipt_bytes = persisted_file[:-1]
+persisted = parse_bounded_target_g_encoder_receipt(persisted_receipt_bytes)
+
+fresh_d = json.loads(result.receipt.to_receipt_bytes()) if hasattr(result.receipt, "to_receipt_bytes") else None
+if fresh_d is None:
+    fresh_d = {f: getattr(result.receipt, f) for f in result.receipt.__dataclass_fields__}
+    old_d = {f: getattr(persisted, f) for f in persisted.__dataclass_fields__}
+else:
+    old_d = json.loads(persisted_receipt_bytes)
+
+deltas = {}
+for key in sorted(set(fresh_d) | set(old_d)):
+    a, b = old_d.get(key, "<absent>"), fresh_d.get(key, "<absent>")
+    if a != b:
+        deltas[key] = {"retained": a, "fresh": b}
+
+out = {
+    "schema": "ql1.bounded_target_g_n2_receipt_delta.v1",
+    "predictor_state_binding_sha256_now": state.binding_sha256,
+    "predictor_state_semantic_binding_sha256_now": state.semantic_binding_sha256,
+    "predictor_renderer_sha256_now": state.predictor_renderer_sha256,
+    "target_labels_sha256": target_sha,
+    "substantive_fields_now": {
+        "debt_before_cells": result.receipt.debt_before_cells,
+        "total_topology_events": result.receipt.total_topology_events,
+        "birth_event_count": result.receipt.birth_event_count,
+        "death_event_count": result.receipt.death_event_count,
+        "packet_bytes": result.receipt.packet_bytes,
+        "decoded_labels_sha256": result.receipt.decoded_labels_sha256,
+        "scorer_invoked": result.receipt.scorer_invoked,
+        "candidate_archive_eligible": result.receipt.candidate_archive_eligible,
+    },
+    "packet_sha256_now": result.receipt.packet_sha256,
+    "changed_field_count": len(deltas),
+    "changed_fields": deltas,
+}
+print(json.dumps(out, indent=2, sort_keys=True, default=str))

@@ -1,0 +1,59 @@
+#!/bin/bash
+# ddm_pc1: wait for the V3 n600 re-solve, then merge -> measure -> price.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+ROOT=/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency
+PROBE=$ROOT/probe/carrier_state.npz
+
+for W in 0 1 2 3 4 5 6 7; do
+  until [ -f ".omx/tmp/codex_runs/ddm_pc1_v3rest2_w${W}.done.done" ]; do sleep 60; done
+done
+echo "ALL_WORKERS_DONE"
+
+.venv/bin/python - <<'PY'
+import json, glob, sys
+import numpy as np
+ROOT = "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency"
+seen = {}
+for f in glob.glob(f"{ROOT}/solve/v3_lattice10/*/rows.jsonl"):
+    for line in open(f):
+        row = json.loads(line)
+        seen[int(row["pair"])] = row
+missing = sorted(set(range(600)) - set(seen))
+print("unique pairs", len(seen), "missing", len(missing), missing[:20])
+if missing:
+    print("INCOMPLETE -- refusing to merge an n600 code table with holes")
+    sys.exit(3)
+start = np.load(f"{ROOT}/solve/v3_lattice10/shard0/start_codes.npy").astype(np.int32)
+codes = start.copy()
+for pair, row in seen.items():
+    codes[pair] = np.asarray(row["codes"], dtype=np.int32)
+np.save(f"{ROOT}/solve/v3_lattice10/merged_codes.npy", codes)
+merged = {"pairs": len(seen),
+          "sum_start": float(sum(r["start_d_pose"] for r in seen.values())),
+          "sum_final": float(sum(r["final_d_pose"] for r in seen.values())),
+          "changed_coordinates": int(sum(r["changed_coordinates"] for r in seen.values())),
+          "stop_reasons": {k: sum(1 for r in seen.values() if r["stop_reason"] == k)
+                           for k in {r["stop_reason"] for r in seen.values()}}}
+json.dump(merged, open(f"{ROOT}/solve/v3_lattice10/MERGED.json", "w"), indent=2)
+print(json.dumps(merged, indent=1))
+PY
+rc=$?
+if [ $rc -ne 0 ]; then echo "MERGE_FAILED rc=$rc"; exit $rc; fi
+
+echo "=== MEASURE n600 ==="
+OMP_NUM_THREADS=8 .venv/bin/python experiments/ddm_pc1_pose_carrier_efficiency.py measure \
+  --variant v3_lattice10 --carrier-state "$PROBE" \
+  --codes $ROOT/solve/v3_lattice10/merged_codes.npy \
+  --batch-size 8 \
+  --out $ROOT/measure/v3_lattice10 2>&1 | tail -20
+
+echo "=== PRICE ==="
+OMP_NUM_THREADS=8 .venv/bin/python experiments/ddm_pc1_pose_carrier_efficiency.py price \
+  --variant v3_lattice10 --carrier-state "$PROBE" \
+  --rows $ROOT/solve/v3_lattice10/*/rows.jsonl \
+  --start-codes $ROOT/solve/v3_lattice10/shard0/start_codes.npy \
+  --base-measure $ROOT/measure/v0_base/MEASURE.json \
+  --variant-measure $ROOT/measure/v3_lattice10/MEASURE.json \
+  --out $ROOT/price/v3_lattice10 2>&1 | tail -60
+echo "HARVEST_COMPLETE"

@@ -1,0 +1,27 @@
+#!/bin/bash
+# MAIN fire of ng1's warm-transition cell. Preconditions are CHECKED, not assumed.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+S=/Volumes/APDataStore/pact/ddm_ng1_warm_transition
+SEALED_TREE=/Volumes/VertigoDataTier/pact/ddm_wc3_qbr1_ema_law_cure/sealed_source_106d0dd0_v2
+D=$(date -u +%Y%m%d)
+# 1. Metal free: chain ended (CHAIN_DONE present, driver gone) and no qbt1 trainer alive.
+[ -s /Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/CHAIN_DONE.json ] || { echo "REFUSE: CHAIN_DONE.json absent"; exit 2; }
+pgrep -f 'experiments/ddm_qbr1_cell_chain.py' >/dev/null && { echo "REFUSE: chain driver alive"; exit 2; }
+pgrep -f 'ddm_qbt1_qbflow_trainer|run-config' >/dev/null && { echo "REFUSE: a trainer/cell is alive"; exit 2; }
+# 2. Fresh claims (24h TTL default; the cell is ~3 h).
+SC=ddm_ng1_scorer_$D; MC=ddm_ng1_metal_$D
+.venv/bin/python tools/claim_lane_dispatch.py claim --lane-id $SC --platform local_macos_cpu --instance-job-id ng1_warm_transition_$D --agent claude-main --status active_eval --ttl-hours 8 --notes "ng1 warm-transition cell (r10 AdamW state carried; one lever) vs measured cold control seed_20260902; sealed d57e49b02; falsifier S_hat(5k)<0.398768 and below control at every milestone"
+.venv/bin/python tools/claim_lane_dispatch.py claim --lane-id $MC --platform local_mlx_metal --instance-job-id ng1_warm_transition_$D --agent claude-main --status active_eval --ttl-hours 8 --notes "ONE Metal fire: ng1 warm cell (~2.95 h)"
+# 3. Authorize through the chain driver's own functions.
+.venv/bin/python $S/fire/authorize_warm_cell.py --scorer-claim-id $SC --metal-claim-id $MC --write
+# 4. Launch EXACTLY the sealed argv from the ng1 memo (sealed tree, not the working tree).
+$SEALED_TREE/.venv/bin/python $SEALED_TREE/tools/launch_detached_process.py \
+  --output-dir $S/launch/seed_20260902_warm_transition \
+  --cwd $SEALED_TREE \
+  --purpose "NG1 warm-transition cell seed_20260902_warm_transition_control_native100" \
+  --authority MAIN --derive-resource-budgets --measured-peak-rss-gib 2.3959503173828125 \
+  --measured-thread-need 4 --walltime-cap-s 18000 --done-receipt DONE.json \
+  -- $SEALED_TREE/.venv/bin/python $SEALED_TREE/experiments/ddm_qbr1_born_fairform_burn_prep.py \
+     run-config $S/authorized_configs/seed_20260902_warm_transition_control_native100.json
+echo "FIRED $(date -u +%H:%M:%SZ) — claims $SC / $MC"

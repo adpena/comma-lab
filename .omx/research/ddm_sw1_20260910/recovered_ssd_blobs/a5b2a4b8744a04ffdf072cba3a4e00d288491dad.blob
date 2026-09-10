@@ -1,0 +1,10 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+.venv/bin/python experiments/ddm_jg2_tail_reencode.py --stage encode \
+  --store /Volumes/APDataStore/pact/ddm_fs2/reencode \
+  --runtime-root /Volumes/APDataStore/pact/ddm_rc1/candidate_runtime_composed \
+  --expect-pointer-sha256 df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 \
+  --tokens /Volumes/APDataStore/pact/ddm_rc2/composed_decode_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8 \
+  --edits /Volumes/APDataStore/pact/ddm_fs2/retained/fields/edits_u12.npz --tag fs2u12
+echo "encode_u12 rc=$?"

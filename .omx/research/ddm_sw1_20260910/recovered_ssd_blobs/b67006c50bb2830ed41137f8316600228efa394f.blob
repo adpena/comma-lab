@@ -1,0 +1,3 @@
+#!/bin/bash
+W=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng1_warm_transition/runs/seed_20260902_warm_transition/milestones/step_001000/MILESTONE.json
+until [ -s "$W" ]; do sleep 30; done; echo "warm 1k milestone landed $(date -u +%H:%M:%SZ)"

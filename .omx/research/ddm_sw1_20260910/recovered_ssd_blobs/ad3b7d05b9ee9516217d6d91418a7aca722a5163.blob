@@ -1,0 +1,23 @@
+#!/bin/bash
+# ddm_ng5 -- the bounded CPU smoke, as ONE governed child: arm, arm, then the 3-way no-op
+# detector + differential.  Sequencing only; no memory arithmetic lives here (the caller reads
+# every declared peak out of gov2's measured-peak ledger).
+#
+# Shape note, and it is a MEASURED one: ng4 established that the high-water of this segment is
+# the B=16 forward+backward itself (~40.4 GiB per arm), NOT two arms summed -- ng2 and ng3 ran
+# both arms in one process and landed 41.46 / 41.48 GiB, 27 MB apart, with different extra work.
+# So running both arms in one process costs ~1 GiB over one arm, and ng3's ledger row is the
+# shape-matched measurement the caller declares.
+set -uo pipefail
+
+REPO=/Users/adpena/Projects/pact
+PY="$REPO/.venv/bin/python"
+ARM="$REPO/experiments/ddm_ng5_composition_cell.py"
+OUT=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng5_tau_band_x_continuous_objective/bounded_smoke
+
+mkdir -p "$OUT"
+
+"$PY" "$ARM" smoke --arm composition > "$OUT/arm_composition.stdout.json" || exit 11
+"$PY" "$ARM" smoke --arm control     > "$OUT/arm_control.stdout.json"     || exit 12
+"$PY" "$ARM" smoke-finalize          > "$OUT/finalize.stdout.json"        || exit 13
+exit 0
