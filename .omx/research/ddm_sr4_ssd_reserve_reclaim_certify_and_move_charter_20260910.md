@@ -1,4 +1,4 @@
-# ddm_sr3 — restore the SSD tier above the 40 GiB fallback reserve by certify-and-move / hardlink dedup (charter, MAIN 2026-09-10)
+# ddm_sr4 — restore the SSD tier above the 40 GiB fallback reserve by certify-and-move / hardlink dedup (charter, MAIN 2026-09-10)
 
 Both SSDs are under the serializer's mandatory 40 GiB fallback reserve (Vertigo 36 GiB free, APDataStore 32 GiB free at 20:35Z),
 so every codex arm's rc-17 fallback bundle now fails (pr15: rc 19) and gdc2's burn enforces a live 12 GiB floor. Free ≥ 80 GiB on
@@ -19,10 +19,10 @@ Vertigo and ≥ 60 GiB on APDataStore WITHOUT deleting any uncertified byte.
    tier has space, the honest output is a certified DELETION LIST for the operator (memory law: MOVE labels ≠ custody; #419
    STRICT deletion guard — you may NOT delete; you produce the certified list). Prefer: inflated raw frame trees and decoded
    PNG trees that a retained archive + runtime regenerate deterministically (certify with the archive sha + runtime digest).
-4. Every action appends to `.omx/research/ddm_sr3_20260910/RECLAIM_LEDGER.jsonl` (before/after `df`, per-file sha at source
-   and destination, certificate path). Memo `.omx/research/ddm_sr3_ssd_reserve_reclaim_20260910.md` with the before/after
+4. Every action appends to `.omx/research/ddm_sr4_20260910/RECLAIM_LEDGER.jsonl` (before/after `df`, per-file sha at source
+   and destination, certificate path). Memo `.omx/research/ddm_sr4_ssd_reserve_reclaim_20260910.md` with the before/after
    table and the certified deletion list (if any) for the operator. Serializer commit LAST (`REVIEW_GATE_OVERRIDE=1` ok for
-   non-.py); rc 17/19 is NOT a stop. Checkpoint as `ddm_sr3`.
+   non-.py); rc 17/19 is NOT a stop. Checkpoint as `ddm_sr4`.
 
 ## Boundaries
 Never touch: live arm dirs (`ddm_gdc2_categorical_coolchic_k8_distill`, `ddm_rlc5_first_measurement_run3*`), sealed candidate
