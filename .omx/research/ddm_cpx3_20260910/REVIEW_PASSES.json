@@ -1,0 +1,82 @@
+[
+  {
+    "file": "scripts/pre_submission_compliance_check.py",
+    "sha256": "6e47f6c71a29eef85b144208faad0ef94045b5c40690fffd58ce71722074e343",
+    "pass": 1,
+    "rc": 0,
+    "at": "2026-09-10T23:04:24.932346+00:00",
+    "lens": "Source-to-invariant review: live guard and traceback; bound receipt and lifecycle; current runtime rehash; normal path and historical fixture isolation. Earlier defects corrected before this clean pass."
+  },
+  {
+    "file": "scripts/pre_submission_first_measurement_custody.py",
+    "sha256": "57c4592e442d374f8555ffc760d0d51fab493d6df1709883063b9fe9df6b42c6",
+    "pass": 1,
+    "rc": 0,
+    "at": "2026-09-10T23:04:26.550477+00:00",
+    "lens": "Source-to-invariant review: live guard and traceback; bound receipt and lifecycle; current runtime rehash; normal path and historical fixture isolation. Earlier defects corrected before this clean pass."
+  },
+  {
+    "file": "src/tac/auth_eval_schema.py",
+    "sha256": "b2dd0db83b43515e04ecc1540d8510312bfa81da84406e859d74513141695b7b",
+    "pass": 1,
+    "rc": 0,
+    "at": "2026-09-10T23:04:28.208229+00:00",
+    "lens": "Source-to-invariant review: live guard and traceback; bound receipt and lifecycle; current runtime rehash; normal path and historical fixture isolation. Earlier defects corrected before this clean pass."
+  },
+  {
+    "file": "src/tac/tests/test_move44_compliance_custody.py",
+    "sha256": "10dd049d10865e592fc3ed85d9edfc6f72df06419b5037ff9e637cecb6e40b5b",
+    "pass": 1,
+    "rc": 0,
+    "at": "2026-09-10T23:04:30.194648+00:00",
+    "lens": "Source-to-invariant review: live guard and traceback; bound receipt and lifecycle; current runtime rehash; normal path and historical fixture isolation. Earlier defects corrected before this clean pass."
+  },
+  {
+    "file": "src/tac/tests/test_contest_cpu_axis_refusal.py",
+    "sha256": "74f211945d12e403f66be59d6d6c18ab2628724f3770492a84d40b8f109d77e5",
+    "pass": 1,
+    "rc": 0,
+    "at": "2026-09-10T23:04:32.108324+00:00",
+    "lens": "Source-to-invariant review: live guard and traceback; bound receipt and lifecycle; current runtime rehash; normal path and historical fixture isolation. Earlier defects corrected before this clean pass."
+  },
+  {
+    "file": "scripts/pre_submission_compliance_check.py",
+    "sha256": "6e47f6c71a29eef85b144208faad0ef94045b5c40690fffd58ce71722074e343",
+    "pass": 2,
+    "rc": 0,
+    "at": "2026-09-10T23:05:38.956576+00:00",
+    "lens": "Adversarial review: repinned corruption controls reach semantic checks; wrong call/archive/runtime and inactive CPU guards refuse; no v3 read on normal path; release debt remains failed. No new findings on final content."
+  },
+  {
+    "file": "scripts/pre_submission_first_measurement_custody.py",
+    "sha256": "57c4592e442d374f8555ffc760d0d51fab493d6df1709883063b9fe9df6b42c6",
+    "pass": 2,
+    "rc": 0,
+    "at": "2026-09-10T23:05:40.556334+00:00",
+    "lens": "Adversarial review: repinned corruption controls reach semantic checks; wrong call/archive/runtime and inactive CPU guards refuse; no v3 read on normal path; release debt remains failed. No new findings on final content."
+  },
+  {
+    "file": "src/tac/auth_eval_schema.py",
+    "sha256": "b2dd0db83b43515e04ecc1540d8510312bfa81da84406e859d74513141695b7b",
+    "pass": 2,
+    "rc": 0,
+    "at": "2026-09-10T23:05:42.220258+00:00",
+    "lens": "Adversarial review: repinned corruption controls reach semantic checks; wrong call/archive/runtime and inactive CPU guards refuse; no v3 read on normal path; release debt remains failed. No new findings on final content."
+  },
+  {
+    "file": "src/tac/tests/test_move44_compliance_custody.py",
+    "sha256": "10dd049d10865e592fc3ed85d9edfc6f72df06419b5037ff9e637cecb6e40b5b",
+    "pass": 2,
+    "rc": 0,
+    "at": "2026-09-10T23:05:44.180801+00:00",
+    "lens": "Adversarial review: repinned corruption controls reach semantic checks; wrong call/archive/runtime and inactive CPU guards refuse; no v3 read on normal path; release debt remains failed. No new findings on final content."
+  },
+  {
+    "file": "src/tac/tests/test_contest_cpu_axis_refusal.py",
+    "sha256": "74f211945d12e403f66be59d6d6c18ab2628724f3770492a84d40b8f109d77e5",
+    "pass": 2,
+    "rc": 0,
+    "at": "2026-09-10T23:05:46.049872+00:00",
+    "lens": "Adversarial review: repinned corruption controls reach semantic checks; wrong call/archive/runtime and inactive CPU guards refuse; no v3 read on normal path; release debt remains failed. No new findings on final content."
+  }
+]

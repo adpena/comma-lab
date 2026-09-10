@@ -577,6 +577,109 @@ def _read_bound_json(reference: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _cpu_guard_value(node, bindings: dict[str, Any]) -> Any:
+    """Interpret only declarative guard expressions; never execute receiver code.
+
+    Environment reads use the ordinary public entrypoint's unset opt-ins. The
+    independently retained CPU traceback must also prove this branch was reached.
+    Unknown syntax fails closed instead of guessing a receiver's semantics.
+    """
+    import ast
+
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name) and node.id in bindings:
+        return bindings[node.id]
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return not _cpu_guard_value(node.operand, bindings)
+    if isinstance(node, ast.BoolOp):
+        values = [_cpu_guard_value(value, bindings) for value in node.values]
+        return all(values) if isinstance(node.op, ast.And) else any(values)
+    if isinstance(node, ast.Compare) and len(node.ops) == 1:
+        left = _cpu_guard_value(node.left, bindings)
+        right = _cpu_guard_value(node.comparators[0], bindings)
+        if isinstance(node.ops[0], (ast.Eq, ast.Is)):
+            return left == right
+        if isinstance(node.ops[0], (ast.NotEq, ast.IsNot)):
+            return left != right
+    if isinstance(node, ast.Call) and not node.keywords:
+        name = ast.unparse(node.func)
+        if name == "torch.cuda.is_available" and not node.args:
+            return False
+        if name in {"os.environ.get", "os.getenv"} and 1 <= len(node.args) <= 2:
+            if not isinstance(node.args[0], ast.Constant) or not isinstance(node.args[0].value, str):
+                raise ValueError("nonliteral environment guard")
+            return _cpu_guard_value(node.args[1], bindings) if len(node.args) == 2 else None
+    raise ValueError("unsupported CPU guard expression")
+
+
+def staged_cpu_refusal_receiver(submission_dir: Path, receiver: dict[str, Any], stderr: str) -> dict[str, Any]:
+    """Derive a reached, raising CPU guard from the live shell/Python pair."""
+    import ast
+    import re
+    import shlex
+
+    if set(receiver) != {"target", "launcher_line", "launcher_text", "guard_line", "guard_text", "error"}:
+        raise ValueError("invalid receiver fields")
+    for key in ("launcher_line", "guard_line"):
+        if type(receiver[key]) is not int or receiver[key] < 1:
+            raise ValueError("invalid receiver line")
+    launcher = (submission_dir / "inflate.sh").read_text().splitlines()
+    launches = [(number, line.strip()) for number, line in enumerate(launcher, 1)
+                if line.strip() == receiver["launcher_text"]]
+    if len(launches) != 1:
+        raise ValueError("ambiguous public Python invocation")
+    launcher_line, line = launches[0]
+    argv = shlex.split(line)
+    if (len(argv) != 5 or argv[0] not in {"python", "python3"}
+            or argv[2:] != ["$DATA_DIR", "$base", "$OUTPUT_DIR/$base.raw"]
+            or not argv[1].startswith("$HERE/")
+            or Path(argv[1][6:]).name != argv[1][6:]):
+        raise ValueError("unsupported public Python invocation")
+    source_path = submission_dir / argv[1][6:]
+    source_text = source_path.read_text()
+    tree = ast.parse(source_text)
+    mains = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main"]
+    if len(mains) != 1:
+        raise ValueError("ambiguous main guard")
+    # Direct-body guards only: nested/disabled functions cannot stand in for main.
+    bindings: dict[str, Any] = {}
+    guard = None
+    for node in mains[0].body:
+        if isinstance(node, ast.If) and node.lineno == receiver["guard_line"]:
+            guard = node
+            break
+        for child in ast.walk(node):
+            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store):
+                bindings.pop(child.id, None)
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            try:
+                bindings[node.targets[0].id] = _cpu_guard_value(node.value, bindings)
+            except ValueError:
+                pass
+    if (guard is None or _cpu_guard_value(guard.test, bindings) is not True
+            or len(guard.body) != 1 or not isinstance(guard.body[0], ast.Raise)):
+        raise ValueError("CPU guard does not raise")
+    raised = guard.body[0]
+    exc = raised.exc
+    if (not isinstance(exc, ast.Call) or ast.unparse(exc.func) != "RuntimeError"
+            or len(exc.args) != 1 or exc.keywords or not isinstance(exc.args[0], ast.Constant)
+            or not isinstance(exc.args[0].value, str) or "linux-nvidia-t4" not in exc.args[0].value):
+        raise ValueError("guard does not declare the T4 refusal")
+    actual = {"target": "linux-nvidia-t4", "launcher_line": launcher_line,
+              "launcher_text": line, "guard_line": guard.lineno,
+              "guard_text": source_text.splitlines()[guard.lineno - 1].strip(), "error": exc.args[0].value}
+    trace = rf'File "[^"\n]*/{re.escape(source_path.name)}", line {raised.lineno}, in main'
+    # Line hints are descriptive metadata: move 44 added shell setup lines.
+    # Runtime bytes and the reached traceback, not historical line numbers, bind.
+    declared = {key: value for key, value in receiver.items() if key != "launcher_line"}
+    derived = {key: value for key, value in actual.items() if key != "launcher_line"}
+    if (derived != declared or not re.search(trace, stderr)
+            or "RuntimeError: " + actual["error"] not in stderr):
+        raise ValueError("refusal receiver guard not bound to retained traceback")
+    return actual
+
+
 def required_contest_cpu_axis_refusal_blockers(
     payload: dict[str, Any],
     *,
@@ -592,7 +695,6 @@ def required_contest_cpu_axis_refusal_blockers(
     adjudication's receipt reference and independently measured packet must agree.
     No provider call or receiver execution occurs here.
     """
-    import ast
     import hashlib
 
     blockers: list[str] = []
@@ -683,33 +785,12 @@ def required_contest_cpu_axis_refusal_blockers(
         outer_tree = remote.get("expected_runtime_tree_sha256")
         if outer_tree and outer_tree != retained_manifest.get("runtime_tree_sha256"):
             blockers.append("refusal_outer_runtime_mismatch")
-        receiver = payload["receiver"]
-        if set(receiver) != {"target", "launcher_line", "launcher_text", "guard_line", "guard_text", "error"}:
-            raise ValueError("invalid receiver fields")
-        launcher = (submission_dir / "inflate.sh").read_text().splitlines()
-        source_text = (submission_dir / "inflate.py").read_text()
-        source = source_text.splitlines()
-        guard = next((node for node in ast.walk(ast.parse(source_text))
-                      if isinstance(node, ast.If) and node.lineno == receiver["guard_line"]), None)
-        if (guard is None or ast.unparse(guard.test) != "not torch.cuda.is_available()"
-                or len(guard.body) != 1 or not isinstance(guard.body[0], ast.Raise)
-                or not isinstance(guard.body[0].exc, ast.Call)
-                or ast.unparse(guard.body[0].exc.func) != "RuntimeError"
-                or len(guard.body[0].exc.args) != 1
-                or not isinstance(guard.body[0].exc.args[0], ast.Constant)
-                or guard.body[0].exc.args[0].value != receiver["error"]):
+        try:
+            staged_cpu_refusal_receiver(submission_dir, payload["receiver"],
+                                        artifacts["contest_auth_eval.stderr.log"])
+        except ValueError:
             blockers.append("refusal_guard_does_not_raise_recorded_error")
-        if (receiver["target"] != "linux-nvidia-t4"
-                or type(receiver["launcher_line"]) is not int or receiver["launcher_line"] < 1
-                or type(receiver["guard_line"]) is not int or receiver["guard_line"] < 1
-                or launcher[receiver["launcher_line"] - 1].strip() != receiver["launcher_text"]
-                or receiver["launcher_text"] != 'python "$HERE/inflate.py" "$DATA_DIR" "$base" "$OUTPUT_DIR/$base.raw"'
-                or source[receiver["guard_line"] - 1].strip() != receiver["guard_text"]
-                or receiver["guard_text"] != "if not torch.cuda.is_available():"
-                or "linux-nvidia-t4" not in receiver["error"]
-                or "RuntimeError: " + receiver["error"] not in artifacts["contest_auth_eval.stderr.log"]
-                or 'line ' + str(receiver["guard_line"] + 1) + ', in main' not in artifacts["contest_auth_eval.stderr.log"]):
-            blockers.append("refusal_receiver_guard_not_bound")
+            raise
     except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, SyntaxError) as exc:
         blockers.append(f"refusal_evidence_invalid:{type(exc).__name__}:{exc}")
     return blockers

@@ -1,0 +1,33 @@
+{
+  "charter_status": "COMPLETE",
+  "main_landed": false,
+  "checker_counts": {
+    "before": 81,
+    "after": 91,
+    "total": 93,
+    "strict_rc": 1
+  },
+  "tests_passed": 222,
+  "serializer": {
+    "returncode": 17,
+    "attempts": 1,
+    "status": "BUNDLE_VERIFIED_MAIN_MUST_LAND",
+    "commit": "a272bab138e62693de24108e166386ef93bd5bdc",
+    "main_landed": false,
+    "verified_files": 38,
+    "bundle": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/serializer/20260910T231014.052116Z-92852/intended-commit.bundle",
+      "bytes": 771413,
+      "sha256": "49c0f804ed134a4e92e99d38c55318f994b909b60f2f4e92ae25d638de629e6b"
+    },
+    "shared_index_unchanged": true,
+    "owner": "MAIN",
+    "consumer_store": ".omx/research/ddm_cpx3_20260910/SERIALIZER_STATUS.json",
+    "fire_trigger": "harvest verified bundle and land exact commit",
+    "git_failure": "git object backing-store creation denied: Operation not permitted"
+  },
+  "memo": ".omx/research/ddm_cpx3_checker_move44_guard_form_and_first_measurement_custody_20260910.md",
+  "fire_orders": ".omx/research/ddm_cpx3_20260910/FIRE_ORDERS.json",
+  "score_measured_by_this_arm": false,
+  "frontier_line": "composition S 0.1372449041713402 @ 180,406 B [contest-CUDA T4 n600] (move 44)"
+}

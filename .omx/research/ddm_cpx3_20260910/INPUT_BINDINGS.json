@@ -1,0 +1,42 @@
+[
+  {
+    "path": ".omx/research/ddm_swp3_pr140_swap_packet_restage_move44_20260910.md",
+    "bytes": 13510,
+    "sha256": "87f1d2ee685d35f11f65809b7c7ef1d3b2671b857714b3147b1f4f038a59a247"
+  },
+  {
+    "path": ".omx/research/ddm_cpx2_checker_cuda_only_refusal_adjudication_path_20260910.md",
+    "bytes": 14471,
+    "sha256": "a48f685cbd42666a4702cad1c10901f40bc2963beb08c6aa60835d7575096991"
+  },
+  {
+    "path": ".omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json",
+    "bytes": 16791,
+    "sha256": "8fd8077f7f495325d3a56b77a54610eff481259f7e6efa62f27beadbae95bcd5"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_move44_cpu_20260910/MODAL_REMOTE_RESULT.json",
+    "bytes": 48262,
+    "sha256": "ef39b9b7aa173f1acf3730d57b1e2dc1c661bfef381c693923c6c7480c612124"
+  },
+  {
+    "path": ".omx/research/ddm_rlc5_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json",
+    "bytes": 976,
+    "sha256": "3df608ea3de6d7fe7ad0dc509fb0d497eb4a286cc287f508bb33e9d63b9f9e46"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+    "bytes": 242556,
+    "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+  },
+  {
+    "path": ".omx/research/ddm_cust1_first_measurement_custody_reconciliation_20260910.md",
+    "bytes": 10616,
+    "sha256": "5e24c44e72d2e5f7f6d78b9911839d8118fd7402b321302df802d452d1a7adc8"
+  },
+  {
+    "path": ".omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
+    "bytes": 24850,
+    "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
+  }
+]

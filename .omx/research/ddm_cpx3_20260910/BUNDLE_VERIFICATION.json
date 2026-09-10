@@ -1,0 +1,665 @@
+{
+  "commit": "a272bab138e62693de24108e166386ef93bd5bdc",
+  "all_files_match": true,
+  "changed_paths_match_intent": true,
+  "no_coauthor_trailer": true,
+  "prerequisite_objects_read_only": "/Users/adpena/Projects/pact/.git/objects",
+  "files": [
+    {
+      "path": "scripts/pre_submission_compliance_check.py",
+      "expected_sha256": "6e47f6c71a29eef85b144208faad0ef94045b5c40690fffd58ce71722074e343",
+      "commit_sha256": "6e47f6c71a29eef85b144208faad0ef94045b5c40690fffd58ce71722074e343",
+      "equal": true
+    },
+    {
+      "path": "scripts/pre_submission_first_measurement_custody.py",
+      "expected_sha256": "57c4592e442d374f8555ffc760d0d51fab493d6df1709883063b9fe9df6b42c6",
+      "commit_sha256": "57c4592e442d374f8555ffc760d0d51fab493d6df1709883063b9fe9df6b42c6",
+      "equal": true
+    },
+    {
+      "path": "src/tac/auth_eval_schema.py",
+      "expected_sha256": "b2dd0db83b43515e04ecc1540d8510312bfa81da84406e859d74513141695b7b",
+      "commit_sha256": "b2dd0db83b43515e04ecc1540d8510312bfa81da84406e859d74513141695b7b",
+      "equal": true
+    },
+    {
+      "path": "src/tac/tests/test_move44_compliance_custody.py",
+      "expected_sha256": "10dd049d10865e592fc3ed85d9edfc6f72df06419b5037ff9e637cecb6e40b5b",
+      "commit_sha256": "10dd049d10865e592fc3ed85d9edfc6f72df06419b5037ff9e637cecb6e40b5b",
+      "equal": true
+    },
+    {
+      "path": "src/tac/tests/test_contest_cpu_axis_refusal.py",
+      "expected_sha256": "74f211945d12e403f66be59d6d6c18ab2628724f3770492a84d40b8f109d77e5",
+      "commit_sha256": "74f211945d12e403f66be59d6d6c18ab2628724f3770492a84d40b8f109d77e5",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_checker_move44_guard_form_and_first_measurement_custody_20260910.md",
+      "expected_sha256": "f8962504dd1be6ef5a02388c53fa1c4f1a0308d208659bee8393a94bb8ba6089",
+      "commit_sha256": "f8962504dd1be6ef5a02388c53fa1c4f1a0308d208659bee8393a94bb8ba6089",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/COMPLIANCE_BEFORE.json",
+      "expected_sha256": "555d2ecd852fcfa53f210f583bc5c82c560f66492e15180325e5b804685906e3",
+      "commit_sha256": "555d2ecd852fcfa53f210f583bc5c82c560f66492e15180325e5b804685906e3",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/COMPLIANCE.json",
+      "expected_sha256": "665417968ed13ea4de6efb5f8df7753b016205cd27a868bc33b7ef3a92909d80",
+      "commit_sha256": "665417968ed13ea4de6efb5f8df7753b016205cd27a868bc33b7ef3a92909d80",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/COMPLIANCE_COMMAND.json",
+      "expected_sha256": "5fe7b85ae6a234a6c5d7d10dbabcff107f4ba7126dddedeabd1b479640157505",
+      "commit_sha256": "5fe7b85ae6a234a6c5d7d10dbabcff107f4ba7126dddedeabd1b479640157505",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/COMPLIANCE_STATUS.json",
+      "expected_sha256": "ada5c2ea5dac5516d0ad620e2ef0b6e687a420a6cfeb3b7d2944f70bda169175",
+      "commit_sha256": "ada5c2ea5dac5516d0ad620e2ef0b6e687a420a6cfeb3b7d2944f70bda169175",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/SUBMISSION_POLICY_ADJUDICATION.json",
+      "expected_sha256": "57c4326fd5d221a527d480d579aca4b6f3e09dbc2bdaeb9dc6127c54dc5a110b",
+      "commit_sha256": "57c4326fd5d221a527d480d579aca4b6f3e09dbc2bdaeb9dc6127c54dc5a110b",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/DISPATCH_CUSTODY.json",
+      "expected_sha256": "ec276d4df93f21285ad3e501f867a1d8891e34cfd26d1c103724b4cff1865b74",
+      "commit_sha256": "ec276d4df93f21285ad3e501f867a1d8891e34cfd26d1c103724b4cff1865b74",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/DERIVED_RECEIVER.json",
+      "expected_sha256": "63e77227ed3404243f253e1f9d189f750813562f1630c26fc3efeb8901bde62d",
+      "commit_sha256": "63e77227ed3404243f253e1f9d189f750813562f1630c26fc3efeb8901bde62d",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/INPUT_BINDINGS.json",
+      "expected_sha256": "496e56f5f95e437be2536ceb130183cbe67458b29a9221373ea9ab8b7f0a3c27",
+      "commit_sha256": "496e56f5f95e437be2536ceb130183cbe67458b29a9221373ea9ab8b7f0a3c27",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/SCORE_RECOMPUTATION.json",
+      "expected_sha256": "58318aad0e50548c31f34287ef4c331443ed042a5053c371836c46afebfe83c3",
+      "commit_sha256": "58318aad0e50548c31f34287ef4c331443ed042a5053c371836c46afebfe83c3",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/RECALL_QUERIES.json",
+      "expected_sha256": "b38bdf433c73a3c086af42004578ab18b5075e2cfc768c1eb0117d9771aee332",
+      "commit_sha256": "b38bdf433c73a3c086af42004578ab18b5075e2cfc768c1eb0117d9771aee332",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/research_recall.txt",
+      "expected_sha256": "ffe87c379202c2badf70cb3d0184250f77f30076a7a7cae041fbb6855c295495",
+      "commit_sha256": "ffe87c379202c2badf70cb3d0184250f77f30076a7a7cae041fbb6855c295495",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/design_recall.txt",
+      "expected_sha256": "a0f6933f800d458551fff907dcd08f57917dce2846befbe08e85dd302ee9ddbc",
+      "commit_sha256": "a0f6933f800d458551fff907dcd08f57917dce2846befbe08e85dd302ee9ddbc",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/graph_recall.txt",
+      "expected_sha256": "89e65d7713b33e5d132149b30059e3d4f92c2a7bd1ac9ea3f272ae9a88c74dbc",
+      "commit_sha256": "89e65d7713b33e5d132149b30059e3d4f92c2a7bd1ac9ea3f272ae9a88c74dbc",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/ledger_recall.txt",
+      "expected_sha256": "e82f5d83cfadfc8852bf74ffb1993ce88bbb559d4c4dc9430b7a81c0bab2dd85",
+      "commit_sha256": "e82f5d83cfadfc8852bf74ffb1993ce88bbb559d4c4dc9430b7a81c0bab2dd85",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/equations_recall.txt",
+      "expected_sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+      "commit_sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/REVIEW_PASSES.json",
+      "expected_sha256": "3e37301365178569b06402c48712ed7fa13122717faa3912991e3b1c7b5f1278",
+      "commit_sha256": "3e37301365178569b06402c48712ed7fa13122717faa3912991e3b1c7b5f1278",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/pytest_final.txt",
+      "expected_sha256": "d7f15ead8841ab2ec79ebb90b93830a9bc22f828d1b876c1520827b122f78ae5",
+      "commit_sha256": "d7f15ead8841ab2ec79ebb90b93830a9bc22f828d1b876c1520827b122f78ae5",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/ruff.txt",
+      "expected_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "commit_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/BOUNDARIES_BEFORE.json",
+      "expected_sha256": "932b9ea8ecb1f08350d0d133a1b3ead617a09f24f44375ffdaef05e046af6f9b",
+      "commit_sha256": "932b9ea8ecb1f08350d0d133a1b3ead617a09f24f44375ffdaef05e046af6f9b",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/BOUNDARY_VERIFICATION.json",
+      "expected_sha256": "3460dd03f767286398d3bb3e318c013db49f671ce281a1cfdf84e5eb86db2e44",
+      "commit_sha256": "3460dd03f767286398d3bb3e318c013db49f671ce281a1cfdf84e5eb86db2e44",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/FIRE_ORDERS.json",
+      "expected_sha256": "949ff7b4ea3ba2959a4da77a7bc7c90b0dd50a7cbbb8680a1c19c45b226a0e15",
+      "commit_sha256": "949ff7b4ea3ba2959a4da77a7bc7c90b0dd50a7cbbb8680a1c19c45b226a0e15",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/MOVE43_BASELINE.json",
+      "expected_sha256": "ac90074304c22afad9cdacf5927066ab6c672e2be035795dd016ccf984cca574",
+      "commit_sha256": "ac90074304c22afad9cdacf5927066ab6c672e2be035795dd016ccf984cca574",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass1_auth_eval_schema.py.txt",
+      "expected_sha256": "857c7d9fd3b6b5158a1e948f51f03a168aa95247ef950ace6c14b58213dd665a",
+      "commit_sha256": "857c7d9fd3b6b5158a1e948f51f03a168aa95247ef950ace6c14b58213dd665a",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass1_pre_submission_compliance_check.py.txt",
+      "expected_sha256": "4cf98ae5e2cacef0e2b7d37c68b1f54a47d08473ce72388e70363bd0621dafc6",
+      "commit_sha256": "4cf98ae5e2cacef0e2b7d37c68b1f54a47d08473ce72388e70363bd0621dafc6",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass1_pre_submission_first_measurement_custody.py.txt",
+      "expected_sha256": "da760b074b30978f2f6cd0e24f9c37a08239f0d19db65be5c1dc0013e80139c9",
+      "commit_sha256": "da760b074b30978f2f6cd0e24f9c37a08239f0d19db65be5c1dc0013e80139c9",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass1_test_contest_cpu_axis_refusal.py.txt",
+      "expected_sha256": "66579e1978e539e8021548f19e67a336b3944a724ffb1829665092d7e20b4b6f",
+      "commit_sha256": "66579e1978e539e8021548f19e67a336b3944a724ffb1829665092d7e20b4b6f",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass1_test_move44_compliance_custody.py.txt",
+      "expected_sha256": "1f5422cfafb79f9aa586c8789f23f4bcec4a27f7b95112de74f7be75a5eab3cb",
+      "commit_sha256": "1f5422cfafb79f9aa586c8789f23f4bcec4a27f7b95112de74f7be75a5eab3cb",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass2_auth_eval_schema.py.txt",
+      "expected_sha256": "faa6dbaa6fc78b165b50a7788e1103b30cb0a0579570d7309869747b9faa32e0",
+      "commit_sha256": "faa6dbaa6fc78b165b50a7788e1103b30cb0a0579570d7309869747b9faa32e0",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass2_pre_submission_compliance_check.py.txt",
+      "expected_sha256": "4cf98ae5e2cacef0e2b7d37c68b1f54a47d08473ce72388e70363bd0621dafc6",
+      "commit_sha256": "4cf98ae5e2cacef0e2b7d37c68b1f54a47d08473ce72388e70363bd0621dafc6",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass2_pre_submission_first_measurement_custody.py.txt",
+      "expected_sha256": "6aca545daed01783367e8e0ff20b34c4109accbe9300db9c935537ae074c4453",
+      "commit_sha256": "6aca545daed01783367e8e0ff20b34c4109accbe9300db9c935537ae074c4453",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass2_test_contest_cpu_axis_refusal.py.txt",
+      "expected_sha256": "66579e1978e539e8021548f19e67a336b3944a724ffb1829665092d7e20b4b6f",
+      "commit_sha256": "66579e1978e539e8021548f19e67a336b3944a724ffb1829665092d7e20b4b6f",
+      "equal": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx3_20260910/review_pass2_test_move44_compliance_custody.py.txt",
+      "expected_sha256": "c7e2c962944648dfe015b646c5d2badbfef53ae73b497a1a0fbdac7102aa97d3",
+      "commit_sha256": "c7e2c962944648dfe015b646c5d2badbfef53ae73b497a1a0fbdac7102aa97d3",
+      "equal": true
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "fetch",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/serializer/20260910T231014.052116Z-92852/intended-commit.bundle",
+        "refs/heads/serializer-fallback:refs/heads/verified"
+      ],
+      "rc": 0,
+      "stderr": "From /Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/serializer/20260910T231014.052116Z-92852/intended-commit.bundle\n * [new branch]          serializer-fallback -> verified\n"
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "rev-parse",
+        "refs/heads/verified"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:scripts/pre_submission_compliance_check.py"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:scripts/pre_submission_first_measurement_custody.py"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:src/tac/auth_eval_schema.py"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:src/tac/tests/test_move44_compliance_custody.py"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:src/tac/tests/test_contest_cpu_axis_refusal.py"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_checker_move44_guard_form_and_first_measurement_custody_20260910.md"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/COMPLIANCE_BEFORE.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/COMPLIANCE.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/COMPLIANCE_COMMAND.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/COMPLIANCE_STATUS.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/SUBMISSION_POLICY_ADJUDICATION.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/DISPATCH_CUSTODY.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/DERIVED_RECEIVER.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/INPUT_BINDINGS.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/SCORE_RECOMPUTATION.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/RECALL_QUERIES.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/research_recall.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/design_recall.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/graph_recall.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/ledger_recall.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/equations_recall.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/REVIEW_PASSES.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/pytest_final.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/ruff.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/BOUNDARIES_BEFORE.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/BOUNDARY_VERIFICATION.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/FIRE_ORDERS.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/MOVE43_BASELINE.json"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass1_auth_eval_schema.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass1_pre_submission_compliance_check.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass1_pre_submission_first_measurement_custody.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass1_test_contest_cpu_axis_refusal.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass1_test_move44_compliance_custody.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass2_auth_eval_schema.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass2_pre_submission_compliance_check.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass2_pre_submission_first_measurement_custody.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass2_test_contest_cpu_axis_refusal.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "a272bab138e62693de24108e166386ef93bd5bdc:.omx/research/ddm_cpx3_20260910/review_pass2_test_move44_compliance_custody.py.txt"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "show",
+        "-s",
+        "--format=%B",
+        "a272bab138e62693de24108e166386ef93bd5bdc"
+      ],
+      "rc": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_cpx3_20260910/bundle_verify.git",
+        "diff-tree",
+        "--no-commit-id",
+        "--name-only",
+        "-r",
+        "a272bab138e62693de24108e166386ef93bd5bdc"
+      ],
+      "rc": 0,
+      "stderr": ""
+    }
+  ]
+}

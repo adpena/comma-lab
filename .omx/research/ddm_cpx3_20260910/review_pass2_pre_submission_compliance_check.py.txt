@@ -1,0 +1,2 @@
+RESCAN: 'scripts/pre_submission_compliance_check.py' current entity census 87 (last stored census 87)
+Marked 87 entities in 'scripts/pre_submission_compliance_check.py' as 'reviewed'

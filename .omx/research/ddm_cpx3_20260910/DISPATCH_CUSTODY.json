@@ -1,0 +1,105 @@
+{
+  "basis": "completed_candidate_seal.v3",
+  "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+  "ledger": {
+    "bytes": 1755054,
+    "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+    "sha256": "3dc969441002b34f29305d21f6bee5a90ad3c4f856dd22793605df2c93c3b63f"
+  },
+  "ledger_events": [
+    "dispatched",
+    "harvested",
+    "reconciled_terminal_success"
+  ],
+  "receipt": {
+    "bytes": 242556,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+    "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+  },
+  "reconciliation": {
+    "bytes": 10347,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RUN5_TERMINAL_RECONCILIATION.json",
+    "sha256": "bc2d80abef05f8b8ace04fe37f4192f25ebb975643ba8583d62a24149db45aec"
+  },
+  "runtime_custody": {
+    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+    "expected_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+    "normal_projected_runtime_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664/out/submission_dir",
+    "retained_runtime_tree_sha256": "e44a61a1b2b2e5dab42488cdb1c33cef04e6a516b5be4ad361576c9df93506ee",
+    "runtime_file_count": 48,
+    "runtime_files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
+    "schema": "first_measurement_runtime_custody.v1",
+    "sources": {
+      "argv": {
+        "field_path": [
+          "exact_argv"
+        ],
+        "file": {
+          "bytes": 7341,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+          "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+        },
+        "flag": "--expected-runtime-content-tree-sha256"
+      },
+      "context": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 4973,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+          "sha256": "f0fe10b83a913fb59b92874d7fda8f276d4844038855f35ea9d1dc9059a50eec"
+        }
+      },
+      "provenance": {
+        "field_path": [
+          "artifacts",
+          "provenance.json"
+        ],
+        "file": {
+          "bytes": 242556,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        },
+        "manifest_field_path": [
+          "inflate_runtime_manifest"
+        ]
+      },
+      "request": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 7341,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+          "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+        }
+      },
+      "result": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 242556,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        }
+      }
+    },
+    "worker_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf"
+  },
+  "seal": {
+    "bytes": 16791,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json",
+    "sha256": "8fd8077f7f495325d3a56b77a54610eff481259f7e6efa62f27beadbae95bcd5"
+  },
+  "seal_link": {
+    "bytes": 1641,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RUN5_COMPLETED_SEAL_ADDENDUM.json",
+    "sha256": "533ad944975c287bdf07ce9723c489e69b8a9b09bb9cd6e3881b10e377d4f56a"
+  },
+  "valid": true
+}

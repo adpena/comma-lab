@@ -1,0 +1,41 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "scripts/pre_submission_compliance_check.py",
+    "--submission-dir",
+    "submissions/_staging_move44_pr140_swap/shippable",
+    "--archive",
+    "submissions/_staging_move44_pr140_swap/shippable/archive.zip",
+    "--auth-eval-json",
+    "submissions/_staging_move44_pr140_swap/_packet/contest_auth_eval.json",
+    "--contest-final",
+    "--strict",
+    "--submission-score-axis",
+    "contest_cuda",
+    "--expected-archive-sha256",
+    "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+    "--expected-archive-size-bytes",
+    "180406",
+    "--expected-runtime-tree-sha256",
+    "e44a61a1b2b2e5dab42488cdb1c33cef04e6a516b5be4ad361576c9df93506ee",
+    "--expected-lane-id",
+    "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+    "--expected-job-id",
+    "ddm_rlc5_first_measurement_t4_run5_20260910",
+    "--dispatch-claims-md",
+    ".omx/state/active_lane_dispatch_claims.md",
+    "--competitive-or-innovative-statement-file",
+    "submissions/_staging_move44_pr140_swap/_packet/COMPETITIVE_STATEMENT.md",
+    "--public-scan-path",
+    "submissions/_staging_move44_pr140_swap/PR_BODY.md",
+    "--json-out",
+    "submissions/_staging_move44_pr140_swap/_packet/COMPLIANCE.json",
+    "--contest-cpu-auth-eval-json",
+    "submissions/_staging_move44_pr140_swap/_packet/CPU_AXIS_REFUSAL.json",
+    "--archive-manifest-json",
+    "submissions/_staging_move44_pr140_swap/_packet/archive_manifest.json"
+  ],
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}

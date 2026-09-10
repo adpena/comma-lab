@@ -1,0 +1,22 @@
+{
+  "checked_files": 128,
+  "unchanged_files": 127,
+  "authorized_strict_report_changes": [
+    {
+      "path": "submissions/_staging_move44_pr140_swap/_packet/COMPLIANCE.json",
+      "before": {
+        "bytes": 95624,
+        "sha256": "553ddbfee71d5270a503247dbc771fc1038110def12c9d6329a8d8b77e65c8de"
+      },
+      "after": {
+        "bytes": 123453,
+        "sha256": "665417968ed13ea4de6efb5f8df7753b016205cd27a868bc33b7ef3a92909d80"
+      }
+    }
+  ],
+  "shared_index_unchanged": true,
+  "receiver_files_unchanged": true,
+  "volume_writes": false,
+  "upstream_writes": false,
+  "scorer_or_modal_calls": false
+}

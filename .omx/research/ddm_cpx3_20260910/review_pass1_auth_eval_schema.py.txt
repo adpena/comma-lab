@@ -1,0 +1,2 @@
+RESCAN: 'src/tac/auth_eval_schema.py' current entity census 28 (last stored census 26)
+Marked 28 entities in 'src/tac/auth_eval_schema.py' as 'reviewed'

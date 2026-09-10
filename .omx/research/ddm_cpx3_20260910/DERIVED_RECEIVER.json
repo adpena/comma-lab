@@ -1,0 +1,8 @@
+{
+  "target": "linux-nvidia-t4",
+  "launcher_line": 86,
+  "launcher_text": "python \"$HERE/inflate.py\" \"$DATA_DIR\" \"$base\" \"$OUTPUT_DIR/$base.raw\"",
+  "guard_line": 57,
+  "guard_text": "if not advisory_cpu and not torch.cuda.is_available():",
+  "error": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+}

@@ -196,7 +196,15 @@ def test_live_packet_changes_cannot_reuse_receipt(real_packet, tmp_path):
 
 
 @pytest.fixture
-def reviewed_packet(real_packet):
+def reviewed_packet(real_packet, monkeypatch):
+    # This is the historical move-43 policy fixture. Keep real move-43 anchors
+    # while isolating it from later pointer moves; frontier regression has its
+    # own production tests and must continue refusing this old packet today.
+    import tac.frontier_scan as frontier
+
+    anchors = [row for row in frontier.collect_all_anchors(REPO) if row.archive_sha256 == SHA]
+    assert anchors, "retained move-43 frontier anchor required"
+    monkeypatch.setattr(frontier, "collect_all_anchors", lambda repo: anchors)
     mod = real_packet[0]
     argv = json.loads((EVIDENCE / "COMPLIANCE_COMMAND.json").read_text())["argv"][2:]
     return mod.build_report(mod.build_arg_parser().parse_args(argv))

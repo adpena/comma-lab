@@ -1,0 +1,2 @@
+RESCAN: 'scripts/pre_submission_first_measurement_custody.py' current entity census 3 (last stored census 0)
+Marked 3 entities in 'scripts/pre_submission_first_measurement_custody.py' as 'reviewed'

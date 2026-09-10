@@ -1,0 +1,2 @@
+RESCAN: 'src/tac/tests/test_move44_compliance_custody.py' current entity census 19 (last stored census 19)
+Marked 19 entities in 'src/tac/tests/test_move44_compliance_custody.py' as 'reviewed'

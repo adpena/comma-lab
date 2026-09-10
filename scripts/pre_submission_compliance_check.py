@@ -2126,6 +2126,9 @@ def inspect_dispatch_claims(
     selected_axis: str = "contest_cuda",
     expected_archive_sha256: str | None = None,
     expected_runtime_tree_sha256: str | None = None,
+    submission_dir: Path | None = None,
+    archive: dict[str, Any] | None = None,
+    packet_auth_eval: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     if not lane_id and not job_id:
@@ -2197,6 +2200,20 @@ def inspect_dispatch_claims(
             f"latest_matching_status={latest_matching_status!r}"
         ),
     )
+    completed_custody: dict[str, Any] = {"required": False}
+    if (require_successful_exact_eval_terminal and selected_axis == "contest_cuda"
+            and latest_matching_status and latest_matching_status.startswith("completed_pointer_move_")
+            and latest_matching_notes and "candidate_seal.v3 completed" in latest_matching_notes
+            and submission_dir is not None and archive is not None and packet_auth_eval is not None):
+        from scripts.pre_submission_first_measurement_custody import inspect_completed_first_measurement_custody
+
+        completed_custody = inspect_completed_first_measurement_custody(
+            repo=REPO_ROOT, latest_row=latest_matching_row, claim_rows=rows,
+            lane_id=lane_id, job_id=job_id, archive=archive, submission_dir=submission_dir,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            packet_auth_eval=packet_auth_eval,
+            runtime_manifest=_submission_runtime_manifest(submission_dir))
+    completed_valid = completed_custody.get("valid") is True
     if require_successful_exact_eval_terminal:
         successful_prefixes = (
             SUCCESSFUL_CPU_EVAL_TERMINAL_STATUS_PREFIXES
@@ -2210,7 +2227,7 @@ def inspect_dispatch_claims(
         _add(
             checks,
             "dispatch_claim_successful_exact_eval_terminal_row",
-            successful_terminal,
+            successful_terminal or completed_valid,
             (
                 f"lane_id={lane_id} job_id={job_id} matching_rows={matching_rows} "
                 f"latest_matching_status={latest_matching_status!r} "
@@ -2226,7 +2243,7 @@ def inspect_dispatch_claims(
         _add(
             checks,
             "dispatch_claim_terminal_archive_sha_bound",
-            terminal_archive_bound,
+            terminal_archive_bound or completed_valid,
             (
                 "contest-final terminal claim must bind the exact scored "
                 f"archive sha256={expected_sha}; latest_matching_notes={latest_matching_notes!r}"
@@ -2241,7 +2258,7 @@ def inspect_dispatch_claims(
         _add(
             checks,
             "dispatch_claim_terminal_runtime_tree_sha_bound",
-            terminal_runtime_bound,
+            terminal_runtime_bound or completed_valid,
             (
                 "contest-final terminal claim must bind the exact scored "
                 f"runtime_tree_sha256={expected_runtime_sha}; "
@@ -2265,6 +2282,7 @@ def inspect_dispatch_claims(
         "latest_matching_status": latest_matching_status,
         "latest_matching_row": latest_matching_row,
         "latest_matching_notes": latest_matching_notes,
+        "completed_first_measurement_custody": completed_custody,
         "has_prior_nonterminal_matching_row": has_prior_nonterminal_matching_row,
     }, checks
 
@@ -3365,6 +3383,9 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             if args.contest_final
             else None
         ),
+        submission_dir=args.submission_dir,
+        archive=archive,
+        packet_auth_eval=_load_json(auth_path),
     )
     sections["dispatch_claims"] = claims_record
     checks.extend(claims_checks)

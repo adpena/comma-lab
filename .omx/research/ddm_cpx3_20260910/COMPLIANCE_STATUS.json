@@ -1,0 +1,9 @@
+{
+  "returncode": 1,
+  "passed": 91,
+  "total": 93,
+  "failed": [
+    "submission_runtime_imports_within_allowlist",
+    "hosted_archive_manifest_supplied"
+  ]
+}

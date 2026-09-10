@@ -1,0 +1,23 @@
+[
+  {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": ".omx/research/ddm_cpx3_20260910/SERIALIZER_STATUS.json",
+    "fire_trigger": "harvest verified rc17 bundle",
+    "action": "Land exact checker/test/evidence commit and verify all intended file hashes"
+  },
+  {
+    "disposition": "FOLDED",
+    "owner": "operator + MAIN",
+    "consumer_store": "submissions/_staging_move44_pr140_swap/_packet/BLOCKERS.json",
+    "fire_trigger": "checker harvest and operator receiver decision",
+    "action": "Resolve import hygiene and stale README; fresh exact evidence for receiver edits"
+  },
+  {
+    "disposition": "FOLDED",
+    "owner": "operator + MAIN",
+    "consumer_store": "submissions/_staging_move44_pr140_swap/SWAP_COMMANDS.md",
+    "fire_trigger": "non-hosting clearance and explicit publish authorization",
+    "action": "Host and fetchback; require real hosted manifest and strict PASS before swap; restage on pointer drift"
+  }
+]
