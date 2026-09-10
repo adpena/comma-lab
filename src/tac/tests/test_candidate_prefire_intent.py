@@ -1,6 +1,7 @@
 """Scorer-free contract fixtures; these do NOT prove RLC2's real producer/harvest door.
 
-Only Git history and the 3.6GB raw-file transport are fixture substitutes. Archive,
+The broad fixtures substitute Git history and the 3.6GB raw-file transport; the
+amendment custody tests read real isolated Git objects. Archive,
 member, runtime, normalized receiver, small retained evidence and legacy T4 validation
 are real local byte reads. No decoder, timing sampler, scorer, or provider is invoked.
 """
@@ -19,6 +20,8 @@ from tac.tests.test_candidate_seal import DEFAULT_PAYLOAD, _public_smoke, _stage
 from tac.tests.test_decode_wall_clock_t4_direct import _report, _t4_receipt
 
 COMMIT = "a1" * 20
+AMENDMENT_COMMIT = "b2" * 20
+REAL_PF_GIT = cs._pf_git
 
 
 def write(path, document):
@@ -44,6 +47,10 @@ def load_tool(name):
 def fixture(tmp_path, monkeypatch):
     root, archive = _stage_candidate(tmp_path / "candidate")
     base, base_archive = _stage_candidate(tmp_path / "base", bytes(range(256)) * 10)
+    for tree in (root, base):
+        (tree / "MANIFEST.sha256").write_text("".join(
+            f"{cs.sha256_file(path)}  {path.relative_to(tree).as_posix()}\n"
+            for path in sorted(tree.rglob("*")) if path.is_file() and path.name != "archive.zip"))
     runtime = cs.measure_runtime_digest(root)
     receiver = measure_receiver_digest(root)
     pointer = _write_pointer(tmp_path, score=0.2, sha=cs.sha256_file(base_archive))
@@ -102,16 +109,26 @@ def fixture(tmp_path, monkeypatch):
             "score_claim": False, "actual_verdict": "REFUSED", "cold_start": True, "checkpoint_resume": False, "frames": list(range(600))})
         return {**ref, "wall_seconds": wall, "authority": False, "actual_verdict": "REFUSED"}
     base_diagnostic = diagnostic("base_local.json", base, 100)
-    candidate_diagnostic = {**diagnostic("candidate_local.json", root, 110), "cold": True, "n_samples": 600}
-    smap = {r[0]: list(r[1:]) for r in cs.prefire_receiver_rows(base)}
-    cmap = {r[0]: list(r[1:]) for r in cs.prefire_receiver_rows(root)}
-    delta = write(store / "delta.json", {"source_receiver_sha256": measure_receiver_digest(base),
-        "candidate_receiver_sha256": receiver, "files": [{"relative_path": p, "source": smap.get(p),
+    candidate_diagnostic = {**diagnostic("candidate_local.json", base, 110), "cold": True, "n_samples": 600}
+    smap = {r[0]: list(r[1:]) for r in cs.prefire_risk_receiver_rows(base)}
+    cmap = {r[0]: list(r[1:]) for r in cs.prefire_risk_receiver_rows(root)}
+    delta = write(store / "delta.json", {"source_receiver_sha256": cs.measure_prefire_risk_receiver_digest(base),
+        "candidate_receiver_sha256": cs.measure_prefire_risk_receiver_digest(root), "files": [{"relative_path": p, "source": smap.get(p),
         "candidate": cmap.get(p)} for p in sorted(smap.keys() | cmap.keys())]})
     fraction = 110 / 100 - 1
     risk = {"schema": cs.PREFIRE_RISK_SCHEMA, "mode": "completed_t4_receiver_delta", "authority": False,
-        "timing_clearance": False, "source_t4_leg": leg_ref, "source_receiver": {"sha256": leg["receiver_sha256"]},
-        "candidate_receiver": {"sha256": receiver}, "diagnostic_reference_receiver": {"path": str(root), "sha256": receiver},
+        "timing_clearance": False, "source_t4_leg": leg_ref, "source_receiver": {
+            "digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+            "sha256": cs.measure_prefire_risk_receiver_digest(base),
+            "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "t4_direct_sha256": leg["receiver_sha256"]},
+        "candidate_receiver": {"digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+            "sha256": cs.measure_prefire_risk_receiver_digest(root)},
+        "diagnostic_reference_receiver": {"path": str(base),
+            "digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+            "sha256": cs.measure_prefire_risk_receiver_digest(root),
+            "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "receipt_sha256": measure_receiver_digest(base)},
         "receiver_delta_manifest": delta, "base_local_diagnostic": base_diagnostic,
         "candidate_local_diagnostics": [candidate_diagnostic], "score_claim": False,
         "calculation": {"candidate_local_ceiling_seconds": 110, "local_cost_fraction_upper": fraction,
@@ -129,11 +146,35 @@ def fixture(tmp_path, monkeypatch):
     memo_path = tmp_path / cs.PREFIRE_MEMO
     memo_path.parent.mkdir(parents=True, exist_ok=True)
     memo_path.write_bytes((Path(__file__).resolve().parents[3] / cs.PREFIRE_MEMO).read_bytes())
+    base_blobs = {name: (tmp_path / name).read_bytes() for name in cs.PREFIRE_IMPLEMENTATION_PATHS}
+    (tmp_path / cs.PREFIRE_IMPLEMENTATION_PATHS[0]).write_text("# amended committed source fixture\n")
+    amended_rows = [{"path": name, "sha256": cs.sha256_file(tmp_path / name)}
+                    for name in sorted(cs.PREFIRE_IMPLEMENTATION_PATHS)]
+    amended_manifest = write(store / "amended_implementation.json", amended_rows)
+    amended_memo = tmp_path / ".omx/research/amendment.md"
+    amended_memo.write_text("Fixture prospective amendment.\n")
+    amendment = {"schema": cs.PREFIRE_CONTRACT_AMENDMENT_SCHEMA,
+        "amendment_id": cs.PREFIRE_CONTRACT_AMENDMENT_ID,
+        "adjudication_memo": cs.prefire_file_reference(amended_memo),
+        "definition_change": {
+            "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+            "digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+            "excluded_relative_paths": ["MANIFEST.sha256"], "raw_manifest_still_required": True,
+            "executable_difference_policy": "REFUSE"},
+        "reference_receiver": {"path": str(base)}, "candidate_receiver": {"path": str(root)},
+        "implementation_commit": AMENDMENT_COMMIT, "implementation_manifest": amended_manifest,
+        "score_claim": False}
+    write(tmp_path / cs.PREFIRE_FREEZE, {"implementation_commit": COMMIT,
+        "implementation_manifest": implementation, "amendments": [amendment]})
     def git(repo, *args):
         if args[:2] == ("show", "-s"):
-            return b"2026-09-09T00:00:00+00:00"
+            return (b"2026-09-10T00:30:00+00:00" if args[3] == AMENDMENT_COMMIT
+                    else b"2026-09-09T00:00:00+00:00")
         if args[0] == "show":
-            return (repo / args[1].split(":", 1)[1]).read_bytes()
+            ref, rel = args[1].split(":", 1)
+            if ref == COMMIT and rel in base_blobs:
+                return base_blobs[rel]
+            return (repo / rel).read_bytes()
         if args[:2] == ("rev-parse", "HEAD"):
             return COMMIT.encode()
         return b""
@@ -142,7 +183,8 @@ def fixture(tmp_path, monkeypatch):
         "created_at_utc": "2026-09-10T01:00:00Z", "created_by": "fixture-producer", "producer_source_commit": COMMIT,
         "score_claim": False, "promotion_eligible": False, "timing_clearance": False,
         "contract": {"adjudication_memo": cs.prefire_file_reference(memo_path), "implementation_commit": COMMIT,
-            "implementation_manifest": implementation, "implementation_manifest_sha256": implementation["sha256"]},
+            "implementation_manifest": implementation, "implementation_manifest_sha256": implementation["sha256"],
+            "amendment": amendment},
         "candidate": {"archive": cs.prefire_file_reference(archive), "runtime": {"path": str(root), **runtime.to_dict()},
             "normalized_receiver": {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest", "sha256": receiver},
             "receiver_pins": [row for row in rows if row["relative_path"] in {"inflate.py", "inflate.sh"}], "archive_member": None},
@@ -490,7 +532,7 @@ def test_unregistered_call_cannot_transition(fixture, monkeypatch):
 def test_intent_producer_emits_and_self_validates(fixture):
     contract = fixture["intent"]["contract"]
     write(fixture["repo"] / cs.PREFIRE_FREEZE, {"implementation_commit": COMMIT,
-        "implementation_manifest": contract["implementation_manifest"]})
+        "implementation_manifest": contract["implementation_manifest"], "amendments": [contract["amendment"]]})
     output = fixture["repo"] / "new_intent.json"
     doc = cs.build_prefire_intent(candidate_id="fixture_produced", runtime_dir=fixture["root"],
         evidence_paths={key: Path(ref["path"]) for key, ref in fixture["intent"]["evidence"].items()},
@@ -587,3 +629,292 @@ def test_worker_local_custody_survives_snapshot_import(fixture, monkeypatch):
         first_measurement_context=str(context_path), gpu="T4", scorer_device="cuda", inflate_device="auto",
         inflate_timeout=1800, evaluate_timeout=1800, claim_policy="require_active", detach=True, provider_detach_ack=True)
     assert len(seen) == 1
+
+
+def test_prefire_risk_accepts_only_regenerated_manifest_indirection(fixture):
+    root = fixture["root"]
+    risk = json.loads(Path(fixture["intent"]["evidence"]["timing_risk"]["path"]).read_text())
+    reference = Path(risk["diagnostic_reference_receiver"]["path"])
+    for tree in (root, reference):
+        for line in (tree / "MANIFEST.sha256").read_text().splitlines():
+            digest, rel = line.split("  ", 1)
+            assert digest == cs.sha256_file(tree / rel)
+    assert (root / "MANIFEST.sha256").read_bytes() != (reference / "MANIFEST.sha256").read_bytes()
+    assert cs.prefire_risk_receiver_rows(root) == cs.prefire_risk_receiver_rows(reference)
+    assert cs.measure_prefire_risk_receiver_digest(root) == cs.measure_prefire_risk_receiver_digest(reference)
+    assert measure_receiver_digest(root) != measure_receiver_digest(reference)
+    assert "MANIFEST.sha256" in {row[0] for row in cs.prefire_receiver_rows(root)}
+    assert "MANIFEST.sha256" in cs.measure_runtime_digest(root).file_map()
+    assert validate(fixture)["schema"] == cs.PREFIRE_INTENT_SCHEMA
+    for field in ("source_receiver", "candidate_receiver", "diagnostic_reference_receiver"):
+        original = risk[field]["digest_definition"]
+        risk[field]["digest_definition"] = "unversioned"
+        risk["risk_sha256"] = cs.prefire_digest(risk, "risk_sha256")
+        ref = write(fixture["store"] / "wrong_definition.json", risk)
+        with pytest.raises(cs.PrefireRefusal, match="PREFIRE_RISK_EVIDENCE_REFUSED"):
+            cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+        risk[field]["digest_definition"] = original
+    for field, key in (("source_receiver", "t4_direct_sha256"),
+                       ("diagnostic_reference_receiver", "receipt_sha256")):
+        original = risk[field][key]
+        risk[field][key] = "e" * 64
+        risk["risk_sha256"] = cs.prefire_digest(risk, "risk_sha256")
+        ref = write(fixture["store"] / "wrong_legacy_join.json", risk)
+        with pytest.raises(cs.PrefireRefusal, match="PREFIRE_RISK_EVIDENCE_REFUSED"):
+            cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+        risk[field][key] = original
+    delta_path = Path(risk["receiver_delta_manifest"]["path"])
+    delta = json.loads(delta_path.read_text())
+    for field in ("files", "source_receiver_sha256", "candidate_receiver_sha256"):
+        changed = dict(delta)
+        changed[field] = delta["files"][:-1] if field == "files" else "e" * 64
+        risk["receiver_delta_manifest"] = write(delta_path, changed)
+        risk["risk_sha256"] = cs.prefire_digest(risk, "risk_sha256")
+        ref = write(fixture["store"] / "wrong_delta.json", risk)
+        with pytest.raises(cs.PrefireRefusal, match="complete normalized receiver delta differs"):
+            cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+
+
+def test_prefire_risk_refuses_nonpin_inflate_byte_change(fixture):
+    ref = fixture["intent"]["evidence"]["timing_risk"]
+    assert cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+    path = fixture["root"] / "inflate.py"
+    before = path.read_bytes()
+    # One byte outside either AST pin span, leaving valid Python.
+    after = before.replace(b"stand-in", b"stand-In", 1)
+    assert sum(a != b for a, b in zip(before, after, strict=True)) == 1
+    path.write_bytes(after)
+    with pytest.raises(cs.PrefireRefusal, match="PREFIRE_RISK_EVIDENCE_REFUSED: receiver risk endpoints differ"):
+        cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+    for after in (before + b"\nARCHIVE_BYTES = 1\n",
+                  before.replace(b"ARCHIVE_BYTES = ", b"ARCHIVE_BYTES = 1 + ", 1),
+                  before.replace(b"ARCHIVE_BYTES", b"REMOVED_BYTES", 1)):
+        path.write_bytes(after)
+        with pytest.raises(cs.PrefireRefusal, match="PREFIRE_RISK_EVIDENCE_REFUSED"):
+            cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+
+
+def test_prefire_risk_manifest_exclusion_does_not_bypass_dependency_manifest_validation(fixture):
+    intent, root = fixture["intent"], fixture["root"]
+    assert validate(fixture)
+    digest = cs.measure_prefire_risk_receiver_digest(root)
+    (root / "MANIFEST.sha256").write_text("stale raw dependency manifest\n")
+    assert cs.measure_prefire_risk_receiver_digest(root) == digest
+    # Rebind outer identities so refusal must come from the independent dependency
+    # listing, which still pins the formerly valid manifest bytes.
+    runtime = cs.measure_runtime_digest(root)
+    receiver = measure_receiver_digest(root)
+    intent["candidate"]["runtime"] = {"path": str(root), **runtime.to_dict()}
+    intent["candidate"]["normalized_receiver"]["sha256"] = receiver
+    smoke = _public_smoke(root, root / "archive.zip")
+    for group in ("public_path_probes", "inflate_sh_smokes"):
+        intent["public_entrypoint_smoke"][group]["candidate"] = smoke[group]["candidate"]
+    for name in ("candidate_manifest", "manifest_validation", "twin_encode", "archive_parseback",
+                 "raw_identity_n600", "literal_census"):
+        path = Path(intent["evidence"][name]["path"])
+        doc = json.loads(path.read_text())
+        doc.update(runtime_sha256=runtime.sha256, receiver_sha256=receiver)
+        if name == "manifest_validation":
+            doc["manifest"] = intent["evidence"]["candidate_manifest"]
+        intent["evidence"][name] = write(path, doc)
+    write(fixture["path"], sign(intent))
+    with pytest.raises(cs.PrefireRefusal, match="PREFIRE_NON_TIMING_GATE_REFUSED: dependency manifest/verification not complete"):
+        validate(fixture)
+
+
+def test_prefire_amendment_keeps_legacy_t4_direct_manifest_inclusive(fixture):
+    from tac.decode_wall_clock import validate_decode_wall_clock
+
+    risk = json.loads(Path(fixture["intent"]["evidence"]["timing_risk"]["path"]).read_text())
+    leg = json.loads(Path(risk["source_t4_leg"]["path"]).read_text())
+    root, archive = Path(leg["runtime_dir"]), Path(leg["archive_path"])
+    assert not validate_decode_wall_clock(leg, runtime_dir=root, archive_path=archive)[0]
+    risk_before = cs.measure_prefire_risk_receiver_digest(root)
+    runtime_before = cs.measure_runtime_digest(root).sha256
+    manifest = root / "MANIFEST.sha256"
+    manifest.write_bytes(manifest.read_bytes() + b"\n")
+    assert cs.measure_prefire_risk_receiver_digest(root) == risk_before
+    assert cs.measure_runtime_digest(root).sha256 != runtime_before
+    assert measure_receiver_digest(root) != leg["receiver_sha256"]
+    assert validate_decode_wall_clock(leg, runtime_dir=root, archive_path=archive)[0]
+
+
+def _contract_git_history(f, monkeypatch):
+    """Real loose Git objects in the isolated fixture; no shared index or processes."""
+    import hashlib
+    import zlib
+
+    repo, intent = f["repo"], f["intent"]
+    def obj(kind, data):
+        raw = f"{kind} {len(data)}\0".encode() + data
+        digest = hashlib.sha1(raw).hexdigest()
+        path = repo / ".git/objects" / digest[:2] / digest[2:]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(zlib.compress(raw))
+        return digest
+    def tree(files):
+        entries = {}
+        for path, data in files.items():
+            name, sep, rest = path.partition("/")
+            if sep:
+                entries.setdefault(name, {})[rest] = data
+            else:
+                entries[name] = data
+        body = b""
+        for name, data in sorted(entries.items(), key=lambda item: item[0] + ("/" if isinstance(item[1], dict) else "")):
+            directory = isinstance(data, dict)
+            digest = tree(data) if directory else obj("blob", data)
+            body += ("40000" if directory else "100644").encode() + b" " + name.encode() + b"\0" + bytes.fromhex(digest)
+        return obj("tree", body)
+    def commit(files, parent=None, when="2026-09-10T02:00:00+00:00"):
+        timestamp = int(datetime.fromisoformat(when).timestamp())
+        body = f"tree {tree(files)}\n" + (f"parent {parent}\n" if parent else "")
+        body += f"author Fixture <fixture@example.invalid> {timestamp} +0000\n"
+        body += f"committer Fixture <fixture@example.invalid> {timestamp} +0000\n\ncontract fixture\n"
+        digest = obj("commit", body.encode())
+        (repo / ".git/HEAD").write_text(digest + "\n")
+        return digest
+    base_files = dict.fromkeys(cs.PREFIRE_IMPLEMENTATION_PATHS, b"# synthetic committed source fixture\n")
+    base_files[cs.PREFIRE_MEMO] = (repo / cs.PREFIRE_MEMO).read_bytes()
+    base = commit(base_files, when="2026-09-09T00:00:00+00:00")
+    production = commit(base_files, base, "2026-09-10T00:00:00+00:00")
+    amended_files = {name: (repo / name).read_bytes() for name in base_files}
+    memo = Path(intent["contract"]["amendment"]["adjudication_memo"]["path"])
+    amended_files[memo.relative_to(repo).as_posix()] = memo.read_bytes()
+    amended = commit(amended_files, production, "2026-09-10T00:30:00+00:00")
+    intent["contract"]["implementation_commit"] = base
+    intent["contract"]["amendment"]["implementation_commit"] = amended
+    intent["producer_source_commit"] = production
+    path = Path(intent["evidence"]["candidate_manifest"]["path"])
+    manifest = json.loads(path.read_text())
+    manifest["producer_source_commit"] = production
+    intent["evidence"]["candidate_manifest"] = write(path, manifest)
+    path = Path(intent["evidence"]["manifest_validation"]["path"])
+    verification = json.loads(path.read_text())
+    verification["manifest"] = intent["evidence"]["candidate_manifest"]
+    intent["evidence"]["manifest_validation"] = write(path, verification)
+    path = Path(intent["evidence"]["twin_encode"]["path"])
+    twin = json.loads(path.read_text())
+    for index, ref in enumerate(twin["executions"]):
+        execution_path = Path(ref["path"])
+        execution = json.loads(execution_path.read_text())
+        execution["producer_source_commit"] = production
+        twin["executions"][index] = write(execution_path, execution)
+    intent["evidence"]["twin_encode"] = write(path, twin)
+    write(repo / cs.PREFIRE_FREEZE, {"implementation_commit": base,
+        "implementation_manifest": intent["contract"]["implementation_manifest"],
+        "amendments": [intent["contract"]["amendment"]]})
+    write(f["path"], sign(intent))
+    def land():
+        files = {name: (repo / name).read_bytes() for name in amended_files}
+        files[cs.PREFIRE_FREEZE] = (repo / cs.PREFIRE_FREEZE).read_bytes()
+        files[f["path"].relative_to(repo).as_posix()] = f["path"].read_bytes()
+        return commit(files, amended)
+    head = land()
+    monkeypatch.setattr(cs, "_pf_git", REAL_PF_GIT)
+    orphan = commit(base_files, when="2026-09-08T00:00:00+00:00")
+    (repo / ".git/HEAD").write_text(head + "\n")
+    return {"base": base, "production": production, "amended": amended, "head": head,
+            "orphan": orphan, "land": land}
+
+
+def test_prefire_amendment_allows_pinned_old_evidence_but_refuses_pre_amendment_intent(fixture, monkeypatch):
+    history = _contract_git_history(fixture, monkeypatch)
+    intent, repo = fixture["intent"], fixture["repo"]
+    manifest_path = Path(intent["evidence"]["candidate_manifest"]["path"])
+    original = manifest_path.read_bytes()
+    assert validate(fixture)
+    assert manifest_path.read_bytes() == original
+    assert history["base"] != history["amended"]
+    intent["created_at_utc"] = "2026-09-10T00:15:00Z"
+    with pytest.raises(cs.PrefireRefusal, match="amendment implementation must precede new intent"):
+        cs._pf_contract(intent, repo, None)
+    intent["created_at_utc"] = "2026-09-10T01:00:00Z"
+    for timestamp in ("2026-09-08T00:00:00Z", "2026-09-10T02:00:00Z"):
+        manifest = json.loads(original)
+        manifest["production_started_at_utc"] = timestamp
+        intent["evidence"]["candidate_manifest"] = write(manifest_path, manifest)
+        with pytest.raises(cs.PrefireRefusal, match="implementation must precede every producer timestamp"):
+            cs._pf_contract(intent, repo, None)
+    manifest_path.write_bytes(original)
+    intent["evidence"]["candidate_manifest"] = cs.prefire_file_reference(manifest_path)
+    intent["contract"].pop("amendment")
+    with pytest.raises(cs.PrefireRefusal, match="contract fields differ"):
+        cs._pf_contract(intent, repo, None)
+
+
+def test_prefire_amendment_requires_latest_frozen_row_and_live_committed_sources(fixture, monkeypatch):
+    history = _contract_git_history(fixture, monkeypatch)
+    intent, repo = fixture["intent"], fixture["repo"]
+    assert validate(fixture)
+    freeze_path = repo / cs.PREFIRE_FREEZE
+    freeze_bytes = freeze_path.read_bytes()
+    source_path = repo / cs.PREFIRE_IMPLEMENTATION_PATHS[0]
+    source_bytes = source_path.read_bytes()
+    source_path.write_bytes(source_bytes + b"# drift\n")
+    with pytest.raises(cs.PrefireRefusal, match="live file differs from committed blob"):
+        cs._pf_contract(intent, repo, None)
+    source_path.write_bytes(source_bytes)
+    fixture["path"].write_bytes(fixture["path"].read_bytes() + b"\n")
+    with pytest.raises(cs.PrefireRefusal, match="live file differs from committed blob"):
+        cs._pf_contract(intent, repo, fixture["path"])
+    write(fixture["path"], sign(intent))
+    frozen = json.loads(freeze_bytes)
+    frozen["amendments"].append({**frozen["amendments"][-1], "score_claim": False, "new_row": True})
+    write(freeze_path, frozen)
+    with pytest.raises(cs.PrefireRefusal, match="live file differs from committed blob"):
+        cs._pf_contract(intent, repo, None)
+    history["land"]()
+    with pytest.raises(cs.PrefireRefusal, match="latest exact frozen amendment required"):
+        cs._pf_contract(intent, repo, None)
+    freeze_path.write_bytes(freeze_bytes)
+    history["land"]()
+    for contract in (intent["contract"], intent["contract"]["amendment"]):
+        ref = contract["implementation_manifest"]
+        path = Path(ref["path"])
+        original = path.read_bytes()
+        rows = json.loads(original)
+        rows[0]["sha256"] = "e" * 64
+        contract["implementation_manifest"] = write(path, rows)
+        if contract is intent["contract"]:
+            contract["implementation_manifest_sha256"] = contract["implementation_manifest"]["sha256"]
+        frozen = json.loads(freeze_bytes)
+        frozen["implementation_manifest"] = intent["contract"]["implementation_manifest"]
+        frozen["amendments"] = [intent["contract"]["amendment"]]
+        write(freeze_path, frozen)
+        history["land"]()
+        with pytest.raises(cs.PrefireRefusal, match="committed implementation drift"):
+            cs._pf_contract(intent, repo, None)
+        path.write_bytes(original)
+        contract["implementation_manifest"] = ref
+        intent["contract"]["implementation_manifest_sha256"] = intent["contract"]["implementation_manifest"]["sha256"]
+    freeze_path.write_bytes(freeze_bytes)
+    history["land"]()
+    intent["contract"]["amendment"]["definition_change"]["raw_manifest_still_required"] = 1
+    with pytest.raises(cs.PrefireRefusal, match="latest exact frozen amendment required"):
+        cs._pf_contract(intent, repo, None)
+    intent["contract"]["amendment"]["definition_change"]["raw_manifest_still_required"] = True
+    intent["producer_source_commit"] = history["orphan"]
+    with pytest.raises(cs.PrefireRefusal, match="commit ancestry differs"):
+        cs._pf_contract(intent, repo, None)
+    intent["producer_source_commit"] = history["production"]
+    intent["contract"]["amendment"]["implementation_commit"] = history["orphan"]
+    frozen = json.loads(freeze_bytes)
+    frozen["amendments"] = [intent["contract"]["amendment"]]
+    write(freeze_path, frozen)
+    history["land"]()
+    with pytest.raises(cs.PrefireRefusal, match="commit ancestry differs"):
+        cs._pf_contract(intent, repo, None)
+    intent["contract"]["amendment"]["implementation_commit"] = history["amended"]
+    freeze_path.write_bytes(freeze_bytes)
+    history["land"]()
+    (repo / ".git/HEAD").write_text(history["production"] + "\n")
+    # Keep the freeze query available so this direction specifically attacks ancestry.
+    real_git = cs._pf_git
+    def old_head(repo, *args):
+        if args == ("show", "HEAD:" + cs.PREFIRE_FREEZE):
+            return freeze_bytes
+        return real_git(repo, *args)
+    monkeypatch.setattr(cs, "_pf_git", old_head)
+    with pytest.raises(cs.PrefireRefusal, match="commit ancestry differs"):
+        cs._pf_contract(intent, repo, None)

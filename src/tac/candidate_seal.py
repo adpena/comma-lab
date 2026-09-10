@@ -1599,6 +1599,12 @@ def _find_placeholder_pins(document: dict) -> list[str]:
 # ddm_pr12, with ddm_ffi3 clarifications: a prefire intent is deliberately NOT a seal.
 PREFIRE_INTENT_SCHEMA = "candidate_prefire_intent.v1"
 PREFIRE_RISK_SCHEMA = "candidate_prefire_timing_risk.v1"
+PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION = (
+    "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1"
+)
+PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS = frozenset({"MANIFEST.sha256"})
+PREFIRE_CONTRACT_AMENDMENT_SCHEMA = "prefire_contract_amendment.v1"
+PREFIRE_CONTRACT_AMENDMENT_ID = "ddm_pr14_manifest_in_receiver_risk_digest"
 FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA = "candidate_first_measurement_authorization.v1"
 SEAL_SCHEMA_V3 = "candidate_seal.v3"
 PREFIRE_REFUSAL_CODES = (
@@ -1762,25 +1768,60 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
     code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
     contract = intent["contract"]
     _pf_require(isinstance(contract, dict) and set(contract) == {
-        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256"},
+        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256", "amendment"},
         code, "contract fields differ")
     commit = contract["implementation_commit"]
     _pf_require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit), code, "full implementation commit required")
-    _pf_git(repo, "merge-base", "--is-ancestor", commit, "HEAD")
-    manifest = _pf_ref(contract["implementation_manifest"], code)
-    _pf_require(isinstance(manifest, list) and manifest, code, "sorted implementation manifest array required")
-    _pf_require(contract["implementation_manifest_sha256"] == contract["implementation_manifest"]["sha256"],
-                code, "implementation manifest digest differs")
-    paths = [r.get("path") for r in manifest if isinstance(r, dict)]
-    _pf_require(len(paths) == len(manifest) and all(isinstance(p, str) for p in paths)
-                and paths == sorted(set(paths)) and set(PREFIRE_IMPLEMENTATION_PATHS) <= set(paths),
-                code, "implementation manifest omits a consumer or is unsorted")
-    for row in manifest:
-        path = repo / row["path"]
-        _pf_require(not Path(row["path"]).is_absolute() and ".." not in Path(row["path"]).parts,
-                    code, "implementation path escapes repository")
-        _pf_require(path.is_file() and sha256_file(path) == row.get("sha256"), code, f"implementation drift: {path}")
-        _pf_blob(repo, commit, path)
+    frozen_path = repo / PREFIRE_FREEZE
+    frozen = _pf_read(frozen_path, code)
+    _pf_blob(repo, "HEAD", frozen_path)
+    amendments = frozen.get("amendments")
+    _pf_require(isinstance(amendments, list) and amendments, code, "frozen amendment required")
+    amendment = contract["amendment"]
+    _pf_require(isinstance(amendment, dict) and prefire_digest(amendment) == prefire_digest(amendments[-1]), code,
+                "latest exact frozen amendment required")
+    _pf_require(amendment.get("schema") == PREFIRE_CONTRACT_AMENDMENT_SCHEMA
+                and amendment.get("amendment_id") == PREFIRE_CONTRACT_AMENDMENT_ID
+                and amendment.get("score_claim") is False
+                and amendment.get("definition_change") == {
+                    "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+                    "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+                    "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
+                    "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"},
+                code, "amendment definition differs")
+    amendment_commit = amendment.get("implementation_commit")
+    _pf_require(isinstance(amendment_commit, str) and re.fullmatch(r"[0-9a-f]{40}", amendment_commit),
+                code, "full amendment implementation commit required")
+    _pf_require(commit == frozen.get("implementation_commit")
+                and contract["implementation_manifest"] == frozen.get("implementation_manifest")
+                and contract["implementation_manifest_sha256"] == contract["implementation_manifest"]["sha256"],
+                code, "base frozen implementation differs")
+    _pf_git(repo, "merge-base", "--is-ancestor", commit, amendment_commit)
+    _pf_git(repo, "merge-base", "--is-ancestor", amendment_commit, "HEAD")
+    for owner_commit, reference, require_live in (
+        (commit, contract["implementation_manifest"], False),
+        (amendment_commit, amendment["implementation_manifest"], True),
+    ):
+        manifest = _pf_ref(reference, code)
+        _pf_require(isinstance(manifest, list) and manifest, code, "sorted implementation manifest array required")
+        paths = [r.get("path") for r in manifest if isinstance(r, dict)]
+        _pf_require(len(paths) == len(manifest) and all(isinstance(p, str) for p in paths)
+                    and paths == sorted(set(paths)) and set(PREFIRE_IMPLEMENTATION_PATHS) <= set(paths),
+                    code, "implementation manifest omits a consumer or is unsorted")
+        for row in manifest:
+            rel = row["path"]
+            _pf_require(not Path(rel).is_absolute() and ".." not in Path(rel).parts,
+                        code, "implementation path escapes repository")
+            blob = _pf_git(repo, "show", f"{owner_commit}:{rel}")
+            _pf_require(hashlib.sha256(blob).hexdigest() == row.get("sha256"), code,
+                        f"committed implementation drift: {rel}")
+            if require_live:
+                _pf_blob(repo, owner_commit, repo / rel)
+    amendment_memo = _pf_ref(amendment["adjudication_memo"], code, parse=False)
+    _pf_blob(repo, amendment_commit, amendment_memo)
+    amended_at = _pf_git(repo, "show", "-s", "--format=%cI", amendment_commit).decode().strip()
+    _pf_require(_pf_time(amended_at, code) <= _pf_time(intent["created_at_utc"], code),
+                code, "amendment implementation must precede new intent timestamp")
     _pf_ref(contract["adjudication_memo"], code, parse=False)
     _pf_require(contract["adjudication_memo"]["sha256"] == PREFIRE_MEMO_SHA256, code, "normative pr12 memo pin differs")
     _pf_require(Path(contract["adjudication_memo"]["path"]).resolve() == (repo / PREFIRE_MEMO).resolve(),
@@ -2004,17 +2045,21 @@ def _pf_evidence(intent: dict, root: Path, archive: Path) -> None:
     _pf_require(required <= paths, code, "retention missing archive/twins/raw/parseback/declared payload")
 
 
-def prefire_receiver_rows(root: Path) -> list[tuple[str, int, str]]:
-    """Materialize the exact existing receiver digest's normalized path rows, without writes."""
+def _materialize_prefire_receiver_rows(
+    root: Path, *, excluded_paths: frozenset[str] = frozenset()
+) -> list[tuple[str, int, str]]:
     import ast
 
-    from tac.decode_wall_clock import measure_receiver_digest
     rows = []
     for path in sorted(Path(root).rglob("*")):
         if not path.is_file() or path.is_symlink():
             continue
         rel = path.relative_to(root).as_posix()
-        if rel == "archive.zip" or runtime_digest_skip_reason(rel):
+        if (
+            rel == "archive.zip"
+            or runtime_digest_skip_reason(rel)
+            or rel in excluded_paths
+        ):
             continue
         data = path.read_bytes()
         if rel == "inflate.py":
@@ -2022,19 +2067,73 @@ def prefire_receiver_rows(root: Path) -> list[tuple[str, int, str]]:
             lines = data.splitlines(keepends=True)
             offsets = [sum(map(len, lines[:i])) for i in range(len(lines))]
             edits = []
+            seen = set()
             for node in tree.body:
-                if (isinstance(node, ast.Assign) and len(node.targets) == 1
-                        and isinstance(node.targets[0], ast.Name)
-                        and node.targets[0].id in {"ARCHIVE_SHA256", "ARCHIVE_BYTES"}):
+                if (
+                    isinstance(node, ast.Assign)
+                    and len(node.targets) == 1
+                    and isinstance(node.targets[0], ast.Name)
+                    and node.targets[0].id in {"ARCHIVE_SHA256", "ARCHIVE_BYTES"}
+                ):
+                    name = node.targets[0].id
+                    _pf_require(
+                        name not in seen,
+                        "PREFIRE_RISK_EVIDENCE_REFUSED",
+                        f"duplicate archive pin {name}",
+                    )
+                    seen.add(name)
                     value = node.value
-                    edits.append((offsets[value.lineno - 1] + value.col_offset,
-                                  offsets[value.end_lineno - 1] + value.end_col_offset))
+                    expected = str if name == "ARCHIVE_SHA256" else int
+                    _pf_require(
+                        isinstance(value, ast.Constant) and type(value.value) is expected,
+                        "PREFIRE_RISK_EVIDENCE_REFUSED",
+                        f"nonliteral archive pin {name}",
+                    )
+                    edits.append(
+                        (
+                            offsets[value.lineno - 1] + value.col_offset,
+                            offsets[value.end_lineno - 1] + value.end_col_offset,
+                        )
+                    )
+            _pf_require(
+                seen == {"ARCHIVE_SHA256", "ARCHIVE_BYTES"},
+                "PREFIRE_RISK_EVIDENCE_REFUSED",
+                "both archive pins required",
+            )
             for start, end in sorted(edits, reverse=True):
                 data = data[:start] + b"<ARCHIVE_PIN>" + data[end:]
         rows.append((rel, len(data), hashlib.sha256(data).hexdigest()))
-    _pf_require(hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
-                == measure_receiver_digest(root), "PREFIRE_RISK_EVIDENCE_REFUSED", "normalized row parity failed")
+    _pf_require(bool(rows), "PREFIRE_RISK_EVIDENCE_REFUSED", "receiver tree empty")
     return rows
+
+
+def _prefire_receiver_rows_digest(rows: list[tuple[str, int, str]]) -> str:
+    return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
+
+
+def prefire_receiver_rows(root: Path) -> list[tuple[str, int, str]]:
+    """Legacy row view used to prove parity with decode_wall_clock."""
+    from tac.decode_wall_clock import measure_receiver_digest
+
+    rows = _materialize_prefire_receiver_rows(root)
+    _pf_require(
+        _prefire_receiver_rows_digest(rows) == measure_receiver_digest(root),
+        "PREFIRE_RISK_EVIDENCE_REFUSED",
+        "legacy normalized row parity failed",
+    )
+    return rows
+
+
+def prefire_risk_receiver_rows(root: Path) -> list[tuple[str, int, str]]:
+    """Behavior-bearing rows for pre-fire spend-risk inheritance only."""
+    return _materialize_prefire_receiver_rows(
+        root, excluded_paths=PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS
+    )
+
+
+def measure_prefire_risk_receiver_digest(root: Path) -> str:
+    """Versioned risk digest; excludes only the derived dependency manifest."""
+    return _prefire_receiver_rows_digest(prefire_risk_receiver_rows(root))
 
 
 def validate_prefire_risk(risk_ref: dict, intent: dict, *, repo: Path) -> dict:
@@ -2050,15 +2149,33 @@ def validate_prefire_risk(risk_ref: dict, intent: dict, *, repo: Path) -> dict:
     _pf_require(isinstance(leg, dict) and leg.get("mode") == "t4_direct", code, "completed source t4_direct required")
     problems, _ = validate_decode_wall_clock(leg, runtime_dir=Path(leg["runtime_dir"]), archive_path=Path(leg["archive_path"]))
     _pf_require(not problems, code, "; ".join(problems))
-    source = risk["source_receiver"].get("sha256")
-    candidate = intent["candidate"]["normalized_receiver"]["sha256"]
+    source_receiver = {
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": measure_prefire_risk_receiver_digest(Path(leg["runtime_dir"])),
+        "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+        "t4_direct_sha256": leg["receiver_sha256"],
+    }
+    candidate_receiver = {
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": measure_prefire_risk_receiver_digest(Path(intent["candidate"]["runtime"]["path"])),
+    }
     diagnostic_root = Path(risk["diagnostic_reference_receiver"]["path"])
-    _pf_require(source == leg.get("receiver_sha256") and risk["candidate_receiver"] == {"sha256": candidate}
-                and risk["diagnostic_reference_receiver"].get("sha256") == candidate
-                and measure_receiver_digest(diagnostic_root) == candidate, code, "receiver risk endpoints differ")
+    diagnostic_reference_receiver = {
+        "path": str(diagnostic_root),
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": candidate_receiver["sha256"],
+        "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+        "receipt_sha256": measure_receiver_digest(diagnostic_root),
+    }
+    _pf_require(risk["source_receiver"] == source_receiver
+                and risk["candidate_receiver"] == candidate_receiver
+                and risk["diagnostic_reference_receiver"] == diagnostic_reference_receiver
+                and measure_prefire_risk_receiver_digest(diagnostic_root) == candidate_receiver["sha256"],
+                code, "receiver risk endpoints differ")
+    source, candidate = source_receiver["sha256"], candidate_receiver["sha256"]
     delta = _pf_ref(risk["receiver_delta_manifest"], code)
-    source_rows = prefire_receiver_rows(Path(leg["runtime_dir"]))
-    candidate_rows = prefire_receiver_rows(Path(intent["candidate"]["runtime"]["path"]))
+    source_rows = prefire_risk_receiver_rows(Path(leg["runtime_dir"]))
+    candidate_rows = prefire_risk_receiver_rows(Path(intent["candidate"]["runtime"]["path"]))
     smap, cmap = {r[0]: list(r[1:]) for r in source_rows}, {r[0]: list(r[1:]) for r in candidate_rows}
     wanted = [{"relative_path": p, "source": smap.get(p), "candidate": cmap.get(p)} for p in sorted(smap.keys() | cmap.keys())]
     _pf_require(delta.get("files") == wanted and delta.get("source_receiver_sha256") == source
@@ -2073,7 +2190,8 @@ def validate_prefire_risk(risk_ref: dict, intent: dict, *, repo: Path) -> dict:
         _pf_require(ref.get("authority") is False and ref.get("actual_verdict") == "REFUSED"
                     and doc.get("wall_seconds") == wall and doc.get("score_claim") is False,
                     code, "diagnostic must retain actual refused verdict and measured wall")
-        _pf_require(doc.get("receiver_sha256") == (source if ref is base else candidate), code, "diagnostic receiver differs")
+        _pf_require(doc.get("receiver_sha256") == (source_receiver["t4_direct_sha256"] if ref is base
+                    else diagnostic_reference_receiver["receipt_sha256"]), code, "diagnostic receiver differs")
         if not is_rlc2:
             _pf_require(doc.get("actual_verdict") == "REFUSED", code, "diagnostic's retained actual verdict is not REFUSED")
         if ref is not base:
@@ -2097,7 +2215,7 @@ def validate_prefire_risk(risk_ref: dict, intent: dict, *, repo: Path) -> dict:
     if is_rlc2:
         _pf_require(risk["source_t4_leg"]["sha256"] == "ed929b24cc876bf8ffabc3004b856decbb5e73d0fee13c1d3c87d91d659f9521"
                     and risk["source_t4_leg"]["bytes"] == 1553
-                    and candidate == "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d"
+                    and diagnostic_reference_receiver["receipt_sha256"] == "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d"
                     and summary_path.stat().st_size == 3064
                     and sha256_file(summary_path) == "a8d1e1a781a0c2f80962591288dbcc4ed023113e31766baaec368db8ef75c4ed",
                     code, "RLC2 pinned historical chain differs")
@@ -2183,6 +2301,8 @@ def build_prefire_intent(*, candidate_id: str, runtime_dir: Path, evidence_paths
     code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
     frozen = _pf_read(repo / PREFIRE_FREEZE, code)
     commit = frozen["implementation_commit"]
+    amendments = frozen.get("amendments")
+    _pf_require(isinstance(amendments, list) and amendments, code, "frozen amendment required")
     root = runtime_dir.resolve()
     archive = root / "archive.zip"
     runtime = measure_runtime_digest(root)
@@ -2198,7 +2318,8 @@ def build_prefire_intent(*, candidate_id: str, runtime_dir: Path, evidence_paths
         "promotion_eligible": False, "timing_clearance": False,
         "contract": {"adjudication_memo": prefire_file_reference(repo / PREFIRE_MEMO),
                      "implementation_commit": commit, "implementation_manifest": frozen["implementation_manifest"],
-                     "implementation_manifest_sha256": frozen["implementation_manifest"]["sha256"]},
+                     "implementation_manifest_sha256": frozen["implementation_manifest"]["sha256"],
+                     "amendment": amendments[-1]},
         "candidate": {"archive": prefire_file_reference(archive), "runtime": {"path": str(root), **runtime.to_dict()},
                       "normalized_receiver": {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
                                               "sha256": measure_receiver_digest(root)},

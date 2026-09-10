@@ -1,0 +1,61 @@
+{
+  "equations_generated": 483,
+  "relevant_equations": [],
+  "query": "prefire|receiver.digest|environment.free.digest|normalized.receiver|dependency.manifest",
+  "research_queries": {
+    "research": [
+      "rg",
+      "-l",
+      "-i",
+      "manifest.{0,80}(receiver|digest)|receiver.{0,80}manifest|environment.free digest|prefire",
+      ".omx/research",
+      "--glob",
+      "*.md",
+      "--glob",
+      "*.json"
+    ],
+    "graph": [
+      "rg",
+      "-n",
+      "-i",
+      "prefire|receiver.digest|content.only digest",
+      ".omx/research",
+      "--glob",
+      "CANONICAL_RESEARCH_INDEX*",
+      "--glob",
+      "sub015_DAG_*"
+    ],
+    "design": [
+      "rg",
+      "-n",
+      "-i",
+      "prefire|receiver.digest|dependency.manifest",
+      "docs",
+      "--glob",
+      "*.md"
+    ],
+    "ledger": [
+      "rg",
+      "-n",
+      "-i",
+      "ffi4|pr14|rlc4|receiver.digest",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/lane_registry.json"
+    ],
+    "equations": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ]
+  },
+  "additional_spec_query": {
+    "files": "rg --files -g *SPEC* -g *spec*.md -g *design*.md",
+    "content": "prefire|receiver.digest|dependency.manifest",
+    "matches": 0
+  },
+  "beyond_seed_sources": [
+    ".omx/research/ddm_seal1_candidate_seal_contract_20260818.md:29-30,56-66",
+    ".omx/research/ddm_r9m_first_contest_cpu_row_20260804/runtime_tree_hash_verification_20260804.md:7-24"
+  ],
+  "change_to_plan": "Preserve literal content-only common helper; confirm no environmental metadata is added and retain legacy identity pins separately. No competing scoped risk digest definition found in searched equation/graph/design surfaces."
+}

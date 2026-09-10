@@ -1,0 +1,47 @@
+{
+  "schema": "prefire_contract_amendment.v1",
+  "amendment_id": "ddm_pr14_manifest_in_receiver_risk_digest",
+  "adjudication_memo": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr14_adjudicate_manifest_in_normalized_receiver_digest_20260910.md",
+    "bytes": 48452,
+    "sha256": "6e1732baea1912731fef6a53abca0cb94faf2e9440accc304dd9b34e593bade9"
+  },
+  "definition_change": {
+    "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "excluded_relative_paths": [
+      "MANIFEST.sha256"
+    ],
+    "raw_manifest_still_required": true,
+    "executable_difference_policy": "REFUSE"
+  },
+  "reference_receiver": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+    "legacy_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+    "amended_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+    "included_file_count": 49,
+    "raw_input_pinset_sha256": "663b36aed2656b9e56fb5c8867b8ebd083e8b241a6d8741d091c2762318f9f3d",
+    "excluded_manifest": {
+      "bytes": 4570,
+      "sha256": "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
+    }
+  },
+  "candidate_receiver": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime",
+    "legacy_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+    "amended_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+    "included_file_count": 49,
+    "raw_input_pinset_sha256": "046621cb5c4c1d5c67f2ab2d4857ee750b97e885b95713930acfcc4c46f3a9dc",
+    "excluded_manifest": {
+      "bytes": 4570,
+      "sha256": "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
+    }
+  },
+  "implementation_commit": "${FULL_IMPLEMENTATION_LANDING_COMMIT}",
+  "implementation_manifest": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+    "bytes": 2072,
+    "sha256": "${AMENDED_IMPLEMENTATION_MANIFEST_SHA256}"
+  },
+  "score_claim": false
+}

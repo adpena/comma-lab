@@ -1,0 +1,22 @@
+[
+  {
+    "name": "reference",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+    "digest": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+    "legacy_digest": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+    "row_count": 49,
+    "listing_path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/reference_normalized_rows.json",
+    "listing_bytes": 5081,
+    "listing_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+  },
+  {
+    "name": "candidate",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime",
+    "digest": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+    "legacy_digest": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+    "row_count": 49,
+    "listing_path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/candidate_normalized_rows.json",
+    "listing_bytes": 5081,
+    "listing_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+  }
+]

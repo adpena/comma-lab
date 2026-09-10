@@ -1,0 +1,53 @@
+{
+  "literal_helper_block_identical": true,
+  "changed_source_functions": [
+    "_pf_contract",
+    "build_prefire_intent",
+    "prefire_receiver_rows",
+    "validate_prefire_risk"
+  ],
+  "added_source_functions": [
+    "_materialize_prefire_receiver_rows",
+    "_prefire_receiver_rows_digest",
+    "measure_prefire_risk_receiver_digest",
+    "prefire_risk_receiver_rows"
+  ],
+  "added_test_names": [
+    "test_prefire_amendment_allows_pinned_old_evidence_but_refuses_pre_amendment_intent",
+    "test_prefire_amendment_keeps_legacy_t4_direct_manifest_inclusive",
+    "test_prefire_amendment_requires_latest_frozen_row_and_live_committed_sources",
+    "test_prefire_risk_accepts_only_regenerated_manifest_indirection",
+    "test_prefire_risk_manifest_exclusion_does_not_bypass_dependency_manifest_validation",
+    "test_prefire_risk_refuses_nonpin_inflate_byte_change"
+  ],
+  "unchanged_pins": {
+    "src/tac/decode_wall_clock.py": true,
+    "tools/make_candidate_seal.py": true,
+    "src/tac/tests/test_candidate_seal.py": true,
+    ".omx/research/ddm_pr14_adjudicate_manifest_in_normalized_receiver_digest_20260910.md": true,
+    ".omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json": true
+  },
+  "review_1": "Scope and literal contract: shared helper spans, legacy/non-risk paths and RLC2 legacy receipt pin; full 135-test suite and six behavior controls read. No unresolved findings.",
+  "review_2": "Custody and falsifiers: real loose Git blobs/ancestry/time tests, exact latest amendment including JSON types, pre-amendment intent, old base blobs versus live amended sources; every named red starts from a passing fixture. No unresolved findings.",
+  "assumption_challenge": "Manifest content may change without receiver behavior changing because it hashes the raw normalized archive-pin values. Scope is only this derived path; changing other bytes still refuses. No score or timing transfer is inferred.",
+  "reviewed_post_edit_sha256": {
+    "src/tac/candidate_seal.py": "f8ffeadda93757ff218630d85550d12ea386e09648e07897d478e86ada233ece",
+    "src/tac/tests/test_candidate_prefire_intent.py": "2b94eb5733c5560ebfd77fd0d4bd1aacb6dc54843a8563dcb31867e32755c4f2"
+  },
+  "tracker_passes": [
+    {
+      "reviewer": "ddm_ffi4",
+      "pass": 1,
+      "candidate_seal_entities": 87,
+      "prefire_test_entities": 41,
+      "status": "reviewed"
+    },
+    {
+      "reviewer": "ddm_ffi4",
+      "pass": 2,
+      "candidate_seal_entities": 87,
+      "prefire_test_entities": 41,
+      "status": "reviewed"
+    }
+  ]
+}

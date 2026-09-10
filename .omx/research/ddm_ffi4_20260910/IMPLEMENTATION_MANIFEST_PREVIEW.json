@@ -1,0 +1,62 @@
+[
+  {
+    "path": "experiments/modal_auth_eval.py",
+    "sha256": "d0c9fc519b004ba8f250d80ffac9d5f48c8abc3dce256462be4d88665c8071a7"
+  },
+  {
+    "path": "src/tac/candidate_seal.py",
+    "sha256": "f8ffeadda93757ff218630d85550d12ea386e09648e07897d478e86ada233ece"
+  },
+  {
+    "path": "src/tac/checkpoint_maturity.py",
+    "sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5"
+  },
+  {
+    "path": "src/tac/decode_wall_clock.py",
+    "sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff"
+  },
+  {
+    "path": "src/tac/deploy/modal/auth_eval.py",
+    "sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1"
+  },
+  {
+    "path": "src/tac/deploy/modal/call_id_ledger.py",
+    "sha256": "2edb975b53e1ac9a1e46474d51711c7fadf06820fb15fa11d63c2248bb4e9015"
+  },
+  {
+    "path": "src/tac/deploy/modal/result_json.py",
+    "sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d"
+  },
+  {
+    "path": "src/tac/deploy/modal/single_flight.py",
+    "sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d"
+  },
+  {
+    "path": "src/tac/git_custody_read.py",
+    "sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5"
+  },
+  {
+    "path": "src/tac/modal_source_snapshot.py",
+    "sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290"
+  },
+  {
+    "path": "tools/authorize_candidate_first_measurement.py",
+    "sha256": "96bab07767e5e7e3f6243c30be3a58e58b232b1111b0088e97367cca2e0c4174"
+  },
+  {
+    "path": "tools/fire_modal_auth_eval.py",
+    "sha256": "22771b01138df50782d7edefd47bf6cac486252bbd187d02429c7c7254d0084c"
+  },
+  {
+    "path": "tools/launch_detached_process.py",
+    "sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa"
+  },
+  {
+    "path": "tools/make_candidate_seal.py",
+    "sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791"
+  },
+  {
+    "path": "tools/modal_harvest_poller.py",
+    "sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f"
+  }
+]
