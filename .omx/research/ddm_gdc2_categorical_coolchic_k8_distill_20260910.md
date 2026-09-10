@@ -167,6 +167,24 @@ exact, deterministic packet repeat, and full-n600 decode under 900 s.
 
 *(filled by the governed burn)*
 
+## Retained custody
+
+Root `/Volumes/VertigoDataTier/pact/ddm_gdc2_categorical_coolchic_k8_distill/` (storage waterfall:
+Vertigo first; 36.4 GiB free at launch, projected output under 8 GiB, live floor 12 GiB enforced by
+the driver, which refuses to start below it). Nothing deleted; every coder repeat kept beside its
+payload.
+
+| directory | contents | files | size |
+|---|---|---:|---:|
+| `teacher_residual_probe/` | K=8 exact-residual race, 8 orders x 3 coders + repeats | 64 | 4.9 M |
+| `residual_law/k04 k06 k12 k16/` | the same race at four more mismatch counts | 64 each | 21 M / 9.9 M / 1.0 M / 292 K |
+| `smoke_parity_scope/` | declared-SCOPE parity smoke: packets, renders, checkpoints | — | 386 M |
+| `governed_v1/` | the governed burn: tile schedule, per-stage checkpoints every 250 steps, per-branch stage ends, per-evaluation packets/renders, heartbeats | — | *(burn)* |
+
+Launch receipts: `.omx/tmp/codex_runs/gdc2_teacher_residual_probe.done`,
+`gdc2_smoke_parity.done`, `gdc2_residual_law_k{04,06,12,16}.done`, `gdc2_governed_v1.done`.
+Lane claim `ddm_gdc2_categorical_coolchic_k8_distill_20260910`.
+
 ## Boundaries
 
 - Nothing here is a score. No scorer, no Modal, no candidate archive, no MPS number. The pointer is
