@@ -409,7 +409,34 @@ gain. 838 token changes over 450 pairs move the rendered pixels enough to swamp 
 pass. The carrier re-solve is not a refinement here; it is the entire viability of the arm,
 and it is running on the 450 changed pairs.
 
-## 12. State on hand-off, and what it would cost to finish
+## 12. The full-field price, the admission, and the subset priced by real twin encode
+
+**Full field (all 450 edited pairs), real 600-frame encode under the live coder:** stream
+**119,640 B against the control's 119,784 B = −144.65 B** for 838 tokens, realized/modelled
+**0.1749**. Per pair: 256 savers −280.41 B, **194 losers +134.08 B**, and the 150 untouched
+pairs drift +1.68 B — the autoregressive spill onto frames nobody edited.
+
+**Both legs move together in the sweep.** The Lagrange admission (rate exact from the two
+real per-frame ledgers, pose per pair from base vs re-solved, seg zero by construction and
+verified) keeps **253 of 450 pairs, 473 of 838 tokens**:
+
+| | all 450 pairs | **admitted 253** |
+|---|---|---|
+| Δ archive (ledger sum) | −146.33 B | **−237.87 B** |
+| d_pose mean | 5.056907e-06 | **4.886129e-06** (BELOW the 5.049766e-06 base) |
+| ΔS vs pointer | −9.241e-05 | **−2.7447e-04** |
+
+The selection is not a rate filter: it drops pairs whose bytes went the wrong way *and*
+keeps pairs whose carrier re-solve landed below their own base pose, so the admitted subset
+is **better than the pointer on rate and on pose at once**, with seg pinned at zero.
+
+**Priced by real twin encode, not by the sum.** Two independent 600-frame encodes of the
+admitted field returned **byte-identical streams at 119,572 B** — **−212 B** against the
+control. The ledger sum said −237.87 B, so it **under-charged by 25.87 B (10.9 % of the
+delta)**, the same direction and a similar magnitude to sj1's +19.6 B on its own subset. The
+sum ranks; the encode charges.
+
+## 13. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -437,6 +464,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 13. Frontier line
+## 14. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
