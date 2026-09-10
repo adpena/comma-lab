@@ -217,6 +217,24 @@ Commit order is the receipt: none of the numbers below exist yet.
 | kept < 200 B | continue ONLY if the resolved pose is at or below base; otherwise the pass cannot clear the bar and the rebase itself is the finding |
 | kept < 75 B | **ABANDON** the chain. Report the base-mismatch law and the recovered floor; do not spend a T4 row on it |
 
+**The exposure is known EXACTLY before the rebase runs, from receipts alone (no CPU).**
+`ddm_sj1_pass5_price/compose39/COMPOSE.json` records `union_pairs 282`, `rp1_tokens 473`,
+`my_tokens 78`, `position_collisions 0`, and — the useful part — `composed_u8_sha256
+b50da438…`, which is **byte-identical to `ROUND2_BASE.json`'s `field_move40_u8.sha256`.**
+So `field_move40.u8` IS sj1's `composed.u8`, and falsifier 4 is already carried by
+provenance before `verify-field` confirms it by bytes.
+
+Intersecting the two admissions' own `kept_pairs.json` (253 ∪ 42, overlap 13):
+
+| | pairs |
+|---|---|
+| base plane DIFFERS from the acceptance base (exposed) | **282** |
+| base plane IDENTICAL (the control group) | **318** |
+
+So roughly 47 % of the field is exposed and 53 % must transfer perfectly. The rebase receipt
+reports those two transfer fractions separately, and both numbers above were derived and
+committed before it ran.
+
 **Falsifiers, pre-registered for the seal.**
 
 1. Pairs whose base plane is unchanged between the two bodies transfer at fraction **1.0**.
