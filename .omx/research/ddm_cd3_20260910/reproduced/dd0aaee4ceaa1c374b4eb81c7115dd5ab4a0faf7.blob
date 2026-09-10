@@ -1,0 +1,16 @@
+import pytest
+
+
+@pytest.fixture
+def boom():
+    raise RuntimeError("setup blows up like a drifted-custody fixture")
+
+
+@pytest.mark.xfail(strict=True, reason="probe: does xfail cover a SETUP error?")
+def test_setup_error_is_covered_by_xfail(boom):
+    assert True
+
+
+@pytest.mark.xfail(strict=True, reason="probe: does strict xfail fail on XPASS?")
+def test_strict_xpass_is_reported_failed():
+    assert True

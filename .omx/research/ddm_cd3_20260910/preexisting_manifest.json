@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "experiments/ddm_vr3_certified_raw_reclaim.py",
+      "sha256": "11f7a0ff9c2c94370ccdbc18286dbf6a0b9c041a104af694d9c03e9c76aec160",
+      "snapshot": ".omx/research/ddm_cd3_20260910/preexisting_0.blob"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+      "sha256": "600a0d3897f1b5ae634e0eb57d72e35a7c46a0b3aeaef32958f1d0600b18e82e",
+      "snapshot": ".omx/research/ddm_cd3_20260910/preexisting_1.blob"
+    },
+    {
+      "path": ".omx/research/ddm_cs1_ssd_code_certify_20260909.jsonl",
+      "sha256": "a8b8283e535aa4486d93979d823e0043aee33eadfd2c88fee5e10fed703191cb",
+      "snapshot": ".omx/research/ddm_cd3_20260910/preexisting_2.blob"
+    },
+    {
+      "path": ".omx/research/ssd_authored_signal_certified.jsonl",
+      "sha256": "5a8a6ddfa1746114fddc9d67e7a91e30e2e93684cd12b57673c94945186d4f9a",
+      "snapshot": ".omx/research/ddm_cd3_20260910/preexisting_3.blob"
+    }
+  ],
+  "head": "e5065c4c30f55c9dcc5cd6f098aeb03f79fb26cc",
+  "index_sha256": "6e543256d534df6764f0538c1a875f192abf5a0bdb8b8f2f0b2a0e4ad3eb1ec0"
+}

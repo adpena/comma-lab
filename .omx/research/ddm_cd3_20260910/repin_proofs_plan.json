@@ -1,0 +1,298 @@
+[
+  {
+    "blob_sha1": "0ef12fc85eb047d0df3600cd9b476855765445f6",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "2b512aa3f1131c8e079eb6d8c213cb523b2a464c7ba4a4855111f29dbc901d65",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "55697d7c9d664cb77b7108b7f244c00c76897d28",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/inflate.py",
+    "instance_count": 2,
+    "sha256": "1e14a68a8fe2f71228984361fbf7cbe42173e0aa1e3c5a94a753b6850190a87d",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "f19f16ec0f5617c245aacd4c82e65f2381e5cca2",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/source_runtime/inflate.py",
+    "instance_count": 2,
+    "sha256": "ae64aa4645cb0625f2278954a685972e14c558ae440e00c46a6e7baad55b93f8",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/source_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "1f202759e374bfc9470925fd2e5d466d1d22acb6",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "140c6b56f510776e84cdb87d0d7055c0362196872b651868d7eb4a98b9e44251",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "69c0924434c095f009ddcd667e91de3e82df7248",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/staged_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "e9154997f7f45c105c6edf046205b65ef227d71b00131b8d3d4b1ff28c8eadca",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/staged_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "c390bec76e9d7690bc9d32c869584eadf945b911",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "b7252de2ed06bd5bef65b8a82c30460866121ef305bee47dd0f4f82372ec6aae",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "b90809caf614d92a8a57f380bb2d2b0ebbf7c01d",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/staged_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "7570bd6c2decabb4e6af538f150e58e48ead1515f4e9bcd47b062ce10254f9fe",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/staged_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "d3e25647af39bf136753df42f5279240b7e7452d",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/inflate.py",
+    "instance_count": 2,
+    "sha256": "0f7f44f3e199459d0a6ce73aec63e728bff0bcebcb7585e16b6b015113d3b48d",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  }
+]

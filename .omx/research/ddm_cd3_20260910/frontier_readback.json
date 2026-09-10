@@ -1,0 +1,35 @@
+{
+  "pointer": {
+    "archive_sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180186,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_rp1_t4_rate_directed_predistortion_20260910",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "5e1e6dac4b0391d77596883e4d9b4b1988b22ccc8ad0b07e544e7ad76ad38927",
+      "source_receipt_sha256": "41d24304787b7c17505550bb17e516c981e985d8822c0b74e329e1e6c67c7b5f"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_rp1_t4_rate_directed_predistortion_20260910",
+    "measured_at_utc": null,
+    "score": 0.13766931482209038,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_rp1_t4_rate_directed_predistortion_20260910.json"
+  },
+  "mirror_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_rp1_t4_rate_directed_predistortion_20260910.json",
+  "mirror_sha256": "3efef1b4ba32d94a898f893fd2d3726928588ec2f03198dd1f824b022eb1e558",
+  "source_receipt": "/Volumes/APDataStore/pact/ddm_rp1_t4_rate_directed_predistortion_20260910/MODAL_REMOTE_RESULT.json",
+  "source_receipt_sha256": "41d24304787b7c17505550bb17e516c981e985d8822c0b74e329e1e6c67c7b5f",
+  "seg": 0.00010698,
+  "pose": 4.89e-06,
+  "archive_bytes": 180186,
+  "original_bytes": 37545489,
+  "recomputed_from_retained_components": 0.1376693148220904,
+  "new_score_measurement": false
+}

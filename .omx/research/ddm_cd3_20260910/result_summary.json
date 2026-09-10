@@ -1,0 +1,21 @@
+{
+  "axis": "macOS-CPU filesystem/custody apparatus",
+  "score_claim": false,
+  "charter_seed_owed_unverified": 37,
+  "sw2_measured_before_owed": 41,
+  "cd3_before_raw_owed_with_rejected_drafts": 5,
+  "cd3_before_corrected_policy_owed_derived": 46,
+  "after_owed_measured": 33,
+  "after_certified_measured": 96,
+  "source_blobs_waiting_main_landing": 11,
+  "owner_retained_original_population": 17,
+  "concurrent_live_bnd3": 5,
+  "after_landing_projected_owed": 22,
+  "prediction_at_least_30_committable": "FALSIFIED_INSTANCE",
+  "prediction_after_at_most_7": "FALSIFIED_INSTANCE",
+  "target_zero_achieved": false,
+  "serializer_returncode": 17,
+  "shared_repo_commit_attempts": 1,
+  "after_audit_sha256": "91df7d4e1b9a6e34480001319c93cdcd5b535d56ce6f0dd6fd09c45777380a0a",
+  "new_score_measurement": false
+}

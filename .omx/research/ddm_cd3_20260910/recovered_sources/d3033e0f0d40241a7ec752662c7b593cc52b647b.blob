@@ -1,0 +1,48 @@
+# MAIN HOT STATE — the orchestrator's retained-reasoning manifest
+<!-- managed by tools/main_hot_state.py; sections are typed; set via --set-section NAME (--content-file F | stdin) -->
+_updated: 2026-09-09T22:30:53+00:00_
+
+## POINTER_LINE
+- OWN-VEHICLE FRONTIER: S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]
+- archive sha 670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc
+- runtime tree 165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a
+- lane ddm_cmp2_t4_sm1_semantic_coder_20260909
+- move #37: -2.556898e-04 vs ddm_cmp1_t4_rc3_tc1_composed_20260909
+- sub-0.12 gap 0.01791730; rate corner -26,908.6 B at held distortion; distortion corner infx at held bytes
+- 37th move: the coder-level squeeze now covers every section; remainder of the rate demand is a field/representation question
+
+## LIVE_PROCESSES
+**~22:45Z 09-09 — gs3 ADDENDUM 18 landed (ae6a0b837) on the operator's "all negative signal … points to gestalt": the day's twelve closures placed against the months' walls; the gap restated as two numbers that are one object (12,377 knife-edge boundary cells the renderer misplaces at correct tokens ≈ 0.0105 S; 83 KB the tail pays on the 0.2 % mispredicted boundary tokens); §IV the research program. CHARTERED + SPAWNED the door it names: `ddm_bnd1` (codex gpt-6-astra xhigh, 4122552c7) — boundary-representation closed-form pricing, falsifier 78 KB.**
+
+**~22:30Z 09-09 — sj1 gen 2 ENDED without pricing pass 5 (the pass-5 field exists: 235 tokens, 237 cells, seg −2.01e-4, break-even 10.27 bits/token; no encode log after 14:01). sj1 gen 3 SPAWNED (Opus): price through tc1's mixer codec against cmp2's tree (successor_price.sh uses the OLD cl2 HPAC coder — forbidden for the number), Lagrange subset if needed, pose chain only if the net clears −2e-5, seal+fire as ddm_sj1_t4_token_predistortion_pass5_20260909 or write the pre-registered stop + the cell census for bnd1.**
+
+**rp1 n600 (4 shards on the move-37 field): s1 DONE rc=0 (2,308 s; 9,387 tokens changed vs pristine on its shard); s2/s3/s4 at pair ~490/600 — the Opus arm polls SIZING_ROWS; on completion it runs the Lagrange subset by REAL re-encode → pose re-solve → seg equal → seal.**
+
+## LIVE_ARMS
+- **ddm_sj1 gen 3 (Opus)** — pass-5 pricing through tc1's coder on cmp2's tree (control must reproduce the shipped tail byte-identically; twins); band 7.72–13.36 vs break-even 10.27 bits/token; Lagrange subset; pose chain only on a clearing net; seal+fire or the pre-registered STOP with the census. Told: bulk stays on Vertigo.
+- **ddm_rp1 (Opus)** — n600 DONE on all 4 shards (rc=0, ~3,000 s each); now: real-re-encode Lagrange subset → pose re-solve → seg equal → seal (projected −217 B); its mispredicted-token census feeds bnd1.
+- **codex keeper 4/4 (gpt-6-astra):** bnd1 xhigh (boundary-representation door, closed-form; falsifier 78 KB) · gb2 xhigh (gb1's owed unconditional lattice bound; falsifier 300 B under the stored basis) · pm2 high (four instrument laws as gates: pose-base magnitude, encoder==pointer coder, ledger-before-dump, screening-law lint) · vr4 medium (both-SSD certified reclaim; APDataStore 38 GiB / Vertigo 67 GiB; target ≥ 120 GiB).
+- **STORAGE IS BINDING:** APDataStore 38 GiB (98 %), Vertigo 67 GiB (97 %). Both Opus arms told to keep bulk on Vertigo; vr4 reclaims; route no new bulk to APDataStore until vr4 reports.
+- **RETAINED unfired:** cmp2 build B (+16 B, under bar). **CLOSED with handoffs:** rw1, fe1, gf3, gb1 (→ gb2), ane3.
+
+## OPEN_OPERATOR_DECISIONS
+- PR #140 (afr1 bytes, S 0.14797617) is NINE moves behind the live pointer (S 0.13900437796841966). Publishing an update needs the operator's one-line confirm (p0_swap_procedure). MAIN does not act without it.
+- CPU-axis adjudication of the shipping bytes (contest-CPU score on the live pointer) has never been bought; the old jg5-era plan is superseded by nine moves. Decide when the PR question is decided.
+- Codex keeper cap raised 4→5 for this wave (five apparatus/structural arms + one Opus frontier arm). Confirm the codex quota tolerates it.
+- Two runtime-digest DEFINITIONS coexist: `tac.candidate_seal.measure_runtime_digest` (pass-3 tree → 2435dab86725…) vs the Modal fire manifest's `expected_runtime_tree_sha256` (same tree → 6508d184e60a…). Self-consistent per tool (each re-measures with its own function), but a reader comparing them will call it drift. Route to the seal-contract follow-on (scg1 ITEM_7 owner) as "one digest definition, or name both in every receipt".
+
+## MONITOR_TASKS
+- Fleet watcher Monitor (persistent): `tools/codex_arm_watch.py` → ARM FINISHED/ALERT/RELAYED lines.
+- sj1 Opus agent: harness notification on completion; SendMessage to continue.
+- Corrections-index rebuild: receipt `.omx/tmp/au1_rebuild_20260908/au1_rebuild_20260908.done`.
+
+## NEXT_BOUNDARIES
+- sj1 gen 3 reports the pass-5 rate leg → admit (fire → packet move 38) or STOP (memo section + census → bnd1).
+- rp1 s2–s4 finish → Lagrange subset by real re-encode → pose → seal → fire → packet move 38/39.
+- bnd1 verdict → BUILD charter (n600 plan) or closure + generator successor (the-cross; gb1's owed bound construction).
+- PR #140 swap packet: prep only on the operator's one-line confirm (13 moves behind; CPU-axis row never measured on this lineage).
+
+## FRESHEST_RECEIPTS
+- 09-06 04:40Z move 32 harvest: `/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/MODAL_REMOTE_RESULT.json` (call fc-01M1TFD35EPY2YZHNV3VKJP6MG).
+- 09-08 sj1 gen-2 lineage row commit 0e25879c1 (projection error +4.162e-06 S bracketed with round one's +0.0038%).
+- 09-08 corrections index rebuilt: `.omx/tmp/au1_rebuild_20260908/` rc=0 in 16 s.

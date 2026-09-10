@@ -139,7 +139,7 @@ def test_process_visibility_fail_closed(monkeypatch, mode):
             if mode in {"lsof_denied", "lsof_warning"}:
                 return subprocess.CompletedProcess(command, 1, "", "cannot stat mount")
             cwd = "/work/ddm_test_run" if mode == "live_cwd" else "/work/idle"
-            return subprocess.CompletedProcess(command, 0, f"p1\nclaunchd\nn/\np123\ncpython3\nn{cwd}\np{os.getpid()}\ncpytest\nn/work/repo\n", "")
+            return subprocess.CompletedProcess(command, 0, f"p1\nn/\np123\nn{cwd}\np{os.getpid()}\nn/work/repo\n", "")
         if command[0] == "ps":
             if mode == "ps_denied":
                 raise PermissionError("sandbox")
@@ -164,7 +164,7 @@ def test_process_visibility_fail_closed(monkeypatch, mode):
 def test_visible_idle_host_passes(monkeypatch):
     def run(command, **kwargs):
         if command[0] == "lsof":
-            return subprocess.CompletedProcess(command, 0, f"p1\nclaunchd\nn/\np{os.getpid()}\ncpytest\nn/work/repo\n", "")
+            return subprocess.CompletedProcess(command, 0, f"p1\nn/\np{os.getpid()}\nn/work/repo\n", "")
         return subprocess.CompletedProcess(
             command,
             0 if command[0] == "ps" else 1,
@@ -190,87 +190,11 @@ def test_owner_token_only_in_argv_does_not_trip_process_gate(monkeypatch):
             assert command == ["pgrep", "-x", "ddm_test"]
             return subprocess.CompletedProcess(command, 1, "", "")
         return subprocess.CompletedProcess(
-            command, 0, f"p1\nclaunchd\nn/\np123\ncpython3\nn/work/review\np{os.getpid()}\ncpytest\nn/work/repo\n", ""
+            command, 0, f"p1\nn/\np123\nn/work/review\np{os.getpid()}\nn/work/repo\n", ""
         )
 
     monkeypatch.setattr(vr3.subprocess, "run", run)
     assert vr3.process_gate("ddm_test")["visible"]
-
-
-@pytest.mark.parametrize(
-    "cwd_output",
-    [
-        "",  # Successful but empty lsof is not visibility.
-        "self_only",  # A hidden Python consumer could have the owner's cwd.
-        "p1\nclaunchd\nn/\np123\n",  # Missing name on the last process.
-        "p1\nclaunchd\nn/\np123\ncpython3\nnrelative\n",
-        "p1\nclaunchd\nn/\np123\ncpython3\nn/work/idle\nn/work/other\n",
-        "p1\nclaunchd\nn/\np123\ncpython3\nn/work/idle\np123\ncpython3\nn/work/other\n",
-        "p1\nclaunchd\nn/\np123\ncpython3\nn/work/idle\nERROR hidden mount\n",
-        "p1\nclaunchd\nn/\np999\nn/work/new-process\n",
-    ],
-)
-def test_incomplete_or_malformed_cwd_census_refused(monkeypatch, cwd_output):
-    def run(command, **kwargs):
-        if command[0] == "ps":
-            output = f"1 0 /sbin/launchd\n123 1 /usr/bin/python3\n{os.getpid()} 1 /usr/bin/pytest\n"
-        elif command[0] == "pgrep":
-            return subprocess.CompletedProcess(command, 1, "", "")
-        else:
-            output = f"p{os.getpid()}\ncpytest\nn/work/repo\n" if cwd_output == "self_only" else cwd_output
-        return subprocess.CompletedProcess(command, 0, output, "")
-
-    monkeypatch.setattr(vr3.subprocess, "run", run)
-    with pytest.raises(vr3.CertifyError, match="PROCESS_VISIBILITY_UNAVAILABLE"):
-        vr3.process_gate("ddm_test")
-
-
-@pytest.mark.parametrize(
-    ("comm", "cwd", "refuse"),
-    [
-        ("/usr/bin/ddm_test_worker", "/work/idle", True),
-        ("/usr/bin/python3", "/work/ddm_test-run", True),
-        ("/usr/bin/notddm_test", "/work/notddm_test", False),
-        ("/usr/bin/ddm_test2", "/work/ddm_test2", False),
-        ("/usr/bin/ruff", "/work/review", False),
-    ],
-)
-def test_owner_token_boundary_on_command_and_cwd(monkeypatch, comm, cwd, refuse):
-    def run(command, **kwargs):
-        if command[0] == "ps":
-            output = f"1 0 /sbin/launchd\n123 1 {comm}\n{os.getpid()} 1 /usr/bin/pytest\n"
-        elif command[0] == "pgrep":
-            return subprocess.CompletedProcess(command, 1, "", "")
-        else:
-            output = f"p1\nclaunchd\nn/\np123\ncpython3\nfcwd\nn{cwd}\np{os.getpid()}\ncpytest\nn/work/repo\n"
-        return subprocess.CompletedProcess(command, 0, output, "")
-
-    monkeypatch.setattr(vr3.subprocess, "run", run)
-    if refuse:
-        with pytest.raises(vr3.CertifyError, match="LIVE_OWNER_PROCESS"):
-            vr3.process_gate("ddm_test")
-    else:
-        assert vr3.process_gate("ddm_test")["visible"]
-
-
-@pytest.mark.parametrize("extra_command", ["lsof", "ddm_test_worker"])
-def test_observer_lifecycle_and_new_process_command(monkeypatch, extra_command):
-    def run(command, **kwargs):
-        if command[0] == "ps":
-            output = f"1 0 launchd\n{os.getpid()} 1 pytest\n321 {os.getpid()} /bin/ps\n"
-        elif command[0] == "pgrep":
-            return subprocess.CompletedProcess(command, 1, "", "")
-        else:
-            assert command[-1] == "pcn"
-            output = f"p1\nclaunchd\nn/\np{os.getpid()}\ncpytest\nn/work\np456\nc{extra_command}\nn/work\n"
-        return subprocess.CompletedProcess(command, 0, output, "")
-
-    monkeypatch.setattr(vr3.subprocess, "run", run)
-    if extra_command == "lsof":
-        assert vr3.process_gate("ddm_test")["visible"]
-    else:
-        with pytest.raises(vr3.CertifyError, match="LIVE_OWNER_PROCESS"):
-            vr3.process_gate("ddm_test")
 
 
 def make_plan(tmp_path, monkeypatch):

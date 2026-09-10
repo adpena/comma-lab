@@ -1,0 +1,296 @@
+{
+  "schema": "ddm_cd3.uncommitted_draft_withdrawal.v1",
+  "reason": "Reject unsupported sw2 pre-landing draft certifications. Every committed certificate is byte-identically preserved; the complete rejected draft remains in preexisting_3.blob. No committed certification history removed.",
+  "draft_rows": [
+    {
+      "blob_sha1": "073e9d0dad16a174db986029bd112e8056563d27",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_extra/compress.py",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    },
+    {
+      "blob_sha1": "cf90e97010d7f1b652993ba7c55527a70f010e0c",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/negative_controls/manifest_extra/compress.py",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    },
+    {
+      "blob_sha1": "70f13d70b5dac1462b32f101441d779ba8cca978",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_gb2_generated_basis_bound",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+      "rationale": "Run-local input-audit snapshot copied from retained runtime lineage; retained under the named owner as evidence, not active source."
+    },
+    {
+      "blob_sha1": "de7fccff8c73dfe7ed58c9d341e594bddc534c93",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_sm1_semantic_shared_mixer",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/runtime/residual_archive.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "029d3785c3cf17d916f7ce4372d2ba2bec6f980e",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_rp1_rate_directed_predistortion",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/runtime/f26_inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "58352890d2baee4b5e74046aa3a450adc3b2bcd0",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_sm1_semantic_shared_mixer",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/profile_observer_correction/ddm_sm1_stage.py",
+      "rationale": "Run-local authored staging or pre-review source retained under the named owner; promote only through a separately reviewed owner landing."
+    },
+    {
+      "blob_sha1": "1527c7e04112115967956e0aa4a0c61884c5293b",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_ps1_pr140_update_prep",
+      "path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+      "rationale": "Known correctness-risk evidence fragment; unsafe to promote as code and retained under its named owner until a clean exact replacement is supplied."
+    },
+    {
+      "blob_sha1": "4d792e6355b46e0a9cc1f383e428c9b26f002a02",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_cmp1_compose",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+      "rationale": "Run-local authored staging or pre-review source retained under the named owner; promote only through a separately reviewed owner landing."
+    },
+    {
+      "blob_sha1": "cdd5ad08b8fdaca7a046b2f8f9ec26d28f720ed6",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_ps2_pr140_update_prep",
+      "path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+      "rationale": "Known correctness-risk evidence fragment; unsafe to promote as code and retained under its named owner until a clean exact replacement is supplied."
+    },
+    {
+      "blob_sha1": "3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_gb2_generated_basis_bound",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/a3d25a10188684e2_inflate.py",
+      "rationale": "Run-local input-audit snapshot copied from retained runtime lineage; retained under the named owner as evidence, not active source."
+    },
+    {
+      "blob_sha1": "60483fbf36b6882fc8d8aa06cf31758fa67ad125",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_sm1_semantic_shared_mixer",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+      "rationale": "Run-local authored staging or pre-review source retained under the named owner; promote only through a separately reviewed owner landing."
+    },
+    {
+      "blob_sha1": "8349f2ddccaf2506caba70cd74ad6461698650df",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_rp1_rate_directed_predistortion",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "dd87b66070bd20c502f3d7431fd0648603577d9f",
+      "certified_at_utc": "2026-09-10T01:43:11+00:00",
+      "owner": "ddm_bnd1_boundary_representation",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/04_main_hot_state.md",
+      "rationale": "Run-local immutable input snapshot of canonical repo state; retained only as owner audit evidence and not an active source."
+    },
+    {
+      "blob_sha1": "d3033e0f0d40241a7ec752662c7b593cc52b647b",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_gb2_generated_basis_bound",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/main_hot_state.md",
+      "rationale": "Run-local immutable input snapshot of canonical repo state; retained only as owner audit evidence and not an active source."
+    },
+    {
+      "blob_sha1": "2ebac46958b33c3b64a917779d0993b4871a04bd",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_ql1_retired_lineage_test_quarantine",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+      "rationale": "Known correctness-risk evidence fragment; unsafe to promote as code and retained under its named owner until a clean exact replacement is supplied."
+    },
+    {
+      "blob_sha1": "39a0cf291c28928131ce83d8a50d2dd8cdf6818f",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_bnd1_boundary_representation",
+      "path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/06__common_contract.md",
+      "rationale": "Run-local immutable input snapshot of canonical repo state; retained only as owner audit evidence and not an active source."
+    },
+    {
+      "blob_sha1": "1fa8c9ea77faf5895a9f721b60104fdc8b55113d",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_ps2_pr140_update_prep",
+      "path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/negative_control_stage7.py",
+      "rationale": "Negative or positive-control fixture, not operational source; retained under the named owner until the owning test evidence is retired."
+    },
+    {
+      "blob_sha1": "1f6f019da614b0a6500a3476a9deaa181323bf67",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_post_readme_clean2_controls/source_extra/README.md",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    },
+    {
+      "blob_sha1": "3635964486d90c872fc0d56710c55a78163f1900",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_extra/README.md",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    },
+    {
+      "blob_sha1": "abc3e951598eeccd53ab6a6b82a6fc92cf0071f4",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_ps1_pr140_update_prep",
+      "path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/negative_control_stage6.py",
+      "rationale": "Negative or positive-control fixture, not operational source; retained under the named owner until the owning test evidence is retired."
+    },
+    {
+      "blob_sha1": "0ef12fc85eb047d0df3600cd9b476855765445f6",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_cmp2_compose",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "55697d7c9d664cb77b7108b7f244c00c76897d28",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_cmp2_compose",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "f19f16ec0f5617c245aacd4c82e65f2381e5cca2",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_cmp2_compose",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/source_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "1f202759e374bfc9470925fd2e5d466d1d22acb6",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_rp1_rate_directed_predistortion",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "69c0924434c095f009ddcd667e91de3e82df7248",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_rp1_rate_directed_predistortion",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/staged_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "c390bec76e9d7690bc9d32c869584eadf945b911",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_pass5_price",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "b90809caf614d92a8a57f380bb2d2b0ebbf7c01d",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_pass5_price",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/staged_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "d3e25647af39bf136753df42f5279240b7e7452d",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sm1_semantic_shared_mixer",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/inflate.py",
+      "rationale": "Generated candidate runtime copy retained with its archive and owner lineage; reproducible from the owning build and not active repo source."
+    },
+    {
+      "blob_sha1": "831222d0f333e1d2c520d198496eadeee950fc6e",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sm1_semantic_shared_mixer",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+      "rationale": "Retained bounded verification probe with an owner receipt; not operational source and reproducible from the owning candidate workspace."
+    },
+    {
+      "blob_sha1": "51cd9cf15711a0042e588958b398c2f36e1ed417",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sm1_semantic_shared_mixer",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+      "rationale": "Retained bounded verification probe with an owner receipt; not operational source and reproducible from the owning candidate workspace."
+    },
+    {
+      "blob_sha1": "fae824929aaf3c2db67010b79b8c087dcf597c0e",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_t4_token_predistortion_joint_20260906",
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/mechanism.md",
+      "rationale": "Charter-protected live packet text; retained byte-identically under the named owner until packet harvest folds it into durable repo evidence."
+    },
+    {
+      "blob_sha1": "2a5b092d10cbe45a3459253328633c57736b787d",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_t4_token_predistortion_pass3_20260906",
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/mechanism.md",
+      "rationale": "Charter-protected live packet text; retained byte-identically under the named owner until packet harvest folds it into durable repo evidence."
+    },
+    {
+      "blob_sha1": "74686797414075eae6eb68581e91a61fbe198d39",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_t4_token_predistortion_joint_20260906",
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/not_claimed.md",
+      "rationale": "Charter-protected live packet text; retained byte-identically under the named owner until packet harvest folds it into durable repo evidence."
+    },
+    {
+      "blob_sha1": "b481681744dc3ccefc88f4a6683f84d6ab8b03a3",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_t4_token_predistortion_joint_20260906",
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/next.md",
+      "rationale": "Charter-protected live packet text; retained byte-identically under the named owner until packet harvest folds it into durable repo evidence."
+    },
+    {
+      "blob_sha1": "ee09842dce41ed4f2be7cd7090f0150db4c31c39",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_t4_token_predistortion_pass3_20260906",
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/not_claimed.md",
+      "rationale": "Charter-protected live packet text; retained byte-identically under the named owner until packet harvest folds it into durable repo evidence."
+    },
+    {
+      "blob_sha1": "ff3609e6ddb90198c53df30150402016687bb30f",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_sj1_t4_token_predistortion_pass3_20260906",
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/next.md",
+      "rationale": "Charter-protected live packet text; retained byte-identically under the named owner until packet harvest folds it into durable repo evidence."
+    },
+    {
+      "blob_sha1": "dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_ql1_retired_lineage_test_quarantine",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/probe/test_xfail_setup_probe.py",
+      "rationale": "Negative or positive-control fixture, not operational source; retained under the named owner until the owning test evidence is retired."
+    },
+    {
+      "blob_sha1": "15d2e243935a75f73eee654fec88e9f3ed0bce7c",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_gt2",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_gt2/positive_control_repo/tools/undeclared_gt_consumer.py",
+      "rationale": "Negative or positive-control fixture, not operational source; retained under the named owner until the owning test evidence is retired."
+    },
+    {
+      "blob_sha1": "34a2a07a1c9185a9a50280ac314755ca7fc453c6",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/negative_controls_v2/stage_extra/work/embedded_encoder_sources/compress_vendor/unmanifested.py",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    },
+    {
+      "blob_sha1": "51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_terminal_clean2c_controls_v2/materialize_refusal/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    },
+    {
+      "blob_sha1": "4287ca8617970fa8fc025b75cb319c7032706910",
+      "certified_at_utc": "2026-09-10T01:43:12+00:00",
+      "owner": "ddm_g8r_compress_adversarial_review",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_hash_tamper/README.md",
+      "rationale": "Adversarial detector fixture, not operational source; retained under the named review owner until its fixture consumer is retired or replaced."
+    }
+  ],
+  "original_draft_sha256": "5a8a6ddfa1746114fddc9d67e7a91e30e2e93684cd12b57673c94945186d4f9a",
+  "committed_prefix_sha256": "aaaa9e86f864fca78900cf7de0dfc866d9a790fcd2a3e0c2cd313c6be2fb8eab",
+  "retained_original": ".omx/research/ddm_cd3_20260910/preexisting_3.blob"
+}

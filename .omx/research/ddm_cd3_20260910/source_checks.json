@@ -1,0 +1,5986 @@
+[
+  {
+    "blob_sha1": "073e9d0dad16a174db986029bd112e8056563d27",
+    "ext": "py",
+    "size_bytes": 183053,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_extra/compress.py",
+    "instance_count": 6,
+    "sha256": "3cca28e6c68d7a37587723feeaf17305cc0936dffd5f6dec21fb0bb5608af7ef",
+    "ruff_rc": 0,
+    "ruff_findings": [],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "cf90e97010d7f1b652993ba7c55527a70f010e0c",
+    "ext": "py",
+    "size_bytes": 179863,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/negative_controls/manifest_extra/compress.py",
+    "instance_count": 3,
+    "sha256": "a3a70434d707cba79bd0acbc451b89873b99d525521cb95bda59239b34b808cb",
+    "ruff_rc": 0,
+    "ruff_findings": [],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "70f13d70b5dac1462b32f101441d779ba8cca978",
+    "ext": "py",
+    "size_bytes": 34053,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+    "instance_count": 8,
+    "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 35,
+          "row": 40
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from .bits import BitPackingError, packed_length, unpack_signed\nfrom .carrier_repack import pack_frame0_selector_carrier\nfrom .compensation_overlay import (\n    MAGIC as COMPENSATION_MAGIC,\n)\nfrom .compensation_overlay import (\n    split_selector_compensation,\n)\nfrom .entropy.coefficient_ar1_codec import (\n    CAP1_MAGIC,\n    CoefficientAr1CodecError,\n    decode_cap1,\n)\nfrom .entropy.rc64 import NativeDecoder\nfrom .entropy.renderer_weight_codec import (\n    RendererWeightCodecError,\n    decode_f12_wans_body,\n    decode_wans1,\n)\nfrom .frame0_selector import decode_selector\nfrom .ihs2 import materialize_ihs1\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 42
+              },
+              "location": {
+                "column": 1,
+                "row": 22
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 22
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 22,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 68,
+          "row": 250
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "        from .rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC\n        from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n",
+              "end_location": {
+                "column": 1,
+                "row": 251
+              },
+              "location": {
+                "column": 1,
+                "row": 248
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 9,
+          "row": 248
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 248,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 46,
+          "row": 640
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "    import torch\n\n    from .free_corrector import FreeCorrector\n    from .hpac_inference import configure_cuda_reproducibility, optimize_sparse_evaluator\n",
+              "end_location": {
+                "column": 1,
+                "row": 641
+              },
+              "location": {
+                "column": 1,
+                "row": 637
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 5,
+          "row": 637
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 637,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "F401",
+        "end_location": {
+          "column": 46,
+          "row": 640
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/535950d953f3da36_residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "",
+              "end_location": {
+                "column": 1,
+                "row": 641
+              },
+              "location": {
+                "column": 1,
+                "row": 640
+              }
+            }
+          ],
+          "message": "Remove unused import: `.free_corrector.FreeCorrector`"
+        },
+        "location": {
+          "column": 33,
+          "row": 640
+        },
+        "message": "`.free_corrector.FreeCorrector` imported but unused",
+        "name": "unused-import",
+        "noqa_row": 640,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unused-import"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "de7fccff8c73dfe7ed58c9d341e594bddc534c93",
+    "ext": "py",
+    "size_bytes": 32332,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/runtime/residual_archive.py",
+    "instance_count": 2,
+    "sha256": "109bb6052f4fdb1a72195f49979091776e71c5ffe261cc80add0b044fc0e7e34",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 35,
+          "row": 40
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/runtime/residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from .bits import BitPackingError, packed_length, unpack_signed\nfrom .carrier_repack import pack_frame0_selector_carrier\nfrom .compensation_overlay import (\n    MAGIC as COMPENSATION_MAGIC,\n)\nfrom .compensation_overlay import (\n    split_selector_compensation,\n)\nfrom .entropy.coefficient_ar1_codec import (\n    CAP1_MAGIC,\n    CoefficientAr1CodecError,\n    decode_cap1,\n)\nfrom .entropy.rc64 import NativeDecoder\nfrom .entropy.renderer_weight_codec import (\n    RendererWeightCodecError,\n    decode_f12_wans_body,\n    decode_wans1,\n)\nfrom .frame0_selector import decode_selector\nfrom .ihs2 import materialize_ihs1\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 42
+              },
+              "location": {
+                "column": 1,
+                "row": 22
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 22
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 22,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 68,
+          "row": 249
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/runtime/residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "        from .rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC\n        from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n",
+              "end_location": {
+                "column": 1,
+                "row": 250
+              },
+              "location": {
+                "column": 1,
+                "row": 247
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 9,
+          "row": 247
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 247,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 46,
+          "row": 633
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/runtime/residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "    import torch\n\n    from .free_corrector import FreeCorrector\n    from .hpac_inference import configure_cuda_reproducibility, optimize_sparse_evaluator\n",
+              "end_location": {
+                "column": 1,
+                "row": 634
+              },
+              "location": {
+                "column": 1,
+                "row": 630
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 5,
+          "row": 630
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 630,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "F401",
+        "end_location": {
+          "column": 46,
+          "row": 633
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/runtime/residual_archive.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "",
+              "end_location": {
+                "column": 1,
+                "row": 634
+              },
+              "location": {
+                "column": 1,
+                "row": 633
+              }
+            }
+          ],
+          "message": "Remove unused import: `.free_corrector.FreeCorrector`"
+        },
+        "location": {
+          "column": 33,
+          "row": 633
+        },
+        "message": "`.free_corrector.FreeCorrector` imported but unused",
+        "name": "unused-import",
+        "noqa_row": 633,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unused-import"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "029d3785c3cf17d916f7ce4372d2ba2bec6f980e",
+    "ext": "py",
+    "size_bytes": 29176,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/runtime/f26_inflate.py",
+    "instance_count": 9,
+    "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 78,
+          "row": 37
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/runtime/f26_inflate.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from __future__ import annotations\n\nimport dataclasses\nimport hashlib\nimport importlib.util\nimport inspect\nimport json\nimport os\nimport platform\nimport shutil\nimport struct\nimport sys\nimport time\nfrom pathlib import Path\nfrom types import ModuleType\nfrom typing import Any\n\nimport numpy as np\n\nfrom .carrier_repack import materialize_cpr1, split_frame0_selector_carrier\nfrom .compensation_overlay import apply_compensation_overlay\nfrom .entropy.renderer_weight_codec import WANS1_MAGIC, decode_wans1\nfrom .frame0_selector import apply_pixel_mode, decode_selector\nfrom .hpac_inference import configure_cuda_reproducibility\nfrom .rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC\nfrom .rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic\nfrom .residual_archive import decode_production_tokens, read_residual_archive\nfrom .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\nfrom .sm1_semantic_mixer import restore_semantic as restore_sm1_semantic\n\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 40
+              },
+              "location": {
+                "column": 1,
+                "row": 9
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 9
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 9,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "58352890d2baee4b5e74046aa3a450adc3b2bcd0",
+    "ext": "py",
+    "size_bytes": 26718,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/profile_observer_correction/ddm_sm1_stage.py",
+    "instance_count": 1,
+    "sha256": "b3a71141e2fe7350dd8a0cce4d4bdd5875f4f1d33496c0d21b8debd4c23426c8",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 55,
+          "row": 31
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/profile_observer_correction/ddm_sm1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 31
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 31,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 62,
+          "row": 32
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/profile_observer_correction/ddm_sm1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 32
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 32,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 78,
+          "row": 33
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/profile_observer_correction/ddm_sm1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 33
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 33,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "1527c7e04112115967956e0aa4a0c61884c5293b",
+    "ext": "py",
+    "size_bytes": 19965,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+    "instance_count": 1,
+    "sha256": "11c70b17e2a2b9febe63ff65789a663913c24a52d0e187570127682c3b6227d0",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 29,
+          "row": 39
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 23,
+          "row": 39
+        },
+        "message": "Undefined name `struct`",
+        "name": "undefined-name",
+        "noqa_row": 39,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 57
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 57
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 57,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 59
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 59
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 59,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 61
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 61
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 61,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 20,
+          "row": 62
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 16,
+          "row": 62
+        },
+        "message": "Undefined name `math`",
+        "name": "undefined-name",
+        "noqa_row": 62,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 68
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 68
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 68,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 70
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 70
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 70,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 24,
+          "row": 82
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 82
+        },
+        "message": "Undefined name `math`",
+        "name": "undefined-name",
+        "noqa_row": 82,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 78,
+          "row": 86
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 75,
+          "row": 86
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 86,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 98
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 98
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 98,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 101
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 101
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 101,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 24,
+          "row": 106
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 106
+        },
+        "message": "Undefined name `math`",
+        "name": "undefined-name",
+        "noqa_row": 106,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 114
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 114
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 114,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 121
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 121
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 121,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 128
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 128
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 128,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 135
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 31,
+          "row": 135
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 135,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 49,
+          "row": 135
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 46,
+          "row": 135
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 135,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 54,
+          "row": 135
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 51,
+          "row": 135
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 135,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 59,
+          "row": 135
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 56,
+          "row": 135
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 135,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 64,
+          "row": 135
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 61,
+          "row": 135
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 135,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 69,
+          "row": 135
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 66,
+          "row": 135
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 135,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 24,
+          "row": 141
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 141
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 141,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 8,
+          "row": 142
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 142
+        },
+        "message": "Undefined name `sys`",
+        "name": "undefined-name",
+        "noqa_row": 142,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 33,
+          "row": 145
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 30,
+          "row": 145
+        },
+        "message": "Undefined name `sys`",
+        "name": "undefined-name",
+        "noqa_row": 145,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 20,
+          "row": 147
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 17,
+          "row": 147
+        },
+        "message": "Undefined name `sys`",
+        "name": "undefined-name",
+        "noqa_row": 147,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 44,
+          "row": 152
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "        from runtime import (\n            carrier_repack,  # type: ignore[import-not-found]\n            dx2_cabac_coefficients,  # type: ignore[import-not-found]\n            frame0_selector,  # type: ignore[import-not-found]\n            residual_archive,  # type: ignore[import-not-found]\n            rr5_arith_basis,  # type: ignore[import-not-found]\n        )\n",
+              "end_location": {
+                "column": 1,
+                "row": 153
+              },
+              "location": {
+                "column": 1,
+                "row": 148
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 9,
+          "row": 148
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 148,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 12,
+          "row": 154
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 154
+        },
+        "message": "Undefined name `sys`",
+        "name": "undefined-name",
+        "noqa_row": 154,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 42,
+          "row": 161
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 38,
+          "row": 161
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 161,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 62,
+          "row": 161
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 58,
+          "row": 161
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 161,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 33,
+          "row": 164
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 29,
+          "row": 164
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 164,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 21,
+          "row": 168
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 14,
+          "row": 168
+        },
+        "message": "Undefined name `zipfile`",
+        "name": "undefined-name",
+        "noqa_row": 168,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 32,
+          "row": 168
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 30,
+          "row": 168
+        },
+        "message": "Undefined name `io`",
+        "name": "undefined-name",
+        "noqa_row": 168,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 39,
+          "row": 170
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 23,
+          "row": 170
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 170,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 180
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 180
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 180,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 193
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 193
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 193,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 216
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 216
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 216,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 226
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 226
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 226,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 236
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 236
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 236,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 20,
+          "row": 252
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 18,
+          "row": 252
+        },
+        "message": "Undefined name `io`",
+        "name": "undefined-name",
+        "noqa_row": 252,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 21,
+          "row": 253
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 14,
+          "row": 253
+        },
+        "message": "Undefined name `zipfile`",
+        "name": "undefined-name",
+        "noqa_row": 253,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 50,
+          "row": 253
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 43,
+          "row": 253
+        },
+        "message": "Undefined name `zipfile`",
+        "name": "undefined-name",
+        "noqa_row": 253,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 28,
+          "row": 254
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 21,
+          "row": 254
+        },
+        "message": "Undefined name `zipfile`",
+        "name": "undefined-name",
+        "noqa_row": 254,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 72,
+          "row": 262
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 68,
+          "row": 262
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 262,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 90,
+          "row": 262
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 87,
+          "row": 262
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 262,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 270
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 270
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 270,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 274
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 274
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 274,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 277
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 28,
+          "row": 277
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 277,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 39,
+          "row": 279
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 32,
+          "row": 279
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 279,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 281
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 24,
+          "row": 281
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 281,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 39,
+          "row": 283
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 32,
+          "row": 283
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 283,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 43,
+          "row": 285
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 36,
+          "row": 285
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 285,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 38,
+          "row": 286
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 31,
+          "row": 286
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 286,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 21,
+          "row": 292
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 14,
+          "row": 292
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 292,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 40,
+          "row": 293
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 33,
+          "row": 293
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 293,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 301
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 27,
+          "row": 301
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 301,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 46,
+          "row": 301
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 42,
+          "row": 301
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 301,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 61,
+          "row": 301
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 57,
+          "row": 301
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 301,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 76,
+          "row": 301
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 72,
+          "row": 301
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 301,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 91,
+          "row": 301
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 88,
+          "row": 301
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 301,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 19,
+          "row": 311
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 311
+        },
+        "message": "Undefined name `time`",
+        "name": "undefined-name",
+        "noqa_row": 311,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 313
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 313
+        },
+        "message": "Undefined name `require_pin`",
+        "name": "undefined-name",
+        "noqa_row": 313,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 52,
+          "row": 313
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 41,
+          "row": 313
+        },
+        "message": "Undefined name `AFR1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 313,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 64,
+          "row": 313
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 54,
+          "row": 313
+        },
+        "message": "Undefined name `AFR1_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 313,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 15,
+          "row": 316
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 8,
+          "row": 316
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 316,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 317
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 317
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 317,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 30,
+          "row": 329
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 23,
+          "row": 329
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 329,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 38,
+          "row": 330
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 27,
+          "row": 330
+        },
+        "message": "Undefined name `AFR1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 330,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 69,
+          "row": 330
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 59,
+          "row": 330
+        },
+        "message": "Undefined name `AFR1_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 330,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 331
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 331
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 331,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 27,
+          "row": 334
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 16,
+          "row": 334
+        },
+        "message": "Undefined name `AFR1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 334,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 41,
+          "row": 334
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 31,
+          "row": 334
+        },
+        "message": "Undefined name `AFR1_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 334,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 26,
+          "row": 339
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 339
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 339,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 341
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 341
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 341,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 355
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 355
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 355,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 360
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 360
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 360,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 365
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 365
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 365,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 373
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 373
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 373,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 379
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 379
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 379,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 380
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 380
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 380,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 381
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 381
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 381,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 23,
+          "row": 382
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 12,
+          "row": 382
+        },
+        "message": "Undefined name `require_pin`",
+        "name": "undefined-name",
+        "noqa_row": 382,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 49,
+          "row": 382
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 37,
+          "row": 382
+        },
+        "message": "Undefined name `FINAL_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 382,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 62,
+          "row": 382
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 51,
+          "row": 382
+        },
+        "message": "Undefined name `FINAL_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 382,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 32,
+          "row": 385
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/stage6_block.py",
+        "fix": null,
+        "location": {
+          "column": 28,
+          "row": 385
+        },
+        "message": "Undefined name `time`",
+        "name": "undefined-name",
+        "noqa_row": 385,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "4d792e6355b46e0a9cc1f383e428c9b26f002a02",
+    "ext": "py",
+    "size_bytes": 16948,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+    "instance_count": 1,
+    "sha256": "69357d4baf39f0f94b5a8d2bb2b658012a3c2f47f3b307fada3ad707e06bad1d",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 15,
+          "row": 11
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from __future__ import annotations\n\nimport argparse\nimport json\nimport subprocess\nimport sys\nimport zipfile\nfrom datetime import UTC, datetime\nfrom pathlib import Path\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 13
+              },
+              "location": {
+                "column": 1,
+                "row": 3
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 3
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 3,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 46,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "SIM108",
+        "end_location": {
+          "column": 48,
+          "row": 66
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "section = c.ROOT / 'retained/source/hpac.bin' if role == 'source' else c.ROOT / 'retained/rc3_hpac.br'",
+              "end_location": {
+                "column": 48,
+                "row": 66
+              },
+              "location": {
+                "column": 5,
+                "row": 63
+              }
+            }
+          ],
+          "message": "Replace `if`-`else`-block with `section = c.ROOT / 'retained/source/hpac.bin' if role == 'source' else c.ROOT / 'retained/rc3_hpac.br'`"
+        },
+        "location": {
+          "column": 5,
+          "row": 63
+        },
+        "message": "Use ternary operator `section = c.ROOT / 'retained/source/hpac.bin' if role == 'source' else c.ROOT / 'retained/rc3_hpac.br'` instead of `if`-`else`-block",
+        "name": "if-else-block-instead-of-if-exp",
+        "noqa_row": 63,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/if-else-block-instead-of-if-exp"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 26,
+          "row": 70
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "    import importlib.util\n\n    from runtime.ihs2 import materialize_ihs1\n    from runtime.residual_archive import read_residual_archive\n",
+              "end_location": {
+                "column": 1,
+                "row": 71
+              },
+              "location": {
+                "column": 1,
+                "row": 68
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 5,
+          "row": 68
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 68,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E702",
+        "end_location": {
+          "column": 61,
+          "row": 78
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 60,
+          "row": 78
+        },
+        "message": "Multiple statements on one line (semicolon)",
+        "name": "multiple-statements-on-one-line-semicolon",
+        "noqa_row": 78,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-semicolon"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 84,
+          "row": 88
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'role': role,'body': fact,'archive': c.jg2.file_fact(archive),\n                    'model_identity': role=='candidate','axis': c.AXIS,'score_claim': False}",
+              "end_location": {
+                "column": 84,
+                "row": 88
+              },
+              "location": {
+                "column": 55,
+                "row": 87
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 55,
+          "row": 87
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 87,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "E702",
+        "end_location": {
+          "column": 23,
+          "row": 111
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 22,
+          "row": 111
+        },
+        "message": "Multiple statements on one line (semicolon)",
+        "name": "multiple-statements-on-one-line-semicolon",
+        "noqa_row": 111,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-semicolon"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 109,
+          "row": 141
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'label': label,'method': method,'level': level,'archive': c.jg2.file_fact(path),'rider': fact}",
+              "end_location": {
+                "column": 109,
+                "row": 141
+              },
+              "location": {
+                "column": 25,
+                "row": 141
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 25,
+          "row": 141
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 141,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 120,
+          "row": 161
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'label': label,'method': method,'level': level,'archive': c.jg2.file_fact(standalone_path)}",
+              "end_location": {
+                "column": 120,
+                "row": 161
+              },
+              "location": {
+                "column": 36,
+                "row": 161
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 36,
+          "row": 161
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 161,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "E702",
+        "end_location": {
+          "column": 32,
+          "row": 173
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 31,
+          "row": 173
+        },
+        "message": "Multiple statements on one line (semicolon)",
+        "name": "multiple-statements-on-one-line-semicolon",
+        "noqa_row": 173,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-semicolon"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 92,
+          "row": 198
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'base_bytes': len(v),'candidate_bytes': len(new[k]),'identical': v==new[k],\n                   'base_sha': c.jg2.sha256_bytes(v),'candidate_sha': c.jg2.sha256_bytes(new[k])}",
+              "end_location": {
+                "column": 92,
+                "row": 198
+              },
+              "location": {
+                "column": 15,
+                "row": 197
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 15,
+          "row": 197
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 197,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "E702",
+        "end_location": {
+          "column": 44,
+          "row": 204
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 43,
+          "row": 204
+        },
+        "message": "Multiple statements on one line (semicolon)",
+        "name": "multiple-statements-on-one-line-semicolon",
+        "noqa_row": 204,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-semicolon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 69,
+          "row": 205
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 68,
+          "row": 205
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 205,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 31,
+          "row": 208
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 30,
+          "row": 208
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 208,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 95,
+          "row": 220
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'axis': c.AXIS,'score_claim': False,'archive': c.jg2.file_fact(target/'archive.zip'),\n                'base': inputs['archive'],'saving': saving,'model_saving': len(base_parts['hpac'])-len(new['hpac']),\n                'tail_saving': len(base_parts['tail'])-len(new['tail']),'prior_prediction_saving': 750,\n                'interaction_vs_prior_savings': saving-750,'prior_falsifier_fired': saving<700,\n                'projected_score': inputs['pointer']['our_local_frontier_contest_cuda']['score']-saving*25/37545489,\n                'delta_score_rate_only': -saving*25/37545489,'projection_only': True,\n                'independent_twin_encode_identity': True,'section_census': census,'runtime_changed_files': changes,\n                'container_rows': rows,'winner': winner,'model_proof': proof,'weights': inputs['weights']}",
+              "end_location": {
+                "column": 95,
+                "row": 220
+              },
+              "location": {
+                "column": 12,
+                "row": 213
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 12,
+          "row": 213
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 213,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "E702",
+        "end_location": {
+          "column": 59,
+          "row": 234
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 58,
+          "row": 234
+        },
+        "message": "Multiple statements on one line (semicolon)",
+        "name": "multiple-statements-on-one-line-semicolon",
+        "noqa_row": 234,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-semicolon"
+      },
+      {
+        "cell": null,
+        "code": "E702",
+        "end_location": {
+          "column": 31,
+          "row": 240
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 30,
+          "row": 240
+        },
+        "message": "Multiple statements on one line (semicolon)",
+        "name": "multiple-statements-on-one-line-semicolon",
+        "noqa_row": 240,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-semicolon"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 109,
+          "row": 246
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'base': result['base'],'fixed_tc1_weights': result['weights'],'pairs': 600,'symbols': 117964800}",
+              "end_location": {
+                "column": 109,
+                "row": 246
+              },
+              "location": {
+                "column": 20,
+                "row": 246
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 20,
+          "row": 246
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 246,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 74,
+          "row": 247
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'composed_bytes': 180771,'saving_bytes': 750}",
+              "end_location": {
+                "column": 74,
+                "row": 247
+              },
+              "location": {
+                "column": 30,
+                "row": 247
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 30,
+          "row": 247
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 247,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 73,
+          "row": 261
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'equation_id': equation,'anchor': anchor.to_dict()}",
+              "end_location": {
+                "column": 73,
+                "row": 261
+              },
+              "location": {
+                "column": 23,
+                "row": 261
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 23,
+          "row": 261
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 261,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 43,
+          "row": 270
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 42,
+          "row": 270
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 270,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 30,
+          "row": 271
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 29,
+          "row": 271
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 271,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 42,
+          "row": 272
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 41,
+          "row": 272
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 272,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 30,
+          "row": 273
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 29,
+          "row": 273
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 273,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 10,
+          "row": 274
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_release/ddm_cmp1_stage.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 274
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 274,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "cdd5ad08b8fdaca7a046b2f8f9ec26d28f720ed6",
+    "ext": "py",
+    "size_bytes": 16219,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+    "instance_count": 1,
+    "sha256": "46b0bcab8550092e316338937e801c0f4f608828b1178277efcc6c7122952f17",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 32,
+          "row": 68
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 28,
+          "row": 68
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 68,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 40,
+          "row": 68
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 37,
+          "row": 68
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 68,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 25,
+          "row": 70
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 14,
+          "row": 70
+        },
+        "message": "Undefined name `vendor_file`",
+        "name": "undefined-name",
+        "noqa_row": 70,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 16,
+          "row": 71
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 71
+        },
+        "message": "Undefined name `require_pin`",
+        "name": "undefined-name",
+        "noqa_row": 71,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 49,
+          "row": 71
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 25,
+          "row": 71
+        },
+        "message": "Undefined name `MATERIALIZED_SOURCE_PINS`",
+        "name": "undefined-name",
+        "noqa_row": 71,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 21,
+          "row": 72
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 12,
+          "row": 72
+        },
+        "message": "Undefined name `importlib`",
+        "name": "undefined-name",
+        "noqa_row": 72,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 74
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 74
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 74,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 23,
+          "row": 75
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 14,
+          "row": 75
+        },
+        "message": "Undefined name `importlib`",
+        "name": "undefined-name",
+        "noqa_row": 75,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 8,
+          "row": 79
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 79
+        },
+        "message": "Undefined name `sys`",
+        "name": "undefined-name",
+        "noqa_row": 79,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 28,
+          "row": 84
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 25,
+          "row": 84
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 84,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 42,
+          "row": 84
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 39,
+          "row": 84
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 84,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 39,
+          "row": 89
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 24,
+          "row": 89
+        },
+        "message": "Undefined name `FS1_FRAME_COUNT`",
+        "name": "undefined-name",
+        "noqa_row": 89,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 90
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 90
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 90,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 43,
+          "row": 93
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 28,
+          "row": 93
+        },
+        "message": "Undefined name `FS1_FRAME_COUNT`",
+        "name": "undefined-name",
+        "noqa_row": 93,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 94
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 94
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 94,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 96
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 96
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 96,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 99
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 99
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 99,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 101
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 101
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 101,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 45,
+          "row": 117
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 42,
+          "row": 117
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 117,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 67,
+          "row": 117
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 64,
+          "row": 117
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 117,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 88,
+          "row": 117
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 85,
+          "row": 117
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 117,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 123
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 27,
+          "row": 123
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 123,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 46,
+          "row": 123
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 42,
+          "row": 123
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 123,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 61,
+          "row": 123
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 57,
+          "row": 123
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 123,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 76,
+          "row": 123
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 72,
+          "row": 123
+        },
+        "message": "Undefined name `Path`",
+        "name": "undefined-name",
+        "noqa_row": 123,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 91,
+          "row": 123
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 88,
+          "row": 123
+        },
+        "message": "Undefined name `Any`",
+        "name": "undefined-name",
+        "noqa_row": 123,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 19,
+          "row": 137
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 137
+        },
+        "message": "Undefined name `time`",
+        "name": "undefined-name",
+        "noqa_row": 137,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 139
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 139
+        },
+        "message": "Undefined name `require_pin`",
+        "name": "undefined-name",
+        "noqa_row": 139,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 51,
+          "row": 139
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 41,
+          "row": 139
+        },
+        "message": "Undefined name `FS1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 139,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 62,
+          "row": 139
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 53,
+          "row": 139
+        },
+        "message": "Undefined name `FS1_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 139,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 54,
+          "row": 143
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 35,
+          "row": 143
+        },
+        "message": "Undefined name `_fs1_import_runtime`",
+        "name": "undefined-name",
+        "noqa_row": 143,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 41,
+          "row": 148
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 31,
+          "row": 148
+        },
+        "message": "Undefined name `FS1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 148,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 149
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 149
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 149,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 35,
+          "row": 153
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 28,
+          "row": 153
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 153,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 157
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 157
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 157,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 49,
+          "row": 172
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 39,
+          "row": 172
+        },
+        "message": "Undefined name `FS1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 172,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 49,
+          "row": 173
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 40,
+          "row": 173
+        },
+        "message": "Undefined name `FS1_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 173,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 177
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 177
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 177,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 30,
+          "row": 180
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 180
+        },
+        "message": "Undefined name `FS1_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 180,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 43,
+          "row": 180
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 34,
+          "row": 180
+        },
+        "message": "Undefined name `FS1_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 180,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 27,
+          "row": 184
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 20,
+          "row": 184
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 184,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 186
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 186
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 186,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 190
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 190
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 190,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 15,
+          "row": 200
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 8,
+          "row": 200
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 200,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 72,
+          "row": 200
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 48,
+          "row": 200
+        },
+        "message": "Undefined name `FS1_SELECTOR_BLOB_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 200,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 201
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 201
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 201,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 32,
+          "row": 205
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 12,
+          "row": 205
+        },
+        "message": "Undefined name `_fs1_encode_selector`",
+        "name": "undefined-name",
+        "noqa_row": 205,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 26,
+          "row": 206
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 206
+        },
+        "message": "Undefined name `hashlib`",
+        "name": "undefined-name",
+        "noqa_row": 206,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 208
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 208
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 208,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 213
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 213
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 213,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 26,
+          "row": 216
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 216
+        },
+        "message": "Undefined name `dataclasses`",
+        "name": "undefined-name",
+        "noqa_row": 216,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 20,
+          "row": 224
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 224
+        },
+        "message": "Undefined name `dataclasses`",
+        "name": "undefined-name",
+        "noqa_row": 224,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 230
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 230
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 230,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 29,
+          "row": 233
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 14,
+          "row": 233
+        },
+        "message": "Undefined name `_fs1_parse_back`",
+        "name": "undefined-name",
+        "noqa_row": 233,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 34,
+          "row": 234
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 19,
+          "row": 234
+        },
+        "message": "Undefined name `_fs1_parse_back`",
+        "name": "undefined-name",
+        "noqa_row": 234,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 238
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 238
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 238,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 64,
+          "row": 241
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 44,
+          "row": 241
+        },
+        "message": "Undefined name `FS1_SELECTOR_CHOICES`",
+        "name": "undefined-name",
+        "noqa_row": 241,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 242
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 242
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 242,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 250
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 250
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 250,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 255
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 255
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 255,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 31,
+          "row": 259
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 15,
+          "row": 259
+        },
+        "message": "Undefined name `CompressionError`",
+        "name": "undefined-name",
+        "noqa_row": 259,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 262
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 262
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 262,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 263
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 263
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 263,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 17,
+          "row": 264
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 5,
+          "row": 264
+        },
+        "message": "Undefined name `atomic_bytes`",
+        "name": "undefined-name",
+        "noqa_row": 264,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 23,
+          "row": 265
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 12,
+          "row": 265
+        },
+        "message": "Undefined name `require_pin`",
+        "name": "undefined-name",
+        "noqa_row": 265,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 49,
+          "row": 265
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 37,
+          "row": 265
+        },
+        "message": "Undefined name `FINAL_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 265,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 62,
+          "row": 265
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 51,
+          "row": 265
+        },
+        "message": "Undefined name `FINAL_BYTES`",
+        "name": "undefined-name",
+        "noqa_row": 265,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 32,
+          "row": 268
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 28,
+          "row": 268
+        },
+        "message": "Undefined name `time`",
+        "name": "undefined-name",
+        "noqa_row": 268,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 56,
+          "row": 291
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 32,
+          "row": 291
+        },
+        "message": "Undefined name `FS1_SELECTOR_BLOB_SHA256`",
+        "name": "undefined-name",
+        "noqa_row": 291,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 58,
+          "row": 298
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 38,
+          "row": 298
+        },
+        "message": "Undefined name `FS1_SELECTOR_CHOICES`",
+        "name": "undefined-name",
+        "noqa_row": 298,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      },
+      {
+        "cell": null,
+        "code": "F821",
+        "end_location": {
+          "column": 45,
+          "row": 299
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/stage7_block.py",
+        "fix": null,
+        "location": {
+          "column": 25,
+          "row": 299
+        },
+        "message": "Undefined name `FS1_SELECTOR_CHOICES`",
+        "name": "undefined-name",
+        "noqa_row": 299,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c",
+    "ext": "py",
+    "size_bytes": 13810,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/a3d25a10188684e2_inflate.py",
+    "instance_count": 10,
+    "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 32,
+          "row": 18
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/input_audit/sources/a3d25a10188684e2_inflate.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from __future__ import annotations\n\nimport math\nimport struct\nimport time\nfrom pathlib import Path\n\nimport numpy as np\nimport torch\nfrom carrier_codec import MAGIC as COMPACT_CARRIER_MAGIC\nfrom carrier_codec import decode_compact_carrier\nfrom ddm_mp2_semantic_receiver import unpack_variant_semantic_or_none\nfrom hpac_integer import IntegerHPAC\nfrom integer_model_io import deserialize_integer_model\nfrom torch import nn\nfrom torch.nn import functional\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 20
+              },
+              "location": {
+                "column": 1,
+                "row": 3
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 3
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 3,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "60483fbf36b6882fc8d8aa06cf31758fa67ad125",
+    "ext": "py",
+    "size_bytes": 13474,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+    "instance_count": 1,
+    "sha256": "00c3fd0069718018417f4f23a5782ad24ee1da2b7fab7623ed62e971c80185a8",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 52,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 58,
+          "row": 17
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 17
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 17,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 53,
+          "row": 29
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'inputs': b.fact(root / 'INPUTS.json'), 'bound': b.fact(root / 'BOUND_SUPPORTED.json'),\n                'codec': b.fact(c.__file__), 'base_codec': b.fact(c.rc1.__file__),\n                'fixed_math': b.fact(c.fixed.__file__)}",
+              "end_location": {
+                "column": 53,
+                "row": 29
+              },
+              "location": {
+                "column": 12,
+                "row": 27
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 12,
+          "row": 27
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 27,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 116,
+          "row": 85
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'binding': binding(root), 'x': array_file(root / 'retained/fit/x.npy', x),\n                  'truth': array_file(root / 'retained/fit/truth.npy', y),\n                  'events': len(y), 'all_source_probabilities_identical': True,\n                  'weight_count': 24, 'model_family': 'scale_geometry_history_shared',\n                  'scope': 'one shared vector; six named context families plus adaptation timescale and count priors'}",
+              "end_location": {
+                "column": 116,
+                "row": 85
+              },
+              "location": {
+                "column": 14,
+                "row": 81
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 14,
+          "row": 81
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 81,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 82,
+          "row": 102
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'features': b.fact(root / 'FEATURES.json'), 'code': b.fact(__file__)}",
+              "end_location": {
+                "column": 82,
+                "row": 102
+              },
+              "location": {
+                "column": 14,
+                "row": 102
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 14,
+          "row": 102
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 102,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 85,
+          "row": 144
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'power': power, 'weights': trial.tolist(), 'loss_nats': value}",
+              "end_location": {
+                "column": 85,
+                "row": 144
+              },
+              "location": {
+                "column": 27,
+                "row": 144
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 27,
+          "row": 144
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 144,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 93,
+          "row": 154
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'iteration': iteration + 1, 'weights': current.tolist(), 'loss_nats': value,\n                    'max_gradient': float(np.max(np.abs(grad))), 'improvement_nats': loss - value}",
+              "end_location": {
+                "column": 93,
+                "row": 154
+              },
+              "location": {
+                "column": 16,
+                "row": 153
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 16,
+          "row": 153
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 153,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 71,
+          "row": 172
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'weights': weights.tolist(), 'loss_bits': winner[0]}",
+              "end_location": {
+                "column": 71,
+                "row": 172
+              },
+              "location": {
+                "column": 20,
+                "row": 172
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 20,
+          "row": 172
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 172,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 101,
+          "row": 180
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'binding': inputs, 'continuous_weights': current.tolist(),\n                  'initial_quantized_weights': quantized_initial.tolist(), 'weights': weights.tolist(),\n                  'baseline_fixed_bits': fixed_loss(x, y, np.asarray([32] + [0] * 23, dtype=np.int8)),\n                  'fitted_fixed_bits': fixed_loss(x, y, weights),\n                  'continuous_gain_bytes': (initial_loss - objective(current)) / math.log(2) / 8,\n                  'counted_parameters_bytes': 24, 'header_increment_bytes': 2,\n                  'fixed_net_ideal_bytes': (initial_loss / math.log(2) - fixed_loss(x, y, weights)) / 8 - 26,\n                  'limitation': 'fit and integer log-loss only; no realized container gain until RACE'}",
+              "end_location": {
+                "column": 101,
+                "row": 180
+              },
+              "location": {
+                "column": 14,
+                "row": 173
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 14,
+          "row": 173
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 173,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 98,
+          "row": 213
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'fit': b.fact(root / 'FIT.json'), 'codecs': binding(root), 'weights': vector.tolist()}",
+              "end_location": {
+                "column": 98,
+                "row": 213
+              },
+              "location": {
+                "column": 16,
+                "row": 213
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 16,
+          "row": 213
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 213,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 79,
+          "row": 245
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'binding': bind, 'sample': index, 'weights': vector.tolist(), 'rider': rider_fact,\n                   'ck2': True, 'q': 11, 'lgwin': 24,\n                   'semantic_container': semantic_container, 'artifacts': artifacts, 'payload_bytes': len(payload),\n                   'parameter_bytes': 24, 'header_increment_bytes': 2, 'body_identity': True, 'twins_identical': True,\n                   'net_container_bytes': len(container) - len(source_container)}",
+              "end_location": {
+                "column": 79,
+                "row": 245
+              },
+              "location": {
+                "column": 15,
+                "row": 241
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 15,
+          "row": 241
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 241,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 135,
+          "row": 247
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'sample': index, 'range_bytes': len(payload), 'semantic_bytes': len(container), 'delta': row['net_container_bytes']}",
+              "end_location": {
+                "column": 135,
+                "row": 247
+              },
+              "location": {
+                "column": 26,
+                "row": 247
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 26,
+          "row": 247
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 247,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 49,
+          "row": 253
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/pre_review_corrections/ddm_sm1_mixer_race.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'axis': b.AXIS, 'score_claim': False, 'bound': b.fact(root / 'BOUND_SUPPORTED.json'),\n                  'fit': b.fact(root / 'FIT.json'), 'rows': rows, 'controls': controls,\n                  'winner': min(rows, key=lambda r: (r['semantic_container']['bytes'], r['sample'])),\n                  'variant_design': 'one fitted vector and four seeded +/-1 perturbations of four shared coefficients; all lossless; q11/w24 fixed',\n                  'seed': b.SEED, 'families_built': 1}",
+              "end_location": {
+                "column": 49,
+                "row": 253
+              },
+              "location": {
+                "column": 14,
+                "row": 249
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 14,
+          "row": 249
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 249,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "8349f2ddccaf2506caba70cd74ad6461698650df",
+    "ext": "py",
+    "size_bytes": 13389,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+    "instance_count": 9,
+    "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 77,
+          "row": 21
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 21
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 21,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 80,
+          "row": 24
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC\nfrom rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic\nfrom runtime.sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\nfrom runtime.sm1_semantic_mixer import restore_semantic as restore_sm1_semantic\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 25
+              },
+              "location": {
+                "column": 1,
+                "row": 21
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 21
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 21,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 81,
+          "row": 22
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 22
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 22,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 67,
+          "row": 23
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 23
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 23,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 80,
+          "row": 24
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 24
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 24,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "dd87b66070bd20c502f3d7431fd0648603577d9f",
+    "ext": "md",
+    "size_bytes": 5915,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/04_main_hot_state.md",
+    "instance_count": 1,
+    "sha256": "b85a76b4d8f70c6f6a1f98a0d85a4fbd606dc224188a02b8d3d3cda0da435453"
+  },
+  {
+    "blob_sha1": "d3033e0f0d40241a7ec752662c7b593cc52b647b",
+    "ext": "md",
+    "size_bytes": 5738,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_gb2_generated_basis_bound/main_hot_state.md",
+    "instance_count": 1,
+    "sha256": "80e0a7d082bf5e5996a0d64fda0c87905804c23fdfcac9d97e27ed8cc9c433d2"
+  },
+  {
+    "blob_sha1": "2ebac46958b33c3b64a917779d0993b4871a04bd",
+    "ext": "py",
+    "size_bytes": 4703,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+    "instance_count": 1,
+    "sha256": "d3d32a79912618455683505644c1d523c4fffcab16f8efd2d43615eae70f8c12",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "RUF100",
+        "end_location": {
+          "column": 33,
+          "row": 21
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "",
+              "end_location": {
+                "column": 33,
+                "row": 21
+              },
+              "location": {
+                "column": 19,
+                "row": 21
+              }
+            }
+          ],
+          "message": "Remove unused `noqa` directive"
+        },
+        "location": {
+          "column": 21,
+          "row": 21
+        },
+        "message": "Unused `noqa` directive (unused: `E402`)",
+        "name": "unused-noqa",
+        "noqa_row": 21,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unused-noqa"
+      },
+      {
+        "cell": null,
+        "code": "RUF100",
+        "end_location": {
+          "column": 80,
+          "row": 23
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "",
+              "end_location": {
+                "column": 80,
+                "row": 23
+              },
+              "location": {
+                "column": 66,
+                "row": 23
+              }
+            }
+          ],
+          "message": "Remove unused `noqa` directive"
+        },
+        "location": {
+          "column": 68,
+          "row": 23
+        },
+        "message": "Unused `noqa` directive (unused: `E402`)",
+        "name": "unused-noqa",
+        "noqa_row": 23,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unused-noqa"
+      },
+      {
+        "cell": null,
+        "code": "B023",
+        "end_location": {
+          "column": 30,
+          "row": 82
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+        "fix": null,
+        "location": {
+          "column": 24,
+          "row": 82
+        },
+        "message": "Function definition does not bind loop variable `frozen`",
+        "name": "function-uses-loop-variable",
+        "noqa_row": 82,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/function-uses-loop-variable"
+      },
+      {
+        "cell": null,
+        "code": "B023",
+        "end_location": {
+          "column": 29,
+          "row": 83
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt.py",
+        "fix": null,
+        "location": {
+          "column": 21,
+          "row": 83
+        },
+        "message": "Function definition does not bind loop variable `observed`",
+        "name": "function-uses-loop-variable",
+        "noqa_row": 83,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/function-uses-loop-variable"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "39a0cf291c28928131ce83d8a50d2dd8cdf6818f",
+    "ext": "md",
+    "size_bytes": 4124,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation/source_text/06__common_contract.md",
+    "instance_count": 2,
+    "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+  },
+  {
+    "blob_sha1": "1fa8c9ea77faf5895a9f721b60104fdc8b55113d",
+    "ext": "py",
+    "size_bytes": 4090,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/negative_control_stage7.py",
+    "instance_count": 1,
+    "sha256": "70ec4f6e9cb22cc247887e3a198d831fc419c72450b964a7eb875c5d7be00f7b",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "SIM300",
+        "end_location": {
+          "column": 47,
+          "row": 75
+        },
+        "filename": "/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/negative_control_stage7.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "good_sel != cx.FS2_SELECTOR_CHOICES",
+              "end_location": {
+                "column": 47,
+                "row": 75
+              },
+              "location": {
+                "column": 12,
+                "row": 75
+              }
+            }
+          ],
+          "message": "Rewrite as `good_sel != cx.FS2_SELECTOR_CHOICES`"
+        },
+        "location": {
+          "column": 12,
+          "row": 75
+        },
+        "message": "Yoda condition detected",
+        "name": "yoda-conditions",
+        "noqa_row": 75,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/yoda-conditions"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "1f6f019da614b0a6500a3476a9deaa181323bf67",
+    "ext": "md",
+    "size_bytes": 3584,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_post_readme_clean2_controls/source_extra/README.md",
+    "instance_count": 2,
+    "sha256": "a7cb50e010f0be31f6764230599952f01f643e177a0733e9238e3dc949119017"
+  },
+  {
+    "blob_sha1": "3635964486d90c872fc0d56710c55a78163f1900",
+    "ext": "md",
+    "size_bytes": 3439,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_extra/README.md",
+    "instance_count": 2,
+    "sha256": "a1876e6cac040ef06407fad1a06af76227bf077f4422149839c40971eb3da848"
+  },
+  {
+    "blob_sha1": "abc3e951598eeccd53ab6a6b82a6fc92cf0071f4",
+    "ext": "py",
+    "size_bytes": 3165,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/evidence/negative_control_stage6.py",
+    "instance_count": 1,
+    "sha256": "f407cdc8c09852e6112cea3acd4756b691f3d6c399255ad2ac95c51171050d3b",
+    "ruff_rc": 0,
+    "ruff_findings": [],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "0ef12fc85eb047d0df3600cd9b476855765445f6",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "2b512aa3f1131c8e079eb6d8c213cb523b2a464c7ba4a4855111f29dbc901d65",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "55697d7c9d664cb77b7108b7f244c00c76897d28",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/inflate.py",
+    "instance_count": 2,
+    "sha256": "1e14a68a8fe2f71228984361fbf7cbe42173e0aa1e3c5a94a753b6850190a87d",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "f19f16ec0f5617c245aacd4c82e65f2381e5cca2",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/source_runtime/inflate.py",
+    "instance_count": 2,
+    "sha256": "ae64aa4645cb0625f2278954a685972e14c558ae440e00c46a6e7baad55b93f8",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/source_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "1f202759e374bfc9470925fd2e5d466d1d22acb6",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "140c6b56f510776e84cdb87d0d7055c0362196872b651868d7eb4a98b9e44251",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "69c0924434c095f009ddcd667e91de3e82df7248",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/staged_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "e9154997f7f45c105c6edf046205b65ef227d71b00131b8d3d4b1ff28c8eadca",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/staged_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "c390bec76e9d7690bc9d32c869584eadf945b911",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "b7252de2ed06bd5bef65b8a82c30460866121ef305bee47dd0f4f82372ec6aae",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "b90809caf614d92a8a57f380bb2d2b0ebbf7c01d",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/staged_runtime/inflate.py",
+    "instance_count": 1,
+    "sha256": "7570bd6c2decabb4e6af538f150e58e48ead1515f4e9bcd47b062ce10254f9fe",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/staged_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "d3e25647af39bf136753df42f5279240b7e7452d",
+    "ext": "py",
+    "size_bytes": 2475,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/inflate.py",
+    "instance_count": 2,
+    "sha256": "0f7f44f3e199459d0a6ce73aec63e728bff0bcebcb7585e16b6b015113d3b48d",
+    "template": {
+      "blob_sha1": "a64f13168b211d04466cea1ab05835ae57e22eb0",
+      "path": "submissions/semantic_joint_ctxmix/inflate.py"
+    },
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 16
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/candidate_runtime/inflate.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 16
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 16,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "831222d0f333e1d2c520d198496eadeee950fc6e",
+    "ext": "py",
+    "size_bytes": 1996,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+    "instance_count": 9,
+    "sha256": "949db86148781991cf0f3d447469c78cb636e92537bd6c49e15d6d06d9b14650",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E401",
+        "end_location": {
+          "column": 27,
+          "row": 1
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "import hashlib\nimport json\nimport os\nimport sys",
+              "end_location": {
+                "column": 27,
+                "row": 1
+              },
+              "location": {
+                "column": 1,
+                "row": 1
+              }
+            }
+          ],
+          "message": "Split imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 1
+        },
+        "message": "Multiple imports on one line",
+        "name": "multiple-imports-on-one-line",
+        "noqa_row": 1,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-imports-on-one-line"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 25,
+          "row": 2
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "import hashlib\nimport json\nimport os\nimport sys\nfrom pathlib import Path\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 3
+              },
+              "location": {
+                "column": 1,
+                "row": 1
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 1
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 1,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 5
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 5
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 5,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 48,
+          "row": 5
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from runtime.f26_inflate import inflate_archive\n\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 6
+              },
+              "location": {
+                "column": 1,
+                "row": 5
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 5
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 5,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 28,
+          "row": 7
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 27,
+          "row": 7
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 7,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 19,
+          "row": 10
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 18,
+          "row": 10
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 10,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 85,
+          "row": 12
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 84,
+          "row": 12
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 12,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 80,
+          "row": 22
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 79,
+          "row": 22
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 22,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 59,
+          "row": 24
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 58,
+          "row": 24
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 24,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "UP031",
+        "end_location": {
+          "column": 34,
+          "row": 28
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 21,
+          "row": 28
+        },
+        "message": "Use format specifiers instead of percent format",
+        "name": "printf-string-formatting",
+        "noqa_row": 28,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/printf-string-formatting"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 93,
+          "row": 29
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/smoke_frontier/20260909T191452594033Z/probe.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'name': key,'shape': list(array.shape),'dtype': str(array.dtype),'artifact': fact}",
+              "end_location": {
+                "column": 93,
+                "row": 29
+              },
+              "location": {
+                "column": 18,
+                "row": 29
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 18,
+          "row": 29
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 29,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "51cd9cf15711a0042e588958b398c2f36e1ed417",
+    "ext": "py",
+    "size_bytes": 1904,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+    "instance_count": 2,
+    "sha256": "6218e6156d671e8983ef84f433a0b570ed0a292e189c5dcff2b8da45f544fd04",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "E401",
+        "end_location": {
+          "column": 27,
+          "row": 1
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "import hashlib\nimport json\nimport os\nimport sys",
+              "end_location": {
+                "column": 27,
+                "row": 1
+              },
+              "location": {
+                "column": 1,
+                "row": 1
+              }
+            }
+          ],
+          "message": "Split imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 1
+        },
+        "message": "Multiple imports on one line",
+        "name": "multiple-imports-on-one-line",
+        "noqa_row": 1,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-imports-on-one-line"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 25,
+          "row": 2
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "import hashlib\nimport json\nimport os\nimport sys\nfrom pathlib import Path\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 3
+              },
+              "location": {
+                "column": 1,
+                "row": 1
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 1
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 1,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E402",
+        "end_location": {
+          "column": 48,
+          "row": 5
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 1,
+          "row": 5
+        },
+        "message": "Module level import not at top of file",
+        "name": "module-import-not-at-top-of-file",
+        "noqa_row": 5,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+      },
+      {
+        "cell": null,
+        "code": "I001",
+        "end_location": {
+          "column": 48,
+          "row": 5
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": {
+          "applicability": "safe",
+          "edits": [
+            {
+              "content": "from runtime.f26_inflate import inflate_archive\n\n\n",
+              "end_location": {
+                "column": 1,
+                "row": 6
+              },
+              "location": {
+                "column": 1,
+                "row": 5
+              }
+            }
+          ],
+          "message": "Organize imports"
+        },
+        "location": {
+          "column": 1,
+          "row": 5
+        },
+        "message": "Import block is un-sorted or un-formatted",
+        "name": "unsorted-imports",
+        "noqa_row": 5,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 28,
+          "row": 7
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 27,
+          "row": 7
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 7,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 19,
+          "row": 10
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 18,
+          "row": 10
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 10,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 80,
+          "row": 21
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 79,
+          "row": 21
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 21,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "E701",
+        "end_location": {
+          "column": 59,
+          "row": 23
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 58,
+          "row": 23
+        },
+        "message": "Multiple statements on one line (colon)",
+        "name": "multiple-statements-on-one-line-colon",
+        "noqa_row": 23,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/multiple-statements-on-one-line-colon"
+      },
+      {
+        "cell": null,
+        "code": "UP031",
+        "end_location": {
+          "column": 34,
+          "row": 27
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": null,
+        "location": {
+          "column": 21,
+          "row": 27
+        },
+        "message": "Use format specifiers instead of percent format",
+        "name": "printf-string-formatting",
+        "noqa_row": 27,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/printf-string-formatting"
+      },
+      {
+        "cell": null,
+        "code": "C408",
+        "end_location": {
+          "column": 93,
+          "row": 28
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/retained/probes/proof_candidate/20260909T191052342475Z/probe.py",
+        "fix": {
+          "applicability": "unsafe",
+          "edits": [
+            {
+              "content": "{'name': key,'shape': list(array.shape),'dtype': str(array.dtype),'artifact': fact}",
+              "end_location": {
+                "column": 93,
+                "row": 28
+              },
+              "location": {
+                "column": 18,
+                "row": 28
+              }
+            }
+          ],
+          "message": "Rewrite as a literal"
+        },
+        "location": {
+          "column": 18,
+          "row": 28
+        },
+        "message": "Unnecessary `dict()` call (rewrite as a literal)",
+        "name": "unnecessary-collection-call",
+        "noqa_row": 28,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/unnecessary-collection-call"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "fae824929aaf3c2db67010b79b8c087dcf597c0e",
+    "ext": "md",
+    "size_bytes": 1501,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/mechanism.md",
+    "instance_count": 1,
+    "sha256": "c97f347fee6543713723c7a7b578135b9d6d5ec56d1556c2e91358c61b996e74"
+  },
+  {
+    "blob_sha1": "2a5b092d10cbe45a3459253328633c57736b787d",
+    "ext": "md",
+    "size_bytes": 1346,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/mechanism.md",
+    "instance_count": 1,
+    "sha256": "287b22b3f34acb91025ded371994b17e74b6e5688cf3264964acce0a213a6af8"
+  },
+  {
+    "blob_sha1": "74686797414075eae6eb68581e91a61fbe198d39",
+    "ext": "md",
+    "size_bytes": 802,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/not_claimed.md",
+    "instance_count": 1,
+    "sha256": "f15fabb8b3e3aa518d3ab888c1dec15eb1a50d652b851e7829eb03f0b803c223"
+  },
+  {
+    "blob_sha1": "b481681744dc3ccefc88f4a6683f84d6ab8b03a3",
+    "ext": "md",
+    "size_bytes": 732,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/packet_text/next.md",
+    "instance_count": 1,
+    "sha256": "b7525b789ab8066a7e932a178cc8d4baa2c92510f7615234788542fdd5c68d4d"
+  },
+  {
+    "blob_sha1": "ee09842dce41ed4f2be7cd7090f0150db4c31c39",
+    "ext": "md",
+    "size_bytes": 631,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/not_claimed.md",
+    "instance_count": 1,
+    "sha256": "6fb55799d4645510fe119bcf9a6c745057cbbaf671146aa3a085c8b1a4162209"
+  },
+  {
+    "blob_sha1": "ff3609e6ddb90198c53df30150402016687bb30f",
+    "ext": "md",
+    "size_bytes": 624,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/packet_text/next.md",
+    "instance_count": 1,
+    "sha256": "2dee124bc692fb4c72829455aeabc875fcb65c00faffa03f484b27ebebb835ba"
+  },
+  {
+    "blob_sha1": "dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7",
+    "ext": "py",
+    "size_bytes": 407,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/probe/test_xfail_setup_probe.py",
+    "instance_count": 1,
+    "sha256": "8975f96ea79ebde430202e0ad652901593d54263bb002333b169568baeb9ada0",
+    "ruff_rc": 0,
+    "ruff_findings": [],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "15d2e243935a75f73eee654fec88e9f3ed0bce7c",
+    "ext": "py",
+    "size_bytes": 338,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_gt2/positive_control_repo/tools/undeclared_gt_consumer.py",
+    "instance_count": 1,
+    "sha256": "b931076347afdafe84e48ef5fd5b55a7dcaa88af5406363f45b2231070e1662f",
+    "ruff_rc": 0,
+    "ruff_findings": [],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "34a2a07a1c9185a9a50280ac314755ca7fc453c6",
+    "ext": "py",
+    "size_bytes": 21,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/negative_controls_v2/stage_extra/work/embedded_encoder_sources/compress_vendor/unmanifested.py",
+    "instance_count": 1,
+    "sha256": "475fe6fea164be3de8b30ba8fdc16775d7b21d63052131c188e2413d9d70b4c1",
+    "ruff_rc": 0,
+    "ruff_findings": [],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55",
+    "ext": "py",
+    "size_bytes": 21,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_terminal_clean2c_controls_v2/materialize_refusal/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+    "instance_count": 2,
+    "sha256": "1de585763ca08e15f7e384a599bf004e95764fa87fd1e0037146fb0ef4cac515",
+    "ruff_rc": 1,
+    "ruff_findings": [
+      {
+        "cell": null,
+        "code": "invalid-syntax",
+        "end_location": {
+          "column": 15,
+          "row": 1
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_terminal_clean2c_controls_v2/materialize_refusal/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+        "fix": null,
+        "location": {
+          "column": 9,
+          "row": 1
+        },
+        "message": "Simple statements must be separated by newlines or semicolons",
+        "name": "invalid-syntax",
+        "noqa_row": null,
+        "severity": "error",
+        "url": null
+      },
+      {
+        "cell": null,
+        "code": "invalid-syntax",
+        "end_location": {
+          "column": 22,
+          "row": 1
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_terminal_clean2c_controls_v2/materialize_refusal/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+        "fix": null,
+        "location": {
+          "column": 16,
+          "row": 1
+        },
+        "message": "Simple statements must be separated by newlines or semicolons",
+        "name": "invalid-syntax",
+        "noqa_row": null,
+        "severity": "error",
+        "url": null
+      },
+      {
+        "cell": null,
+        "code": "W292",
+        "end_location": {
+          "column": 22,
+          "row": 1
+        },
+        "filename": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_terminal_clean2c_controls_v2/materialize_refusal/work/embedded_encoder_sources/compress_vendor/jg2_tail_reencode.py",
+        "fix": null,
+        "location": {
+          "column": 22,
+          "row": 1
+        },
+        "message": "No newline at end of file",
+        "name": "missing-newline-at-end-of-file",
+        "noqa_row": 1,
+        "severity": "error",
+        "url": "https://docs.astral.sh/ruff/rules/missing-newline-at-end-of-file"
+      }
+    ],
+    "ruff_stderr": ""
+  },
+  {
+    "blob_sha1": "4287ca8617970fa8fc025b75cb319c7032706910",
+    "ext": "md",
+    "size_bytes": 1,
+    "bucket": "C",
+    "durability": "absent",
+    "representative_path": "/Volumes/VertigoDataTier/pact/ddm_g8r_compress_adversarial_review/review_final_clean2_controls/source_hash_tamper/README.md",
+    "instance_count": 4,
+    "sha256": "334359b90efed75da5f0ada1d5e6b256f4a6bd0aee7eb39c0f90182a021ffc8b"
+  }
+]

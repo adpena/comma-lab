@@ -1,0 +1,10 @@
+{
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": ".omx/research/ddm_vr5_apply_journal_20260909.jsonl",
+  "plan_store": ".omx/research/ddm_vr5_reclaim_plan_20260909.jsonl",
+  "fire_trigger": "After landing and reviewing the cd3 gate patch on a host with complete ps/pgrep/lsof visibility, revalidate only the retained bz2d row with all existing certificate, reference, hash and open-descriptor checks. Apply remains MAIN-only.",
+  "source_journal_sha256": "7c6067d84553ab10c57f15121c3ac298296398d96b336689c08ab358d21245f6",
+  "gate_executed_on_host": false,
+  "ssd_delete_attempted": false
+}

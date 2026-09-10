@@ -1,0 +1,100 @@
+{
+  "schema": "subagent_commit_bundle_fallback.v1",
+  "event_type": "git_object_write_denial_bundle_fallback",
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "written_at_utc": "2026-09-10T02:16:36Z",
+  "label": "ddm_cd3_patch_only_code",
+  "base_head": "8679549acd8ec9169b2cbe390a6f030c2ef2cdb7",
+  "fallback_commit": "d2a659920f4d79f77a51b67ccc4acd846daeb5e8",
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/intended-commit.bundle",
+  "bundle_bytes": 12395,
+  "bundle_sha256": "79c720a85556aceb36e679ad63bc8f90a367409255b0d6f3cee4d6f11ebcad08",
+  "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/intended-commit.format-patch",
+  "format_patch_bytes": 28025,
+  "format_patch_sha256": "886629d459a75903704085299d622a0072aa8be119fc584402b34c738ed89c9e",
+  "intended_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/intended-tree.patch",
+  "intended_patch_bytes": 26903,
+  "intended_patch_sha256": "45ac7235d9697eea2296ce06007e63c3a4d943da0f4e35e6ea519c9199cf43cd",
+  "construction_mode": "isolated_git_plumbing_no_checkout",
+  "artifact_cap_bytes": 67108864,
+  "projected_artifact_bytes": 198395,
+  "storage_reserve": {
+    "selected": {
+      "candidate": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback",
+      "probe_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback",
+      "free_bytes": 251407638528,
+      "projected_bytes": 198395,
+      "reserve_bytes": 42949672960,
+      "writable": true,
+      "eligible": true,
+      "error": null
+    },
+    "candidates": [
+      {
+        "candidate": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback",
+        "probe_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback",
+        "free_bytes": 251407638528,
+        "projected_bytes": 198395,
+        "reserve_bytes": 42949672960,
+        "writable": true,
+        "eligible": true,
+        "error": null
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "experiments/ddm_vr3_certified_raw_reclaim.py",
+      "content_sha256": "025fd7d07c931b509c4afef58a0173172392af02d7ba699bbdd269889e01f2bf"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+      "content_sha256": "f71bdd740a4a9b8ca18b7feef16c2805f4e402467945d0d708bfdd39eebbaaad"
+    },
+    {
+      "path": "experiments/ddm_cd3_ssd_custody.py",
+      "content_sha256": "e9ffcb04ae54e43dfb61bf85d0181910b07b387d7e6bee5787d24ec727006aab"
+    },
+    {
+      "path": ".omx/research/ddm_cd3_20260910/review_receipt.json",
+      "content_sha256": "88604fbb48ba415952b4f28799fad51e3b9981a99ed0cf886b56fa6d08ca1052"
+    },
+    {
+      "path": ".omx/research/ddm_cd3_20260910/gate_tests.log",
+      "content_sha256": "c10b61b5ddc8a46ad807962930e0c6ac32d2c3ec9155ea4ccb7d812562162f27"
+    },
+    {
+      "path": ".omx/research/ddm_cd3_20260910/gate_ruff.log",
+      "content_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  ],
+  "failure": {
+    "serializer_rc": 128,
+    "output": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: .omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob: failed to insert into database\nerror: unable to index file '.omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob'\nfatal: adding files failed\nBUNDLE_FALLBACK rc=17 phase=git_add bundle=/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021120.440351Z-95835/intended-commit.bundle format_patch=/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021120.440351Z-95835/intended-commit.format-patch receipt=/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021120.440351Z-95835/receipts.jsonl fallback_commit=7b36e1c6f5a36596e589371b77b8e6d80610c1d8\n"
+  },
+  "environment": {
+    "cwd": "/Users/adpena/Projects/pact",
+    "repo_root": "/Users/adpena/Projects/pact",
+    "uid": 501,
+    "gid": 20,
+    "platform": "darwin",
+    "sandbox_markers": {
+      "CODEX_SANDBOX": "seatbelt",
+      "CODEX_SANDBOX_NETWORK_DISABLED": "1"
+    },
+    "git_dir": "/Users/adpena/Projects/pact/.git",
+    "git_objects": "/Users/adpena/Projects/pact/.git/objects",
+    "git_objects_mode": "0o755",
+    "repo_mount": {
+      "path": "/Users/adpena/Projects/pact",
+      "mountpoint": "/System/Volumes/Data",
+      "mount_line": "/dev/disk3s5 on /System/Volumes/Data (apfs, local, journaled, nobrowse, protect, root data)"
+    },
+    "receipt_mount": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067",
+      "mountpoint": "/System/Volumes/Data",
+      "mount_line": "/dev/disk3s5 on /System/Volumes/Data (apfs, local, journaled, nobrowse, protect, root data)"
+    }
+  },
+  "receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/receipts.jsonl"
+}

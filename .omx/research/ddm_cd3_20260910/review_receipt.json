@@ -1,0 +1,32 @@
+{
+  "axis": "macOS-CPU static apparatus",
+  "score_claim": false,
+  "files": [
+    {
+      "path": "experiments/ddm_vr3_certified_raw_reclaim.py",
+      "sha256": "025fd7d07c931b509c4afef58a0173172392af02d7ba699bbdd269889e01f2bf",
+      "clean_review_passes": 2
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+      "sha256": "f71bdd740a4a9b8ca18b7feef16c2805f4e402467945d0d708bfdd39eebbaaad",
+      "clean_review_passes": 2
+    },
+    {
+      "path": "experiments/ddm_cd3_ssd_custody.py",
+      "sha256": "e9ffcb04ae54e43dfb61bf85d0181910b07b387d7e6bee5787d24ec727006aab",
+      "clean_review_passes": 2
+    }
+  ],
+  "historical_python_sources": "Two custody-scoped passes: AST/Ruff/hash/owner evidence; then secret and exact inert-copy verification. Historical behavior was not executed or endorsed.",
+  "historical_secret_scan": {
+    "files": 24,
+    "pattern_matches": 0
+  },
+  "gate_review_1": "Fail-closed control review: unavailable ps/pgrep/lsof, missing cwd, malformed/duplicate rows, exact owner token boundaries. Found and fixed inherited missing-cwd acceptance.",
+  "gate_review_2": "Lifecycle/seam review: ps observer disappears, new lsof processes have COMMAND checked, argv-only ruff does not match, real owner command/cwd refuses. No production apply executed.",
+  "assumption_challenge": "A successful empty/incomplete process scan is not proof of idleness; a retain-with-owner rationale is not proof of reproducibility. Both assumptions were rejected.",
+  "tests": "57 passed",
+  "ruff": "all active Python files passed",
+  "index_boundary": "No direct staged-index writes; serializer used isolated index; shared index bytes drifted while its staged set stayed empty."
+}

@@ -1,0 +1,40 @@
+{
+  "axis": "macOS-CPU filesystem/custody apparatus",
+  "score_claim": false,
+  "baseline_distinct_blobs": 41,
+  "source_rehashes": 41,
+  "retained_exact_files": 24,
+  "distinct_certificates": 13,
+  "owner_rows": 20,
+  "owner_rows_queued": 15,
+  "source_dispositions": {
+    "RETAIN_WITH_OWNER": 17,
+    "EXACT_SOURCE_READY_FOR_SERIALIZER": 11,
+    "CERTIFIED_REPRODUCED": 13
+  },
+  "cs1_new_events": 72,
+  "index_entry_sha256": "6e543256d534df6764f0538c1a875f192abf5a0bdb8b8f2f0b2a0e4ad3eb1ec0",
+  "index_exit_sha256": "4e0a51ee9ab9c8407d32d931c9debbeb8177a9ee75c9b39f2f732507b707c922",
+  "index_bytes_unchanged": false,
+  "staged_paths_at_verification": [],
+  "index_note": "Index file bytes changed during concurrent work; staged paths remain empty. No byte-unchanged claim. Serializer used its isolated index; no direct shared-index operation was performed.",
+  "verification": "PASS",
+  "initial_verification_refusal": "Rejected assumption that concurrent shared-index file bytes must remain identical; custody invariants themselves passed.",
+  "source_bundle_events": 11,
+  "concurrent_bnd3_events": 5,
+  "closing_audit_denominator": {
+    "ssd_code_like_files_scanned": 287242,
+    "files_unreadable": 0,
+    "roots_absent_from_this_machine": [],
+    "reachable_blobs_in_repo": 109495,
+    "odb_blobs_in_repo": 118366,
+    "gc_eligible_blobs_in_repo": 8952,
+    "absent_file_instances": 4200,
+    "absent_DISTINCT_blobs": 1383,
+    "bucket_A_third_party_or_clone": 934,
+    "bucket_B_run_output_or_coldstore": 320,
+    "bucket_C_authored_OWED": 33,
+    "bucket_C_of_which_gc_eligible": 0,
+    "bucket_D_certified_in_place": 96
+  }
+}

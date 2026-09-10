@@ -1,0 +1,12 @@
+"""Deliberately red static fixture for the ddm_gt2 GT-lineage gate control."""
+
+from pathlib import Path
+
+import numpy as np
+
+GT_POSE = Path("retained/gt_first6_n600.npy")
+
+
+def load_gt_pose() -> np.ndarray:
+    """Consume the undeclared table if this intentionally invalid tool is run."""
+    return np.load(GT_POSE, allow_pickle=False)

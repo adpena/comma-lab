@@ -1,0 +1,12 @@
+{
+  "mode": "PATCH_ONLY_AFTER_ONE_SHARED_REPO_DENIAL",
+  "expected_content_sha256": {
+    "experiments/ddm_vr3_certified_raw_reclaim.py": "025fd7d07c931b509c4afef58a0173172392af02d7ba699bbdd269889e01f2bf",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py": "f71bdd740a4a9b8ca18b7feef16c2805f4e402467945d0d708bfdd39eebbaaad",
+    "experiments/ddm_cd3_ssd_custody.py": "e9ffcb04ae54e43dfb61bf85d0181910b07b387d7e6bee5787d24ec727006aab",
+    ".omx/research/ddm_cd3_20260910/review_receipt.json": "88604fbb48ba415952b4f28799fad51e3b9981a99ed0cf886b56fa6d08ca1052",
+    ".omx/research/ddm_cd3_20260910/gate_tests.log": "c10b61b5ddc8a46ad807962930e0c6ac32d2c3ec9155ea4ccb7d812562162f27",
+    ".omx/research/ddm_cd3_20260910/gate_ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "shared_repo_retry": false
+}

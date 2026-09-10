@@ -1,0 +1,30 @@
+{
+  "returncode": 17,
+  "attempts_against_shared_repo": 1,
+  "files": [
+    ".omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/4d792e6355b46e0a9cc1f383e428c9b26f002a02.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/51cd9cf15711a0042e588958b398c2f36e1ed417.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/58352890d2baee4b5e74046aa3a450adc3b2bcd0.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/60483fbf36b6882fc8d8aa06cf31758fa67ad125.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/70f13d70b5dac1462b32f101441d779ba8cca978.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/831222d0f333e1d2c520d198496eadeee950fc6e.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/d3033e0f0d40241a7ec752662c7b593cc52b647b.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/dd87b66070bd20c502f3d7431fd0648603577d9f.blob",
+    ".omx/research/ddm_cd3_20260910/recovered_sources/de7fccff8c73dfe7ed58c9d341e594bddc534c93.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/0ef12fc85eb047d0df3600cd9b476855765445f6.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/15d2e243935a75f73eee654fec88e9f3ed0bce7c.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/1f202759e374bfc9470925fd2e5d466d1d22acb6.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/34a2a07a1c9185a9a50280ac314755ca7fc453c6.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/4287ca8617970fa8fc025b75cb319c7032706910.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/55697d7c9d664cb77b7108b7f244c00c76897d28.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/69c0924434c095f009ddcd667e91de3e82df7248.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/b90809caf614d92a8a57f380bb2d2b0ebbf7c01d.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/c390bec76e9d7690bc9d32c869584eadf945b911.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/d3e25647af39bf136753df42f5279240b7e7452d.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7.blob",
+    ".omx/research/ddm_cd3_20260910/reproduced/f19f16ec0f5617c245aacd4c82e65f2381e5cca2.blob"
+  ]
+}

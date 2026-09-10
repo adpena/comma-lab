@@ -1,0 +1,13 @@
+{
+  "command": ".venv/bin/python tools/list_canonical_equations.py --json",
+  "registry_rows": 481,
+  "query_terms": [
+    "ssd_authored",
+    "process_gate",
+    "retain_with_owner",
+    "source custody"
+  ],
+  "matches": [],
+  "full_output_path": ".omx/research/ddm_cd3_20260910/equations_recall.json",
+  "full_output_sha256": "92f9382e49cc96145e4185bbae4cd697c0a096eeb0cc969955a7a23d61997ca6"
+}

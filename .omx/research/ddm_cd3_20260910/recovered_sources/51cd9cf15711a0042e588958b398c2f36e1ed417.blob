@@ -1,0 +1,34 @@
+import hashlib,json,os,sys
+from pathlib import Path
+root,work,mode=Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve(),sys.argv[3]
+sys.path.insert(0,str(root))
+from runtime.f26_inflate import inflate_archive
+def emit(path,data):
+ with path.open('xb') as f: f.write(data)
+ return {'path':str(path),'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+def observe(frame,event,arg):
+ if event!='call': return
+ name=frame.f_code.co_name
+ file=Path(frame.f_code.co_filename).resolve()
+ if name in ('render_video','render_video_parallel') and root in file.parents:
+  emit(work/'FORBIDDEN_RENDER.json',json.dumps({'function':name,'filename':str(file)}).encode())
+  os._exit(81)
+ if name=='decode_production_tokens' and file==root/'runtime/residual_archive.py':
+  marker={'function':name,'filename':str(file),'runtime':str(root),'attempt':str(work)}
+  emit(work/'TOKEN_DECODE_ENTERED.json',json.dumps(marker).encode())
+  if mode=='proof':
+   caller=frame.f_back
+   if Path(caller.f_code.co_filename).resolve()!=root/'runtime/f26_inflate.py': raise RuntimeError('wrong public caller')
+   state=caller.f_locals['semantic'].state_dict()
+   if len(state)!=38 or 'frame_embed.weight' not in state: raise RuntimeError('incomplete semantic state')
+   facts=[]
+   for index,(key,tensor) in enumerate(state.items()):
+    array=tensor.detach().cpu().contiguous().numpy()
+    fact=emit(work/('%02d.tensor'%index),array.tobytes())
+    facts.append(dict(name=key,shape=list(array.shape),dtype=str(array.dtype),artifact=fact))
+   emit(work/'restored.sm3r',caller.f_locals['parts'].semantic_blob)
+   emit(work/'TENSORS.json',json.dumps(facts,sort_keys=True).encode())
+   os._exit(0)
+sys.setprofile(observe)
+inflate_archive(root/'archive.zip',work/'0.raw',renderer_dir=root/'cpr1',device_name='cpu',num_threads=4,checkpoint_dir=work/'.ckpt')
+raise RuntimeError('public probe returned without its stopping boundary')
