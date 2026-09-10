@@ -138,6 +138,27 @@ Per-layer initialisation scales are likewise DERIVED from the fixed requant shif
 (`sigma = 2**shift / sqrt(n/2)`): a single global scale decays the activation to zero by block five and
 kills the gradient (MEASURED).
 
+## Finding 3 (MEASURED) — with the real rate, GDC1's own scanline family has a different winner and a monotone cost curve
+
+GDC1 chose K=6 as its family winner by ranking `packet + 0.2909 * mismatches`. Re-ranked on the
+measured residual, `packet + R(M)` is **monotone increasing in K** across the whole retained roster:
+
+| K | packet | R (measured) | packet + R | x gate |
+|---:|---:|---:|---:|---:|
+| **4** | 133,426 | 174,680 | **308,106** | 3.277 |
+| 6 | 223,494 | 105,628 | 329,122 | 3.501 |
+| 8 | 88,304 mismatches | 60,520 | 366,562 | 3.899 |
+| 12 | 421,886 | 11,772 | 433,658 | 4.613 |
+| 16 | 459,394 | 1,238 | 460,632 | 4.900 |
+| 24 | 475,002 | 0 | 475,002 | 5.053 |
+
+(the K=8 row's packet is 306,042 B.) The family's best point is **K=4 at 308,106 B**, not K=6 at
+329,122 B, and there is no interior minimum: every byte the program spends buying accuracy costs more
+than the residual it saves, all the way to exact. GDC1's NO-GO stands and is *stronger* than it was
+stated — the family floor is 3.28x the gate — but the winner it recorded was an artefact of the
+transferred rate. This is the same defect the charter's 68,322 B screen carried, surfacing twice in
+one memo from one borrowed constant.
+
 ## Parity smoke (declared SCOPE reduction: step counts only; produces no verdict)
 
 `…/ddm_gdc2_categorical_coolchic_k8_distill/smoke_parity_scope/`, 300 / 200 / 100 steps, one lambda,
