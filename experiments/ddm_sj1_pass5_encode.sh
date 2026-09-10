@@ -13,7 +13,10 @@ cd /Users/adpena/Projects/pact
 
 field="${1:?field}"
 tag="${2:?tag}"
-case "$field" in control|candidate) ;; *) echo "bad field" >&2; exit 2 ;; esac
+# The field must be a plain identifier -- it becomes a path segment -- but WHICH names are
+# legal is INPUTS.json's business, not this script's.  Hardcoding {control,candidate} here
+# made the driver refuse the Lagrange-selected `subset` field it was written to price.
+case "$field" in *[!A-Za-z0-9_]*|'') echo "field must be a plain identifier" >&2; exit 2 ;; esac
 
 root=/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price
 work="$root/encode/$field/$tag"
