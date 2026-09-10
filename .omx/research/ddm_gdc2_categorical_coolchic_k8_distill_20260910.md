@@ -177,9 +177,42 @@ A separate 1,100-step probe measured the optimisation itself: the run sits on th
 step 700**, holding 97–98% after. The 300-step smoke had simply not escaped yet — the plateau is a
 symmetry-breaking delay, not a pathology.
 
-## Stage table
+## Stage table (governed burn `governed_v1`, in flight)
 
-*(filled by the governed burn)*
+All rows are the EMA authority exported to int8, physically coded, parsed back, and rendered over all
+600 pairs by the NumPy integer receiver. Parity = exact MLX/NumPy argmax identity on 262,144 sampled
+sites.
+
+| stage | steps | packet B (z0 / z1 / params) | mismatches vs field | vs teacher | bits/latent symbol | nonzero latents | decode s | parity |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| A final | 10,000 | **233,206** (182,920 / 45,723 / 4,521) | **1,061,038** | 993,989 | 6.478 | 98.61% | 173 | exact |
+| B λ=1e-4 | 8,000 | | | | | | | |
+| B λ=3e-4 | 8,000 | | | | | | | |
+| B λ=1e-3 | 8,000 | | | | | | | |
+| C λ=1e-4 | 4,000 | | | | | | | |
+| C λ=3e-4 | 4,000 | | | | | | | |
+| C λ=1e-3 | 4,000 | | | | | | | |
+
+Stage A ended at cross entropy 0.0159 nats. Field mismatches by class 0..4:
+`[214,100 · 561,888 · 126,154 · 92,797 · 66,099]` — Lane 53.0%, still the dominant class but spread
+more broadly than the teacher's 71.5%.
+
+### Finding 4 (MEASURED at Stage A) — the construction is in the wrong corner of the frontier, before any rate pressure
+
+With **no** rate term the decoder sits at `(packet 233,206 B, M 1,061,038)`. Two things follow directly
+from the measured law:
+
+- The frontier has a **zero-budget mismatch count**: `R(M) = 94,010` at `M ≈ 190,000`
+  (interpolating the measured K=6/K=8 segment, exponent 0.571). Above that, the residual alone exhausts
+  the gate and *no* packet is admissible, however small. Stage A's `M` is **5.6x** that ceiling.
+- The teacher floor is **not** the binding constraint. The teacher contributes 88,304 mismatches; the
+  decoder's own fit contributes 993,989 more. Distillation loss dominates the teacher's own error by
+  11.3x, so training against the field directly would move `M` by at most 8%.
+
+Stage B's three lambda branches now trade packet for mismatches along this decoder's own
+rate-distortion curve. Rate pressure moves `M` **up**, i.e. further from the admissible region, so the
+sweep measures how the total `packet + R(M)` behaves, not whether a smaller packet can rescue the
+construction. That is the honest reading of GF1's "form and fit are one fact" for this vehicle.
 
 ## Closure arithmetic
 
