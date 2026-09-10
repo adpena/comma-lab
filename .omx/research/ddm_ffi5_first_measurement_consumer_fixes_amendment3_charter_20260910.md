@@ -60,3 +60,6 @@ Final message: three finding→code→test rows, both digests of rlc5's tree, te
 `composition S 0.1372848557085275 @ 180,466 B [contest-CUDA T4 n600] (move 43)` unchanged.
 
 <!-- # FORMALIZATION_PENDING: implementation charter; consumer fixes, no measured row -->
+
+## CORRECTION (MAIN, ~20:50Z) — fix 1 re-stated; read `.omx/research/ddm_ffi5_20260910/CHARTER_CORRECTION.md` FIRST
+The dispatch already passes the worker definition (e3d23719…). The mismatch is PATH-COUPLING: the first-measurement worker extracts under a volume root keyed by the authorization sha; content-only and files digests MATCH (e1e6d125… / fb1f6295…). Fix 1 = compare the content-only digest on both sides for first-measurement runs, record the tree digest for custody; fixes 2–3 unchanged.
