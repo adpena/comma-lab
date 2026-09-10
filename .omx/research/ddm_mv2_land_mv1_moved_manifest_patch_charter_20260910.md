@@ -47,8 +47,28 @@ boundary the hold waited for. Land it BEFORE rp1's chain starts.
   (a) the catalog number is re-claimed because the counter moved on (the row text is the arm's), (b) the
   catalog row is appended at the current table end, (c) the pre-existing memo file is compared and skipped
   if identical. Any mechanism change is a TOY-BRACKET violation — stop and report instead.
-- Provenance pins: patch path + sha as recorded in `final_real_resolution.json`; base head the arm built on
-  (`landing.bundle` ref) vs current HEAD listed in the final message.
+- Provenance pins: patch `.omx/research/ddm_mv1_20260910/landing.patch` sha256
+  `ea104296ba676338472bb884b0356bb88c44e1da122d2eb68e4d6e645d2e6c92`; the arm's base head
+  `6020c867f82fe1e61cb7373da9d5ba1c5c9ce475` (`landing_manifest.json`), its fallback commit
+  `1076c601ac26029c04546b066ca90d777927e104` (`FINAL_HANDOFF.json`, bundle ref); current main HEAD at
+  charter time `2625e8a608aa7568ffb0fa5442737fd93582afd3`. Verify the patch sha before applying.
+
+## Prior negatives accounted (operator 2026-08-15: unaccounted negatives = naive)
+- eb1 (79e1e21f9) and eb2 (ffc17b774) "landed" from bundles that had not actually been fetched —
+  the bundle guard on file COUNT and the ExFAT `._` stub law
+  (`landing_an_arm_bundle_guard_on_file_count_and_skip_exfat_dot_underscore_stubs_20260910`). Here:
+  verify `git apply --stat` lists exactly 21 files and the post-apply tree diff matches the patch's
+  file set before any commit.
+- pm2's landing edited scripts sj1 was running and broke its checkpoint binding
+  (`landing_a_gate_into_a_live_arms_script_breaks_its_checkpoint_binding_20260910`). Here: rp1 round 2
+  is GATED on MAIN's GO file, so the boundary holds only if you land BEFORE that file appears —
+  check `/Volumes/VertigoDataTier/pact/ddm_rp1_round2/MAIN_GO_HEAVY_COMPUTE` does not exist at
+  commit time; if it does, STOP and report.
+- d7bf47655 (2026-09-10) chained a commit after tests without gating on the result and landed two red
+  tests. Here: the serializer call runs only if pytest's exit code is 0 (`&&`), never chained blindly.
+- The mv1 arm itself could not land (git custody refusal at its serializer step — see
+  `FINAL_HANDOFF.json`), which is why this patch exists; do not repeat its serializer attempt
+  verbatim — read `final_serializer.stderr` for the refusal class first.
 - Verification form: the arm's full test set plus the sister suites named in Deliverable 2; strict gate run
   with the live count recorded. No smoke substitutes for the test set.
 
