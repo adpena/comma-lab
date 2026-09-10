@@ -117,6 +117,92 @@ seconds WITH the concurrent-shard count, and the paired candidate/frontier publi
 outcomes showing both reach the same gate at the same time — never a bare number implying a
 contest-budget verdict this instrument cannot give.
 
-## 6. Frontier line
+## 6. THE N600 RUN WAS VERIFIED ON THE WRONG BASE (respawn, 2026-09-10 ~10:00Z)
+
+All five shards finished rc=0 and their arithmetic is internally consistent: **4,503 neutral
+tokens of 115,200 tested (3.9089 %), 15,552.3 first-order bits = 1,944.0 B** over all 600
+pairs, close to §3's pre-registered 2,147 B projection. But the acceptance was not measured
+on move 40's field.
+
+`ddm_rp1_sizing.py` takes its two objects from two different places:
+
+| object | source | round 2's value |
+|---|---|---|
+| the RANKING | `--rank-dir` — a **flag** | built on `field_move40.u8` — correct |
+| the BASE FIELD | `rp1.load_live_field()` — a **source constant** | sj1's pass-4 npz = **move 37's field** |
+
+`sizing.py:65` reads `rp1.load_live_field()`, which is pinned to
+`admission_pass4/field_admitted.npz` (sha `813bf1e6…`) behind a hardcoded `changed != 9_209`
+refusal, and the `sizing` subcommand has no field flag at all. So every "argmax identical on
+all 196,608 cells" verdict came from a body the pointer stopped shipping two moves ago.
+
+**The receipts said so and nobody read them that way.** Each shard's
+`pricing_field.tokens_changed_vs_pristine` reads 10,045–10,180 with
+`tokens_changed_vs_live_field` 836–971 — the difference is 9,209 every time, and 9,209 is
+pass-4's count. Move 40's field is pass-4 plus 473 tokens (rp1 move 39) plus 78 (sj1 pass 5)
+over ~295 pairs.
+
+**Law (new, general).** *A harness whose ranking is field-overridable and whose base field is
+a source constant will silently verify on the wrong body.* A flag and a constant cannot
+disagree loudly; only two flags can. Same genus as the carrier silent-revert and sj1's
+subset-writer revert — the guard existed on one object and not on the one beside it.
+
+## 7. WHY THE 4.6 SHARD-HOURS ARE RECOVERABLE, AND HOW
+
+**What survives.** The rank computes `sj1_edit_mask = target != base` on the **override**
+field and drops every masked position from the proposals (`order = order[~is_sj1_edit]`), so
+no accepted proposal sits on a banked token. At every proposed position the two bases
+therefore carry the **same** symbol, and `(pos, sym → best)` is the identical edit on either
+body. That is now checked per edit against the `sym` the rank priced it against, not argued.
+
+**What does not survive.** The render CONTEXT. The renderer's receptive field is 9 token
+cells, so a banked edit near a proposal moves both the base argmax and the edited argmax.
+Joint neutrality has to be re-measured on the shipping base.
+
+**The repair** is `experiments/ddm_rp1_rebase.py` (commit `daadbf7a2`): re-verify the accepted
+set on a named base field with the same cumulative bisection the acceptance used, so a set
+that fails is NARROWED rather than dropped whole. Cost is ~2 realizations per pair instead of
+192 — minutes, against the 4.6 shard-hours a re-run would take. It is **conservative by
+construction**: it can lose yield, never invent it (a proposal rejected on pass-4 that would
+be neutral on move 40 is not recovered), so its number is a floor on this pass's yield.
+
+**It carries its own control group.** Pairs whose two base planes are identical must transfer
+at fraction 1.0; the receipt reports that fraction separately from the exposed pairs'. If the
+control is not 1.0 then the instrument moved, not the base, and the rebase is not a
+measurement.
+
+`ddm_rp1_sizing.py` is deliberately NOT patched: another arm may be running it, and an edit
+to a live arm's script re-binds its checkpoints (`[[landing_a_gate_into_a_live_arms_script_
+breaks_its_checkpoint_binding_20260910]]`). The structural cure belongs to whoever owns the
+class: *a harness whose ranking is field-overridable must take its base field from the same
+flag, or refuse when the two disagree.*
+
+## 8. THE CHAIN FROM HERE, AND WHAT IT IS ALLOWED TO CLAIM
+
+Base overlay reuse, verified not assumed: sj1's `compose39_price/pose/cand_overlay` is the
+600-plane render of `field_composed.npz`, which is move 40's field — so it is this arm's BASE
+overlay, and only the candidate's renders are owed. `verify-field` proves `field_move40.u8`
+and that npz are the same 600 planes before either is used, because two files in two formats
+cannot be compared by sha and a drift between them would put the pose leg on one body and the
+rate leg on the other.
+
+The pose base is still MEASURED here on the pointer's own carrier codes over that overlay
+(the pose-base law); sj1's 4.886129e-06 is the number it must land near, never the number it
+inherits.
+
+Order: verify-field → rebase ×5 → merge → real twin encode of the rebased field (ledger +
+stream) → render candidate overlay → pose base / stale → carrier re-solve on the changed
+pairs → resolved → **frame-0 8-mode re-selection inside the admission**, on the pairs the
+admission would drop for pose → admit on the RESOLVED pose → twin re-encode of the SELECTED
+subset (the sum ranks, it does not charge) → stage → close → parse-back + seg identity → seal
+with move 40's inherited decode-wall-clock leg.
+
+**Re-derived at move 40** (binding numbers expire at every pointer move): gap to sub-0.12 is
+0.01763861019288715 S = **26,490.0 B** at 6.658589531221714e-07 S/B; the rate corner is an
+archive ≤ 153,743.0 B. At round 1's measured selected-realization ratio 0.2663 the pre-rebase
+1,944.0 B first-order projects to ≈ 518 B, i.e. **≈ −3.45e-04 S, about 2.0 % of the corner** —
+and the rebase can only take from that. This pass is a step down the rate axis, not a door.
+
+## 9. Frontier line
 
 `ddm_sj1 compose39+rp1 union S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40)
