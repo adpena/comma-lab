@@ -56,15 +56,13 @@ def test_schema_version_is_pinned():
 
 
 def test_valid_event_types_canonical_set():
-    assert {
-        "dispatched",
-        "harvested",
-        "failed",
-            "reconciled_terminal_failure",
-            "reconciled_terminal_success",
-        "stale",
-        "manually_terminated",
-    } == VALID_EVENT_TYPES
+    """The canonical event taxonomy: the six lifecycle events plus the two append-only reconciliation
+    events (pr16 §5 / pr17 §4, 2026-09-10). Any addition must land here and in the CLAUDE.md ledger row."""
+    from tac.deploy.modal import call_id_ledger as _ledger
+    assert set(_ledger.VALID_EVENT_TYPES) == {
+        "dispatched", "harvested", "failed", "stale", "manually_terminated", "pre_spawn_fatal",
+        "reconciled_terminal_failure", "reconciled_terminal_success",
+    }
 
 
 def test_valid_statuses_match_event_types():
