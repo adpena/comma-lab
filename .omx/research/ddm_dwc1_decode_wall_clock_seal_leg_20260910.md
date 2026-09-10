@@ -247,3 +247,44 @@ QUEUED-WITH-A-FIRE-ORDER: MAIN owns integration; consumer
 `ddm_dwc1_20260910/MAIN_LANDING_ORDER.json`; fire on harvest of the verified bundle. Apply the
 source landing first and enforcement landing last as one reviewable batch. Preserve the
 explicit failed/blocked backfills; do not manufacture a passing move40 leg during integration.
+
+## MAIN addendum 1 (2026-09-10 ~06:00Z) — the refusal was a gate with no door; move 40's leg is now measured
+
+**Finding.** Every REFUSE above ("competing process count absent") was a validator contract no real
+producer could satisfy: `ddm_dwc1_move40_timing.py` counted EVERY `ps` row (hundreds) and then wrote
+`null`; `ddm_rlc1_public.py` wrote `margin_time_basis: "unknown_host_concurrency"`. The 175 tests
+passed on a synthetic fixture that simply wrote `competing_process_count: 0`. A gate whose PASS path
+only a hand-written fixture exercises is a gate with no door (memory:
+`validator_contract_no_producer_can_satisfy_is_a_forever_refusal_test_the_producer_on_the_pass_path_20260910`).
+
+**Instrument (bf467026f).** `src/tac/decode_timing_concurrency.py` + `tools/quiesced_decode_timing.py`
+`{run, assemble, calibrate, leg}`: a sampler records the process table every 20 s through the whole
+producer run (settle phase recorded but never counted); the verdict is by MEASURED IMPACT where the
+producer leaves stage checkpoints (total excess over the run's own median pace ≤ 1 % of wall; slowed
+stages listed with the processes sampled beside them), by process samples outside the instrumented
+stages (≥ one full core competes; single-core daemons cannot displace four P-core decode threads), and
+by an aggregate guard. Every process ≥ 5 % is listed so a reviewer can re-decide from the receipt.
+
+**Measurements (cold, four threads, bit-identical raw c5a7986c… and tokens).**
+
+| attempt | wall s | verdict |
+|---|---:|---|
+| move40 (dwc1, under rp1's three shards) | 1,243.98 | refused (no count); 1.56× the quiet time |
+| move40_quiesced (attempt 1) | **797.15** | **ADMITTED**: excess 5.66 s = 0.71 %; stage 325 +22 % beside two venv pythons at 66.9 %; `dasd` at ~96 % for 5 min moved no stage |
+| move40_quiesced2 (attempt 2) | 785.14 | refused: Codex desktop app 124 % + two pythons at 100 % during the native build; excess 0.41 %; corroborates attempt 1 within 1.5 % |
+
+Calibration `cpu_to_t4_ratio = 990.053829427 / 797.1459791249945 = 1.24200`. Leg: mode measured,
+projected 990.054 s, actual T4 990.054 s (completed), limit 1,260 s, problems none — sidecar beside
+`SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json` (sha 4540e951…; dwc1's refused sidecar retained
+as `receipts/dwc1_refused_sidecar_backup.json`). Inheritance proven on the pointer tree
+(`inherit_decode_wall_clock` → mode inherited, 990.054 s, no problems). Consumer record:
+`.omx/research/ddm_dwc1_20260910/MOVE40_QUIESCED_LEG.json`.
+
+**Corrections to the body above.** "MAIN must supply a quiesced or genuinely measured-normalized
+calibration" was the right ask but the wrong diagnosis: the sandbox's `ps` denial hid that even with
+`ps` the producer's count could never be zero. The rule stated in the module docstring replaced the
+pcpu-only heuristic after the two runs above showed it misattributed (`dasd` null effect, python bursts
+real effect); the 1 % impact tolerance sits thirty times inside the 0.7 safety factor the limit carries.
+
+verdict_scope: instance — this host (18 cores, 6 P), these two producers; the rule's thresholds are
+recorded in every receipt and are re-derivable from the listed samples.
