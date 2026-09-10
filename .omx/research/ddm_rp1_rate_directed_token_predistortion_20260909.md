@@ -436,7 +436,39 @@ control. The ledger sum said −237.87 B, so it **under-charged by 25.87 B (10.9
 delta)**, the same direction and a similar magnitude to sj1's +19.6 B on its own subset. The
 sum ranks; the encode charges.
 
-## 13. State on hand-off, and what it would cost to finish
+## 13. The candidate — staged, closed, and priced exactly
+
+**Null build first.** This arm's own control body, re-packed into the pointer's member,
+reproduces the pointer's member byte for byte (`723cd022…`). The stream it carries,
+**119,779 B sha `ffcd64bd…`**, is exactly the stream cmp2's shipped TC1M rider carries. The
+delta below is therefore measured against a baseline this code can rebuild.
+
+| stage | bytes | sha256 |
+|---|---|---|
+| pointer (cmp2, move 37) | 180,388 | `670d38d0…` |
+| staged (new token stream) | 180,177 | `35aee0b1…` |
+| **closed (+ re-solved carrier)** | **180,186** | **`8877f75d…`** |
+
+- tail 119,915 → **119,704 B (−211)**; hpac, semantic and header **byte-identical**.
+- carrier 18,586 → **18,595 B (+9)** for 253 pairs and 1,350 coordinates — the re-solve
+  costs 9 bytes and buys 3.29 % off the pose leg.
+- The carrier identity control passed: rebuilding the staged body from its OWN codes returns
+  the staged archive exactly, so the +9 B is the re-solve and not the rebuild.
+- `frame1_sections_all_identical: true` — no odd-frame section moved, so no seg leg can be
+  laundered through a changed section.
+
+**The three legs, each from its own measurement:**
+
+| leg | base (pointer) | candidate | ΔS |
+|---|---|---|---|
+| d_seg | 0.00010698 | **0.00010698** (0 of 117,964,800 cells differ) | **0.0** |
+| d_pose | 5.049766e-06 | **4.886129e-06** | **−5.161e-05** |
+| bytes | 180,388 | **180,186 (−202)** | **−1.345e-04** |
+
+**Score projected 0.13766654648761660 against the pointer's 0.13791730003757818 —
+net ΔS −2.5075e-04, 12.5× the 2e-5 admit bar.**
+
+## 14. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -464,6 +496,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 14. Frontier line
+## 15. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
