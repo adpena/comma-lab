@@ -1,0 +1,58 @@
+{
+  "schema": "ddm_dwc1.consumer_order.v1",
+  "disposition": "FIRED",
+  "owner": "MAIN",
+  "consumer_store": ".omx/research/ddm_dwc1_20260910/MOVE40_QUIESCED_LEG.json",
+  "consumes": [
+    ".omx/research/ddm_dwc1_20260910/MAIN_MARGIN_DECISION.json",
+    ".omx/research/ddm_dwc1_20260910/RLC1_INHERITANCE_COORDINATION.json",
+    ".omx/research/ddm_dwc1_20260910/MOVE40_BACKFILL.json"
+  ],
+  "finding": "dwc1's REFUSE ('competing process count absent') was a validator contract no real producer could satisfy: ddm_dwc1_move40_timing.py counted every ps row (then wrote null) and ddm_rlc1_public.py wrote 'unknown_host_concurrency'. A measured concurrency instrument (src/tac/decode_timing_concurrency.py, tools/quiesced_decode_timing.py) now records competition by MEASURED IMPACT on the decode rate (stage checkpoints), process samples outside the instrumented stages (>= one full core), and an aggregate guard; settle samples never count; every process >= 5 % is listed per sample.",
+  "measurements": [
+    {
+      "attempt": "move40_quiesced",
+      "wall_seconds": 797.1459791249945,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "verdict": "QUIESCED (admitted): total stage excess 5.66 s = 0.71 % of wall < 1 %; stage 325 +22 % beside two venv pythons at 66.9 %; dasd at ~96 % for five minutes moved no stage",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_local.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced/CONCURRENCY.json",
+      "raw_dedup_certificate": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced/RAW_DEDUP_CERTIFICATE.json"
+    },
+    {
+      "attempt": "move40_quiesced2",
+      "wall_seconds": 785.1382802089938,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "verdict": "REFUSED: the Codex desktop app at 124 % and two venv pythons at 100 % (with tar and git) during the native-build phase, outside the instrumented stages; stage excess 3.25 s = 0.41 %. Corroborates attempt 1 within 1.5 %; not admitted",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced2_local.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced2/CONCURRENCY.json"
+    },
+    {
+      "attempt": "move40 (dwc1, under rp1's three n600 shards)",
+      "wall_seconds": 1243.9751226250082,
+      "verdict": "REFUSED by dwc1 (no count); 1.56x the quiesced time — the contention the calibration must exclude"
+    }
+  ],
+  "calibration": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_calibration.json",
+    "cpu_to_t4_ratio": 1.2419981475836523,
+    "definition": "T4_seconds / local_600_seconds = 990.053829427 / 797.1459791249945",
+    "t4_receipt": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910/MODAL_REMOTE_RESULT.json"
+  },
+  "leg": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_decode_wall_clock.json",
+    "sidecar": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+    "sha256_prefix": "4540e9512fe35cd6",
+    "mode": "measured",
+    "projected_t4_decode_seconds": 990.053829427,
+    "measured_t4_decode_seconds": 990.053829427,
+    "limit_seconds": 1260.0,
+    "validation_problems": [],
+    "replaced_sidecar_backup": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/dwc1_refused_sidecar_backup.json"
+  },
+  "inheritance_proof": "inherit_decode_wall_clock(source_leg=sidecar, runtime_dir=move 40 candidate_runtime, pointer_archive_sha256=986d536b...) -> mode inherited, projected 990.054 s, validate problems []. rp1's round-2 seal (receiver identical except archive.zip + the two pins) inherits this leg.",
+  "rlc1_next": "rlc1's cured receiver cannot inherit (different receiver code); its own quiesced timing via tools/quiesced_decode_timing.py run + assemble --stage-checkpoints, projected = local_600 x 1.2420 <= 1,260 s; needs MANIFEST.sha256 refresh (pr9 condition 1) and one twin raw moved off the 8 GiB store first.",
+  "score_claim": false
+}

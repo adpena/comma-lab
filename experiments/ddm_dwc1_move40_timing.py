@@ -261,6 +261,10 @@ if __name__ == "__main__":
     parser.add_argument("--timeout-seconds", type=float, default=2400)
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if args.resume_from.resolve() != WORK or not 0 < args.timeout_seconds <= 2400:
+    resume = args.resume_from.resolve()
+    # A sibling work dir (e.g. ROOT/move40_quiesced) re-times the same copied receiver cold
+    # under a measured concurrency sampler; the default ROOT/move40 run is retained as-is.
+    if resume.parent != ROOT or not resume.name.startswith("move40") or not 0 < args.timeout_seconds <= 2400:
         raise ValueError("invalid resume root or wall budget")
+    WORK = resume
     worker() if args.worker else run(args.timeout_seconds)
