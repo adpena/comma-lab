@@ -531,6 +531,34 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=4.89e-06,
         score_t4=0.13763861019288715,
     ),
+    #: MOVE 42 -- LIVE.  rp1 round 2: K=192 rate-directed pre-distortion RE-BASED onto
+    #: move 40's field (the accepted set had been verified against sj1's pass-4 body
+    #: because the sizing script took its ranking from a flag and its base field from a
+    #: source constant) and closed by a CARRIER RE-SOLVE.  Lane
+    #: ddm_rp1_round2_rate_directed_predistortion_k192_20260910, call
+    #: fc-01M25TM1G2SNMGXZ39PFWQ4T0V, -1.621049e-04 S on +5 B.
+    #:
+    #: WHAT THIS ROW MEANS FOR THIS ARM'S SEG WORK: the token edits are argmax-NEUTRAL by
+    #: construction, so seg moved EXACTLY 0 over 117,964,800 cells (12,540 local flips =
+    #: 12,540 predicted, rp1 SEGCHECK.json on the shipped decode) -- but the RENDER moved.
+    #: MEASURED here on the sealed ``admission/field_admitted.npz`` against move 40's
+    #: field: 160 pairs, 1,054 tokens differ.  That is a NEW OBJECT for the single-token
+    #: repair family this arm closed at pass 5, whose convergence verdict was drawn on the
+    #: move-37 field.  The row's own gain is the carrier re-solve landing pose below base,
+    #: not the token edits (the rate leg came in at +5 B).
+    PointerRow(
+        label="rp1_round2_rate_directed_predistortion_k192",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime"
+        ),
+        archive_sha256=(
+            "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+        ),
+        archive_bytes=180_238,
+        d_seg_t4=0.00010637,
+        d_pose_t4=4.66e-06,
+        score_t4=0.1374765052591843,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
