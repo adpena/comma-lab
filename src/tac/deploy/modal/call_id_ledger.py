@@ -156,6 +156,11 @@ EVENT_MANUALLY_TERMINATED = "manually_terminated"
 # no-spawn anchor. The synthetic call_id format is
 # `pre_spawn_fatal_<label>_<utc_compact>` since no Modal call_id exists yet.
 EVENT_PRE_SPAWN_FATAL = "pre_spawn_fatal"
+# Append-only reconciliation events for first-measurement lifecycles (pr16 §5 / pr17 §4, 2026-09-10):
+# a terminal receipt that rehashes every retained artifact and links the run's intent, authorization,
+# nonce state, and claim closure. Never a score; never mutates the row it reconciles.
+EVENT_RECONCILED_TERMINAL_FAILURE = "reconciled_terminal_failure"
+EVENT_RECONCILED_COMPLETED = "reconciled_completed"
 
 VALID_EVENT_TYPES = frozenset(
     {
@@ -165,6 +170,8 @@ VALID_EVENT_TYPES = frozenset(
         EVENT_STALE,
         EVENT_MANUALLY_TERMINATED,
         EVENT_PRE_SPAWN_FATAL,
+        EVENT_RECONCILED_TERMINAL_FAILURE,
+        EVENT_RECONCILED_COMPLETED,
     }
 )
 
