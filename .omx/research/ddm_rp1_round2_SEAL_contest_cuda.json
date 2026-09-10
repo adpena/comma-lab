@@ -1,0 +1,158 @@
+{
+  "admit_bar": {
+    "derivation": {
+      "pointer_archive_sha256_at_seal": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.13763861019288715,
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    },
+    "net_dS_threshold": -2e-05,
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold"
+  },
+  "archive": {
+    "bytes": 180238,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip",
+    "sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+  },
+  "axis": "contest_cuda",
+  "candidate_id": "ddm_rp1_round2_rate_directed_predistortion_k192_20260910",
+  "decode_wall_clock": {
+    "archive_sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f",
+    "candidate_t4_runtime_sha256": "a0f7cede2324c0e4f3e21cfc0e59ba115a1e1cfaf479e23a4ad246cbfb76d8f9",
+    "inheritance_scope": "identical normalized receiver code; candidate payload-dependent time not remeasured",
+    "limit_seconds": 1260.0,
+    "mode": "inherited",
+    "pointer_archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+    "projected_t4_decode_seconds": 990.053829427,
+    "receiver_sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf",
+    "schema": "candidate_decode_wall_clock.v1",
+    "score_claim": false,
+    "source_leg": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+      "sha256": "ed929b24cc876bf8ffabc3004b856decbb5e73d0fee13c1d3c87d91d659f9521"
+    },
+    "source_mode": "t4_direct",
+    "source_t4_runtime_sha256": "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39"
+  },
+  "falsifiers": [
+    "control group: 307 pairs whose base plane is unchanged transferred 2,401 of 2,401 tokens, fraction exactly 1.000000 -- the instrument did not move between the acceptance and the rebase",
+    "every one of the 4,142 accepted edits sits on a position whose base symbol equals the sym the rank priced it against; a mismatch refuses in-loop, none fired",
+    "field_move40.u8 and sj1's compose39/field_composed.npz are identical on all 600 planes, 0 of 117,964,800 cells differing",
+    "NULL BUILD: this arm's control body (119,618 B sha 648168db) IS the pointer's shipped stream, and re-packed reproduces move 40's member byte for byte",
+    "twin encodes byte-identical on both the full rebased field (120,238 B body sha 27813d91) and the admitted subset (119,613 B body sha 106d1f51)",
+    "the candidate runtime differs from the pointer tree in exactly ['archive.zip','inflate.py'], and inflate.py differs in exactly its two pin literals at L18/L19",
+    "seg identity through the REAL receiver: 0 of 117,964,800 cells differ between move 40's renders and the candidate's own parse-back; local flip count 12,540 = 12,540, delta_d_seg exactly 0.0",
+    "parse-back decoded_field_matches_admitted = true and the tree's own inflate.py pin_check = PASS",
+    "pose base measured on this arm's instrument over the pointer's own carrier codes: 4.88709198352764e-06, +0.010 percent from sj1's, inside pm2's [1/3,3]x gate",
+    "the admission consumed the RESOLVED pose (4.64947689e-06); the stale column (1.05512811e-03, 216x worse) is printed beside it and was never an input",
+    "the shipped bytes come from a REAL encode of the selected subset: ledger sum predicted -43.98 B, the coder charged -4 B, gap +39.98 B reported"
+  ],
+  "notes": "K=192 rate-directed pre-distortion re-verified on move 40's field after the acceptance was found to have been measured on sj1's pass-4 body. Rate leg is +5 B net (carrier +10, tail -5); the win is the carrier re-solve landing pose BELOW base. Frame-0 ran inside the admission, measured and priced, NOT adopted at -1.95e-06 S (0.0975x bar). score_claim=false.",
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime",
+        "seconds": 1.9802968502044678,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/inflate.py\", line 57, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "8c4b4fcebb4409e6403e309efc37bbdf21dde7dfcf4d1117837c7e96bfb67033"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+        "seconds": 1.964461088180542,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/inflate.py\", line 57, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a"
+      }
+    },
+    "public_path_probe_seconds": 300.0,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "no exception within the bound; every pre-decode stage throws fast, so the token decode -- the slow leg -- was reached",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime",
+        "seconds": 240.02362394332886,
+        "tree_sha256": "8c4b4fcebb4409e6403e309efc37bbdf21dde7dfcf4d1117837c7e96bfb67033"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "no exception within the bound; every pre-decode stage throws fast, so the token decode -- the slow leg -- was reached",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+        "seconds": 240.02129197120667,
+        "tree_sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "receiver_pins": [
+    {
+      "bytes": 2475,
+      "relative_path": "inflate.py",
+      "sha256": "74cdc32cbfedd29ab6a2c3ff27b825ceeed9c518f5f298005ed1c3a4c9e8d147"
+    },
+    {
+      "bytes": 3219,
+      "relative_path": "inflate.sh",
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+    }
+  ],
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/admission/field_admitted.npz",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/rebase/field_rebased.npz",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/refine/codes_resolved.npy",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/sub_a/tail_rp1_mixer_rider_body.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/pose/pose_base.npy",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/pose/pose_resolved.npy",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/pose/pose_stale.npy",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/0.raw"
+  ],
+  "runtime": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 48,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime",
+    "sha256": "8c4b4fcebb4409e6403e309efc37bbdf21dde7dfcf4d1117837c7e96bfb67033",
+    "total_bytes": 994180
+  },
+  "schema": "candidate_seal.v2",
+  "seal_sha256": "2490a7025abcb8b5917eedd64045b3ec81771b7b2dd6b63df1ca713bc659c742",
+  "sealed_at_utc": "2026-09-10T14:07:24.570710+00:00",
+  "sealed_by": "ddm_rp1"
+}

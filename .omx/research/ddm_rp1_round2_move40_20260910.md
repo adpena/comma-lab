@@ -367,6 +367,57 @@ it costs a fresh ~27-minute subset re-encode plus a carrier selector-splice path
 not verified exists (`ddm_rp1_build.close` splices CODES only). Putting the seal at risk for
 1 % is the wrong trade. Receipt: `frame0/FRAME0_VERDICT.json`.
 
+## 8g. THE SEALED CANDIDATE
+
+`SEAL_ddm_rp1_round2_contest_cuda.json`, seal sha `2490a702…`, **SEAL_VALID**.
+Lane `ddm_rp1_round2_rate_directed_predistortion_k192_20260910`.
+
+| | value |
+|---|---|
+| archive | **180,238 B**, sha `f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f` |
+| runtime | 48 files, 994,180 B, digest `8c4b4fce…` |
+| projected S | **0.13746779326523825** |
+| **net ΔS vs move 40** | **−1.7081692764889245e-04 = 8.5× the bar** |
+
+**Leg by leg, and the rate leg is not the one that pays.**
+
+| leg | value | ΔS |
+|---|---|---|
+| rate | 180,238 B vs 180,233 (**tail −5 B, carrier +10 B, net +5 B**) | **+3.33e-06** |
+| seg | 0 of 117,964,800 cells moved; local flips 12,540 = 12,540 | **0** |
+| pose | 4.64947689e-06 vs base 4.88709198e-06 (RESOLVED) | **−1.74e-04** |
+
+**The rate-directed pass ends up paying for itself with POSE.** Its own axis is +5 B in the
+wrong direction: the −4 B the tail actually gave back is smaller than the +10 B the carrier
+re-solve costs. What clears the bar is that re-solving the carrier on the 160 selected pairs
+lands d_pose *below* the base — the same thing round 1 found (−5.16e-5), larger here.
+
+Sections: hpac 11,911 and semantic 29,862 byte-identical to move 40; tail 119,754 → 119,749;
+carrier 18,592 → 18,602. `frame1_sections_all_identical: true`, so no seg leg is laundered
+through a changed odd-frame section.
+
+**All eleven pre-registered falsifiers passed**, including the three that could have stopped
+the pass: control-group transfer exactly 1.0; NULL BUILD reproducing move 40's member; and
+seg identity **through the real receiver** at 0 of 117,964,800 cells with the local flip count
+landing on move 40's own 12,540. Parse-back: `decoded_field_matches_admitted = true`,
+`pin_check = PASS`, 931.3 s local. Public smoke: candidate and frontier both
+`REACHED_TOKEN_DECODE` at 240.02 s and `REACHED_CUDA_GATE` at ~1.97 s.
+
+Decode-wall-clock: **inherited** from move 40's `t4_direct` leg (`receiver_sha256`
+`6726fd77…` matched; projected 990.054 s against the 1,260 s limit). The seal accepted the
+inheritance because the runtime differs from the pointer in exactly `archive.zip` and
+inflate.py's two pin literals.
+
+**Projection fidelity, stated in advance.** This projection composes the T4's own d_seg
+(0.00010636) and exact bytes with a *locally measured* pose. The pointer's own row was built
+from an 8-dp T4 pose print of 4.89e-06 while this arm measures the same configuration at
+4.887092e-06, so the pose-print class (historically +1.8e-06 to +7.7e-06 optimistic) applies
+here too. A realized T4 row 2–8e-06 above this projection would be that class, not a defect.
+
+**Custody:** archive + seal on Vertigo under `ddm_rp1_round2/`, second copies at
+`/Volumes/APDataStore/pact/ddm_rp1_round2/` (archive sha re-verified). `score_claim=false`;
+nothing here is a row until MAIN fires T4.
+
 ## 9. Frontier line
 
 `ddm_sj1 compose39+rp1 union S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40)
