@@ -1,0 +1,26 @@
+{
+  "behavior_checks": "zero-motion identity and exact RLE parse-back on real input maps; functional checks only, not population empirical claims",
+  "calibration_values": [
+    -0.003224707899359239,
+    0.0,
+    -0.009999999999999995
+  ],
+  "pose_first": [
+    34.25,
+    -6.717443466186523e-05,
+    0.00173187255859375,
+    -0.0008645057678222656,
+    -0.012664794921875,
+    -0.0002148151397705078
+  ],
+  "real_pair_ids": [
+    0,
+    119,
+    239,
+    359,
+    479,
+    599
+  ],
+  "review": "Checked source custody, paid calibration, scorer/token separation, nearest-neighbor invalid fill, all-symbol residual bijection, topology strata, midpoint-safe C converse, no coder-to-floor inference, per-frame retention and source-bound resume.",
+  "status": "clean after lint fixes"
+}

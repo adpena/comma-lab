@@ -1,0 +1,40 @@
+{
+  "status": "PASS",
+  "exact_factorial_recount_groups": 12640,
+  "switches": 28994,
+  "mutable_sites": 104811,
+  "independent_float_checks_only_not_verdict_authority": [
+    {
+      "D": 6270,
+      "independent_float_converse_C": 14664.096717482056,
+      "independent_float_converse_N": 27131.5202568675,
+      "certified_bits_match": true
+    },
+    {
+      "D": 12540,
+      "independent_float_converse_C": 7153.86940507863,
+      "independent_float_converse_N": 6002.094989252539,
+      "certified_bits_match": true
+    },
+    {
+      "D": 25080,
+      "independent_float_converse_C": 382.3004190356853,
+      "independent_float_converse_N": 0,
+      "certified_bits_match": true
+    }
+  ],
+  "n600_profile_invariants": "600/600 for each retained C and N alternate",
+  "codec_joint_exact_reconstruction": "600/600 for all three cases",
+  "twins": "5 per-class streams for each of three cases; every primary equals repeat",
+  "resume_returncode": 0,
+  "resume_result_byte_identical": true,
+  "source_code": {
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/experiments/ddm_eb2_conditional_bound.py",
+    "sha256": "aba6eb400fb541dc2d294455c4a5ebf57fa4bea6f2de7e78bcd51ccf69931753"
+  },
+  "ruff": "passed",
+  "visible_review_passes_final_code": 2,
+  "new_score_measured": false,
+  "verification_census_correction": "Initial broad glob met macOS AppleDouble metadata ._*.json; exact 000..599 receipt enumeration passes. Producer and resume already used explicit frame IDs, unaffected.",
+  "test_boundary": "cached argmax labels, no video decode or neural scorer; no contest or cross-host parity claim"
+}

@@ -1,0 +1,9 @@
+{
+  "code": {
+    "bytes": 18621,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/experiments/ddm_eb2_conditional_bound.py",
+    "sha256": "aba6eb400fb541dc2d294455c4a5ebf57fa4bea6f2de7e78bcd51ccf69931753"
+  },
+  "review": "Independent mathematical pass: admissible residual symbols fixed by predictor-class stratum; C subset N; Hamming residual map is an isometry at each fixed predictor; grants skeleton explicitly; all-class D is global not per-frame; largest-ball bound handles off-class centers; achieved exact coder is only an upper bound; initial frame charged; scored partitions remain oracle side information. Actual retained profile alternatives checked for all required geometry invariants on real frames 0,119,599; full n600 checks remain in launch.",
+  "status": "clean"
+}

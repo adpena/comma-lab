@@ -1,0 +1,81 @@
+[
+  {
+    "tag": "memos",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "--glob",
+      "*.md",
+      "--glob",
+      "!**/staged/**",
+      "conditional.*partition|previous.partition|pose.warp|ground.plane.*homography|temporal.*transport|side.information",
+      ".omx/research"
+    ],
+    "returncode": 0,
+    "lines": 1372,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/recall/memos.txt",
+    "sha256": "6b01e422a8a239d84948a9bdacfac164ef1bf9086b8793d2c70bbcaf4b09c842"
+  },
+  {
+    "tag": "index_dag",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "--glob",
+      "CANONICAL_RESEARCH_INDEX*",
+      "--glob",
+      "sub015_DAG_*",
+      "partition|side.information|screw|entropy",
+      ".omx/research"
+    ],
+    "returncode": 0,
+    "lines": 808,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/recall/index_dag.txt",
+    "sha256": "8ce405869ed1eda51cb88d815c8a952a7d84d6644494cce49b25bca8630708f6"
+  },
+  {
+    "tag": "design",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "partition.*(warp|bound)|side.information|ground.plane.*homography",
+      "docs",
+      "configs"
+    ],
+    "returncode": 0,
+    "lines": 33,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/recall/design.txt",
+    "sha256": "6ae868670da11ba27d94a86f0771b93cdb34c8918b21324db791801873dec5c8"
+  },
+  {
+    "tag": "ledgers",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "ddm_eb2|ddm_xi[12]|conditional.*partition|temporal.*transport",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/lane_registry.json",
+      ".omx/state/operator_p0_ledger.jsonl"
+    ],
+    "returncode": 0,
+    "lines": 5,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/recall/ledgers.txt",
+    "sha256": "576e70d48a4970fd781cc0bed577163085250bd75a6960b576ee282aad481e84"
+  },
+  {
+    "tag": "equations",
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "returncode": 0,
+    "lines": 70741,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/recall/equations.txt",
+    "sha256": "f864dc3c01df479a44de959e5ea19c9f2e1a8055ec3a0a0c3cd8c5fbc0635b1a"
+  }
+]

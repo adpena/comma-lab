@@ -1,0 +1,35 @@
+{
+  "schema": "ddm_eb2_fire_orders_v1",
+  "score_claim": false,
+  "orders": [
+    {
+      "task_id": "ddm_eb2_isolated_landing_harvest_20260910",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_stores": [
+        ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md",
+        ".omx/state/canonical_equations_registry.jsonl",
+        ".omx/state/canonical_task_status.jsonl"
+      ],
+      "fire_trigger": "Harvest verified isolated EB2 landing",
+      "action": "Import memo/code and narrow equation/task events; retain receiver blocker and formulation-only refusal."
+    },
+    {
+      "task_id": "ddm_eb2_receiver_information_rebind_20260910",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_stores": [
+        "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/RECEIVER_SIDE_INFORMATION.json"
+      ],
+      "fire_trigger": "Harvest EB2 source audit",
+      "action": "Bind actual decoder state and byte-derived or charged pose mapping across adjacent scored frames before a corrected generator-door charter."
+    }
+  ],
+  "closed_followon": {
+    "action": "Build the tested residual RLE/zlib channel",
+    "disposition": "FOLDED",
+    "owner": "ddm_eb2",
+    "consumer_store": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.omx/research/ddm_eb2_20260910/SUMMARY.json",
+    "reason": "542248 B exceeds the 119754 B refusal threshold; 40000 B build trigger not met."
+  }
+}

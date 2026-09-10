@@ -1,0 +1,111 @@
+{
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+    "bytes": 180233,
+    "sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+  },
+  "header": "RX1M",
+  "sections": {
+    "hpac": 11911,
+    "semantic": 29862,
+    "carrier": 18592,
+    "header": 14,
+    "tail": 119754
+  },
+  "payload_bytes": 180133,
+  "files": [
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/PARSEBACK_RESULT.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/parseback/PARSEBACK_RESULT.json",
+      "bytes": 3338,
+      "sha256": "82e16070b62d7aed08ba13f921d9112405b6a308254c6847e37ce25d689a929c"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/STEP0_RESULT.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/STEP0_RESULT.json",
+      "bytes": 4924,
+      "sha256": "517580f9fe53eb6a5b82614e08835686dfd8cd36a4e91d3fce3874726b6ec0d2"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_0.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/step0_shard_0.json",
+      "bytes": 2229,
+      "sha256": "62833c2946b6c9eab49e275dc2e7777b3fc5da78942c06b65ac0b613f9cb909b"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_1.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/step0_shard_1.json",
+      "bytes": 2339,
+      "sha256": "ef7ed7e22316fdc167a33a3cd89a396aa49c584b7298190523aa735b529f458f"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_2.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/step0_shard_2.json",
+      "bytes": 2338,
+      "sha256": "dd9cd0cd85a5468a721fe703c2c64d2aa1fbc41b576b91293b49fede655ec8eb"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_3.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/step0_shard_3.json",
+      "bytes": 2339,
+      "sha256": "890252da7689082c2a71b8976a137f2aacff21527923d3a6b3dc2566a099dc15"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_4.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/step0_shard_4.json",
+      "bytes": 2337,
+      "sha256": "74fb9188a03bb8cc6c0c0890ca64d3812dba37298937e2fd6f2b382a139277f2"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_5.json",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/seg_final/step0_shard_5.json",
+      "bytes": 2338,
+      "sha256": "9006716bfc30e0eb6a00af10f1eeffcaaf6a53a9cabfe665d8cca2af9b3a23be"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/inflate.py",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/candidate/candidate_runtime/inflate.py",
+      "bytes": 2475,
+      "sha256": "a741f1df65bc23997d4aff24f5c989baa99b60df58f5dac41fcbfba00c480eda"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/runtime/f26_inflate.py",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/candidate/candidate_runtime/runtime/f26_inflate.py",
+      "bytes": 29176,
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/runtime/residual_archive.py",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/candidate/candidate_runtime/runtime/residual_archive.py",
+      "bytes": 34053,
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/cpr1/inflate.py",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/candidate/candidate_runtime/cpr1/inflate.py",
+      "bytes": 13810,
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/cpr1/carrier_codec.py",
+      "retained_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/source_evidence/candidate/candidate_runtime/cpr1/carrier_codec.py",
+      "bytes": 7353,
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    }
+  ],
+  "raw_exists": false,
+  "moved_manifest_exists": true,
+  "receiver_contract": {
+    "carrier_dimensions": 12,
+    "carrier_spatial_shape": [
+      3,
+      24,
+      32
+    ],
+    "pose6_transmitted": false,
+    "scored_argmax_receiver_state": false,
+    "actual_decoded_partition": "stored token map, not SegNet output",
+    "trace": "f26_inflate.py:472-480 -> unpack_semantic_pose -> 12 basis coefficients -> render_video; no pose6 extraction or scorer call"
+  },
+  "provenance_boundary": "six shards bind c5a7986c raw and DALI GT; inherited body token statistics refer to CL2, not move40"
+}

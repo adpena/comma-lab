@@ -1,0 +1,179 @@
+{
+  "equation": {
+    "schema_version": "canonical_equation_v1_20260519",
+    "equation_id": "conditional_partition_description_bound_v1",
+    "name": "Conditional residual profile covering converse with explicit receiver grant",
+    "one_line_summary": "C/N worst-case covering lower bounds under a fixed predictor and granted residual skeleton; achieved residual code sizes remain upper bounds; move40 receiver premise is blocked.",
+    "latex_form": "R_wc(A_z,D) >= max(0, log2|A_z| - log2 sup_y |A_z intersect B(y,D)|); C subset N; R_wc(N,D) >= R_wc(C,D)",
+    "python_callable_module_path": "experiments.ddm_eb1_entropy_bound:partition_description_rate_distortion_lower_bound_v1",
+    "domain_of_validity": {
+      "included": [
+        "explicit finite residual-profile C/N reference classes",
+        "fixed conditional predictor and source-specific outside skeleton granted",
+        "hard Hamming radius over all 600 frames; fixed-length worst-case covering",
+        "binary local group alphabets measured; midpoint-safe arbitrary reconstruction centers",
+        "uniform-natural expected prefix bound uses its own raw converse, not inherited C converse"
+      ],
+      "excluded": [
+        "pointwise video lower bound",
+        "marginal tail entropy under paid HPAC and renderer models",
+        "scored maps or pose6 assumed present in move40 receiver",
+        "physical source-law or inter-pair motion identification",
+        "simple-code failure promoted to a temporal-family closure"
+      ],
+      "receiver_valid": false,
+      "score_claim": false,
+      "reference_scope": "FORMULATION"
+    },
+    "units_in": {
+      "cardinality": "reference partitions",
+      "mutable": "cells",
+      "qmax": "symbols",
+      "switches": "independent two-cell switches",
+      "d": "total Hamming cells"
+    },
+    "units_out": {
+      "natural_lower_bits_certified": "bits",
+      "conservative_lower_bits_certified": "bits"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "ddm_eb2_granted_residual_profiles_n600_20260910",
+        "measurement_utc": "2026-09-10T05:05:02.093660+00:00",
+        "inputs": {
+          "n": 600,
+          "cells": 117964800,
+          "conditioner": "previous cached move40 scored argmax plus historical separately charged pose/calibration",
+          "classes": "C paired swaps and N permutations preserving residual profile in fixed predictor-label strata; skeleton granted"
+        },
+        "predicted_output": {
+          "invariant_frames": 600
+        },
+        "empirical_output": {
+          "invariant_frames": 600,
+          "coder_bytes": {
+            "from_scratch": 357123,
+            "persist": 536997,
+            "warp": 542248
+          },
+          "bounds": [
+            {
+              "D": 6270,
+              "conservative_log2_N": 28994,
+              "conservative_log2_ball_upper": "14329.903282517945507015264133514064",
+              "conservative_lower_bits_certified": 14664,
+              "conservative_lower_bytes": 1833.0,
+              "groups": 12640,
+              "mutable_sites": 104811,
+              "natural_log2_N_interval": [
+                "61369.740371312641926012408808166987",
+                "61369.740371312641926012502437264896"
+              ],
+              "natural_log2_ambient_ball_interval": [
+                "34238.220114445141578002242600284650",
+                "34238.220114445141578002376884127668"
+              ],
+              "natural_lower_bits_certified": 27131,
+              "natural_lower_bytes": 3391.375,
+              "natural_minimax_lower_bits_certified": 27131,
+              "qmax": 2,
+              "switches": 28994
+            },
+            {
+              "D": 12540,
+              "conservative_log2_N": 28994,
+              "conservative_log2_ball_upper": "21840.130594921372590805155180412559",
+              "conservative_lower_bits_certified": 7153,
+              "conservative_lower_bytes": 894.125,
+              "groups": 12640,
+              "mutable_sites": 104811,
+              "natural_log2_N_interval": [
+                "61369.740371312641926012408808166987",
+                "61369.740371312641926012502437264896"
+              ],
+              "natural_log2_ambient_ball_interval": [
+                "55367.645382060101946012599315427625",
+                "55367.645382060101946012699316683319"
+              ],
+              "natural_lower_bits_certified": 6002,
+              "natural_lower_bytes": 750.25,
+              "natural_minimax_lower_bits_certified": 7153,
+              "qmax": 2,
+              "switches": 28994
+            },
+            {
+              "D": 25080,
+              "conservative_log2_N": 28994,
+              "conservative_log2_ball_upper": "28611.699580964314785200790722549717",
+              "conservative_lower_bits_certified": 382,
+              "conservative_lower_bytes": 47.75,
+              "groups": 12640,
+              "mutable_sites": 104811,
+              "natural_log2_N_interval": [
+                "61369.740371312641926012408808166987",
+                "61369.740371312641926012502437264896"
+              ],
+              "natural_log2_ambient_ball_interval": [
+                "83196.741939491100859626103821174923",
+                "83196.741939491100859626197348555310"
+              ],
+              "natural_lower_bits_certified": 0,
+              "natural_lower_bytes": 0.0,
+              "natural_minimax_lower_bits_certified": 382,
+              "qmax": 2,
+              "switches": 28994
+            }
+          ]
+        },
+        "residual": 0.0,
+        "source_artifact": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/RESULT.json",
+        "measurement_method": "All 600 retained residuals, exact twins and joint reconstruction; zero residual means invariant equality only, not source-entropy prediction.",
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "source_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/RESULT.json",
+          "source_sha256": "e66ebe5f6e78e107e88d016c3be76948b5e2cfda75bdd2f5d5d3a385c40a1612",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "hardware_substrate": "macos_arm64",
+          "evidence_grade": "macos_cpu_advisory",
+          "promotion_eligible": false,
+          "score_claim_valid": false,
+          "captured_at_utc": "2026-09-10T05:05:02.093660+00:00",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "contest_archive_zip_path": "",
+          "contest_archive_member_name": "",
+          "composed_from": [],
+          "rejection_reason": ""
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR"
+      }
+    ],
+    "predicted_vs_empirical_residual": {},
+    "last_calibration_utc": "2026-09-10T05:05:02.093660+00:00",
+    "next_recalibration_trigger": "never_auto_operator_only",
+    "canonical_consumers": [
+      "experiments.ddm_eb2_conditional_bound.main"
+    ],
+    "canonical_producers": [
+      "experiments.ddm_eb2_conditional_bound.profile_classes"
+    ],
+    "provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "source_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/RESULT.json",
+      "source_sha256": "e66ebe5f6e78e107e88d016c3be76948b5e2cfda75bdd2f5d5d3a385c40a1612",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "hardware_substrate": "macos_arm64",
+      "evidence_grade": "macos_cpu_advisory",
+      "promotion_eligible": false,
+      "score_claim_valid": false,
+      "captured_at_utc": "2026-09-10T05:05:02.093660+00:00",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "contest_archive_zip_path": "",
+      "contest_archive_member_name": "",
+      "composed_from": [],
+      "rejection_reason": ""
+    }
+  },
+  "registration_store": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.omx/state/canonical_equations_registry.jsonl",
+  "query_verified": true,
+  "live_registry_updated": false
+}

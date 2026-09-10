@@ -1,0 +1,9 @@
+{
+  "code": {
+    "bytes": 18621,
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/experiments/ddm_eb2_conditional_bound.py",
+    "sha256": "aba6eb400fb541dc2d294455c4a5ebf57fa4bea6f2de7e78bcd51ccf69931753"
+  },
+  "findings": "Replaced BLAS grid multiplication with explicit NumPy einsum after platform floating exception warnings; finite inverse guard; actual zero-pose identity passes. Rechecked all 11 callable bodies and immutable input-bound resume. Previous review superseded by final-code passes.",
+  "status": "clean"
+}

@@ -1,0 +1,29 @@
+{
+  "axis": "scorer-free macOS-CPU advisory diagnostic",
+  "predictions_from_charter": {
+    "agreement_min": 0.9,
+    "residual_edges_over_gt_band": [
+      0.1,
+      0.25
+    ],
+    "natural_floor_B": [
+      200,
+      800
+    ],
+    "residual_coder_B": [
+      20000,
+      60000
+    ],
+    "build_trigger_B_max": 40000,
+    "simple_coder_refusal_B_min": 119754
+  },
+  "changes_before_measurement": "SOURCE/RECEIVER BLOCKER: current archive does not carry pose6 or evaluator argmax state. Measure granted argmax conditioner with separate historical pose and global calibration bytes; actual receiver verdict remains blocked.",
+  "coding": "single specified RLE+zlib9 framing; 5 residual class masks; frame0 zero predictor charged; twin compressor calls retained; D=0 exact parseback upper bound only",
+  "classes": "C independent paired swaps; N observed-label permutations of isolated simple residual sites, grouped by fixed predictor label and effect on residual geometry; grants outside residual skeleton; Hamming metric target <-> allowed residual is isometric",
+  "controls": [
+    "persist previous cached scored partition",
+    "same-coder partition from all-zero predictor"
+  ],
+  "threshold_interpretation": "over-tail simple coder refuses this implementation only; cannot lower-bound optimal coder or close temporal family. No fraction-of-information claim from agreement or byte ratio.",
+  "data_scope": "600/600; no subset empirical row, scorer, training, remote dispatch, or live-tree edits"
+}

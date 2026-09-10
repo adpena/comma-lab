@@ -1,0 +1,9 @@
+{
+  "manifest_path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/CUSTODY.json",
+  "manifest_sha256": "a9cb672b825da459b16ec44bfe3ca08dbba9b3c60eb19759ef45c92afe288e56",
+  "files": 12123,
+  "retained_bytes": 501130233,
+  "source_checkout_manifest": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/CHECKOUT.json",
+  "reproducibility": "pinned checkout HEAD plus landing patch, launch and source manifests; inputs immutable; resume validated",
+  "cleanup": "KEEP all evidence; no opaque deletion, scratch raw decode, or unowned candidate sweep"
+}

@@ -1,0 +1,687 @@
+{
+  "all_600_invariants_and_joint_coder_parseback": true,
+  "axis": "[macOS-CPU advisory; cached n600 partitions; scorer-free exact bytes]",
+  "cases": {
+    "from_scratch": {
+      "band_rows_128_319": 31575029,
+      "boundary_edges": 1619850,
+      "coder_bytes": 357123,
+      "components_by_residual_symbol": [
+        1259,
+        0,
+        16626,
+        646,
+        2209,
+        600
+      ],
+      "confusion_pred_rows_gt_cols": [
+        [
+          27407371,
+          690753,
+          58413069,
+          1460386,
+          29993221
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "disagreement": 90557429,
+      "first_frame_coder_raw_rle_bytes": 1049,
+      "gt_boundary_r0": 1300129,
+      "gt_boundary_r3": 3702045,
+      "per_class": [
+        {
+          "artifacts": [
+            {
+              "bytes": 35,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_0.erl",
+              "sha256": "05c5567e588177792cf6cc9d7e7b876872ea55a772f8c49907513c802154640b"
+            },
+            {
+              "bytes": 35,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_0.repeat.erl",
+              "sha256": "05c5567e588177792cf6cc9d7e7b876872ea55a772f8c49907513c802154640b"
+            }
+          ],
+          "bytes": 35,
+          "class": 0,
+          "raw_rle_bytes": 1800
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 193903,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_1.erl",
+              "sha256": "fa52f337bdea2a681a7549eeb2b6c24a06a391f00a0f9e1ea8342ddbbb04c8b6"
+            },
+            {
+              "bytes": 193903,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_1.repeat.erl",
+              "sha256": "fa52f337bdea2a681a7549eeb2b6c24a06a391f00a0f9e1ea8342ddbbb04c8b6"
+            }
+          ],
+          "bytes": 193903,
+          "class": 1,
+          "raw_rle_bytes": 303734
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 81525,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_2.erl",
+              "sha256": "fd7aabbbd874f7e2b0f62449eb63cd8a02a09b7917ae2b41ffe2a4cf30bd20c0"
+            },
+            {
+              "bytes": 81525,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_2.repeat.erl",
+              "sha256": "fd7aabbbd874f7e2b0f62449eb63cd8a02a09b7917ae2b41ffe2a4cf30bd20c0"
+            }
+          ],
+          "bytes": 81525,
+          "class": 2,
+          "raw_rle_bytes": 117494
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 60408,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_3.erl",
+              "sha256": "b592134e00f13a6d9ba31ca2c380047103be968fa28e36151f8d2c1e4fbd61d7"
+            },
+            {
+              "bytes": 60408,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_3.repeat.erl",
+              "sha256": "b592134e00f13a6d9ba31ca2c380047103be968fa28e36151f8d2c1e4fbd61d7"
+            }
+          ],
+          "bytes": 60408,
+          "class": 3,
+          "raw_rle_bytes": 108400
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 21252,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_4.erl",
+              "sha256": "193bd0316ec402ca25a0890b9f1b9c51613cffeebaca6bf25080cd0687ac8a15"
+            },
+            {
+              "bytes": 21252,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/from_scratch_4.repeat.erl",
+              "sha256": "193bd0316ec402ca25a0890b9f1b9c51613cffeebaca6bf25080cd0687ac8a15"
+            }
+          ],
+          "bytes": 21252,
+          "class": 4,
+          "raw_rle_bytes": 28534
+        }
+      ],
+      "transition_disagreement_excluding_bootstrap": 90404958,
+      "agreement_fraction_all600": 0.2323351626925998,
+      "agreement_fraction_599_transitions": 0.2323482558006834,
+      "boundary_edge_ratio_to_gt": 1.0,
+      "disagreement_fraction_in_row_band": 0.3486740883511611,
+      "disagreement_fraction_gt_boundary_r3": 0.04088063277503163,
+      "coder_ratio_to_tail": 2.9821383836865576,
+      "scheme_byte_credit_fraction_vs_from_scratch": 0.0,
+      "disagreements_by_gt_class": [
+        0,
+        690753,
+        58413069,
+        1460386,
+        29993221
+      ],
+      "per_gt_class_agreement": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "persist": {
+      "band_rows_128_319": 1522061,
+      "boundary_edges": 2153408,
+      "coder_bytes": 536997,
+      "components_by_residual_symbol": [
+        3914,
+        64671,
+        43403,
+        17135,
+        10354,
+        5494
+      ],
+      "confusion_pred_rows_gt_cols": [
+        [
+          26737154,
+          407737,
+          202951,
+          56107,
+          153166
+        ],
+        [
+          407476,
+          278292,
+          762,
+          1273,
+          1480
+        ],
+        [
+          106428,
+          1036,
+          58147335,
+          59756,
+          0
+        ],
+        [
+          53397,
+          1664,
+          62021,
+          1343222,
+          143
+        ],
+        [
+          102916,
+          2024,
+          0,
+          28,
+          29838432
+        ]
+      ],
+      "disagreement": 1620365,
+      "first_frame_coder_raw_rle_bytes": 1049,
+      "gt_boundary_r0": 804705,
+      "gt_boundary_r3": 1167316,
+      "per_class": [
+        {
+          "artifacts": [
+            {
+              "bytes": 247003,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_0.erl",
+              "sha256": "7ab2468159cb5e1514219d011f3f2c616f26678471dc3a61bf064e3b1a10444a"
+            },
+            {
+              "bytes": 247003,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_0.repeat.erl",
+              "sha256": "7ab2468159cb5e1514219d011f3f2c616f26678471dc3a61bf064e3b1a10444a"
+            }
+          ],
+          "bytes": 247003,
+          "class": 0,
+          "raw_rle_bytes": 354880
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 172062,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_1.erl",
+              "sha256": "fdcf74373f6c94ee77cdd90285d5f2e507ef55841b0c90a13b8c3c4b11a07c0c"
+            },
+            {
+              "bytes": 172062,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_1.repeat.erl",
+              "sha256": "fdcf74373f6c94ee77cdd90285d5f2e507ef55841b0c90a13b8c3c4b11a07c0c"
+            }
+          ],
+          "bytes": 172062,
+          "class": 1,
+          "raw_rle_bytes": 270921
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 57763,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_2.erl",
+              "sha256": "da8e8cdc952caeba580306dd0c6fa5dc773389b0c497ba401e618669bf597416"
+            },
+            {
+              "bytes": 57763,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_2.repeat.erl",
+              "sha256": "da8e8cdc952caeba580306dd0c6fa5dc773389b0c497ba401e618669bf597416"
+            }
+          ],
+          "bytes": 57763,
+          "class": 2,
+          "raw_rle_bytes": 84509
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 42567,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_3.erl",
+              "sha256": "23d54b8850b39d7a8ca4c8248194d465afaf354ec7bc3d7825b25849bd184b11"
+            },
+            {
+              "bytes": 42567,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_3.repeat.erl",
+              "sha256": "23d54b8850b39d7a8ca4c8248194d465afaf354ec7bc3d7825b25849bd184b11"
+            }
+          ],
+          "bytes": 42567,
+          "class": 3,
+          "raw_rle_bytes": 75469
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 17602,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_4.erl",
+              "sha256": "3ff72262ed0ff8703999f945adf437f1f04273b17e5676d192e8e51f0758ebb7"
+            },
+            {
+              "bytes": 17602,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/persist_4.repeat.erl",
+              "sha256": "3ff72262ed0ff8703999f945adf437f1f04273b17e5676d192e8e51f0758ebb7"
+            }
+          ],
+          "bytes": 17602,
+          "class": 4,
+          "raw_rle_bytes": 22115
+        }
+      ],
+      "transition_disagreement_excluding_bootstrap": 1467894,
+      "agreement_fraction_all600": 0.9862639957004123,
+      "agreement_fraction_599_transitions": 0.9875357346065057,
+      "boundary_edge_ratio_to_gt": 1.3293872889465075,
+      "disagreement_fraction_in_row_band": 0.9393321875009643,
+      "disagreement_fraction_gt_boundary_r3": 0.7204031190503374,
+      "coder_ratio_to_tail": 4.4841675434641015,
+      "scheme_byte_credit_fraction_vs_from_scratch": -0.5036752043413615,
+      "disagreements_by_gt_class": [
+        670217,
+        412461,
+        265734,
+        117164,
+        154789
+      ],
+      "per_gt_class_agreement": [
+        0.9755461040024598,
+        0.40288207217341077,
+        0.9954507783181192,
+        0.9197718959234066,
+        0.9948392004980059
+      ]
+    },
+    "warp": {
+      "band_rows_128_319": 1523051,
+      "boundary_edges": 2171934,
+      "coder_bytes": 542248,
+      "components_by_residual_symbol": [
+        4202,
+        65221,
+        44047,
+        17270,
+        10400,
+        5494
+      ],
+      "confusion_pred_rows_gt_cols": [
+        [
+          26740162,
+          411424,
+          204528,
+          54043,
+          153146
+        ],
+        [
+          411206,
+          274650,
+          766,
+          1207,
+          1474
+        ],
+        [
+          104500,
+          1032,
+          58144113,
+          59020,
+          0
+        ],
+        [
+          48587,
+          1623,
+          63662,
+          1346088,
+          169
+        ],
+        [
+          102916,
+          2024,
+          0,
+          28,
+          29838432
+        ]
+      ],
+      "disagreement": 1621355,
+      "first_frame_coder_raw_rle_bytes": 1049,
+      "gt_boundary_r0": 811849,
+      "gt_boundary_r3": 1173190,
+      "per_class": [
+        {
+          "artifacts": [
+            {
+              "bytes": 249176,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_0.erl",
+              "sha256": "6f9ee2f11276f0eab2c50d5bdacd69ad3d2b5ca93bd78f23348745404240cdd9"
+            },
+            {
+              "bytes": 249176,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_0.repeat.erl",
+              "sha256": "6f9ee2f11276f0eab2c50d5bdacd69ad3d2b5ca93bd78f23348745404240cdd9"
+            }
+          ],
+          "bytes": 249176,
+          "class": 0,
+          "raw_rle_bytes": 356418
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 174473,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_1.erl",
+              "sha256": "5936f0d2d1401acdb2a066dfa672a9d10cd1bf7d562a9d177963287f9216df2a"
+            },
+            {
+              "bytes": 174473,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_1.repeat.erl",
+              "sha256": "5936f0d2d1401acdb2a066dfa672a9d10cd1bf7d562a9d177963287f9216df2a"
+            }
+          ],
+          "bytes": 174473,
+          "class": 1,
+          "raw_rle_bytes": 273819
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 58350,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_2.erl",
+              "sha256": "a4ec0722fd567d37df1d0472c235bb97428346da9aa0f9f519b2de7e3876de26"
+            },
+            {
+              "bytes": 58350,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_2.repeat.erl",
+              "sha256": "a4ec0722fd567d37df1d0472c235bb97428346da9aa0f9f519b2de7e3876de26"
+            }
+          ],
+          "bytes": 58350,
+          "class": 2,
+          "raw_rle_bytes": 85447
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 42647,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_3.erl",
+              "sha256": "6b7b4d6507ff7f7277f4be4b1096ca47e82f7fa92c3cbe7d00cd8930f9a6098b"
+            },
+            {
+              "bytes": 42647,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_3.repeat.erl",
+              "sha256": "6b7b4d6507ff7f7277f4be4b1096ca47e82f7fa92c3cbe7d00cd8930f9a6098b"
+            }
+          ],
+          "bytes": 42647,
+          "class": 3,
+          "raw_rle_bytes": 75896
+        },
+        {
+          "artifacts": [
+            {
+              "bytes": 17602,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_4.erl",
+              "sha256": "3ff72262ed0ff8703999f945adf437f1f04273b17e5676d192e8e51f0758ebb7"
+            },
+            {
+              "bytes": 17602,
+              "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/retained/warp_4.repeat.erl",
+              "sha256": "3ff72262ed0ff8703999f945adf437f1f04273b17e5676d192e8e51f0758ebb7"
+            }
+          ],
+          "bytes": 17602,
+          "class": 4,
+          "raw_rle_bytes": 22115
+        }
+      ],
+      "transition_disagreement_excluding_bootstrap": 1468884,
+      "agreement_fraction_all600": 0.9862556033664279,
+      "agreement_fraction_599_transitions": 0.987527328261947,
+      "boundary_edge_ratio_to_gt": 1.3408241503842948,
+      "disagreement_fraction_in_row_band": 0.9393692312911115,
+      "disagreement_fraction_gt_boundary_r3": 0.7235861362872412,
+      "coder_ratio_to_tail": 4.528015765652921,
+      "scheme_byte_credit_fraction_vs_from_scratch": -0.5183788218624956,
+      "disagreements_by_gt_class": [
+        667209,
+        416103,
+        268956,
+        114298,
+        154789
+      ],
+      "per_gt_class_agreement": [
+        0.9756558554996027,
+        0.39760956521361474,
+        0.995395619428933,
+        0.9217343907706592,
+        0.9948392004980059
+      ]
+    }
+  },
+  "cells": 117964800,
+  "n": 600,
+  "own_argmax_gt_mismatches": 12540,
+  "own_tokens_gt_mismatches": 17631,
+  "pose_and_calibration_extra_bytes": 7224,
+  "receiver_valid": false,
+  "score_claim": false,
+  "selection_mode": "all_scored_pairs_0_through_599",
+  "bounds": [
+    {
+      "D": 6270,
+      "conservative_log2_N": 28994,
+      "conservative_log2_ball_upper": "14329.903282517945507015264133514064",
+      "conservative_lower_bits_certified": 14664,
+      "conservative_lower_bytes": 1833.0,
+      "groups": 12640,
+      "mutable_sites": 104811,
+      "natural_log2_N_interval": [
+        "61369.740371312641926012408808166987",
+        "61369.740371312641926012502437264896"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "34238.220114445141578002242600284650",
+        "34238.220114445141578002376884127668"
+      ],
+      "natural_lower_bits_certified": 27131,
+      "natural_lower_bytes": 3391.375,
+      "natural_minimax_lower_bits_certified": 27131,
+      "qmax": 2,
+      "switches": 28994
+    },
+    {
+      "D": 12540,
+      "conservative_log2_N": 28994,
+      "conservative_log2_ball_upper": "21840.130594921372590805155180412559",
+      "conservative_lower_bits_certified": 7153,
+      "conservative_lower_bytes": 894.125,
+      "groups": 12640,
+      "mutable_sites": 104811,
+      "natural_log2_N_interval": [
+        "61369.740371312641926012408808166987",
+        "61369.740371312641926012502437264896"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "55367.645382060101946012599315427625",
+        "55367.645382060101946012699316683319"
+      ],
+      "natural_lower_bits_certified": 6002,
+      "natural_lower_bytes": 750.25,
+      "natural_minimax_lower_bits_certified": 7153,
+      "qmax": 2,
+      "switches": 28994
+    },
+    {
+      "D": 25080,
+      "conservative_log2_N": 28994,
+      "conservative_log2_ball_upper": "28611.699580964314785200790722549717",
+      "conservative_lower_bits_certified": 382,
+      "conservative_lower_bytes": 47.75,
+      "groups": 12640,
+      "mutable_sites": 104811,
+      "natural_log2_N_interval": [
+        "61369.740371312641926012408808166987",
+        "61369.740371312641926012502437264896"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "83196.741939491100859626103821174923",
+        "83196.741939491100859626197348555310"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 382,
+      "qmax": 2,
+      "switches": 28994
+    }
+  ],
+  "per_class_bounds_D12540": [
+    {
+      "D": 12540,
+      "conservative_log2_N": 8061,
+      "conservative_log2_ball_upper": "8061",
+      "conservative_lower_bits_certified": 0,
+      "conservative_lower_bytes": 0.0,
+      "groups": 4279,
+      "mutable_sites": 25370,
+      "natural_log2_N_interval": [
+        "15299.196089966819295338507657897801",
+        "15299.196089966819295338644196625058"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "25365.155461715355206047707778138665",
+        "25365.155461715355206047848216635572"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 0,
+      "qmax": 2,
+      "switches": 8061
+    },
+    {
+      "D": 12540,
+      "conservative_log2_N": 15200,
+      "conservative_log2_ball_upper": "14862.477468429102900058565811435554",
+      "conservative_lower_bits_certified": 337,
+      "conservative_lower_bytes": 42.125,
+      "groups": 4759,
+      "mutable_sites": 61806,
+      "natural_log2_N_interval": [
+        "35790.408538480758402018999395059428",
+        "35790.408538480758402019117237702602"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "44967.218655805159867029632394086260",
+        "44967.218655805159867029766813765909"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 337,
+      "qmax": 2,
+      "switches": 15200
+    },
+    {
+      "D": 12540,
+      "conservative_log2_N": 3113,
+      "conservative_log2_ball_upper": "3113",
+      "conservative_lower_bits_certified": 0,
+      "conservative_lower_bytes": 0.0,
+      "groups": 1770,
+      "mutable_sites": 9407,
+      "natural_log2_N_interval": [
+        "5718.4161542559539387042751908857229",
+        "5718.4161542559539387043924130939271"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "9407",
+        "9407"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 0,
+      "qmax": 2,
+      "switches": 3113
+    },
+    {
+      "D": 12540,
+      "conservative_log2_N": 1518,
+      "conservative_log2_ball_upper": "1518",
+      "conservative_lower_bits_certified": 0,
+      "conservative_lower_bytes": 0.0,
+      "groups": 1193,
+      "mutable_sites": 4726,
+      "natural_log2_N_interval": [
+        "2530.0560570813697239237927510991870",
+        "2530.0560570813697239239432072507924"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "4726",
+        "4726"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 0,
+      "qmax": 2,
+      "switches": 1518
+    },
+    {
+      "D": 12540,
+      "conservative_log2_N": 1070,
+      "conservative_log2_ball_upper": "1070",
+      "conservative_lower_bits_certified": 0,
+      "conservative_lower_bytes": 0.0,
+      "groups": 610,
+      "mutable_sites": 3425,
+      "natural_log2_N_interval": [
+        "1990.9249378329177480605245104458986",
+        "1990.9249378329177480606068959456139"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "3425",
+        "3425"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 0,
+      "qmax": 2,
+      "switches": 1070
+    }
+  ],
+  "source_result": {
+    "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/RESULT.json",
+    "sha256": "e66ebe5f6e78e107e88d016c3be76948b5e2cfda75bdd2f5d5d3a385c40a1612"
+  }
+}

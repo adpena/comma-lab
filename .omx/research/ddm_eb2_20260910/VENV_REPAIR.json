@@ -1,0 +1,83 @@
+{
+  "reason": "Serializer isolated-root venv canary rc20; no Git object write was attempted. Real venv uses verified canonical packages via standard pth. uv Python copy additionally needs its rpath-relative libpython dylib, now copied and hashed.",
+  "commands": [
+    [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "-m",
+      "venv",
+      "--copies",
+      "--without-pip",
+      ".venv"
+    ],
+    [
+      "copy2",
+      "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/libpython3.13.dylib",
+      "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/lib/libpython3.13.dylib"
+    ]
+  ],
+  "ruff_source": "/Users/adpena/Projects/pact/.venv/bin/ruff",
+  "shared_package_path": "/Users/adpena/Projects/pact/.venv/lib/python3.13/site-packages",
+  "files": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/.gitignore",
+      "bytes": 69,
+      "sha256": "36692e1840f82f75adce103fd03e65b1eaa35f798c885b3b545e3abc14ffcbf0"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/pyvenv.cfg",
+      "bytes": 388,
+      "sha256": "fd773f876e1cbe237f679589c780056f31d6d0485f3795d36319b18575d18872"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/lib/libpython3.13.dylib",
+      "bytes": 17155312,
+      "sha256": "5a1d60557aebf1ea3e7847977f63b4cbc1f605ebd78afac2559ab7a57cbcb349"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/python3.13",
+      "bytes": 49968,
+      "sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/python",
+      "bytes": 49968,
+      "sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/python3",
+      "bytes": 49968,
+      "sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/activate.csh",
+      "bytes": 957,
+      "sha256": "ce346dea6ee0f6b9aaf94ca18dd1a4b40498055f416249cfdb0ec53c8b2a9c08"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/Activate.ps1",
+      "bytes": 9031,
+      "sha256": "eb8ce20f580877d300c4fed60a7f36daa18715d35c50bb3596d6995d023b4ffe"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/activate.fish",
+      "bytes": 2228,
+      "sha256": "078d75fc2441e0de6ed81e18fe7cfa9cb23e9d872b08d6d2e2eec07f06cbe4f0"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/activate",
+      "bytes": 2244,
+      "sha256": "94e381562df4daa9fc3da7cf5e1f54d37d9d323c048c3707cecf35da4593ecf6"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/bin/ruff",
+      "bytes": 23885248,
+      "sha256": "1edd2e6e57286bdddedb1fb55493a91dc17f42838f3d6be488ded7cfe2a4f3a1"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_eb2_conditional_bound/worktree/.venv/lib/python3.13/site-packages/pact_canonical_dependencies.pth",
+      "bytes": 63,
+      "sha256": "a24c017bfc6f6149fb9fd9b732189015a59db4316e5c2e42066f93b743b0ee2f"
+    }
+  ],
+  "retention": "KEEP reproducible environment until landing harvest; no payload, source or shared environment was moved/deleted."
+}

@@ -1,0 +1,15 @@
+{
+  "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw.MOVED.json",
+  "manifest": {
+    "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+    "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+    "bytes": 3662409600,
+    "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+    "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+    "moved_at_utc": "2026-09-10T04:53:03Z"
+  },
+  "destination_exists": true,
+  "bytes_verified": true,
+  "sha256_verified": true,
+  "resolution": "read moved_to directly; no symlink, source mutation, deletion, or raw decode"
+}
