@@ -1,0 +1,37 @@
+{
+  "schema": "ddm_cpx1.recall.v1",
+  "equations": {
+    "command": ".venv/bin/python tools/list_canonical_equations.py --json",
+    "rows": 483,
+    "query": "cpu.{0,30}refus|policy.adjudicat|phantom.axis|runtime.{0,20}digest",
+    "hits": [],
+    "raw_sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+  },
+  "searches": [
+    {
+      "scope": "all .omx/research markdown",
+      "query": "cpu.{0,30}refus|policy.adjudicat|raw_auth_eval_does_not_verify_submission_policy_gates|runtime.{0,20}digest",
+      "output": "RECALL_RESEARCH.txt"
+    },
+    {
+      "scope": "all .omx/research JSON and JSONL",
+      "query": "cpu.axis.refusal|REFUSED-BY-DESIGN|fc-01M25W34DGHHJES03531X3VDXV",
+      "output": "RECALL_RECEIPT_PATHS.txt"
+    },
+    {
+      "scope": "docs, canonical research index, sub015 DAG, state task glob",
+      "query": "cpu.{0,30}refus|policy.adjudicat|phantom.axis|runtime.{0,20}digest",
+      "output": "RECALL_DESIGN_GRAPH_LEDGER.txt"
+    },
+    {
+      "scope": "canonical_task_status.jsonl and operator_p0_ledger.jsonl",
+      "query": "cpx1|swp2|cpu.{0,30}refus|policy.adjudicat|runtime.{0,20}digest",
+      "output": "RECALL_TASK_LEDGER.txt"
+    },
+    {
+      "scope": "all research spec and SPEC paths",
+      "query": "cpu.{0,30}refus|policy.adjudicat|runtime.{0,20}digest",
+      "output": "RECALL_SPECS.txt"
+    }
+  ]
+}

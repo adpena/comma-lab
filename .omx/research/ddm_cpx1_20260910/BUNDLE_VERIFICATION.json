@@ -1,0 +1,31 @@
+{
+  "verified": true,
+  "commit": "67d733ef87253153cd175a010eadb1f2a43f7024",
+  "files_verified": {
+    ".omx/research/ddm_cpx1_20260910/BOUNDARY_VERIFICATION.json": "6b8d02b2303f4c1ab92f2ac08c6ede4e090b989ad984b0d3fb76296c71fa90cc",
+    ".omx/research/ddm_cpx1_20260910/COMPLIANCE.json": "3fe480751310a125b09e92c9a9b8b5765713f1b353cd98c6657185dbf4dc4207",
+    ".omx/research/ddm_cpx1_20260910/COMPLIANCE.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".omx/research/ddm_cpx1_20260910/COMPLIANCE.stdout.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".omx/research/ddm_cpx1_20260910/COMPLIANCE_COMMAND.json": "489bf2be49811286fe778c2a26c7f1dfe29b56da967dc546e1740faaf5bf3a6f",
+    ".omx/research/ddm_cpx1_20260910/COMPLIANCE_SUMMARY.json": "c30043408840100c5dd5491a33ceaf3865393d25aa9559e219cddc226ffc8567",
+    ".omx/research/ddm_cpx1_20260910/EXISTING_TESTS.txt": "bb1455715565c73ca9f0364c9e6681d9d59d683643296d2c4d303c0a4656f712",
+    ".omx/research/ddm_cpx1_20260910/FIRE_ORDERS.json": "a9301ccc17bbd9e6e585349e489456d9d39b89ce08c7c5a6805226247a99cf4e",
+    ".omx/research/ddm_cpx1_20260910/INDEX_BEFORE.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".omx/research/ddm_cpx1_20260910/INPUT_BINDINGS.json": "92eacc8382e73395032c3d6f1db3262b287bb874cdb414ef72ed3969139744de",
+    ".omx/research/ddm_cpx1_20260910/RECALL_DESIGN_GRAPH_LEDGER.txt": "c56222be33034bd3a41aa4e4379461bf9022b19ec145b97d54c5a75c0d7f6afd",
+    ".omx/research/ddm_cpx1_20260910/RECALL_EQUATIONS.json": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+    ".omx/research/ddm_cpx1_20260910/RECALL_RECEIPT_PATHS.txt": "9ecd33b4866bcf6f84c52fbbaba9d9cbc46f8fd8e895cae0237b702e0e867d95",
+    ".omx/research/ddm_cpx1_20260910/RECALL_RESEARCH.txt": "994c2eb00902c831b20587c9f5af4f9bde224be1e291b626a5a94fd657f17560",
+    ".omx/research/ddm_cpx1_20260910/RECALL_SEARCHES.json": "15bb2dae1e2db3151465c5c66d08c4415c00b664addbaf730986a428584ee616",
+    ".omx/research/ddm_cpx1_20260910/RECALL_SPECS.txt": "26c990ad841698cf57f6f2f85270d33ff7bfa80f61aea99adbe7710429f27566",
+    ".omx/research/ddm_cpx1_20260910/RECALL_TASK_LEDGER.txt": "4fcade4d1d592e025e288edc15d63f84a016a239f92d38d7316c8c2f8332e09b",
+    ".omx/research/ddm_cpx1_20260910/RUFF.txt": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    ".omx/research/ddm_cpx1_20260910/RUNTIME_COMPARISON.json": "d2a4a30d985b163d57518f9582bf1da92c291b40df0eb2b3f02ce4603b8d72f3",
+    ".omx/research/ddm_cpx1_20260910/STOP_RECEIPT.json": "a09e6f48692665b849165a3c72d5568d8ba73bb51e5b80c04c81287defff4ccb",
+    ".omx/research/ddm_cpx1_checker_cuda_only_refusal_adjudication_path_20260910.md": "5a5d83e3932cbe6a31486e1341edc2c902f85785c55f69982c32f8ec5a4e8c69"
+  },
+  "bundle_verify_rc": 0,
+  "index_unchanged": true,
+  "no_coauthor_trailer": true,
+  "first_fetch_ref_error": "Initial assumed ref refs/heads/intended absent; git bundle list-heads resolved actual refs/heads/serializer-fallback before successful fetch."
+}

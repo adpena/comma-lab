@@ -1,0 +1,55 @@
+{
+  "returncode": 1,
+  "passed": 85,
+  "total": 93,
+  "failed": [
+    {
+      "details": "{\"promotion_blockers\": [\"raw_auth_eval_does_not_verify_submission_policy_gates\", \"cpu_leaderboard_reproduction_not_adjudicated\", \"pre_submission_compliance_check_not_recorded\"], \"rank_or_kill_blockers\": [\"raw_auth_eval_not_rank_or_kill_authority\", \"requires_adjudicated_cuda_cpu_policy_review\"]}",
+      "name": "auth_eval_raw_promotion_policy_blockers_absent",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "contest_cpu_auth_eval_score_parseable",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "name": "contest_cpu_auth_eval_archive_sha_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=180466",
+      "name": "contest_cpu_auth_eval_archive_size_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "score_missing, pose_avg_missing, seg_avg_missing, rate_unscaled_missing, archive_size_bytes_missing, canonical_score_source_not_recomputed_from_components, n_samples_missing",
+      "name": "contest_cpu_auth_eval_schema_metric_consistency",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_recorded",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "disallowed=['submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:experiments', 'submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:experiments']",
+      "name": "submission_runtime_imports_within_allowlist",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "strict contest-final packets require --hosted-archive-manifest-json",
+      "name": "hosted_archive_manifest_supplied",
+      "passed": false,
+      "severity": "error"
+    }
+  ]
+}

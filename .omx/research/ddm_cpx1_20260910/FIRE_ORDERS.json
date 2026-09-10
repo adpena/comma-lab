@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ddm_cpx1_matching_refusal_or_policy_amendment",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN / compliance-policy owner",
+    "consumer_store": ".omx/research/ddm_cpx1_20260910/FIRE_ORDERS.json",
+    "fire_trigger": "Harvest of this blocked ddm_cpx1 handoff",
+    "action": "Resolve the archive/runtime mismatch before resuming implementation: provide a retained refusal bound to the exact move-43 archive and runtime, or explicitly amend the charter for a separately proven archive-pin-normalized refusal reuse policy. Correct guard location to inflate.py reached by inflate.sh:83. No dispatch authorized by this fire order.",
+    "blocked_until": "Matching evidence or explicit versioned policy amendment is available",
+    "result_consumer": ".omx/research/ddm_cpx1_checker_cuda_only_refusal_adjudication_path_charter_20260910.md"
+  },
+  {
+    "id": "ddm_cpx1_landing_if_bundle",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": ".omx/research/ddm_cpx1_20260910/SERIALIZER_STATUS.json",
+    "fire_trigger": "Serializer rc 17 with a verified retained bundle",
+    "action": "Land the exact metadata-only blocked-handoff commit using the retained bundle and manifest; do not mark checker implementation complete."
+  }
+]

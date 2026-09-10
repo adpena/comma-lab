@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_cpx1.serializer_status.v1",
+  "returncode": 17,
+  "implementation_completed": false,
+  "manifest": "INTENDED_FILES.json",
+  "fallback_dir": ".omx/research/ddm_cpx1_20260910/serializer",
+  "source_head": "cd7a7e7c03bf21342d2b742cfa15221be72c1912",
+  "fallback_commit": "67d733ef87253153cd175a010eadb1f2a43f7024",
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cpx1_20260910/serializer/20260910T192128.651909Z-98355/intended-commit.bundle",
+  "bundle_sha256": "93b0953ccaf8d71ba434c35d80e828ce03e1b56787a6003ebb4db4f091846402",
+  "bundle_verified": true,
+  "commit_files_verified": 21,
+  "index_unchanged": true,
+  "main_landed": false
+}

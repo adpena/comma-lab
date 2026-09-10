@@ -1,0 +1,14 @@
+{
+  "schema": "ddm_cpx1.boundary_verification.v1",
+  "checked_files": 121,
+  "changed": [],
+  "index_unchanged": true,
+  "new_score_measurements": 0,
+  "new_cpu_metrics": false,
+  "receiver_edits": false,
+  "volume_writes": false,
+  "upstream_writes": false,
+  "modal_calls": 0,
+  "publishing_actions": 0,
+  "source_edits": false
+}

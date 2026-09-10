@@ -1,0 +1,25 @@
+{
+  "schema": "ddm_cpx1.binding_refusal.v1",
+  "disposition": "STOP_CHARTER_BINDING_CONTRACT_UNSATISFIED",
+  "verdict_scope": "INSTANCE",
+  "exact_stop_sentence": "STOP: A genuine submission_policy_adjudication.v1 cannot be produced from this packet’s passed checks because the retained CPU refusal binds a different archive and a different content-only runtime digest.",
+  "retained_refusal_archive": {
+    "sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f",
+    "bytes": 180238
+  },
+  "packet_archive": {
+    "sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+    "bytes": 180466
+  },
+  "retained_call_id": "fc-01M25W34DGHHJES03531X3VDXV",
+  "guard_location": {
+    "shell_call": "inflate.sh:83",
+    "condition": "inflate.py:56: if not torch.cuda.is_available():",
+    "raise": "inflate.py:57-60",
+    "note": "inflate.sh calls the guarded Python entry point; it does not contain the CUDA guard."
+  },
+  "no_cpu_metrics_created": true,
+  "new_refusal_schema_implemented": false,
+  "policy_adjudication_produced": false,
+  "reason": "Cannot meet archive and runtime equality by relabeling the ancestor receipt. No Modal or receiver mutation is authorized by the charter."
+}
