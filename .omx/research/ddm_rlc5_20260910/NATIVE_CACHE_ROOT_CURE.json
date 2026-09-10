@@ -1,0 +1,16 @@
+{
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc4_native_cache.py",
+    "bytes": 2618,
+    "sha256": "3dde7f96f406a5ebbacf985fdf29e630ad33bc1e188798d801fc65e045e5ea9c"
+  },
+  "passes": 2,
+  "actual_failure": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4_failed_native_root/attempts/attempt_0000/run.log",
+    "bytes": 351,
+    "sha256": "6f6b8f046b5f2dd30af43a0402c940434a0fe05df89088a09fcb288e0ad1894c"
+  },
+  "fix": "Parameterize only the owned root via RLC4_NATIVE_ROOT; cache and source must still be within that root, output must still be within TMPDIR, and source/flags/compiler hashes still key the retained library.",
+  "validation": "Both source reviews passed and subsequent literal public shell compiled the real native sources and reached token decoding. No receiver code or contract was changed.",
+  "score_claim": false
+}

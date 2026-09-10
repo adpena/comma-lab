@@ -26,6 +26,9 @@ from tac.decode_wall_clock import measure_receiver_digest, validate_decode_wall_
 ROOT = base.ROOT
 OUT = REPO / ".omx/research/ddm_rlc4_20260910"
 RUNTIME = ROOT / "candidate_runtime"
+ARM_ID = "ddm_rlc4"
+BASE_LABEL = "move42"
+ENCODER_COMMAND = [str(REPO / ".venv/bin/python"), "experiments/ddm_rlc4_rebase.py", "encode", "--resume-from", str(ROOT)]
 
 
 def ref(path):
@@ -79,7 +82,7 @@ def census(endpoints, files):
         raise ValueError("counted rider config differs")
     return write("LITERAL_CENSUS.json", {**endpoints, "verdict": "CLEAR", "rule": 118, "complete": True,
         "files": covered, "literal_occurrences": ref(literal_path), "occurrence_count": len(literals),
-        "review_scope": "RLC1 cure delta on move42; unchanged inherited dependencies are hash-bound, not newly certified as an entire family",
+        "review_scope": f"RLC1 cure delta on {BASE_LABEL}; unchanged inherited dependencies are hash-bound, not newly certified as an entire family",
         "counted_config_bytes": 60, "counted_weights_bytes": 40, "counted_geometry_bytes": 19,
         "parsed_geometry": base.prior.geo.parse_config(config[41:]).tolist(),
         "counted_stream_bytes": len(stream), "tc4_maps": "ABSENT", "whole_receiver_integer": False,
@@ -93,11 +96,14 @@ def risk(endpoints):
     problems, _ = validate_decode_wall_clock(leg, runtime_dir=Path(leg["runtime_dir"]), archive_path=Path(leg["archive_path"]))
     if problems:
         raise ValueError(problems)
-    source = {r[0]: list(r[1:]) for r in seal.prefire_receiver_rows(Path(leg["runtime_dir"]))}
-    candidate = {r[0]: list(r[1:]) for r in seal.prefire_receiver_rows(RUNTIME)}
+    source = {r[0]: list(r[1:]) for r in seal.prefire_risk_receiver_rows(Path(leg["runtime_dir"]))}
+    candidate = {r[0]: list(r[1:]) for r in seal.prefire_risk_receiver_rows(RUNTIME)}
+    definition = seal.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION
+    source_sha = seal.measure_prefire_risk_receiver_digest(Path(leg["runtime_dir"]))
+    candidate_sha = seal.measure_prefire_risk_receiver_digest(RUNTIME)
     delta_path = OUT / "NORMALIZED_RECEIVER_DELTA.json"
-    write(delta_path.name, {"source_receiver_sha256": leg["receiver_sha256"],
-        "candidate_receiver_sha256": endpoints["receiver_sha256"],
+    write(delta_path.name, {"source_receiver_sha256": source_sha,
+        "candidate_receiver_sha256": candidate_sha,
         "files": [{"relative_path": p, "source": source.get(p), "candidate": candidate.get(p)} for p in sorted(source.keys() | candidate.keys())]})
     bp = Path("/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_local.json")
     bd = json.loads(bp.read_text())
@@ -112,10 +118,16 @@ def risk(endpoints):
     seconds = leg["measured_t4_decode_seconds"]
     projection = seconds * (1 + fraction)
     doc = {"schema": seal.PREFIRE_RISK_SCHEMA, "mode": "completed_t4_receiver_delta", "authority": False,
-        "timing_clearance": False, "source_t4_leg": ref(leg_path), "source_receiver": {"sha256": leg["receiver_sha256"]},
-        "candidate_receiver": {"sha256": endpoints["receiver_sha256"]},
+        "timing_clearance": False, "source_t4_leg": ref(leg_path), "source_receiver": {
+            "digest_definition": definition, "sha256": source_sha,
+            "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "t4_direct_sha256": leg["receiver_sha256"]},
+        "candidate_receiver": {"digest_definition": definition, "sha256": candidate_sha},
         "diagnostic_reference_receiver": {"path": str(base.REFERENCE / "candidate_runtime"),
-            "sha256": measure_receiver_digest(base.REFERENCE / "candidate_runtime")},
+            "digest_definition": definition,
+            "sha256": seal.measure_prefire_risk_receiver_digest(base.REFERENCE / "candidate_runtime"),
+            "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "receipt_sha256": measure_receiver_digest(base.REFERENCE / "candidate_runtime")},
         "receiver_delta_manifest": ref(delta_path),
         "base_local_diagnostic": {**ref(bp), "wall_seconds": bd["wall_seconds"], "authority": False, "actual_verdict": "REFUSED"},
         "candidate_local_diagnostics": candidates, "calculation": {"candidate_local_ceiling_seconds": ceiling,
@@ -156,8 +168,8 @@ def receipts():
         payloads.append(payload)
         name = f"ENCODER_EXECUTION_{i}.json"
         write(name, {"n_samples": 600, "completed": True, "payload": payload,
-            "command": [str(REPO / ".venv/bin/python"), "experiments/ddm_rlc4_rebase.py", "encode", "--resume-from", str(ROOT)],
-            "producer_source_commit": commit, "execution_id": f"ddm_rlc4_independent_rc64_state_{i}",
+            "command": ENCODER_COMMAND,
+            "producer_source_commit": commit, "execution_id": f"{ARM_ID}_independent_rc64_state_{i}",
             "execution_scope": "distinct native arithmetic encoder state in one full n600 process; no copied output",
             "source_execution": ref(ROOT / "encode/RESULT.json"), "score_claim": False})
         executions.append(ref(OUT / name))

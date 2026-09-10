@@ -1,0 +1,2 @@
+SEAL: SEAL PREFIRE_INTENT_SCHEMA_REFUSED: candidate_prefire_intent.v1 is not a completed seal
+REFUSED (rc=7): /Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/normal_seal_refusal/FIRE_REFUSED.json

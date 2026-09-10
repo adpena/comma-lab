@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-10T19:15:21.726774+00:00",
+  "research_query": "counted.{0,40}(rider|geometry)|prefire_intent|receiver.delta",
+  "additional_sources": [
+    ".omx/research/ddm_pr13_ratify_prefire_contract_clarifications_20260910.md",
+    "docs/meta_bug_class_catalog.md#418",
+    ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md rate-R19",
+    "tools/codex_arm_queue.py _CHARTER_TEMPLATE detached launch requirement"
+  ],
+  "findings": [
+    "pr13 independently ratifies raw file SHA and size plus canonical digest and exact committed-byte custody before MAIN authorization. Controls will report all identities separately.",
+    "Gate418 excludes the rule118-disqualified move41. Current move43 remains the only base used; no resurrection of an uncounted rider.",
+    "Generic/free versus content-selected/counted distinction in index and DAG does not grant successor timing or score authority.",
+    "Launcher template documents sandbox setpriority rc8 and nice-best-effort remedy; trace successfully used the existing supported option."
+  ],
+  "equation_export_scope": "Full tools/list_canonical_equations.py --json export; no new mathematical law or score anchor measured by this byte/control producer.",
+  "score_claim": false
+}

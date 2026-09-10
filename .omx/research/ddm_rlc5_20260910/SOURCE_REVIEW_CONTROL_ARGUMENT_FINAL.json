@@ -1,0 +1,10 @@
+{
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc5_controls.py",
+    "bytes": 9310,
+    "sha256": "98a2bc679288ab791e5f3572bbe1262515b36d97481d4b9db078c050b4319153"
+  },
+  "post_edit_passes": 2,
+  "finding": "Completed ordinary CLI pairing argv without a waiver; real control returns rc7 PREFIRE_INTENT_SCHEMA_REFUSED with no subprocess attempts. Earlier invalid argv rc2 retained separately.",
+  "score_claim": false
+}

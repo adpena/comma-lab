@@ -1,0 +1,14 @@
+{
+  "bytes_per_path": 3662409600,
+  "certificate": {
+    "bytes": 1777,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RAW_HARDLINK_CERTIFICATE.json",
+    "sha256": "96c2acf789b00e4c08cd8d74b962fd3d21eca21100e42e361682fc95021bbd7a"
+  },
+  "retained_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/parseback/0.raw"
+  ],
+  "same_inode": true,
+  "score_claim": false
+}

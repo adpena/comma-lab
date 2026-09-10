@@ -1,0 +1,2 @@
+SEAL REFUSAL RECEIPT: /Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json.REFUSED.json
+SEAL REFUSED (rc=7): seal invalid: PREFIRE_INTENT_SCHEMA_REFUSED

@@ -1,0 +1,27 @@
+{
+  "orders": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FINAL_HANDOFF.json",
+      "fire_trigger": "Harvest of the verified final serializer bundle or successful serializer commit",
+      "action": "Land the exact verified source and evidence, including the 13773-byte intent, and verify committed intent file SHA and canonical digest."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+      "fire_trigger": "Exact intent bytes committed; live amended validation passes; pointer remains move43; current cost preflight and exclusive MAIN lane claim pass",
+      "action": "Authorize and execute one first-measurement T4 dispatch through the frozen authorization and fire tools."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/first_measurement/MODAL_REMOTE_RESULT.json",
+      "fire_trigger": "Harvest of the authorized same-intent T4 dispatch",
+      "action": "Complete the first-fire lifecycle and consider a frontier packet only if exact net dS is below -2e-5 versus move43 and actual T4 decode is at most 1260 seconds."
+    }
+  ],
+  "score_claim": false,
+  "no_authorization_or_dispatch_performed": true
+}

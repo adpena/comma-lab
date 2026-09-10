@@ -1,0 +1,20 @@
+{
+  "schema": "candidate_seal_fire_refusal.v1",
+  "seal_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+  "refusal_rc": 7,
+  "refusal_reason": "seal invalid: PREFIRE_INTENT_SCHEMA_REFUSED",
+  "seal_validation": {
+    "verdict": "PREFIRE_INTENT_SCHEMA_REFUSED",
+    "ok": false,
+    "seal_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+    "candidate_id": "",
+    "axis": "",
+    "problems": [
+      "candidate_prefire_intent.v1 is not a completed seal"
+    ],
+    "observed": {}
+  },
+  "code": "PREFIRE_INTENT_SCHEMA_REFUSED",
+  "score_claim": false,
+  "promotion_eligible": false
+}

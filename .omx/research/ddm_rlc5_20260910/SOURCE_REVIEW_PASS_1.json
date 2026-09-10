@@ -1,0 +1,15 @@
+{
+  "pass": 1,
+  "scope": [
+    "experiments/ddm_rlc5_run.py",
+    "experiments/ddm_rlc4_rebase.py",
+    "experiments/ddm_rlc4_evidence.py"
+  ],
+  "findings": [
+    "Checked all rebound module globals against actual move43 source paths, field and archive pins. Fresh store compatibility names do not read move42 payloads.",
+    "Compared risk endpoint shapes with unchanged validate_prefire_risk; retained historical chain still uses original legacy receipt digests and amended risk digests separately.",
+    "Checked byte-gate arithmetic, distinct encoder states, per-frame retention, and public no-cache/cold constraints."
+  ],
+  "style_note": "Ruff passes with I001 ignored; import-order-only finding retained to preserve the exact already-bound production source.",
+  "score_claim": false
+}

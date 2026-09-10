@@ -1,0 +1,42 @@
+{
+  "schema": "ddm_rlc5_failed_attempt_relocation.v1",
+  "original_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4",
+  "destination": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4_failed_native_root",
+  "files": [
+    {
+      "relative_path": "INPUTS.json",
+      "bytes": 899,
+      "sha256": "910f965bf9bc17fe7fb5a4db2d138e140e6121c69fa83d4798e726915a300771"
+    },
+    {
+      "relative_path": "attempts/attempt_0000/COMMAND.json",
+      "bytes": 4623,
+      "sha256": "de1b433cc9cf2667154f85d7d6284e75a3de242efbb4d5999cf310b614cf06e3"
+    },
+    {
+      "relative_path": "attempts/attempt_0000/PROCESS.json",
+      "bytes": 168,
+      "sha256": "d49292bf12dc7f065b7389db67964de02df815f6f0b15c25d68343dcdcd6ef32"
+    },
+    {
+      "relative_path": "attempts/attempt_0000/run.log",
+      "bytes": 351,
+      "sha256": "6f6b8f046b5f2dd30af43a0402c940434a0fe05df89088a09fcb288e0ad1894c"
+    },
+    {
+      "relative_path": "data/p",
+      "bytes": 180306,
+      "sha256": "6a66cf11fce2eee544ed3a578efc2201b85555008bfb07091c4f440e1a17f78d"
+    },
+    {
+      "relative_path": "file_list.txt",
+      "bytes": 7,
+      "sha256": "78435bc8b51e55c10427a9ee37298160ab3a1724e33187bb755689ec1bc8ec54"
+    }
+  ],
+  "bytes": 186354,
+  "tree_sha256": "a37fee42f30fc8c592905491e83d659aef6d6768e5ce3cdbf6a8786db307f1c9",
+  "reason": "Native compiler-cache ownership guard refused the move43 root before any C compile, token decode, checkpoint or raw output. Preserve the complete failed attempt and launch a new cold generation with explicit owned-root binding.",
+  "old_cache_source_sha256": "7cad04c7ba47df3ac7baa6e6713d268e7a50bb332ff851eeaeecc0cae47d7135",
+  "score_claim": false
+}

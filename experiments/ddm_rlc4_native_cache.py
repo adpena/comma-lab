@@ -19,7 +19,7 @@ def fact(path):
 
 
 def main():
-    root = Path("/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42").resolve()
+    root = Path(os.environ.get("RLC4_NATIVE_ROOT", "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42")).resolve()
     cache = Path(os.environ["RLC4_NATIVE_CACHE"]).resolve()
     argv = sys.argv[1:]
     if not cache.is_relative_to(root) or len(argv) < 3 or argv[-2] != "-o":

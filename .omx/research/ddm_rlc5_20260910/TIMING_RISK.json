@@ -1,0 +1,74 @@
+{
+  "authority": false,
+  "base_local_diagnostic": {
+    "actual_verdict": "REFUSED",
+    "authority": false,
+    "bytes": 230286,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_local.json",
+    "sha256": "9cefbac9f1a003a380d817308f070b6122b99e94303bb78eeac7304fc3bc43fd",
+    "wall_seconds": 797.1459791249945
+  },
+  "calculation": {
+    "candidate_local_ceiling_seconds": 831.502915124991,
+    "hard_timeout_seconds": 1800.0,
+    "local_cost_fraction_upper": 0.043099930125356956,
+    "passed": true,
+    "policy_limit_seconds": 1260.0,
+    "source_t4_seconds": 990.053829427,
+    "t4_risk_ceiling_seconds": 1032.7250802956457
+  },
+  "candidate_local_diagnostics": [
+    {
+      "actual_verdict": "REFUSED",
+      "authority": false,
+      "bytes": 228309,
+      "cold": true,
+      "n_samples": 600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/rlc1_g3_threads4_local.json",
+      "sha256": "b8efd88ceb21f48f78b57a3add3b90a665ea7258c3fed44449d306fed37986b9",
+      "wall_seconds": 829.0324737499905
+    },
+    {
+      "actual_verdict": "REFUSED",
+      "authority": false,
+      "bytes": 235786,
+      "cold": true,
+      "n_samples": 600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/rlc1_g4_threads4_local.json",
+      "sha256": "a8dc34ebd3913031eb6da7c2008c0355a8732311ad610f490041f3f582f98db7",
+      "wall_seconds": 831.502915124991
+    }
+  ],
+  "candidate_receiver": {
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+  },
+  "diagnostic_reference_receiver": {
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+    "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+    "receipt_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+    "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+  },
+  "mode": "completed_t4_receiver_delta",
+  "receiver_delta_manifest": {
+    "bytes": 14685,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMALIZED_RECEIVER_DELTA.json",
+    "sha256": "c161b8653c7b002128703208a6147a1e75370a27e6b2bd33b9ea3f904f82c11d"
+  },
+  "risk_sha256": "9502c26501ad7a394f3088413d46cb7000c8226ed1feefccab6203218cf9c406",
+  "schema": "candidate_prefire_timing_risk.v1",
+  "score_claim": false,
+  "source_receiver": {
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "sha256": "b37ac3f122188a6b9d990b072b0f4f45be08ffb5e9048f84877c63f5f82c58ab",
+    "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+    "t4_direct_sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf"
+  },
+  "source_t4_leg": {
+    "bytes": 1553,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+    "sha256": "ed929b24cc876bf8ffabc3004b856decbb5e73d0fee13c1d3c87d91d659f9521"
+  },
+  "timing_clearance": false
+}

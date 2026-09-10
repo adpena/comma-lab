@@ -1,0 +1,57 @@
+[
+  {
+    "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+    "bytes": 439297,
+    "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/AGENTS.md",
+    "bytes": 439297,
+    "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+    "bytes": 5784,
+    "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+    "bytes": 15577,
+    "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/state/main_hot_state.md",
+    "bytes": 11101,
+    "sha256": "675b6024e2b0bd6fd65095e225f3b8575632f445818094faf17dfb1638c9b169"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "bytes": 19596,
+    "sha256": "96e7832f22b92d7b319ac73843d2d3cf80ce06abf4b38998a955757aaef0e4dd"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_rebase_counted_rider_cure_onto_move43_amended_prefire_intent_charter_20260910.md",
+    "bytes": 7009,
+    "sha256": "e74299d464ed8a42a312b4937c32cec007166714a3bb2a0773409485e5900739"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+    "bytes": 4124,
+    "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_20260910.md",
+    "bytes": 15264,
+    "sha256": "54bcc83a81c5ff36516cdcf85d529036e36338ea5e097c452e88c79e5a2b1e1e"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr14_adjudicate_manifest_in_normalized_receiver_digest_20260910.md",
+    "bytes": 48452,
+    "sha256": "6e1732baea1912731fef6a53abca0cb94faf2e9440accc304dd9b34e593bade9"
+  },
+  {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+    "bytes": 5090,
+    "sha256": "a3358944ec9978ddfbe8b45d265bcc572deef64732674ab7054a086fb90a0f4d"
+  }
+]

@@ -1,0 +1,269 @@
+{
+  "schema": "candidate_prefire_intent.v1",
+  "state": "PREFIRE_FIRST_MEASUREMENT_ONLY",
+  "candidate_id": "ddm_rlc2_counted_cure_move43_rlc5",
+  "created_at_utc": "2026-09-10T19:53:07.920973+00:00",
+  "created_by": "candidate-prefire-producer",
+  "producer_source_commit": "582d9a3d873ad5d9d06e2d8858aa76ae8543abc7",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "timing_clearance": false,
+  "contract": {
+    "adjudication_memo": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+      "bytes": 42309,
+      "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+    },
+    "implementation_commit": "a475431997d0e0c66563448524e44c2ca8ddb384",
+    "implementation_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+      "bytes": 2072,
+      "sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d"
+    },
+    "implementation_manifest_sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d",
+    "amendment": {
+      "schema": "prefire_contract_amendment.v1",
+      "amendment_id": "ddm_pr14_manifest_in_receiver_risk_digest",
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr14_adjudicate_manifest_in_normalized_receiver_digest_20260910.md",
+        "bytes": 48452,
+        "sha256": "6e1732baea1912731fef6a53abca0cb94faf2e9440accc304dd9b34e593bade9"
+      },
+      "definition_change": {
+        "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+        "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+        "excluded_relative_paths": [
+          "MANIFEST.sha256"
+        ],
+        "raw_manifest_still_required": true,
+        "executable_difference_policy": "REFUSE"
+      },
+      "reference_receiver": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+        "legacy_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+        "amended_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+        "included_file_count": 49,
+        "raw_input_pinset_sha256": "663b36aed2656b9e56fb5c8867b8ebd083e8b241a6d8741d091c2762318f9f3d",
+        "excluded_manifest": {
+          "bytes": 4570,
+          "sha256": "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
+        }
+      },
+      "candidate_receiver": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime",
+        "legacy_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+        "amended_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+        "included_file_count": 49,
+        "raw_input_pinset_sha256": "046621cb5c4c1d5c67f2ab2d4857ee750b97e885b95713930acfcc4c46f3a9dc",
+        "excluded_manifest": {
+          "bytes": 4570,
+          "sha256": "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
+        }
+      },
+      "implementation_commit": "d05c2fbd27c7c2eeddd7cd681b4bd045cac30800",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+        "bytes": 1982,
+        "sha256": "a6646480b5e5c122aa32aadd33e6569bdcfab8ae1e22cbf010908e0e5dda2617"
+      },
+      "score_claim": false
+    }
+  },
+  "candidate": {
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+      "bytes": 180406,
+      "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    },
+    "runtime": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+      "sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 51,
+      "total_bytes": 1009765
+    },
+    "normalized_receiver": {
+      "digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+      "sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b"
+    },
+    "receiver_pins": [
+      {
+        "relative_path": "inflate.py",
+        "bytes": 2735,
+        "sha256": "139a198801e498465a90e2cd74bfd8c17582e4a4cec5e0749786c4aa0b71b764"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 3380,
+        "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+      }
+    ],
+    "archive_member": null
+  },
+  "admit_bar": {
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold",
+    "net_dS_threshold": -2e-05,
+    "pointer_axis": "contest_cuda",
+    "pointer_score_at_intent": 0.1372848557085275,
+    "pointer_archive_sha256_at_intent": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+    "pointer_tolerance_abs": 0.0,
+    "require_pointer_archive_identity": true,
+    "rate_only_precheck": {
+      "raw_identity_required": true,
+      "normalizer_bytes": 37545489,
+      "derived_net_dS": -3.995153718733028e-05,
+      "passed": true
+    }
+  },
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+        "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/candidate/data",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/candidate/output",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/candidate/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "scope": "ordinary declared-axis gate; not full decode",
+        "seconds": 3.2411464169999817,
+        "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/frontier/data",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/frontier/output",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/frontier/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime",
+        "scope": "ordinary declared-axis gate; not full decode",
+        "seconds": 3.6008916670107283,
+        "tree_sha256": "68fae56a0709ebc435e1fb99019beb16d97e2a30948a44a33866f999e6032a8c"
+      }
+    },
+    "public_path_probe_seconds": 180,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+        "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "scope": "setup observer only; actual full public twins are separate",
+        "seconds": 2.292588959011482,
+        "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime",
+        "scope": "setup observer only; actual full public twins are separate",
+        "seconds": 2.5489170830114745,
+        "tree_sha256": "68fae56a0709ebc435e1fb99019beb16d97e2a30948a44a33866f999e6032a8c"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "evidence": {
+    "candidate_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_MANIFEST.json",
+      "bytes": 9444,
+      "sha256": "961874ffd9086b0555459b6bcdc737d69f3fa3a2d13a15c366a10564f1bcb7ee"
+    },
+    "manifest_validation": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/MANIFEST_VALIDATION.json",
+      "bytes": 559,
+      "sha256": "161ea134067c9981f50a933d3a6f2490c115acaf782223b17633e5a62bb81e1e"
+    },
+    "twin_encode": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/TWIN_ENCODE.json",
+      "bytes": 1189,
+      "sha256": "7641f73fbcaae612dde09368a933cc8c168da3b385e18c3bde46113539d62cab"
+    },
+    "archive_parseback": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/ARCHIVE_PARSEBACK.json",
+      "bytes": 657,
+      "sha256": "648ab1688c978bf2418b3be0eaf4fddfe2a83bfb05aa8ea3005ca3c9c0e796f9"
+    },
+    "raw_identity_n600": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RAW_IDENTITY_N600.json",
+      "bytes": 1770,
+      "sha256": "c7b53bd52e40924c0efae1d8d8f5761d6ad9eea9b832f4d7d966c10214d67e37"
+    },
+    "literal_census": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/LITERAL_CENSUS.json",
+      "bytes": 13410,
+      "sha256": "e94b5f4b602d9be1eab8096d45647a368c536a4704548b1d8f53b223bd6a08bd"
+    },
+    "retention_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RETENTION_MANIFEST.json",
+      "bytes": 3538,
+      "sha256": "d6bc11786605573ed14b4f114eb0afac6c95f57ae069cbd5a317270f3a90ce24"
+    },
+    "timing_risk": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/TIMING_RISK.json",
+      "bytes": 3239,
+      "sha256": "df44353242db8d7a81b4429ec23a777b8120af49272f16be1c8f3a923d92ca1e"
+    }
+  },
+  "dispatch_policy": {
+    "axis": "contest_cuda",
+    "gpu": "T4",
+    "scorer_device": "cuda",
+    "inflate_device": "auto",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "modal_function_timeout_seconds": 4800,
+    "poller_deadline_seconds": 5400,
+    "n_samples": 600,
+    "cold_required": true,
+    "checkpoint_resume_required": false,
+    "token_cache_status_required": "DISABLED",
+    "source_snapshot_required": true,
+    "claim_policy": "require_active",
+    "max_paid_dispatches": 1,
+    "currency": "USD",
+    "maximum_total_cost_usd_exclusive": 5.0,
+    "cost_preflight_max_age_seconds": 86400
+  },
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/twin0.member",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/twin1.member",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/ARCHIVE_PARSEBACK.json"
+  ],
+  "falsifiers": [
+    "Full real move43 archive must be at most 180435 bytes; rate-only net dS must be strictly below -2e-5 against 180466 bytes.",
+    "Both complete independently encoded member payloads and complete ZIP twins must be byte-identical; source-control encode must reconstruct the shipped move43 stream and archive.",
+    "Cold literal inflate.sh output must contain all 600 pairs, token cache DISABLED, no checkpoint resume, and every raw byte equal to retained move43 raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc.",
+    "Amended timing-risk receiver digest must equal 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw manifest remains in every custody check.",
+    "Risk ceiling must not exceed 1260 seconds; only MAIN may authorize a committed intent and measure actual T4 decode and exact score. No timing or score authority is conferred by this intent.",
+    "Both normal seal paths must refuse exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, crash, or subprocess attempt closes this real door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer arm."
+  ],
+  "intent_sha256": "cd400a30d3764edf9b8e73eccb0101dde3c42aab60107e35aaf7fdd08beec377"
+}

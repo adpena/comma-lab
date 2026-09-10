@@ -1,0 +1,31 @@
+{
+  "attempted_subprocesses": [],
+  "consumer_execution": "unmodified tools/fire_modal_auth_eval.py via runpy __main__ with literal --seal argv",
+  "consumer_source": {
+    "bytes": 67484,
+    "path": "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+    "sha256": "22771b01138df50782d7edefd47bf6cac486252bbd187d02429c7c7254d0084c"
+  },
+  "exception": null,
+  "intent": {
+    "bytes": 13773,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+    "sha256": "88204b883d622a6a66081e24ec817fb165e2751b4a8783b74b0968b48d2f8238"
+  },
+  "intent_canonical_digest": "cd400a30d3764edf9b8e73eccb0101dde3c42aab60107e35aaf7fdd08beec377",
+  "receipts": [
+    {
+      "bytes": 687,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json.REFUSED.json",
+      "sha256": "2550508a45237bcb6bc9e0fdc6b477c7875e29db630ef8746ffc273ce9ce79c9"
+    },
+    {
+      "bytes": 1307,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/normal_seal_refusal/FIRE_REFUSED.json",
+      "sha256": "2e2dcdba7a634566a6154ed5261c327c0cb6f4fa5262df8a9240d40a3cafc9e3"
+    }
+  ],
+  "refusal_code": "PREFIRE_INTENT_SCHEMA_REFUSED",
+  "returncode": 7,
+  "score_claim": false
+}

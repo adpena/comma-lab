@@ -1,0 +1,13 @@
+{
+  "leg": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/POINTER42_t4_direct.decode_wall_clock.json",
+    "bytes": 1529,
+    "sha256": "6c094ff81b097eccb35e2061cbf655d3f6159e4b1f20ec819a7bc3783125c74a"
+  },
+  "problems": [],
+  "measured_t4_decode_seconds": 978.1235589080001,
+  "archive_sha256_named_by_leg": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f",
+  "runtime_dir_named_by_leg": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime",
+  "interpretation": "Completed move42 t4_direct leg used by move43 admission; this is not a move43-specific timing measurement. Move40 completed leg remains the risk calculation source.",
+  "score_claim": false
+}

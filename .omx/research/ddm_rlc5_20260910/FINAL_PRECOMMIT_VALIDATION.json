@@ -1,0 +1,39 @@
+{
+  "intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+    "bytes": 13773,
+    "sha256": "88204b883d622a6a66081e24ec817fb165e2751b4a8783b74b0968b48d2f8238"
+  },
+  "canonical_digest": "cd400a30d3764edf9b8e73eccb0101dde3c42aab60107e35aaf7fdd08beec377",
+  "latest_amendment_exact": true,
+  "freeze": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+    "bytes": 5090,
+    "sha256": "a3358944ec9978ddfbe8b45d265bcc572deef64732674ab7054a086fb90a0f4d"
+  },
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "bytes": 180406,
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+  },
+  "runtime": {
+    "sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "total_bytes": 1009765
+  },
+  "risk_receiver_digest": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "normal_seal_refusal": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_VALIDATE_SEAL_REFUSAL.json",
+    "bytes": 305,
+    "sha256": "dc64131cee1717aa8cb29c8ac35d4e02913943720b01793cb4a71b7bce59b55d"
+  },
+  "normal_fire_refusal": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_FIRE_REFUSAL.json",
+    "bytes": 1268,
+    "sha256": "076a35050313a54b80d9c1ee8bc973240936c4e2a2a5087cb78cc452df976729"
+  },
+  "producer_returncode": 0,
+  "public_smoke_groups_pass": 4,
+  "score_claim": false
+}

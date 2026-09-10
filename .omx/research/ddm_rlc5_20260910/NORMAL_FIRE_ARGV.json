@@ -1,0 +1,14 @@
+[
+  "/Users/adpena/Projects/pact/.venv/bin/python",
+  "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+  "--seal",
+  "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+  "--output-dir",
+  "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/normal_seal_refusal",
+  "--lane-id",
+  "ddm_rlc5_counted_rider_move43_20260910",
+  "--pair-group-id",
+  "ddm_rlc5_normal_seal_refusal_control",
+  "--instance-job-id",
+  "ddm_rlc5_normal_seal_refusal_control"
+]

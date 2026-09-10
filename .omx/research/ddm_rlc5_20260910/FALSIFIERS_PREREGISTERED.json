@@ -1,0 +1,15 @@
+{
+  "created_at_utc": "2026-09-10T19:12:53.990117+00:00",
+  "falsifiers": [
+    "Full real move43 archive must be at most 180435 bytes; rate-only net dS must be strictly below -2e-5 against 180466 bytes.",
+    "Both complete independently encoded member payloads and complete ZIP twins must be byte-identical; source-control encode must reconstruct the shipped move43 stream and archive.",
+    "Cold literal inflate.sh output must contain all 600 pairs, token cache DISABLED, no checkpoint resume, and every raw byte equal to retained move43 raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc.",
+    "Amended timing-risk receiver digest must equal 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw manifest remains in every custody check.",
+    "Risk ceiling must not exceed 1260 seconds; only MAIN may authorize a committed intent and measure actual T4 decode and exact score. No timing or score authority is conferred by this intent.",
+    "Both normal seal paths must refuse exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, crash, or subprocess attempt closes this real door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer arm."
+  ],
+  "score_claim": false,
+  "owner": "ddm_rlc5",
+  "base_archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+}

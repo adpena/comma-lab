@@ -1,0 +1,26 @@
+{
+  "axis": "[DERIVED CONDITIONAL; not a candidate contest score]",
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_sj1_pass6_t4_20260910.json",
+    "bytes": 1586,
+    "sha256": "707cd23d7729f59b671966c0f74972c46cf18e862995e173ece275c83c8c870f"
+  },
+  "base_score_recomputed_from_reported_components": 0.1372848557085275,
+  "held_d_seg": 0.00010345,
+  "held_d_pose": 4.59e-06,
+  "normalizer_bytes": 37545489,
+  "base_archive_bytes": 180466,
+  "candidate_archive_bytes": 180406,
+  "delta_bytes": -60,
+  "rate_only_net_dS": -3.995153718733028e-05,
+  "conditional_score": 0.13724490417134017,
+  "maximum_admitted_bytes": 180435,
+  "byte_gate_pass": true,
+  "required_condition": "Candidate T4 exact score and decode still require MAIN first-measurement authorization, fire and harvest. MacOS cold raw identity is established; no CUDA transfer is inferred.",
+  "raw_proof": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/RESULT.json",
+    "bytes": 4988,
+    "sha256": "1138086c76acc64dd24a85354c3c98c8f0018a769ff0044752bde5d933292c3b"
+  },
+  "score_claim": false
+}

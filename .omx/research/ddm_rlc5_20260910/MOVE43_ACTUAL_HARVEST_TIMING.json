@@ -1,0 +1,15 @@
+{
+  "source_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/fire/MODAL_REMOTE_RESULT.json",
+    "bytes": 158969,
+    "sha256": "d2aadf9809ed6ef9ef435807082fb4849631f224118aba23dd60c2c61443a12e"
+  },
+  "field": [
+    "artifacts",
+    "contest_auth_eval.json",
+    "inflate_elapsed_seconds"
+  ],
+  "actual_move43_inflate_seconds": 1089.633945164,
+  "interpretation": "Actual move43 harvest reports 1089.633945164 seconds. The 978.123558908-second admission leg under pass6 names move42. Neither is substituted for the frozen move40/RLC1 diagnostic risk recipe.",
+  "score_claim": false
+}

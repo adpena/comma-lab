@@ -1,0 +1,12 @@
+{
+  "all_hashes_passed": true,
+  "all_runtime_dependencies_listed": true,
+  "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+  "manifest": {
+    "bytes": 9444,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_MANIFEST.json",
+    "sha256": "961874ffd9086b0555459b6bcdc737d69f3fa3a2d13a15c366a10564f1bcb7ee"
+  },
+  "receiver_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+  "runtime_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+}

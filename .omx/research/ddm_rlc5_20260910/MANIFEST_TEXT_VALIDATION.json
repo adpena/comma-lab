@@ -1,0 +1,27 @@
+{
+  "all_hashes_passed": true,
+  "external_generation": {
+    "bytes": 4570,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/MANIFEST.sha256.generated_outside",
+    "sha256": "c65d2e74dc2c52357676526510f59fd92c3ee5088882e790fcd0ad6b3f9a6ca0"
+  },
+  "manifest": {
+    "bytes": 4570,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/MANIFEST.sha256",
+    "sha256": "c65d2e74dc2c52357676526510f59fd92c3ee5088882e790fcd0ad6b3f9a6ca0"
+  },
+  "risk_digest": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "risk_rows_listing": {
+    "bytes": 6111,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RISK_RECEIVER_ROWS.json",
+    "sha256": "96765b48fcb5deaa49e7c57a8404a5a7007a846db7b1dd1945630ff1dfca565e"
+  },
+  "row_count": 49,
+  "runtime": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+    "total_bytes": 1009765
+  },
+  "score_claim": false
+}

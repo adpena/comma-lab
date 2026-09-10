@@ -1,0 +1,15 @@
+{
+  "file": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc5_controls.py",
+    "bytes": 9239,
+    "sha256": "f1770020990e903f3467cba934bfa294a8e97b6ac6016135c35105d17b51287b"
+  },
+  "post_edit_passes": 2,
+  "scope": "new lossless raw deduplication path plus emitter/refusal controls",
+  "findings": [
+    "Certificate requires real cold n600 proof, exact live raw path/bytes/SHA matches, same-device custody and an owned candidate destination. Writes certificate before any replacement.",
+    "Only owned duplicate output is replaced; both raw paths remain reachable with equal inode after hardlink. Source archive/runtime/command and full public result are pinned in certificate.",
+    "No authorization/first-measurement call exists. Normal --seal runs unchanged and fails the control if any subprocess is attempted."
+  ],
+  "score_claim": false
+}

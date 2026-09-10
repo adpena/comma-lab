@@ -1,0 +1,17 @@
+usage: fire_modal_auth_eval.py [-h] [--seal SEAL] [--runtime-dir RUNTIME_DIR]
+                               [--archive ARCHIVE] --output-dir OUTPUT_DIR
+                               --lane-id LANE_ID
+                               [--allow-nonpromotable-lane-id]
+                               [--allow-seal-without-public-smoke REASON]
+                               --instance-job-id INSTANCE_JOB_ID
+                               [--claim-agent CLAIM_AGENT] [--axis {cpu,cuda}]
+                               [--single-axis-waiver-reason SINGLE_AXIS_WAIVER_REASON]
+                               [--pair-group-id PAIR_GROUP_ID]
+                               [--claim-policy {,open,require_active}]
+                               [--require-archive-sha REQUIRE_ARCHIVE_SHA]
+                               [--repin-receiver]
+                               [--poller-deadline-s POLLER_DEADLINE_S]
+                               [--no-source-snapshot]
+                               [--snapshot-retain-days SNAPSHOT_RETAIN_DAYS]
+                               [--dry-run]
+fire_modal_auth_eval.py: error: the worker is paired-by-default: pass --pair-group-id (shared by the CPU/CUDA sibling jobs) for a paired fire, or --single-axis-waiver-reason with a substantive rationale for a single-axis row.

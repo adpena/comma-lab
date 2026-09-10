@@ -28,6 +28,8 @@ ROOT = trace.ROOT
 SOURCE = trace.LIVE
 REFERENCE = Path("/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure")
 EXPECTED_RECEIVER = "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d"
+BASE_BYTES = 180238
+MAX_ARCHIVE_BYTES = 180207
 RECEIVER_PATHS = ("inflate.py", "inflate.sh", "runtime/residual_archive.py",
                   "runtime/rlc1_geometry.c", "runtime/rlc1_geometry.py", "runtime/rlc1_mixer.py")
 
@@ -132,8 +134,8 @@ def stage():
     if (ROOT / "retained/archive.twin0.zip").read_bytes() != (ROOT / "retained/archive.twin1.zip").read_bytes():
         raise ValueError("full archive twins differ")
     archive = fact(ROOT / "retained/archive.twin0.zip")
-    if archive["bytes"] > 180207:
-        return record(ROOT / "BYTE_GATE_STOP.json", {"archive": archive, "maximum_bytes": 180207,
+    if archive["bytes"] > MAX_ARCHIVE_BYTES:
+        return record(ROOT / "BYTE_GATE_STOP.json", {"archive": archive, "maximum_bytes": MAX_ARCHIVE_BYTES,
             "verdict": "STOP", "verdict_scope": "INSTANCE", "score_claim": False})
     candidate = ROOT / "candidate_runtime"
     # Copy move42 first, then exactly RLC1's six receiver paths. All payload pins are measured.
@@ -176,7 +178,7 @@ def stage():
         "expected_receiver_sha256": EXPECTED_RECEIVER, "receiver_gate_pass": receiver == EXPECTED_RECEIVER,
         "changed_paths": changed, "manifest_rows": 49, "all_manifest_hashes_passed": True,
         "source_archive": fact(SOURCE / "archive.zip"), "source_runtime": measure_runtime_digest(SOURCE).to_dict(),
-        "binding": pin, "net_saved_bytes": 180238 - archive["bytes"], "score_claim": False})
+        "binding": pin, "net_saved_bytes": BASE_BYTES - archive["bytes"], "score_claim": False})
 
 
 def main():

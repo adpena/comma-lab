@@ -1,0 +1,41 @@
+{
+  "candidate_archive": {
+    "bytes": 180406,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+  },
+  "cold_store_source": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/parseback/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "command": [
+    "bash",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/inflate.sh",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/data",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/file_list.txt"
+  ],
+  "original": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "original_inodes": [
+    5098637,
+    5089628
+  ],
+  "public_result": {
+    "bytes": 4988,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/RESULT.json",
+    "sha256": "1138086c76acc64dd24a85354c3c98c8f0018a769ff0044752bde5d933292c3b"
+  },
+  "raw_identity_proof": {
+    "bytes": 1770,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RAW_IDENTITY_N600.json",
+    "sha256": "c7b53bd52e40924c0efae1d8d8f5761d6ad9eea9b832f4d7d966c10214d67e37"
+  },
+  "reason": "Full cold public execution compared every byte before certification; replacing the duplicate owned raw retains both paths and identical bytes on one inode.",
+  "schema": "ddm_rlc5_lossless_raw_hardlink.v1",
+  "score_claim": false
+}

@@ -1,0 +1,17 @@
+{
+  "source": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/move42/trace/RESULT.json",
+    "bytes": 5124,
+    "sha256": "82c63aa420973266dc77013a3f71c46e40a7eed13fc6abb13b4ed2f653aecf69"
+  },
+  "field": "interpretation",
+  "retained_legacy_caption": "unchanged move42 field, before/after TC1 source rows",
+  "corrected_interpretation": "unchanged move43 field, before/after TC1 source rows",
+  "reason": "The charter requires reuse of the landed trace. Its literal display caption is fixed to move42, but actual ARCHIVE_SHA/FIELD_SHA/LIVE/ROOT globals were rebound to move43 before fresh execution. No move42 trace, field, stream or raw payload was reused. The inherited directory move42 and RLC4_* receipt names are compatibility names in the new store.",
+  "move43_binding": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/RLC5_BINDINGS.json",
+    "bytes": 1863,
+    "sha256": "6f6d32ac001f7922995c2c5dc6494a7b82eb2c84462a03b39afaffc3238ea865"
+  },
+  "score_claim": false
+}

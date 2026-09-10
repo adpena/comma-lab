@@ -1,0 +1,11 @@
+{
+  "axis": "",
+  "candidate_id": "",
+  "observed": {},
+  "ok": false,
+  "problems": [
+    "candidate_prefire_intent.v1 is not a completed seal"
+  ],
+  "seal_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+  "verdict": "PREFIRE_INTENT_SCHEMA_REFUSED"
+}

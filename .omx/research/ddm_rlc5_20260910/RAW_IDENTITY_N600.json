@@ -1,0 +1,38 @@
+{
+  "actual_public_result": {
+    "bytes": 4988,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/RESULT.json",
+    "sha256": "1138086c76acc64dd24a85354c3c98c8f0018a769ff0044752bde5d933292c3b"
+  },
+  "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+  "candidate_public_stdout": {
+    "bytes": 6173,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/attempts/attempt_0000/run.log",
+    "sha256": "f38c6f02bec65d90a0f942c21d87b5acc8b776c248b1a2325f452d3387cab9e1"
+  },
+  "candidate_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "checkpoint_resume": false,
+  "command": [
+    "bash",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/inflate.sh",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/data",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/file_list.txt"
+  ],
+  "entrypoint": "inflate.sh",
+  "n_samples": 600,
+  "pair_count": 600,
+  "pointer_archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+  "pointer_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/parseback/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "receiver_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+  "runtime_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+  "token_cache_status": "DISABLED"
+}

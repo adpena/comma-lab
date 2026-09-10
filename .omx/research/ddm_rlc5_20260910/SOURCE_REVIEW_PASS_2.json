@@ -1,0 +1,33 @@
+{
+  "pass": 2,
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc5_run.py",
+      "bytes": 5617,
+      "sha256": "70d2519dd297f1c8d2c5a294f39a7b7ce508f5d9c4d7842b8dfb670d5974ce44"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc4_rebase.py",
+      "bytes": 10536,
+      "sha256": "b555d56784a32e249599637ad2f5cad4c5892eab698a00a6ab673141c494dc8b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc4_evidence.py",
+      "bytes": 13875,
+      "sha256": "2a0b7528b1936b8d5763734d134b2033d8ab96caf0ea8e7deec0a2a01a476836"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc5_controls.py",
+      "bytes": 6684,
+      "sha256": "5a26149fa013d072d2aa2dcb284ef09f1299eed50c92359e9ef4fa9eceb32ba0"
+    }
+  ],
+  "findings": [
+    "Confirmed lineage by opening actual move43 harvest; actual inflate is 1089.633945164 s, whereas retained admission leg is move42. No inferred timing authority is attached to the candidate.",
+    "Reviewed immutable source bindings and inherited legacy storage names; every source, field, byte gate and output root is rebound before execution.",
+    "Traced normal --seal validation before reconciliation/dispatch. Audit hook regards attempted process creation as a failed control. Corrected receipt discovery before running: typed code lives beside intent; output FIRE_REFUSED nests it.",
+    "Compared candidate member construction and source control; copied prefix preserves actual move43 HPAC, semantic, carrier and tail header. Full public byte comparison still required."
+  ],
+  "status": "reviewed; functional production verification remains in progress",
+  "score_claim": false
+}

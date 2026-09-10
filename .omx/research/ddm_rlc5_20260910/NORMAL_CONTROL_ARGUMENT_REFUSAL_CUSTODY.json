@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_FIRE_ARGV.json",
+      "retained_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/normal_control_missing_pair_args/NORMAL_FIRE_ARGV.json",
+      "bytes": 444,
+      "sha256": "7e8d0b3350b406ea5d282458397605d3e22d91d89290853832b0a9d07c474168"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_FIRE_REFUSAL.json",
+      "retained_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/normal_control_missing_pair_args/NORMAL_FIRE_REFUSAL.json",
+      "bytes": 777,
+      "sha256": "77dadb90685db31d316605fb37351591d7d6d8b69b9eb45bef38add3526eea52"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_FIRE_STDERR.txt",
+      "retained_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/normal_control_missing_pair_args/NORMAL_FIRE_STDERR.txt",
+      "bytes": 1300,
+      "sha256": "097f0d512417e71b60da6fd92f3a88b722f2cfcb25a573d79939098959a18bcc"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_FIRE_STDOUT.txt",
+      "retained_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/normal_control_missing_pair_args/NORMAL_FIRE_STDOUT.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/NORMAL_VALIDATE_SEAL_REFUSAL.json",
+      "retained_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/normal_control_missing_pair_args/NORMAL_VALIDATE_SEAL_REFUSAL.json",
+      "bytes": 305,
+      "sha256": "dc64131cee1717aa8cb29c8ac35d4e02913943720b01793cb4a71b7bce59b55d"
+    }
+  ],
+  "interpretation": "INSTANCE control invocation invalid: pairing argument omitted, so argparse returned rc2 before normal seal validation. Zero subprocess attempts. This is not a contract refusal of the valid intent. Next invocation supplies the ordinary pair-group-id, without any waiver.",
+  "score_claim": false
+}

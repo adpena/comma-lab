@@ -1,0 +1,118 @@
+{
+  "all_manifest_hashes_passed": true,
+  "archive": {
+    "bytes": 180406,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+  },
+  "binding": {
+    "binding": {
+      "archive": {
+        "bytes": 180466,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+        "sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+      },
+      "axis": "[exact bytes; macOS-CPU scorer-free]",
+      "config": {
+        "bytes": 60,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/config.bin",
+        "sha256": "76f10171e42d27e6a1966a5a4a0a530c18541415b2a60a5fe9f8c2bb8af3d91a"
+      },
+      "field": {
+        "bytes": 117964800,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/move42/field.u8",
+        "sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
+      },
+      "native": {
+        "bytes": 33824,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/geometry.dylib",
+        "sha256": "3bc30db1c7fe40636a5ad57a74412d16f411ea554e644baf6ef10cf2a3d66597"
+      },
+      "score_claim": false,
+      "seed": 20260910,
+      "source_trace_result": {
+        "bytes": 5124,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/move42/trace/RESULT.json",
+        "sha256": "82c63aa420973266dc77013a3f71c46e40a7eed13fc6abb13b4ed2f653aecf69"
+      },
+      "sources": [
+        {
+          "bytes": 18227,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc1_run.py",
+          "sha256": "253627d6f77e5b6845d97658cf0c6cb65e8fa91f2b6e0c818849095aacba2e2e"
+        },
+        {
+          "bytes": 59527,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+          "sha256": "628b2a2b459dfc9650d0238ce6867559ccd40d5bd158fba1dc7e6a73afba1cf5"
+        },
+        {
+          "bytes": 4552,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc1_geometry.py",
+          "sha256": "c6fc46dd647725bd3fa256c7e712e255e135bd1928e93f70bad53c0ef56c451f"
+        },
+        {
+          "bytes": 5558,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc1_mixer.py",
+          "sha256": "8e8961f1602694ed637ec020f2207e30bab3ce1a693f23877c82ac21d5ae7e1c"
+        },
+        {
+          "bytes": 8590,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_mixer_codec.py",
+          "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+        },
+        {
+          "bytes": 18728,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc3_move42_trace.py",
+          "sha256": "436ee464bdd00c9f06a16cfae889d05f2cda5be083aee937010d88b1e06fd5cd"
+        },
+        {
+          "bytes": 10536,
+          "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc4_rebase.py",
+          "sha256": "b555d56784a32e249599637ad2f5cad4c5892eab698a00a6ab673141c494dc8b"
+        }
+      ],
+      "upstream": {
+        "bytes": 6005,
+        "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "producer_source_commit": "582d9a3d873ad5d9d06e2d8858aa76ae8543abc7",
+    "production_started_at_utc": "2026-09-10T19:32:32.423844+00:00",
+    "source_custody": "landed RLC1 mechanism and RLC3 trace; charter-authorized unlanded rebase wrapper bundled at final harvest"
+  },
+  "changed_paths": [
+    "MANIFEST.sha256",
+    "archive.zip",
+    "inflate.py",
+    "inflate.sh",
+    "runtime/residual_archive.py",
+    "runtime/rlc1_geometry.c",
+    "runtime/rlc1_geometry.py",
+    "runtime/rlc1_mixer.py"
+  ],
+  "expected_receiver_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+  "manifest_rows": 49,
+  "net_saved_bytes": 60,
+  "receiver_gate_pass": false,
+  "receiver_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+  "runtime": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+    "total_bytes": 1009765
+  },
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 180466,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+    "sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+  },
+  "source_runtime": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 48,
+    "sha256": "68fae56a0709ebc435e1fb99019beb16d97e2a30948a44a33866f999e6032a8c",
+    "total_bytes": 994408
+  }
+}

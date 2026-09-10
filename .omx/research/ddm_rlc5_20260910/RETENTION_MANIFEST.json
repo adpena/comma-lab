@@ -1,0 +1,86 @@
+{
+  "payloads": [
+    {
+      "bytes": 180406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+      "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    },
+    {
+      "bytes": 180306,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/twin0.member",
+      "sha256": "6a66cf11fce2eee544ed3a578efc2201b85555008bfb07091c4f440e1a17f78d"
+    },
+    {
+      "bytes": 180306,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/twin1.member",
+      "sha256": "6a66cf11fce2eee544ed3a578efc2201b85555008bfb07091c4f440e1a17f78d"
+    },
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+      "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+    },
+    {
+      "bytes": 657,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/ARCHIVE_PARSEBACK.json",
+      "sha256": "648ab1688c978bf2418b3be0eaf4fddfe2a83bfb05aa8ea3005ca3c9c0e796f9"
+    },
+    {
+      "bytes": 119756,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin0.envelope",
+      "sha256": "8a67bafec05223e34f96335f0ec55867c617e087da902652c416ea6c3247255e"
+    },
+    {
+      "bytes": 119749,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin0.rc64",
+      "sha256": "c499972a33dac497412c18839b632a8e1bbf75d518528039db0e2aca80c8eb13"
+    },
+    {
+      "bytes": 119756,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin1.envelope",
+      "sha256": "8a67bafec05223e34f96335f0ec55867c617e087da902652c416ea6c3247255e"
+    },
+    {
+      "bytes": 119749,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin1.rc64",
+      "sha256": "c499972a33dac497412c18839b632a8e1bbf75d518528039db0e2aca80c8eb13"
+    },
+    {
+      "bytes": 119840,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin2.envelope",
+      "sha256": "5728b8e768a5b8e133dc073796da3404e98958358b17cedd6c76c39147719609"
+    },
+    {
+      "bytes": 119833,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin2.rc64",
+      "sha256": "4b8fc5997982577eb2749567eec48aa4c9ca820af7961135898950af4fb89e30"
+    },
+    {
+      "bytes": 119813,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin0.rider",
+      "sha256": "c0d90cc3f558c260c307bc309e3a0bc12de9f98ca81954f89a281a4b6584dc3a"
+    },
+    {
+      "bytes": 119813,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/encode/twin1.rider",
+      "sha256": "c0d90cc3f558c260c307bc309e3a0bc12de9f98ca81954f89a281a4b6584dc3a"
+    },
+    {
+      "bytes": 60,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/config.bin",
+      "sha256": "76f10171e42d27e6a1966a5a4a0a530c18541415b2a60a5fe9f8c2bb8af3d91a"
+    },
+    {
+      "bytes": 180406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/archive.twin0.zip",
+      "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    },
+    {
+      "bytes": 180406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/archive.twin1.zip",
+      "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    }
+  ],
+  "policy": "all stage payloads also retained in assigned store; 8 GiB cap, certify or block",
+  "score_claim": false
+}

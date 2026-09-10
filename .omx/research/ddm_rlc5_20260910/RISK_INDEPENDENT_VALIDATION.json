@@ -1,0 +1,19 @@
+{
+  "calculation": {
+    "candidate_local_ceiling_seconds": 831.502915124991,
+    "hard_timeout_seconds": 1800.0,
+    "local_cost_fraction_upper": 0.043099930125356956,
+    "passed": true,
+    "policy_limit_seconds": 1260.0,
+    "source_t4_seconds": 990.053829427,
+    "t4_risk_ceiling_seconds": 1032.7250802956457
+  },
+  "full_intent_validated": false,
+  "passed": true,
+  "risk": {
+    "bytes": 3239,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/TIMING_RISK.json",
+    "sha256": "df44353242db8d7a81b4429ec23a777b8120af49272f16be1c8f3a923d92ca1e"
+  },
+  "score_claim": false
+}
