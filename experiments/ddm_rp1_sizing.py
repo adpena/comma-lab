@@ -289,6 +289,9 @@ def _by_bucket(
                 "neutral_saving_bits_total": float(
                     sum(t["saving_bits"] for t in neutral)
                 ),
+                "marginal_bits_per_realized_proposal": (
+                    float(sum(t["saving_bits"] for t in neutral)) / len(rows)
+                ),
             }
         )
     return out
@@ -505,16 +508,44 @@ def cmd_sizing(args: argparse.Namespace) -> int:
             )
             if was_neutral:
                 neutral_idx.append(int(j))
+        # CUMULATIVE acceptance: every proposal is realized on top of what this pair has
+        # ALREADY accepted, so the joint check is the acceptance rather than a post-check.
+        # Round 1 measured why: on 12.9 % of edited pairs a set of individually-neutral
+        # proposals was NOT jointly neutral, and only a post-hoc greedy pass caught it.
+        cur = plane.copy() if args.accept_mode == "cumulative" else plane
         for start in range(0, len(chosen), args.batch):
             block = chosen[start : start + args.batch]
             planes = []
             for j in block:
-                variant = plane.copy()
+                variant = cur.copy()
                 variant.reshape(-1)[int(cand["pos"][j])] = np.uint8(cand["best"][j])
                 planes.append(variant)
             argmaxes = inst.argmax_batch(planes, pair)
+            hits = [
+                k for k in range(len(block))
+                if int((argmaxes[k] != base_argmax).sum()) == 0
+            ]
+            rechecked: dict[int, int] = {}
+            if args.accept_mode == "cumulative" and len(hits) > 1:
+                # Each proposal in this block was realized against the SAME ``cur``, so
+                # only the first hit is verified in context.  The rest are re-realized
+                # one at a time against the advancing state; a block never ships a set
+                # no render has actually seen.
+                first = hits[0]
+                cur = planes[first]
+                for k in hits[1:]:
+                    trial = cur.copy()
+                    trial.reshape(-1)[int(cand["pos"][block[k]])] = np.uint8(
+                        cand["best"][block[k]]
+                    )
+                    delta = int((inst.argmax_batch([trial], pair)[0] != base_argmax).sum())
+                    rechecked[k] = delta
+                    if delta == 0:
+                        cur = trial
+            elif args.accept_mode == "cumulative" and hits:
+                cur = planes[hits[0]]
             for k, j in enumerate(block):
-                changed = int((argmaxes[k] != base_argmax).sum())
+                changed = rechecked.get(k, int((argmaxes[k] != base_argmax).sum()))
                 tested.append(
                     {
                         "pos": int(cand["pos"][j]),
@@ -732,10 +763,11 @@ def build_parser() -> argparse.ArgumentParser:
     sizing.add_argument("--threads", type=int, default=3)
     sizing.add_argument(
         "--accept-mode",
-        choices=("singles", "bisect"),
+        choices=("singles", "bisect", "cumulative"),
         default="singles",
-        help="singles measures the per-proposal neutral fraction; bisect maximizes the "
-        "accepted set per realization and is the n600 mode",
+        help="singles measures the UNCONDITIONAL per-proposal neutral fraction; "
+        "cumulative realizes each proposal on top of the pair's accepted state, so the "
+        "joint check IS the acceptance; bisect maximizes the set per realization",
     )
     sizing.add_argument("--max-verifies", type=int, default=400)
     sizing.add_argument("--shards", type=int, default=1)
