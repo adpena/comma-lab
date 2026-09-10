@@ -1,0 +1,752 @@
+{
+  "source": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/MANIFEST.sha256",
+      "bytes": 4301,
+      "sha256": "795469939275bbbd1cb624fff85f252b3a3c3b5a1bbd5dab592517b34c9ea3c9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/README.md",
+      "bytes": 3667,
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/__pycache__/inflate.cpython-313.pyc",
+      "bytes": 4067,
+      "sha256": "313d1df95267769463e7660ea7d0e83a4061d1a8db5c965ce8ed030a81458561"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+      "bytes": 180466,
+      "sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/compress.py",
+      "bytes": 183043,
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/carrier_codec.cpython-313.pyc",
+      "bytes": 9991,
+      "sha256": "5f016b5c5a83efa6c202d7cd9a2a29c0cf81d02a5ee70ed7d3f6179505805cad"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/ddm_mp2_semantic_receiver.cpython-313.pyc",
+      "bytes": 17458,
+      "sha256": "90d996896e6cef29f092def3639a3285a997bf375181851ad287d32602a0bcde"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/hpac_integer.cpython-313.pyc",
+      "bytes": 23643,
+      "sha256": "2ff369cb373030ece94249e5b86118479d76fa9d904b824dac438ff3696946fa"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/hpac_integer_sparse.cpython-313.pyc",
+      "bytes": 14139,
+      "sha256": "5b07764811bfd47f4d4421aedba53a04685c47c53487644cebdf2fe5444bbaa0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/inflate.cpython-313.pyc",
+      "bytes": 20964,
+      "sha256": "102ff3f1970e7206afb459cd15d710e8d50111a107d3bfff75617632c6ef9af1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/integer_model_io.cpython-313.pyc",
+      "bytes": 9664,
+      "sha256": "cc75eba8d91d14b9970420715a070ef13b92abee5c7fea908cf38030d71ce54d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/__pycache__/rc1_adaptive_model_sections.cpython-313.pyc",
+      "bytes": 30565,
+      "sha256": "3ac76f610b9682862d7de9d145b410ba58ac37914b5937c28ec88a550e499c4b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/carrier_codec.py",
+      "bytes": 7353,
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "bytes": 13389,
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/hpac_integer.py",
+      "bytes": 17471,
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/hpac_integer_sparse.py",
+      "bytes": 8282,
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/inflate.py",
+      "bytes": 13810,
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/integer_model_io.py",
+      "bytes": 5881,
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/cpr1/rc1_adaptive_model_sections.py",
+      "bytes": 20916,
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/inflate.py",
+      "bytes": 2475,
+      "sha256": "598dbd7acb3146f6b3e3779fd82119decf5c55f302d2e1e984365ba1955e7749"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/inflate.sh",
+      "bytes": 3219,
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__init__.py",
+      "bytes": 57,
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/__init__.cpython-313.pyc",
+      "bytes": 253,
+      "sha256": "36453b3cc2eb2dd120ff5d21562527d642df26e46f3cdb5cfb69518aa5f699a6"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/baseline.cpython-313.pyc",
+      "bytes": 4054,
+      "sha256": "4c32dafae8aa55cbcb94446f7d6ab18cdcf3c0c6d75e0e1da908d17d38cb41b4"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/bits.cpython-313.pyc",
+      "bytes": 2541,
+      "sha256": "3b644ded447acef1aee6ca832c7db4432894cd1cee3b010476a086ae6f121a43"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/carrier_repack.cpython-313.pyc",
+      "bytes": 12539,
+      "sha256": "ea473cfab0296602986da5093f40d6f4938c307b0b0cdd6555353f5c52a3876f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/compensation_overlay.cpython-313.pyc",
+      "bytes": 11117,
+      "sha256": "96af551904fa898658ac340f9938db791b267360d853e09bdc0d660c4b7c26c1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/dx2_cabac_coefficients.cpython-313.pyc",
+      "bytes": 19057,
+      "sha256": "47b0861f763f54bea2569d68e02028c103a58aff0285855e869d4ac1f91543df"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/f26_inflate.cpython-313.pyc",
+      "bytes": 35935,
+      "sha256": "d32ecb4b19ca30d735e133147e6819f691cdcbc681c0db90ec5ffceb6d1fe9b2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/frame0_selector.cpython-313.pyc",
+      "bytes": 7925,
+      "sha256": "4a9897da3e04eb19a43e434821a4be664cbec7cb1f54f897252d03fbe393c10c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/free_corrector.cpython-313.pyc",
+      "bytes": 17143,
+      "sha256": "17d8a7baee0b7424ff669347d7364cc5b741b7f073721e8639a40e2b78f6413e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/fx1_logistic_mixer_corrector.cpython-313.pyc",
+      "bytes": 40426,
+      "sha256": "dd4436c5fa151a22aabc1ccf74ad383073ee309d4d78cc73d5b04b098da2916b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/fx2_model_axis_corrector.cpython-313.pyc",
+      "bytes": 33759,
+      "sha256": "40eb9c9ac29bd7daca2598561c13a3dcc40777d4ac60e2214e275f121a1a54bb"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/hpac_inference.cpython-313.pyc",
+      "bytes": 16644,
+      "sha256": "2c6b27e192fa14d9b5a805da25162f2a0ce9b903807f73622bd0f6b330ab7d33"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/ihs2.cpython-313.pyc",
+      "bytes": 21461,
+      "sha256": "e947b2aac5bbf6fb923073594404ee60c1216e99216cff1966de3f6390c95498"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/native_free_corrector.cpython-313.pyc",
+      "bytes": 21340,
+      "sha256": "6ae2fc7d825021e0c11b845597a56bbfbe47f284cb6b9abf8ba6078cc1ae2ffb"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/rc1_adaptive_model_sections.cpython-313.pyc",
+      "bytes": 30568,
+      "sha256": "c2251cc5b9de8b5f72b577f901d7f5fa8b36375be0bc45a7f0508c57e8596755"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/rc2_hpac_semistatic_mixing.cpython-313.pyc",
+      "bytes": 41654,
+      "sha256": "05ea776dce9e8b131abee55975e511a87b3f6c63d23453747da8e6abc8438478"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/rc3_shared_mixer.cpython-313.pyc",
+      "bytes": 13766,
+      "sha256": "0e95f261b134efec6208814f4765c4bf2dbbf0bff196f8222323b9e5058facaf"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/residual_archive.cpython-313.pyc",
+      "bytes": 39201,
+      "sha256": "3f533b05ab970233f2c3e42c0b808587f8d387c20bdcb3602c32bd4c623c6c82"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/rr4_free_corrector.cpython-313.pyc",
+      "bytes": 19910,
+      "sha256": "875e8477ad68f4d265ced31885069607a50c973aac13c3d9e18c487284df9e9f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/rr5_arith_basis.cpython-313.pyc",
+      "bytes": 28155,
+      "sha256": "98f0a14406ad31399fa4c11355d6b191a059329dde1bd94072971c19649874d5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/sm1_semantic_mixer.cpython-313.pyc",
+      "bytes": 16291,
+      "sha256": "15d56fa51d6bc2f159a701b3bb7af4f46ac0be7238df38dddec024e9f5183e6e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/__pycache__/tc1_shared_mixer.cpython-313.pyc",
+      "bytes": 18442,
+      "sha256": "6ba39697e57974a732ab3dab3656b7140178e99fd97bcffc2be9731de64a8076"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/baseline.py",
+      "bytes": 2058,
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/bits.py",
+      "bytes": 1578,
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/carrier_repack.py",
+      "bytes": 8206,
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/compensation_overlay.py",
+      "bytes": 7074,
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/ddm_wc1_advisory_runtime.py",
+      "bytes": 25232,
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/dx2_cabac_coefficients.py",
+      "bytes": 12929,
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__init__.py",
+      "bytes": 54,
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__pycache__/__init__.cpython-313.pyc",
+      "bytes": 258,
+      "sha256": "3fd65d73ce89ae52d0bfa91f8edbbd620a3ba34502c8462a582f9379e57805e5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__pycache__/adaptive_ans.cpython-313.pyc",
+      "bytes": 6789,
+      "sha256": "7099eaa5ed663b308fe6edafb7f814de50586da51e72d4a4861282a88463f6cc"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__pycache__/coefficient_ar1_codec.cpython-313.pyc",
+      "bytes": 6210,
+      "sha256": "6953e3a6b631f5a62ca88a617088786cd3f8bcd53163c0667fcc23d2bb6f64a4"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__pycache__/coefficient_predictor.cpython-313.pyc",
+      "bytes": 7193,
+      "sha256": "298b32ad0df1e10bf09ab9f19f5c55bdde97105665276e9550536974e24d0f42"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__pycache__/rc64.cpython-313.pyc",
+      "bytes": 5571,
+      "sha256": "521e31f79de000ddbee9724f6605f325888f39c309adc7be861ddc27c316279f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/__pycache__/renderer_weight_codec.cpython-313.pyc",
+      "bytes": 14093,
+      "sha256": "60539ec1c110c5de6731265bf123c8f32ce315d2f67e4afa6cbb4ed24c77dfa2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/adaptive_ans.py",
+      "bytes": 4230,
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/coefficient_ar1_codec.py",
+      "bytes": 4875,
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/coefficient_predictor.py",
+      "bytes": 4027,
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/rc64.py",
+      "bytes": 2904,
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/rc64_backend.c",
+      "bytes": 5638,
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/entropy/renderer_weight_codec.py",
+      "bytes": 9656,
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/f26_corrector_native.c",
+      "bytes": 50299,
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/f26_hpac_native.c",
+      "bytes": 40911,
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/f26_hpac_native.py",
+      "bytes": 26781,
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/f26_inflate.py",
+      "bytes": 29176,
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/frame0_selector.py",
+      "bytes": 4964,
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/free_corrector.py",
+      "bytes": 14709,
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/fx1_logistic_mixer_corrector.py",
+      "bytes": 34979,
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/fx2_model_axis_corrector.py",
+      "bytes": 31470,
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/hpac_inference.py",
+      "bytes": 10952,
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/ihs2.py",
+      "bytes": 13327,
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/ihs2_gate_a.py",
+      "bytes": 10527,
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/native_free_corrector.py",
+      "bytes": 15952,
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/rc1_adaptive_model_sections.py",
+      "bytes": 20916,
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/rc2_hpac_semistatic_mixing.py",
+      "bytes": 31341,
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/rc3_shared_mixer.py",
+      "bytes": 8010,
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/residual_archive.py",
+      "bytes": 34053,
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/rr4_free_corrector.py",
+      "bytes": 15421,
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/rr5_arith_basis.py",
+      "bytes": 20793,
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/sm1_semantic_mixer.py",
+      "bytes": 9693,
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/tc1_receiver_checkpoint.py",
+      "bytes": 8753,
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/runtime/tc1_shared_mixer.py",
+      "bytes": 8590,
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    }
+  ],
+  "live": [
+    {
+      "path": "submissions/semantic_joint_ctxmix/MANIFEST.sha256",
+      "bytes": 3605,
+      "sha256": "7c845ee4d3fc1a62868da647b7b900f1584e51103b4df264357be5bcb60c22f7"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/README.md",
+      "bytes": 5119,
+      "sha256": "746ab0ab172fa3d8675712a8e42e464de6d504017afa690e30475ac964019471"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/compress.py",
+      "bytes": 183617,
+      "sha256": "76761a7827873abaf424c99db5ca7a8c7ded9467ad571a2caebd3c0550842819"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/__pycache__/carrier_codec.cpython-313.pyc",
+      "bytes": 9981,
+      "sha256": "5b30c7a996ab51003bbb227db68bad5bfadd8b2e435cce2cbf8bf51caf2bb887"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/__pycache__/ddm_mp2_semantic_receiver.cpython-313.pyc",
+      "bytes": 16963,
+      "sha256": "ddcbd77e687724e5ea616d99f46499f311274c63ee530ceca34af9c737ae6d60"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/__pycache__/hpac_integer.cpython-313.pyc",
+      "bytes": 23633,
+      "sha256": "af80791d3ec380504919fd9e901a6082dcc4cd0b849dabe550dd03c1fe8687bd"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/__pycache__/inflate.cpython-313.pyc",
+      "bytes": 20936,
+      "sha256": "7bb5e76654812ca73ee8eb190617416bab1150291616c211d036ca919df9592c"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/__pycache__/integer_model_io.cpython-313.pyc",
+      "bytes": 9654,
+      "sha256": "6c3a18fcb254626cd0ed982fc385ffed9e44f74e1ec6611a6dc7eac5dd2476b9"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/carrier_codec.py",
+      "bytes": 7353,
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/ddm_mp2_semantic_receiver.py",
+      "bytes": 12648,
+      "sha256": "1d1caf5aa562324b3d86812ed505282c180c687220f34db4be2f748db377f5ea"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/hpac_integer.py",
+      "bytes": 17471,
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/hpac_integer_sparse.py",
+      "bytes": 8282,
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/inflate.py",
+      "bytes": 13792,
+      "sha256": "ff446edd9237148bdc898be2f8f8c4782bf231a50cf3830c4b0b21a4474a736b"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/cpr1/integer_model_io.py",
+      "bytes": 5881,
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/inflate.py",
+      "bytes": 2476,
+      "sha256": "7c5a5e9a0e561045f9364a7b6d302718f458fbb9e61740924e7e73c5e26e671b"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/inflate.sh",
+      "bytes": 3219,
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__init__.py",
+      "bytes": 57,
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/__init__.cpython-313.pyc",
+      "bytes": 243,
+      "sha256": "33cd7ac19b21315547338a571e65a7521bb86949d39a699f910646980cf46adf"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/baseline.cpython-313.pyc",
+      "bytes": 4044,
+      "sha256": "5c4d46b44b1a4eba40f6f145393c711cc621951945f4470b7b152872c12f10fe"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/bits.cpython-313.pyc",
+      "bytes": 2531,
+      "sha256": "3fcb1253ad387e133d1b4e4f2d1ba2853251c8330e0d601d926c3937d33fd90d"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/carrier_repack.cpython-313.pyc",
+      "bytes": 12529,
+      "sha256": "f1c74dd0a4a9421054a297d57fde839a5d472929a7448ea8572878183bcea4fb"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/compensation_overlay.cpython-313.pyc",
+      "bytes": 11107,
+      "sha256": "4319887be1d96f8618ffd8452d912da96d39509cd8d5b6fe50b7e7c5595e5c72"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/dx2_cabac_coefficients.cpython-313.pyc",
+      "bytes": 19047,
+      "sha256": "83a229353bde274507a4d41646f402476ea0d0a752c2c4fe92e65f7352ee6258"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/f26_inflate.cpython-313.pyc",
+      "bytes": 34973,
+      "sha256": "37afebf28d70f64834f808a25e6eb9c7eb31e3965f5a6358a944a4f2091a8b2e"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/f26_inflate.cpython-314.pyc",
+      "bytes": 38260,
+      "sha256": "a98e07248d493244ee886805d29d528e31cdbd7ebe2eee605dd05be502ffd213"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/frame0_selector.cpython-313.pyc",
+      "bytes": 7915,
+      "sha256": "90d69a69672c4efbe125cdad35794bb383062ee80b94ee21695a5508ee2df886"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/hpac_inference.cpython-313.pyc",
+      "bytes": 16634,
+      "sha256": "9b2c144954ba5b698eaac7c39446a0439b80dce09261eb1b5b16cc8eacce1a99"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/ihs2.cpython-313.pyc",
+      "bytes": 20631,
+      "sha256": "ea72647cbf718d5b911bca40b582cc3d7e29782b5cc08868bd9b3fb759a871e7"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/residual_archive.cpython-313.pyc",
+      "bytes": 36522,
+      "sha256": "c9e3f771dd143a0ee554a2025d143e6a129b1e9eb64b2c82933ea6aa351ddf53"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/__pycache__/rr5_arith_basis.cpython-313.pyc",
+      "bytes": 28145,
+      "sha256": "6ae7978e8e8d124f0a7791f7274b81946f5ea0cf65ad742a55d6601f3e8b392d"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/baseline.py",
+      "bytes": 2058,
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/bits.py",
+      "bytes": 1578,
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/carrier_repack.py",
+      "bytes": 8206,
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/compensation_overlay.py",
+      "bytes": 7074,
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/ddm_wc1_advisory_runtime.py",
+      "bytes": 25232,
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/dx2_cabac_coefficients.py",
+      "bytes": 12929,
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__init__.py",
+      "bytes": 54,
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__pycache__/__init__.cpython-313.pyc",
+      "bytes": 248,
+      "sha256": "cade701b5c38470cea2abb7f4d83b2617475184dea9356429b19cc90983da2b1"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__pycache__/adaptive_ans.cpython-313.pyc",
+      "bytes": 6779,
+      "sha256": "c7040224a21e518f6691cb10d9e24705dda7c9519d1e5c16f43c5c13974c3b1e"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__pycache__/coefficient_ar1_codec.cpython-313.pyc",
+      "bytes": 6200,
+      "sha256": "894254432bd96cea1b6fbe78d17541b04da099ab5ec83eb4b0108592bf59e913"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__pycache__/coefficient_predictor.cpython-313.pyc",
+      "bytes": 7183,
+      "sha256": "8a1cbd7120d2c06b0e2bd72706cd79fd3ece9011d7b03b3baca7a3540bc150b7"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__pycache__/rc64.cpython-313.pyc",
+      "bytes": 5561,
+      "sha256": "b14d63892870a16160ea0d8c9a31f55d94d0cb0e41c3fe6c82ccbfe76e3f06d3"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/__pycache__/renderer_weight_codec.cpython-313.pyc",
+      "bytes": 14083,
+      "sha256": "759c644bcc2b43b918ca84fbfdbbb3d413e621dd723332e8dd9ba397a0d2de63"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/adaptive_ans.py",
+      "bytes": 4230,
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/coefficient_ar1_codec.py",
+      "bytes": 4875,
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/coefficient_predictor.py",
+      "bytes": 4027,
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/rc64.py",
+      "bytes": 2904,
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/rc64_backend.c",
+      "bytes": 5638,
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/entropy/renderer_weight_codec.py",
+      "bytes": 9656,
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/f26_corrector_native.c",
+      "bytes": 50299,
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/f26_hpac_native.c",
+      "bytes": 40911,
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/f26_hpac_native.py",
+      "bytes": 26781,
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/f26_inflate.py",
+      "bytes": 27793,
+      "sha256": "5d705f93c051b2b540845dad4140f73d7dd61c721e4de2ed33b2ad32170c35c4"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/frame0_selector.py",
+      "bytes": 4964,
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/free_corrector.py",
+      "bytes": 14709,
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/fx1_logistic_mixer_corrector.py",
+      "bytes": 34979,
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/fx2_model_axis_corrector.py",
+      "bytes": 31470,
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/hpac_inference.py",
+      "bytes": 10952,
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/ihs2.py",
+      "bytes": 12318,
+      "sha256": "4fdb10304171d0659495954c69df259e5d2a7e189a3692d924a5d7aeb212607e"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/ihs2_gate_a.py",
+      "bytes": 10527,
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/native_free_corrector.py",
+      "bytes": 15952,
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/residual_archive.py",
+      "bytes": 30622,
+      "sha256": "aca361f3e94941f4f2800bacec79f5032335588e317e76ee1a306bbb5ba64530"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/rr4_free_corrector.py",
+      "bytes": 15421,
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "path": "submissions/semantic_joint_ctxmix/runtime/rr5_arith_basis.py",
+      "bytes": 20793,
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    }
+  ],
+  "upstream_evaluate": {
+    "path": "upstream/evaluate.py",
+    "bytes": 6005,
+    "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+  },
+  "index": ""
+}

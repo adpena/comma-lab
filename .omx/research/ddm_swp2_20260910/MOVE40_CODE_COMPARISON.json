@@ -1,0 +1,182 @@
+[
+  {
+    "file": "inflate.py",
+    "equals_move40": false
+  },
+  {
+    "file": "compress.py",
+    "equals_move40": true
+  },
+  {
+    "file": "inflate.sh",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/bits.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/hpac_inference.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/ddm_wc1_advisory_runtime.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/rc3_shared_mixer.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/baseline.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/residual_archive.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/f26_hpac_native.c",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/carrier_repack.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/rc1_adaptive_model_sections.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/__init__.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/sm1_semantic_mixer.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/f26_corrector_native.c",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/f26_hpac_native.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/native_free_corrector.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/ihs2_gate_a.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/tc1_shared_mixer.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/compensation_overlay.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/free_corrector.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/rr4_free_corrector.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/tc1_receiver_checkpoint.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/dx2_cabac_coefficients.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/frame0_selector.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/fx1_logistic_mixer_corrector.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/f26_inflate.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/ihs2.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/fx2_model_axis_corrector.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/rc2_hpac_semistatic_mixing.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/rr5_arith_basis.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/integer_model_io.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/inflate.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/rc1_adaptive_model_sections.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/ddm_mp2_semantic_receiver.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/hpac_integer.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/hpac_integer_sparse.py",
+    "equals_move40": true
+  },
+  {
+    "file": "cpr1/carrier_codec.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/coefficient_ar1_codec.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/rc64.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/__init__.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/coefficient_predictor.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/adaptive_ans.py",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/rc64_backend.c",
+    "equals_move40": true
+  },
+  {
+    "file": "runtime/entropy/renderer_weight_codec.py",
+    "equals_move40": true
+  }
+]

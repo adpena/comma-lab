@@ -1,0 +1,7 @@
+{
+  "before": "I used coding agents (Claude as orchestrator of Codex subagents) extensively as research and engineering tools for the work behind this submission.",
+  "after": "I used automated research and engineering tools extensively for the work behind this submission.",
+  "before_source": ".omx/research/ddm_pk1_pr140_swap_packet_staging_20260910.md",
+  "before_is_retained_snapshot_not_live_verified": true,
+  "status": "DRAFT; operator publication confirmation pending"
+}

@@ -1,0 +1,1783 @@
+{
+  "archive": {
+    "bytes": 180466,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 180366,
+        "crc": 3028051658,
+        "file_size": 180366,
+        "local_header": {
+          "compress_size": 180366,
+          "compress_type": 0,
+          "crc32": 3028051658,
+          "extra_len": 0,
+          "file_size": 180366,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "p",
+          "version_needed": 20
+        },
+        "local_header_name": "p",
+        "name": "p",
+        "sha256": "fcef2545e3185cc61223c14a5e9843fc88c46c94b37ac43ffb69a4c67767e0f5",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "submissions/_staging_move43_pr140_swap/archive.zip",
+    "sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": ".omx/research/ddm_swp2_20260910/archive_manifest.json"
+  },
+  "auth_eval": {
+    "anchor_proof": {
+      "archive": {
+        "bytes": 180466,
+        "members": [
+          {
+            "compress_size": 180366,
+            "crc": 3028051658,
+            "file_size": 180366,
+            "local_header": {
+              "compress_size": 180366,
+              "compress_type": 0,
+              "crc32": 3028051658,
+              "extra_len": 0,
+              "file_size": 180366,
+              "flag_bits": 0,
+              "mod_date": 33,
+              "mod_time": 0,
+              "name": "p",
+              "version_needed": 20
+            },
+            "local_header_name": "p",
+            "name": "p",
+            "sha256": "fcef2545e3185cc61223c14a5e9843fc88c46c94b37ac43ffb69a4c67767e0f5",
+            "unsafe_reason": null
+          }
+        ],
+        "path": "submissions/_staging_move43_pr140_swap/archive.zip",
+        "sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+      },
+      "auth_eval": {
+        "contest_auth_eval_elapsed_seconds": 1142.8494449290001,
+        "cuda_version": "12.4",
+        "device": "cuda",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submission_dir/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cuda"
+        ],
+        "evaluate_elapsed_seconds": 42.740094623000005,
+        "evidence_grade": "contest-CUDA",
+        "gpu_driver": "580.95.05",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_elapsed_seconds": 1089.633945164,
+        "samples": 600,
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.5.1+cu124",
+        "upstream_commit": null,
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "auth_eval_local_custody_ignored_by_git": true,
+      "auth_eval_local_custody_path": ".omx/research/ddm_swp2_20260910/contest_auth_eval.json",
+      "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+      "runtime": {
+        "runtime_file_count": 45,
+        "runtime_files": [
+          {
+            "bytes": 183043,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/compress.py",
+            "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+          },
+          {
+            "bytes": 7353,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/carrier_codec.py",
+            "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+          },
+          {
+            "bytes": 13389,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/ddm_mp2_semantic_receiver.py",
+            "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+          },
+          {
+            "bytes": 17471,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/hpac_integer.py",
+            "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+          },
+          {
+            "bytes": 8282,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/hpac_integer_sparse.py",
+            "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+          },
+          {
+            "bytes": 13810,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/inflate.py",
+            "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+          },
+          {
+            "bytes": 5881,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/integer_model_io.py",
+            "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+          },
+          {
+            "bytes": 20916,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/rc1_adaptive_model_sections.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          {
+            "bytes": 2475,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+            "sha256": "598dbd7acb3146f6b3e3779fd82119decf5c55f302d2e1e984365ba1955e7749"
+          },
+          {
+            "bytes": 3219,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+            "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+          },
+          {
+            "bytes": 57,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/__init__.py",
+            "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+          },
+          {
+            "bytes": 2058,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/baseline.py",
+            "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+          },
+          {
+            "bytes": 1578,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/bits.py",
+            "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+          },
+          {
+            "bytes": 8206,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/carrier_repack.py",
+            "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+          },
+          {
+            "bytes": 7074,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/compensation_overlay.py",
+            "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+          },
+          {
+            "bytes": 25232,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/ddm_wc1_advisory_runtime.py",
+            "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+          },
+          {
+            "bytes": 12929,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/dx2_cabac_coefficients.py",
+            "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+          },
+          {
+            "bytes": 54,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/__init__.py",
+            "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+          },
+          {
+            "bytes": 4230,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/adaptive_ans.py",
+            "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+          },
+          {
+            "bytes": 4875,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/coefficient_ar1_codec.py",
+            "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+          },
+          {
+            "bytes": 4027,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/coefficient_predictor.py",
+            "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+          },
+          {
+            "bytes": 2904,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/rc64.py",
+            "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+          },
+          {
+            "bytes": 5638,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/rc64_backend.c",
+            "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+          },
+          {
+            "bytes": 9656,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/renderer_weight_codec.py",
+            "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+          },
+          {
+            "bytes": 50299,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_corrector_native.c",
+            "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+          },
+          {
+            "bytes": 40911,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_hpac_native.c",
+            "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+          },
+          {
+            "bytes": 26781,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_hpac_native.py",
+            "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+          },
+          {
+            "bytes": 29176,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_inflate.py",
+            "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+          },
+          {
+            "bytes": 4964,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/frame0_selector.py",
+            "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+          },
+          {
+            "bytes": 14709,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/free_corrector.py",
+            "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+          },
+          {
+            "bytes": 34979,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/fx1_logistic_mixer_corrector.py",
+            "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+          },
+          {
+            "bytes": 31470,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/fx2_model_axis_corrector.py",
+            "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+          },
+          {
+            "bytes": 10952,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/hpac_inference.py",
+            "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+          },
+          {
+            "bytes": 13327,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/ihs2.py",
+            "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+          },
+          {
+            "bytes": 10527,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/ihs2_gate_a.py",
+            "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+          },
+          {
+            "bytes": 15952,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/native_free_corrector.py",
+            "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+          },
+          {
+            "bytes": 20916,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rc1_adaptive_model_sections.py",
+            "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+          },
+          {
+            "bytes": 31341,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rc2_hpac_semistatic_mixing.py",
+            "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+          },
+          {
+            "bytes": 8010,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rc3_shared_mixer.py",
+            "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+          },
+          {
+            "bytes": 34053,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/residual_archive.py",
+            "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+          },
+          {
+            "bytes": 15421,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rr4_free_corrector.py",
+            "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+          },
+          {
+            "bytes": 20793,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rr5_arith_basis.py",
+            "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+          },
+          {
+            "bytes": 9693,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/sm1_semantic_mixer.py",
+            "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+          },
+          {
+            "bytes": 8753,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/tc1_receiver_checkpoint.py",
+            "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+          },
+          {
+            "bytes": 8590,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/tc1_shared_mixer.py",
+            "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+          }
+        ],
+        "runtime_tree_sha256": "a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803",
+        "runtime_tree_sha256_candidates": {
+          "provenance.inflate_runtime_manifest.runtime_tree_sha256": "a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803"
+        }
+      },
+      "schema": "pre_submission_compliance_anchor_proof_v1",
+      "score_basis": {
+        "archive_bytes": 180466,
+        "archive_rate_unscaled": 0.0048065960733658306,
+        "avg_posenet_dist": 4.59e-06,
+        "avg_segnet_dist": 0.00010345,
+        "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+        "report_reconstructed_score": 0.1372848557085275,
+        "score": 0.1372848557085275,
+        "score_delta_vs_report_reconstruction": 0.0
+      }
+    },
+    "exists": true,
+    "path": ".omx/research/ddm_swp2_20260910/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 180466,
+      "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "avg_posenet_dist": 4.59e-06,
+      "avg_segnet_dist": 0.00010345,
+      "cpu_leaderboard_reproduction_eligible": false,
+      "device": "cuda",
+      "evidence_grade": "contest-CUDA",
+      "gpu_t4_match": true,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.0048065960733658306,
+      "samples": 600,
+      "score": 0.1372848557085275,
+      "score_axis": "contest_cuda",
+      "score_claim_valid": true
+    },
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803"
+    },
+    "strict_formula": {
+      "archive_bytes": 180466,
+      "archive_rate_unscaled": 0.0048065960733658306,
+      "avg_posenet_dist": 4.59e-06,
+      "avg_segnet_dist": 0.00010345,
+      "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+      "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+      "report_reconstructed_score": 0.1372848557085275,
+      "score": 0.1372848557085275,
+      "score_delta_vs_report_reconstruction": 0.0
+    }
+  },
+  "checks": [
+    {
+      "details": "submissions/_staging_move43_pr140_swap/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/_staging_move43_pr140_swap/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/_staging_move43_pr140_swap/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "requires archive_dir=$1 output_dir=$2 file_list=$3 and file-list read loop",
+      "name": "inflate_sh_uses_canonical_three_arg_contract",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "forbidden_eval_tokens=[]",
+      "name": "inflate_sh_loads_no_scorers_or_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/_staging_move43_pr140_swap/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "p",
+      "name": "zip_member_safe:p",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='p' local='p' local_reason=None",
+      "name": "zip_local_header_matches:p",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "p",
+      "name": "zip_local_header_metadata_matches:p",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "p",
+      "name": "zip_member_payload_readable:p",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['p']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=1",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e actual=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=180466 actual=180466",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/ddm_swp2_20260910/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/ddm_swp2_20260910/contest_auth_eval.json",
+      "name": "auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e actual=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=180466 actual=180466",
+      "name": "auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "auth_eval_has_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "record=0.1372848557085275 recomputed=0.1372848557085275",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict=0.1372848557085275 record=0.1372848557085275 delta=0.0",
+      "name": "auth_eval_strict_formula_score_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cuda record_axis=contest_cuda",
+      "name": "auth_eval_selected_axis_matches_submission_gate",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cuda score=0.1372848557085275 source=strict_formula threshold=0.192",
+      "name": "auth_eval_score_at_or_below_submission_threshold",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True claim=True exact_cuda_eval_complete=True",
+      "name": "auth_eval_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires explicit exact_cuda_eval_complete=true, score_claim_valid=true, lane_tag=[contest-CUDA], score_axis=contest_cuda in the auth-eval JSON; promotion eligibility is decided by this compliance gate, not raw contest_auth_eval.py",
+      "name": "auth_eval_explicit_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "{\"promotion_blockers\": [\"raw_auth_eval_does_not_verify_submission_policy_gates\", \"cpu_leaderboard_reproduction_not_adjudicated\", \"pre_submission_compliance_check_not_recorded\"], \"rank_or_kill_blockers\": [\"raw_auth_eval_not_rank_or_kill_authority\", \"requires_adjudicated_cuda_cpu_policy_review\"]}",
+      "name": "auth_eval_raw_promotion_policy_blockers_absent",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "raw auth-eval payload without adjudication fields",
+      "name": "auth_eval_adjudicated_raw_policy_clean",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803 candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803'} runtime_equivalence_proof_accepts_expected=False",
+      "name": "auth_eval_runtime_tree_expected_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/ddm_rp1_round2_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json",
+      "name": "contest_cpu_auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/ddm_rp1_round2_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json",
+      "name": "contest_cpu_auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "contest_cpu_auth_eval_score_parseable",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "name": "contest_cpu_auth_eval_archive_sha_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=180466",
+      "name": "contest_cpu_auth_eval_archive_size_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "score_missing, pose_avg_missing, seg_avg_missing, rate_unscaled_missing, archive_size_bytes_missing, canonical_score_source_not_recomputed_from_components, n_samples_missing",
+      "name": "contest_cpu_auth_eval_schema_metric_consistency",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_recorded",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_matches_cuda",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/_staging_move43_pr140_swap/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "hits=[]",
+      "name": "submission_runtime_loads_no_scorers_or_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "hits=[]",
+      "name": "submission_runtime_has_no_network_install_or_local_paths",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "parse_errors=[]",
+      "name": "submission_runtime_import_allowlist_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "disallowed=['submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:experiments', 'submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:experiments']",
+      "name": "submission_runtime_imports_within_allowlist",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=750fc1e4e099db72d138d67db2e9d4028786531b4fbbadfe1587a5bfc8ccb8d7",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab', '750fc1e4e099db72d138d67db2e9d4028786531b4fbbadfe1587a5bfc8ccb8d7'] auth_eval_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'} runtime_equivalence_proof_valid=False",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/ddm_swp2_20260910/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/ddm_swp2_20260910/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e actual=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=180466 actual=180466",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='p' actual='p'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=180366 actual=180366",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=180366 actual=180366",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=3028051658 actual=3028051658",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='fcef2545e3185cc61223c14a5e9843fc88c46c94b37ac43ffb69a4c67767e0f5' actual='fcef2545e3185cc61223c14a5e9843fc88c46c94b37ac43ffb69a4c67767e0f5'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/_staging_move43_pr140_swap/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "7beb6a5fc7c2bf47",
+      "name": "report_mentions_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "180466",
+      "name": "report_mentions_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packets must include the PR-template `competitive or innovative` answer",
+      "name": "post_deadline_policy_statement_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement must affirm competitive and/or innovative status",
+      "name": "post_deadline_policy_statement_names_mode",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "non-template rationale",
+      "name": "post_deadline_policy_statement_not_template",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "affirmative rationale",
+      "name": "post_deadline_policy_statement_not_negated",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement must explain score/leaderboard competitiveness or novelty",
+      "name": "post_deadline_policy_statement_has_frontier_context",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement length=587 chars; minimum 80",
+      "name": "post_deadline_policy_statement_substantive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict contest-final packets require --hosted-archive-manifest-json",
+      "name": "hosted_archive_manifest_supplied",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "placeholders=[] locations=[]",
+      "name": "hosted_archive_public_text_has_no_placeholder",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must link public source repo(s)",
+      "name": "public_source_repo_link_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must include a pinned commit/tag URL or 40-char git SHA",
+      "name": "public_source_pinned_revision_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "placeholders=[] locations=[]",
+      "name": "public_source_pin_text_has_no_placeholder",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must mention OSS/open-source, deterministic reproducibility, source code, commit, archive SHA, or runtime tree",
+      "name": "public_source_reproducibility_context_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must include a reproduce command or an archive/runtime SHA binding",
+      "name": "public_source_reproduce_command_or_sha_binding_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final public text must label CUDA evidence as [contest-CUDA]",
+      "name": "public_evidence_contest_cuda_label_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final public text must label CPU evidence as [contest-CPU]",
+      "name": "public_evidence_contest_cpu_label_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "placeholders=[] locations=[]",
+      "name": "public_text_has_no_unresolved_template_placeholders",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-lane-id",
+      "name": "contest_final_expected_lane_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-job-id",
+      "name": "contest_final_expected_job_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/state/active_lane_dispatch_claims.md",
+      "name": "dispatch_claims_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=ddm_sj1_t4_token_predistortion_pass6_20260910 job_id=ddm_sj1_t4_token_predistortion_pass6_20260910 matching_rows=0 latest_matching_status=None",
+      "name": "dispatch_claim_terminal_row",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=ddm_sj1_t4_token_predistortion_pass6_20260910 job_id=ddm_sj1_t4_token_predistortion_pass6_20260910 matching_rows=0 latest_matching_status=None selected_axis=contest_cuda",
+      "name": "dispatch_claim_successful_exact_eval_terminal_row",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final terminal claim must bind the exact scored archive sha256=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e; latest_matching_notes=None",
+      "name": "dispatch_claim_terminal_archive_sha_bound",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final terminal claim must bind the exact scored runtime_tree_sha256=a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803; latest_matching_notes=None",
+      "name": "dispatch_claim_terminal_runtime_tree_sha_bound",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=ddm_sj1_t4_token_predistortion_pass6_20260910 job_id=ddm_sj1_t4_token_predistortion_pass6_20260910 matching_rows=0 has_prior_nonterminal_matching_row=False",
+      "name": "dispatch_claim_prior_active_row",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "scanned 50 file(s)",
+      "name": "public_scan_corpus_nonempty",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "axis=contest_cuda score_source=strict_formula; contest-final must use selected-axis auth-eval artifact, not --submission-score",
+      "name": "contest_final_selected_axis_auth_score_available",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "axis=contest_cuda candidate=0.137285 canonical_best=0.137285 canonical_archive=7beb6a5fc7c2 same_archive=True",
+      "name": "frontier_no_regression_on_submitted_axis",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "contest_cpu_auth_eval": {
+    "exists": true,
+    "path": ".omx/research/ddm_rp1_round2_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json",
+    "record": null,
+    "required": true,
+    "runtime_tree_candidates": {},
+    "runtime_tree_pruned_candidates": {},
+    "strict_formula": null
+  },
+  "dispatch_claims": {
+    "exists": true,
+    "has_prior_nonterminal_matching_row": false,
+    "latest_matching_notes": null,
+    "latest_matching_row": null,
+    "latest_matching_status": null,
+    "matching_rows": 0,
+    "path": ".omx/state/active_lane_dispatch_claims.md",
+    "rows": 3558
+  },
+  "frontier_baseline": {
+    "candidate": {
+      "axis": "contest_cuda",
+      "score": 0.1372848557085275,
+      "score_source": "strict_formula"
+    },
+    "canonical_best": {
+      "contest_cpu": {
+        "archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+        "hardware_substrate": "linux_x86_64_cpu",
+        "lane_id": null,
+        "score": 0.1880443979880752
+      },
+      "contest_cuda": {
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "hardware_substrate": "linux_x86_64_t4",
+        "lane_id": "ddm_sj1_t4_token_predistortion_pass6_20260910",
+        "score": 0.1372848557085275
+      }
+    },
+    "schema": "pact_frontier_check_v1"
+  },
+  "hosted_archive": {
+    "placeholder_locations": [],
+    "placeholders": [],
+    "provided": false,
+    "public_text_sources": [
+      "submissions/_staging_move43_pr140_swap/README.md",
+      "submissions/_staging_move43_pr140_swap/report.txt",
+      ".omx/research/ddm_swp2_20260910/PR_BODY.md"
+    ],
+    "required": true
+  },
+  "instrument_and_world": {
+    "checker_source_files": [
+      {
+        "path": "scripts/pre_submission_compliance_check.py",
+        "sha256": "c4145263037225337d0edda409f513aa5030191afd740036212862043647fad9"
+      },
+      {
+        "path": "src/tac/preflight.py",
+        "sha256": "1e8af1a9f8a4a5f6d73fcc88e34f4e3060eb0a9b6f108a88a65334f023d58b5c"
+      },
+      {
+        "path": "src/tac/repo_io.py",
+        "sha256": "a081e533abd5dc6be1c575d4536065d2dd22fb724c45af876685d4ec8dfacc67"
+      },
+      {
+        "path": "src/tac/frontier_scan.py",
+        "sha256": "379b125ae95dcf8ffcf223edcb4060aee44187e7d97111c3698a71e24b7a25b6"
+      }
+    ],
+    "checker_source_sha256": "c4145263037225337d0edda409f513aa5030191afd740036212862043647fad9",
+    "frontier_pointer_state": {
+      "effective_frontier": {
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "archive_size_bytes": null,
+        "score": 0.1372848557085275
+      },
+      "file_sha256": "96e7832f22b92d7b319ac73843d2d3cf80ce06abf4b38998a955757aaef0e4dd",
+      "last_refreshed_utc": "2026-09-10T18:45:29.172338+00:00",
+      "our_local_frontier_contest_cpu": {
+        "archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+        "archive_size_bytes": null,
+        "score": 0.1880443979880752
+      },
+      "our_local_frontier_contest_cuda": {
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "archive_size_bytes": null,
+        "score": 0.1372848557085275
+      },
+      "path": ".omx/state/canonical_frontier_pointer.json",
+      "present": true
+    },
+    "note": "A receipt is bytes x instrument x world. Re-check all three before citing this receipt: any of them moving makes it stale, not only an edit to a scanned surface.",
+    "scanned_file_count": 50,
+    "schema": "compliance_instrument_and_world.v1"
+  },
+  "passed": false,
+  "post_deadline_submission_policy": {
+    "chars": 587,
+    "has_frontier_context": true,
+    "names_mode": true,
+    "negation_reason": null,
+    "required": true,
+    "source": ".omx/research/ddm_swp2_20260910/COMPETITIVE_STATEMENT.md",
+    "statement_preview": "Competitive on the measured contest-CUDA axis: the retained move-43 score is 0.1372848557085275. The update adds token pre-distortion pass 6 to the move-42 field and re-solves the stored pose carrier on that edited field. It retains the ear",
+    "template_reason": null
+  },
+  "public_evidence_axis_labels": {
+    "labels": {
+      "[contest-CPU]": true,
+      "[contest-CUDA]": true
+    },
+    "required": true,
+    "sources": [
+      "submissions/_staging_move43_pr140_swap/README.md",
+      "submissions/_staging_move43_pr140_swap/report.txt",
+      ".omx/research/ddm_swp2_20260910/PR_BODY.md"
+    ]
+  },
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      ".omx/research/ddm_swp2_20260910/PR_BODY.md"
+    ],
+    "scanned_file_count": 50,
+    "scanned_files": [
+      "submissions/_staging_move43_pr140_swap/README.md",
+      "submissions/_staging_move43_pr140_swap/report.txt",
+      "submissions/_staging_move43_pr140_swap/MANIFEST.sha256",
+      "submissions/_staging_move43_pr140_swap/archive.zip",
+      "submissions/_staging_move43_pr140_swap/compress.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/carrier_codec.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer_sparse.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/integer_model_io.py",
+      "submissions/_staging_move43_pr140_swap/cpr1/rc1_adaptive_model_sections.py",
+      "submissions/_staging_move43_pr140_swap/inflate.py",
+      "submissions/_staging_move43_pr140_swap/inflate.sh",
+      "submissions/_staging_move43_pr140_swap/runtime/__init__.py",
+      "submissions/_staging_move43_pr140_swap/runtime/baseline.py",
+      "submissions/_staging_move43_pr140_swap/runtime/bits.py",
+      "submissions/_staging_move43_pr140_swap/runtime/carrier_repack.py",
+      "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py",
+      "submissions/_staging_move43_pr140_swap/runtime/dx2_cabac_coefficients.py",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/__init__.py",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/adaptive_ans.py",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_ar1_codec.py",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_predictor.py",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64.py",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64_backend.c",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/renderer_weight_codec.py",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_corrector_native.c",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.c",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py",
+      "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py",
+      "submissions/_staging_move43_pr140_swap/runtime/free_corrector.py",
+      "submissions/_staging_move43_pr140_swap/runtime/fx1_logistic_mixer_corrector.py",
+      "submissions/_staging_move43_pr140_swap/runtime/fx2_model_axis_corrector.py",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2.py",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2_gate_a.py",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py",
+      "submissions/_staging_move43_pr140_swap/runtime/rc1_adaptive_model_sections.py",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py",
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py",
+      "submissions/_staging_move43_pr140_swap/runtime/rr4_free_corrector.py",
+      "submissions/_staging_move43_pr140_swap/runtime/rr5_arith_basis.py",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_shared_mixer.py",
+      ".omx/research/ddm_swp2_20260910/PR_BODY.md"
+    ],
+    "submission_dir": "submissions/_staging_move43_pr140_swap"
+  },
+  "public_source_reproducibility": {
+    "archive_runtime_sha_bindings": [
+      "Archive SHA-256: 7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+    ],
+    "has_reproduce_command": false,
+    "has_reproduce_command_or_sha_binding": true,
+    "has_reproducibility_context": true,
+    "pin_placeholder_locations": [],
+    "pin_placeholders": [],
+    "pinned_source_refs": [
+      "1c9fbbf58716eb0f26bcdf2a91e3c89d0e4efdde"
+    ],
+    "repo_links": [
+      "https://github.com/adpena/comma-lab",
+      "https://github.com/adpena/comma_video_compression_challenge"
+    ],
+    "required": true,
+    "source_ref_manifest": {
+      "provided": false
+    },
+    "sources": [
+      "submissions/_staging_move43_pr140_swap/README.md",
+      "submissions/_staging_move43_pr140_swap/report.txt",
+      ".omx/research/ddm_swp2_20260910/PR_BODY.md"
+    ]
+  },
+  "public_template_placeholders": {
+    "allowlist": [
+      "<archive_dir>",
+      "<file_list>",
+      "<output_dir>"
+    ],
+    "placeholder_locations": [],
+    "placeholders": [],
+    "required": true,
+    "sources": [
+      "submissions/_staging_move43_pr140_swap/README.md",
+      "submissions/_staging_move43_pr140_swap/report.txt",
+      ".omx/research/ddm_swp2_20260910/PR_BODY.md"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "submissions/_staging_move43_pr140_swap/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "submissions/_staging_move43_pr140_swap",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "submissions/_staging_move43_pr140_swap/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "submissions/_staging_move43_pr140_swap/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "submissions/_staging_move43_pr140_swap/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "disallowed_runtime_imports": [
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:experiments",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:experiments"
+    ],
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "contest_auth_eval_cpu.json",
+      "contest_cpu_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 183043,
+        "relative_path": "compress.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/compress.py",
+        "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+      },
+      {
+        "bytes": 7353,
+        "relative_path": "cpr1/carrier_codec.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/carrier_codec.py",
+        "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+      },
+      {
+        "bytes": 13389,
+        "relative_path": "cpr1/ddm_mp2_semantic_receiver.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py",
+        "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+      },
+      {
+        "bytes": 17471,
+        "relative_path": "cpr1/hpac_integer.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer.py",
+        "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+      },
+      {
+        "bytes": 8282,
+        "relative_path": "cpr1/hpac_integer_sparse.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer_sparse.py",
+        "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+      },
+      {
+        "bytes": 13810,
+        "relative_path": "cpr1/inflate.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/inflate.py",
+        "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+      },
+      {
+        "bytes": 5881,
+        "relative_path": "cpr1/integer_model_io.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/integer_model_io.py",
+        "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+      },
+      {
+        "bytes": 20916,
+        "relative_path": "cpr1/rc1_adaptive_model_sections.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/cpr1/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      },
+      {
+        "bytes": 2475,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/inflate.py",
+        "sha256": "598dbd7acb3146f6b3e3779fd82119decf5c55f302d2e1e984365ba1955e7749"
+      },
+      {
+        "bytes": 3219,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/inflate.sh",
+        "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+      },
+      {
+        "bytes": 57,
+        "relative_path": "runtime/__init__.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/__init__.py",
+        "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+      },
+      {
+        "bytes": 2058,
+        "relative_path": "runtime/baseline.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/baseline.py",
+        "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+      },
+      {
+        "bytes": 1578,
+        "relative_path": "runtime/bits.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/bits.py",
+        "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+      },
+      {
+        "bytes": 8206,
+        "relative_path": "runtime/carrier_repack.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/carrier_repack.py",
+        "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+      },
+      {
+        "bytes": 7074,
+        "relative_path": "runtime/compensation_overlay.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py",
+        "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+      },
+      {
+        "bytes": 25232,
+        "relative_path": "runtime/ddm_wc1_advisory_runtime.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py",
+        "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+      },
+      {
+        "bytes": 12929,
+        "relative_path": "runtime/dx2_cabac_coefficients.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/dx2_cabac_coefficients.py",
+        "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+      },
+      {
+        "bytes": 54,
+        "relative_path": "runtime/entropy/__init__.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/__init__.py",
+        "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+      },
+      {
+        "bytes": 4230,
+        "relative_path": "runtime/entropy/adaptive_ans.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/adaptive_ans.py",
+        "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+      },
+      {
+        "bytes": 4875,
+        "relative_path": "runtime/entropy/coefficient_ar1_codec.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_ar1_codec.py",
+        "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+      },
+      {
+        "bytes": 4027,
+        "relative_path": "runtime/entropy/coefficient_predictor.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_predictor.py",
+        "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+      },
+      {
+        "bytes": 2904,
+        "relative_path": "runtime/entropy/rc64.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64.py",
+        "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+      },
+      {
+        "bytes": 5638,
+        "relative_path": "runtime/entropy/rc64_backend.c",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64_backend.c",
+        "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+      },
+      {
+        "bytes": 9656,
+        "relative_path": "runtime/entropy/renderer_weight_codec.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/entropy/renderer_weight_codec.py",
+        "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+      },
+      {
+        "bytes": 50299,
+        "relative_path": "runtime/f26_corrector_native.c",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/f26_corrector_native.c",
+        "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+      },
+      {
+        "bytes": 40911,
+        "relative_path": "runtime/f26_hpac_native.c",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.c",
+        "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+      },
+      {
+        "bytes": 26781,
+        "relative_path": "runtime/f26_hpac_native.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py",
+        "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+      },
+      {
+        "bytes": 29176,
+        "relative_path": "runtime/f26_inflate.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py",
+        "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+      },
+      {
+        "bytes": 4964,
+        "relative_path": "runtime/frame0_selector.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py",
+        "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+      },
+      {
+        "bytes": 14709,
+        "relative_path": "runtime/free_corrector.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/free_corrector.py",
+        "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+      },
+      {
+        "bytes": 34979,
+        "relative_path": "runtime/fx1_logistic_mixer_corrector.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/fx1_logistic_mixer_corrector.py",
+        "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+      },
+      {
+        "bytes": 31470,
+        "relative_path": "runtime/fx2_model_axis_corrector.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/fx2_model_axis_corrector.py",
+        "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+      },
+      {
+        "bytes": 10952,
+        "relative_path": "runtime/hpac_inference.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py",
+        "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+      },
+      {
+        "bytes": 13327,
+        "relative_path": "runtime/ihs2.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/ihs2.py",
+        "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+      },
+      {
+        "bytes": 10527,
+        "relative_path": "runtime/ihs2_gate_a.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/ihs2_gate_a.py",
+        "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+      },
+      {
+        "bytes": 15952,
+        "relative_path": "runtime/native_free_corrector.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py",
+        "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+      },
+      {
+        "bytes": 20916,
+        "relative_path": "runtime/rc1_adaptive_model_sections.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      },
+      {
+        "bytes": 31341,
+        "relative_path": "runtime/rc2_hpac_semistatic_mixing.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py",
+        "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+      },
+      {
+        "bytes": 8010,
+        "relative_path": "runtime/rc3_shared_mixer.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py",
+        "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+      },
+      {
+        "bytes": 34053,
+        "relative_path": "runtime/residual_archive.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py",
+        "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+      },
+      {
+        "bytes": 15421,
+        "relative_path": "runtime/rr4_free_corrector.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/rr4_free_corrector.py",
+        "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+      },
+      {
+        "bytes": 20793,
+        "relative_path": "runtime/rr5_arith_basis.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/rr5_arith_basis.py",
+        "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+      },
+      {
+        "bytes": 9693,
+        "relative_path": "runtime/sm1_semantic_mixer.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      },
+      {
+        "bytes": 8753,
+        "relative_path": "runtime/tc1_receiver_checkpoint.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py",
+        "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+      },
+      {
+        "bytes": 8590,
+        "relative_path": "runtime/tc1_shared_mixer.py",
+        "repo_relative_path": "submissions/_staging_move43_pr140_swap/runtime/tc1_shared_mixer.py",
+        "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+      }
+    ],
+    "forbidden_side_effect_hits": [],
+    "portable_runtime_tree_sha256_without_custody_files": "5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "_staging_move43_pr140_swap",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_allowed_non_stdlib_import_roots": [
+      "brotli",
+      "codec",
+      "codec_sidecar",
+      "frame_selector",
+      "model",
+      "numpy",
+      "src",
+      "torch"
+    ],
+    "runtime_equivalence_proof": {
+      "provided": false
+    },
+    "runtime_file_count": 45,
+    "runtime_import_parse_errors": [],
+    "runtime_imports": [
+      "submissions/_staging_move43_pr140_swap/compress.py:__future__",
+      "submissions/_staging_move43_pr140_swap/compress.py:argparse",
+      "submissions/_staging_move43_pr140_swap/compress.py:base64",
+      "submissions/_staging_move43_pr140_swap/compress.py:brotli",
+      "submissions/_staging_move43_pr140_swap/compress.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/compress.py:importlib",
+      "submissions/_staging_move43_pr140_swap/compress.py:io",
+      "submissions/_staging_move43_pr140_swap/compress.py:json",
+      "submissions/_staging_move43_pr140_swap/compress.py:numpy",
+      "submissions/_staging_move43_pr140_swap/compress.py:os",
+      "submissions/_staging_move43_pr140_swap/compress.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/compress.py:platform",
+      "submissions/_staging_move43_pr140_swap/compress.py:shutil",
+      "submissions/_staging_move43_pr140_swap/compress.py:subprocess",
+      "submissions/_staging_move43_pr140_swap/compress.py:sys",
+      "submissions/_staging_move43_pr140_swap/compress.py:time",
+      "submissions/_staging_move43_pr140_swap/compress.py:torch",
+      "submissions/_staging_move43_pr140_swap/compress.py:typing",
+      "submissions/_staging_move43_pr140_swap/compress.py:zipfile",
+      "submissions/_staging_move43_pr140_swap/compress.py:zlib",
+      "submissions/_staging_move43_pr140_swap/cpr1/carrier_codec.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/carrier_codec.py:numpy",
+      "submissions/_staging_move43_pr140_swap/cpr1/carrier_codec.py:struct",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:collections",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:numpy",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:rc1_adaptive_model_sections",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:runtime",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:struct",
+      "submissions/_staging_move43_pr140_swap/cpr1/ddm_mp2_semantic_receiver.py:torch",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer.py:torch",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer_sparse.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer_sparse.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer_sparse.py:hpac_integer",
+      "submissions/_staging_move43_pr140_swap/cpr1/hpac_integer_sparse.py:torch",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:carrier_codec",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:ddm_mp2_semantic_receiver",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:hpac_integer",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:integer_model_io",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:math",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:numpy",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:struct",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:time",
+      "submissions/_staging_move43_pr140_swap/cpr1/inflate.py:torch",
+      "submissions/_staging_move43_pr140_swap/cpr1/integer_model_io.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/integer_model_io.py:hpac_integer",
+      "submissions/_staging_move43_pr140_swap/cpr1/integer_model_io.py:numpy",
+      "submissions/_staging_move43_pr140_swap/cpr1/integer_model_io.py:torch",
+      "submissions/_staging_move43_pr140_swap/cpr1/rc1_adaptive_model_sections.py:__future__",
+      "submissions/_staging_move43_pr140_swap/cpr1/rc1_adaptive_model_sections.py:numpy",
+      "submissions/_staging_move43_pr140_swap/cpr1/rc1_adaptive_model_sections.py:struct",
+      "submissions/_staging_move43_pr140_swap/cpr1/rc1_adaptive_model_sections.py:torch",
+      "submissions/_staging_move43_pr140_swap/inflate.py:__future__",
+      "submissions/_staging_move43_pr140_swap/inflate.py:argparse",
+      "submissions/_staging_move43_pr140_swap/inflate.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/inflate.py:json",
+      "submissions/_staging_move43_pr140_swap/inflate.py:os",
+      "submissions/_staging_move43_pr140_swap/inflate.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/inflate.py:runtime",
+      "submissions/_staging_move43_pr140_swap/inflate.py:torch",
+      "submissions/_staging_move43_pr140_swap/inflate.py:zipfile",
+      "submissions/_staging_move43_pr140_swap/runtime/baseline.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/baseline.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/baseline.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/bits.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/carrier_repack.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/carrier_repack.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/carrier_repack.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py:collections",
+      "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py:math",
+      "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/compensation_overlay.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:collections",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:fcntl",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:importlib",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:json",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:math",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:multiprocessing",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:os",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:platform",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:resource",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:subprocess",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:sys",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:time",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/ddm_wc1_advisory_runtime.py:typing",
+      "submissions/_staging_move43_pr140_swap/runtime/dx2_cabac_coefficients.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/dx2_cabac_coefficients.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/dx2_cabac_coefficients.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/adaptive_ans.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/adaptive_ans.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_ar1_codec.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_ar1_codec.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_ar1_codec.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_predictor.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_predictor.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/coefficient_predictor.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64.py:ctypes",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/rc64.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/renderer_weight_codec.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/renderer_weight_codec.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/entropy/renderer_weight_codec.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:ctypes",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:json",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:os",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:runtime",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:time",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_hpac_native.py:typing",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:importlib",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:inspect",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:json",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:os",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:platform",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:shutil",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:sys",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:time",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:types",
+      "submissions/_staging_move43_pr140_swap/runtime/f26_inflate.py:typing",
+      "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py:math",
+      "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/frame0_selector.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/free_corrector.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/free_corrector.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/fx1_logistic_mixer_corrector.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/fx1_logistic_mixer_corrector.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/fx2_model_axis_corrector.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/fx2_model_axis_corrector.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py:sys",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py:types",
+      "submissions/_staging_move43_pr140_swap/runtime/hpac_inference.py:typing",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2.py:importlib",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2_gate_a.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/ihs2_gate_a.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py:ctypes",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py:os",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/native_free_corrector.py:runtime",
+      "submissions/_staging_move43_pr140_swap/runtime/rc1_adaptive_model_sections.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/rc1_adaptive_model_sections.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/rc1_adaptive_model_sections.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/rc1_adaptive_model_sections.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py:bisect",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py:collections",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py:math",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/rc2_hpac_semistatic_mixing.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:collections",
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:experiments",
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:brotli",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:dataclasses",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:hpac_integer_sparse",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:lzma",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:os",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:subprocess",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:sys",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:time",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/residual_archive.py:zipfile",
+      "submissions/_staging_move43_pr140_swap/runtime/rr4_free_corrector.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/rr4_free_corrector.py:math",
+      "submissions/_staging_move43_pr140_swap/runtime/rr4_free_corrector.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/rr5_arith_basis.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/rr5_arith_basis.py:heapq",
+      "submissions/_staging_move43_pr140_swap/runtime/rr5_arith_basis.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:experiments",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:math",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:struct",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:ctypes",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:hashlib",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:json",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:numpy",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:os",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:pathlib",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:platform",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_receiver_checkpoint.py:torch",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_shared_mixer.py:__future__",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_shared_mixer.py:brotli",
+      "submissions/_staging_move43_pr140_swap/runtime/tc1_shared_mixer.py:numpy"
+    ],
+    "runtime_local_import_roots": [
+      "__init__",
+      "adaptive_ans",
+      "baseline",
+      "bits",
+      "carrier_codec",
+      "carrier_repack",
+      "coefficient_ar1_codec",
+      "coefficient_predictor",
+      "compensation_overlay",
+      "compress",
+      "cpr1",
+      "ddm_mp2_semantic_receiver",
+      "ddm_wc1_advisory_runtime",
+      "dx2_cabac_coefficients",
+      "f26_hpac_native",
+      "f26_inflate",
+      "frame0_selector",
+      "free_corrector",
+      "fx1_logistic_mixer_corrector",
+      "fx2_model_axis_corrector",
+      "hpac_inference",
+      "hpac_integer",
+      "hpac_integer_sparse",
+      "ihs2",
+      "ihs2_gate_a",
+      "inflate",
+      "integer_model_io",
+      "native_free_corrector",
+      "rc1_adaptive_model_sections",
+      "rc2_hpac_semistatic_mixing",
+      "rc3_shared_mixer",
+      "rc64",
+      "renderer_weight_codec",
+      "residual_archive",
+      "rr4_free_corrector",
+      "rr5_arith_basis",
+      "runtime",
+      "sm1_semantic_mixer",
+      "tc1_receiver_checkpoint",
+      "tc1_shared_mixer"
+    ],
+    "runtime_root": "/Users/adpena/Projects/pact/submissions/_staging_move43_pr140_swap",
+    "runtime_tree_sha256": "750fc1e4e099db72d138d67db2e9d4028786531b4fbbadfe1587a5bfc8ccb8d7",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "scorer_import_hits": [],
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

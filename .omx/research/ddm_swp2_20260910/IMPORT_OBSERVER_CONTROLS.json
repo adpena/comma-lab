@@ -1,0 +1,30 @@
+[
+  {
+    "argv": [
+      "/Volumes/VertigoDataTier/pact/ddm_swp2/retained/bare_venv/bin/python",
+      "-I",
+      "-B",
+      "-c",
+      "import sys,builtins,importlib,json\nsys.path.insert(0,sys.argv[1])\nmodule=sys.argv[2];original=builtins.__import__;attempts=[]\ndef observed(name,globals=None,locals=None,fromlist=(),level=0):\n if level==1 and globals and globals.get(\"__name__\")==module: raise ImportError(\"diagnostic observer positive control\")\n if name==\"experiments\":\n  attempts.append(name)\n  raise ImportError(\"experiments unavailable: expected positive control\")\n return original(name,globals,locals,fromlist,level)\nbuiltins.__import__=observed\ntry:importlib.import_module(module)\nexcept ImportError:pass\nassert attempts==[\"experiments\"],attempts\nprint(json.dumps({\"module\":module,\"forced_failure\":True,\"fallback_attempts\":attempts,\"verdict\":\"observer detected actual fallback\"}))\n",
+      "/Users/adpena/Projects/pact/submissions/_staging_move43_pr140_swap",
+      "runtime.rc3_shared_mixer"
+    ],
+    "rc": 0,
+    "stdout": "{\"module\": \"runtime.rc3_shared_mixer\", \"forced_failure\": true, \"fallback_attempts\": [\"experiments\"], \"verdict\": \"observer detected actual fallback\"}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Volumes/VertigoDataTier/pact/ddm_swp2/retained/bare_venv/bin/python",
+      "-I",
+      "-B",
+      "-c",
+      "import sys,builtins,importlib,json\nsys.path.insert(0,sys.argv[1])\nmodule=sys.argv[2];original=builtins.__import__;attempts=[]\ndef observed(name,globals=None,locals=None,fromlist=(),level=0):\n if level==1 and globals and globals.get(\"__name__\")==module: raise ImportError(\"diagnostic observer positive control\")\n if name==\"experiments\":\n  attempts.append(name)\n  raise ImportError(\"experiments unavailable: expected positive control\")\n return original(name,globals,locals,fromlist,level)\nbuiltins.__import__=observed\ntry:importlib.import_module(module)\nexcept ImportError:pass\nassert attempts==[\"experiments\"],attempts\nprint(json.dumps({\"module\":module,\"forced_failure\":True,\"fallback_attempts\":attempts,\"verdict\":\"observer detected actual fallback\"}))\n",
+      "/Users/adpena/Projects/pact/submissions/_staging_move43_pr140_swap",
+      "runtime.sm1_semantic_mixer"
+    ],
+    "rc": 0,
+    "stdout": "{\"module\": \"runtime.sm1_semantic_mixer\", \"forced_failure\": true, \"fallback_attempts\": [\"experiments\"], \"verdict\": \"observer detected actual fallback\"}\n",
+    "stderr": ""
+  }
+]

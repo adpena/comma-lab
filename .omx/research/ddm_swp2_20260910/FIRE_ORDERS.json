@@ -1,0 +1,34 @@
+[
+  {
+    "id": "swp2-readiness",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN with operator for receiver decision",
+    "consumer_store": ".omx/research/ddm_swp2_20260910/BLOCKERS.json",
+    "fire_trigger": "harvest of ddm_swp2 staging handoff",
+    "action": "Resolve declaration/import policy and stale public README/MANIFEST in a new reviewed successor; preserve sealed source. Any receiver edit requires fresh exact T4 evidence. Do not manufacture CPU metrics or waive gates."
+  },
+  {
+    "id": "swp2-landing",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": ".omx/research/ddm_swp2_20260910/LANDING_STATUS.json",
+    "fire_trigger": "serializer returns rc17 with verified fallback bundle",
+    "action": "Land and verify the exact metadata-only bundle; retain staging archive outside Git."
+  },
+  {
+    "id": "swp2-publication",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "operator + MAIN",
+    "consumer_store": ".omx/research/ddm_swp2_20260910/SWAP_COMMANDS.md",
+    "fire_trigger": "all non-hosting blockers closed and explicit one-line confirm on reviewed move43 tree/body; if pointer changes, restage first",
+    "action": "Execute approved new-release hosting/fetchback; generate hosted manifest and require strict PASS before branch push and PR update; verify public head and downloaded archive afterward."
+  },
+  {
+    "id": "swp2-digest-definitions",
+    "disposition": "FOLDED",
+    "owner": "MAIN / existing r9m owner",
+    "consumer_store": ".omx/research/ddm_swp2_20260910/DIGEST_DEFINITIONS.json",
+    "fire_trigger": "existing r9m digest-definition work consumes this receipt",
+    "action": "Preserve named digest definitions; this packet runtime-match check now passes via portable identity. Do not claim general definition consolidation is complete."
+  }
+]

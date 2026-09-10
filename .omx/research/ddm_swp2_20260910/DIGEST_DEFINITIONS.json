@@ -1,0 +1,59 @@
+{
+  "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime": {
+    "sha256": "68fae56a0709ebc435e1fb99019beb16d97e2a30948a44a33866f999e6032a8c",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 48,
+    "total_bytes": 994408
+  },
+  "submissions/_staging_move43_pr140_swap": {
+    "sha256": "59820a4549b3cdb18bbbe55b58d02d746181fe99d017f73d10a6f225d959750c",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 49,
+    "total_bytes": 995013
+  },
+  "compliance_tree_check": [
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803 candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803'} runtime_equivalence_proof_accepts_expected=False",
+      "name": "auth_eval_runtime_tree_expected_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_recorded",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_matches_cuda",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=750fc1e4e099db72d138d67db2e9d4028786531b4fbbadfe1587a5bfc8ccb8d7",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab', '750fc1e4e099db72d138d67db2e9d4028786531b4fbbadfe1587a5bfc8ccb8d7'] auth_eval_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab'} runtime_equivalence_proof_valid=False",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final terminal claim must bind the exact scored runtime_tree_sha256=a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803; latest_matching_notes='archive_sha256=7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e archive_bytes=180466 runtime_tree_sha256=a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803 call_id=fc-01M2691VTJYKNCXX01CKKTN44N score=0.1372848557085275 pose=4.59e-06 seg=0.00010345 n_samples=600 axis=contest_cuda gpu=Tesla T4 auto-closed by modal_harvest_poller at harvest (canonical terminal row)'",
+      "name": "dispatch_claim_terminal_runtime_tree_sha_bound",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "producer_sha256": "f8ffeadda93757ff218630d85550d12ea386e09648e07897d478e86ada233ece"
+}

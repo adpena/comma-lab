@@ -1,0 +1,9 @@
+{
+  "receiver_text_matches": [],
+  "all_tree_text_match": "compress.py:1172 contains tC4 inside a base85 bytes literal, not an identifier or receiver module",
+  "symbol_hits": [],
+  "filename_hits": [],
+  "verdict_scope": "INSTANCE staged move43 receiver; not a global absence claim",
+  "encoded_literal_owner": "compress.py EMBEDDED legacy residual_pre_dx2.py source; its complete compress.py SHA matches move40 evaluated manifest",
+  "compress_matches_move40": true
+}

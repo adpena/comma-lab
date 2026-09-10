@@ -1,0 +1,14 @@
+{
+  "schema": "archive_manifest_v1",
+  "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+  "archive_size_bytes": 180466,
+  "members": [
+    {
+      "name": "p",
+      "file_size": 180366,
+      "compress_size": 180366,
+      "crc": 3028051658,
+      "sha256": "fcef2545e3185cc61223c14a5e9843fc88c46c94b37ac43ffb69a4c67767e0f5"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "full_output_path": ".omx/research/ddm_swp2_20260910/equations_recall.json",
+  "full_output_sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+  "total_rows": 483,
+  "selected_ids": [
+    "canonical_frontier_pointer_v1",
+    "static_packet_custody_byte_delta_score_savings_v1",
+    "modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1",
+    "fixed_c1_pointer_crossing_cap_bytes_v1",
+    "ddm_metric_custody_bundle_completion_v1",
+    "exchange_ratio_noise_floor_v1"
+  ],
+  "scope": "score/exchange and runtime/custody; no new law or fit"
+}

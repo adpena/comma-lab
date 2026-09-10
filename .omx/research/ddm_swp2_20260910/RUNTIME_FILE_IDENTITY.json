@@ -1,0 +1,552 @@
+{
+  "files": [
+    {
+      "relative_path": "compress.py",
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175",
+      "auth_sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "auth_sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+      "auth_sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66",
+      "auth_sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864",
+      "auth_sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "auth_sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1",
+      "auth_sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "auth_sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "equal": true
+    },
+    {
+      "relative_path": "inflate.py",
+      "sha256": "598dbd7acb3146f6b3e3779fd82119decf5c55f302d2e1e984365ba1955e7749",
+      "auth_sha256": "598dbd7acb3146f6b3e3779fd82119decf5c55f302d2e1e984365ba1955e7749",
+      "equal": true
+    },
+    {
+      "relative_path": "inflate.sh",
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "auth_sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8",
+      "auth_sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38",
+      "auth_sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a",
+      "auth_sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "auth_sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "auth_sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2",
+      "auth_sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e",
+      "auth_sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de",
+      "auth_sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797",
+      "auth_sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "auth_sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "auth_sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36",
+      "auth_sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "auth_sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1",
+      "auth_sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a",
+      "auth_sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00",
+      "auth_sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba",
+      "auth_sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+      "auth_sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "auth_sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5",
+      "auth_sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452",
+      "auth_sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064",
+      "auth_sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6",
+      "auth_sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903",
+      "auth_sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b",
+      "auth_sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13",
+      "auth_sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "auth_sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589",
+      "auth_sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "auth_sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/residual_archive.py",
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "auth_sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0",
+      "auth_sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb",
+      "auth_sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26",
+      "auth_sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826",
+      "auth_sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+      "auth_sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+      "equal": true
+    }
+  ],
+  "source_manifest_checks": [
+    {
+      "relative_path": "README.md",
+      "claimed": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609",
+      "actual": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609",
+      "equal": true
+    },
+    {
+      "relative_path": "compress.py",
+      "claimed": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175",
+      "actual": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/carrier_codec.py",
+      "claimed": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "actual": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/ddm_mp2_semantic_receiver.py",
+      "claimed": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+      "actual": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/hpac_integer.py",
+      "claimed": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66",
+      "actual": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/hpac_integer_sparse.py",
+      "claimed": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864",
+      "actual": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/inflate.py",
+      "claimed": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "actual": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/integer_model_io.py",
+      "claimed": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1",
+      "actual": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1",
+      "equal": true
+    },
+    {
+      "relative_path": "cpr1/rc1_adaptive_model_sections.py",
+      "claimed": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "actual": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "equal": true
+    },
+    {
+      "relative_path": "inflate.py",
+      "claimed": "1e14a68a8fe2f71228984361fbf7cbe42173e0aa1e3c5a94a753b6850190a87d",
+      "actual": "598dbd7acb3146f6b3e3779fd82119decf5c55f302d2e1e984365ba1955e7749",
+      "equal": false
+    },
+    {
+      "relative_path": "inflate.sh",
+      "claimed": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "actual": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/__init__.py",
+      "claimed": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8",
+      "actual": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/baseline.py",
+      "claimed": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38",
+      "actual": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/bits.py",
+      "claimed": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a",
+      "actual": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/carrier_repack.py",
+      "claimed": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "actual": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/compensation_overlay.py",
+      "claimed": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "actual": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/ddm_wc1_advisory_runtime.py",
+      "claimed": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2",
+      "actual": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/dx2_cabac_coefficients.py",
+      "claimed": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e",
+      "actual": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/__init__.py",
+      "claimed": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de",
+      "actual": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/adaptive_ans.py",
+      "claimed": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797",
+      "actual": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/coefficient_ar1_codec.py",
+      "claimed": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "actual": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/coefficient_predictor.py",
+      "claimed": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "actual": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/rc64.py",
+      "claimed": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36",
+      "actual": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/rc64_backend.c",
+      "claimed": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "actual": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/entropy/renderer_weight_codec.py",
+      "claimed": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1",
+      "actual": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_corrector_native.c",
+      "claimed": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a",
+      "actual": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_hpac_native.c",
+      "claimed": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00",
+      "actual": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_hpac_native.py",
+      "claimed": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba",
+      "actual": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/f26_inflate.py",
+      "claimed": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+      "actual": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/frame0_selector.py",
+      "claimed": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "actual": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/free_corrector.py",
+      "claimed": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5",
+      "actual": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/fx1_logistic_mixer_corrector.py",
+      "claimed": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452",
+      "actual": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/fx2_model_axis_corrector.py",
+      "claimed": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064",
+      "actual": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/hpac_inference.py",
+      "claimed": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6",
+      "actual": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/ihs2.py",
+      "claimed": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903",
+      "actual": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/ihs2_gate_a.py",
+      "claimed": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b",
+      "actual": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/native_free_corrector.py",
+      "claimed": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13",
+      "actual": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rc1_adaptive_model_sections.py",
+      "claimed": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "actual": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rc2_hpac_semistatic_mixing.py",
+      "claimed": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589",
+      "actual": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rc3_shared_mixer.py",
+      "claimed": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "actual": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/residual_archive.py",
+      "claimed": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "actual": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rr4_free_corrector.py",
+      "claimed": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0",
+      "actual": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/rr5_arith_basis.py",
+      "claimed": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb",
+      "actual": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/sm1_semantic_mixer.py",
+      "claimed": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26",
+      "actual": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/tc1_receiver_checkpoint.py",
+      "claimed": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826",
+      "actual": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826",
+      "equal": true
+    },
+    {
+      "relative_path": "runtime/tc1_shared_mixer.py",
+      "claimed": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+      "actual": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+      "equal": true
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+[
+  {
+    "argv": [
+      "rg",
+      "-g",
+      "*.md",
+      "-n",
+      "-i",
+      "PR #140|PR140|bare.venv|runtime.tree.digest|p0_swap_procedure",
+      ".omx/research"
+    ],
+    "rc": 0,
+    "lines": 197,
+    "output": ".omx/research/ddm_swp2_20260910/recall_0.txt"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|submission.packet|runtime.tree.digest",
+      "docs"
+    ],
+    "rc": 0,
+    "lines": 45,
+    "output": ".omx/research/ddm_swp2_20260910/recall_1.txt"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|ddm_swp2|r9m",
+      ".omx/state/canonical_task_status.jsonl"
+    ],
+    "rc": 0,
+    "lines": 4,
+    "output": ".omx/research/ddm_swp2_20260910/recall_2.txt"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|runtime.tree.digest",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "rc": 1,
+    "lines": 0,
+    "output": ".omx/research/ddm_swp2_20260910/recall_3.txt"
+  }
+]

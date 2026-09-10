@@ -1,0 +1,22 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/fire/MODAL_REMOTE_RESULT.json",
+    "bytes": 158969,
+    "sha256": "d2aadf9809ed6ef9ef435807082fb4849631f224118aba23dd60c2c61443a12e"
+  },
+  {
+    "path": ".omx/research/ddm_sj1_t4_token_predistortion_pass6_20260910_pointer_move_43_20260910.md",
+    "bytes": 6520,
+    "sha256": "d57ab4d55b3d7b0d49d024cea58573c4a29438d1fd2c84046a56bc61863b0ea8"
+  },
+  {
+    "path": ".omx/research/ddm_pk1_pr140_swap_packet_staging_20260910.md",
+    "bytes": 11177,
+    "sha256": "d61b93ba6ec7460c192c45d3e96351d1ece7c58cd02f283af4e42e02b7ae6c68"
+  },
+  {
+    "path": ".omx/research/ddm_rp1_round2_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json",
+    "bytes": 910,
+    "sha256": "fae7d78a79552b96eb8fd5ac81e59dfdae3b7d722d0b9a20e66abed272f4925d"
+  }
+]

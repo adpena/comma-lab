@@ -1,0 +1,12 @@
+{
+  "copied_files_rehashed": 48,
+  "generated_report_rehashed": true,
+  "report_block_exact": true,
+  "public_named_assistant_scan_hits": 0,
+  "strict_pass_count": 85,
+  "strict_total": 93,
+  "strict_fail_count": 8,
+  "scored_receiver_files_matching": 45,
+  "new_scorer_run": false,
+  "swap_commands_not_run": true
+}

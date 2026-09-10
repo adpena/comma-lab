@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "/Volumes/VertigoDataTier/pact/ddm_swp2/retained/bare_venv/bin/python",
+    "-I",
+    "-B",
+    "-c",
+    "import sys,json,builtins,importlib.util,importlib\nsys.path.insert(0,sys.argv[1])\nassert importlib.util.find_spec(\"experiments\") is None\nattempts=[]\noriginal=builtins.__import__\ndef observed(name,*args,**kwargs):\n if name==\"experiments\" or name.startswith(\"experiments.\"):\n  attempts.append(name)\n  raise AssertionError(\"forbidden fallback reached: \"+name)\n return original(name,*args,**kwargs)\nbuiltins.__import__=observed\nfor name in (\"runtime.rc3_shared_mixer\",\"runtime.sm1_semantic_mixer\",\"runtime.ihs2\"):\n module=importlib.import_module(name)\n print(json.dumps({\"module\":name,\"file\":module.__file__}))\nprint(json.dumps({\"experiments_available\":False,\"fallback_attempts\":attempts,\"numpy_version\":importlib.import_module(\"numpy\").__version__,\"sys_path\":sys.path,\"verdict\":\"PASS: normal package imports did not reach either fallback; not an end-to-end inflate or Linux/T4 proof\"}))\n",
+    "/Users/adpena/Projects/pact/submissions/_staging_move43_pr140_swap"
+  ],
+  "rc": 0,
+  "axis": "macOS-CPU import diagnostic",
+  "no_scorer": true,
+  "no_receiver_changes": true,
+  "package_install": {
+    "name": "numpy",
+    "version": "1.26.4",
+    "source": "/Users/adpena/Library/Caches/uv/sdists-v9/pypi/numpy/1.26.4/Ns21IbpKC7_vtuEb/numpy-1.26.4-cp313-cp313-macosx_26_0_arm64.whl"
+  },
+  "scope": "normal rc3, sm1 and ihs2 package imports; full inflate entry needs torch; no numerical decode claim"
+}

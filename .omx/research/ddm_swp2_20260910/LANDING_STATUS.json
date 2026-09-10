@@ -1,0 +1,12 @@
+{
+  "rc": 17,
+  "index_unchanged": true,
+  "fallback_receipt_dir": "/Volumes/VertigoDataTier/pact/ddm_swp2/serializer",
+  "main_landed": false,
+  "not_published": true,
+  "checkpoint_id": "ddm_swp2",
+  "bundle": "/Volumes/VertigoDataTier/pact/ddm_swp2/serializer/20260910T190051.595848Z-82252/intended-commit.bundle",
+  "bundle_sha256": "fcdb0de205322795733d3c6ede1cce540029939d896fedb09524e5c19a46d62b",
+  "fallback_commit": "7b26d2ed2d99d351c7100ed2286518211ea11ce1",
+  "bundle_verified_files": 51
+}
