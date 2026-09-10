@@ -1,0 +1,27 @@
+# ddm_pr8 — SECOND-FAMILY compliance review (gpt-5.6-sol, xhigh) of the FIRST receiver-code changes of this wave: tc3's and tc4's predictor/context-map code now inside the shipped `inflate.py` runtime (moves 41 and 42-candidate) — rule-118 boundary (generic code vs video-derived content), determinism, dependency closure, CPU-axis decode budget, and the strict-scorer rule; plus the standard re-derivation of moves 41–42 (charter, 2026-09-10)
+
+Tokens: `[no-triality] [p0-ledger-ok]` · Owner: codex arm (gpt-5.6-sol, xhigh — second model family by design) · Spawned by MAIN 2026-09-10. Sources: move 41 (`359146e2f`; runtime `/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime`, 48 files; diff vs move 40's runtime = the receiver change), tc3 (`62451b9d3`: memo, receiver wiring, `geometry_review.md` etc.), tc4 (`4e486d1ce`; seal `/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_mask19.seal.json`; runtime under `…/move41/`; row on T4 as lane ddm_tc4_t4_context_slate_20260910), tc2 (`b1e42e8a3`), CLAUDE.md: "inflate.py is a FREE interpreter — COMPILE the generator" (rule 118: GENERIC algorithm free; VIDEO-DERIVED tables/weights counted; the hide-data-in-code fake is NO-FAKE #6/#7), "Strict scorer rule" (no scorer at inflate time), "Deterministic reproducibility", the 30-min decode budget on CPU 4×/16 GB and T4, "Submission auth eval — BOTH CPU AND CUDA" (this lineage has NEVER measured the CPU axis), pr5/pr6/pr7 (`3607c7252`, `72565bdab`, `6da7a0fbe`: the review standard). Axes: review; every number `[from receipts]`; `score_claim=false`.
+
+## MANDATE
+(1) Diff the shipped runtime of move 41 (and tc4's candidate) against move 40's, file by file; for every changed or added line of decoder code answer: is any constant, table, threshold, coefficient or seed DERIVED FROM THIS VIDEO (fitted, tuned by search on the scored frames, or copied from a per-frame quantity)? Mixer weights are COUNTED in the archive — verify they are read from the archive, not embedded in code. Generic geometry (openpilot camera/lane model, quantization bins chosen a priori) is free — but a bin edge tuned on the 600 frames is content: classify each constant with its provenance line. (2) Determinism: the predictor's arithmetic must be bit-identical CPU vs CUDA and across hosts (integer/fixed-point? float ordering?) — the arithmetic coder's decode depends on it; read tc3's `public600` identity proof and say what it proves (same host, one axis) and what it does not (CPU axis, other hosts). (3) Dependency closure: no new imports outside the runtime's declared closure. (4) Decode wall-clock: estimate the added per-token cost and the CPU-axis decode time against the 30-min budget from tc3's timing receipts; flag if the CPU axis has no measurement (it does not — say so as a risk for the PR swap packet). (5) Strict-scorer rule: confirm no scorer weight or scorer-derived table entered the runtime. (6) Re-derive S for moves 41 (and 42 if harvested by then) from receipt components; verify the chain. (7) Read the move-41 packet's not-claimed section against tc3's receipts.
+
+## PRIOR-LAW PREDICTION (m38)
+- All added constants are a-priori generic (geometry, bin counts); weights are archive-read; no imports added; determinism holds by integer arithmetic (verify); CPU decode adds < 60 s. Predict ONE finding: the CPU axis is unmeasured for a runtime whose decode-time profile changed — a real risk for the swap packet, not a compliance breach.
+- **FALSIFIER:** any constant traceable to a fit on the scored frames inside code → NO-FAKE #6/#7 class, P0: report first, and MAIN withdraws the row from the packet candidates until the constant is moved into the counted archive.
+
+## SCOPE
+Review only; a local CPU decode timing of the public entrypoint on ≤ 20 frames is permitted (advisory, labelled) if cheap; no scorer, no dispatch.
+
+## HARD CONSTRAINTS
+- `upstream/` READ-ONLY; no writes outside your memo and `.omx/research/ddm_pr8_20260910/`. Every finding cites file:line in the RUNTIME tree, not the memo. The local SCORER LANE belongs to MAIN, always. Do NOT write who holds it into a charter (the #1210 stale-precondition genus, memo ddm_bz2_bornsmall_capacity_ceiling 2026-08-29).
+- Serializer commits w/ post-edit `--expected-content-sha256`; if git object writes are refused, `landing.patch` + bundle with HEAD ref. Tokens `[no-triality] [p0-ledger-ok]`; NEVER a Co-Authored-By or AI-attribution trailer. Checkpoint `tools/subagent_checkpoint.py --subagent-id ddm_pr8`.
+
+## PRIOR NEGATIVE SIGNAL
+- rc1: identity via the library path failed in f26_inflate (public entrypoint is the proof); the hide-data-in-code fake (NO-FAKE #6/#7) is the class this review exists for. # VERDICT_SCOPE_OK: this charter issues no negative of its own; it audits compliance
+
+## OPTIMAL FORM
+- Reference form: pr5/pr6/pr7 for the review standard; the payload-cleanliness audit bundle of the "Native eval-time runtime discipline" section (binary_source_audit / embedded_constants_audit) as the checklist. SCOPE reductions: none. MECHANISM reductions FORBIDDEN: no trusting the arm's own compliance claims.
+- **PRIOR-LAW PREDICTION (falsifiable):** as above.
+
+## DELIVERABLE
+Memo `.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md`: the per-constant provenance table, determinism verdict, dependency closure, CPU-budget estimate, the S re-derivations, findings with corrected statements. Commit via the serializer. End with the live frontier line.
