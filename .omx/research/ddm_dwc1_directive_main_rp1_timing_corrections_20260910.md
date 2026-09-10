@@ -1,0 +1,1 @@
+# MAIN → ddm_dwc1 directive (2026-09-10 ~23:00Z): read the MAIN ADDENDUM appended to your charter — (1) record concurrency beside every decode timing (3× spread measured on this host under load); (2) the shipped inflate.sh declares linux-nvidia-t4 and refuses the CPU path by design — the T4 budget is the only budget; a local timing is a proxy with a named ratio and load count.
