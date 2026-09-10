@@ -918,3 +918,18 @@ def test_prefire_amendment_requires_latest_frozen_row_and_live_committed_sources
     monkeypatch.setattr(cs, "_pf_git", old_head)
     with pytest.raises(cs.PrefireRefusal, match="commit ancestry differs"):
         cs._pf_contract(intent, repo, None)
+
+
+def test_first_measurement_manifest_is_axis_tagged_and_writable(tmp_path):
+    """rlc5 real control (2026-09-10): the first-measurement manifest must carry the axis tags
+    ``write_fire_manifest`` refuses without, or the reserved nonce is spent on a refusal."""
+    import importlib.util
+    from pathlib import Path as _P
+    spec = importlib.util.spec_from_file_location("fire_tool", _P("tools/fire_modal_auth_eval.py"))
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    manifest = tool.first_measurement_manifest(tool.axis_spec("cuda"), {"lane_id": "l", "instance_job_id": "j"})
+    assert manifest["axis"] == "cuda" and manifest["evidence_axis_tag"] == "[contest-CUDA]"
+    assert manifest["score_axis"] == "contest_cuda" and manifest["stage5_entrypoint"]
+    path = tool.write_fire_manifest(tmp_path, manifest)
+    assert path.exists() and path.name == "FIRE_MANIFEST.json"

@@ -220,6 +220,19 @@ def _archive_sha_is_already_scored(archive_sha256: str) -> bool:
     return _walk(payload)
 
 
+def first_measurement_manifest(spec: dict, context: dict) -> dict:
+    """The first-measurement FIRE_MANIFEST row, axis-tagged so ``write_fire_manifest`` accepts it.
+
+    The real first-measurement dispatch (rlc5, 2026-09-10) reserved its nonce and then refused at
+    the manifest writer because this row carried no axis tag; the axis is the intent's contract
+    axis resolved through ``axis_spec`` and is recorded here exactly as the normal path records it.
+    """
+
+    return {"schema": "fire_modal_first_measurement.v1", "axis": spec["axis"],
+            "evidence_axis_tag": spec["evidence_axis_tag"], "score_axis": spec["score_axis"],
+            "stage5_entrypoint": spec["entrypoint"], **context}
+
+
 def write_fire_manifest(out_dir: Path, manifest: dict) -> Path:
     """Write FIRE_MANIFEST.json, REFUSING an axis-untagged row.
 
@@ -704,7 +717,7 @@ def _first_measurement_main(argv: list[str]) -> int:
         validate_prefire_intent(intent_path, repo=REPO)
         context["source_snapshot"] = snap.to_dict()
         _pf_write_new(context_path, context)
-        manifest = {"schema": "fire_modal_first_measurement.v1", **context}
+        manifest = first_measurement_manifest(axis_spec("cuda"), context)
         write_fire_manifest(output, manifest)
         dispatched = subprocess.run(cmd, cwd=REPO, env=dispatch_env(snap.root, entrypoint=snap.entrypoint),
                                    capture_output=True, text=True, check=False)
