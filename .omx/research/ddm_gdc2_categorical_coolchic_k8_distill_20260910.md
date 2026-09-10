@@ -109,6 +109,24 @@ Per-layer initialisation scales are likewise DERIVED from the fixed requant shif
 (`sigma = 2**shift / sqrt(n/2)`): a single global scale decays the activation to zero by block five and
 kills the gradient (MEASURED).
 
+## Parity smoke (declared SCOPE reduction: step counts only; produces no verdict)
+
+`…/ddm_gdc2_categorical_coolchic_k8_distill/smoke_parity_scope/`, 300 / 200 / 100 steps, one lambda,
+elapsed 661 s, peak RSS **0.67 GiB**. It proved the whole chain before the governed burn spent an hour:
+
+| check | result |
+|---|---|
+| packet built, deterministic repeat byte-identical | PASS (3 stage ends) |
+| receiver parse-back exact (z0, z1, parameters) | PASS |
+| full-n600 receiver render | PASS, decode **172 / 202 / 192 s** (budget 900 s) |
+| MLX float vs NumPy integer argmax identity | **exact**, 262,144 sampled sites, agreement 1.000 |
+| resumable atomic checkpoints every 250 steps | PASS |
+
+A separate 1,100-step probe measured the optimisation itself: the run sits on the class-prior plateau
+(cross entropy 1.129 nats) for roughly 300 steps, escapes, and reaches **98.4% training accuracy by
+step 700**, holding 97–98% after. The 300-step smoke had simply not escaped yet — the plateau is a
+symmetry-breaking delay, not a pathology.
+
 ## Stage table
 
 *(filled by the governed burn)*
