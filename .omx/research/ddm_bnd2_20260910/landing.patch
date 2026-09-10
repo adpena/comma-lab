@@ -1,0 +1,1053 @@
+diff --git a/experiments/ddm_bnd2_source_preflight.py b/experiments/ddm_bnd2_source_preflight.py
+new file mode 100644
+--- /dev/null
++++ b/experiments/ddm_bnd2_source_preflight.py
+@@ -0,0 +1,254 @@
++"""Source custody and fail-closed launch preflight for bnd2; this is NOT an encoder.
++
++Read the cmp2 tree's actual archive reader and preserve every extracted payload.
++No scorer, native forward, field materialization, or new coded candidate runs here.
++The priority probe is deliberately required: EPERM is a blocker, not best effort.
++"""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import math
++import os
++import shutil
++import subprocess
++import sys
++from pathlib import Path
++
++sys.dont_write_bytecode = True
++REPO = Path(__file__).resolve().parents[1]
++sys.path[:0] = [str(REPO), str(REPO / "src")]
++for _key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
++    os.environ[_key] = "1"
++
++import numpy as np
++
++from experiments import ddm_jg2_tail_reencode as jg2
++
++STORE = Path("/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code")
++LIVE = Path("/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime")
++RP1 = Path("/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion")
++FIELD = Path("/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/source/field.u8")
++POINTER = REPO / ".omx/state/canonical_frontier_pointer.json"
++AXIS = "[macOS-CPU scorer-free source-custody preflight]"
++RESERVE = 40 * 1024**3
++
++
++def fact(path: Path) -> dict:
++    """Hash an actual file with bounded memory."""
++    return jg2.file_fact(path)
++
++
++def preserve(path: Path, payload: bytes) -> dict:
++    """Persist once without overwriting a changed or stranded artifact."""
++    if not path.resolve().is_relative_to(STORE):
++        raise ValueError("write outside assigned bnd2 store")
++    if path.exists():
++        if path.read_bytes() != payload:
++            raise ValueError(f"immutable payload differs: {path}")
++        return fact(path)
++    if shutil.disk_usage(STORE.parent).free < RESERVE + len(payload):
++        raise RuntimeError("40 GiB storage reserve would be crossed")
++    path.parent.mkdir(parents=True, exist_ok=True)
++    partial = path.with_name(path.name + f".{os.getpid()}.partial")
++    with partial.open("xb") as handle:
++        handle.write(payload)
++        handle.flush()
++        os.fsync(handle.fileno())
++    try:
++        os.link(partial, path)
++    except FileExistsError:
++        if path.read_bytes() != payload:
++            raise ValueError(f"concurrent immutable payload differs: {path}") from None
++    # Only success-only scratch with identical published bytes is removed.
++    # The returned path/size/hash and recorded argv retain its reproduction proof.
++    if path.read_bytes() != payload:
++        raise ValueError("published bytes changed; retain partial for diagnosis")
++    partial.unlink()
++    return fact(path)
++
++
++def encode_json(value: object) -> bytes:
++    """Canonical metadata only; no coding-price claim."""
++    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
++
++
++def run(root: Path) -> dict:
++    """Verify source identity and record blockers without starting an experiment."""
++    if root.resolve() != STORE:
++        raise ValueError("--resume-from must name the assigned bnd2 store")
++    free = shutil.disk_usage(STORE.parent).free
++    if free < RESERVE + 4 * 1024**2:
++        raise RuntimeError("insufficient storage for bounded source preflight")
++    root.mkdir(parents=True, exist_ok=True)
++    pointer_bytes = POINTER.read_bytes()
++    pointer = json.loads(pointer_bytes)
++    anchor = pointer["our_local_frontier_contest_cuda"]
++    archive = fact(LIVE / "archive.zip")
++    if archive["sha256"] != anchor["archive_sha256"]:
++        raise RuntimeError("configured cmp2 tree is no longer the pointer")
++    retained = root / "retained"
++    copies = {"pointer.json": preserve(retained / "pointer.json", pointer_bytes)}
++    for name, path in (
++        ("archive.zip", LIVE / "archive.zip"),
++        ("rank.json", RP1 / "rank_mixer/RANK.json"),
++        ("filtered_candidates.npz", RP1 / "rank_mixer/candidates.npz"),
++    ):
++        copies[name] = preserve(retained / name, path.read_bytes())
++
++    # Import read-only source, never the mutable sister experiment module.
++    residual, _, _ = jg2.load_runtime(LIVE)
++    if Path(residual.__file__).resolve() != LIVE / "runtime/residual_archive.py":
++        raise RuntimeError("wrong runtime module imported")
++    if copies["archive.zip"]["sha256"] != archive["sha256"]:
++        raise RuntimeError("source archive changed during the copy")
++    parts = residual.read_residual_archive(retained / "archive.zip")
++    decoded_components = {}
++    for name in (
++        "semantic_blob",
++        "carrier_blob",
++        "hpac_blob",
++        "residual_payload",
++        "compressed_models",
++        "compensation_blob",
++    ):
++        value = getattr(parts, name)
++        if value is not None:
++            decoded_components[name] = preserve(retained / f"reader_{name}.bin", value)
++    stream = preserve(retained / "shipped_token_stream.rc64", parts.token_stream)
++    weights = preserve(retained / "tc1_weights.bin", bytes(parts.tc1_weights))
++    envelope_bytes = (RP1 / "rank_mixer/tail_rp1_mixer_control.bin").read_bytes()
++    envelope = preserve(retained / "rank_control.envelope", envelope_bytes)
++    expected = b"R6D1" + parts.token_stream
++    expected += b"\0" * ((-len(expected)) % 4)
++    reconstructed = preserve(retained / "reader_rewrapped.envelope", expected)
++    if envelope_bytes != expected:
++        raise RuntimeError("RP1 envelope is not the shipped reader stream plus R6D1 padding")
++    rank = json.loads((retained / "rank.json").read_text())
++    field = fact(FIELD)
++    # This hash identifies the complete pass-4 field, not the ancestor TC1 field.
++    if field["sha256"] != "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94":
++        raise RuntimeError("pass-4 source field changed")
++    control = rank["identity_control"]
++    if rank["schema"] != "ddm_rp1_rank_mixer.v1" or control["byte_identical"] is not True:
++        raise RuntimeError("retained RP1 schema/control is invalid")
++    if control["frames_encoded"] != 600:
++        raise RuntimeError("retained RP1 control is not n600")
++    for prefix in ("emitted", "cmp1_stream"):
++        if control[prefix + "_bytes"] != envelope["bytes"] or control[prefix + "_sha256"] != envelope["sha256"]:
++            raise RuntimeError("rank control is not bound to retained envelope")
++    if any(rank["stream"][key] != envelope[key] for key in ("bytes", "sha256")):
++        raise RuntimeError("rank stream custody differs")
++    census = rank["census"]
++    if (
++        census["total_tokens"] != 600 * 384 * 512
++        or not 0 <= census["n_symbol_is_coder_argmax"] <= census["total_tokens"]
++        or sum(census["bin_counts"]) != census["total_tokens"]
++    ):
++        raise RuntimeError("rank census denominator differs")
++    with np.load(retained / "filtered_candidates.npz", allow_pickle=False) as data:
++        columns = {key: data[key] for key in data.files}
++    frame, pos, sym, best = (columns[key] for key in ("frame", "pos", "sym", "best"))
++    count = len(frame)
++    if (
++        any(value.shape != (count,) for value in columns.values())
++        or count != rank["candidates_dump"]["rows"]
++        or any(value.dtype.kind not in "ui" for value in (frame, pos, sym, best))
++        or np.any((frame < 0) | (frame >= 600))
++        or np.any((pos < 0) | (pos >= 384 * 512))
++        or np.any((sym < 0) | (sym >= 5) | (best < 0) | (best >= 5) | (sym == best))
++    ):
++        raise RuntimeError("filtered candidate schema or coordinates differ")
++    flat_ids = frame.astype(np.int64) * (384 * 512) + pos
++    if np.unique(flat_ids).size != count:
++        raise RuntimeError("duplicate filtered candidate locations")
++    mapped = np.memmap(FIELD, dtype=np.uint8, mode="r")
++    if mapped.size != census["total_tokens"] or not np.array_equal(mapped[flat_ids], sym):
++        raise RuntimeError("filtered symbols do not join to the shipped pass-4 field")
++    misses = census["total_tokens"] - census["n_symbol_is_coder_argmax"]
++    if count > misses:
++        raise RuntimeError("filtered rows exceed total coder misses")
++
++    priority = {"required": 10, "before": os.getpriority(os.PRIO_PROCESS, 0)}
++    try:
++        os.setpriority(os.PRIO_PROCESS, 0, 10)
++        priority["after"] = os.getpriority(os.PRIO_PROCESS, 0)
++        priority["satisfied"] = priority["after"] == 10
++    except OSError as error:
++        priority.update(after=os.getpriority(os.PRIO_PROCESS, 0), satisfied=False, errno=error.errno, error=str(error))
++    blockers = [] if priority["satisfied"] else ["NICE_10_DENIED"]
++    # No production encoder is claimed merely because source preflight succeeded.
++    result = {
++        "schema": "ddm_bnd2_source_preflight.v1",
++        "axis": AXIS,
++        "research_only": True,
++        "score_claim": False,
++        "charter_complete": False,
++        "source_preflight_passed": True,
++        "launch_constraints_satisfied": not blockers,
++        "encoder_implemented": False,
++        "new_encode_rows": 0,
++        "new_scorer_pairs": 0,
++        "new_misprediction_locations": 0,
++        "new_shipped_field_decode": False,
++        "retained_locations_revalidated": count,
++        "source_total_mispredictions": misses,
++        "unlocated_mispredictions": misses - count,
++        "recovered_census_complete": False,
++        "blockers": blockers,
++        "priority": priority,
++        "archive": archive,
++        "field": field,
++        "retained": copies,
++        "raw_stream": stream,
++        "weights": weights,
++        "control_envelope": envelope,
++        "reconstructed_envelope": reconstructed,
++        "envelope_identity": True,
++        "envelope_overhead_bytes": len(expected) - len(parts.token_stream),
++        "reader_components": decoded_components,
++        "retained_rank_census": rank["census"],
++        "source_reader": fact(LIVE / "runtime/residual_archive.py"),
++        "imported_jg2": fact(Path(jg2.__file__)),
++        "producer": fact(Path(__file__)),
++        "upstream_evaluate": fact(REPO / "upstream/evaluate.py"),
++        "archive_bytes": archive["bytes"],
++        "pointer_anchor": anchor,
++        "free_bytes_before": free,
++        "storage_reserve_bytes": RESERVE,
++        "retention_policy": "all extracted bytes kept; no deletion or movement",
++        "argv": sys.argv,
++        "git_head": subprocess.run(
++            ["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True, check=True
++        ).stdout.strip(),
++        "seed": None,
++        "randomness": "none",
++    }
++    mirror = json.loads((REPO / anchor["source_path"]).read_text())
++    recomputed = (
++        100 * mirror["avg_segnet_dist"]
++        + math.sqrt(10 * mirror["avg_posenet_dist"])
++        + 25 * archive["bytes"] / 37_545_489
++    )
++    if mirror["archive_sha256"] != archive["sha256"] or abs(recomputed - anchor["score"]) > 1e-14:
++        raise RuntimeError("existing exact-anchor component arithmetic or identity differs")
++    result["existing_anchor_recomputed_score"] = recomputed
++    encoded = encode_json(result)
++    receipt_id = hashlib.sha256(encoded).hexdigest()[:16]
++    preserve(retained / f"PREFLIGHT_{receipt_id}.json", encoded)
++    return result
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--resume-from", required=True, type=Path)
++    args = parser.parse_args()
++    result = run(args.resume_from)
++    print(json.dumps(result, indent=2, sort_keys=True))
++    return 0 if result["launch_constraints_satisfied"] else 20
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/.omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md b/.omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md
+@@ -0,0 +1,227 @@
++# ddm_bnd2 — source preflight passed; required nice 10 denied
++
++`[no-triality] [p0-ledger-ok]` · owner `ddm_bnd2` · charter dated 2026-09-10;
++execution 2026-09-09 UTC. `research_only=true`; `score_claim=false`;
++`charter_complete=false`. Lane `lane_ddm_bnd2_segment_code_20260910`, L0.
++
++**The requested real segment encode is unfinished.** The sandbox denied both
++`os.nice(10)` and `os.setpriority(os.PRIO_PROCESS, 0, 10)` with errno 1,
++`Operation not permitted`. Actual priority remained 0. The charter's explicit
++nice-10 constraint therefore prevented the encoding launch. No waiver was
++received during this execution. A source preflight was completed and retained;
++it is not the segment encoder, an n600 pricing row, or a representation verdict.
++
++Verdict **BLOCKED_EXECUTION_PRECONDITION**, scope **THIS_SANDBOX_LAUNCH**.
++No family, formulation, or candidate has been closed by a new encode.
++
++## Source results and denominators
++
++Axis **[macOS-CPU scorer-free source-custody preflight]**. These are fresh file
++sizes, hashes and retained-input joins; the total miss count is re-derived from
++the existing RP1 census, not a newly traced coder population.
++
++| Quantity | Result | Boundary |
++|---|---:|---|
++| Shipped cmp2 archive | 180,388 B | SHA `670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc` |
++| Raw token stream returned by cmp2's own reader | **119,779 B** | SHA `ffcd64bd3013f313538d3a426fdccdd8ac82c5fbcb19b382d7f935c5163bb427` |
++| RP1 control envelope | **119,784 B** | Reader stream + `R6D1` + one zero padding byte; byte-identical reconstruction |
++| Counted tc1 weights | 35 B | Preserved unchanged; not included in the raw-stream size |
++| Complete retained pass-4 field | 117,964,800 symbols | 600 × 384 × 512, uint8; hash `361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94` |
++| Coder misses in source ledger | 235,044 | 117,964,800 minus 117,729,756 coder-argmax matches |
++| Unique retained locations revalidated | 213,733 | Every stored symbol equals pass 4 at its retained location |
++| Locations still unlocated | **21,311** | No full current-field trace generated |
++| New coding rows / scorer pairs / draws | **0 / 0 / 0** | No partial-n price, no draw, no candidate archive |
++
++The explicit envelope join is a useful correction to future pricing:
++119,784 B is the charter comparator, but it is not the on-wire raw-stream length.
++Compare like-for-like framing first, then the complete replacement tail/container.
++Do not silently subtract either the 5-byte wrapper or the 35 counted weights as
++if a new codec had removed them. The 96-byte compact residual prefix and remaining
++archive sections also retain their actual charged homes.
++
++The preflight used the actual
++`ddm_cmp2_compose/candidate_runtime/runtime/residual_archive.py::read_residual_archive`
++on a byte-verified retained copy of the pointer archive. It did **not** run the
++token decoder or renderer. The source RP1 n600 control's schema, strict success
++boolean, emitted/CMP1/stream lengths and hashes, census arithmetic, unique
++coordinates and shipped-symbol join are validated explicitly.
++
++## Required prices and run lengths — not measured
++
++| Required row | Bytes / result | Disposition |
++|---|---|---|
++| Existing full envelope | 119,784 B | Source identity verified; existing encode |
++| Full population masked to model prediction, re-encoded | unknown | Not launched |
++| Charged class-pair chain/polyline + ternary offsets | unknown | Encoder not implemented |
++| Remaining tokens under tc1 | unknown | No routed residual stream emitted |
++| Twin segment + residual price | unknown | No primary or repeat candidate |
++| Complete-population tangent run distribution | unknown | Missing locations not recovered |
++| Falsifier ≤114,784 B | untested | Neither success nor failure established |
++
++The source's 83,258.632 ideal attributed bytes are **not** an isolated stream or
++a displaceable cash amount. Its 36,519-byte approximate correct-prediction flag
++mass is also an attribution, not this arm's measured masked-field control.
++bnd1's on-edge bound remains source evidence; no new GT-edge census is claimed.
++Shipped residual **12,614 cells** remains the pass-4 source measurement; the
++12,377-cell pass-5 count is unshipped and must not join to this field.
++
++## Concrete implementation requirements retained for the next execution
++
++This is a design handoff, not a claimed implemented grammar:
++
++* Replace the old axis-aligned `(segment,s,n)` chart with explicitly charged
++  class-pair unit-edge polylines, segment starts/topology, chain directions and
++  ternary normal offsets; give every exception to the remaining tc1 stream.
++  Charge the selected supports and any class/symbol/routing information. The
++  actual serialized total, including framing, must decide the result.
++* Recover **all** post-tc1 **integer-frequency** argmax misses. RP1's
++  `saving >= 0.25` retention filter loses the required locations. Setting that
++  threshold to zero alone is insufficient: correctly predicted and tied rows
++  must be separated explicitly, and crash-resumability must be added before
++  using the existing rank loop as a launch path.
++* Route every supplied segment token into `current`, `corrector.observe` and
++  mixer state at its original causal group position. An end-of-frame patch
++  changes subsequent probabilities and cannot use the original trace as proof.
++* Distinguish an actual whole-field masked-prediction re-encode, with the
++  changed field's causal state, from a frozen-original-trajectory ablation.
++  If both are useful, retain and label both; neither is an isolated entropy
++  substream. No logarithmic estimate is an admitted price.
++* Preserve independent twin encoder states and per-stage/periodic checkpoints,
++  source bindings, every payload and a parse-back equality proof. Reuse jg2's
++  structural corrector-state capture and tc1's complete mixer snapshot rather
++  than copying an incomplete base-class state dictionary.
++
++A measured loss would apply to the specified grammar, addressing, partition and
++coder. The charter's statement that a richer grammar can only add side information
++does not establish monotonic **total** price: extra structure can reduce address
++and residual costs. NO-FAKE therefore prevents broadening an achieved-code loss
++to every richer boundary family. The lossless-first and 5 KB draw gates remain
++binding. No speculative draw was run to work around them.
++
++## RECALL EVIDENCE
++
++Read the charter and common contract in full, PROGRAM, governing AGENTS/CLAUDE
++sections, the operating handoff, main hot state, pointer, bnd1 ITEM 1–3 and its
++RECALL EVIDENCE, of1:58–109, or1:111–143, tc1's full pricing receipt, the curve-relative
++coder and its build memo, and the actual cmp2 reader and RP1 mixer loop.
++An independent read-only recall/review worker covered the full 480-equation CLI
++export, research memos/receipts, index/DAG, design/SPEC and task surfaces.
++
++Content queries included `boundary.segment|normal.offset|contour.string|mispredict`,
++`curve.relative`, `FEED-residualkit`, `boundary representation offset field class pair`,
++and `bnd1.*ITEM|gb1.*VALID_BOUND_INPUTS|ddm_gb2|ddm_bnd2`.
++One shell glob query failed because `docs/*SPEC*` had no matches; it was replaced
++by `rg` file globs over `docs`. No absence claim uses the failed query.
++
++| Beyond-seed source | Finding | Effect |
++|---|---|---|
++| `ddm_hc2_wrong_half_flip_location_decomposition_20260905.md:45–109` | Older fs2 misses had median component size 1 and 81.10% singleton components | Edge proximity cannot supply the missing run-length measurement; older counts remain priors |
++| `ddm_hc1_hpac_calibration_reliability_20260824.md:29–55` | Causal versus acausal geometry changes attribution substantially | Current-plane or GT boundaries must be charged rather than supplied free |
++| `ddm_mi1_indicator_model_axis_20260824.md:13–40` | Temporal/run/spatial contexts already exist, but feature presence does not prove complete consumption | New segment contexts need actual residual byte evidence |
++| `v8_increment1_design_draft_20260709.md:59–69` | Historical temporal generator amortization beat independent frame chains | Extra grammar structure can reduce total price; no richer-family monotonicity claim |
++| `sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:9060` | Real contour coding spent 45% on anchors on an ancestor object | Starts/connectivity enter the first price, not a later top-up |
++| tc1 `rebase_pc2/INPUTS.json` and `rows/frame_*.npz` | Full pre-mixer row traces exist, but bind ancestor field `a73289e…` | Rejected as current-field evidence; shipped field is `361cc6c9…` |
++
++Relevant recalled laws: `token_tail_context_mixing_bound_v1`,
++`context_model_reorder_savings_v1`, `v8_geometric_rate_decomposition_v1`,
++`leverd_flicker_residual_reactivation_economics_v1`.
++Did not find a complete current-field missing-location dump in the bounded
++RP1/CMP1 stores inspected. HC2's model-ledger alternative and older curve-relative
++prices are not new real-code prices for this shipped field.
++
++## Retention, review and reproducibility
++
++All retained bytes are in
++`/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/`.
++The complete source receipt is [source_preflight.json](ddm_bnd2_20260910/source_preflight.json).
++It names the actual source files, current Git hash, producer/reader/upstream hashes,
++argv, component sizes and payload SHA-256 values. No live tree or upstream file
++was changed. Storage preflight measured 69,714,214,912 free bytes and preserved
++the 40 GiB reserve. No large artifacts were deleted or moved.
++
++Producer: `experiments/ddm_bnd2_source_preflight.py`, SHA-256
++`85fef367933e931dc09005707d943098ad828ee0e2b37879b4a651ebc350dbfe`.
++Two clean review passes cover this hash; earlier review findings about weak
++census joins, archive snapshot races and overwrite-capable publication were
++fixed before those clean passes. Ruff and review policy passed. Five tracked
++entities are compliant. The first tool transport lost stdout; the complete
++durable receipt survived. An explicit resume then returned **20**, with source
++checks passed and `NICE_10_DENIED`; its stdout/stderr and exit receipt are retained
++in `RESUME_VALIDATION.json`. This is a real fail-closed preflight, not a failed
++codec experiment or evidence that the segment family loses.
++
++Reproduce the source preflight only:
++
++```sh
++.venv/bin/python experiments/ddm_bnd2_source_preflight.py \
++  --resume-from /Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code
++```
++
++`boundary_segment_recode_price_v1` is not registered.
++# FORMALIZATION_PENDING: No real segment-plus-residual encode exists; source-file identity and a priority refusal cannot anchor a measured recode-price law.
++
++All six solver integration hooks are N/A for this research-only blocked preflight:
++no new sensitivity measurement, Pareto constraint, per-tensor allocation,
++archive-deployable candidate, empirical codec posterior, or competing scored
++interpretation was produced. Existing task rows consume the blocker and design
++requirements; no production behavior or score pointer is changed.
++
++## Landing custody
++
++The required serializer refused the main checkout's Git object write with
++`Operation not permitted` during `git apply --cached`. It successfully authored
++an isolated fallback commit and retained a Git bundle and format-patch under
++the assigned Vertigo tree; the bundle passed `git bundle verify`. **This is not
++a landing on main.** The exact latest bundle/commit, hashes and verification
++are in `ddm_bnd2_20260910/FINAL_HANDOFF.json` after final packaging. The staged
++index remained empty. Only bnd2 source/receipt files enter the intended patch;
++the lane registration and existing-task note snapshots document the narrowly
++scoped canonical API writes, and unrelated shared dirty work is excluded.
++Commit hooks did not run because object insertion failed; Ruff, two code-review
++passes, review-policy compliance and the source preflight are the checks that
++actually completed. The charter remains incomplete independently of landing.
++
++## NEXT_IF_RESUMED
++
++* **QUEUED-WITH-A-FIRE-ORDER** — owner `ddm_bnd2`, coordinated by MAIN; existing
++  consumer `.omx/state/canonical_task_status.jsonl`, bnd1 `::ITEM_1`; bulk consumer
++  `/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/`. Fire when nice 10
++  can be verified or the operator explicitly changes that constraint. Re-read
++  the pointer, recover all misses, implement and review the charged grammar,
++  then run resumable n600 twins, masked control and parse-back. This is the
++  unfinished bnd2 work, not a newly completed bnd1 obligation.
++* **FOLDED** — owner MAIN for scorer coordination, execution successor `ddm_bnd2`;
++  consumer `.omx/state/canonical_task_status.jsonl`, bnd1 `::ITEM_2`. Fire only
++  after a real twin-verified lossless total ≤114,784 B and explicit scorer
++  allocation. Use the retained 12-pair selection; retain every draw. A lossless
++  loss stops this draw and routes the existing generator successor instead.
++* **QUEUED-WITH-A-FIRE-ORDER** — owner MAIN; consumer
++  `.omx/state/canonical_task_status.jsonl`,
++  `ddm_bnd2_boundary_segment_code_real_encode_20260910::LANDING`. Fire on harvest
++  in a Git-writable context: land the final reviewed bundle using the serializer,
++  run required commit checks, preserve unrelated changes and the staged index,
++  and record the actual commit. Use `FINAL_HANDOFF.json` to select the final bundle.
++
++## LIVE-HYPOTHESES
++
++* A charged segment code may still win: retained misses are strongly concentrated
++  on edges. Full-population coherence and its actual price are untested.
++* The existing the-cross/gb2 generator successor remains plausible because changing
++  the representation can create coherence instead of only addressing existing
++  isolated misses. It stays folded into MAIN's existing gb1 `::VALID_BOUND_INPUTS`
++  consumer and gb2 arm; this blocked preflight does not launch or duplicate it.
++
++## DEAD-ENDS
++
++* Using ancestor tc1 `a73289e…` traces as move-37 evidence: the field hashes differ.
++* Pricing detached 83 KB attribution or treating achieved lengths as lower bounds:
++  neither supplies the requested actual composite bytes.
++* Repairing decoder state only after decoding a masked residual: later causal
++  probability rows would differ.
++* Inferring all richer grammars lose from one minimal grammar: total-price
++  monotonicity is not established. No new segment formulation is closed here.
++* Launching at priority 0 as if nice 10 succeeded: the measured syscall refused.
++
++Own-vehicle frontier **unchanged**: **S 0.13791730003757818 @ 180,388 B
++[contest-CUDA T4 n600]**, recomputed from existing anchor components; archive SHA
++`670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc`.
+diff --git a/.omx/research/ddm_bnd2_20260910/lane_registration.json b/.omx/research/ddm_bnd2_20260910/lane_registration.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/lane_registration.json
+@@ -0,0 +1,41 @@
++{
++  "id": "lane_ddm_bnd2_segment_code_20260910",
++  "name": "ddm_bnd2 shipped boundary segment real recode",
++  "phase": 2.0,
++  "level": 0,
++  "gates": {
++    "impl_complete": {
++      "status": false,
++      "evidence": ""
++    },
++    "real_archive_empirical": {
++      "status": false,
++      "evidence": ""
++    },
++    "contest_cuda": {
++      "status": false,
++      "evidence": ""
++    },
++    "contest_cpu": {
++      "status": false,
++      "evidence": ""
++    },
++    "strict_preflight": {
++      "status": false,
++      "evidence": ""
++    },
++    "three_clean_review": {
++      "status": false,
++      "evidence": ""
++    },
++    "memory_entry": {
++      "status": false,
++      "evidence": ""
++    },
++    "deploy_runbook": {
++      "status": false,
++      "evidence": ""
++    }
++  },
++  "notes": "Charter .omx/research/charters/ddm_bnd2_boundary_segment_code_real_encode_on_shipped_field_20260910.md; scorer-free, owned Vertigo directory; no launch until nice 10 verified"
++}
+diff --git a/.omx/research/ddm_bnd2_20260910/resume_validation.json b/.omx/research/ddm_bnd2_20260910/resume_validation.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/resume_validation.json
+@@ -0,0 +1,25 @@
++{
++  "argv": [
++    "/Users/adpena/Projects/pact/.venv/bin/python",
++    "experiments/ddm_bnd2_source_preflight.py",
++    "--resume-from",
++    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code"
++  ],
++  "returncode": 20,
++  "source_preflight_passed": true,
++  "blockers": [
++    "NICE_10_DENIED"
++  ],
++  "artifacts": [
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/resume.stdout.json",
++      "bytes": 7575,
++      "sha256": "e7543f5260fbb0063f1fc00938c277c7b8f4a31684f8f53fb0414a0ee38a415f"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/resume.stderr.txt",
++      "bytes": 0,
++      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
++    }
++  ]
++}
+diff --git a/.omx/research/ddm_bnd2_20260910/retained_manifest.json b/.omx/research/ddm_bnd2_20260910/retained_manifest.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/retained_manifest.json
+@@ -0,0 +1,112 @@
++{
++  "schema": "ddm_bnd2_retained_manifest.v1",
++  "research_only": true,
++  "score_claim": false,
++  "equations_recall_argv": [
++    ".venv/bin/python",
++    "tools/list_canonical_equations.py",
++    "--json"
++  ],
++  "files": [
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/PREFLIGHT_0c09b42c17b9380b.json",
++      "bytes": 7575,
++      "sha256": "0c09b42c17b9380b87eaf4e2367b1f3a7e7ed732974f867a7b7fc8775baba662"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/PREFLIGHT_e7543f5260fbb006.json",
++      "bytes": 7575,
++      "sha256": "e7543f5260fbb0063f1fc00938c277c7b8f4a31684f8f53fb0414a0ee38a415f"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/RESUME_VALIDATION.json",
++      "bytes": 741,
++      "sha256": "ccdba6f29b65b7f6bbaea6f37e9cd1e589e62de65a3cb3f6b7b82c86af4c3c3f"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/archive.zip",
++      "bytes": 180388,
++      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/equations_recall.json",
++      "bytes": 3646482,
++      "sha256": "7fe0a09d912d1ff1f97e4a3191c701f23565e34409ffa1ca4f77c7b34e5fd791"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/equations_recall.stderr.txt",
++      "bytes": 0,
++      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/filtered_candidates.npz",
++      "bytes": 2201035,
++      "sha256": "a6d19fa68744ef1238354253e2a398733aba45d3aff095b154cc46b8b39b94ae"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/pointer.json",
++      "bytes": 17890,
++      "sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/rank.json",
++      "bytes": 4388,
++      "sha256": "2ac591747069a53cb75a6528d8ee223886960e1387b3cee534adcbab9dcba273"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/rank_control.envelope",
++      "bytes": 119784,
++      "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_carrier_blob.bin",
++      "bytes": 18936,
++      "sha256": "178cf5d2246adbcd932c293af7366a7d0cd8559003e03cf91a47eb4cd6ed668c"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_compressed_models.bin",
++      "bytes": 60373,
++      "sha256": "0c0b0057494175d01c78e16ebb1b9d3f949ed152c21b6b40dcec9bf1b5473f31"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_hpac_blob.bin",
++      "bytes": 15859,
++      "sha256": "c083b85976b267a10f8b173e225910631c856344863ae39fa2aa4158f6ab3b5c"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_residual_payload.bin",
++      "bytes": 100,
++      "sha256": "74775aab04c7615cacabfddfa185efa05429cc0d8e21fd1a1d84f37bbc79d750"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_rewrapped.envelope",
++      "bytes": 119784,
++      "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_semantic_blob.bin",
++      "bytes": 31451,
++      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/resume.stderr.txt",
++      "bytes": 0,
++      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/resume.stdout.json",
++      "bytes": 7575,
++      "sha256": "e7543f5260fbb0063f1fc00938c277c7b8f4a31684f8f53fb0414a0ee38a415f"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/shipped_token_stream.rc64",
++      "bytes": 119779,
++      "sha256": "ffcd64bd3013f313538d3a426fdccdd8ac82c5fbcb19b382d7f935c5163bb427"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/tc1_weights.bin",
++      "bytes": 35,
++      "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
++    }
++  ]
++}
+diff --git a/.omx/research/ddm_bnd2_20260910/reviews.json b/.omx/research/ddm_bnd2_20260910/reviews.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/reviews.json
+@@ -0,0 +1,31 @@
++{
++  "schema": "ddm_bnd2_reviews.v1",
++  "producer_sha256": "85fef367933e931dc09005707d943098ad828ee0e2b37879b4a651ebc350dbfe",
++  "passes": [
++    {
++      "reviewer": "recall_review",
++      "status": "FINDINGS_FIXED",
++      "findings": [
++        "rank envelope and census unbound",
++        "archive snapshot race",
++        "overwrite-capable immutable publication"
++      ]
++    },
++    {
++      "reviewer": "recall_review",
++      "status": "CLEAN",
++      "scope": "source custody, snapshot and exclusive retention, fail-closed priority, honest unimplemented encoder boundary"
++    },
++    {
++      "reviewer": "ddm_bnd2 parent",
++      "status": "CLEAN",
++      "scope": "source and field joins, causal-claim boundaries, atomic retry, explicit priority errno; reviewed entire final file"
++    }
++  ],
++  "ruff": "pass",
++  "review_policy": {
++    "entities_compliant": 5,
++    "violations": 0
++  },
++  "encoder_reviewed": false
++}
+diff --git a/.omx/research/ddm_bnd2_20260910/source_preflight.json b/.omx/research/ddm_bnd2_20260910/source_preflight.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/source_preflight.json
+@@ -0,0 +1,210 @@
++{
++  "archive": {
++    "bytes": 180388,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
++    "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
++  },
++  "archive_bytes": 180388,
++  "argv": [
++    "experiments/ddm_bnd2_source_preflight.py",
++    "--resume-from",
++    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code"
++  ],
++  "axis": "[macOS-CPU scorer-free source-custody preflight]",
++  "blockers": [
++    "NICE_10_DENIED"
++  ],
++  "charter_complete": false,
++  "control_envelope": {
++    "bytes": 119784,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/rank_control.envelope",
++    "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9"
++  },
++  "encoder_implemented": false,
++  "envelope_identity": true,
++  "envelope_overhead_bytes": 5,
++  "existing_anchor_recomputed_score": 0.13791730003757818,
++  "field": {
++    "bytes": 117964800,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/source/field.u8",
++    "sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94"
++  },
++  "free_bytes_before": 69711142912,
++  "git_head": "32620e7c46d47d5408207ac60b408872aeb397fa",
++  "imported_jg2": {
++    "bytes": 59351,
++    "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
++    "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
++  },
++  "launch_constraints_satisfied": false,
++  "new_encode_rows": 0,
++  "new_misprediction_locations": 0,
++  "new_scorer_pairs": 0,
++  "new_shipped_field_decode": false,
++  "pointer_anchor": {
++    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
++    "axis": "contest_cuda",
++    "evidence_grade": "contest-CUDA",
++    "extra": {
++      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
++      "archive_bytes": 180388,
++      "evidence_grade": "contest-CUDA",
++      "inflate_device_policy": "auto",
++      "inflate_sh_rel": "inflate.sh",
++      "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
++      "measured_at_utc": null,
++      "promotion_eligible": false,
++      "runtime_custody": "pinned",
++      "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
++      "source_receipt_sha256": "14bbd5df8cbefa9d7ce2dc146f165162d37dd19728e0621bcdb07c22d9f17dfe"
++    },
++    "hardware_substrate": "linux_x86_64_t4",
++    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
++    "measured_at_utc": null,
++    "score": 0.13791730003757818,
++    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json"
++  },
++  "priority": {
++    "after": 0,
++    "before": 0,
++    "errno": 1,
++    "error": "[Errno 1] Operation not permitted",
++    "required": 10,
++    "satisfied": false
++  },
++  "producer": {
++    "bytes": 11491,
++    "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_source_preflight.py",
++    "sha256": "85fef367933e931dc09005707d943098ad828ee0e2b37879b4a651ebc350dbfe"
++  },
++  "randomness": "none",
++  "raw_stream": {
++    "bytes": 119779,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/shipped_token_stream.rc64",
++    "sha256": "ffcd64bd3013f313538d3a426fdccdd8ac82c5fbcb19b382d7f935c5163bb427"
++  },
++  "reader_components": {
++    "carrier_blob": {
++      "bytes": 18936,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_carrier_blob.bin",
++      "sha256": "178cf5d2246adbcd932c293af7366a7d0cd8559003e03cf91a47eb4cd6ed668c"
++    },
++    "compressed_models": {
++      "bytes": 60373,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_compressed_models.bin",
++      "sha256": "0c0b0057494175d01c78e16ebb1b9d3f949ed152c21b6b40dcec9bf1b5473f31"
++    },
++    "hpac_blob": {
++      "bytes": 15859,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_hpac_blob.bin",
++      "sha256": "c083b85976b267a10f8b173e225910631c856344863ae39fa2aa4158f6ab3b5c"
++    },
++    "residual_payload": {
++      "bytes": 100,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_residual_payload.bin",
++      "sha256": "74775aab04c7615cacabfddfa185efa05429cc0d8e21fd1a1d84f37bbc79d750"
++    },
++    "semantic_blob": {
++      "bytes": 31451,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_semantic_blob.bin",
++      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
++    }
++  },
++  "reconstructed_envelope": {
++    "bytes": 119784,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/reader_rewrapped.envelope",
++    "sha256": "bc046883e9c0e5f49029ee3d0918e4d3315c851b16ad3b8c481056d7a1f38ce9"
++  },
++  "recovered_census_complete": false,
++  "research_only": true,
++  "retained": {
++    "archive.zip": {
++      "bytes": 180388,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/archive.zip",
++      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
++    },
++    "filtered_candidates.npz": {
++      "bytes": 2201035,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/filtered_candidates.npz",
++      "sha256": "a6d19fa68744ef1238354253e2a398733aba45d3aff095b154cc46b8b39b94ae"
++    },
++    "pointer.json": {
++      "bytes": 17890,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/pointer.json",
++      "sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a"
++    },
++    "rank.json": {
++      "bytes": 4388,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/rank.json",
++      "sha256": "2ac591747069a53cb75a6528d8ee223886960e1387b3cee534adcbab9dcba273"
++    }
++  },
++  "retained_locations_revalidated": 213733,
++  "retained_rank_census": {
++    "bin_counts": [
++      111621172,
++      3998166,
++      1144761,
++      310135,
++      316002,
++      185397,
++      152713,
++      117298,
++      75536,
++      33321,
++      8164,
++      1791,
++      328,
++      16
++    ],
++    "bin_edges_bits": [
++      0.0,
++      0.001,
++      0.01,
++      0.05,
++      0.1,
++      0.25,
++      0.5,
++      1.0,
++      2.0,
++      4.0,
++      8.0,
++      12.0,
++      16.0,
++      24.0,
++      "inf"
++    ],
++    "bits_on_argmax_symbols": 292155.1257180173,
++    "bits_on_nonargmax_symbols": 666069.0591727127,
++    "bits_per_token_mean": 0.008122967062129732,
++    "fraction_of_bits_on_nonargmax_symbols": 0.6951077521057071,
++    "fraction_symbol_is_coder_argmax": 0.9980075073242187,
++    "n_symbol_is_coder_argmax": 117729756,
++    "total_bits": 958224.1848907213,
++    "total_bytes_ideal": 119778.02311134017,
++    "total_tokens": 117964800
++  },
++  "retention_policy": "all extracted bytes kept; no deletion or movement",
++  "schema": "ddm_bnd2_source_preflight.v1",
++  "score_claim": false,
++  "seed": null,
++  "source_preflight_passed": true,
++  "source_reader": {
++    "bytes": 34053,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/runtime/residual_archive.py",
++    "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
++  },
++  "source_total_mispredictions": 235044,
++  "storage_reserve_bytes": 42949672960,
++  "unlocated_mispredictions": 21311,
++  "upstream_evaluate": {
++    "bytes": 6005,
++    "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
++    "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
++  },
++  "weights": {
++    "bytes": 35,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/tc1_weights.bin",
++    "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
++  }
++}
+diff --git a/.omx/research/ddm_bnd2_20260910/task_notes.json b/.omx/research/ddm_bnd2_20260910/task_notes.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/task_notes.json
+@@ -0,0 +1,82 @@
++[
++  {
++    "schema_version": "canonical_task_status_v1_20260518",
++    "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_1",
++    "source_design_memo": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
++    "title": "Repair the population, causal pricing and proof premises",
++    "status": "blocked",
++    "owner": "ddm_bnd1",
++    "predicted_cost_usd": null,
++    "predicted_delta_s_band": null,
++    "actual_delta_s": null,
++    "commit_shas": [],
++    "test_status": "pending",
++    "blockers": [
++      "INCOMPLETE_SHIPPED_POPULATION_AND_INVALID_PRICE_FLOOR_PREMISE"
++    ],
++    "started_at_utc": null,
++    "completed_at_utc": null,
++    "event_type": "note",
++    "event_timestamp_utc": "2026-09-09T23:17:59.422925Z",
++    "event_actor": "ddm_bnd2",
++    "event_notes": "{\"action\": \"Recover all current-field integer-frequency coder misses, implement and review charged segment grammar, retain n600 twins and masked control plus full parse-back; price complete framing. No encoder exists yet.\", \"blocker\": \"NICE_10_DENIED\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"coordinator\": \"MAIN\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"execution_owner\": \"ddm_bnd2\", \"fire_trigger\": \"nice 10 becomes verifiable or operator explicitly changes priority requirement; rebind live pointer before execution\", \"ledger_owner\": \"ddm_bnd1\", \"payload_store\": \"/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/retained/\", \"source_memo\": \".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md\"}",
++    "session_id": "ddm_bnd2_20260910",
++    "written_at_utc": "2026-09-09T23:17:59.422925Z",
++    "written_pid": 89179,
++    "written_host": "mac.lan"
++  },
++  {
++    "schema_version": "canonical_task_status_v1_20260518",
++    "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_2",
++    "source_design_memo": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
++    "title": "Run the retained 12-pair draw after the pricing prerequisite",
++    "status": "blocked",
++    "owner": "ddm_bnd1",
++    "predicted_cost_usd": null,
++    "predicted_delta_s_band": null,
++    "actual_delta_s": null,
++    "commit_shas": [],
++    "test_status": "pending",
++    "blockers": [
++      "UNPRICED_DRAW_AND_SCORER_ALLOCATION_REQUIRED"
++    ],
++    "started_at_utc": null,
++    "completed_at_utc": null,
++    "event_type": "note",
++    "event_timestamp_utc": "2026-09-09T23:17:59.439580Z",
++    "event_actor": "ddm_bnd2",
++    "event_notes": "{\"action\": \"Run retained 12-pair draw; no draw if lossless recode loses. This update tightens existing gate, creates no new task.\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"coordinator\": \"MAIN\", \"disposition\": \"FOLDED\", \"execution_owner\": \"ddm_bnd2\", \"fire_trigger\": \"lossless twin-verified segment plus residual total <=114784 B and explicit scorer allocation\", \"ledger_owner\": \"ddm_bnd1\"}",
++    "session_id": "ddm_bnd2_20260910",
++    "written_at_utc": "2026-09-09T23:17:59.439580Z",
++    "written_pid": 89179,
++    "written_host": "mac.lan"
++  },
++  {
++    "schema_version": "canonical_task_status_v1_20260518",
++    "task_id": "ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909::VALID_BOUND_INPUTS",
++    "source_design_memo": ".omx/research/ddm_gb1_generated_carrier_basis_lattice_priced_closed_form_20260909.md",
++    "title": "Resolve the generated-carrier proof gate and missing live derivative inputs",
++    "status": "blocked",
++    "owner": "MAIN",
++    "predicted_cost_usd": null,
++    "predicted_delta_s_band": null,
++    "actual_delta_s": null,
++    "commit_shas": [],
++    "test_status": "n_a",
++    "blockers": [
++      "NONTRIVIAL_REALIZED_LOWER_BOUND_NOT_ESTABLISHED",
++      "LIVE_N600_SPATIAL_JACOBIAN_MISSING",
++      "MATCHED_ABSOLUTE_LATTICE_PENALTY_MISSING"
++    ],
++    "started_at_utc": null,
++    "completed_at_utc": null,
++    "event_type": "note",
++    "event_timestamp_utc": "2026-09-09T23:17:59.455397Z",
++    "event_actor": "ddm_bnd2",
++    "event_notes": "{\"action\": \"bnd2 source-preflight block leaves the-cross/gb2 successor with existing gb1 proof-input/scorer-allocation fire order; no new dispatch or closure\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"disposition\": \"FOLDED\", \"owner\": \"MAIN\", \"source_memo\": \".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md\"}",
++    "session_id": "ddm_bnd2_20260910",
++    "written_at_utc": "2026-09-09T23:17:59.455397Z",
++    "written_pid": 89179,
++    "written_host": "mac.lan"
++  }
++]
+diff --git a/.omx/research/ddm_bnd2_20260910/landing_task.json b/.omx/research/ddm_bnd2_20260910/landing_task.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_bnd2_20260910/landing_task.json
+@@ -0,0 +1,26 @@
++{
++  "schema_version": "canonical_task_status_v1_20260518",
++  "task_id": "ddm_bnd2_boundary_segment_code_real_encode_20260910::LANDING",
++  "source_design_memo": ".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
++  "title": "Land the reviewed bnd2 source-preflight handoff",
++  "status": "blocked",
++  "owner": "MAIN",
++  "predicted_cost_usd": null,
++  "predicted_delta_s_band": null,
++  "actual_delta_s": null,
++  "commit_shas": [],
++  "test_status": "green",
++  "blockers": [
++    "MAIN_CHECKOUT_GIT_OBJECT_WRITE_DENIED"
++  ],
++  "started_at_utc": null,
++  "completed_at_utc": null,
++  "event_type": "blocked",
++  "event_timestamp_utc": "2026-09-09T23:19:56.504639Z",
++  "event_actor": "ddm_bnd2",
++  "event_notes": "{\"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"owner\": \"MAIN\", \"consumer_store\": \".omx/state/canonical_task_status.jsonl\", \"fire_trigger\": \"MAIN harvest in Git-writable context\", \"action\": \"Land final reviewed bnd2 fallback bundle selected by .omx/research/ddm_bnd2_20260910/FINAL_HANDOFF.json through serializer; preserve staged index and unrelated changes; run required commit checks; charter encode still blocked\", \"blocker\": \"MAIN_CHECKOUT_GIT_OBJECT_WRITE_DENIED\"}",
++  "session_id": "ddm_bnd2_20260910",
++  "written_at_utc": "2026-09-09T23:19:56.504639Z",
++  "written_pid": 95622,
++  "written_host": "mac.lan"
++}

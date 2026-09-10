@@ -1,0 +1,379 @@
+{
+  "schema": "ddm_bnd2_generation2_final_handoff.v1",
+  "captured_at_utc": "2026-09-10T01:14:50.413590+00:00",
+  "charter_complete": false,
+  "measurement_complete": true,
+  "status": "MEASUREMENT_COMPLETE_BUNDLE_READY_MAIN_MUST_LAND",
+  "landed_on_main": false,
+  "main_landing_verified": false,
+  "serializer_returncode": 17,
+  "landing_blocker": "MAIN_CHECKOUT_GIT_OBJECT_WRITE_DENIED",
+  "failed_phase": "git_apply_cached before commit hooks",
+  "fallback_commit": "e5c7044866cea2869042a7e6fc879b0957fb64b4",
+  "fallback_base_head": "2b5a3265ff76a857c936a2b2b7d5eb5475a1fb36",
+  "bundle": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/intended-commit.bundle",
+    "bytes": 55773,
+    "sha256": "355e1223f94adb90bb7eca9cbdf7f440dbecdce758cdd639f65e1fa19b1f33e9"
+  },
+  "format_patch": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/intended-commit.format-patch",
+    "bytes": 217400,
+    "sha256": "899265e977263d36075e056786b98aac9df2b9a941fc53f103ed4411b9cec63c"
+  },
+  "serializer_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/receipts.jsonl",
+    "bytes": 6472,
+    "sha256": "3edad31c6472380087d8ec5015c1b1505f8bfa8f0ebeead93be674a61193fc9f"
+  },
+  "landing_patch": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_landing.patch",
+    "bytes": 213436,
+    "sha256": "9cfeb6c4fd2df8ab52af78eef56c3f09c211aa30975294093dcbc1d455746591"
+  },
+  "bundle_verification": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/BUNDLE_VERIFICATION.json",
+    "bytes": 6094,
+    "sha256": "c327411e37940f997fc40aa84467e78cd121fc946b94db831eab6653b1cf1597"
+  },
+  "committed_file_count": 22,
+  "committed_files": [
+    {
+      "path": "experiments/ddm_bnd2_causal_trace.py",
+      "bytes": 15906,
+      "sha256": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+    },
+    {
+      "path": "experiments/ddm_bnd2_census.py",
+      "bytes": 13637,
+      "sha256": "24f3f7f6ba46e1fe4406e8627713d73570b206e2c713fddd246318b5fa664df4"
+    },
+    {
+      "path": "experiments/ddm_bnd2_segment_encode.py",
+      "bytes": 24269,
+      "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+    },
+    {
+      "path": "experiments/ddm_bnd2_segment_decode.py",
+      "bytes": 11384,
+      "sha256": "5a32b20fc91369016fdeee4badc45cfeeed2ad4bbdaa61c0993da0f1030a157d"
+    },
+    {
+      "path": "experiments/test_ddm_bnd2_segment_code.py",
+      "bytes": 5590,
+      "sha256": "678a4a1bb0444f4f5d32a21b6c6ff9225f13fb89ed114cb46aa5bd70d211a682"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
+      "bytes": 21444,
+      "sha256": "f0ce1557a9edc5fc083fa6e1cd9c15c30927e2604d4350d46ca6a1bbd693a184"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/GENERATION2_RESULT.json",
+      "bytes": 5249,
+      "sha256": "66be872725360877d49b34ff69f8ade4d40cd998f10d8738f4a52ad5195a8d85"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_causal_proof.json",
+      "bytes": 1612,
+      "sha256": "05aa04ece5c9c5f690774549aa6ff89959646038d5a28d2b50c6d63bbdbbcc7c"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_census_summary.json",
+      "bytes": 9968,
+      "sha256": "6b5d02cb12c3264888b015fafbdcfe180f315a059f4a6a7d4ddf53fc59c042c3"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_draw_disposition.json",
+      "bytes": 1520,
+      "sha256": "1d626f6f2c4ab8621cabcbb44ab9b07af0b28fd50e46c9eb0ec7452282588e0b"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_equation_events.jsonl",
+      "bytes": 17497,
+      "sha256": "ae914b308350c5bb08e2d8027451815bff97fec66f9643b9ba9fa1b286d4dcbf"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_equation_registration.json",
+      "bytes": 22948,
+      "sha256": "64483666aa4f4bf0cfca5717200961f1c8eb652793164569a084f44442dbd55d"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_fired.json",
+      "bytes": 1484,
+      "sha256": "ab4a7283aeb825a0c7b232fa9d0d1421fa3a68e1754140a0162d067208699eff"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_lane_event.json",
+      "bytes": 2169,
+      "sha256": "d3e980b71be4a031a75672c8b4f156dadde1bcac410a06f061c25306b18f0a91"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_live_frontier.json",
+      "bytes": 1131,
+      "sha256": "7ffbebe98da2566caf37aa645beccbb75f41d823e7f57185f29a06aee6f5db3d"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_masked_control.json",
+      "bytes": 1474,
+      "sha256": "2208ce78a8a909af3f0675818a080c118bf6963265366a4a3d8a8417ed043267"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_memo_edit_base.json",
+      "bytes": 340,
+      "sha256": "6c5963f7caf694742daef14255fb889893f84ad35d66f3b8c5c501399c9625da"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_price_table.json",
+      "bytes": 14033,
+      "sha256": "0ea1fb36e86ae152731688d4be449d86ef50b5b206ead9167bc3e5a8c80306b6"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_retained_manifest.json",
+      "bytes": 1703,
+      "sha256": "0fafd583cfd6a22a612c028ff79c0efec6072afe998f37196b58d087f3e270de"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_run_lengths.json",
+      "bytes": 3615,
+      "sha256": "32826ef07c11dce495315855bb07d410bbbe6b7512915651a01789c07e6b800b"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_task_events.jsonl",
+      "bytes": 11061,
+      "sha256": "b3f1ba5e519acb1f90c74dbcab93fa146c677ed7038954d25a1cf2583d2ae3dd"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_final_review.json",
+      "bytes": 976,
+      "sha256": "3e444c984dc73a5690b29fbbb17710377e921cff8d94c1293ee07ab604be204f"
+    }
+  ],
+  "post_serialization_repo_leaves": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_bundle_verification.json",
+      "bytes": 6094,
+      "sha256": "c327411e37940f997fc40aa84467e78cd121fc946b94db831eab6653b1cf1597"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_landing.patch",
+      "bytes": 213436,
+      "sha256": "9cfeb6c4fd2df8ab52af78eef56c3f09c211aa30975294093dcbc1d455746591"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_landing_task_event.json",
+      "bytes": 2284,
+      "sha256": "a668e663721e97861d41343aa7977702149d79f0a41e46806ae7c57ac524aaed"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_resume_state.json",
+      "bytes": 1727,
+      "sha256": "b05c58159b09a701d8fd1426320ed9982236648258bd20ce3f7265c944bf0155"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_serializer_intent.json",
+      "bytes": 10348,
+      "sha256": "f383a19b81effa7b937f91039ad88f8e35d37a4ce6a2d046b5af16207c091ea7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_serializer_status.json",
+      "bytes": 282,
+      "sha256": "543b84b16010d1aa84e1e90612f7defa82617aabba6fba74aa0d423e957c3aed"
+    }
+  ],
+  "post_manifest_retained_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/BUNDLE_VERIFICATION.json",
+      "bytes": 6094,
+      "sha256": "c327411e37940f997fc40aa84467e78cd121fc946b94db831eab6653b1cf1597"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/RETAINED_MANIFEST.json",
+      "bytes": 2453296,
+      "sha256": "2316629320c947101a32f2d3678815600479f5d6ef6a760d8173caec8f3557bf"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/SERIALIZER_INTENT.json",
+      "bytes": 10348,
+      "sha256": "f383a19b81effa7b937f91039ad88f8e35d37a4ce6a2d046b5af16207c091ea7"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/checkpoint12.log",
+      "bytes": 2159,
+      "sha256": "ac530822070fec04846733b1a3a90097ad86ad2c645dad4865ea0d7ccabf63d2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/checkpoint13.log",
+      "bytes": 2579,
+      "sha256": "6598d3a68de8caa29328e072b065b2887aa45a006de5e65b1fd9ac3852e71d61"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/intended-commit.bundle",
+      "bytes": 55773,
+      "sha256": "355e1223f94adb90bb7eca9cbdf7f440dbecdce758cdd639f65e1fa19b1f33e9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/intended-commit.format-patch",
+      "bytes": 217400,
+      "sha256": "899265e977263d36075e056786b98aac9df2b9a941fc53f103ed4411b9cec63c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/intended-tree.patch",
+      "bytes": 213436,
+      "sha256": "9cfeb6c4fd2df8ab52af78eef56c3f09c211aa30975294093dcbc1d455746591"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/receipts.jsonl",
+      "bytes": 6472,
+      "sha256": "3edad31c6472380087d8ec5015c1b1505f8bfa8f0ebeead93be674a61193fc9f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer.stderr.log",
+      "bytes": 315,
+      "sha256": "354b1d729273efdd5d277fa4c2260ce0bb9a6d377d6b43220b4672c069725189"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer.stdout.log",
+      "bytes": 512,
+      "sha256": "d2c2297cc7aba45b183b417a0b1277613e5d8fe903e6896b08e8918b7d4d996c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/task_draw_finalization.stderr.log",
+      "bytes": 9972,
+      "sha256": "2349040e2df9e221962684526da793e817aab03cdfe018669ca8bbde1d96a291"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/task_landing_finalization.stderr.log",
+      "bytes": 9972,
+      "sha256": "6a31fa8c41fbf4493445fd709fa78ac52ffe512f9b3d35d42a71a2d344090135"
+    }
+  ],
+  "scientific_memo": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
+    "bytes": 21444,
+    "sha256": "f0ce1557a9edc5fc083fa6e1cd9c15c30927e2604d4350d46ca6a1bbd693a184"
+  },
+  "scientific_result": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/GENERATION2_RESULT.json",
+    "bytes": 5249,
+    "sha256": "66be872725360877d49b34ff69f8ade4d40cd998f10d8738f4a52ad5195a8d85"
+  },
+  "retained_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/RETAINED_MANIFEST.json",
+    "bytes": 2453296,
+    "sha256": "2316629320c947101a32f2d3678815600479f5d6ef6a760d8173caec8f3557bf"
+  },
+  "retained_measurement_file_count": 10487,
+  "retained_measurement_bytes": 1860773542,
+  "measurement": {
+    "axis": "[exact bytes, scorer-free macOS-CPU]",
+    "frames": 600,
+    "token_cells": 117964800,
+    "misses_recovered": 235044,
+    "newly_located_misses": 21311,
+    "variant_count": 6,
+    "baseline_envelope_bytes": 119784,
+    "best_envelope_bytes": 121200,
+    "best_delta_bytes": 1416,
+    "draw_gate_bytes": 114784,
+    "draw_disposition": "CANCELLED/FOLDED",
+    "masked_envelope_bytes": 129316,
+    "masked_delta_bytes": 9532,
+    "selected_independent_causal_decode_all600": true,
+    "score_claim": false,
+    "scorer_pairs": 0,
+    "lossy_draw_pairs": 0,
+    "scope": "six declared greedy crack assignment/orientation/minrun variants; no universal floor or richer-family kill",
+    "not_measured": [
+      "new Seg/Pose or contest score",
+      "new full rendered video",
+      "hash-bound12614-cell rendered-residual joint census",
+      "GT distance and adjacent-class-pair histograms from broader inherited ITEM1"
+    ]
+  },
+  "checks": {
+    "source_reviews": "two visible clean passes for each of five Python files at retained post-edit hashes",
+    "ruff": "PASS",
+    "real_input_focused_test": "PASS; seeded random 32-of-128 retained frames tests packet correctness and refusal cases, not subset pricing",
+    "n600_proofs": "six actual twin archives; selected fresh independent causal decoder matches all tokens; baseline and decoder both restarted from disk; masked twin control completed",
+    "scientific_memo_review": "CLEAN",
+    "bundle_verification": "PASS; read actual fallback commit blobs and verified all22 expected hashes, exact changed paths, parent, message, tokens and absent coauthor",
+    "main_commit_hooks": "NOT_RUN: main Git object insertion failed before git commit",
+    "main_landing": "NOT_VERIFIED; fallback is an isolated commit only"
+  },
+  "canonical_updates": {
+    "equation_id": "boundary_segment_recode_price_v1",
+    "equation_status": "registered via API locally; own exact event retained",
+    "numerical_posterior_update": false,
+    "measurement_task": "completed",
+    "draw_task": "cancelled/FOLDED",
+    "broader_bnd1_ITEM1": "cancelled/FOLDED; map/distance obligations explicitly not claimed fulfilled",
+    "gb1_VALID_BOUND_INPUTS": "cancelled/FOLDED into gb2/the-cross successor context; no new bound or build",
+    "landing_task": "blocked; latest own note supersedes generation1 landing scope",
+    "event_mirrors": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_equation_events.jsonl",
+        "bytes": 17497,
+        "sha256": "ae914b308350c5bb08e2d8027451815bff97fec66f9643b9ba9fa1b286d4dcbf"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_task_events.jsonl",
+        "bytes": 11061,
+        "sha256": "b3f1ba5e519acb1f90c74dbcab93fa146c677ed7038954d25a1cf2583d2ae3dd"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_lane_event.json",
+        "bytes": 2169,
+        "sha256": "d3e980b71be4a031a75672c8b4f156dadde1bcac410a06f061c25306b18f0a91"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/generation2_landing_task_event.json",
+        "bytes": 2284,
+        "sha256": "a668e663721e97861d41343aa7977702149d79f0a41e46806ae7c57ac524aaed"
+      }
+    ],
+    "shared_state_files_not_bundled": "Only own API events mirrored; do not import whole live shared-state files"
+  },
+  "active_compute_jobs": 0,
+  "all_payloads_kept": true,
+  "shared_staged_index_unchanged": true,
+  "shared_staged_diff_bytes_after": 0,
+  "live_frontier": {
+    "schema": "ddm_bnd2_live_frontier_check.v1",
+    "captured_at_utc": "2026-09-10T00:54:20.778477+00:00",
+    "source_pointer": ".omx/state/canonical_frontier_pointer.json",
+    "source_pointer_sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a",
+    "source_mirror": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json",
+    "source_mirror_sha256": "f115fc2b1502b170ab209784a5c8de747fcdc09f22be223fb2146fe8b416d848",
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "archive_bytes": 180388,
+    "d_seg": 0.00010698,
+    "d_pose": 5.05e-06,
+    "original_video_bytes": 37545489,
+    "score_recomputed_from_recorded_components": 0.13791730003757818,
+    "pointer_score": 0.13791730003757818,
+    "axis": "[contest-CUDA T4 n600]",
+    "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "this_arm_score_claim": false,
+    "this_arm_pointer_move": false,
+    "interpretation": "live pointer and existing authority mirror checked; no new scorer evaluation by bnd2",
+    "final_rechecked_at_utc": "2026-09-10T01:14:50.393045+00:00"
+  },
+  "followons": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "task_id": "ddm_bnd2_boundary_segment_code_real_encode_20260910::LANDING",
+      "consumer_stores": [
+        "owned repo source/memo/receipts",
+        ".omx/state/canonical_task_status.jsonl",
+        ".omx/state/canonical_equations_registry.jsonl",
+        ".omx/state/lane_registry.json"
+      ],
+      "fire_trigger": "MAIN harvest in a Git-writable context with required commit checks",
+      "action": "Land verified generation2 fallback e5c7044866cea2869042a7e6fc879b0957fb64b4 and post-serialization handoff leaves via serializer; verify resulting main file hashes and commit hooks, replay only retained bnd2 API events if absent, and record the main commit. No measurement or generator dispatch remains."
+    }
+  ],
+  "index_scope": "This is a post-serialization custody index and is not itself inside the fallback bundle. Bundle scientific result intentionally records landing_complete=false. Subsequent MAIN landing should supersede this index, not reinterpret the isolated fallback as landed."
+}

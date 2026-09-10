@@ -1,0 +1,41 @@
+{
+  "schema": "ddm_bnd2_generation2_resume.v1",
+  "owner": "ddm_bnd2",
+  "root": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2",
+  "state": "measurement complete; no active compute; verified fallback bundle ready for MAIN landing",
+  "live_jobs": {
+    "masked": {
+      "pid": 18316,
+      "manifest": "launch_masked/launch_manifest.json",
+      "result": "masked/RESULT.json",
+      "status": "completed",
+      "rc": 0
+    },
+    "independent_decode600": {
+      "pid": 41189,
+      "manifest": "launch_decode600/launch_manifest.json",
+      "result": "price_o1_min4/causal_decode/RESULT.json",
+      "resumed_from_frame": 32,
+      "status": "completed",
+      "rc": 0
+    }
+  },
+  "selected_archive": {
+    "path": "price_o1_min4/archive.zip",
+    "bytes": 181804,
+    "sha256": "cab4b3914b2d761daa096cb4203898b73db20ca1763c7db329943d7273c506d4",
+    "envelope_bytes": 121200,
+    "delta_bytes": 1416,
+    "above_draw_gate_bytes": 6416
+  },
+  "do_not_edit_running_producers": false,
+  "draw_task": "bnd1 ITEM2 already cancelled/FOLDED via canonical API; do not reopen",
+  "pending": [
+    "MAIN land verified fallback e5c7044866cea2869042a7e6fc879b0957fb64b4 and post-serialization leaves through serializer in a Git-writable context; replay own canonical API events only if absent and verify main commit/hooks"
+  ],
+  "memory_citation": "MEMORY.md:43-45; rollout019fca7f-87c5-7632-80cd-32dddf84072e",
+  "safety": "max2compute processes; nice10best-effort launcher; no scorer slot; reserve40GiB; no deletes or live-tree writes",
+  "handoff": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/GENERATION2_FINAL_HANDOFF.json",
+  "measurement_complete": true,
+  "main_landing_verified": false
+}

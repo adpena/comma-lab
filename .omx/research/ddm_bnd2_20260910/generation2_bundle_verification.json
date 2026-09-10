@@ -1,0 +1,129 @@
+{
+  "schema": "ddm_bnd2_bundle_verification.v1",
+  "verified_at_utc": "2026-09-10T01:12:04.441233+00:00",
+  "fallback_commit": "e5c7044866cea2869042a7e6fc879b0957fb64b4",
+  "parent": "2b5a3265ff76a857c936a2b2b7d5eb5475a1fb36",
+  "bundle_verify_rc": 0,
+  "bundle_verify_output": "The bundle contains this ref:\ne5c7044866cea2869042a7e6fc879b0957fb64b4 refs/heads/serializer-fallback\nThe bundle requires this ref:\n2b5a3265ff76a857c936a2b2b7d5eb5475a1fb36 \nThe bundle uses this hash algorithm: sha1\n/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/intended-commit.bundle is okay\n",
+  "bundle_and_patch_artifact_hashes_verified": true,
+  "committed_file_count": 22,
+  "committed_files": [
+    {
+      "path": "experiments/ddm_bnd2_causal_trace.py",
+      "bytes": 15906,
+      "sha256": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+    },
+    {
+      "path": "experiments/ddm_bnd2_census.py",
+      "bytes": 13637,
+      "sha256": "24f3f7f6ba46e1fe4406e8627713d73570b206e2c713fddd246318b5fa664df4"
+    },
+    {
+      "path": "experiments/ddm_bnd2_segment_encode.py",
+      "bytes": 24269,
+      "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+    },
+    {
+      "path": "experiments/ddm_bnd2_segment_decode.py",
+      "bytes": 11384,
+      "sha256": "5a32b20fc91369016fdeee4badc45cfeeed2ad4bbdaa61c0993da0f1030a157d"
+    },
+    {
+      "path": "experiments/test_ddm_bnd2_segment_code.py",
+      "bytes": 5590,
+      "sha256": "678a4a1bb0444f4f5d32a21b6c6ff9225f13fb89ed114cb46aa5bd70d211a682"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
+      "bytes": 21444,
+      "sha256": "f0ce1557a9edc5fc083fa6e1cd9c15c30927e2604d4350d46ca6a1bbd693a184"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/GENERATION2_RESULT.json",
+      "bytes": 5249,
+      "sha256": "66be872725360877d49b34ff69f8ade4d40cd998f10d8738f4a52ad5195a8d85"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_causal_proof.json",
+      "bytes": 1612,
+      "sha256": "05aa04ece5c9c5f690774549aa6ff89959646038d5a28d2b50c6d63bbdbbcc7c"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_census_summary.json",
+      "bytes": 9968,
+      "sha256": "6b5d02cb12c3264888b015fafbdcfe180f315a059f4a6a7d4ddf53fc59c042c3"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_draw_disposition.json",
+      "bytes": 1520,
+      "sha256": "1d626f6f2c4ab8621cabcbb44ab9b07af0b28fd50e46c9eb0ec7452282588e0b"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_equation_events.jsonl",
+      "bytes": 17497,
+      "sha256": "ae914b308350c5bb08e2d8027451815bff97fec66f9643b9ba9fa1b286d4dcbf"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_equation_registration.json",
+      "bytes": 22948,
+      "sha256": "64483666aa4f4bf0cfca5717200961f1c8eb652793164569a084f44442dbd55d"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_fired.json",
+      "bytes": 1484,
+      "sha256": "ab4a7283aeb825a0c7b232fa9d0d1421fa3a68e1754140a0162d067208699eff"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_lane_event.json",
+      "bytes": 2169,
+      "sha256": "d3e980b71be4a031a75672c8b4f156dadde1bcac410a06f061c25306b18f0a91"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_live_frontier.json",
+      "bytes": 1131,
+      "sha256": "7ffbebe98da2566caf37aa645beccbb75f41d823e7f57185f29a06aee6f5db3d"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_masked_control.json",
+      "bytes": 1474,
+      "sha256": "2208ce78a8a909af3f0675818a080c118bf6963265366a4a3d8a8417ed043267"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_memo_edit_base.json",
+      "bytes": 340,
+      "sha256": "6c5963f7caf694742daef14255fb889893f84ad35d66f3b8c5c501399c9625da"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_price_table.json",
+      "bytes": 14033,
+      "sha256": "0ea1fb36e86ae152731688d4be449d86ef50b5b206ead9167bc3e5a8c80306b6"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_retained_manifest.json",
+      "bytes": 1703,
+      "sha256": "0fafd583cfd6a22a612c028ff79c0efec6072afe998f37196b58d087f3e270de"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_run_lengths.json",
+      "bytes": 3615,
+      "sha256": "32826ef07c11dce495315855bb07d410bbbe6b7512915651a01789c07e6b800b"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_task_events.jsonl",
+      "bytes": 11061,
+      "sha256": "b3f1ba5e519acb1f90c74dbcab93fa146c677ed7038954d25a1cf2583d2ae3dd"
+    },
+    {
+      "path": ".omx/research/ddm_bnd2_20260910/generation2_final_review.json",
+      "bytes": 976,
+      "sha256": "3e444c984dc73a5690b29fbbb17710377e921cff8d94c1293ee07ab604be204f"
+    }
+  ],
+  "commit_message": "ddm_bnd2: measure six n600 segment recodes and close losing byte gate [no-triality] [p0-ledger-ok]\n\nRecover all 235044 shipped-field coder misses, retain real twin segment/TC1 packets and prove the selected archive reproduces all 117964800 tokens through fresh causal decoding. Best replacement is 121200 B versus 119784 B; masked control is 129316 B. Cancel the gated draw; no scorer or exact score claim.\n\nValidation: two visible clean source reviews, Ruff, seeded real-input tests, six full-n600 twin archives, resumed n600 source trace and independent decoder. Canonical API events applied locally and mirrored narrowly for harvest. Main landing and post-serialization index are separate custody gates.\n\nCheckpoint: tools/subagent_checkpoint.py --subagent-id ddm_bnd2, steps 4-12.\n\n",
+  "no_coauthor_trailer": true,
+  "required_tokens_present": true,
+  "staged_index_unchanged": true,
+  "shared_staged_diff_bytes_after": 0,
+  "main_landing_verified": false,
+  "scratch_policy": "Only temporary bounded Git verification objects created and auto-cleaned; bundle and all payload bytes retained."
+}
