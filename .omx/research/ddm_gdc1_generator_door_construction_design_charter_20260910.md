@@ -1,4 +1,4 @@
-# ddm_gd1 — the generator door as a CONSTRUCTION: design the program whose output the receiver renders, under the gf1 bar re-derived at move 43 (charter, MAIN 2026-09-10)
+# ddm_gdc1 — the generator door as a CONSTRUCTION: design the program whose output the receiver renders, under the gf1 bar re-derived at move 43 (charter, MAIN 2026-09-10)
 
 ## Where the frontier is and why this door
 Pointer move 43: S 0.1372848557085275 @ 180,466 B [contest-CUDA T4 n600] (d_seg 0.00010345, d_pose 4.59e-06). Sub-0.12
@@ -40,10 +40,10 @@ the falsifier you pre-register before any build.
    at 0.2909 B (and at a measured price if you code it with the real coder), and whether the bar is met. If it needs
    training, produce the exact governed launch spec (resumable, per-stage checkpoints, seeds) and STOP before launching
    — MAIN GO is required for burns.
-4. Memo `.omx/research/ddm_gd1_generator_door_construction_design_20260910.md` with the derived bar, the gestalt page,
+4. Memo `.omx/research/ddm_gdc1_generator_door_construction_design_20260910.md` with the derived bar, the gestalt page,
    the three constructions and their falsifiers, the measured result of (3), and the next charter you would write.
    Serializer commit LAST, once (`REVIEW_GATE_OVERRIDE=1` allowed for .md; any .py needs two review passes); rc 17 is NOT
-   a stop — bundle, report, MAIN lands. Checkpoint as `ddm_gd1`.
+   a stop — bundle, report, MAIN lands. Checkpoint as `ddm_gdc1`.
 
 ## Boundaries
 No training burns, no Modal, no edits to `upstream/`, the PR tree, sealed trees, or live arm directories (`ddm_sj1_pass6`,
