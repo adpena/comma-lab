@@ -1,0 +1,46 @@
+{
+  "schema": "ddm_rlc2.read_first_stop.v1",
+  "axis": "[macOS-CPU advisory; contract-only, scorer-free]",
+  "candidate_materialized": false,
+  "rows": [
+    {
+      "control": "missing timing leg; real move42 runtime used as read-only control, not an rlc2 candidate",
+      "call": "validate_decode_wall_clock(None, runtime_dir=move42, archive_path=move42/archive.zip)",
+      "problems": [
+        "decode_wall_clock: leg must be an object"
+      ],
+      "observed": {}
+    },
+    {
+      "control": "builder on original move42 smoke/bar; no output seal written",
+      "exception_class": "SealContractError",
+      "message": "decode wall-clock refused: decode_wall_clock: leg must be an object"
+    },
+    {
+      "control": "future rlc2 receipt absence; move42 tree is read-only control",
+      "exception_class": "SealContractError",
+      "message": "decode_wall_clock: receipt missing: /Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/MODAL_REMOTE_RESULT.json"
+    },
+    {
+      "control": "real seal CLI omitting both required timing flags; argparse refuses before tree consumption",
+      "argv": [
+        ".venv/bin/python",
+        "tools/make_candidate_seal.py",
+        "--candidate-id",
+        "ddm_rlc2_read_first_contract_control",
+        "--runtime-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime",
+        "--axis",
+        "contest_cuda",
+        "--out",
+        ".omx/research/ddm_rlc2_20260910/UNEXPECTED_SEAL.json",
+        "--public-entrypoint-smoke",
+        "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/SEAL_ddm_rp1_round2_contest_cuda.json",
+        "--admit-bar-net-ds=-2e-5"
+      ],
+      "returncode": 2,
+      "stdout": "",
+      "stderr": "usage: make_candidate_seal.py [-h] --candidate-id CANDIDATE_ID\n                              --runtime-dir RUNTIME_DIR [--archive ARCHIVE]\n                              --axis {contest_cuda,contest_cpu,advisory}\n                              --out OUT [--receiver RECEIVER]\n                              [--archive-member ARCHIVE_MEMBER]\n                              --public-entrypoint-smoke PUBLIC_ENTRYPOINT_SMOKE\n                              (--decode-wall-clock DECODE_WALL_CLOCK |\n                              --inherit-decode-wall-clock INHERIT_DECODE_WALL_CLOCK)\n                              [--retained-path RETAINED_PATH]\n                              [--falsifier FALSIFIER]\n                              --admit-bar-net-ds ADMIT_BAR_NET_DS\n                              [--admit-bar-rule ADMIT_BAR_RULE]\n                              [--pointer-axis {contest_cuda,contest_cpu,effective}]\n                              [--bar-tolerance BAR_TOLERANCE]\n                              [--allow-pointer-candidate-change]\n                              [--verify-archive-sha VERIFY_ARCHIVE_SHA]\n                              [--bound-base-receipt BOUND_BASE_RECEIPT]\n                              [--sealed-by SEALED_BY] [--notes NOTES] [--json]\nmake_candidate_seal.py: error: one of the arguments --decode-wall-clock --inherit-decode-wall-clock is required\n"
+    }
+  ]
+}

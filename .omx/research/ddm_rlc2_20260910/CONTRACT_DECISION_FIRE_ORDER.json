@@ -1,0 +1,17 @@
+{
+  "schema": "ddm_rlc2.contract_decision_fire_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN and second family",
+  "consumer_store": ".omx/research/ddm_rlc2_20260910/CONTRACT_DECISION_FIRE_ORDER.json",
+  "fire_trigger": "Harvest committed or verified-bundle STOP packet before any rlc2 materialization or fire",
+  "action": "Adjudicate PROPOSED_CONTRACT.md; if approved, implement and prospectively freeze a separately typed first-measurement intent and consumer, preserving completed t4_direct validation. Then resume the original charter from real twin re-encode through full cold n600 raw identity, refreshed manifest, public smoke, literal census and staged intent; MAIN alone fires and harvests its own T4 receipt; validate full seal and exact score before promotion.",
+  "proposal": ".omx/research/ddm_rlc2_20260910/PROPOSED_CONTRACT.md",
+  "approved": false,
+  "implemented": false,
+  "modal_authorized_for_this_arm": false,
+  "local_calibration": "SUSPENDED",
+  "candidate_exists": false,
+  "dependent_rebase_and_fire_disposition": "FOLDED into this decision-gated original charter chain",
+  "decision_receipt": null,
+  "score_claim": false
+}

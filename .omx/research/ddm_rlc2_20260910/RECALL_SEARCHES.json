@@ -1,0 +1,121 @@
+[
+  {
+    "argv": [
+      "rg",
+      "-l",
+      "-i",
+      "t4_direct|seal.before.fire|pre.fire.seal|receiver.change.*timing",
+      ".omx/research",
+      "--glob",
+      "*.md",
+      "--glob",
+      "*.json"
+    ],
+    "returncode": 0,
+    "path": ".omx/research/ddm_rlc2_20260910/recall_0.txt",
+    "bytes": 1162,
+    "sha256": "2ac4eb7ce48f4f4a774b6e95e5c3560c52ac411ec23a2c664cae74e1c76504d4",
+    "lines": 16
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "t4_direct|decode.wall.clock|receiver.*timing",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "returncode": 0,
+    "path": ".omx/research/ddm_rlc2_20260910/recall_1.txt",
+    "bytes": 820,
+    "sha256": "806ff453de8d9d04a208c9ce18088947d625db030754a55ecd1b32976c167d06",
+    "lines": 2
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "t4_direct|decode.wall.clock|receiver.*timing",
+      "docs",
+      ".omx/state/canonical_task_status.jsonl",
+      "--glob",
+      "*.md",
+      "--glob",
+      "*.jsonl"
+    ],
+    "returncode": 0,
+    "path": ".omx/research/ddm_rlc2_20260910/recall_2.txt",
+    "bytes": 15458,
+    "sha256": "b5dc1e537a3786d9c8bdb0c5aa11b486973c5453ea90506c9e56d5d374c20dff",
+    "lines": 13
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "t4_direct|decode.wall.clock|receiver.*timing",
+      ".omx/research",
+      "--glob",
+      "*SPEC*",
+      "--glob",
+      "*design*",
+      "--glob",
+      "*charter*"
+    ],
+    "returncode": 0,
+    "path": ".omx/research/ddm_rlc2_20260910/recall_3.txt",
+    "bytes": 11065,
+    "sha256": "659656ab0de514acde004648607a95716f1b533ba8b4ff577f0c42e7e9f2c0d2",
+    "lines": 49
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "rlc2|rlc1|rp1_round2",
+      ".omx/state/lane_registry.json"
+    ],
+    "returncode": 0,
+    "path": ".omx/research/ddm_rlc2_20260910/recall_4.txt",
+    "bytes": 801,
+    "sha256": "159f4fc44aa62344b6de8c47c07547a174b3950db08d3f97c6ec38a8d0d1c7e4",
+    "lines": 4
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "rlc2|rule118|move42",
+      "/Users/adpena/.codex/memories/MEMORY.md"
+    ],
+    "returncode": 1,
+    "path": ".omx/research/ddm_rlc2_20260910/recall_5.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lines": 0
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "returncode": 0,
+    "path": ".omx/research/ddm_rlc2_20260910/equations_recall.json",
+    "bytes": 3703678,
+    "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+  }
+]

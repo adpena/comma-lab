@@ -1,0 +1,13 @@
+{
+  "schema": "ddm_rlc2.landing_fire_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": ".omx/research/ddm_rlc2_20260910/LANDING_STATUS.json",
+  "fire_trigger": "Git-writable MAIN context harvests this verified fallback bundle",
+  "action": "Land the exact verified 16-file bundle commit through the serializer, preserving unrelated work and rechecking post-edit hashes. Do not equate landing the STOP packet with candidate admission or a frontier move.",
+  "fallback_commit": "86f092ebc9c844acce9d84a86d2e5b73d3e4186d",
+  "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_20260910/serializer/20260910T144310.302853Z-62393/intended-commit.bundle",
+  "bundle_sha256": "65c6028347fe87412ea1d9bba80720359545b46bb2ec796c97151f3ed8007c42",
+  "main_landed": false,
+  "score_claim": false
+}

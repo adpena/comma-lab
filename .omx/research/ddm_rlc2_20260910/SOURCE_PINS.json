@@ -1,0 +1,96 @@
+{
+  "head": "3676ad0b0194e8e1958665d404ecb1dd6efea78b",
+  "pins": [
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "bytes": 439048,
+      "sha256": "de72c87820145c3fe680fe8bfc0d730b99aa8f19ff8acc55151f878e004ff31d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "bytes": 439048,
+      "sha256": "de72c87820145c3fe680fe8bfc0d730b99aa8f19ff8acc55151f878e004ff31d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/main_hot_state.md",
+      "bytes": 7289,
+      "sha256": "ea79ae5fd7ddaafd5a468acdc60a26671236163b6338bc028aa9d51941f92c7d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "bytes": 19632,
+      "sha256": "a5c7021579ec7b71f345f8ec26396e755c31aac266de30e3340d5337b11a6f3d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_rebase_rule118_cure_onto_move42_charter_20260910.md",
+      "bytes": 6604,
+      "sha256": "326744a8a951b5ab0a50b349cec6e666d5bd2f520c27f618653c5394a1327e67"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc1_rule118_cure_20260910.md",
+      "bytes": 11491,
+      "sha256": "c4871dd60b61b5a002a68fa27096fb1d089679a9555efd93494a98840307c26d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr9_second_family_check_rlc1_cure_20260910.md",
+      "bytes": 23077,
+      "sha256": "f6a0318f1bd87e582221226e8cfc217b5d4959135193bd5fed0846a18ee8513b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr11_adjudicate_timing_admission_on_daemon_bursts_20260910.md",
+      "bytes": 27612,
+      "sha256": "7fd5ee3bcee7b4b001d53825547363e45a48e2f1e93501e56375ca9f98e493d1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rp1_round2_rate_directed_predistortion_k192_20260910_pointer_move_42_20260910.md",
+      "bytes": 7365,
+      "sha256": "b6014f9420986257eca94b79a62be0ea24a8706c0a2ad4e7b33a60b89eeb1a36"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+      "bytes": 69947,
+      "sha256": "d94f479ef13d1cc3a5331403eddf18bc5816c5bbe16aa75772c51d64d33357e6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/decode_wall_clock.py",
+      "bytes": 30533,
+      "sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/make_candidate_seal.py",
+      "bytes": 14722,
+      "sha256": "7c2aa6aa79c33d8d478e94cb9dda5c752c205ebe399775d2848bdd0f7e019288"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+      "bytes": 56868,
+      "sha256": "8bcce76759bd10e4a79620f58223ee8c29426c09d48038ca88e5cde644deacb4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/subagent_commit_serializer.py",
+      "bytes": 156721,
+      "sha256": "a9998cf4c07c70d4ad86abb7572af0a8a283e6fd4710386ab921bc13437a916d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/SEAL_ddm_rp1_round2_contest_cuda.json",
+      "bytes": 9911,
+      "sha256": "ead82e7e7b5eb2f1c7d8f9f9e2cdc334a45b0fd501930a9ed3491d25a03035e1"
+    }
+  ],
+  "governing_files_byte_identical": true
+}

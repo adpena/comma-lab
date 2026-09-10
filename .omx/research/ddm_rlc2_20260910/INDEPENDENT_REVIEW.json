@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_rlc2.independent_contract_review.v1",
+  "reviewer": "/root/rlc2_contract_check",
+  "family_authority": "same-family independent source audit only; not second-family clearance",
+  "edits": false,
+  "conclusion": "STOP before materialization under charter Read first. No compliant pre-fire seal path for unseen receiver in the audited current contract.",
+  "surfaces": [
+    "src/tac/decode_wall_clock.py",
+    "src/tac/candidate_seal.py",
+    "tools/make_candidate_seal.py",
+    "tools/fire_modal_auth_eval.py"
+  ],
+  "legacy_route": "Unsealed fire interface exists but violates this charter; public-smoke waiver cannot waive timing.",
+  "proposed_change": "Separate pre-fire intent and first-measurement consumer; unchanged completed t4_direct validator; new validated seal after hash-bound receipt."
+}

@@ -1,0 +1,34 @@
+{
+  "pointer": {
+    "pointer_axis": "contest_cuda",
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_score": 0.1374765052591843,
+    "pointer_archive_sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+  },
+  "move42_archive": {
+    "sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f",
+    "bytes": 180238,
+    "source": "measured:/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip"
+  },
+  "move42_runtime": {
+    "sha256": "8c4b4fcebb4409e6403e309efc37bbdf21dde7dfcf4d1117837c7e96bfb67033",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 48,
+    "total_bytes": 994180
+  },
+  "move42_receiver_sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf",
+  "rlc1_archive": {
+    "sha256": "8c2eaefa944ca8acba3db80829a5cd7a3d06a17b1fdb7ed5f39ce5a6fd9a124d",
+    "bytes": 180173,
+    "source": "measured:/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/archive.zip"
+  },
+  "rlc1_runtime": {
+    "sha256": "191086a8868aad5470fee491dcec124d113cda34f10992515138066db737fae5",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "total_bytes": 1009532
+  },
+  "rlc1_receiver_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+  "rlc2_candidate_exists": false,
+  "score_claim": false
+}

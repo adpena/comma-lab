@@ -1,0 +1,18 @@
+{
+  "status": "HYPOTHETICAL_NOT_MEASURED_ON_RLC2",
+  "assumption": "exactly 60 B saving and move42 distortion components unchanged; neither tested on rlc2",
+  "base_bytes": 180238,
+  "assumed_candidate_bytes": 180178,
+  "d_seg_from_move42_report": 0.00010637,
+  "d_pose_from_move42_report": 4.66e-06,
+  "denominator": 37545489,
+  "rate": 0.11997313445564659,
+  "seg_term": 0.010637,
+  "pose_term": 0.006826419266350405,
+  "conditional_score": 0.137436553721997,
+  "delta_s": -3.995153718733028e-05,
+  "measured_candidate_bytes": null,
+  "measured_candidate_sha256": null,
+  "raw_identity_proved": false,
+  "seal": null
+}
