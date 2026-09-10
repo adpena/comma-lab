@@ -1,0 +1,90 @@
+{
+  "axis": "host-custody-only; no scorer executed",
+  "completion_invoked": false,
+  "custody": {
+    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+    "expected_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+    "normal_projected_runtime_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/f7e229a17d05cd216faa943e6244b54a4f2cbcc39b6e43b29e9207ac81ca6b7e/out/submission_dir",
+    "retained_runtime_tree_sha256": "8d31edd6f7c3291b37b87eb8404a5944713a80a1d0e4a66fb66bab7650599dbc",
+    "runtime_file_count": 48,
+    "runtime_files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
+    "schema": "first_measurement_runtime_custody.v1",
+    "sources": {
+      "argv": {
+        "field_path": [
+          "exact_argv"
+        ],
+        "file": {
+          "bytes": 7341,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
+          "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
+        },
+        "flag": "--expected-runtime-content-tree-sha256"
+      },
+      "context": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 4973,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
+          "sha256": "2c579d9db53d42d1dca606ae14ac6791c80b022ee491b8b2ca56ab35b9ce81d1"
+        }
+      },
+      "provenance": {
+        "field_path": [
+          "artifacts",
+          "provenance.json"
+        ],
+        "file": {
+          "bytes": 242556,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+          "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
+        },
+        "manifest_field_path": [
+          "inflate_runtime_manifest"
+        ]
+      },
+      "request": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 7341,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
+          "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
+        }
+      },
+      "result": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 242556,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+          "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
+        }
+      }
+    },
+    "worker_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf"
+  },
+  "joined_runtime_custody": "PASS",
+  "limitation": "No live-intent/full-seal completion validation or write. A prospective freeze append makes this old intent stale; latest-row refusal is preserved.",
+  "measured_at_utc": "2026-09-10T21:48:35.352837+00:00",
+  "promotion_eligible": false,
+  "read_only_completion_facts": "PASS",
+  "receipt": {
+    "bytes": 242556,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+    "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
+  },
+  "retained_receipt_inflate_seconds": 1124.5857065260002,
+  "run": 4,
+  "runtime": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+  "schema": "ddm_ffi6_dry_custody_validation.v1",
+  "score_claim": false,
+  "seal_written": false
+}

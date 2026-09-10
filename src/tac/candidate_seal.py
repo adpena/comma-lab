@@ -1604,6 +1604,7 @@ PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION = (
 )
 PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS = frozenset({"MANIFEST.sha256"})
 PREFIRE_CONTRACT_AMENDMENT_SCHEMA = "prefire_contract_amendment.v1"
+PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA = "prefire_contract_consumer_fix.v1"
 PREFIRE_CONTRACT_AMENDMENT_ID = "ddm_pr14_manifest_in_receiver_risk_digest"
 FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA = "candidate_first_measurement_authorization.v1"
 SEAL_SCHEMA_V3 = "candidate_seal.v3"
@@ -1764,12 +1765,85 @@ def _pf_blob(repo: Path, commit: str, path: Path) -> None:
         raise PrefireRefusal(code, f"file is not in repository custody: {path}") from exc
 
 
+def _pf_freeze_history(rows: list, repo: Path, base_commit: str) -> str:
+    """Validate append-only consumer batches; repeated legacy snapshots keep pr14 as parent."""
+    code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
+    definition = None
+    previous = None
+    previous_commit = base_commit
+    batch_ids: set[str] = set()
+    fix_ids: set[str] = set()
+    for row in rows:
+        _pf_require(isinstance(row, dict), code, "freeze row must be an object")
+        commit = row.get("implementation_commit")
+        _pf_require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit),
+                    code, "full amendment implementation commit required")
+        _pf_git(repo, "merge-base", "--is-ancestor", previous_commit, commit)
+        _pf_git(repo, "merge-base", "--is-ancestor", commit, "HEAD")
+        if row.get("schema") == PREFIRE_CONTRACT_AMENDMENT_SCHEMA:
+            _pf_require(not batch_ids, code, "definition snapshot after consumer fixes is unsupported")
+            expected = {
+                "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+                "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+                "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
+                "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"}
+            _pf_require(row.get("amendment_id") == PREFIRE_CONTRACT_AMENDMENT_ID
+                        and row.get("score_claim") is False
+                        and prefire_digest(row.get("definition_change")) == prefire_digest(expected),
+                        code, "amendment definition differs")
+            # Historical amendments[1..3] re-pin implementations of the SAME definition.
+            # They remain immutable snapshots; they do not replace pr14's definition identity.
+            if definition is None:
+                definition = prefire_digest(row)
+        else:
+            _pf_require(row.get("schema") == PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA
+                        and set(row) == {"schema", "fix_batch_id", "previous_row_sha256",
+                            "definition_parent_sha256", "definition_change", "consumer_fixes",
+                            "implementation_commit", "implementation_manifest", "adjudication_memo", "score_claim"},
+                        code, "consumer-fix fields differ or carry definition overrides")
+            _pf_require(row["definition_change"] is False and row["score_claim"] is False,
+                        code, "consumer fix cannot change definition or claim score")
+            _pf_require(definition is not None and row["definition_parent_sha256"] == definition,
+                        code, "consumer-fix definition parent differs")
+            _pf_require(previous is not None and row["previous_row_sha256"] == prefire_digest(previous),
+                        code, "consumer-fix previous-row chain differs")
+            batch = row["fix_batch_id"]
+            _pf_require(isinstance(batch, str) and bool(batch.strip()) and batch not in batch_ids,
+                        code, "missing or duplicate fix batch id")
+            batch_ids.add(batch)
+            fixes = row["consumer_fixes"]
+            _pf_require(isinstance(fixes, list) and bool(fixes), code, "consumer fixes required")
+            ids = []
+            for fix in fixes:
+                _pf_require(isinstance(fix, dict) and set(fix) == {
+                    "fix_id", "scope", "reason", "causal_commit", "tests"}, code, "consumer fix fields differ")
+                for key in ("fix_id", "scope", "reason"):
+                    _pf_require(isinstance(fix[key], str) and bool(fix[key].strip()), code, f"consumer fix {key} required")
+                causal = fix["causal_commit"]
+                _pf_require(isinstance(causal, str) and re.fullmatch(r"[0-9a-f]{40}", causal),
+                            code, "full causal commit required")
+                _pf_git(repo, "merge-base", "--is-ancestor", base_commit, causal)
+                _pf_git(repo, "merge-base", "--is-ancestor", causal, commit)
+                tests = fix["tests"]
+                _pf_require(isinstance(tests, list) and bool(tests)
+                            and all(isinstance(t, str) and bool(t.strip()) for t in tests),
+                            code, "consumer fix exact tests required")
+                ids.append(fix["fix_id"])
+            _pf_require(ids == sorted(set(ids)) and not fix_ids.intersection(ids),
+                        code, "consumer fix ids unsorted or duplicated")
+            fix_ids.update(ids)
+        previous, previous_commit = row, commit
+    _pf_require(definition is not None, code, "definition parent absent")
+    return definition
+
+
 def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
     code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
     contract = intent["contract"]
-    _pf_require(isinstance(contract, dict) and set(contract) == {
-        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256", "amendment"},
-        code, "contract fields differ")
+    fields = {
+        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256", "amendment"}
+    _pf_require(isinstance(contract, dict) and set(contract) in (
+        fields, fields | {"definition_parent_sha256", "latest_row_sha256"}), code, "contract fields differ")
     commit = contract["implementation_commit"]
     _pf_require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit), code, "full implementation commit required")
     frozen_path = repo / PREFIRE_FREEZE
@@ -1780,15 +1854,11 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
     amendment = contract["amendment"]
     _pf_require(isinstance(amendment, dict) and prefire_digest(amendment) == prefire_digest(amendments[-1]), code,
                 "latest exact frozen amendment required")
-    _pf_require(amendment.get("schema") == PREFIRE_CONTRACT_AMENDMENT_SCHEMA
-                and amendment.get("amendment_id") == PREFIRE_CONTRACT_AMENDMENT_ID
-                and amendment.get("score_claim") is False
-                and amendment.get("definition_change") == {
-                    "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
-                    "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
-                    "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
-                    "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"},
-                code, "amendment definition differs")
+    definition = _pf_freeze_history(amendments, repo, commit)
+    if amendment.get("schema") == PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA or "latest_row_sha256" in contract:
+        _pf_require(contract.get("definition_parent_sha256") == definition
+                    and contract.get("latest_row_sha256") == prefire_digest(amendment),
+                    code, "intent definition parent or latest row pin differs")
     amendment_commit = amendment.get("implementation_commit")
     _pf_require(isinstance(amendment_commit, str) and re.fullmatch(r"[0-9a-f]{40}", amendment_commit),
                 code, "full amendment implementation commit required")
@@ -1798,10 +1868,11 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
                 code, "base frozen implementation differs")
     _pf_git(repo, "merge-base", "--is-ancestor", commit, amendment_commit)
     _pf_git(repo, "merge-base", "--is-ancestor", amendment_commit, "HEAD")
-    for owner_commit, reference, require_live in (
+    for owner_commit, reference, require_live in [
         (commit, contract["implementation_manifest"], False),
-        (amendment_commit, amendment["implementation_manifest"], True),
-    ):
+        *((row["implementation_commit"], row["implementation_manifest"], index == len(amendments) - 1)
+          for index, row in enumerate(amendments)),
+    ]:
         manifest = _pf_ref(reference, code)
         _pf_require(isinstance(manifest, list) and manifest, code, "sorted implementation manifest array required")
         paths = [r.get("path") for r in manifest if isinstance(r, dict)]
@@ -1815,6 +1886,9 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
             blob = _pf_git(repo, "show", f"{owner_commit}:{rel}")
             _pf_require(hashlib.sha256(blob).hexdigest() == row.get("sha256"), code,
                         f"committed implementation drift: {rel}")
+            if "bytes" in row:
+                _pf_require(type(row["bytes"]) is int and row["bytes"] == len(blob), code,
+                            f"committed implementation bytes differ: {rel}")
             if require_live:
                 _pf_blob(repo, owner_commit, repo / rel)
     amendment_memo = _pf_ref(amendment["adjudication_memo"], code, parse=False)
@@ -2319,7 +2393,9 @@ def build_prefire_intent(*, candidate_id: str, runtime_dir: Path, evidence_paths
         "contract": {"adjudication_memo": prefire_file_reference(repo / PREFIRE_MEMO),
                      "implementation_commit": commit, "implementation_manifest": frozen["implementation_manifest"],
                      "implementation_manifest_sha256": frozen["implementation_manifest"]["sha256"],
-                     "amendment": amendments[-1]},
+                     "amendment": amendments[-1],
+                     "definition_parent_sha256": _pf_freeze_history(amendments, repo, commit),
+                     "latest_row_sha256": prefire_digest(amendments[-1])},
         "candidate": {"archive": prefire_file_reference(archive), "runtime": {"path": str(root), **runtime.to_dict()},
                       "normalized_receiver": {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
                                               "sha256": measure_receiver_digest(root)},
@@ -2566,6 +2642,87 @@ def quarantine_first_measurement_result(result: dict, context: dict) -> dict:
     return result
 
 
+def validate_first_measurement_runtime_custody(*, runtime_dir: Path, output_dir: Path,
+                                             receipt_path: Path) -> dict:
+    """Dry, scorer-free pr16 join against freshly read local bytes and retained provenance.
+
+    The provenance can be retained inside the hashed result; a separately materialized
+    provenance.json is not required. This establishes custody only, never completion.
+    """
+    from pathlib import PurePosixPath
+
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+    from tac.decode_wall_clock import _field
+    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
+
+    code = "FIRST_MEASUREMENT_RESULT_REFUSED"
+    try:
+        refs = {"context": prefire_file_reference(output_dir / "FIRST_MEASUREMENT_CONTEXT.json"),
+                "request": prefire_file_reference(output_dir / "modal_cuda_auth_eval_local_request.json"),
+                "result": prefire_file_reference(receipt_path)}
+        documents = {name: _pf_ref(ref, code) for name, ref in refs.items()}
+        provenance = _field(documents["result"], ["artifacts", "provenance.json"], "worker provenance")
+        if isinstance(provenance, str):
+            provenance = json.loads(provenance)
+        _pf_require(isinstance(provenance, dict), code, "worker provenance absent")
+        worker = provenance.get("inflate_runtime_manifest")
+        _pf_require(isinstance(worker, dict), code, "worker runtime manifest absent")
+        local = _runtime_dependency_manifest(runtime_dir / "inflate.sh",
+            Path(__file__).resolve().parents[2] / "upstream")
+        normal = modal_uploaded_submission_dir_runtime_manifest(local)
+        content = normal["runtime_content_tree_sha256"]
+        for name, document in documents.items():
+            _pf_require(document.get("expected_runtime_content_tree_sha256") == content,
+                        code, f"{name} runtime content differs")
+        _pf_require(worker.get("runtime_content_tree_sha256") == content, code, "worker runtime content differs")
+        argv = documents["request"].get("exact_argv")
+        _pf_require(isinstance(argv, list) and all(isinstance(arg, str) for arg in argv)
+                    and documents["context"].get("exact_argv") == argv
+                    and documents["result"].get("exact_argv") == argv, code, "custody exact argv differs")
+        flag = "--expected-runtime-content-tree-sha256"
+        _pf_require(argv.count(flag) == 1 and argv.index(flag) + 1 < len(argv)
+                    and argv[argv.index(flag) + 1] == content
+                    and not any(arg.startswith(flag + "=") for arg in argv),
+                    code, "worker argv content digest missing, duplicated or different")
+        root = worker.get("runtime_root")
+        _pf_require(isinstance(root, str) and PurePosixPath(root).is_absolute()
+                    and str(PurePosixPath(root)) == root and ".." not in PurePosixPath(root).parts
+                    and PurePosixPath(root).name == "submission_dir", code, "worker retained root invalid")
+        _pf_require(provenance.get("inflate_script") == root + "/inflate.sh", code, "worker retained root differs from inflate script")
+        projected = modal_uploaded_submission_dir_runtime_manifest(local, remote_submission_dir=root)
+        for key in ("runtime_tree_sha256", "runtime_content_tree_sha256", "runtime_file_count",
+                    "files", "external_dependency_roots", "repo_local_tac_import_manifest", "upstream_evaluate_py"):
+            _pf_require(prefire_digest(worker.get(key)) == prefire_digest(projected[key]),
+                        code, f"worker retained-root projection {key} differs")
+        _pf_require(worker.get("runtime_files_sha256") == local["runtime_files_sha256"],
+                    code, "worker runtime files digest differs")
+        for name in ("request", "result"):
+            _pf_require(documents[name].get("expected_runtime_tree_sha256") == normal["runtime_tree_sha256"],
+                        code, f"{name} normal runtime projection differs")
+        # Pin containing files AND exact field paths, including the JSON-encoded artifact.
+        sources = {name: {"file": ref, "field_path": ["expected_runtime_content_tree_sha256"]}
+                   for name, ref in refs.items()}
+        sources["argv"] = {"file": refs["request"], "field_path": ["exact_argv"], "flag": flag}
+        sources["provenance"] = {"file": refs["result"], "field_path": ["artifacts", "provenance.json"],
+                                 "manifest_field_path": ["inflate_runtime_manifest"]}
+        definition = "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
+        return {"schema": "first_measurement_runtime_custody.v1",
+                "content_digest_definition": definition + ".runtime_content_tree_sha256",
+                "path_tree_digest_definition": definition + ".runtime_tree_sha256",
+                "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+                "expected_runtime_content_tree_sha256": content,
+                "worker_runtime_content_tree_sha256": worker["runtime_content_tree_sha256"],
+                "runtime_files_sha256": local["runtime_files_sha256"],
+                "runtime_file_count": projected["runtime_file_count"],
+                "normal_projected_runtime_tree_sha256": normal["runtime_tree_sha256"],
+                "retained_runtime_root": root,
+                "retained_runtime_tree_sha256": projected["runtime_tree_sha256"], "sources": sources}
+    except PrefireRefusal:
+        raise
+    except (SealContractError, OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise PrefireRefusal(code, f"runtime custody unavailable: {exc}") from exc
+
+
 def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo: Path) -> tuple[dict, dict]:
     from tac.decode_wall_clock import _cold_public_report, _field, build_t4_direct_leg
     code = "FIRST_MEASUREMENT_RESULT_REFUSED"
@@ -2609,6 +2766,11 @@ def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo: 
                     "FIRST_MEASUREMENT_TIMEOUT_REFUSED", f"timeout binding {key} differs")
     _pf_require(result.get("returncode") != 124 and not result.get("timed_out"),
                 "FIRST_MEASUREMENT_TIMEOUT_REFUSED", "worker timed out")
+    _pf_require(result.get("passed") is True and type(result.get("returncode")) is int
+                and result["returncode"] == 0, code, "terminal failed receipt cannot complete")
+    custody = validate_first_measurement_runtime_custody(
+        runtime_dir=Path(intent["candidate"]["runtime"]["path"]),
+        output_dir=Path(auth["output_dir"]), receipt_path=receipt_path)
     try:
         _pf_require(_field(result, ["artifacts", "contest_auth_eval.json", "n_samples"], "n_samples") == 600,
                     "FIRST_MEASUREMENT_WARM_REFUSED", "not n600")
@@ -2627,6 +2789,7 @@ def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo: 
         raise
     except SealContractError as exc:
         raise PrefireRefusal(code, str(exc)) from exc
+    leg["first_measurement_runtime_custody"] = custody
     return leg, result
 
 
@@ -2679,7 +2842,8 @@ def complete_first_fire_intent(*, intent_path: Path, authorization_path: Path, r
     document.update(decode_wall_clock_reference=prefire_file_reference(leg_path))
     document.update(schema=SEAL_SCHEMA_V3, prefire_intent=prefire_file_reference(intent_path),
                     first_measurement_authorization=prefire_file_reference(authorization_path),
-                    first_measurement_receipt=prefire_file_reference(receipt_path), prefire_intent_sha256=intent["intent_sha256"])
+                    first_measurement_receipt=prefire_file_reference(receipt_path), prefire_intent_sha256=intent["intent_sha256"],
+                    first_measurement_runtime_custody=leg["first_measurement_runtime_custody"])
     document["seal_sha256"] = compute_seal_sha256(document)
     _pf_write_new(out_path, document)
     verdict = validate_seal(out_path, pointer_path=pointer_path, require_decode_wall_clock=True)
@@ -2717,6 +2881,8 @@ def _pf_validate_completed_seal(document: dict, *, pointer_path: Path | None = N
     stored_leg = _pf_ref(document["decode_wall_clock_reference"], code)
     _pf_require(document.get("decode_wall_clock") == leg == stored_leg, code,
                 "completed seal leg differs from its retained file or unchanged direct builder")
+    _pf_require(document.get("first_measurement_runtime_custody") == leg["first_measurement_runtime_custody"],
+                code, "completed seal and leg runtime custody differ")
 
 
 def _pf_registered_call(auth: dict, call_id: str, repo: Path) -> None:

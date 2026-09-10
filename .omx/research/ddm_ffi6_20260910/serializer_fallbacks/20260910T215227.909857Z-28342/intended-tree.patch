@@ -1,0 +1,1313 @@
+diff --git a/.omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json b/.omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json
+new file mode 100644
+index 000000000..4ce3b1038
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json
+@@ -0,0 +1,98 @@
++{
++  "binding_required": "MAIN sets implementation_commit to the exact successful serializer or MAIN landing commit, verifies all manifest rows against live files and that commit, then appends the typed row. This draft envelope is not a frozen row.",
++  "existing_rows_unchanged": [
++    "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
++    "ecc62f5b9cb136f8dc9d1bef92bae743e9ddf9028f9536cc1f86fbf3de5d1b72",
++    "0651e7360f4a95a8b5618355c40a30ad15bfce5ea4ae65cdf4917ed9e807be77",
++    "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2"
++  ],
++  "rows": [
++    {
++      "adjudication_memo": {
++        "bytes": 24850,
++        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
++        "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
++      },
++      "consumer_fixes": [
++        {
++          "causal_commit": "808da43c02a32ae328fd73c707331b9aaee2ac36",
++          "fix_id": "migration-amendment1-context",
++          "reason": "Do not require the context file before this producer exclusively creates it.",
++          "scope": "tools/fire_modal_auth_eval.py first-measurement dispatch-path verification",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_dry_run_consumes_nothing_and_explicit_argv"
++          ]
++        },
++        {
++          "causal_commit": "7a837a9de38f1be1d6a023e0a6caab0e7696a1a2",
++          "fix_id": "migration-amendment2-axis",
++          "reason": "The manifest writer refused run2 after reservation because its axis tag was absent.",
++          "scope": "tools/fire_modal_auth_eval.py first_measurement_manifest axis tagging",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_first_measurement_manifest_is_axis_tagged_and_writable"
++          ]
++        },
++        {
++          "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
++          "fix_id": "migration-amendment3-content",
++          "reason": "Run3 had identical runtime bytes at a differently spelled retained root.",
++          "scope": "first-measurement dispatcher, worker and evaluator content comparison",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_content_pin_accepts_relocation_but_refuses_one_changed_byte"
++          ]
++        },
++        {
++          "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
++          "fix_id": "migration-amendment3-import",
++          "reason": "Authorization must import experiments from a foreign working directory.",
++          "scope": "tools/authorize_candidate_first_measurement.py import closure",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_authorize_tool_imports_experiments_from_a_foreign_cwd"
++          ]
++        },
++        {
++          "causal_commit": "0919b62e4e4afba47124e77dd9c3e958b30e477a",
++          "fix_id": "migration-amendment3-ledger",
++          "reason": "Imported source snapshots must register in the canonical repository ledger.",
++          "scope": "local first-measurement dispatch call-id registration",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_local_registration_uses_repo_ledger_when_imported_from_snapshot"
++          ]
++        },
++        {
++          "causal_commit": "74c284865937a7e852ab6ba7550e2517786d345a",
++          "fix_id": "pr16-completion-custody",
++          "reason": "pr16 requires fresh content joins, retained-root projection and identical seal/direct-leg custody.",
++          "scope": "candidate_seal first-measurement completion and v3 revalidation",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_run3_retained_provenance_projection_and_terminal_refusal"
++          ]
++        },
++        {
++          "causal_commit": "74c284865937a7e852ab6ba7550e2517786d345a",
++          "fix_id": "pr16-typed-consumer-history",
++          "reason": "pr16 separates immutable definition identity from fresh consumer implementation batches.",
++          "scope": "candidate_seal prefire contract validation and intent production",
++          "tests": [
++            "src/tac/tests/test_candidate_prefire_intent.py::test_consumer_fix_typed_refusals_with_real_git"
++          ]
++        }
++      ],
++      "definition_change": false,
++      "definition_parent_sha256": "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
++      "fix_batch_id": "ddm_ffi6_pr16_completion_and_migration_20260910",
++      "implementation_commit": null,
++      "implementation_manifest": {
++        "bytes": 2702,
++        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
++        "sha256": "37d429ea769579a3bb569c30c04a4a78dade82d0a80fae77a1f6c7e42c20c8fc"
++      },
++      "previous_row_sha256": "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2",
++      "schema": "prefire_contract_consumer_fix.v1",
++      "score_claim": false
++    }
++  ],
++  "schema": "ddm_ffi6_consumer_fix_rows_draft.v1",
++  "score_claim": false,
++  "state": "DRAFT_REQUIRES_COMMITTED_IMPLEMENTATION"
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/INPUT_PINS.json b/.omx/research/ddm_ffi6_20260910/INPUT_PINS.json
+new file mode 100644
+index 000000000..69d999207
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/INPUT_PINS.json
+@@ -0,0 +1,97 @@
++{
++  "files": [
++    {
++      "bytes": 13149,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
++      "sha256": "9557af75c031b06eaf6a190fed03ec32afe11a994478149f6ce215e8cc605415"
++    },
++    {
++      "bytes": 24850,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
++      "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
++    },
++    {
++      "bytes": 14062,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
++      "sha256": "955f765e559947079e5c64350eea19b93d595407719ed3a9926f820196d4079e"
++    },
++    {
++      "bytes": 14075,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v4.json",
++      "sha256": "c92e8b4c7707d5560ba200af7d3cfbe949dc6011f3d3ffbf66d0be84783d6ef7"
++    },
++    {
++      "bytes": 1707,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v6.json",
++      "sha256": "03c8a56d7f1ec53c89d0c96c5f3700d36d9a630f3ce46ba4a85b7827da1b12b7"
++    },
++    {
++      "bytes": 1707,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v7.json",
++      "sha256": "5bef68da161b151ab05321808e6ac2978f1fe8dfc71670b77a600f8ab3a3c0be"
++    },
++    {
++      "bytes": 4601,
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RUN3_RECONCILIATION.json",
++      "sha256": "553d8c8baa8163df73280697fd4b12b25993fbe7a3541fe34ae1d6dcb16f69ed"
++    },
++    {
++      "bytes": 19684,
++      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
++      "sha256": "c75abc293f25dec624bcd0469a0590c73f9cb646f971cbc25bf90dfb45bc4078"
++    },
++    {
++      "bytes": 4211,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRE_MANIFEST.json",
++      "sha256": "c977344c9b2f25684953b02aa322da0ca8beb436bcd805972bbc08285e2df8df"
++    },
++    {
++      "bytes": 4011,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONTEXT.json",
++      "sha256": "41c9b0c8692346f033646023f466350a65e3b61037f060c7594d6b23ff7abc05"
++    },
++    {
++      "bytes": 80671,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
++      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
++    },
++    {
++      "bytes": 6489,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_local_request.json",
++      "sha256": "8b9627b2f41f73041e46b0a8ff526a26df0925d7e37ffb0cf8a4a3ba44e9fbef"
++    },
++    {
++      "bytes": 42595,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
++      "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
++    },
++    {
++      "bytes": 6104,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRE_MANIFEST.json",
++      "sha256": "7239ff39dcefa6b682a4a5ecc5c32393e64eae770203e7b4b3019a489f1a3f5d"
++    },
++    {
++      "bytes": 4973,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
++      "sha256": "2c579d9db53d42d1dca606ae14ac6791c80b022ee491b8b2ca56ab35b9ce81d1"
++    },
++    {
++      "bytes": 242556,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
++      "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
++    },
++    {
++      "bytes": 7341,
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
++      "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
++    }
++  ],
++  "freeze_row_sha256": [
++    "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
++    "ecc62f5b9cb136f8dc9d1bef92bae743e9ddf9028f9536cc1f86fbf3de5d1b72",
++    "0651e7360f4a95a8b5618355c40a30ad15bfce5ea4ae65cdf4917ed9e807be77",
++    "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2"
++  ],
++  "schema": "ddm_ffi6_input_pins.v1",
++  "score_claim": false
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/INTENDED_FILES.json b/.omx/research/ddm_ffi6_20260910/INTENDED_FILES.json
+new file mode 100644
+index 000000000..52599297a
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/INTENDED_FILES.json
+@@ -0,0 +1,61 @@
++{
++  "files": [
++    {
++      "bytes": 5158,
++      "path": ".omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json",
++      "sha256": "d1c27a4a9e50c779b04656526f4896c77ef6b5a8a80a54eeb551c047435ed08d"
++    },
++    {
++      "bytes": 4240,
++      "path": ".omx/research/ddm_ffi6_20260910/INPUT_PINS.json",
++      "sha256": "1f80ec3cb4380bd6756a23a3970d13c62fdf001eb68cf184b75a3d6db84980f4"
++    },
++    {
++      "bytes": 940,
++      "path": ".omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json",
++      "sha256": "fcf9a6f9fcddda49dfe27fb80bec3be54c4dc2cfe91a5ba6321870143e3d8368"
++    },
++    {
++      "bytes": 2702,
++      "path": ".omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
++      "sha256": "37d429ea769579a3bb569c30c04a4a78dade82d0a80fae77a1f6c7e42c20c8fc"
++    },
++    {
++      "bytes": 1242,
++      "path": ".omx/research/ddm_ffi6_20260910/REVIEW_PASSES.json",
++      "sha256": "252066ee488e831d8f617419f26dc52bbd1439faf9c8fd3c3306890ee0334ed3"
++    },
++    {
++      "bytes": 1599,
++      "path": ".omx/research/ddm_ffi6_20260910/RUN3_DRY_VALIDATION.json",
++      "sha256": "e379dd1e657e0bedbba45b156f90533cac3aa7d5f3bf092a4b811d8900da858a"
++    },
++    {
++      "bytes": 4072,
++      "path": ".omx/research/ddm_ffi6_20260910/RUN4_DRY_VALIDATION.json",
++      "sha256": "c9ddc2ce3d43e48bb9ccd06cd1fac5ea6c3e80d4a679e8f8c4e90a6d43a2c22b"
++    },
++    {
++      "bytes": 675,
++      "path": ".omx/research/ddm_ffi6_20260910/VALIDATION.json",
++      "sha256": "31078941aee4187056a7a030f96b26a9c3beb6abdaf86a72d6f5b0682fc77a44"
++    },
++    {
++      "bytes": 12592,
++      "path": ".omx/research/ddm_ffi6_completion_custody_and_consumer_fix_rows_20260910.md",
++      "sha256": "5c52aa5f0f6ba990a14e01ec4e7fbb4095eb7a42433b6a6ba0c392ccd4922240"
++    },
++    {
++      "bytes": 156270,
++      "path": "src/tac/candidate_seal.py",
++      "sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb"
++    },
++    {
++      "bytes": 82822,
++      "path": "src/tac/tests/test_candidate_prefire_intent.py",
++      "sha256": "83c46dcdb88a277d9625cfe403b7a4b48450e5a0aa4018aa40540a5ebb7e3e34"
++    }
++  ],
++  "schema": "ddm_ffi6_intended_files.v1",
++  "score_claim": false
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json b/.omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json
+new file mode 100644
+index 000000000..fa420dba6
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json
+@@ -0,0 +1,20 @@
++{
++  "orders": [
++    {
++      "action": "Ratify and append the typed consumer batch; preserve historical rows and exact latest-row refusal.",
++      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json",
++      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
++      "fire_trigger": "Verified implementation landing and all 17 manifest rows match committed blobs",
++      "owner": "MAIN"
++    },
++    {
++      "action": "Resolve run4 full-completion disposition under latest-row freshness using passing dry custody/facts; no added dispatch authorization or nonce reuse.",
++      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json",
++      "disposition": "FOLDED",
++      "fire_trigger": "Typed batch ratification within MAIN existing rlc5 lifecycle",
++      "owner": "MAIN/pr17"
++    }
++  ],
++  "schema": "ddm_ffi6_fire_orders.v1",
++  "score_claim": false
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json b/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json
+new file mode 100644
+index 000000000..8cab0ee8b
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json
+@@ -0,0 +1,87 @@
++[
++  {
++    "bytes": 154084,
++    "path": "experiments/contest_auth_eval.py",
++    "sha256": "7affb36427d86b339dad1b71ede52a447977a6803c914ba6d2bd1ec4e749ec79"
++  },
++  {
++    "bytes": 84201,
++    "path": "experiments/modal_auth_eval.py",
++    "sha256": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29"
++  },
++  {
++    "bytes": 156270,
++    "path": "src/tac/candidate_seal.py",
++    "sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb"
++  },
++  {
++    "bytes": 10381,
++    "path": "src/tac/checkpoint_maturity.py",
++    "sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5"
++  },
++  {
++    "bytes": 30533,
++    "path": "src/tac/decode_wall_clock.py",
++    "sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff"
++  },
++  {
++    "bytes": 35999,
++    "path": "src/tac/deploy/modal/auth_eval.py",
++    "sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1"
++  },
++  {
++    "bytes": 75583,
++    "path": "src/tac/deploy/modal/call_id_ledger.py",
++    "sha256": "2edb975b53e1ac9a1e46474d51711c7fadf06820fb15fa11d63c2248bb4e9015"
++  },
++  {
++    "bytes": 6551,
++    "path": "src/tac/deploy/modal/result_json.py",
++    "sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d"
++  },
++  {
++    "bytes": 24551,
++    "path": "src/tac/deploy/modal/single_flight.py",
++    "sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d"
++  },
++  {
++    "bytes": 10222,
++    "path": "src/tac/git_custody_read.py",
++    "sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5"
++  },
++  {
++    "bytes": 28138,
++    "path": "src/tac/modal_source_snapshot.py",
++    "sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290"
++  },
++  {
++    "bytes": 82822,
++    "path": "src/tac/tests/test_candidate_prefire_intent.py",
++    "sha256": "83c46dcdb88a277d9625cfe403b7a4b48450e5a0aa4018aa40540a5ebb7e3e34"
++  },
++  {
++    "bytes": 1658,
++    "path": "tools/authorize_candidate_first_measurement.py",
++    "sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851"
++  },
++  {
++    "bytes": 69737,
++    "path": "tools/fire_modal_auth_eval.py",
++    "sha256": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703"
++  },
++  {
++    "bytes": 73676,
++    "path": "tools/launch_detached_process.py",
++    "sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa"
++  },
++  {
++    "bytes": 20219,
++    "path": "tools/make_candidate_seal.py",
++    "sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791"
++  },
++  {
++    "bytes": 36333,
++    "path": "tools/modal_harvest_poller.py",
++    "sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f"
++  }
++]
+diff --git a/.omx/research/ddm_ffi6_20260910/REVIEW_PASSES.json b/.omx/research/ddm_ffi6_20260910/REVIEW_PASSES.json
+new file mode 100644
+index 000000000..264790302
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/REVIEW_PASSES.json
+@@ -0,0 +1,30 @@
++{
++  "assumption_challenge": "Location-dependent hashes cannot stand in for content equality; retained-root projection preserves custody without introducing a new digest definition. Run4 evidence acceptance cannot erase intent freshness.",
++  "passes": [
++    {
++      "focus": "Fresh content and provenance joins, actual retained-root projection, completion callsites, legacy timing equivalence",
++      "pass": 1,
++      "result": "CLEAN after import formatting correction; 231 tests green"
++    },
++    {
++      "focus": "Real-Git historical ancestry and latest-row identity, typed override refusals, seal/source mutation negatives, real run3 control",
++      "pass": 2,
++      "result": "CLEAN; no further code changes"
++    }
++  ],
++  "reviewed_files": [
++    {
++      "bytes": 156270,
++      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
++      "sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb"
++    },
++    {
++      "bytes": 82822,
++      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py",
++      "sha256": "83c46dcdb88a277d9625cfe403b7a4b48450e5a0aa4018aa40540a5ebb7e3e34"
++    }
++  ],
++  "reviewer": "ddm_ffi6",
++  "schema": "ddm_ffi6_review_passes.v1",
++  "score_claim": false
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/RUN3_DRY_VALIDATION.json b/.omx/research/ddm_ffi6_20260910/RUN3_DRY_VALIDATION.json
+new file mode 100644
+index 000000000..bd75964c4
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/RUN3_DRY_VALIDATION.json
+@@ -0,0 +1,33 @@
++{
++  "axis": "host-custody-only; no scorer executed",
++  "completion_facts_refusal": {
++    "code": "FIRST_MEASUREMENT_RESULT_REFUSED",
++    "detail": "authorization not harvested"
++  },
++  "completion_invoked": false,
++  "content_check": "PASS",
++  "content_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
++  "file_count": 48,
++  "files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
++  "measured_at_utc": "2026-09-10T21:48:35.252004+00:00",
++  "normal_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
++  "original_tree_refusal": "inflate runtime tree hash mismatch: expected=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 actual=baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
++  "promotion_eligible": false,
++  "provenance": {
++    "bytes": 42595,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
++    "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
++  },
++  "receipt": {
++    "bytes": 80671,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
++    "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
++  },
++  "retained_projection_matches": true,
++  "retained_tree_sha256": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
++  "run": 3,
++  "runtime": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
++  "schema": "ddm_ffi6_dry_custody_validation.v1",
++  "score_claim": false,
++  "seal_written": false
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/RUN4_DRY_VALIDATION.json b/.omx/research/ddm_ffi6_20260910/RUN4_DRY_VALIDATION.json
+new file mode 100644
+index 000000000..404cd7470
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/RUN4_DRY_VALIDATION.json
+@@ -0,0 +1,90 @@
++{
++  "axis": "host-custody-only; no scorer executed",
++  "completion_invoked": false,
++  "custody": {
++    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
++    "expected_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
++    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
++    "normal_projected_runtime_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
++    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
++    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/f7e229a17d05cd216faa943e6244b54a4f2cbcc39b6e43b29e9207ac81ca6b7e/out/submission_dir",
++    "retained_runtime_tree_sha256": "8d31edd6f7c3291b37b87eb8404a5944713a80a1d0e4a66fb66bab7650599dbc",
++    "runtime_file_count": 48,
++    "runtime_files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
++    "schema": "first_measurement_runtime_custody.v1",
++    "sources": {
++      "argv": {
++        "field_path": [
++          "exact_argv"
++        ],
++        "file": {
++          "bytes": 7341,
++          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
++          "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
++        },
++        "flag": "--expected-runtime-content-tree-sha256"
++      },
++      "context": {
++        "field_path": [
++          "expected_runtime_content_tree_sha256"
++        ],
++        "file": {
++          "bytes": 4973,
++          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
++          "sha256": "2c579d9db53d42d1dca606ae14ac6791c80b022ee491b8b2ca56ab35b9ce81d1"
++        }
++      },
++      "provenance": {
++        "field_path": [
++          "artifacts",
++          "provenance.json"
++        ],
++        "file": {
++          "bytes": 242556,
++          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
++          "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
++        },
++        "manifest_field_path": [
++          "inflate_runtime_manifest"
++        ]
++      },
++      "request": {
++        "field_path": [
++          "expected_runtime_content_tree_sha256"
++        ],
++        "file": {
++          "bytes": 7341,
++          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
++          "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
++        }
++      },
++      "result": {
++        "field_path": [
++          "expected_runtime_content_tree_sha256"
++        ],
++        "file": {
++          "bytes": 242556,
++          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
++          "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
++        }
++      }
++    },
++    "worker_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf"
++  },
++  "joined_runtime_custody": "PASS",
++  "limitation": "No live-intent/full-seal completion validation or write. A prospective freeze append makes this old intent stale; latest-row refusal is preserved.",
++  "measured_at_utc": "2026-09-10T21:48:35.352837+00:00",
++  "promotion_eligible": false,
++  "read_only_completion_facts": "PASS",
++  "receipt": {
++    "bytes": 242556,
++    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
++    "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
++  },
++  "retained_receipt_inflate_seconds": 1124.5857065260002,
++  "run": 4,
++  "runtime": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
++  "schema": "ddm_ffi6_dry_custody_validation.v1",
++  "score_claim": false,
++  "seal_written": false
++}
+diff --git a/.omx/research/ddm_ffi6_20260910/VALIDATION.json b/.omx/research/ddm_ffi6_20260910/VALIDATION.json
+new file mode 100644
+index 000000000..55e52d2e2
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_20260910/VALIDATION.json
+@@ -0,0 +1,17 @@
++{
++  "axis": "host unit tests; scorer-free",
++  "changed_python_files": [
++    "src/tac/candidate_seal.py",
++    "src/tac/tests/test_candidate_prefire_intent.py"
++  ],
++  "command": ".venv/bin/python -m pytest src/tac/tests/test_candidate_prefire_intent.py src/tac/tests/test_candidate_seal.py src/tac/tests/test_decode_wall_clock_t4_direct.py src/tac/tests/test_decode_wall_clock.py -q",
++  "elapsed_seconds": 5.49,
++  "failed": 0,
++  "passed": 231,
++  "real_control": "test_run3_retained_provenance_projection_and_terminal_refusal executed (not skipped)",
++  "returncode": 0,
++  "ruff_returncode": 0,
++  "schema": "ddm_ffi6_host_validation.v1",
++  "score_claim": false,
++  "skipped": 0
++}
+diff --git a/.omx/research/ddm_ffi6_completion_custody_and_consumer_fix_rows_20260910.md b/.omx/research/ddm_ffi6_completion_custody_and_consumer_fix_rows_20260910.md
+new file mode 100644
+index 000000000..ff1514ec5
+--- /dev/null
++++ b/.omx/research/ddm_ffi6_completion_custody_and_consumer_fix_rows_20260910.md
+@@ -0,0 +1,150 @@
++# ddm_ffi6 — completion custody and typed consumer fixes
++
++Implementation and host validation are complete; serializer disposition is recorded separately in
++`ddm_ffi6_20260910/SERIALIZER_RESULT.json` after the single final attempt. No exact pointer move,
++real completion, seal write, authorization, or fire was performed. This is a consumer repair,
++not score progress.
++
++## Requirement → code → test
++
++| Requirement | Code | Test / evidence |
++|---|---|---|
++| Independently recompute and join content across context, request, exact argv, result, worker provenance | `candidate_seal.validate_first_measurement_runtime_custody`; called by `_pf_completion_facts`, therefore both completion and subsequent v3 validation | `test_completion_runtime_custody_refuses_each_join_drift` (15 variants); `RUN4_DRY_VALIDATION.json` |
++| Project local dependencies onto the recorded retained root; validate actual worker tree, rows, count and file digest | Same helper uses the existing `modal_uploaded_submission_dir_runtime_manifest` with the provenance root; also verifies `inflate_script` belongs to that root | `test_run3_retained_provenance_projection_and_terminal_refusal`; root/tree/row/file-digest/count negatives; synthetic relocation positive |
++| Identical custody in v3 and its direct leg; reread pinned sources | `complete_first_fire_intent`, `_pf_validate_completed_seal`; source references pin the containing file plus exact field paths, including JSON-encoded provenance inside the result | `test_completed_fixture_seal_uses_unchanged_direct_builder`; `test_completion_seal_rechecks_custody_and_refuses_unequal_objects` |
++| Legacy direct-leg requirements unchanged | No edits to `decode_wall_clock.py`; completion adds one custody field after the existing builder validates | All existing `test_decode_wall_clock_t4_direct.py` and `test_decode_wall_clock.py` cases; fixture compares the remaining leg exactly with the unchanged builder |
++| Typed prospective consumer batches, complete previous-row chain, immutable pr14 definition parent | `_pf_freeze_history`, `_pf_contract`, `build_prefire_intent`; exact schema allowlist forbids definition/receiver/threshold/evidence overrides; new intents carry both parent and latest-row digests | `test_consumer_fix_batch_keeps_definition_and_refuses_stale_latest`; `test_consumer_fix_typed_refusals_with_real_git` (18 variants) |
++| Full manifest identity, causal/implementation ancestry and stale-row refusal | Every historical manifest is checked against its owning committed blobs; latest manifest also matches live files; base and sequential implementation ancestry plus causal ancestry are checked | Real isolated Git-object controls for manifest drift, live drift, orphan/unreachable commits, wrong parent/latest pins; existing amendment tests remain green |
++| Add typed migration semantics without rewriting historical rows | `CONSUMER_FIX_ROWS_DRAFT.json` contains one allowed batch: five migrated consumer fixes from amendments[1..3], plus completion custody and typed-history enforcement | `INPUT_PINS.json` preserves all four existing canonical row digests; frozen receipt untouched; batch validator supports multiple fixes and multiple chained batches |
++
++All code above is in `src/tac/candidate_seal.py`; regression tests are in
++`src/tac/tests/test_candidate_prefire_intent.py`. The CLI already delegates to these functions,
++so no parallel CLI implementation or new completion mode was added. Runtime helper invariants and
++negative controls provide the self-protection within pr16's authorized consumer scope.
++
++## Measured host verification
++
++Axis: **host custody / scorer-free unit tests**, not contest or macOS scorer authority.
++
++- Required four suites: **231 passed, 0 failed, 0 skipped**, 5.49 s on the final run.
++- Ruff on both changed Python files: **passed**.
++- Two visible review passes per Python file; tracker rescanned 89 production entities and 56 test
++  entities before marking each pass. `REVIEW_PASSES.json` pins the reviewed final Python bytes.
++- `VALIDATION.json` names the exact suite command. The baseline after initial implementation was
++  195 tests; 36 additional cases cover the new refusal/positive paths and retained control.
++
++These tests exercise real local file reads and real isolated Git objects. Broad pre-existing fixtures
++still substitute the large raw-file transport and some Git/authorization plumbing, as their module
++docstring states. The retained run3 test is additional evidence, not a substitute for that disclosure.
++No scorer, decoder, timing sampler or provider was run by this arm.
++
++## Run3 retained control
++
++`RUN3_DRY_VALIDATION.json` pins the real provenance and result. Provenance SHA:
++`4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405`.
++All **48** runtime file rows agree. Independently derived content:
++`e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf`;
++files digest: `fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4`.
++
++The real evaluator helper passes content-only validation and reproduces the original tree refusal:
++normal prediction `e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891`
++versus retained worker `baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af`.
++Projecting onto the recorded root reproduces the latter exactly. Requiring that *correct* projection
++to refuse would contradict pr16. The test therefore proves the original normal-tree refusal, accepts
++the correct retained projection, and refuses a wrong tree at that retained root while content agrees.
++It exercises production custody validation with the exact retained provenance in an explicitly
++synthetic local join envelope; that envelope is not represented as a real harvest.
++
++The unmodified real run3 completion-facts path refuses with `FIRST_MEASUREMENT_RESULT_REFUSED`
++(`authorization not harvested`). Its reserved nonce and terminal worker failure remain unchanged.
++MAIN's immutable reconciliation receipt is read and pinned; it supplies no completion authority.
++The explicit failed-result check also prevents a failed receipt from proceeding after a harvested
++state. Run3 is non-replayable and not a score.
++
++## Run4 dry control and the remaining contract boundary
++
++`RUN4_DRY_VALIDATION.json` records **PASS** for the five-way content join, all 48 file rows,
++files digest, retained-root projection, and the read-only `_pf_completion_facts` checks.
++The result's embedded provenance is covered by the result file's SHA pin and its exact field path;
++standalone `provenance.json` was absent and is not required by the actual retained artifact shape.
++The retained root projects to
++`8d31edd6f7c3291b37b87eb8404a5944713a80a1d0e4a66fb66bab7650599dbc`.
++Receipt SHA: `6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136`.
++Its existing T4 inflate time, **1124.5857065260002 s**, passes the unchanged 1260 s policy in the
++read-only facts consumer. This is a read of MAIN's retained measurement, not a new timing sample.
++
++No `complete_first_fire_intent` call was made on real data, no seal/direct-leg file was written,
++and no full current-contract completion was claimed. **Appending a typed freeze row makes run4's
++v4 intent stale.** pr16 explicitly preserves latest-row refusal and says a post-amendment scored
++fire needs a newly emitted intent and fresh authorization. The charter also asks to accept run4
++when harvested. The code meets the run4 custody/facts acceptance and retains the refusal rule;
++it does not invent grandfathering. MAIN/pr17 must resolve the run4 full-completion disposition
++within the existing lifecycle. This arm does not authorize a refire or nonce reuse.
++
++## Manifest and draft handoff
++
++`PREFIRE_IMPLEMENTATION_MANIFEST.json` hashes **17** post-edit live files: all 16 files in ffi5's
++latest manifest and the expanded test module. Its content is independent of a future commit hash.
++`CONSUMER_FIX_ROWS_DRAFT.json` is explicitly a draft envelope, with an unbound implementation commit.
++MAIN must bind the successful serializer/landing commit only after all 17 rows match its committed
++blobs, then append the contained typed row. A null draft commit is not a valid frozen row.
++The existing four amendment objects are never rewritten. Historical implementation snapshots with
++the same pr14 definition retain row[0] as the definition parent; the new row chains row[3] as its
++immediate predecessor. This is the charter's explicit pr14-parent interpretation.
++
++The serializer is invoked last, once, with post-edit hashes, no co-author trailer, and the required
++`[no-triality] [p0-ledger-ok]` tags. An explicit arm-local fallback directory prevents the serializer
++from writing to forbidden volume paths; only this small source/evidence commit is eligible. A Git
++object denial or reserve refusal is reported as such; files remain available to MAIN. No shared
++staged index is modified directly.
++
++## RECALL EVIDENCE
++
++Searched the external memory registry for `ffi6|completion.custody|consumer.fix`: no relevant hit;
++no external memory-derived fact is used. In the repository, searched research memos and JSON receipts
++by `content.only|runtime_content_tree_sha256|consumer.fix`, then the canonical equation JSON output,
++research index, `sub015_DAG_*`, docs/design surfaces, and canonical task rows by
++`first.measurement|prefire|runtime.content`. Also read recent operator directive files and the live
++board/lane registry. Search results are bounded; no global absence claim is made.
++
++Beyond the charter seeds, the May 23 `codex_findings_modal_runtime_content_fail_closed` memo separates
++content identity from path/package identity and requires failed/missing evaluator output to remain
++failed. `docs/experiment_scheduler_design.md` separately names archive, content/tree and axis identity.
++The canonical task ledger's rlc2 decision rows confirm that MAIN owns lifecycle adjudication and that
++an arm's evidence must not become dispatch permission. These reinforced fresh content/projection
++checks and explicit terminal failure refusal; no additional contract definition was introduced.
++The DAG prefire references concern earlier reviews, and the equation search exposed no competing
++completion-custody equation in the queried scope.
++
++## Boundaries and frontier
++
++No Modal API/CLI, dispatch, real authorization/completion, timing window, n600 run, scorer, payload
++mutation, upstream edit, PR/sealed-tree edit, frozen receipt edit, or write under `/Volumes/`.
++No gdc2/sr4 directory touched. Unrelated dirty files preserved. Only small code, test and evidence
++files were created/edited; no real payload was produced or discarded. Shared tracker/checkpoint
++metadata is maintained by its canonical tools. No canonical pointer or consumer store owned by MAIN
++was edited.
++
++Canonical pointer values read live: **S 0.1372848557085275 [contest-CUDA T4 n600]**,
++archive `7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e`.
++Archive size **180,466 B** is the live board's move-43 custody value (the pointer JSON itself has no
++byte-size field). No exact score was measured or lowered by this arm; sub-0.12 remains unachieved.
++
++## NEXT_IF_RESUMED
++
++- **QUEUED-WITH-A-FIRE-ORDER; owner MAIN; consumer store `ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json` and the canonical frozen receipt; trigger verified code/test/evidence landing:** bind the exact implementation commit and manifest, ratify the typed batch, and append without rewriting rows[0..3].
++- **FOLDED into MAIN's existing run4 lifecycle; owner MAIN/pr17; consumer store `ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json` and the existing rlc5 completion handoff; trigger typed batch ratification:** adjudicate run4's full-completion disposition under exact latest-row refusal, using the passing dry custody receipt; no automatic refire or nonce reuse.
++
++## LIVE-HYPOTHESES
++
++- MAIN may be able to close the candidate lifecycle from the retained run4 evidence after an explicit
++  contract disposition: all runtime joins and read-only completion facts pass, but freshness is separate.
++
++## DEAD-ENDS
++
++- Normal upload-root hash equals retained-root hash: closed for these receipts by the reproduced root-dependent mismatch.
++- Discarding the path-tree digest: closed; it is independently verified custody at the recorded root.
++- Replaying or completing run3: closed at INSTANCE scope by its retained failure and non-harvested nonce state.
++- Treating run4 custody PASS as a completed v3 seal: closed; no real seal was written and latest-row freshness still applies.
++
++<!-- # FORMALIZATION_PENDING: consumer implementation and draft freeze batch; no scorer row or new equation -->
+diff --git a/src/tac/candidate_seal.py b/src/tac/candidate_seal.py
+index 2a6e8c6c4..2837b5dc7 100644
+--- a/src/tac/candidate_seal.py
++++ b/src/tac/candidate_seal.py
+@@ -1604,6 +1604,7 @@ PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION = (
+ )
+ PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS = frozenset({"MANIFEST.sha256"})
+ PREFIRE_CONTRACT_AMENDMENT_SCHEMA = "prefire_contract_amendment.v1"
++PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA = "prefire_contract_consumer_fix.v1"
+ PREFIRE_CONTRACT_AMENDMENT_ID = "ddm_pr14_manifest_in_receiver_risk_digest"
+ FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA = "candidate_first_measurement_authorization.v1"
+ SEAL_SCHEMA_V3 = "candidate_seal.v3"
+@@ -1764,12 +1765,85 @@ def _pf_blob(repo: Path, commit: str, path: Path) -> None:
+         raise PrefireRefusal(code, f"file is not in repository custody: {path}") from exc
+ 
+ 
++def _pf_freeze_history(rows: list, repo: Path, base_commit: str) -> str:
++    """Validate append-only consumer batches; repeated legacy snapshots keep pr14 as parent."""
++    code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
++    definition = None
++    previous = None
++    previous_commit = base_commit
++    batch_ids: set[str] = set()
++    fix_ids: set[str] = set()
++    for row in rows:
++        _pf_require(isinstance(row, dict), code, "freeze row must be an object")
++        commit = row.get("implementation_commit")
++        _pf_require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit),
++                    code, "full amendment implementation commit required")
++        _pf_git(repo, "merge-base", "--is-ancestor", previous_commit, commit)
++        _pf_git(repo, "merge-base", "--is-ancestor", commit, "HEAD")
++        if row.get("schema") == PREFIRE_CONTRACT_AMENDMENT_SCHEMA:
++            _pf_require(not batch_ids, code, "definition snapshot after consumer fixes is unsupported")
++            expected = {
++                "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
++                "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
++                "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
++                "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"}
++            _pf_require(row.get("amendment_id") == PREFIRE_CONTRACT_AMENDMENT_ID
++                        and row.get("score_claim") is False
++                        and prefire_digest(row.get("definition_change")) == prefire_digest(expected),
++                        code, "amendment definition differs")
++            # Historical amendments[1..3] re-pin implementations of the SAME definition.
++            # They remain immutable snapshots; they do not replace pr14's definition identity.
++            if definition is None:
++                definition = prefire_digest(row)
++        else:
++            _pf_require(row.get("schema") == PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA
++                        and set(row) == {"schema", "fix_batch_id", "previous_row_sha256",
++                            "definition_parent_sha256", "definition_change", "consumer_fixes",
++                            "implementation_commit", "implementation_manifest", "adjudication_memo", "score_claim"},
++                        code, "consumer-fix fields differ or carry definition overrides")
++            _pf_require(row["definition_change"] is False and row["score_claim"] is False,
++                        code, "consumer fix cannot change definition or claim score")
++            _pf_require(definition is not None and row["definition_parent_sha256"] == definition,
++                        code, "consumer-fix definition parent differs")
++            _pf_require(previous is not None and row["previous_row_sha256"] == prefire_digest(previous),
++                        code, "consumer-fix previous-row chain differs")
++            batch = row["fix_batch_id"]
++            _pf_require(isinstance(batch, str) and bool(batch.strip()) and batch not in batch_ids,
++                        code, "missing or duplicate fix batch id")
++            batch_ids.add(batch)
++            fixes = row["consumer_fixes"]
++            _pf_require(isinstance(fixes, list) and bool(fixes), code, "consumer fixes required")
++            ids = []
++            for fix in fixes:
++                _pf_require(isinstance(fix, dict) and set(fix) == {
++                    "fix_id", "scope", "reason", "causal_commit", "tests"}, code, "consumer fix fields differ")
++                for key in ("fix_id", "scope", "reason"):
++                    _pf_require(isinstance(fix[key], str) and bool(fix[key].strip()), code, f"consumer fix {key} required")
++                causal = fix["causal_commit"]
++                _pf_require(isinstance(causal, str) and re.fullmatch(r"[0-9a-f]{40}", causal),
++                            code, "full causal commit required")
++                _pf_git(repo, "merge-base", "--is-ancestor", base_commit, causal)
++                _pf_git(repo, "merge-base", "--is-ancestor", causal, commit)
++                tests = fix["tests"]
++                _pf_require(isinstance(tests, list) and bool(tests)
++                            and all(isinstance(t, str) and bool(t.strip()) for t in tests),
++                            code, "consumer fix exact tests required")
++                ids.append(fix["fix_id"])
++            _pf_require(ids == sorted(set(ids)) and not fix_ids.intersection(ids),
++                        code, "consumer fix ids unsorted or duplicated")
++            fix_ids.update(ids)
++        previous, previous_commit = row, commit
++    _pf_require(definition is not None, code, "definition parent absent")
++    return definition
++
++
+ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
+     code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
+     contract = intent["contract"]
+-    _pf_require(isinstance(contract, dict) and set(contract) == {
+-        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256", "amendment"},
+-        code, "contract fields differ")
++    fields = {
++        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256", "amendment"}
++    _pf_require(isinstance(contract, dict) and set(contract) in (
++        fields, fields | {"definition_parent_sha256", "latest_row_sha256"}), code, "contract fields differ")
+     commit = contract["implementation_commit"]
+     _pf_require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit), code, "full implementation commit required")
+     frozen_path = repo / PREFIRE_FREEZE
+@@ -1780,15 +1854,11 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
+     amendment = contract["amendment"]
+     _pf_require(isinstance(amendment, dict) and prefire_digest(amendment) == prefire_digest(amendments[-1]), code,
+                 "latest exact frozen amendment required")
+-    _pf_require(amendment.get("schema") == PREFIRE_CONTRACT_AMENDMENT_SCHEMA
+-                and amendment.get("amendment_id") == PREFIRE_CONTRACT_AMENDMENT_ID
+-                and amendment.get("score_claim") is False
+-                and amendment.get("definition_change") == {
+-                    "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+-                    "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+-                    "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
+-                    "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"},
+-                code, "amendment definition differs")
++    definition = _pf_freeze_history(amendments, repo, commit)
++    if amendment.get("schema") == PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA or "latest_row_sha256" in contract:
++        _pf_require(contract.get("definition_parent_sha256") == definition
++                    and contract.get("latest_row_sha256") == prefire_digest(amendment),
++                    code, "intent definition parent or latest row pin differs")
+     amendment_commit = amendment.get("implementation_commit")
+     _pf_require(isinstance(amendment_commit, str) and re.fullmatch(r"[0-9a-f]{40}", amendment_commit),
+                 code, "full amendment implementation commit required")
+@@ -1798,10 +1868,11 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
+                 code, "base frozen implementation differs")
+     _pf_git(repo, "merge-base", "--is-ancestor", commit, amendment_commit)
+     _pf_git(repo, "merge-base", "--is-ancestor", amendment_commit, "HEAD")
+-    for owner_commit, reference, require_live in (
++    for owner_commit, reference, require_live in [
+         (commit, contract["implementation_manifest"], False),
+-        (amendment_commit, amendment["implementation_manifest"], True),
+-    ):
++        *((row["implementation_commit"], row["implementation_manifest"], index == len(amendments) - 1)
++          for index, row in enumerate(amendments)),
++    ]:
+         manifest = _pf_ref(reference, code)
+         _pf_require(isinstance(manifest, list) and manifest, code, "sorted implementation manifest array required")
+         paths = [r.get("path") for r in manifest if isinstance(r, dict)]
+@@ -1815,6 +1886,9 @@ def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
+             blob = _pf_git(repo, "show", f"{owner_commit}:{rel}")
+             _pf_require(hashlib.sha256(blob).hexdigest() == row.get("sha256"), code,
+                         f"committed implementation drift: {rel}")
++            if "bytes" in row:
++                _pf_require(type(row["bytes"]) is int and row["bytes"] == len(blob), code,
++                            f"committed implementation bytes differ: {rel}")
+             if require_live:
+                 _pf_blob(repo, owner_commit, repo / rel)
+     amendment_memo = _pf_ref(amendment["adjudication_memo"], code, parse=False)
+@@ -2319,7 +2393,9 @@ def build_prefire_intent(*, candidate_id: str, runtime_dir: Path, evidence_paths
+         "contract": {"adjudication_memo": prefire_file_reference(repo / PREFIRE_MEMO),
+                      "implementation_commit": commit, "implementation_manifest": frozen["implementation_manifest"],
+                      "implementation_manifest_sha256": frozen["implementation_manifest"]["sha256"],
+-                     "amendment": amendments[-1]},
++                     "amendment": amendments[-1],
++                     "definition_parent_sha256": _pf_freeze_history(amendments, repo, commit),
++                     "latest_row_sha256": prefire_digest(amendments[-1])},
+         "candidate": {"archive": prefire_file_reference(archive), "runtime": {"path": str(root), **runtime.to_dict()},
+                       "normalized_receiver": {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+                                               "sha256": measure_receiver_digest(root)},
+@@ -2566,6 +2642,87 @@ def quarantine_first_measurement_result(result: dict, context: dict) -> dict:
+     return result
+ 
+ 
++def validate_first_measurement_runtime_custody(*, runtime_dir: Path, output_dir: Path,
++                                             receipt_path: Path) -> dict:
++    """Dry, scorer-free pr16 join against freshly read local bytes and retained provenance.
++
++    The provenance can be retained inside the hashed result; a separately materialized
++    provenance.json is not required. This establishes custody only, never completion.
++    """
++    from pathlib import PurePosixPath
++
++    from experiments.contest_auth_eval import _runtime_dependency_manifest
++    from tac.decode_wall_clock import _field
++    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
++
++    code = "FIRST_MEASUREMENT_RESULT_REFUSED"
++    try:
++        refs = {"context": prefire_file_reference(output_dir / "FIRST_MEASUREMENT_CONTEXT.json"),
++                "request": prefire_file_reference(output_dir / "modal_cuda_auth_eval_local_request.json"),
++                "result": prefire_file_reference(receipt_path)}
++        documents = {name: _pf_ref(ref, code) for name, ref in refs.items()}
++        provenance = _field(documents["result"], ["artifacts", "provenance.json"], "worker provenance")
++        if isinstance(provenance, str):
++            provenance = json.loads(provenance)
++        _pf_require(isinstance(provenance, dict), code, "worker provenance absent")
++        worker = provenance.get("inflate_runtime_manifest")
++        _pf_require(isinstance(worker, dict), code, "worker runtime manifest absent")
++        local = _runtime_dependency_manifest(runtime_dir / "inflate.sh",
++            Path(__file__).resolve().parents[2] / "upstream")
++        normal = modal_uploaded_submission_dir_runtime_manifest(local)
++        content = normal["runtime_content_tree_sha256"]
++        for name, document in documents.items():
++            _pf_require(document.get("expected_runtime_content_tree_sha256") == content,
++                        code, f"{name} runtime content differs")
++        _pf_require(worker.get("runtime_content_tree_sha256") == content, code, "worker runtime content differs")
++        argv = documents["request"].get("exact_argv")
++        _pf_require(isinstance(argv, list) and all(isinstance(arg, str) for arg in argv)
++                    and documents["context"].get("exact_argv") == argv
++                    and documents["result"].get("exact_argv") == argv, code, "custody exact argv differs")
++        flag = "--expected-runtime-content-tree-sha256"
++        _pf_require(argv.count(flag) == 1 and argv.index(flag) + 1 < len(argv)
++                    and argv[argv.index(flag) + 1] == content
++                    and not any(arg.startswith(flag + "=") for arg in argv),
++                    code, "worker argv content digest missing, duplicated or different")
++        root = worker.get("runtime_root")
++        _pf_require(isinstance(root, str) and PurePosixPath(root).is_absolute()
++                    and str(PurePosixPath(root)) == root and ".." not in PurePosixPath(root).parts
++                    and PurePosixPath(root).name == "submission_dir", code, "worker retained root invalid")
++        _pf_require(provenance.get("inflate_script") == root + "/inflate.sh", code, "worker retained root differs from inflate script")
++        projected = modal_uploaded_submission_dir_runtime_manifest(local, remote_submission_dir=root)
++        for key in ("runtime_tree_sha256", "runtime_content_tree_sha256", "runtime_file_count",
++                    "files", "external_dependency_roots", "repo_local_tac_import_manifest", "upstream_evaluate_py"):
++            _pf_require(prefire_digest(worker.get(key)) == prefire_digest(projected[key]),
++                        code, f"worker retained-root projection {key} differs")
++        _pf_require(worker.get("runtime_files_sha256") == local["runtime_files_sha256"],
++                    code, "worker runtime files digest differs")
++        for name in ("request", "result"):
++            _pf_require(documents[name].get("expected_runtime_tree_sha256") == normal["runtime_tree_sha256"],
++                        code, f"{name} normal runtime projection differs")
++        # Pin containing files AND exact field paths, including the JSON-encoded artifact.
++        sources = {name: {"file": ref, "field_path": ["expected_runtime_content_tree_sha256"]}
++                   for name, ref in refs.items()}
++        sources["argv"] = {"file": refs["request"], "field_path": ["exact_argv"], "flag": flag}
++        sources["provenance"] = {"file": refs["result"], "field_path": ["artifacts", "provenance.json"],
++                                 "manifest_field_path": ["inflate_runtime_manifest"]}
++        definition = "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
++        return {"schema": "first_measurement_runtime_custody.v1",
++                "content_digest_definition": definition + ".runtime_content_tree_sha256",
++                "path_tree_digest_definition": definition + ".runtime_tree_sha256",
++                "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
++                "expected_runtime_content_tree_sha256": content,
++                "worker_runtime_content_tree_sha256": worker["runtime_content_tree_sha256"],
++                "runtime_files_sha256": local["runtime_files_sha256"],
++                "runtime_file_count": projected["runtime_file_count"],
++                "normal_projected_runtime_tree_sha256": normal["runtime_tree_sha256"],
++                "retained_runtime_root": root,
++                "retained_runtime_tree_sha256": projected["runtime_tree_sha256"], "sources": sources}
++    except PrefireRefusal:
++        raise
++    except (SealContractError, OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
++        raise PrefireRefusal(code, f"runtime custody unavailable: {exc}") from exc
++
++
+ def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo: Path) -> tuple[dict, dict]:
+     from tac.decode_wall_clock import _cold_public_report, _field, build_t4_direct_leg
+     code = "FIRST_MEASUREMENT_RESULT_REFUSED"
+@@ -2609,6 +2766,11 @@ def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo:
+                     "FIRST_MEASUREMENT_TIMEOUT_REFUSED", f"timeout binding {key} differs")
+     _pf_require(result.get("returncode") != 124 and not result.get("timed_out"),
+                 "FIRST_MEASUREMENT_TIMEOUT_REFUSED", "worker timed out")
++    _pf_require(result.get("passed") is True and type(result.get("returncode")) is int
++                and result["returncode"] == 0, code, "terminal failed receipt cannot complete")
++    custody = validate_first_measurement_runtime_custody(
++        runtime_dir=Path(intent["candidate"]["runtime"]["path"]),
++        output_dir=Path(auth["output_dir"]), receipt_path=receipt_path)
+     try:
+         _pf_require(_field(result, ["artifacts", "contest_auth_eval.json", "n_samples"], "n_samples") == 600,
+                     "FIRST_MEASUREMENT_WARM_REFUSED", "not n600")
+@@ -2627,6 +2789,7 @@ def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo:
+         raise
+     except SealContractError as exc:
+         raise PrefireRefusal(code, str(exc)) from exc
++    leg["first_measurement_runtime_custody"] = custody
+     return leg, result
+ 
+ 
+@@ -2679,7 +2842,8 @@ def complete_first_fire_intent(*, intent_path: Path, authorization_path: Path, r
+     document.update(decode_wall_clock_reference=prefire_file_reference(leg_path))
+     document.update(schema=SEAL_SCHEMA_V3, prefire_intent=prefire_file_reference(intent_path),
+                     first_measurement_authorization=prefire_file_reference(authorization_path),
+-                    first_measurement_receipt=prefire_file_reference(receipt_path), prefire_intent_sha256=intent["intent_sha256"])
++                    first_measurement_receipt=prefire_file_reference(receipt_path), prefire_intent_sha256=intent["intent_sha256"],
++                    first_measurement_runtime_custody=leg["first_measurement_runtime_custody"])
+     document["seal_sha256"] = compute_seal_sha256(document)
+     _pf_write_new(out_path, document)
+     verdict = validate_seal(out_path, pointer_path=pointer_path, require_decode_wall_clock=True)
+@@ -2717,6 +2881,8 @@ def _pf_validate_completed_seal(document: dict, *, pointer_path: Path | None = N
+     stored_leg = _pf_ref(document["decode_wall_clock_reference"], code)
+     _pf_require(document.get("decode_wall_clock") == leg == stored_leg, code,
+                 "completed seal leg differs from its retained file or unchanged direct builder")
++    _pf_require(document.get("first_measurement_runtime_custody") == leg["first_measurement_runtime_custody"],
++                code, "completed seal and leg runtime custody differ")
+ 
+ 
+ def _pf_registered_call(auth: dict, call_id: str, repo: Path) -> None:
+diff --git a/src/tac/tests/test_candidate_prefire_intent.py b/src/tac/tests/test_candidate_prefire_intent.py
+index cb941c7db..ab87fd916 100644
+--- a/src/tac/tests/test_candidate_prefire_intent.py
++++ b/src/tac/tests/test_candidate_prefire_intent.py
+@@ -350,7 +350,18 @@ def test_missing_authorization_refuses_before_subprocess(tmp_path, monkeypatch):
+ 
+ 
+ def completion_fixture(f, monkeypatch):
++    from experiments.contest_auth_eval import _runtime_dependency_manifest
++    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
++
+     auth, auth_path = auth_fixture(f, monkeypatch)
++    upstream = f["repo"] / "upstream"
++    upstream.mkdir(exist_ok=True)
++    (upstream / "evaluate.py").write_bytes((Path(cs.__file__).resolve().parents[2] / "upstream/evaluate.py").read_bytes())
++    local = _runtime_dependency_manifest(f["root"] / "inflate.sh", upstream)
++    normal = modal_uploaded_submission_dir_runtime_manifest(local)
++    worker = modal_uploaded_submission_dir_runtime_manifest(local,
++        remote_submission_dir="/retained/fixture/out/submission_dir")
++    worker["runtime_files_sha256"] = local["runtime_files_sha256"]
+     monkeypatch.setattr(cs, "__file__", str(f["repo"] / "src/tac/candidate_seal.py"))
+     cs.reserve_first_measurement(auth, repo=f["repo"])
+     cs.transition_first_measurement(auth, "SPAWNED", call_id="fc-fixture", repo=f["repo"])
+@@ -359,13 +370,17 @@ def completion_fixture(f, monkeypatch):
+         "lane_id": auth["lane_id"], "instance_job_id": auth["instance_job_id"], "receipt_path": auth["receipt_path"],
+         "inflate_timeout_seconds": 1800, "evaluate_timeout_seconds": 1800,
+         "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400,
++        "expected_runtime_content_tree_sha256": normal["runtime_content_tree_sha256"],
+         "source_snapshot": {"schema": "modal_source_snapshot.v1", "complete": True,
+             "verify_failures": [], "missing_in_source": [], "files_digest": "a" * 64},
+         "exact_argv": ["modal", "--gpu", "T4", "--scorer-device", "cuda", "--inflate-device", "auto",
+             "--inflate-timeout", "1800", "--evaluate-timeout", "1800", "--claim-policy", "require_active",
+             "--lane-id", auth["lane_id"], "--instance-job-id", auth["instance_job_id"], "--output-dir", auth["output_dir"],
+-            "--expected-archive-sha256", f["intent"]["candidate"]["archive"]["sha256"]]}
+-    request = write(Path(auth["output_dir"]) / "modal_cuda_auth_eval_local_request.json", context)
++            "--expected-archive-sha256", f["intent"]["candidate"]["archive"]["sha256"],
++            "--expected-runtime-content-tree-sha256", normal["runtime_content_tree_sha256"]]}
++    write(Path(auth["output_dir"]) / "FIRST_MEASUREMENT_CONTEXT.json", context)
++    request = write(Path(auth["output_dir"]) / "modal_cuda_auth_eval_local_request.json",
++        {**context, "expected_runtime_tree_sha256": normal["runtime_tree_sha256"]})
+     path = _t4_receipt(f["root"], Path(auth["receipt_path"]), seconds=900,
+         **context, call_id="fc-fixture", worker_request=request, avg_segnet_dist=0.001, avg_posenet_dist=0.0,
+         archive_size_bytes=f["intent"]["candidate"]["archive"]["bytes"], score_claim=False,
+@@ -374,6 +389,8 @@ def completion_fixture(f, monkeypatch):
+     artifact = json.loads(result["artifacts"]["contest_auth_eval.json"])
+     artifact.update(avg_segnet_dist=0.001, avg_posenet_dist=0.0)
+     result["artifacts"]["contest_auth_eval.json"] = json.dumps(artifact)
++    result["artifacts"]["provenance.json"] = json.dumps({
++        "inflate_script": worker["runtime_root"] + "/inflate.sh", "inflate_runtime_manifest": worker})
+     write(path, result)
+     return auth, auth_path, path
+ 
+@@ -386,7 +403,10 @@ def test_completed_fixture_seal_uses_unchanged_direct_builder(fixture, monkeypat
+     document = cs.complete_first_fire_intent(intent_path=fixture["path"], authorization_path=auth_path,
+         receipt_path=receipt, out_path=output, repo=fixture["repo"], pointer_path=fixture["pointer"])
+     assert document["schema"] == "candidate_seal.v3"
+-    assert document["decode_wall_clock"] == build_t4_direct_leg(t4_receipt_path=receipt,
++    custody = document["first_measurement_runtime_custody"]
++    assert document["decode_wall_clock"]["first_measurement_runtime_custody"] == custody
++    assert {k: v for k, v in document["decode_wall_clock"].items()
++            if k != "first_measurement_runtime_custody"} == build_t4_direct_leg(t4_receipt_path=receipt,
+         runtime_dir=fixture["root"], archive_path=fixture["root"] / "archive.zip")
+     assert cs.validate_seal(output, pointer_path=fixture["pointer"], require_decode_wall_clock=True).ok
+     assert cs.prefire_file_reference(fixture["path"]) == before
+@@ -1125,3 +1145,220 @@ def test_first_measurement_manifest_is_axis_tagged_and_writable(tmp_path):
+     assert manifest["score_axis"] == "contest_cuda" and manifest["stage5_entrypoint"]
+     path = tool.write_fire_manifest(tmp_path, manifest)
+     assert path.exists() and path.name == "FIRE_MANIFEST.json"
++
++
++@pytest.mark.parametrize("surface", ["context", "request", "result", "worker", "missing_provenance",
++    "root", "tree", "files_digest", "file_count", "worker_file", "runtime_byte",
++    "missing_argv", "duplicate_argv", "equals_argv", "wrong_argv"])
++def test_completion_runtime_custody_refuses_each_join_drift(fixture, monkeypatch, surface):
++    auth, _, receipt = completion_fixture(fixture, monkeypatch)
++    output = Path(auth["output_dir"])
++    paths = {"context": output / "FIRST_MEASUREMENT_CONTEXT.json",
++             "request": output / "modal_cuda_auth_eval_local_request.json", "result": receipt}
++    documents = {key: json.loads(path.read_text()) for key, path in paths.items()}
++    if surface in paths:
++        documents[surface]["expected_runtime_content_tree_sha256"] = "0" * 64
++    elif surface.endswith("argv"):
++        flag = "--expected-runtime-content-tree-sha256"
++        argv = documents["request"]["exact_argv"]
++        index = argv.index(flag)
++        if surface == "missing_argv":
++            del argv[index:index + 2]
++        elif surface == "duplicate_argv":
++            argv += argv[index:index + 2]
++        elif surface == "equals_argv":
++            argv += [flag + "=" + argv[index + 1]]
++        else:
++            argv[index + 1] = "0" * 64
++        for document in documents.values():
++            document["exact_argv"] = argv
++    elif surface == "missing_provenance":
++        documents["result"]["artifacts"].pop("provenance.json")
++    elif surface == "runtime_byte":
++        with (fixture["root"] / "inflate.sh").open("ab") as stream:
++            stream.write(b"\n# real changed runtime byte\n")
++    else:
++        provenance = json.loads(documents["result"]["artifacts"]["provenance.json"])
++        worker = provenance["inflate_runtime_manifest"]
++        if surface == "worker":
++            worker["runtime_content_tree_sha256"] = "0" * 64
++        elif surface == "root":
++            worker["runtime_root"] = "/different/submission_dir"
++            provenance["inflate_script"] = worker["runtime_root"] + "/inflate.sh"
++        elif surface == "tree":
++            worker["runtime_tree_sha256"] = "0" * 64
++        elif surface == "files_digest":
++            worker["runtime_files_sha256"] = "0" * 64
++        elif surface == "file_count":
++            worker["runtime_file_count"] += 1
++        else:
++            worker["files"][0]["sha256"] = "0" * 64
++        documents["result"]["artifacts"]["provenance.json"] = json.dumps(provenance)
++    for name, path in paths.items():
++        write(path, documents[name])
++    with pytest.raises(cs.PrefireRefusal, match="FIRST_MEASUREMENT_RESULT_REFUSED"):
++        cs.validate_first_measurement_runtime_custody(runtime_dir=fixture["root"], output_dir=output,
++            receipt_path=receipt)
++
++
++def test_completion_seal_rechecks_custody_and_refuses_unequal_objects(fixture, monkeypatch):
++    auth, auth_path, receipt = completion_fixture(fixture, monkeypatch)
++    cs.transition_first_measurement(auth, "HARVESTED", call_id="fc-fixture", receipt_path=receipt, repo=fixture["repo"])
++    output = fixture["repo"] / "completed.json"
++    document = cs.complete_first_fire_intent(intent_path=fixture["path"], authorization_path=auth_path,
++        receipt_path=receipt, out_path=output, repo=fixture["repo"], pointer_path=fixture["pointer"])
++    custody = document["first_measurement_runtime_custody"]
++    assert custody["normal_projected_runtime_tree_sha256"] != custody["retained_runtime_tree_sha256"]
++    # JSON re-read removes Python aliasing: alter the seal alone, keeping the leg unchanged.
++    altered = json.loads(output.read_text())
++    altered["first_measurement_runtime_custody"]["runtime_file_count"] += 1
++    altered["seal_sha256"] = cs.compute_seal_sha256(altered)
++    write(output, altered)
++    verdict = cs.validate_seal(output, pointer_path=fixture["pointer"], require_decode_wall_clock=True)
++    assert not verdict.ok and "custody differ" in verdict.summary()
++    write(output, document)
++    context = Path(auth["output_dir"]) / "FIRST_MEASUREMENT_CONTEXT.json"
++    changed = json.loads(context.read_text())
++    changed["expected_runtime_content_tree_sha256"] = "0" * 64
++    write(context, changed)
++    verdict = cs.validate_seal(output, pointer_path=fixture["pointer"], require_decode_wall_clock=True)
++    assert not verdict.ok and "context runtime content differs" in verdict.summary()
++
++
++def _consumer_fix_row(f, history, previous, *, batch="fixture-consumers"):
++    definition = f["intent"]["contract"]["amendment"]
++    return {"schema": cs.PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA, "fix_batch_id": batch,
++        "previous_row_sha256": cs.prefire_digest(previous),
++        "definition_parent_sha256": cs.prefire_digest(definition), "definition_change": False,
++        "consumer_fixes": [{"fix_id": batch + suffix, "scope": "candidate_seal completion custody",
++            "reason": "retained worker relocated outside the normal upload root",
++            "causal_commit": history["amended"], "tests": ["test_completion_runtime_custody_refuses_each_join_drift"]}
++            for suffix in ("-content", "-projection")],
++        "implementation_commit": history["amended"],
++        "implementation_manifest": definition["implementation_manifest"],
++        "adjudication_memo": definition["adjudication_memo"], "score_claim": False}
++
++
++def _freeze_consumer_rows(f, history, rows, *, pin=True):
++    path = f["repo"] / cs.PREFIRE_FREEZE
++    frozen = json.loads(path.read_text())
++    frozen["amendments"] = rows
++    write(path, frozen)
++    if pin:
++        f["intent"]["contract"].update(amendment=rows[-1],
++            definition_parent_sha256=cs.prefire_digest(rows[0]), latest_row_sha256=cs.prefire_digest(rows[-1]))
++        write(f["path"], sign(f["intent"]))
++    history["land"]()
++
++
++def test_consumer_fix_batch_keeps_definition_and_refuses_stale_latest(fixture, monkeypatch):
++    history = _contract_git_history(fixture, monkeypatch)
++    definition = fixture["intent"]["contract"]["amendment"]
++    row = _consumer_fix_row(fixture, history, definition)
++    second = _consumer_fix_row(fixture, history, row, batch="second-consumers")
++    # Legacy implementation snapshots do not create new definitions.
++    legacy_snapshot = {**definition, "note": "same definition; later implementation snapshot"}
++    row["previous_row_sha256"] = cs.prefire_digest(legacy_snapshot)
++    second["previous_row_sha256"] = cs.prefire_digest(row)
++    _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row])
++    assert validate(fixture)
++    _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row, second], pin=False)
++    with pytest.raises(cs.PrefireRefusal, match="latest exact frozen amendment required"):
++        validate(fixture)
++    _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row, second])
++    assert validate(fixture)
++    assert fixture["intent"]["contract"]["definition_parent_sha256"] == cs.prefire_digest(definition)
++
++
++@pytest.mark.parametrize("mutation", ["previous", "parent", "definition", "receiver", "threshold", "evidence",
++    "missing_id", "duplicate_id", "unsorted", "empty_tests", "empty_fixes", "causal_orphan",
++    "implementation_orphan", "implementation_unreachable", "manifest_drift", "live_drift", "latest_pin", "parent_pin"])
++def test_consumer_fix_typed_refusals_with_real_git(fixture, monkeypatch, mutation):
++    history = _contract_git_history(fixture, monkeypatch)
++    definition = fixture["intent"]["contract"]["amendment"]
++    row = _consumer_fix_row(fixture, history, definition)
++    if mutation in ("previous", "parent"):
++        row["previous_row_sha256" if mutation == "previous" else "definition_parent_sha256"] = "0" * 64
++    elif mutation == "definition":
++        row["definition_change"] = {"new_rule": True}
++    elif mutation in ("receiver", "threshold", "evidence"):
++        row[mutation] = {"override": True}
++    elif mutation == "missing_id":
++        row["consumer_fixes"][0].pop("fix_id")
++    elif mutation == "duplicate_id":
++        row["consumer_fixes"][1]["fix_id"] = row["consumer_fixes"][0]["fix_id"]
++    elif mutation == "unsorted":
++        row["consumer_fixes"].reverse()
++    elif mutation == "empty_tests":
++        row["consumer_fixes"][0]["tests"] = []
++    elif mutation == "empty_fixes":
++        row["consumer_fixes"] = []
++    elif mutation == "causal_orphan":
++        row["consumer_fixes"][0]["causal_commit"] = history["orphan"]
++    elif mutation.startswith("implementation_"):
++        row["implementation_commit"] = history["orphan"] if mutation.endswith("orphan") else "0" * 40
++    elif mutation == "manifest_drift":
++        path = fixture["store"] / "drifted_manifest.json"
++        manifest = json.loads(Path(row["implementation_manifest"]["path"]).read_text())
++        manifest[0]["sha256"] = "0" * 64
++        row["implementation_manifest"] = write(path, manifest)
++    _freeze_consumer_rows(fixture, history, [definition, row])
++    if mutation == "live_drift":
++        with (fixture["repo"] / cs.PREFIRE_IMPLEMENTATION_PATHS[0]).open("ab") as stream:
++            stream.write(b"# uncommitted drift\n")
++    elif mutation in ("latest_pin", "parent_pin"):
++        fixture["intent"]["contract"]["latest_row_sha256" if mutation == "latest_pin" else "definition_parent_sha256"] = "0" * 64
++        write(fixture["path"], sign(fixture["intent"]))
++        history["land"]()
++    with pytest.raises(cs.PrefireRefusal, match="PREFIRE_CONTRACT_DRIFT_REFUSED"):
++        validate(fixture)
++
++
++def test_run3_retained_provenance_projection_and_terminal_refusal(tmp_path):
++    """Real retained bytes, read-only; synthesized join envelope is explicitly not a harvest."""
++    from experiments.contest_auth_eval import _runtime_dependency_manifest, _validate_expected_runtime_tree
++    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
++
++    retained = Path("/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3")
++    provenance_path = retained / "provenance.json"
++    if not provenance_path.is_file():
++        pytest.skip("run3 retained provenance is not mounted on this host")
++    before = cs.prefire_file_reference(provenance_path)
++    assert before["sha256"] == "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
++    provenance = json.loads(provenance_path.read_text())
++    context = json.loads((retained / "FIRST_MEASUREMENT_CONTEXT.json").read_text())
++    intent = json.loads(Path(context["intent_path"]).read_text())
++    root = Path(intent["candidate"]["runtime"]["path"])
++    repo = Path(cs.__file__).resolve().parents[2]
++    local = _runtime_dependency_manifest(root / "inflate.sh", repo / "upstream")
++    normal = modal_uploaded_submission_dir_runtime_manifest(local)
++    worker = provenance["inflate_runtime_manifest"]
++    assert normal["runtime_content_tree_sha256"] == worker["runtime_content_tree_sha256"]
++    assert local["runtime_files_sha256"] == worker["runtime_files_sha256"]
++    assert normal["runtime_tree_sha256"] != worker["runtime_tree_sha256"]
++    _validate_expected_runtime_tree(provenance, None, normal["runtime_content_tree_sha256"])
++    with pytest.raises(RuntimeError, match="inflate runtime tree hash mismatch"):
++        _validate_expected_runtime_tree(provenance, normal["runtime_tree_sha256"])
++    # Run3 predates the complete content join. A synthetic envelope lets the REAL
++    # unmodified provenance exercise the new projection, without upgrading run3.
++    envelope = {"expected_runtime_content_tree_sha256": normal["runtime_content_tree_sha256"],
++        "expected_runtime_tree_sha256": normal["runtime_tree_sha256"],
++        "exact_argv": ["--expected-runtime-content-tree-sha256", normal["runtime_content_tree_sha256"]]}
++    write(tmp_path / "FIRST_MEASUREMENT_CONTEXT.json", envelope)
++    write(tmp_path / "modal_cuda_auth_eval_local_request.json", envelope)
++    receipt = tmp_path / "synthetic_join_not_a_harvest.json"
++    document = {**envelope, "artifacts": {"provenance.json": provenance_path.read_text()}}
++    write(receipt, document)
++    custody = cs.validate_first_measurement_runtime_custody(runtime_dir=root, output_dir=tmp_path, receipt_path=receipt)
++    assert custody["retained_runtime_tree_sha256"] == worker["runtime_tree_sha256"]
++    assert custody["runtime_file_count"] == 48
++    # The normal-root tree is the wrong tree for the retained root even when content passes.
++    worker["runtime_tree_sha256"] = normal["runtime_tree_sha256"]
++    document["artifacts"]["provenance.json"] = json.dumps(provenance)
++    write(receipt, document)
++    with pytest.raises(cs.PrefireRefusal, match="retained-root projection runtime_tree_sha256 differs"):
++        cs.validate_first_measurement_runtime_custody(runtime_dir=root, output_dir=tmp_path, receipt_path=receipt)
++    auth = json.loads(Path(context["authorization_path"]).read_text())
++    with pytest.raises(cs.PrefireRefusal, match="FIRST_MEASUREMENT_RESULT_REFUSED"):
++        cs._pf_completion_facts(intent, auth, retained / "MODAL_REMOTE_RESULT.json", repo=repo)
++    assert cs.prefire_file_reference(provenance_path) == before

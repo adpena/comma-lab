@@ -350,7 +350,18 @@ def test_missing_authorization_refuses_before_subprocess(tmp_path, monkeypatch):
 
 
 def completion_fixture(f, monkeypatch):
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
+
     auth, auth_path = auth_fixture(f, monkeypatch)
+    upstream = f["repo"] / "upstream"
+    upstream.mkdir(exist_ok=True)
+    (upstream / "evaluate.py").write_bytes((Path(cs.__file__).resolve().parents[2] / "upstream/evaluate.py").read_bytes())
+    local = _runtime_dependency_manifest(f["root"] / "inflate.sh", upstream)
+    normal = modal_uploaded_submission_dir_runtime_manifest(local)
+    worker = modal_uploaded_submission_dir_runtime_manifest(local,
+        remote_submission_dir="/retained/fixture/out/submission_dir")
+    worker["runtime_files_sha256"] = local["runtime_files_sha256"]
     monkeypatch.setattr(cs, "__file__", str(f["repo"] / "src/tac/candidate_seal.py"))
     cs.reserve_first_measurement(auth, repo=f["repo"])
     cs.transition_first_measurement(auth, "SPAWNED", call_id="fc-fixture", repo=f["repo"])
@@ -359,13 +370,17 @@ def completion_fixture(f, monkeypatch):
         "lane_id": auth["lane_id"], "instance_job_id": auth["instance_job_id"], "receipt_path": auth["receipt_path"],
         "inflate_timeout_seconds": 1800, "evaluate_timeout_seconds": 1800,
         "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400,
+        "expected_runtime_content_tree_sha256": normal["runtime_content_tree_sha256"],
         "source_snapshot": {"schema": "modal_source_snapshot.v1", "complete": True,
             "verify_failures": [], "missing_in_source": [], "files_digest": "a" * 64},
         "exact_argv": ["modal", "--gpu", "T4", "--scorer-device", "cuda", "--inflate-device", "auto",
             "--inflate-timeout", "1800", "--evaluate-timeout", "1800", "--claim-policy", "require_active",
             "--lane-id", auth["lane_id"], "--instance-job-id", auth["instance_job_id"], "--output-dir", auth["output_dir"],
-            "--expected-archive-sha256", f["intent"]["candidate"]["archive"]["sha256"]]}
-    request = write(Path(auth["output_dir"]) / "modal_cuda_auth_eval_local_request.json", context)
+            "--expected-archive-sha256", f["intent"]["candidate"]["archive"]["sha256"],
+            "--expected-runtime-content-tree-sha256", normal["runtime_content_tree_sha256"]]}
+    write(Path(auth["output_dir"]) / "FIRST_MEASUREMENT_CONTEXT.json", context)
+    request = write(Path(auth["output_dir"]) / "modal_cuda_auth_eval_local_request.json",
+        {**context, "expected_runtime_tree_sha256": normal["runtime_tree_sha256"]})
     path = _t4_receipt(f["root"], Path(auth["receipt_path"]), seconds=900,
         **context, call_id="fc-fixture", worker_request=request, avg_segnet_dist=0.001, avg_posenet_dist=0.0,
         archive_size_bytes=f["intent"]["candidate"]["archive"]["bytes"], score_claim=False,
@@ -374,6 +389,8 @@ def completion_fixture(f, monkeypatch):
     artifact = json.loads(result["artifacts"]["contest_auth_eval.json"])
     artifact.update(avg_segnet_dist=0.001, avg_posenet_dist=0.0)
     result["artifacts"]["contest_auth_eval.json"] = json.dumps(artifact)
+    result["artifacts"]["provenance.json"] = json.dumps({
+        "inflate_script": worker["runtime_root"] + "/inflate.sh", "inflate_runtime_manifest": worker})
     write(path, result)
     return auth, auth_path, path
 
@@ -386,7 +403,10 @@ def test_completed_fixture_seal_uses_unchanged_direct_builder(fixture, monkeypat
     document = cs.complete_first_fire_intent(intent_path=fixture["path"], authorization_path=auth_path,
         receipt_path=receipt, out_path=output, repo=fixture["repo"], pointer_path=fixture["pointer"])
     assert document["schema"] == "candidate_seal.v3"
-    assert document["decode_wall_clock"] == build_t4_direct_leg(t4_receipt_path=receipt,
+    custody = document["first_measurement_runtime_custody"]
+    assert document["decode_wall_clock"]["first_measurement_runtime_custody"] == custody
+    assert {k: v for k, v in document["decode_wall_clock"].items()
+            if k != "first_measurement_runtime_custody"} == build_t4_direct_leg(t4_receipt_path=receipt,
         runtime_dir=fixture["root"], archive_path=fixture["root"] / "archive.zip")
     assert cs.validate_seal(output, pointer_path=fixture["pointer"], require_decode_wall_clock=True).ok
     assert cs.prefire_file_reference(fixture["path"]) == before
@@ -1125,3 +1145,220 @@ def test_first_measurement_manifest_is_axis_tagged_and_writable(tmp_path):
     assert manifest["score_axis"] == "contest_cuda" and manifest["stage5_entrypoint"]
     path = tool.write_fire_manifest(tmp_path, manifest)
     assert path.exists() and path.name == "FIRE_MANIFEST.json"
+
+
+@pytest.mark.parametrize("surface", ["context", "request", "result", "worker", "missing_provenance",
+    "root", "tree", "files_digest", "file_count", "worker_file", "runtime_byte",
+    "missing_argv", "duplicate_argv", "equals_argv", "wrong_argv"])
+def test_completion_runtime_custody_refuses_each_join_drift(fixture, monkeypatch, surface):
+    auth, _, receipt = completion_fixture(fixture, monkeypatch)
+    output = Path(auth["output_dir"])
+    paths = {"context": output / "FIRST_MEASUREMENT_CONTEXT.json",
+             "request": output / "modal_cuda_auth_eval_local_request.json", "result": receipt}
+    documents = {key: json.loads(path.read_text()) for key, path in paths.items()}
+    if surface in paths:
+        documents[surface]["expected_runtime_content_tree_sha256"] = "0" * 64
+    elif surface.endswith("argv"):
+        flag = "--expected-runtime-content-tree-sha256"
+        argv = documents["request"]["exact_argv"]
+        index = argv.index(flag)
+        if surface == "missing_argv":
+            del argv[index:index + 2]
+        elif surface == "duplicate_argv":
+            argv += argv[index:index + 2]
+        elif surface == "equals_argv":
+            argv += [flag + "=" + argv[index + 1]]
+        else:
+            argv[index + 1] = "0" * 64
+        for document in documents.values():
+            document["exact_argv"] = argv
+    elif surface == "missing_provenance":
+        documents["result"]["artifacts"].pop("provenance.json")
+    elif surface == "runtime_byte":
+        with (fixture["root"] / "inflate.sh").open("ab") as stream:
+            stream.write(b"\n# real changed runtime byte\n")
+    else:
+        provenance = json.loads(documents["result"]["artifacts"]["provenance.json"])
+        worker = provenance["inflate_runtime_manifest"]
+        if surface == "worker":
+            worker["runtime_content_tree_sha256"] = "0" * 64
+        elif surface == "root":
+            worker["runtime_root"] = "/different/submission_dir"
+            provenance["inflate_script"] = worker["runtime_root"] + "/inflate.sh"
+        elif surface == "tree":
+            worker["runtime_tree_sha256"] = "0" * 64
+        elif surface == "files_digest":
+            worker["runtime_files_sha256"] = "0" * 64
+        elif surface == "file_count":
+            worker["runtime_file_count"] += 1
+        else:
+            worker["files"][0]["sha256"] = "0" * 64
+        documents["result"]["artifacts"]["provenance.json"] = json.dumps(provenance)
+    for name, path in paths.items():
+        write(path, documents[name])
+    with pytest.raises(cs.PrefireRefusal, match="FIRST_MEASUREMENT_RESULT_REFUSED"):
+        cs.validate_first_measurement_runtime_custody(runtime_dir=fixture["root"], output_dir=output,
+            receipt_path=receipt)
+
+
+def test_completion_seal_rechecks_custody_and_refuses_unequal_objects(fixture, monkeypatch):
+    auth, auth_path, receipt = completion_fixture(fixture, monkeypatch)
+    cs.transition_first_measurement(auth, "HARVESTED", call_id="fc-fixture", receipt_path=receipt, repo=fixture["repo"])
+    output = fixture["repo"] / "completed.json"
+    document = cs.complete_first_fire_intent(intent_path=fixture["path"], authorization_path=auth_path,
+        receipt_path=receipt, out_path=output, repo=fixture["repo"], pointer_path=fixture["pointer"])
+    custody = document["first_measurement_runtime_custody"]
+    assert custody["normal_projected_runtime_tree_sha256"] != custody["retained_runtime_tree_sha256"]
+    # JSON re-read removes Python aliasing: alter the seal alone, keeping the leg unchanged.
+    altered = json.loads(output.read_text())
+    altered["first_measurement_runtime_custody"]["runtime_file_count"] += 1
+    altered["seal_sha256"] = cs.compute_seal_sha256(altered)
+    write(output, altered)
+    verdict = cs.validate_seal(output, pointer_path=fixture["pointer"], require_decode_wall_clock=True)
+    assert not verdict.ok and "custody differ" in verdict.summary()
+    write(output, document)
+    context = Path(auth["output_dir"]) / "FIRST_MEASUREMENT_CONTEXT.json"
+    changed = json.loads(context.read_text())
+    changed["expected_runtime_content_tree_sha256"] = "0" * 64
+    write(context, changed)
+    verdict = cs.validate_seal(output, pointer_path=fixture["pointer"], require_decode_wall_clock=True)
+    assert not verdict.ok and "context runtime content differs" in verdict.summary()
+
+
+def _consumer_fix_row(f, history, previous, *, batch="fixture-consumers"):
+    definition = f["intent"]["contract"]["amendment"]
+    return {"schema": cs.PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA, "fix_batch_id": batch,
+        "previous_row_sha256": cs.prefire_digest(previous),
+        "definition_parent_sha256": cs.prefire_digest(definition), "definition_change": False,
+        "consumer_fixes": [{"fix_id": batch + suffix, "scope": "candidate_seal completion custody",
+            "reason": "retained worker relocated outside the normal upload root",
+            "causal_commit": history["amended"], "tests": ["test_completion_runtime_custody_refuses_each_join_drift"]}
+            for suffix in ("-content", "-projection")],
+        "implementation_commit": history["amended"],
+        "implementation_manifest": definition["implementation_manifest"],
+        "adjudication_memo": definition["adjudication_memo"], "score_claim": False}
+
+
+def _freeze_consumer_rows(f, history, rows, *, pin=True):
+    path = f["repo"] / cs.PREFIRE_FREEZE
+    frozen = json.loads(path.read_text())
+    frozen["amendments"] = rows
+    write(path, frozen)
+    if pin:
+        f["intent"]["contract"].update(amendment=rows[-1],
+            definition_parent_sha256=cs.prefire_digest(rows[0]), latest_row_sha256=cs.prefire_digest(rows[-1]))
+        write(f["path"], sign(f["intent"]))
+    history["land"]()
+
+
+def test_consumer_fix_batch_keeps_definition_and_refuses_stale_latest(fixture, monkeypatch):
+    history = _contract_git_history(fixture, monkeypatch)
+    definition = fixture["intent"]["contract"]["amendment"]
+    row = _consumer_fix_row(fixture, history, definition)
+    second = _consumer_fix_row(fixture, history, row, batch="second-consumers")
+    # Legacy implementation snapshots do not create new definitions.
+    legacy_snapshot = {**definition, "note": "same definition; later implementation snapshot"}
+    row["previous_row_sha256"] = cs.prefire_digest(legacy_snapshot)
+    second["previous_row_sha256"] = cs.prefire_digest(row)
+    _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row])
+    assert validate(fixture)
+    _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row, second], pin=False)
+    with pytest.raises(cs.PrefireRefusal, match="latest exact frozen amendment required"):
+        validate(fixture)
+    _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row, second])
+    assert validate(fixture)
+    assert fixture["intent"]["contract"]["definition_parent_sha256"] == cs.prefire_digest(definition)
+
+
+@pytest.mark.parametrize("mutation", ["previous", "parent", "definition", "receiver", "threshold", "evidence",
+    "missing_id", "duplicate_id", "unsorted", "empty_tests", "empty_fixes", "causal_orphan",
+    "implementation_orphan", "implementation_unreachable", "manifest_drift", "live_drift", "latest_pin", "parent_pin"])
+def test_consumer_fix_typed_refusals_with_real_git(fixture, monkeypatch, mutation):
+    history = _contract_git_history(fixture, monkeypatch)
+    definition = fixture["intent"]["contract"]["amendment"]
+    row = _consumer_fix_row(fixture, history, definition)
+    if mutation in ("previous", "parent"):
+        row["previous_row_sha256" if mutation == "previous" else "definition_parent_sha256"] = "0" * 64
+    elif mutation == "definition":
+        row["definition_change"] = {"new_rule": True}
+    elif mutation in ("receiver", "threshold", "evidence"):
+        row[mutation] = {"override": True}
+    elif mutation == "missing_id":
+        row["consumer_fixes"][0].pop("fix_id")
+    elif mutation == "duplicate_id":
+        row["consumer_fixes"][1]["fix_id"] = row["consumer_fixes"][0]["fix_id"]
+    elif mutation == "unsorted":
+        row["consumer_fixes"].reverse()
+    elif mutation == "empty_tests":
+        row["consumer_fixes"][0]["tests"] = []
+    elif mutation == "empty_fixes":
+        row["consumer_fixes"] = []
+    elif mutation == "causal_orphan":
+        row["consumer_fixes"][0]["causal_commit"] = history["orphan"]
+    elif mutation.startswith("implementation_"):
+        row["implementation_commit"] = history["orphan"] if mutation.endswith("orphan") else "0" * 40
+    elif mutation == "manifest_drift":
+        path = fixture["store"] / "drifted_manifest.json"
+        manifest = json.loads(Path(row["implementation_manifest"]["path"]).read_text())
+        manifest[0]["sha256"] = "0" * 64
+        row["implementation_manifest"] = write(path, manifest)
+    _freeze_consumer_rows(fixture, history, [definition, row])
+    if mutation == "live_drift":
+        with (fixture["repo"] / cs.PREFIRE_IMPLEMENTATION_PATHS[0]).open("ab") as stream:
+            stream.write(b"# uncommitted drift\n")
+    elif mutation in ("latest_pin", "parent_pin"):
+        fixture["intent"]["contract"]["latest_row_sha256" if mutation == "latest_pin" else "definition_parent_sha256"] = "0" * 64
+        write(fixture["path"], sign(fixture["intent"]))
+        history["land"]()
+    with pytest.raises(cs.PrefireRefusal, match="PREFIRE_CONTRACT_DRIFT_REFUSED"):
+        validate(fixture)
+
+
+def test_run3_retained_provenance_projection_and_terminal_refusal(tmp_path):
+    """Real retained bytes, read-only; synthesized join envelope is explicitly not a harvest."""
+    from experiments.contest_auth_eval import _runtime_dependency_manifest, _validate_expected_runtime_tree
+    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
+
+    retained = Path("/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3")
+    provenance_path = retained / "provenance.json"
+    if not provenance_path.is_file():
+        pytest.skip("run3 retained provenance is not mounted on this host")
+    before = cs.prefire_file_reference(provenance_path)
+    assert before["sha256"] == "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+    provenance = json.loads(provenance_path.read_text())
+    context = json.loads((retained / "FIRST_MEASUREMENT_CONTEXT.json").read_text())
+    intent = json.loads(Path(context["intent_path"]).read_text())
+    root = Path(intent["candidate"]["runtime"]["path"])
+    repo = Path(cs.__file__).resolve().parents[2]
+    local = _runtime_dependency_manifest(root / "inflate.sh", repo / "upstream")
+    normal = modal_uploaded_submission_dir_runtime_manifest(local)
+    worker = provenance["inflate_runtime_manifest"]
+    assert normal["runtime_content_tree_sha256"] == worker["runtime_content_tree_sha256"]
+    assert local["runtime_files_sha256"] == worker["runtime_files_sha256"]
+    assert normal["runtime_tree_sha256"] != worker["runtime_tree_sha256"]
+    _validate_expected_runtime_tree(provenance, None, normal["runtime_content_tree_sha256"])
+    with pytest.raises(RuntimeError, match="inflate runtime tree hash mismatch"):
+        _validate_expected_runtime_tree(provenance, normal["runtime_tree_sha256"])
+    # Run3 predates the complete content join. A synthetic envelope lets the REAL
+    # unmodified provenance exercise the new projection, without upgrading run3.
+    envelope = {"expected_runtime_content_tree_sha256": normal["runtime_content_tree_sha256"],
+        "expected_runtime_tree_sha256": normal["runtime_tree_sha256"],
+        "exact_argv": ["--expected-runtime-content-tree-sha256", normal["runtime_content_tree_sha256"]]}
+    write(tmp_path / "FIRST_MEASUREMENT_CONTEXT.json", envelope)
+    write(tmp_path / "modal_cuda_auth_eval_local_request.json", envelope)
+    receipt = tmp_path / "synthetic_join_not_a_harvest.json"
+    document = {**envelope, "artifacts": {"provenance.json": provenance_path.read_text()}}
+    write(receipt, document)
+    custody = cs.validate_first_measurement_runtime_custody(runtime_dir=root, output_dir=tmp_path, receipt_path=receipt)
+    assert custody["retained_runtime_tree_sha256"] == worker["runtime_tree_sha256"]
+    assert custody["runtime_file_count"] == 48
+    # The normal-root tree is the wrong tree for the retained root even when content passes.
+    worker["runtime_tree_sha256"] = normal["runtime_tree_sha256"]
+    document["artifacts"]["provenance.json"] = json.dumps(provenance)
+    write(receipt, document)
+    with pytest.raises(cs.PrefireRefusal, match="retained-root projection runtime_tree_sha256 differs"):
+        cs.validate_first_measurement_runtime_custody(runtime_dir=root, output_dir=tmp_path, receipt_path=receipt)
+    auth = json.loads(Path(context["authorization_path"]).read_text())
+    with pytest.raises(cs.PrefireRefusal, match="FIRST_MEASUREMENT_RESULT_REFUSED"):
+        cs._pf_completion_facts(intent, auth, retained / "MODAL_REMOTE_RESULT.json", repo=repo)
+    assert cs.prefire_file_reference(provenance_path) == before

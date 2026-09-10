@@ -1,0 +1,25 @@
+{
+  "base_head": "5f452848b781c0289c26b03f97b349f944b64460",
+  "bundle": {
+    "bytes": 23819,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/serializer_fallbacks/20260910T215227.909857Z-28342/intended-commit.bundle",
+    "sha256": "4301f6f0d262a2c3b96adb090e106816bcf9e1b8a717b094360bc039c2400565"
+  },
+  "commit": "a62939b58a7b099a86960a10057d35000a373b6a",
+  "main_branch_landed": false,
+  "manifest": {
+    "bytes": 2702,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+    "sha256": "37d429ea769579a3bb569c30c04a4a78dade82d0a80fae77a1f6c7e42c20c8fc"
+  },
+  "method": "Changed-file SHA values verified by serializer against fallback committed blobs; unchanged implementation blobs re-read from exact fallback base commit. All also match live files.",
+  "schema": "ddm_ffi6_bundled_implementation_verification.v1",
+  "score_claim": false,
+  "serializer_receipt": {
+    "bytes": 4937,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/serializer_fallbacks/20260910T215227.909857Z-28342/receipts.jsonl",
+    "sha256": "53dcbade9423dc2c214c5071f2d4c1376b3edfc7f493e530fc3169065abd4ea6"
+  },
+  "verified_committed_files": 12,
+  "verified_implementation_rows": 17
+}

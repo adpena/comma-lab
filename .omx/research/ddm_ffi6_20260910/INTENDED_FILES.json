@@ -1,0 +1,61 @@
+{
+  "files": [
+    {
+      "bytes": 5158,
+      "path": ".omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json",
+      "sha256": "d1c27a4a9e50c779b04656526f4896c77ef6b5a8a80a54eeb551c047435ed08d"
+    },
+    {
+      "bytes": 4240,
+      "path": ".omx/research/ddm_ffi6_20260910/INPUT_PINS.json",
+      "sha256": "1f80ec3cb4380bd6756a23a3970d13c62fdf001eb68cf184b75a3d6db84980f4"
+    },
+    {
+      "bytes": 940,
+      "path": ".omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json",
+      "sha256": "fcf9a6f9fcddda49dfe27fb80bec3be54c4dc2cfe91a5ba6321870143e3d8368"
+    },
+    {
+      "bytes": 2702,
+      "path": ".omx/research/ddm_ffi6_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+      "sha256": "37d429ea769579a3bb569c30c04a4a78dade82d0a80fae77a1f6c7e42c20c8fc"
+    },
+    {
+      "bytes": 1242,
+      "path": ".omx/research/ddm_ffi6_20260910/REVIEW_PASSES.json",
+      "sha256": "252066ee488e831d8f617419f26dc52bbd1439faf9c8fd3c3306890ee0334ed3"
+    },
+    {
+      "bytes": 1599,
+      "path": ".omx/research/ddm_ffi6_20260910/RUN3_DRY_VALIDATION.json",
+      "sha256": "e379dd1e657e0bedbba45b156f90533cac3aa7d5f3bf092a4b811d8900da858a"
+    },
+    {
+      "bytes": 4072,
+      "path": ".omx/research/ddm_ffi6_20260910/RUN4_DRY_VALIDATION.json",
+      "sha256": "c9ddc2ce3d43e48bb9ccd06cd1fac5ea6c3e80d4a679e8f8c4e90a6d43a2c22b"
+    },
+    {
+      "bytes": 675,
+      "path": ".omx/research/ddm_ffi6_20260910/VALIDATION.json",
+      "sha256": "31078941aee4187056a7a030f96b26a9c3beb6abdaf86a72d6f5b0682fc77a44"
+    },
+    {
+      "bytes": 12592,
+      "path": ".omx/research/ddm_ffi6_completion_custody_and_consumer_fix_rows_20260910.md",
+      "sha256": "5c52aa5f0f6ba990a14e01ec4e7fbb4095eb7a42433b6a6ba0c392ccd4922240"
+    },
+    {
+      "bytes": 156270,
+      "path": "src/tac/candidate_seal.py",
+      "sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb"
+    },
+    {
+      "bytes": 82822,
+      "path": "src/tac/tests/test_candidate_prefire_intent.py",
+      "sha256": "83c46dcdb88a277d9625cfe403b7a4b48450e5a0aa4018aa40540a5ebb7e3e34"
+    }
+  ],
+  "schema": "ddm_ffi6_intended_files.v1",
+  "score_claim": false
+}

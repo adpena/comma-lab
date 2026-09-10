@@ -1,0 +1,30 @@
+{
+  "assumption_challenge": "Location-dependent hashes cannot stand in for content equality; retained-root projection preserves custody without introducing a new digest definition. Run4 evidence acceptance cannot erase intent freshness.",
+  "passes": [
+    {
+      "focus": "Fresh content and provenance joins, actual retained-root projection, completion callsites, legacy timing equivalence",
+      "pass": 1,
+      "result": "CLEAN after import formatting correction; 231 tests green"
+    },
+    {
+      "focus": "Real-Git historical ancestry and latest-row identity, typed override refusals, seal/source mutation negatives, real run3 control",
+      "pass": 2,
+      "result": "CLEAN; no further code changes"
+    }
+  ],
+  "reviewed_files": [
+    {
+      "bytes": 156270,
+      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+      "sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb"
+    },
+    {
+      "bytes": 82822,
+      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py",
+      "sha256": "83c46dcdb88a277d9625cfe403b7a4b48450e5a0aa4018aa40540a5ebb7e3e34"
+    }
+  ],
+  "reviewer": "ddm_ffi6",
+  "schema": "ddm_ffi6_review_passes.v1",
+  "score_claim": false
+}

@@ -1,0 +1,20 @@
+{
+  "orders": [
+    {
+      "action": "Ratify and append the typed consumer batch; preserve historical rows and exact latest-row refusal.",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/CONSUMER_FIX_ROWS_DRAFT.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "Verified implementation landing and all 17 manifest rows match committed blobs",
+      "owner": "MAIN"
+    },
+    {
+      "action": "Resolve run4 full-completion disposition under latest-row freshness using passing dry custody/facts; no added dispatch authorization or nonce reuse.",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/NEXT_FIRE_ORDERS.json",
+      "disposition": "FOLDED",
+      "fire_trigger": "Typed batch ratification within MAIN existing rlc5 lifecycle",
+      "owner": "MAIN/pr17"
+    }
+  ],
+  "schema": "ddm_ffi6_fire_orders.v1",
+  "score_claim": false
+}

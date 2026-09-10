@@ -1,0 +1,97 @@
+{
+  "files": [
+    {
+      "bytes": 13149,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+      "sha256": "9557af75c031b06eaf6a190fed03ec32afe11a994478149f6ce215e8cc605415"
+    },
+    {
+      "bytes": 24850,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
+      "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
+    },
+    {
+      "bytes": 14062,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
+      "sha256": "955f765e559947079e5c64350eea19b93d595407719ed3a9926f820196d4079e"
+    },
+    {
+      "bytes": 14075,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v4.json",
+      "sha256": "c92e8b4c7707d5560ba200af7d3cfbe949dc6011f3d3ffbf66d0be84783d6ef7"
+    },
+    {
+      "bytes": 1707,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v6.json",
+      "sha256": "03c8a56d7f1ec53c89d0c96c5f3700d36d9a630f3ce46ba4a85b7827da1b12b7"
+    },
+    {
+      "bytes": 1707,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v7.json",
+      "sha256": "5bef68da161b151ab05321808e6ac2978f1fe8dfc71670b77a600f8ab3a3c0be"
+    },
+    {
+      "bytes": 4601,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RUN3_RECONCILIATION.json",
+      "sha256": "553d8c8baa8163df73280697fd4b12b25993fbe7a3541fe34ae1d6dcb16f69ed"
+    },
+    {
+      "bytes": 19684,
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "sha256": "c75abc293f25dec624bcd0469a0590c73f9cb646f971cbc25bf90dfb45bc4078"
+    },
+    {
+      "bytes": 4211,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRE_MANIFEST.json",
+      "sha256": "c977344c9b2f25684953b02aa322da0ca8beb436bcd805972bbc08285e2df8df"
+    },
+    {
+      "bytes": 4011,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONTEXT.json",
+      "sha256": "41c9b0c8692346f033646023f466350a65e3b61037f060c7594d6b23ff7abc05"
+    },
+    {
+      "bytes": 80671,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+    },
+    {
+      "bytes": 6489,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_local_request.json",
+      "sha256": "8b9627b2f41f73041e46b0a8ff526a26df0925d7e37ffb0cf8a4a3ba44e9fbef"
+    },
+    {
+      "bytes": 42595,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
+      "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+    },
+    {
+      "bytes": 6104,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRE_MANIFEST.json",
+      "sha256": "7239ff39dcefa6b682a4a5ecc5c32393e64eae770203e7b4b3019a489f1a3f5d"
+    },
+    {
+      "bytes": 4973,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
+      "sha256": "2c579d9db53d42d1dca606ae14ac6791c80b022ee491b8b2ca56ab35b9ce81d1"
+    },
+    {
+      "bytes": 242556,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+      "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
+    },
+    {
+      "bytes": 7341,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
+      "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
+    }
+  ],
+  "freeze_row_sha256": [
+    "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
+    "ecc62f5b9cb136f8dc9d1bef92bae743e9ddf9028f9536cc1f86fbf3de5d1b72",
+    "0651e7360f4a95a8b5618355c40a30ad15bfce5ea4ae65cdf4917ed9e807be77",
+    "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2"
+  ],
+  "schema": "ddm_ffi6_input_pins.v1",
+  "score_claim": false
+}

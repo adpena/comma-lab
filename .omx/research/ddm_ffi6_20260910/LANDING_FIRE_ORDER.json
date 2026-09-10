@@ -1,0 +1,16 @@
+{
+  "action": "Land the one code/tests/evidence bundle or identical patch, then bind the draft typed row to the reachable landed commit and verify the 17-file manifest. Preserve latest-row refusal; resolve the existing run4 lifecycle disposition through MAIN/pr17 before any completion.",
+  "bundle": {
+    "bytes": 23819,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/serializer_fallbacks/20260910T215227.909857Z-28342/intended-commit.bundle",
+    "sha256": "4301f6f0d262a2c3b96adb090e106816bcf9e1b8a717b094360bc039c2400565"
+  },
+  "commit": "a62939b58a7b099a86960a10057d35000a373b6a",
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260910/LANDING_FIRE_ORDER.json",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "fire_trigger": "Harvest ddm_ffi6 and verify bundle and all intended-file hashes",
+  "owner": "MAIN",
+  "schema": "ddm_ffi6_landing_fire_order.v1",
+  "score_claim": false,
+  "serializer_rc": 17
+}

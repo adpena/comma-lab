@@ -1,0 +1,17 @@
+{
+  "axis": "host unit tests; scorer-free",
+  "changed_python_files": [
+    "src/tac/candidate_seal.py",
+    "src/tac/tests/test_candidate_prefire_intent.py"
+  ],
+  "command": ".venv/bin/python -m pytest src/tac/tests/test_candidate_prefire_intent.py src/tac/tests/test_candidate_seal.py src/tac/tests/test_decode_wall_clock_t4_direct.py src/tac/tests/test_decode_wall_clock.py -q",
+  "elapsed_seconds": 5.49,
+  "failed": 0,
+  "passed": 231,
+  "real_control": "test_run3_retained_provenance_projection_and_terminal_refusal executed (not skipped)",
+  "returncode": 0,
+  "ruff_returncode": 0,
+  "schema": "ddm_ffi6_host_validation.v1",
+  "score_claim": false,
+  "skipped": 0
+}

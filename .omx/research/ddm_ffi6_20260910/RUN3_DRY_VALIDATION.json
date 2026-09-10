@@ -1,0 +1,33 @@
+{
+  "axis": "host-custody-only; no scorer executed",
+  "completion_facts_refusal": {
+    "code": "FIRST_MEASUREMENT_RESULT_REFUSED",
+    "detail": "authorization not harvested"
+  },
+  "completion_invoked": false,
+  "content_check": "PASS",
+  "content_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+  "file_count": 48,
+  "files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
+  "measured_at_utc": "2026-09-10T21:48:35.252004+00:00",
+  "normal_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+  "original_tree_refusal": "inflate runtime tree hash mismatch: expected=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 actual=baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+  "promotion_eligible": false,
+  "provenance": {
+    "bytes": 42595,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
+    "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+  },
+  "receipt": {
+    "bytes": 80671,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+    "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+  },
+  "retained_projection_matches": true,
+  "retained_tree_sha256": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+  "run": 3,
+  "runtime": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+  "schema": "ddm_ffi6_dry_custody_validation.v1",
+  "score_claim": false,
+  "seal_written": false
+}
