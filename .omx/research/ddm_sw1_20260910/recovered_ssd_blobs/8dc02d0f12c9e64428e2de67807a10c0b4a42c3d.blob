@@ -1,0 +1,21 @@
+#!/bin/bash
+# ddm_sr2f — sr1 FO-1 re-scoped to the LIVE rc2 pointer body.
+# Measures the A1 pose drift (GT-free, vehicle-independent term) on rc2's retained decode.
+#
+# ExFAT-mmap cure (MAIN steer 2026-08-21, #1122 genus): APDataStore is ExFAT and np.memmap of the
+# 3.66 GB 0.raw SIGBUSes mid-read (attempt 1 died rc=138 at pair 60).  Inputs are staged to LOCAL
+# scratch and sha-verified after the copy, so the numbers are unchanged by construction:
+#   0.raw            7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7  (rc2 seal)
+#   A_row_384x384    d884e8ecb9abea65ecb59c20f6ed2dc00b8e54d4e2da2323ac2221aac7621e82  (sr1)
+#   A_col_512x512    1a0fd4c49d253367c7fc4b401ef6f383fb90aed936b838a2206eb013830d80f0  (sr1)
+# Retention is copied back to APDataStore after the run (P0 ALWAYS KEEP THE PAYLOAD).
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+export PYTHONDONTWRITEBYTECODE=1          # no __pycache__/AppleDouble sidecars on any ExFAT tree
+SCR=/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sr2f
+RUN=/Volumes/APDataStore/pact/ddm_sr2f/run
+.venv/bin/python experiments/ddm_sr1_manufactured_seg_recovery.py --stage a1pose \
+  --work "$SCR" --raw "$SCR/0.raw" --frames 600 --threads 8 --retain \
+  > "$RUN/leg_rc2_pose.log" 2>&1
+echo "rc=$?" >> "$RUN/leg_rc2_pose.log"
+touch "$RUN/leg_rc2_pose.done"

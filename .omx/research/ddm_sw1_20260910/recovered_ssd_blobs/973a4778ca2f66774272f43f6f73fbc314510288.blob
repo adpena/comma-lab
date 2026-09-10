@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Execute the STAGED compress.py stage 6 against the pinned AFR1 archive.
+
+This is not a simulation: it imports the staged public encoder, runs its own
+tree-manifest verification, materializes its embedded encoder sources, stages a
+real receiver runtime, and calls ``fold_fs1_stage``.  The stage refuses unless
+the rebuilt archive is exactly the pinned FS1 SHA-256.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import shutil
+import sys
+import time
+from pathlib import Path
+
+STAGING = Path("/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep")
+PACKET = STAGING / "packet"
+AFR1 = Path("/Volumes/APDataStore/pact/ddm_pr1_pose_resolve/runtime_afr1/archive.zip")
+# The work store lives on the local APFS disk: the SSD tier is ExFAT, where macOS
+# materializes every extended attribute as an AppleDouble "._" sidecar, and the
+# encoder correctly refuses a runtime tree carrying that hidden state.  Only the
+# retained payloads and receipts are written back to the SSD staging tree.
+STORE = Path(".omx/tmp/ddm_ps1_stage6").resolve() / sys.argv[1]
+EXPECT_SHA = "50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf"
+EXPECT_BYTES = 180_022
+
+
+def load_staged_compress():
+    spec = importlib.util.spec_from_file_location("staged_compress", PACKET / "compress.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["staged_compress"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def main() -> int:
+    started = time.time()
+    if STORE.exists():
+        shutil.rmtree(STORE)
+    STORE.mkdir(parents=True)
+    cx = load_staged_compress()
+    receipt = {
+        "schema": "ddm_ps1.stage6_rebuild.v1",
+        "axis": "[bytes -- exact, device-free]",
+        "score_claim": False,
+        "promotable": False,
+        "run_label": sys.argv[1],
+        "staged_packet": str(PACKET),
+        "staged_compress_sha256": hashlib.sha256((PACKET / "compress.py").read_bytes()).hexdigest(),
+        "pointer_archive": str(AFR1),
+        "started_unix": started,
+    }
+    receipt["tree_manifest_rows"] = len(cx.verify_tree_manifest())
+    receipt["environment"] = cx.dependency_fingerprint()
+    cx._ACTIVE_VENDOR = cx.materialize_encoder_sources(STORE)
+    receipt["vendor_dir"] = str(cx._ACTIVE_VENDOR)
+    receipt["source_pin_rows"] = len(cx.verify_sources(cx.verify_tree_manifest()))
+    runtime = cx.stage_runtime(STORE / "runtime_fs1", AFR1, "fx2_afr1.py", "residual_dx2.py")
+    receipt["staged_runtime"] = str(runtime)
+    archive, row = cx.fold_fs1_stage(store=STORE / "fs1", runtime=runtime, pointer=AFR1)
+    receipt["stage_row"] = row
+    raw = archive.read_bytes()
+    receipt["rebuilt"] = {
+        "path": str(archive),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "bytes": len(raw),
+    }
+    receipt["matches_pinned_fs1_archive"] = (
+        receipt["rebuilt"]["sha256"] == EXPECT_SHA and receipt["rebuilt"]["bytes"] == EXPECT_BYTES
+    )
+    if not receipt["matches_pinned_fs1_archive"]:
+        raise SystemExit("REBUILD DID NOT MATCH THE PINNED FS1 ARCHIVE")
+    retained = STAGING / "evidence" / "rebuild" / f"{sys.argv[1]}_archive.zip"
+    retained.write_bytes(raw)
+    receipt["retained_payload"] = {
+        "path": str(retained),
+        "sha256": hashlib.sha256(retained.read_bytes()).hexdigest(),
+        "bytes": retained.stat().st_size,
+    }
+    receipt["status"] = "PASS"
+    receipt["elapsed_seconds"] = time.time() - started
+    out = STAGING / "evidence" / "rebuild" / f"STAGE6_{sys.argv[1]}.json"
+    out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    print(json.dumps({k: receipt[k] for k in ("status", "rebuilt", "matches_pinned_fs1_archive",
+                                              "elapsed_seconds")}, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

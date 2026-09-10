@@ -1,0 +1,11 @@
+#!/bin/bash
+# Waits on the COMPLETION ARTIFACTS (the four shard solve receipts), never on a clock
+# or the process table. Exits when all four exist.
+R=/Volumes/APDataStore/pact/ddm_fs3/rescreen38/retained
+while true; do
+  n=0
+  for s in 0 1 2 3; do [ -f "$R/seg_solve_fs3_reopen38_s${s}.json" ] && n=$((n+1)); done
+  [ "$n" -ge 4 ] && break
+  sleep 30
+done
+echo "ALL FOUR RESCREEN SHARD RECEIPTS PRESENT"

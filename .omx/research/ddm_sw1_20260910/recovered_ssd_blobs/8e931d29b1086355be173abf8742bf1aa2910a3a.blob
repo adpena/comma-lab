@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Render ddm_ng4's bounded-smoke result as the memo rows it is owed.
+
+The arm that sealed ng4 could not run the smoke: the system admission governor refused every
+projection while ng2's and ng3's cells held the Metal.  The waiter runs it later, unattended, so
+this turns its JSON into the exact markdown the memo's SMOKE RESULT placeholder wants -- the
+harvester pastes it instead of re-deriving it.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+SMOKE = Path("/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng4_continuous_objective/bounded_smoke")
+NG1_COLD_REFERENCE = "27f514180db2b4cda57289bbeb4be5ca8daf64e874921c92ba5c08d613c30973"
+
+
+def main() -> int:
+    result_path = SMOKE / "BOUNDED_SMOKE_RESULT.json"
+    if not result_path.is_file():
+        print(f"no smoke result at {result_path}", file=sys.stderr)
+        return 1
+    r = json.loads(result_path.read_text(encoding="utf-8"))
+    noop = r["no_op_detector"]
+    unmoved = r["training_path_is_unmoved_by_this_landing"]
+    diff = r["differential_at_the_controls_tau_and_zero_duals"]
+    disp = r["first_update_displacement_l2"]
+    peaks = r["peak_rss_bytes_per_arm"]
+    duals = r["dual_seeding_reached_the_loop"]
+    taus = r["tau_reached_the_loop"]
+    lines = [
+        "### Bounded CPU smoke — RESULT",
+        "",
+        "| check | result |",
+        "|---|---|",
+        f"| **NO-OP DETECTOR** — continuous vs control step-1 live state | "
+        f"**{'DIFFERENT' if noop['states_differ'] else 'IDENTICAL — THE LEVER IS INERT, STOP'}** "
+        f"(`{noop['continuous_live_state_sha256'][:16]}…` vs `{noop['control_live_state_sha256'][:16]}…`) |",
+        f"| — and their re-encoded archives differ | {'yes' if noop['archives_differ'] else '**no**'} |",
+        f"| **THE TRAINING PATH IS UNMOVED BY THIS LANDING** — control step-1 vs ng1's pre-telemetry cold reference | "
+        f"**{'BIT-IDENTICAL' if unmoved['reproduces_ng1_cold_reference'] else 'DIFFERS — this landing moved the training path, STOP'}** "
+        f"(`{NG1_COLD_REFERENCE[:16]}…`) |",
+        f"| **DIFFERENTIAL** — all components at the control's τ = 0.15 with zero duals | "
+        f"**{'BIT-IDENTICAL' if diff['components_bit_identical_at_shared_tau_and_zero_duals'] else 'DIFFER — something leaked out of the blocks'}** "
+        f"(`loss_total` {diff['control_loss_total_neutralized']} both) |",
+        f"| — objective is not τ-blind | {diff['objective_is_not_tau_blind']} "
+        f"({diff['cell_loss_total_at_own_tau_zero_duals']} at its own τ) |",
+        f"| — objective is not dual-blind | {diff['objective_is_not_dual_blind']} "
+        f"({diff['cell_loss_total_at_own_tau_and_carried_duals']} with the carried duals) |",
+        f"| τ reached the loop | control {taus['control']}, continuous {taus['continuous']} |",
+        f"| **duals reached the loop** (falsifier 3, update 1) | control {json.dumps(duals['control'])}; "
+        f"continuous {json.dumps(duals['continuous'])} |",
+        f"| first-update displacement ‖θ₁−θ₀‖₂ | control {disp['control']}, continuous {disp['continuous']} |",
+        f"| peak RSS per arm | control {peaks['control'] / 2**30:.2f} GiB, "
+        f"continuous {peaks['continuous'] / 2**30:.2f} GiB |",
+        "",
+        "**Read the peak-RSS row against the projection:** arm 1 was projected at 42 GiB on the "
+        "inference that ng2's 41.46 and ng3's 41.48 GiB were a SINGLE update's high-water rather "
+        "than two arms summed. The measured per-arm peak above settles that for the lineage — if "
+        "it is near 41.5 GiB the inference held; if it is near 20.7 GiB the peak really was a sum "
+        "and every future split smoke may project half.",
+    ]
+    text = "\n".join(lines) + "\n"
+    out = SMOKE / "SMOKE_APPENDIX.md"
+    out.write_text(text, encoding="utf-8")
+    print(text)
+    print(f"[written] {out}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

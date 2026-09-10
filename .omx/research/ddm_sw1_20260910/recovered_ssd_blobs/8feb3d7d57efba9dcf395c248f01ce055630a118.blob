@@ -1,0 +1,26 @@
+"""Custody manifest for every ddm_md1 retained payload: path, bytes, sha256."""
+import hashlib, json, os
+from pathlib import Path
+ROOT = Path("/Volumes/APDataStore/pact/ddm_md1_micro_macro")
+def sha(p):
+    h=hashlib.sha256()
+    with p.open("rb") as s:
+        for b in iter(lambda: s.read(1<<20), b""): h.update(b)
+    return h.hexdigest()
+files=[]
+for p in sorted(ROOT.rglob("*")):
+    if p.is_file() and not p.name.startswith("._") and "/launch/" not in str(p) and "/wait_cold/" not in str(p):
+        files.append({"relative_path": str(p.relative_to(ROOT)), "bytes": p.stat().st_size, "sha256": sha(p)})
+manifest={
+ "schema":"ddm_md1_custody_manifest.v1",
+ "axis":"[macOS-CPU advisory; retained payloads; not contest authority]",
+ "score_claim": False,
+ "root": str(ROOT),
+ "file_count": len(files),
+ "total_bytes": sum(f["bytes"] for f in files),
+ "files": files,
+ "metal_invocations": 0, "modal_invocations": 0, "contest_eval_invocations": 0,
+}
+out=ROOT/"CUSTODY_MANIFEST.json"; tmp=out.with_suffix(".json.tmp")
+tmp.write_text(json.dumps(manifest, indent=2, sort_keys=True)); os.replace(tmp,out)
+print(json.dumps({k:v for k,v in manifest.items() if k!="files"}, indent=2, sort_keys=True))

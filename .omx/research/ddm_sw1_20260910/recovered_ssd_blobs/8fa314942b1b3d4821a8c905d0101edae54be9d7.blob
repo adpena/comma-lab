@@ -1,0 +1,184 @@
+"""Render the ddm_ane2 measured tables from the retained JSON reports.
+
+Reads only what the runs wrote; computes nothing new.  Kept beside the reports
+so the memo's tables can be regenerated from disk rather than retyped.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+OUT = Path("/Volumes/VertigoDataTier/pact/ddm_ane2_precision")
+
+
+def load(path: Path):
+    if not path.exists():
+        return None
+    return json.loads(path.read_text())
+
+
+def ladder_pose(d):
+    print("\n### PoseNet split ladder (fp16 prefix / fp32 tail of k ops), n120 stratified\n")
+    print("| k | fp16 ops | ANE % | NE ms | CPU ms | self-MSE | x d_pose | dim0 mean abs |")
+    print("|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for r in d["rungs"]:
+        f, p = r["fidelity"], r["placement"]["CPU_AND_NE"]
+        print(
+            f"| {r['k_fp32_tail_ops']} | {r['fp16_ops']} ({r['fp16_op_fraction']*100:.1f}%) | "
+            f"{p['ane_op_fraction']*100:.1f}% | {r['latency']['CPU_AND_NE']['median_ms']:.2f} | "
+            f"{r['latency']['CPU_ONLY']['median_ms']:.2f} | {f['self_mse_median']:.4e} | "
+            f"{f['self_mse_multiple_of_d_pose']:.1f} | {f['per_dim_mean_abs_delta'][0]:.4f} |"
+        )
+
+
+def ladder_seg(d, label):
+    print(f"\n### SegNet split ladder ({label}), n120 stratified\n")
+    print("| k | fp16 ops | ANE % | NE ms | CPU ms | flips | flip rate | x bar |")
+    print("|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for r in d["rungs"]:
+        f, p = r["fidelity"], r["placement"]["CPU_AND_NE"]
+        print(
+            f"| {r['k_fp32_tail_ops']} | {r['fp16_ops']} ({r['fp16_op_fraction']*100:.1f}%) | "
+            f"{p['ane_op_fraction']*100:.1f}% | {r['latency']['CPU_AND_NE']['median_ms']:.2f} | "
+            f"{r['latency']['CPU_ONLY']['median_ms']:.2f} | {f['flips']} | "
+            f"{f['flip_rate']:.4e} | {f['multiple_of_bar']:.2f} |"
+        )
+
+
+def sensitivity(d):
+    model = d["model"]
+    print(f"\n### {model} per-op-group sensitivity (ONE group fp16, rest fp32), n120\n")
+    if model == "posenet":
+        print("| group | ordinals | ops | ANE % | self-MSE | x d_pose | dim0 mean abs |")
+        print("|---:|---|---:|---:|---:|---:|---:|")
+    else:
+        print("| group | ordinals | ops | ANE % | flips | flip rate | x bar |")
+        print("|---:|---|---:|---:|---:|---:|---:|")
+    for r in d["rows"]:
+        f = r["fidelity"]
+        ane = r.get("placement", {}).get("ane_op_fraction", float("nan")) * 100
+        span = f"{r['ordinal_lo']}:{r['ordinal_hi']}"
+        if model == "posenet":
+            print(
+                f"| {r['group']} | {span} | {r['ops_in_group']} | {ane:.1f}% | "
+                f"{f['self_mse_median']:.4e} | {f['self_mse_multiple_of_d_pose']:.1f} | "
+                f"{f['per_dim_mean_abs_delta'][0]:.5f} |"
+            )
+        else:
+            print(
+                f"| {r['group']} | {span} | {r['ops_in_group']} | {ane:.1f}% | {f['flips']} | "
+                f"{f['flip_rate']:.4e} | {f['multiple_of_bar']:.3f} |"
+            )
+
+
+def selective(d):
+    model = d["model"]
+    print(f"\n### {model} fp32-HEAD mirror ladder (first N ops fp32, rest fp16), n120\n")
+    if model == "posenet":
+        print("| label | fp32 ops | fp16 % | ANE % | NE ms | self-MSE | x d_pose | dim0 mean abs |")
+        print("|---|---:|---:|---:|---:|---:|---:|---:|")
+    else:
+        print("| label | fp32 ops | fp16 % | ANE % | NE ms | flips | flip rate | x bar |")
+        print("|---|---:|---:|---:|---:|---:|---:|---:|")
+    for r in d["rows"]:
+        f = r["fidelity"]
+        ane = r["placement"].get("CPU_AND_NE", {}).get("ane_op_fraction", float("nan")) * 100
+        ms = r["latency"].get("CPU_AND_NE", {}).get("median_ms", float("nan"))
+        if model == "posenet":
+            print(
+                f"| {r['label']} | {r['fp32_ops']} | {r['fp16_op_fraction']*100:.1f}% | "
+                f"{ane:.1f}% | {ms:.2f} | {f['self_mse_median']:.4e} | "
+                f"{f['self_mse_multiple_of_d_pose']:.1f} | {f['per_dim_mean_abs_delta'][0]:.5f} |"
+            )
+        else:
+            print(
+                f"| {r['label']} | {r['fp32_ops']} | {r['fp16_op_fraction']*100:.1f}% | "
+                f"{ane:.1f}% | {ms:.2f} | {f['flips']} | {f['flip_rate']:.4e} | "
+                f"{f['multiple_of_bar']:.3f} |"
+            )
+
+
+def selective_named(d, label):
+    model = d["model"]
+    print(f"\n### {model} profile-guided fp32 sets -- {label}, n{d['pairs']}\n")
+    if model == "posenet":
+        print("| set | ordinals | fp32 ops | fp16 % | ANE % | NE ms | self-MSE | x d_pose |")
+        print("|---|---|---:|---:|---:|---:|---:|---:|")
+    else:
+        print("| set | ordinals | fp32 ops | fp16 % | ANE % | NE ms | flip rate | x bar |")
+        print("|---|---|---:|---:|---:|---:|---:|---:|")
+    for r in d["rows"]:
+        f = r["fidelity"]
+        ane = r["placement"].get("CPU_AND_NE", {}).get("ane_op_fraction", float("nan")) * 100
+        ms = r["latency"].get("CPU_AND_NE", {}).get("median_ms", float("nan"))
+        lo, hi = r["fp32_ordinals"][0], r["fp32_ordinals"][-1]
+        span = f"{lo}..{hi} ({r['fp32_ops']} ops)"
+        tail = (
+            f"{f['self_mse_median']:.4e} | {f['self_mse_multiple_of_d_pose']:.1f}"
+            if model == "posenet"
+            else f"{f['flip_rate']:.4e} | {f['multiple_of_bar']:.3f}"
+        )
+        print(
+            f"| {r['label']} | {span} | {r['fp32_ops']} | {r['fp16_op_fraction']*100:.1f}% | "
+            f"{ane:.1f}% | {ms:.2f} | {tail} |"
+        )
+
+
+def units(d, label):
+    print(f"\n### compute-unit control -- {label} ({Path(d['mlpackage']).name})\n")
+    print("| ComputeUnit requested | ANE ops | drift |")
+    print("|---|---:|---:|")
+    for mode, row in d["rows"].items():
+        f = row["fidelity"]
+        drift = (
+            f"flip rate {f['flip_rate']:.4e} ({f['multiple_of_bar']:.2f}x bar)"
+            if "flip_rate" in f
+            else f"self-MSE {f['self_mse_median']:.4e} ({f['self_mse_multiple_of_d_pose']:.2f}x d_pose)"
+        )
+        print(f"| `{mode}` | {row['placement']['ane_ops']}/{row['placement']['total_ops_with_usage']} | {drift} |")
+
+
+def casts(d):
+    print("\n### cast census (fp16/fp32 boundary casts per rung)\n")
+    print("| mlpackage | compute ops | cast ops | const ops |")
+    print("|---|---:|---:|---:|")
+    for r in sorted(d["rows"], key=lambda r: Path(r["mlpackage"]).name):
+        print(
+            f"| {Path(r['mlpackage']).name} | {r['compute_ops']} | {r['cast_ops']} | {r['const_ops']} |"
+        )
+
+
+def main() -> int:
+    jobs = [
+        (OUT / "screen/ladder_posenet_n120.json", ladder_pose, ()),
+        (OUT / "screen/ladder_segnet_n120.json", ladder_seg, ("GT frames",)),
+        (OUT / "stage3/ladder_segnet_generated_n120.json", ladder_seg, ("GENERATED decode",)),
+        (OUT / "screen/sensitivity_posenet_n120.json", sensitivity, ()),
+        (OUT / "screen/sensitivity_segnet_n120.json", sensitivity, ()),
+        (OUT / "stage2/mirror_posenet_n120.json", selective, ()),
+        (OUT / "stage2/mirror_segnet_n120.json", selective, ()),
+        (OUT / "stage2/units_posenet_fp32.json", units, ("PoseNet all-fp32",)),
+        (OUT / "stage2/units_segnet_fp32.json", units, ("SegNet all-fp32",)),
+        (OUT / "stage2/units_posenet_fp16.json", units, ("PoseNet all-fp16",)),
+        (OUT / "stage2/castcount.json", casts, ()),
+        (OUT / "stage6/targeted_posenet_gt_n120.json", selective_named, ("GT frames",)),
+        (OUT / "stage6/targeted_segnet_gt_n120.json", selective_named, ("GT frames",)),
+        (OUT / "stage6/targeted_segnet_generated_n120.json", selective_named, ("GENERATED decode",)),
+        (OUT / "stage8/ladder_segnet_generated_n600.json", ladder_seg, ("GENERATED decode, n600 FINALIST",)),
+        (OUT / "stage8/targeted_segnet_generated_n600.json", selective_named, ("GENERATED decode, n600 FINALIST",)),
+        (OUT / "stage7/units_ane1_fp32_package_gt.json", units, ("ane1's fp32 package on this arm's GT reference",)),
+        (OUT / "stage7/units_ane1_fp16_package_gt.json", units, ("ane1's fp16 package on this arm's GT reference",)),
+    ]
+    for path, fn, extra in jobs:
+        data = load(path)
+        if data is None:
+            print(f"\n<!-- MISSING: {path} -->")
+            continue
+        fn(data, *extra)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

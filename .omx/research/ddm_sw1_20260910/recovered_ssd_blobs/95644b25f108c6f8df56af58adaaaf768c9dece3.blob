@@ -1,0 +1,5 @@
+This is a POSE-CHANGING move: the T4 row is authority for d_pose (5.73e-6 printed at 3 sig figs; the projection used 5.727914e-6, so the realized S differs
+from the projection by −2.4e-6 — print rounding, not instrument error). It is not evidence that the basis can be touched: V1/V2 (basis 5→4/3 bits) and
+V4 (a zero-byte generated DCT basis, d_pose ≥ 0.9986, 39,748× past break-even) and V5 (rank-8 SVD refit) are all REFUSED with measured numbers — the
+carrier's 22 KB buy a specific positioned 12-dim subspace (zero carrier: d_pose 52.1; the carrier pays for itself 1,556×). 4.4 % of the sub-0.12 rate
+demand. `[contest-CPU]` stays RECORD-WITH-REASON. PR #140 is now five moves behind; a public update is the operator's decision.

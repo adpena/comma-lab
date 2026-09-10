@@ -1,0 +1,99 @@
+#!/bin/bash
+# ddm_ng5 -- fire the first TWO-LEVER burn cell the moment ng4 releases the Metal and the
+# canonical admission gate allows.
+#
+# THREE THINGS THIS SCRIPT DOES NOT DO, each on purpose:
+#   * it never launches a Metal cell while ng4 is live -- the first gate is ng4's OWN done
+#     receipt, and two concurrent Metal cells are refused by policy after today's near-OOM;
+#   * it contains NO memory arithmetic -- every declared peak is a LOOKUP in gov2's measured-peak
+#     ledger (tools/measured_peaks.py lookup), i.e. a prior MEASURED run of the same shape;
+#   * it never overrides the governor -- it PRE-GATES on tools/cell_admission.py and then hands
+#     the fire to gov2's queue driver, which runs its own admission, claims and authorization.
+#
+# It also fail-closes on its own science: if the smoke's 3-way no-op detector does not show this
+# cell's first update differing from the control AND from BOTH parents, the composition is inert
+# and the cell is NOT fired.
+set -uo pipefail
+
+REPO=/Users/adpena/Projects/pact
+PY="$REPO/.venv/bin/python"
+ARM_ROOT=/Volumes/APDataStore/pact/ddm_ng5_tau_band_x_continuous_objective
+RUN_ROOT=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng5_tau_band_x_continuous_objective
+NG4_DONE="$REPO/.omx/tmp/codex_runs/ng4_continuous_DONE.json.done"
+SMOKE_RESULT="$RUN_ROOT/bounded_smoke/BOUNDED_SMOKE_RESULT.json"
+LOG="$ARM_ROOT/waiter.log"
+
+log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
+
+peak_for() {
+  "$PY" "$REPO/tools/measured_peaks.py" lookup --family "$1" \
+    | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["governed_peak_gib"])'
+}
+
+# A single-poll admission gate fires on the oscillation's trough: ng4 MEASURED used_gib swinging
+# 104.6-113.1 GiB seconds apart with two cells live.  Require the gate to HOLD.
+hold_admission() {
+  local peak="$1" label="$2" hold=0
+  while [ "$hold" -lt 3 ]; do
+    if "$PY" "$REPO/tools/cell_admission.py" admit --candidate-peak-gib "$peak" --json >/dev/null 2>&1; then
+      hold=$((hold + 1))
+    else
+      hold=0
+    fi
+    if [ "$hold" -lt 3 ]; then sleep 60; fi
+  done
+  log "admission held 3/3 for $label at $peak GiB"
+}
+
+log "waiter start (pid $$); gate 1 = ng4's done receipt $NG4_DONE"
+until [ -f "$NG4_DONE" ]; do sleep 60; done
+log "gate 1 PASSED: ng4 has released the Metal"
+
+# ---- the bounded smoke -------------------------------------------------------------------
+if [ -f "$SMOKE_RESULT" ]; then
+  log "smoke already complete; skipping to the cell"
+else
+  SMOKE_PEAK=$(peak_for ddm_ng3_tau_band_cell)
+  if [ -z "$SMOKE_PEAK" ]; then log "REFUSE: no measured peak for the smoke shape"; exit 4; fi
+  log "smoke declared peak from the ledger (family ddm_ng3_tau_band_cell, the shape-matched row) = $SMOKE_PEAK GiB"
+  hold_admission "$SMOKE_PEAK" "the smoke"
+  "$PY" "$REPO/tools/launch_detached_process.py" \
+    --output-dir "$RUN_ROOT/smoke_launch" \
+    --cwd "$REPO" \
+    --purpose "NG5 bounded CPU smoke: composition + control arms, then the 3-way no-op detector" \
+    --authority "ddm_ng5 arm; bounded macOS-CPU mechanism smoke, not contest authority" \
+    --derive-resource-budgets --measured-peak-rss-gib "$SMOKE_PEAK" \
+    --measured-thread-need 4 --walltime-cap-s 3600 --done-receipt NG5_SMOKE_DONE.json \
+    -- /bin/bash "$ARM_ROOT/run_smoke_arms.sh" >> "$LOG" 2>&1
+  log "smoke launched; waiting for $SMOKE_RESULT"
+  waited=0
+  until [ -f "$SMOKE_RESULT" ]; do
+    sleep 20
+    waited=$((waited + 20))
+    if [ "$waited" -gt 3600 ]; then log "REFUSE: smoke did not produce a result in 3600 s"; exit 5; fi
+  done
+  log "smoke complete"
+fi
+
+# ---- fail closed on an inert composition -------------------------------------------------
+if ! "$PY" -c "import json,sys; d=json.load(open(sys.argv[1]))['no_op_detector']; sys.exit(0 if d['differs_from_all_three'] else 1)" "$SMOKE_RESULT"; then
+  log "STOP: the 3-way no-op detector did not separate this cell from the control and both parents; the composition is inert and the cell is NOT fired"
+  exit 6
+fi
+log "no-op detector PASSED (differs from the control and from BOTH parents)"
+
+# ---- the cell, through gov2's queue driver ------------------------------------------------
+CELL_PEAK=$(peak_for ddm_qbr1_born_fairform_burn_prep)
+if [ -z "$CELL_PEAK" ]; then log "REFUSE: no measured peak for the cell family"; exit 7; fi
+log "cell declared peak from the ledger (family ddm_qbr1_born_fairform_burn_prep) = $CELL_PEAK GiB"
+hold_admission "$CELL_PEAK" "the cell"
+
+"$PY" "$REPO/tools/cell_queue_driver.py" run --queue "$ARM_ROOT/QUEUE_SPEC.json" --dry-run \
+  > "$ARM_ROOT/queue_dry_run.json" 2>> "$LOG"
+log "queue driver dry-run rc=$? (plan in queue_dry_run.json)"
+
+"$PY" "$REPO/tools/cell_queue_driver.py" run --queue "$ARM_ROOT/QUEUE_SPEC.json" \
+  --agent ddm_ng5_composition > "$ARM_ROOT/queue_fire.json" 2>> "$LOG"
+rc=$?
+log "queue driver fire rc=$rc (receipt in queue_fire.json)"
+exit "$rc"

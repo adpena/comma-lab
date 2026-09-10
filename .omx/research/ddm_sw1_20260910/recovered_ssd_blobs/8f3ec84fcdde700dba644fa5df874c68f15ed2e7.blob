@@ -1,0 +1,61 @@
+"""Exact coded-byte cost of the four DEAD pose-head tensors in the shipped model section.
+
+Method: take the terminal EMA state, build the model section payload with `qbf1.encode_model`
+(the real encoder, not a re-implementation), and encode it through the real
+`encode_section_candidates` / `choose_section` chain.  Then repeat with the four pose tensors
+dropped from the payload byte string, and take the coded-byte difference.  This measures what
+those bytes cost IN THIS CONTAINER, which is the only quantity the rate term charges.
+"""
+import json, os, sys
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+import numpy as np, torch
+torch.set_num_threads(4)
+from pathlib import Path
+from experiments import ddm_qbflow_packet as qbf1
+from experiments import ddm_qbt1_qbflow_trainer as qbt
+
+END = Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/control_native100/stage_01_fairform_finish/checkpoints/stage_01_end.pt")
+p = torch.load(END, map_location="cpu", weights_only=False)
+shadow = p["ema"]["shadow"]
+params = {n: shadow[f"params.{n}"].detach().cpu().float().numpy().copy() for n in qbf1.expected_param_shapes()}
+full = qbf1.encode_model(params)
+coded_full = qbf1.choose_section(qbf1.encode_section_candidates(qbf1.SECTION_MODEL, full))
+
+DEAD = ("pose_in_w", "pose_in_b", "pose_out_w", "pose_out_b")
+# Rebuild the same payload with the dead tensors replaced by all-zero arrays of the SAME shape:
+# an exactly-compressible stand-in.  The delta is then the coder's price for the dead VALUES,
+# which is the removable amount without an ABI change.
+zeroed = {n: (np.zeros_like(v) if n in DEAD else v) for n, v in params.items()}
+z = qbf1.encode_model(zeroed)
+coded_zero = qbf1.choose_section(qbf1.encode_section_candidates(qbf1.SECTION_MODEL, z))
+
+# And a true REMOVAL (ABI-breaking) upper bound: drop the tensors from the dict entirely by
+# encoding only the surviving tensors through the same per-tensor packer.
+raw_bits = {n: qbf1.precision_bits(n) for n in DEAD}
+raw_dead_bytes = sum(int(np.ceil(np.prod(qbf1.expected_param_shapes()[n]) * raw_bits[n] / 8)) for n in DEAD)
+
+out = {
+ "schema": "ddm_md1_dead_parameter_bytes.v1",
+ "axis": "[macOS-CPU scorer-free exact byte measurement; not contest authority]",
+ "score_claim": False,
+ "terminal_checkpoint": str(END),
+ "model_section_raw_bytes_full": len(full),
+ "model_section_coded_bytes_full": len(coded_full.payload),
+ "model_section_codec": coded_full.codec_name,
+ "model_section_raw_bytes_pose_zeroed": len(z),
+ "model_section_coded_bytes_pose_zeroed": len(coded_zero.payload),
+ "coded_bytes_the_dead_pose_values_cost": len(coded_full.payload) - len(coded_zero.payload),
+ "dead_tensor_precision_bits": raw_bits,
+ "dead_tensor_raw_bytes_if_removed_abi_breaking": raw_dead_bytes,
+ "dead_param_elements": int(sum(np.prod(qbf1.expected_param_shapes()[n]) for n in DEAD)),
+ "packet_param_elements": int(sum(np.prod(s) for s in qbf1.expected_param_shapes().values())),
+ "note": (
+   "The zeroed variant is the measured, ABI-PRESERVING saving (the coder's price for the dead "
+   "VALUES).  The raw-bytes figure is the ABI-BREAKING upper bound before entropy coding; the "
+   "true removal saving lies between them and is not measured here."
+ ),
+ "metal_invocations": 0, "modal_invocations": 0, "contest_eval_invocations": 0,
+}
+OUT = Path("/Volumes/APDataStore/pact/ddm_md1_micro_macro/DEAD_PARAMETER_BYTES.json")
+tmp = OUT.with_suffix(".json.tmp"); tmp.write_text(json.dumps(out, indent=2, sort_keys=True)); os.replace(tmp, OUT)
+print(json.dumps(out, indent=2, sort_keys=True))

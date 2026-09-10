@@ -1,0 +1,23 @@
+#!/bin/bash
+# ddm_cl3 price launcher: pack + rc1 RC1H container + stage + encode TWICE + receiver decode of one
+# rung, through the LIVE rc1-coded pointer tree.  $1=rung name  $2=purpose
+set -euo pipefail
+RUNG="$1"; PURPOSE="$2"
+CL3=/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection
+cd /Users/adpena/Projects/pact
+CKPT="$CL3/rungs/$RUNG/training/model.checkpoints/qat_stage_end_epoch_0060.pt"
+test -f "$CKPT" || { echo "missing terminal checkpoint: $CKPT" >&2; exit 2; }
+mkdir -p "$CL3/rungs/$RUNG/price_launch"
+exec .venv/bin/python tools/launch_detached_process.py \
+  --output-dir "$CL3/rungs/$RUNG/price_launch" \
+  --purpose "$PURPOSE" \
+  --done-receipt "ddm_cl3_price_${RUNG}" \
+  --receipt-supersede \
+  --derive-resource-budgets \
+  --measured-peak-rss-gib 2.51 \
+  --measured-thread-need 4 \
+  --walltime-cap-s 10800 \
+  --artifact-budget-gib 2.0 \
+  --env PYTHONHASHSEED=0 --env TAC_ADMISSION_ENFORCE=1 \
+  -- .venv/bin/python experiments/ddm_cl3_rc1_rung_price.py price \
+       --rung "$RUNG" --checkpoint "$CKPT" --expected-profile cl2_shipped_ladder

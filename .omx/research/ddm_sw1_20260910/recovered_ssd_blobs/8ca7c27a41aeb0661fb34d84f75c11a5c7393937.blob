@@ -1,0 +1,83 @@
+#!/bin/bash
+# ddm_ng4 bounded CPU smoke -- ONE arm per process, each admitted by the system memory governor.
+#
+# PROJECTION DISCIPLINE (corrected 2026-09-04): ng2 measured 41.46 GiB and ng3 41.48 GiB for their
+# smokes, and both ran two B=16 updates plus an extra computation in one address space.  Two
+# different "extras" landing within 0.02 GiB of each other says the high-water is set by the ONE
+# update's forward+backward, NOT by summing arms -- so splitting the arms buys isolation, not a
+# smaller peak.  Arm 1 therefore projects the full 42 GiB (over-projecting costs wall clock;
+# under-projecting risks an OOM cascade that would kill two live 3-hour Metal cells).  Arm 2 then
+# uses arm 1's MEASURED peak_rss_bytes + 15%, because a measurement exists by then.
+set -uo pipefail
+REPO=/Users/adpena/Projects/pact
+SRC=/Volumes/VertigoDataTier/pact/ddm_ng4_continuous_objective/sealed_source_50e2cd2808
+LAUNCH=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng4_continuous_objective/smoke_launch
+SMOKE=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng4_continuous_objective/bounded_smoke
+PROJ_ARM1=42.0
+
+# HARDENING (ddm_ng4, measured 2026-09-04): the system total OSCILLATES while the live Metal cells
+# alternate between training steps and milestone evaluation -- five reads 5 s apart gave used_gib
+# 104.6 / 107.0 / 109.8 / 110.8 / 113.1 and wired 78.7-96.8 GiB.  A single-poll gate would fire on a
+# trough and then contend with two multi-hour cells re-claiming their memory.  So an admission must
+# HOLD for three consecutive reads a minute apart before an arm launches.  A transient is not a
+# window.
+wait_for_admission () {
+  local proj="$1" streak=0
+  while true; do
+    ok=$(cd "$REPO/tools" && "$REPO/.venv/bin/python" -c "
+import system_memory_governor as gov
+c = gov.live_admission_decision(projected_new_gib=$proj)
+print(('YES' if c.decision.admit else 'NO'), round(c.snapshot.used_gib, 1))
+" 2>/dev/null)
+    case "$ok" in
+      YES*) streak=$((streak+1)) ;;
+      *)    if [ "$streak" -gt 0 ]; then echo "$(date -u +%FT%TZ) streak broken at $streak ($ok)"; fi; streak=0 ;;
+    esac
+    if [ "$streak" -ge 3 ]; then
+      echo "$(date -u +%FT%TZ) ADMITTED at ${proj}GiB (held 3 consecutive polls; $ok)"; return 0
+    fi
+    sleep 60
+  done
+}
+
+run_arm () {
+  local arm="$1" receipt="$2" proj="$3"
+  wait_for_admission "$proj"
+  echo "$(date -u +%FT%TZ) LAUNCHING arm=$arm proj=${proj}GiB"
+  "$REPO/.venv/bin/python" "$REPO/tools/launch_detached_process.py" \
+    --output-dir "$LAUNCH/$arm" --cwd "$SRC" \
+    --purpose "NG4 bounded CPU smoke arm=$arm (1 update, B=16, all payloads retained)" \
+    --authority ddm_ng4 --derive-resource-budgets \
+    --measured-peak-rss-gib "$proj" --measured-thread-need 4 --walltime-cap-s 3600 \
+    --done-receipt "$receipt" \
+    -- "$SRC/.venv/bin/python" "$SRC/experiments/ddm_ng4_continuous_objective_cell.py" smoke --arm "$arm"
+  local rc=$?
+  echo "$(date -u +%FT%TZ) launcher rc=$rc arm=$arm"
+  [ $rc -ne 0 ] && return $rc
+  while [ ! -f "$REPO/.omx/tmp/codex_runs/$receipt.done" ]; do sleep 20; done
+  echo "$(date -u +%FT%TZ) ARM DONE: $arm"
+  return 0
+}
+
+run_arm control NG4_SMOKE_CONTROL_DONE.json "$PROJ_ARM1" || exit 1
+
+PROJ_ARM2=$("$REPO/.venv/bin/python" -c "
+import json
+r = json.load(open('$SMOKE/control/ARM_SMOKE_RESULT.json'))
+print(round(max(4.0, r['peak_rss_bytes'] / 2**30 * 1.15), 2))
+" 2>/dev/null) || PROJ_ARM2="$PROJ_ARM1"
+[ -z "$PROJ_ARM2" ] && PROJ_ARM2="$PROJ_ARM1"
+echo "$(date -u +%FT%TZ) arm-2 projection derived from arm 1's MEASURED peak: ${PROJ_ARM2} GiB"
+
+run_arm continuous NG4_SMOKE_CONTINUOUS_DONE.json "$PROJ_ARM2" || exit 1
+echo "$(date -u +%FT%TZ) FINALIZING"
+"$SRC/.venv/bin/python" "$SRC/experiments/ddm_ng4_continuous_objective_cell.py" smoke-finalize > \
+  /Volumes/APDataStore/pact/ddm_ng4_continuous_objective/SMOKE_FINALIZE_STDOUT.json 2>&1
+fin=$?
+echo "$(date -u +%FT%TZ) smoke-finalize rc=$fin"
+# Render the memo rows the sealing arm could not write, so the harvester pastes them instead of
+# re-deriving them from JSON.
+"$REPO/.venv/bin/python" /Volumes/APDataStore/pact/ddm_ng4_continuous_objective/render_smoke_appendix.py \
+  > /Volumes/APDataStore/pact/ddm_ng4_continuous_objective/SMOKE_APPENDIX_STDOUT.md 2>&1
+echo "$(date -u +%FT%TZ) appendix rc=$? -> $SMOKE/SMOKE_APPENDIX.md"
+echo "$(date -u +%FT%TZ) SMOKE COMPLETE rc=$fin"

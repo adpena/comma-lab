@@ -1,0 +1,27 @@
+# ql1 partial work HELD (MAIN, 2026-09-03): ep725 pin refresh without its bit-exact receipt
+The arm ddm_ql1 died (codex usage limit, resets Sep 7 06:39) after editing
+`src/tac/witness_dsl/ep725_levelset_predictor_adapter.py` (+11/−11: EP725_CANONICAL_RENDERER_SHA256 and the
+binding/receipt shas refreshed to the CURRENT renderer) and its test. 10/11 ep725 tests pass with the edit, but a
+refreshed pin is honest ONLY with a receipt proving the current renderer's output is bit-exact to the frozen oracle
+(cd1's live hypothesis; never verified by the arm). Landing it would be "agreeing with the test". The diff is retained
+here verbatim (`ql1_partial_ep725_pin_refresh_UNVERIFIED.patch`, sha below) and the working tree restored to HEAD.
+Fire trigger: a gen=2 ql1 arm (or MAIN) produces the decode receipt, then re-applies the patch or quarantines.
+807b8c70f30372915d7e0ca759e707d91d903cb01e68357780e04e7e5b0f9421  /Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/ql1_partial_ep725_pin_refresh_UNVERIFIED.patch
+
+## RESOLVED 2026-09-03 by ddm_ql1 gen 2 (commit f1f0abd27)
+The held patch was NOT re-applied. The same seven values were RE-DERIVED from first principles and
+they reproduce the patch exactly, which is why the refresh was safe to land -- agreement between two
+independent derivations, not agreement with a test.
+
+The receipt the hold demanded now exists:
+  receipts/ep725_decode_receipt_20260903.json        decoder OUTPUT bit-exact at n1 and n2
+  receipts/ep725_receipt_sha_derivation_20260903.json  the 3 moved digests re-derived, not read back
+Both decoders deterministic; shipped raw == canonical NumPy raw; camera-frame / raw-prefix / labels
+digests unchanged. Only the provenance chain moved, because predictor_renderer_sha256 is an INPUT to
+_expected_semantic_binding.
+
+Also found, which the hold could not have known: cd1's ledger named ONE drift commit; there are TWO
+(f73bfb4e8 2026-08-03 before 90d537745 2026-08-26). And the pin was masking a pytest-timeout budget
+miss that was in turn masking a real assertion in test_bounded_target_g_encoder.
+
+This patch file is now superseded and is kept only as provenance. Do not apply it.
