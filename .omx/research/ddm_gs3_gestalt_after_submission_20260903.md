@@ -1197,3 +1197,18 @@ reading is the same law as Addendum 22, not a new one.
 **The contract passed end to end on its fifth dispatch.** Between "every test green, three ratifications" and one T4 row sat eight pass-path defects, all found by real runs and none by fixtures, plus the NO-GRACE consequence: landing ffi6's completion-custody fixes made run4's intent stale, so run5 re-measured the same bytes (pr17). Cost: a few dollars of T4 time and one day of second-family adjudication; return: a contract that now provably admits a real producer, refuses every replay, and records custody at every step. The law is banked (`a_contract_pass_path_is_proven_only_by_real_dispatches_eight_doors_in_one_chain_20260910`).
 
 **The rate corner, re-derived at move 44:** cap 154,507 B at the held distortion → demand −25,899 B. gdc2's Stage A closed the categorical Cool-Chic shape at formulation scope (5.6× the zero-budget mismatch ceiling); its measured R(M) law (0.26→2.21 B/mismatch across three decades) is the door's admissible frontier: describe the token field exactly in ≤ 94,010 B. The next construction is chosen against that curve, not against gf1's transferred constant.
+
+## Addendum 26 (MAIN, 2026-09-10 ~23:05Z) — gdc2 closes the categorical distillation; the residual rate is a geometry, not a count
+
+gdc2 (`.omx/research/ddm_gdc2_categorical_coolchic_k8_distill_20260910.md`, sha 2f534b1d2ec91038…) ran the governed burn to the end: 19 full-n600 authority evaluations, exact MLX/NumPy identity, decode
+inside budget — and FORMULATION-NO-GO by 5.75× (540,681 B against the 94,010 B gate). Three facts outlast the row. (1) It is
+capacity-limited, not rate-limited: rate pressure cut the packet 35 % while mismatches moved 2.7 %, and the coder found nothing past
+zeroth-order entropy — the latents are already incompressible at this budget, so the door is not "code the latents better". (2) The
+exact-residual rate is set by error GEOMETRY: the neural decoder's scattered single-cell errors cost 1.83× what the scanline family's
+contiguous runs cost at the same mismatch count, so R(M) is family-local and gf1's constant produced three wrong numbers in one memo
+([[cross-regime constant transfer]] sharpened). (3) The frontier the door must beat is now stated at its level: describe the token
+field EXACTLY in ≤ 94,010 B, 21.6 % under the shipped 119,969 B tail, with the program's own residual priced at its own geometry.
+The gestalt reading: every construction so far (gb2, bnd2/3, tc2/3, eb2, bd1, mc1, gdc1, gdc2) pays for the surprise the coder cannot
+remove by ADDRESSING it; the only object that has ever held the rate is the born generator, whose distortion is data-anchored at
+Lane edges (md1–md4). The next design (gdc3) is chosen against the measured geometry law: it must generate contiguous, Lane-aware
+structure whose errors cluster where the residual coder is cheapest — or state, with a $0 falsifier, why it cannot.
