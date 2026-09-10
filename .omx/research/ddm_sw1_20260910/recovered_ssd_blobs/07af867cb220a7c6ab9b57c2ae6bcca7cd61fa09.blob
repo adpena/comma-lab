@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""Closed-form local quadratic forecasts for two 24-weight shared mixers.
+
+This is a pricing instrument, not a codec. No range encoder is called. The
+Newton quadratic forecast is explicitly a local approximation, NOT an entropy
+bound. Stored candidate weights count as 24 int8 bytes plus one learning-rate
+byte. Geometry and previous-value predictors update only on prior decoded bits.
+"""
+from __future__ import annotations
+
+import argparse
+from collections import defaultdict
+import hashlib
+import io
+import json
+import math
+from pathlib import Path
+import sys
+
+import numpy as np
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from experiments import ddm_rc3_shared_mixer_pricing as pricing
+from experiments import ddm_rc2_hpac_semistatic_mixing_codec as rc2
+
+
+def signed_bucket(value: int | None) -> int:
+    return 3 if value is None else (0 if value < 0 else 1 if value == 0 else 2)
+
+
+def events(rows: list[np.ndarray], depths: np.ndarray, family: str) -> tuple[np.ndarray, np.ndarray]:
+    """24 causal shared predictors, retaining their complete real-data matrix."""
+    base = rc2._AdaptiveExperts()
+    banks: list[dict] = [{} for _ in range(15)]
+    histories = defaultdict(list)
+    features, outcomes = [], []
+    group, width, sibling = -1, None, None
+    for row, depth in zip(rows, depths.tolist(), strict=True):
+        d = int(depth)
+        if len(row) != width:
+            group += 1
+            width, sibling = len(row), None
+        for pos, value in enumerate(row.tolist()):
+            h = histories[d]
+            prev, prev2 = (h[-1] if h else None), (h[-2] if len(h) > 1 else None)
+            sib = int(sibling[pos]) if sibling is not None else None
+            ps, p2s, ss = signed_bucket(prev), signed_bucket(prev2), signed_bucket(sib)
+            quart = min(3, 4 * pos // len(row))
+            node = 1
+            for bitpos, shift in enumerate(reversed(range(d))):
+                bit = (int(value) >> shift) & 1
+                keys = base.keys(d,node,bitpos,prev)
+                features_row = [rc2.stretch(p) for p in base.predictions(keys)]
+                common = [(d,node)] * 5  # shifts 3,4,6,7 plus KT counts
+                if family == 'position_sibling':
+                    extra = [(d,node,quart), (d,node,group), (d,node,pos%3),
+                             (d,node,pos%8), (d,node,ss), (d,node,signed_bucket(row[pos-1]) if pos else 3),
+                             (bitpos,node), (d,node,prev,quart), (d,node,prev,group), (d,node,sib)]
+                elif family == 'order2':
+                    extra = [(d,node,ps,p2s), (d,node,prev,p2s), (d,node,ps,prev2),
+                             (d,node,abs(prev or 0).bit_length(),abs(prev2 or 0).bit_length()),
+                             (d,node,prev,prev2), (d,node,ps), (bitpos,node,ps,p2s),
+                             (d,node,ss), (d,node,quart), (d,node,prev2)]
+                else:
+                    raise ValueError(f'unknown family {family}')
+                for j,key in enumerate(common + extra):
+                    bank = banks[j]
+                    if j == 4 or (family == 'order2' and j == 10):
+                        z,n = bank.get(key,(0,0))
+                        p = max(1,min(4095, ((2*z+1)*4096)//(2*n+2)))
+                        bank[key] = (z+int(bit == 0),n+1)
+                    else:
+                        p = bank.get(key,2048)
+                        bank[key] = rc2._updated_probability(p,bit, (3,4,6,7)[j] if j<4 else 5)
+                    features_row.append(rc2.stretch(p))
+                features_row.append(4096)  # one shared intercept, not a learned table
+                features.append(features_row)
+                outcomes.append(int(bit == 0))
+                base.update(keys,bit)
+                node = 2*node+bit
+            h.append(int(value))
+        sibling = row
+    return np.asarray(features,dtype=np.int32), np.asarray(outcomes,dtype=np.uint8)
+
+
+def npy(path: Path, array: np.ndarray) -> dict:
+    stream = io.BytesIO()
+    np.save(stream,array,allow_pickle=False)
+    return pricing.retain(path,stream.getvalue())
+
+
+def forecast(family: str, rows: list[np.ndarray], depths: np.ndarray, baseline: np.ndarray) -> dict:
+    """Solve H delta = gradient once; report exact replay separately from its forecast."""
+    x_i, y = events(rows,depths,family)
+    root = pricing.STORE / 'retained/forecast' / family
+    matrices = {'features':npy(root/'features.npy',x_i), 'outcomes':npy(root/'outcomes.npy',y)}
+    x = x_i.astype(np.float64) * (math.log(2)/4096)
+    w0 = np.zeros(24)
+    w0[:8] = baseline.astype(float)/32
+    z = x @ w0
+    p = 1/(1+np.exp(-z))
+    g = x.T @ (y-p)
+    h = x.T @ ((p*(1-p))[:,None]*x)
+    # A fixed numerical ridge of one natural-loss unit, not a fitted rate knob.
+    step = np.linalg.solve(h+np.eye(24),g)
+    quadratic_gain_B = float(g@step - 0.5*step@h@step)/(8*math.log(2))
+    w = w0+step
+    wi = np.clip(np.rint(w*32),-128,127).astype(np.int8)
+    for name,a in [('base_weights',w0),('gradient',g),('hessian',h),('newton_step',step),
+                   ('float_weights',w),('int8_weights',wi)]:
+        matrices[name] = npy(root/(name+'.npy'),a)
+    zq = x @ (wi.astype(float)/32)
+    loss0 = float(np.sum(np.logaddexp(0,z)-y*z))/(8*math.log(2))
+    lossq = float(np.sum(np.logaddexp(0,zq)-y*zq))/(8*math.log(2))
+    # Holding rc2's measured outer-container offset is a forecast assumption.
+    # It can only be confirmed by a later actual pack/container race.
+    params, framing = 25, 2
+    net = quadratic_gain_B - (params-8) - framing
+    replay_net = loss0-lossq-(params-8)-framing
+    return {'family':family, 'weights':24, 'int8_parameter_bytes':params,
+            'fp16_parameter_bytes':49, 'context_table_bytes':0, 'additional_framing_bytes':framing,
+            'local_quadratic_gain_bytes':quadratic_gain_B,
+            'predicted_coded_payload_bytes':9419-quadratic_gain_B,
+            'predicted_hpac_container_bytes':12112-net, 'predicted_net_vs_rc2_bytes':net,
+            'int8_exact_float_logloss_gain_bytes':loss0-lossq,
+            'int8_replay_net_bytes':replay_net, 'base_ideal_bytes':loss0,
+            'is_bound':False, 'prediction_kind':'closed-form one-step local Newton quadratic',
+            'admitted':net >= 150 and replay_net >= 150,
+            'gate':'both local quadratic forecast and quantized replay forecast net >=150 B; no coder yet',
+            'online_learning':'one counted learning-rate byte in design; static initialization forecast gives no credit to online learning',
+            'matrices':matrices}
+
+
+def run(resume_from: Path | None) -> dict:
+    target = pricing.STORE/'CLOSED_FORM_GATE.json'
+    if resume_from:
+        if resume_from.resolve() != target.resolve():
+            raise ValueError('resume-from must name CLOSED_FORM_GATE.json')
+        receipt=json.loads(target.read_text())
+        for r in receipt['families']:
+            for f in r['matrices'].values():
+                assert hashlib.sha256(Path(f['path']).read_bytes()).hexdigest()==f['sha256']
+        return receipt
+    e=json.loads((pricing.STORE/'ENTROPY_PRICING.json').read_text())
+    body=(pricing.STORE/'retained/source/body.ihs1').read_bytes()
+    counts=json.loads((pricing.STORE/'retained/source/layout.json').read_text())['row_counts']
+    rows,depths=rc2.unpack_rows(body,counts)
+    baseline=np.frombuffer((pricing.STORE/'retained/source/weights.i8').read_bytes(),dtype=np.int8)
+    result={'schema':'ddm_rc3_closed_form_gate.v1', 'axis':pricing.AXIS, 'score_claim':False,
+            'research_only':True, 'seed':20260909, 'source_archive_sha256':pricing.PIN,
+            'entropy_receipt':str(pricing.STORE/'ENTROPY_PRICING.json'),
+            'entropy_receipt_sha256':hashlib.sha256((pricing.STORE/'ENTROPY_PRICING.json').read_bytes()).hexdigest(),
+            'families':[forecast(f,rows,depths,baseline) for f in ('position_sibling','order2')],
+            'coder_runs_before_gate':0, 'row_count':len(rows), 'value_count':sum(counts),
+            'interpretation':'Entropy estimates and Newton fits are distinct. Neither is a rigorous bound on realized bytes. The gate selects at most two constructions for actual coding.',
+            'contexts':e['contexts'], 'script_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    pricing.save_json(target,result)
+    return result
+
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--resume-from',type=Path)
+    r=run(parser.parse_args().resume_from)
+    print(json.dumps([{k:v for k,v in f.items() if k!='matrices'} for f in r['families']],indent=2))

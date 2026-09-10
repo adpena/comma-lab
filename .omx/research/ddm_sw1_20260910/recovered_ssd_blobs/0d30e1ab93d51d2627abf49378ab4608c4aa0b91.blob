@@ -1,0 +1,5 @@
+#!/bin/bash
+# Waits for the QBR1 chain's CHAIN_DONE.json; exits 0 when it lands so the launcher's done-receipt fires.
+D=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/CHAIN_DONE.json
+until [ -s "$D" ]; do sleep 60; done
+echo "CHAIN_DONE landed $(date -u +%Y-%m-%dT%H:%M:%SZ)"

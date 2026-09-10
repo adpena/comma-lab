@@ -1,0 +1,24 @@
+#!/bin/bash
+# ddm_md1 TOP-UP: complete both cells at the extended cadence (the milestone steps 2,000 and
+# 4,000 were folded in after the first pass launched) and finish any warm steps the first pass's
+# budget truncated.  Resumable: every (step, forward) already in the JSONL is skipped.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+STORE=/Volumes/APDataStore/pact/ddm_md1_micro_macro
+COLD=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/control_native100
+WARM=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng1_warm_transition/runs/seed_20260902_warm_transition
+CFG=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/sealed_configs/seed_20260902_control_native100.json
+
+echo "=== md1 TOP-UP cold $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell cold_control_seed_20260902 --run-root "$COLD" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 1800
+echo "cold topup rc=$? $(date -u +%FT%TZ)"
+
+echo "=== md1 TOP-UP warm $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell warm_transition_seed_20260902 --run-root "$WARM" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 5400
+echo "warm topup rc=$? $(date -u +%FT%TZ)"
+echo "=== md1 TOP-UP done $(date -u +%FT%TZ) ==="

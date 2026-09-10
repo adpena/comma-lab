@@ -1,0 +1,127 @@
+# RELEASE_PLAN — PR #140 update to the fs2 bytes (PREPARED, NOTHING EXECUTED)
+
+**Nothing in this file has been run.** No push, no `gh release`, no `gh pr edit`, no comment.
+The p0 swap procedure binds: publication happens only on the operator's one-line confirm, and
+the operator writes any public prose themselves.
+
+Staging root: `/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/`
+Predecessor (fs1 packet, superseded by this one): `/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/`
+
+| Artifact | Path | SHA-256 / size |
+|---|---|---|
+| staged PR tree (40 files) | `packet/` | MANIFEST `451dd4b7…`, 39 hashed rows |
+| rebuilt archive (stage 7 output) | `evidence/rebuild/run1_archive.zip` | `a8f3a379…27bb6`, 180,023 B |
+| determinism repeat | `evidence/rebuild/run2_archive.zip` | byte-identical to run 1 |
+| clean-state repeat | `evidence/rebuild/run3_cleanstate_archive.zip` | byte-identical to run 1 |
+| evaluator report, verbatim | `report.txt` | `e9ab4206…`, 664 B |
+| packet identity report | `PACKET_REPORT_fs2.txt` | `1e4b234b…`, 4,614 B |
+| harvested auth-eval JSON | `evidence/inputs/contest_auth_eval_fs2_t4_20260904.json` | `0c8f3390…`, 51,385 B |
+| terminal compliance receipt | `evidence/compliance/pre_submission_compliance.ps2.r4.json` | 83 GREEN / 4 RED of 87 |
+| custody seal (MAIN fires) | `/Volumes/VertigoDataTier/pact/ddm_ps2_pr140_update_prep/SEAL_ps2_staged_fs2_packet_tree_contest_cuda.json` | seal sha `60b8d3db…`, `SEAL_VALID` |
+
+---
+
+## Step 0 — operator gate (BLOCKING)
+
+The operator reads §"Open reds" below, decides whether the four pq12-known reds are
+acceptable, and gives the one-line confirm. Until then, stop here.
+
+## Step 1 — put the staged tree on the PR branch
+
+```bash
+cd /Users/adpena/Projects/pact
+git checkout semantic_joint_ctxmix          # the existing PR branch
+rsync -a --delete --exclude '__pycache__' --exclude '._*' \
+    /Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/packet/ \
+    submissions/semantic_joint_ctxmix/
+git add submissions/semantic_joint_ctxmix
+git commit -m "semantic_joint_ctxmix: frame-0 selector re-selection + pose-carrier re-solve — 180,023 B, 0.14784474152757654 [contest-CUDA T4 n600]"
+```
+
+Three files change: `README.md`, `compress.py`, `inflate.py`, plus their `MANIFEST.sha256`
+rows. Nothing under `runtime/` or `cpr1/` changes. Verified by `diff -rq` against the live
+tree — the receipt is `evidence/diff/manifest.diff` and
+`evidence/diff/inflate_py_two_pin_lines.diff`.
+
+## Step 2 — push the branch
+
+```bash
+git push origin semantic_joint_ctxmix
+```
+
+## Step 3 — host the archive as a new fork release asset
+
+A **new tag** is used rather than replacing the asset on `semantic_joint_ctxmix-afr1`, so any
+link already handed out keeps resolving to the bytes it named. If ps1's `-fs1` tag was never
+created, `-fs2` is simply the second tag; if it was, `-fs2` is the third and both older links
+keep resolving.
+
+```bash
+gh release create semantic_joint_ctxmix-fs2 \
+    --repo adpena/comma_video_compression_challenge \
+    --title "semantic_joint_ctxmix fs2 archive" \
+    --notes "archive.zip — SHA-256 a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6, 180023 bytes"
+
+gh release upload semantic_joint_ctxmix-fs2 \
+    /Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence/rebuild/run1_archive.zip#archive.zip \
+    --repo adpena/comma_video_compression_challenge
+```
+
+The auto-mode classifier blocked the binary upload four times during the PR #140 posting; the
+operator's explicit instruction was required then and is required again.
+
+## Step 4 — fetchback verification (MANDATORY before the body is edited)
+
+```bash
+cd /Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/evidence
+curl -fL -o fetchback_archive.zip \
+  https://github.com/adpena/comma_video_compression_challenge/releases/download/semantic_joint_ctxmix-fs2/archive.zip
+shasum -a 256 fetchback_archive.zip
+stat -f '%z' fetchback_archive.zip
+cmp fetchback_archive.zip rebuild/run1_archive.zip && echo HOSTED_BYTES_IDENTICAL
+```
+
+Required result: `a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6`, `180023`,
+`HOSTED_BYTES_IDENTICAL`. If any of the three differs, **stop** — do not edit the PR body.
+
+## Step 5 — update the PR body
+
+The operator writes the body. `PR_BODY_DELTA.md` lists the six number/link edits and states
+what must not change. When the operator has an approved file:
+
+```bash
+gh pr edit 140 --repo commaai/comma_video_compression_challenge \
+    --body-file /path/to/operator_approved_body.md
+```
+
+Title stays `semantic_joint_ctxmix (0.148)` — 0.14784474152757654 still rounds to 0.148.
+
+## Step 6 — record
+
+Refresh the canonical frontier pointer's `submitted_pr_number_for_current_frontier`, append the
+publication row to the claims ledger, and land the publication receipt memo.
+
+---
+
+## Open reds carried into the operator decision (terminal run r4: 83 GREEN / 4 RED of 87)
+
+**All four are pq12-frozen survivors. There is no new red class, and no red is waived.**
+The three `dispatch_claim_*` reds ps1 reported are now GREEN: MAIN's canonical terminal row for
+lane `ddm_fs2_t4_carrier_resolve_20260904`, appended 2026-09-04T23:28:25Z, binds the full
+archive SHA-256 and the full runtime tree SHA-256 and carries a status the checker recognises
+(`completed_contest_cuda_exact_eval_harvested`). That is the ledger-shape cure ps1 asked for,
+landed.
+
+1. `auth_eval_raw_promotion_policy_blockers_absent` — STRUCTURAL-RECORD. The raw authority
+   emitter stamps its pre-adjudication blockers; the raw receipt is preserved.
+2. `contest_cpu_auth_eval_exists` — RECORD-WITH-REASON. No CPU score for these bytes; none
+   inherited; the prior same-lineage CPU attempt timed out at the 1,800 s inflation limit.
+3. `hosted_archive_manifest_supplied` — BLOCKED-ON-OPERATOR. Nothing is hosted yet; steps 3
+   and 4 above are what clear it.
+4. `submission_runtime_tree_matches_auth_eval` — ENUMERATED-TREE-PROVED. The evaluated tree
+   (`915d25f9…`) is the fs2 fire tree, whose `README.md` and `compress.py` are the g8v1-era
+   documents; the staged tree hashes `18041600…` (with custody files) / `963955e8…` (without).
+   Every file `inflate.sh` executes is byte-identical between the two; the difference is
+   exactly those two documents plus their MANIFEST rows. Curing the digest itself requires a
+   fresh T4 row on the final staged tree — that is what the custody seal above is for
+   (`SEAL_VALID`, ~$0.30, ~660 s). **MAIN fires it; this arm did not.**

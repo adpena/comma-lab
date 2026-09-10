@@ -1,0 +1,387 @@
+#!/usr/bin/env python3
+"""Deterministically inventory typed DDM closure assertions from 2026-07-20 onward."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+from collections import Counter
+from datetime import UTC, datetime
+from pathlib import Path
+
+START = 20260720
+END = 20260903
+SCHEMA = "ddm_rn1.closure_roster.v1"
+OUTPUT_MEMO = "ddm_rn1_n600_reopen_sweep_20260903.md"
+STATUS_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(CLOSED|REFUSED|KILLED|KILL|DEAD|FOLDED|FALSIFIED|NO[-_]GO)(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
+DATE_RE = re.compile(r"(?<!\d)(20\d{6})(?!\d)")
+N_PATTERNS = (
+    re.compile(r"(?<![A-Za-z0-9])n\s*(?:=|:)?\s*(>=|≥|<=|≤|>|<)?\s*(\d{1,4})(?!\d)", re.I),
+    re.compile(r"(?<![A-Za-z0-9])n(\d{1,4})(?!\d)", re.I),
+    re.compile(r"(?<!\d)(\d{1,4})[- ]sample(?:s)?(?![A-Za-z])", re.I),
+    re.compile(r"(?<!\d)(\d{1,4})\s+pairs?(?![A-Za-z])", re.I),
+)
+RATIO_RE = re.compile(r"(?<![\d.])((?:0|1)(?:\.\d+)?|2(?:\.0+)?)\s*(?:×|x)(?![\dA-Za-z.])", re.I)
+BAR_CONTEXT_RE = re.compile(
+    r"\b(bar|threshold|demand|budget|headroom|break[- ]even|within|need|required|target|gate)\b",
+    re.I,
+)
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def dated(path: Path) -> bool:
+    values = [int(x) for x in DATE_RE.findall(path.name)]
+    return bool(values) and START <= values[-1] <= END
+
+
+def section_bounds(lines: list[str], line_idx: int) -> tuple[int, int]:
+    start = 0
+    for idx in range(line_idx, -1, -1):
+        if lines[idx].lstrip().startswith("#"):
+            start = idx
+            break
+    end = len(lines)
+    for idx in range(line_idx + 1, len(lines)):
+        if lines[idx].lstrip().startswith("#"):
+            end = idx
+            break
+    return start, end
+
+
+def heading(lines: list[str], line_idx: int) -> str:
+    for idx in range(line_idx, -1, -1):
+        text = lines[idx].strip()
+        if text.startswith("#"):
+            return text.lstrip("# ")
+    return "DOCUMENT"
+
+
+def object_name(lines: list[str], line_idx: int) -> str:
+    text = lines[line_idx].strip()
+    if text.startswith("|"):
+        cells = [c.strip().strip("`*_ ") for c in text.strip("|").split("|")]
+        if cells and cells[0] and not set(cells[0]) <= {"-", ":"}:
+            return cells[0][:240]
+    return heading(lines, line_idx)[:240]
+
+
+def normalize_status(value: str) -> str:
+    value = value.upper().replace("_", "-")
+    return "KILL" if value == "KILLED" else value
+
+
+def asserted(line: str, status: str) -> tuple[bool, str]:
+    lower = line.lower()
+    token = status.lower().replace("_", "[-_]?")
+    negations = (
+        rf"\bnot\s+(?:a\s+)?{token}\b",
+        rf"\bnever\s+{token}\b",
+        rf"\bdoes\s+not\s+{token}\b",
+        rf"\bcannot\s+{token}\b",
+        rf"\bwithout\s+{token}\b",
+    )
+    if any(re.search(pattern, lower) for pattern in negations):
+        return False, "NEGATED_MENTION"
+    if "reopen" in lower and not any(word in lower for word in ("remains", "still", "unless", "only")):
+        return False, "REOPEN_CONTEXT"
+    if status in line or line.lstrip().startswith("|"):
+        return True, "EXPLICIT_TYPED_ASSERTION"
+    if any(
+        word in lower
+        for word in ("status", "verdict", "disposition", "scope", "therefore", "family", "instance", "formulation")
+    ):
+        return True, "LOWERCASE_ASSERTION"
+    return False, "INCIDENTAL_MENTION"
+
+
+def ns_from(text: str) -> list[str]:
+    found: list[str] = []
+    for pat_idx, pattern in enumerate(N_PATTERNS):
+        for match in pattern.finditer(text):
+            if pat_idx == 0:
+                comparator, number = match.groups()
+                item = f"n{comparator or '='}{number}"
+            else:
+                number = match.group(1)
+                item = f"n={number}"
+            if item not in found:
+                found.append(item)
+    if re.search(r"\bfull(?:[- ]population)?\s+n?600\b|\ball\s+600\b", text, re.I) and "n=600" not in found:
+        found.append("n=600")
+    return found
+
+
+def infer_scope(text: str) -> str:
+    upper = text.upper()
+    for scope in ("PARADIGM", "FAMILY", "FORMULATION", "INSTANCE"):
+        if re.search(rf"VERDICT[_ -]SCOPE\s*[:=]?\s*[^\n]{{0,30}}\b{scope}\b", upper):
+            return scope
+    for scope in ("PARADIGM", "FAMILY", "FORMULATION", "INSTANCE"):
+        if re.search(rf"\b{scope}[- ](?:SCOPE|LEVEL|ONLY)\b|\b{scope}\s+(?:CLOSE|KILL|REFUS)", upper):
+            return scope
+    return "UNSTATED-SCOPE"
+
+
+def infer_axis(text: str) -> list[str]:
+    lower = text.lower()
+    axes: list[str] = []
+    if any(x in lower for x in ("d_seg", "segnet", "seg axis", "seg-axis")):
+        axes.append("SEG")
+    if any(x in lower for x in ("d_pose", "posenet", "pose axis", "pose-axis")):
+        axes.append("POSE")
+    if any(x in lower for x in ("byte", " rate", "coder", "archive", "payload")):
+        axes.append("RATE")
+    if any(x in lower for x in ("runtime", "wall-clock", "timeout", "latency")):
+        axes.append("RUNTIME")
+    return axes or ["UNSTATED-AXIS"]
+
+
+def infer_selection(text: str, ns: list[str]) -> str:
+    lower = text.lower()
+    if "n=600" in ns or any(x in lower for x in ("full population", "all 600", "full-population")):
+        return "FULL_POPULATION"
+    if "prefix" in lower or re.search(r"pairs?\s*0\s*[-:]\s*\d+|first\s+\d+", lower):
+        return "CONTIGUOUS_PREFIX"
+    if "random" in lower and "seed" in lower:
+        return "SEEDED_RANDOM"
+    if "stratified" in lower or "evenly-strided" in lower or "evenly strided" in lower:
+        return "STRATIFIED_OR_STRIDED"
+    return "UNSTATED-SELECTION"
+
+
+def fake_mechanisms(text: str, ns: list[str], selection: str) -> list[str]:
+    lower = text.lower()
+    risks: list[str] = []
+    if any(x in lower for x in ("bug", "defect", "invalid", "instrument error", "broken")):
+        risks.append("BUG")
+    numeric = [int(m.group(1)) for n in ns if (m := re.search(r"(\d+)$", n))]
+    if numeric and max(numeric) < 120:
+        risks.append("TOY-SCALE")
+    if selection == "CONTIGUOUS_PREFIX":
+        risks.append("PREFIX")
+    if any(x in lower for x in ("config", "hyperparameter", "width", "seed", "schedule", "window")):
+        risks.append("CONFIG")
+    if any(x in lower for x in ("wrong object", "changed object", "ancestor", "proxy", "surrogate", "object mismatch")):
+        risks.append("WRONG-OBJECT")
+    if any(x in lower for x in ("attribution", "decomposition", "union", "additive", "double-count")):
+        risks.append("ATTRIBUTION")
+    if any(x in lower for x in ("stale", "expired", "old bar", "rebase", "superseded constant")):
+        risks.append("STALE-CONSTANT")
+    if any(x in lower for x in ("overfit", "same seed", "single seed", "pattern", "training set")):
+        risks.append("PATTERN-OVERFIT")
+    return risks
+
+
+def margin_evidence(lines: list[str], line_idx: int) -> list[str]:
+    out: list[str] = []
+    for idx in range(max(0, line_idx - 6), min(len(lines), line_idx + 7)):
+        text = lines[idx].strip()
+        if re.search(r"\b(bar|margin|threshold|demand|break[- ]even|headroom)\b", text, re.I):
+            out.append(f"L{idx + 1}: {text[:360]}")
+    return out[:8]
+
+
+def atomic_write(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("wb") as fh:
+        fh.write(data)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
+    parser.add_argument("--memory-index", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--near-win-output", type=Path, required=True)
+    parser.add_argument("--receipt", type=Path, required=True)
+    args = parser.parse_args()
+
+    root = args.repo.resolve()
+    corpus_files = sorted(p for p in (root / ".omx/research").glob("ddm_*.md") if dated(p) and p.name != OUTPUT_MEMO)
+    memory_index = args.memory_index.resolve()
+    if not memory_index.is_file():
+        raise FileNotFoundError(f"memory index not found: {memory_index}")
+    files = [(path, "CORPUS") for path in corpus_files] + [(memory_index, "MEMORY_INDEX")]
+    rows: list[dict[str, object]] = []
+    near_win_rows: list[dict[str, object]] = []
+    raw_candidates = 0
+    rejected = Counter()
+    for path, source_kind in files:
+        lines = path.read_text(errors="replace").splitlines()
+        digest = sha256(path)
+        source_name = str(path.relative_to(root)) if source_kind == "CORPUS" else f"memory:{path.name}"
+        for line_idx, line in enumerate(lines):
+            ratios = [float(match.group(1)) for match in RATIO_RE.finditer(line)]
+            if not ratios or not BAR_CONTEXT_RE.search(line):
+                continue
+            local = "\n".join(lines[max(0, line_idx - 5) : min(len(lines), line_idx + 6)])
+            local_lower = local.lower()
+            if any(word in local_lower for word in ("retracted", "superseded", "withdrawn", "artifact")):
+                authority = "RETRACTED_OR_SUPERSEDED_CONTEXT"
+            elif "measured" in local_lower and not any(
+                word in local_lower for word in ("projection", "projected", "inferred", "assumed", "toy-priced")
+            ):
+                authority = "MEASURED_CONTEXT"
+            elif any(word in local_lower for word in ("projection", "projected", "inferred", "assumed", "toy-priced")):
+                authority = "NON_MEASURED_CONTEXT"
+            else:
+                authority = "UNSTATED_AUTHORITY"
+            near_win_rows.append(
+                {
+                    "schema": "ddm_rn1.near_win_candidate.v1",
+                    "source": source_name,
+                    "source_kind": source_kind,
+                    "source_sha256": digest,
+                    "line": line_idx + 1,
+                    "ratios_le_2x": ratios,
+                    "authority_context": authority,
+                    "manual_adjudication_required": True,
+                    "verbatim_excerpt": line.strip()[:1000],
+                }
+            )
+        for line_idx, line in enumerate(lines):
+            matches = list(STATUS_RE.finditer(line))
+            if not matches:
+                continue
+            raw_candidates += 1
+            statuses: list[str] = []
+            evidence_classes: list[str] = []
+            for match in matches:
+                status = normalize_status(match.group(1))
+                is_asserted, evidence_class = asserted(line, match.group(0))
+                if is_asserted:
+                    if status not in statuses:
+                        statuses.append(status)
+                    if evidence_class not in evidence_classes:
+                        evidence_classes.append(evidence_class)
+                else:
+                    rejected[evidence_class] += 1
+            if not statuses:
+                continue
+            sec_start, sec_end = section_bounds(lines, line_idx)
+            section = "\n".join(lines[sec_start:sec_end])
+            local = "\n".join(lines[max(sec_start, line_idx - 12) : min(sec_end, line_idx + 13)])
+            local_ns = ns_from(local)
+            section_ns = ns_from(section)
+            if local_ns:
+                ns = local_ns
+                n_extraction = "LOCAL_25_LINES"
+            elif 0 < len(section_ns) <= 3:
+                ns = section_ns
+                n_extraction = "SECTION_SMALL_SET"
+            else:
+                ns = []
+                n_extraction = "UNSTATED_OR_AMBIGUOUS"
+            selection = infer_selection(local, ns)
+            if selection == "UNSTATED-SELECTION":
+                selection = infer_selection(section, ns)
+            margins = margin_evidence(lines, line_idx)
+            local_scope = infer_scope(local)
+            resolved_scope = local_scope if local_scope != "UNSTATED-SCOPE" else infer_scope(section)
+            local_axis = infer_axis(local)
+            resolved_axis = local_axis if local_axis != ["UNSTATED-AXIS"] else infer_axis(section)
+            rows.append(
+                {
+                    "schema": SCHEMA,
+                    "source": source_name,
+                    "source_kind": source_kind,
+                    "source_sha256": digest,
+                    "line": line_idx + 1,
+                    "object": object_name(lines, line_idx),
+                    "typed_verdicts": statuses,
+                    "assertion_evidence": evidence_classes,
+                    "verdict_scope": resolved_scope,
+                    "deciding_n": ns or ["UNSTATED-N"],
+                    "n_extraction": n_extraction,
+                    "n_status": "STATED" if ns else "UNSTATED-N",
+                    "ranking_eligible": bool(ns),
+                    "axis": resolved_axis,
+                    "selection_mode": selection,
+                    "margin_to_bar_evidence": margins or ["UNSTATED-MARGIN"],
+                    "margin_status": "STATED_OR_REFERENCED" if margins else "UNSTATED-MARGIN",
+                    "possible_ww1_mechanisms": fake_mechanisms(local + "\n" + section[:4000], ns, selection),
+                    "source_heading": heading(lines, line_idx),
+                    "verbatim_excerpt": line.strip()[:1000],
+                }
+            )
+
+    encoded = b"".join(
+        (json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n").encode() for row in rows
+    )
+    atomic_write(args.output, encoded)
+    near_win_encoded = b"".join(
+        (json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n").encode()
+        for row in near_win_rows
+    )
+    atomic_write(args.near_win_output, near_win_encoded)
+    receipt = {
+        "schema": "ddm_rn1.closure_census_receipt.v1",
+        "created_utc": datetime.now(UTC).isoformat(),
+        "repo": str(root),
+        "date_window": {"start": START, "end": END},
+        "glob": ".omx/research/ddm_*.md (top-level only)",
+        "excluded_output_memo": str(root / ".omx/research" / OUTPUT_MEMO),
+        "corpus_source_file_count": len(corpus_files),
+        "memory_source_file_count": 1,
+        "source_file_count": len(files),
+        "source_files_with_rows": len({row["source"] for row in rows}),
+        "raw_candidate_line_count": raw_candidates,
+        "asserted_row_count": len(rows),
+        "near_win_candidate_row_count": len(near_win_rows),
+        "near_win_source_file_count": len({row["source"] for row in near_win_rows}),
+        "rejected_token_counts": dict(sorted(rejected.items())),
+        "unstated_n_rows": sum(row["n_status"] == "UNSTATED-N" for row in rows),
+        "unstated_scope_rows": sum(row["verdict_scope"] == "UNSTATED-SCOPE" for row in rows),
+        "output": str(args.output),
+        "output_bytes": len(encoded),
+        "output_sha256": hashlib.sha256(encoded).hexdigest(),
+        "near_win_output": str(args.near_win_output),
+        "near_win_output_bytes": len(near_win_encoded),
+        "near_win_output_sha256": hashlib.sha256(near_win_encoded).hexdigest(),
+        "script": str(Path(__file__).resolve()),
+        "script_sha256": sha256(Path(__file__)),
+        "command": [
+            str(Path(__file__).resolve()),
+            "--repo",
+            str(root),
+            "--memory-index",
+            str(memory_index),
+            "--output",
+            str(args.output),
+            "--near-win-output",
+            str(args.near_win_output),
+            "--receipt",
+            str(args.receipt),
+        ],
+        "notes": [
+            "One row represents one source line containing one or more asserted typed closure tokens.",
+            "UNSTATED-N rows are retained but ranking_eligible=false; no denominator was inferred from absence.",
+            "possible_ww1_mechanisms are audit flags, not findings; ranked items require manual source adjudication.",
+            "Near-win rows are a recall-oriented screen for explicit <=2x ratios near bar language; every row requires manual adjudication.",
+            "The RN1 memo is excluded because it is the output of this census; including its own mutable digest would create a circular receipt.",
+        ],
+    }
+    atomic_write(args.receipt, (json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode())
+    print(json.dumps(receipt, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

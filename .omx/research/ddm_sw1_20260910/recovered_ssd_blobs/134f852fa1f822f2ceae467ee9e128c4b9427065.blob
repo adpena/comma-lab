@@ -1,0 +1,55 @@
+"""Which QBF1 parameters did the fairform objective NEVER reach?  AdamW only creates state for a
+parameter that received a gradient, so an absent state entry at step 5,000 is a receipt."""
+import json, sys, hashlib, os
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+import torch
+torch.set_num_threads(4)
+from pathlib import Path
+from experiments import ddm_qbt1_qbflow_trainer as qbt
+
+OUT = Path("/Volumes/APDataStore/pact/ddm_md1_micro_macro/DEAD_PARAMETERS.json")
+CELLS = {
+ "cold_control_seed_20260902": "/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/control_native100",
+ "cold_control_seed_20260903": "/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260903/control_native100",
+ "cold_treatment_seed_20260902": "/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/treatment_zero_native",
+}
+INIT = Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/initialized/qbr1_from_r10_ema_state.pt")
+model = qbt.load_initial_model(torch.device("cpu"))
+names = [n for n, _ in model.named_parameters()]
+init = torch.load(INIT, map_location="cpu", weights_only=False)["state_dict"]
+rows = {}
+for cell, root in CELLS.items():
+    path = Path(root) / "stage_01_fairform_finish/checkpoints/stage_01_end.pt"
+    if not path.is_file():
+        continue
+    p = torch.load(path, map_location="cpu", weights_only=False)
+    st = p["optimizer_state_dict"]["state"]
+    order = p["optimizer_state_dict"]["param_groups"][0]["params"]
+    absent = [n for i, n in zip(order, names) if i not in st]
+    end = p["live_state_dict"]
+    deltas = {n: float((end[n].float() - init[n].float()).abs().max()) for n in names}
+    rows[cell] = {
+        "completed_steps": int(p["completed_steps"]),
+        "params_without_adamw_state": absent,
+        "roles_without_adamw_state": sorted({qbt.state_tensor_role(n) for n in absent}),
+        "max_abs_delta_over_the_whole_run": {n: deltas[n] for n in absent},
+        "max_abs_delta_over_all_moved_params": max(v for n, v in deltas.items() if n not in absent),
+        "dead_param_count": sum(int(model.state_dict()[n].numel()) for n in absent),
+        "total_param_count": int(sum(x.numel() for x in model.parameters())),
+        "checkpoint_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+receipt = {
+ "schema": "ddm_md1_dead_parameters.v1",
+ "axis": "[macOS-CPU advisory; retained checkpoint state inspection; not contest authority]",
+ "score_claim": False,
+ "mechanism": (
+   "fairform_objective scores pose from PoseNet's forward on the RENDERED camera "
+   "(ddm_qbt1_qbflow_trainer.scorer_forward:533), never from the model's own pose12 head "
+   "(QBFLOWTorch.forward:402 returns pose12 and the objective ignores it), so params.pose_* "
+   "receive no gradient and AdamW never allocates state for them."
+ ),
+ "cells": rows,
+ "metal_invocations": 0, "modal_invocations": 0, "contest_eval_invocations": 0,
+}
+tmp = OUT.with_suffix(".json.tmp"); tmp.write_text(json.dumps(receipt, indent=2, sort_keys=True)); os.replace(tmp, OUT)
+print(json.dumps(receipt, indent=2, sort_keys=True))

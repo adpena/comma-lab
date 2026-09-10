@@ -1,0 +1,29 @@
+#!/bin/bash
+# ddm_ane1 -- replay pr1's 39-point selector sweep on the ANE screening backend.
+# The 39 pairs are pr1 §12.1's ratio>1.01 set, read off
+# /Volumes/APDataStore/pact/ddm_pr1_pose_resolve/retained/selector_sweep_base_shipped_n600.json
+# (base sweep: 600 pairs, 1363.37 s => 2.2723 s/pair on cpu_torch).
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+PAIRS="5 33 70 71 77 85 95 161 173 175 185 186 198 221 259 262 279 289 340 372 381 382 405 417 419 436 450 479 488 504 514 518 541 542 547 555 582 585 586"
+MODE="${1:-validate}"   # validate = confirm all 8 modes; screen = 2 confirms
+EXTRA=""
+LABEL="ane1_selector_replay_screen39"
+if [ "$MODE" = "validate" ]; then EXTRA="--confirm-all-modes"; LABEL="ane1_selector_replay_validate39"; fi
+if [ "$MODE" = "cpu" ]; then LABEL="ane1_selector_replay_cpu39"; fi
+BACKEND=ane_fp16_screen
+PKG_ARG=(--pose-mlpackage "$OUT/mlpackages/posenet_b1_fp16.mlpackage")
+if [ "$MODE" = "cpu" ]; then BACKEND=cpu_torch; PKG_ARG=(); fi
+PYTHONPATH=src .venv_executorch_spike/bin/python -u \
+  experiments/ddm_pr1_pose_resolve_on_renderer_change.py selector \
+  --runtime "$STORE/runtime_afr1" \
+  --gt-cache /Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt \
+  --renderer /Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/archive.zip \
+  --tokens /Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8 \
+  --pairs-list $PAIRS \
+  --threads 4 --label "$LABEL" \
+  --scorer-backend "$BACKEND" "${PKG_ARG[@]}" $EXTRA \
+  --out "$OUT/replay/${LABEL}.json"
+echo ANE1_REPLAY_DONE_"$MODE"

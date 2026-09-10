@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+for _ in $(seq 1 900); do
+  [ -f "$OUT/replay/ane2_selector_replay_coreml_cpu_fp32_validate39.json" ] && break
+  sleep 10
+done
+sleep 5
+exec bash "$OUT/run_stage5.sh"

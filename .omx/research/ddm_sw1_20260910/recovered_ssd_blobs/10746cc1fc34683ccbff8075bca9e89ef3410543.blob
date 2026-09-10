@@ -1,0 +1,7 @@
+# Aborted: ddm_cl3 lambda_2p0, third attempt — memory-pressure TRIPWIRE fired
+
+Launched 2026-09-05T16:18:0xZ (counter 909, supervisor 26900, trainer 26914) on MAIN's 16:29Z
+"proceed on Metal now" directive, with MAIN's rule armed: SIGTERM the trainer if a
+memory_pressure WARN or CRITICAL fires while it runs.  It fired at 16:19:22 / 16:19:27 /
+16:19:33Z and my tripwire SIGTERMed the trainer at 16:19:43Z, ~100 s in, at epoch 0.
+This is the rule working as written, not a failure.

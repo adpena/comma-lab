@@ -1,0 +1,64 @@
+"""Derive the refreshed receipt_sha256 values INDEPENDENTLY of any pinned literal.
+
+Inputs are (a) the MEASURED decode outputs from ep725_decode_receipt_20260903.json and
+(b) module constants that did not drift (archive/member/runtime shas + byte counts +
+schema + truth-flag defaults).  The receipt sha is sha256(canonical_json(as_dict())),
+so this reconstructs it from first principles and never reads _FROZEN_BOUNDED_OUTPUTS.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+
+from tac.witness_dsl import ep725_levelset_predictor_adapter as A  # noqa: E402
+
+measured = json.load(
+    open("/Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt_20260903.json")
+)
+live_renderer = measured["live_renderer_sha256"]
+
+derived: dict[str, object] = {"live_renderer_sha256": live_renderer}
+for key, pair_count in (("n1", 1), ("n2", 2)):
+    block = measured["per_pair"][key]
+    out = block["DECODER_OUTPUT_vs_frozen"]
+    prov = block["PROVENANCE_DERIVED_vs_frozen"]
+    as_dict = {
+        "candidate_claim": False,
+        "canonical_renderer_sha256": live_renderer,
+        "chronological_camera_frame_sha256": list(out["chronological_camera_frame_sha256"]["observed"]),
+        "chronological_raw_prefix_bytes": block["raw_prefix_bytes"],
+        "chronological_raw_prefix_sha256": out["chronological_raw_prefix_sha256"]["observed"],
+        "counted_predictor_bytes": block["counted_predictor_bytes"],
+        "decoder_labels_origin": A._DECODER_LABELS_ORIGIN,
+        "dense_frames_persisted": False,
+        "deterministic_double_decode": True,
+        "labels_sha256": out["labels_sha256"]["observed"],
+        "member_is_counted_p": True,
+        "predictor_semantic_binding_sha256": prov["predictor_semantic_binding_sha256"]["observed"],
+        "predictor_state_binding_sha256": prov["predictor_state_binding_sha256"]["observed"],
+        "promotion_eligible": False,
+        "research_only": True,
+        "schema": A.EP725_BOUNDED_RECEIPT_SCHEMA,
+        "score_claim": False,
+        "scorer_invoked": False,
+        "shipped_numpy_raw_bit_exact": True,
+        "source_archive_bytes": A.EP725_ARCHIVE_BYTES,
+        "source_archive_sha256": A.EP725_ARCHIVE_SHA256,
+        "source_member_sha256": A.EP725_MEMBER_SHA256,
+        "source_pair_ids": list(range(pair_count)),
+        "source_runtime_sha256": A.EP725_RUNTIME_SHA256,
+        "source_zip_wrapper_is_counted_p": False,
+        "transport_kind": "NONE",
+    }
+    derived[key] = {
+        "derived_receipt_sha256": A._sha256(A._canonical_json(as_dict)),
+        "frozen_receipt_sha256_in_repo": A._FROZEN_BOUNDED_OUTPUTS[tuple(range(pair_count))]["receipt_sha256"],
+    }
+    derived[key]["frozen_matches_derived"] = (
+        derived[key]["derived_receipt_sha256"] == derived[key]["frozen_receipt_sha256_in_repo"]
+    )
+
+print(json.dumps(derived, indent=2, sort_keys=True))
