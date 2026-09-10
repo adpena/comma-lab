@@ -525,7 +525,46 @@ carry **−27.71 B (ΔS −1.845e-05)** with them — just under the 2e-5 bar on
 follow-on rather than a candidate, but it is a measured, addressed, 81-token target rather
 than a guess.
 
-## 16. State on hand-off, and what it would cost to finish
+## 16. Move 38 landed under the candidate — the race, and the composition target
+
+sj1's pass-5 subset became **pointer move 38: exact S 0.1378902937630636 @ 180,436 B, sha
+`eae99e00…`**. Decomposed against move 37: **−2.70063e-05 on +48 B**, i.e. a **−5.89675e-05
+seg leg** paid for with **+3.19612e-05 of rate** (pose declared unchanged).
+
+Move 38 and this candidate are **alternative children of move 37, not a chain**: sj1 spent
+48 bytes to buy seg, this arm spent zero seg to buy 202 bytes and a better pose. Re-derived
+at the new base:
+
+| | vs move 37 | vs move 38 |
+|---|---|---|
+| this candidate (projected 0.13766654648761660) | −2.507535e-04 | **−2.237473e-04 = 11.2× the bar** |
+
+This arm's candidate is on T4 as `fc-01M24F980TS3S60D0QTAQX2TR0`. **MAIN names the base after
+the harvest; nothing pointer-bound runs here until it does.**
+
+**⚠ The seal's own bar is now stale by construction and that is correct.** It anchors to
+pointer `670d38d0…` with `pointer_tolerance_abs: 0.0` and
+`require_pointer_archive_identity: true`, so re-validating it today REFUSES. That refusal is
+the apparatus working: the seal is a receipt of a *move-37-base* measurement, and its ΔS is
+unanchored against any other baseline. The move-38 comparison above is arithmetic on two
+published exact rows, not a re-validation of the seal.
+
+**The composition target, stated as a PREDICTION so it can be falsified.** The two edits are
+disjoint at the cell level (0 collisions) and 94 % disjoint at the pair level (13 of 253
+overlap), so if the tails added the composed row would be:
+
+> **0.1376395402 @ 180,234 B** — move 37, plus this arm's −2.507535e-04, plus sj1's
+> −2.70063e-05.
+
+It will not add exactly: the composed tail re-prices under the adaptive coder, and this arm's
+own measurement is that a coder's per-position prices do not sum (realized/modelled 0.1445).
+The number is here to be beaten or missed, not to be quoted.
+
+Canonical equation governing that non-additivity: **`rate_directed_predistortion_yield_v1`**
+(`tac.canonical_equations`), anchor `ddm_rp1_realized_over_first_order_n600_20260909`,
+predicted 219.66 B vs empirical 32.0 B, residual 187.66.
+
+## 17. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -553,6 +592,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 17. Frontier line
+## 18. Frontier line
 
-`cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
+`sj1 pass 5 S 0.1378902937630636 @ 180,436 B [contest-CUDA T4 n600]` (move 38)
