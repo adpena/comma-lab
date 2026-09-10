@@ -89,23 +89,39 @@ _ACTIVE: dict[str, Any] = {"tree": POINTER_TREE, "sha": POINTER_ARCHIVE_SHA256,
                            "carrier_bytes": CARRIER_BYTES}
 
 
-def set_active_pointer(tree: str | None, sha: str | None, carrier: int | None) -> None:
+def set_active_pointer(
+    tree: str | None,
+    sha: str | None,
+    carrier: int | None,
+    rationale: str | None = None,
+) -> None:
     if tree:
         _ACTIVE["tree"] = Path(tree)
     if sha:
         _ACTIVE["sha"] = sha
     if carrier:
         _ACTIVE["carrier_bytes"] = int(carrier)
+    _ACTIVE["rationale"] = rationale
 
 
 def assert_pointer_and_carrier() -> dict[str, Any]:
     """Refuse unless the live pointer is the tree this module solves against."""
     live = rp1.verify_pointer(expect_sha=_ACTIVE["sha"])
+    divergence = None
     if not live["matches_expected"]:
-        raise rp1.Rp1Error(
-            f"pointer moved: file says {live['archive_sha256']}, this run is pinned to "
-            f"{_ACTIVE['sha']}; re-base before solving a carrier"
-        )
+        # A retracted pointer row leaves the FILE and the SUBMITTABLE base disagreeing.
+        # Allowed, never silent: the reason is required and is recorded on every receipt.
+        if not _ACTIVE.get("rationale"):
+            raise rp1.Rp1Error(
+                f"pointer file says {live['archive_sha256']}, this run is pinned to "
+                f"{_ACTIVE['sha']}; pass --submittable-base-rationale or re-base"
+            )
+        divergence = {
+            "pointer_file_lane": live["lane_id"],
+            "pointer_file_sha256": live["archive_sha256"],
+            "submittable_base_sha256": _ACTIVE["sha"],
+            "rationale": _ACTIVE["rationale"],
+        }
     sections = jg2.split_member(
         jg2.read_archive_member(_ACTIVE["tree"] / "archive.zip")
     )
@@ -117,6 +133,7 @@ def assert_pointer_and_carrier() -> dict[str, Any]:
         )
     return {
         "pointer": live,
+        "submittable_base_divergence": divergence,
         "carrier_bytes": len(sections["carrier"]),
         "tail_bytes": len(sections["tail"]),
         "semantic_bytes": len(sections["semantic"]),
@@ -413,6 +430,7 @@ def main(argv: list[str] | None = None) -> int:
         getattr(args, "pointer_tree", None),
         getattr(args, "expect_pointer_sha", None),
         getattr(args, "carrier_bytes", None),
+        getattr(args, "submittable_base_rationale", None),
     )
     return int(args.func(args))
 

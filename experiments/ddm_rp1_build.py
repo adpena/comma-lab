@@ -100,8 +100,26 @@ def cmd_stage(args: argparse.Namespace) -> int:
     pointer = Path(args.pointer_runtime)
     expect = args.expect_pointer_sha or rp1pose.POINTER_ARCHIVE_SHA256
     live = rp1.verify_pointer(expect_sha=expect)
+    divergence = None
     if not live["matches_expected"]:
-        raise rp1.Rp1Error(f"pointer moved to {live['archive_sha256']}; re-base first")
+        # The pointer FILE and the SUBMITTABLE base can legitimately differ -- move 41 was
+        # retracted for a rule-118 compliance defect while still sitting in the file.  That
+        # is a real state, so it is allowed; what is NOT allowed is proceeding silently.
+        # The rationale is required, is recorded in the stage receipt, and travels into the
+        # seal, so a reader can never mistake this for a stale pin nobody noticed.
+        if not args.submittable_base_rationale:
+            raise rp1.Rp1Error(
+                f"the pointer file reads {live['archive_sha256']} but this stage targets "
+                f"{expect}; pass --submittable-base-rationale to record WHY the "
+                "submittable base differs, or re-base"
+            )
+        divergence = {
+            "pointer_file_lane": live["lane_id"],
+            "pointer_file_sha256": live["archive_sha256"],
+            "pointer_file_score": live["score"],
+            "submittable_base_sha256": expect,
+            "rationale": args.submittable_base_rationale,
+        }
     pointer_bytes = (pointer / "archive.zip").read_bytes()
     pointer_sha = sha256_bytes(pointer_bytes)
     if pointer_sha != expect:
@@ -165,6 +183,7 @@ def cmd_stage(args: argparse.Namespace) -> int:
         "pointer_runtime": str(pointer),
         "pointer_archive_sha256": pointer_sha,
         "pointer_archive_bytes": len(pointer_bytes),
+        "submittable_base_divergence": divergence,
         "null_build": {
             "member_sha256": null_sha,
             "reproduces_pointer_member": True,
@@ -293,6 +312,12 @@ def build_parser() -> argparse.ArgumentParser:
     stage.add_argument("--candidate-body", required=True)
     stage.add_argument("--out-dir", required=True)
     stage.add_argument("--expect-pointer-sha", default=None)
+    stage.add_argument(
+        "--submittable-base-rationale",
+        default=None,
+        help="required when the pointer file and the target base differ; recorded in the "
+        "stage receipt and carried into the seal",
+    )
     stage.set_defaults(func=cmd_stage)
 
     close = sub.add_parser("close")
