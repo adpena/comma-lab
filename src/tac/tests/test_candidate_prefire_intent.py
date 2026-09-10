@@ -1362,3 +1362,31 @@ def test_run3_retained_provenance_projection_and_terminal_refusal(tmp_path):
     with pytest.raises(cs.PrefireRefusal, match="FIRST_MEASUREMENT_RESULT_REFUSED"):
         cs._pf_completion_facts(intent, auth, retained / "MODAL_REMOTE_RESULT.json", repo=repo)
     assert cs.prefire_file_reference(provenance_path) == before
+
+
+def test_completed_seal_anchor_mirror_lifts_quarantine_only_with_a_valid_seal(tmp_path, monkeypatch):
+    """rlc5 → move 44 (2026-09-10): a completed candidate_seal.v3 must reach experiments/results as an anchor
+    mirror, and a receipt still carrying its quarantine keys must be refused by the poller's builder."""
+    import importlib.util, json
+    from pathlib import Path as _P
+    spec = importlib.util.spec_from_file_location("wcsam", _P("tools/write_completed_seal_anchor_mirror.py"))
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    poller = tool._load_poller()
+    receipt = tmp_path / "MODAL_REMOTE_RESULT.json"
+    result = {"prefire_intent_sha256": "x" * 64, "score_recomputed_from_components": 0.137, "expected_archive_sha256": "a" * 64,
+              "expected_archive_size_bytes": 1, "gpu_model": "Tesla T4", "score_axis": "contest_cuda", "n_samples": 600}
+    receipt.write_text(json.dumps(result))
+    payload, blocker = poller.build_anchor_mirror(json.loads(receipt.read_text()), lane_id="l", source_receipt=receipt)
+    assert payload is None and "quarantined" in blocker
+    lifted = json.loads(receipt.read_text())
+    for key in tool.QUARANTINE_KEYS:
+        lifted.pop(key, None)
+    payload, blocker = poller.build_anchor_mirror(lifted, lane_id="l", source_receipt=receipt)
+    assert blocker is None and payload["score"] == 0.137 and payload["archive_sha256"] == "a" * 64
+    bad_seal = tmp_path / "seal.json"
+    bad_seal.write_text(json.dumps({"schema": "candidate_seal.v2"}))
+    monkeypatch.setattr("tac.candidate_seal.validate_seal", lambda *a, **k: {"ok": False, "problems": ["nope"]})
+    import pytest as _pytest
+    with _pytest.raises(SystemExit):
+        tool.completed_seal_result(bad_seal)
