@@ -1,17 +1,22 @@
 #!/usr/bin/env python
-"""Quiesced decode timing: run a timing producer under a measured concurrency sampler,
-assemble the local receipt, write the calibration, and build the decode_wall_clock leg.
+"""Quiesced decode timing: run a timing producer under a measured concurrency sampler whose
+admission rule is FROZEN AND HASHED BEFORE the producer starts, assemble the local receipt
+under that same rule (the assembler cannot override it), write the calibration, and build the
+decode_wall_clock leg.
 
 Subcommands (each writes one JSON and prints its path):
-  run        launch the producer command; writes CONCURRENCY.json + producer stdout
-  assemble   producer receipt + CONCURRENCY.json -> decode_wall_clock.local.v1 receipt
-  calibrate  local receipt + T4 receipt -> decode_wall_clock.calibration.v1
+  run        launch the producer command; writes CONCURRENCY.json (rule, hash, freeze time,
+             producer start time, every sample, paused-process custody) + producer stdout
+  assemble   producer receipt + CONCURRENCY.json -> decode_wall_clock.local.v1 receipt; the rule
+             is copied from CONCURRENCY.json and its hash verified; stage checkpoints optional
+             and diagnostic only
+  calibrate  quiesced local receipt + T4 receipt -> decode_wall_clock.calibration.v1
   leg        local + calibration (+ candidate T4 receipt) -> validated measured leg,
              optionally copied as the sidecar beside a seal
 
-The rule that decides "competing" lives in tac.decode_timing_concurrency and is recorded in
-every receipt. Nothing here retypes a timing number: wall seconds come from the producer,
-T4 seconds from the Modal receipt, digests from the runtime on disk.
+The rule lives in tac.decode_timing_concurrency (ddm_pr10's replacement, 2026-09-10). Nothing
+here retypes a timing number: wall seconds come from the producer, T4 seconds from the Modal
+receipt, digests from the runtime on disk.
 """
 
 from __future__ import annotations
@@ -50,7 +55,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     out = Path(args.out_dir).resolve()
     extra = {} if args.aggregate_cap_pcpu is None else {"aggregate_cap_pcpu": args.aggregate_cap_pcpu}
     rule = ConcurrencyRule(threshold_pcpu=args.threshold_pcpu, visible_pcpu=args.visible_pcpu,
-                           ancestor_cap_pcpu=args.ancestor_cap_pcpu, interval_seconds=args.interval_seconds, **extra)
+                           ancestor_cap_pcpu=args.ancestor_cap_pcpu, interval_seconds=args.interval_seconds,
+                           settle_quiet_samples=args.settle_quiet_samples, **extra)
+    frozen = out / "ADMISSION_RULE.json"
+    _save(frozen, {**rule.frozen(), "sha256": rule.sha256()})
     command = shlex.split(args.producer)
     env = dict(os.environ)
     for item in args.env:
@@ -64,7 +72,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     summary["producer_returncode"] = code
     _save(out / "CONCURRENCY.json", summary)
     print(f"producer rc={code} competing_process_count={summary['competing_process_count']} "
-          f"quiesced={summary['quiesced']} samples={summary['sample_count']}")
+          f"quiesced={summary['quiesced']} samples={summary['sample_count']} rule_sha256={rule.sha256()[:16]}")
     return 0 if code == 0 else 3
 
 
@@ -73,15 +81,14 @@ def cmd_assemble(args: argparse.Namespace) -> int:
     concurrency_path = Path(args.concurrency).resolve()
     doc = assemble_local_receipt(json.loads(producer_path.read_text()), json.loads(concurrency_path.read_text()),
                                  producer_receipt_path=producer_path, concurrency_receipt_path=concurrency_path,
-                                 stage_checkpoint_dir=Path(args.stage_checkpoints) if args.stage_checkpoints else None,
-                                 rule=ConcurrencyRule(threshold_pcpu=args.threshold_pcpu, impact_tolerance=args.impact_tolerance,
-                                                      stage_tolerance=args.stage_tolerance))
+                                 stage_checkpoint_dir=Path(args.stage_checkpoints) if args.stage_checkpoints else None)
     _save(Path(args.out), doc)
     block = doc["concurrency"]
+    diag = block.get("stage_diagnostics", {})
     print(f"margin_time_basis={doc['margin_time_basis']} wall_seconds={doc['wall_seconds']} "
           f"frames={len(doc['frames'])} competing={block['competing_process_count']} "
-          f"pcpu_competing={block.get('pcpu_competing_process_count')} "
-          f"stage_max_deviation={block.get('stage_rates', {}).get('max_deviation')}")
+          f"rule_sha256={block['admission_rule_sha256'][:16]} "
+          f"stage_excess_fraction={diag.get('excess_fraction_of_wall')} samples_with_competition={block['samples_with_competition'][:6]}")
     return 0
 
 
@@ -89,7 +96,7 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     doc = write_calibration(name=args.name, local_receipt_path=Path(args.local), t4_receipt_path=Path(args.t4_receipt))
     _save(Path(args.out), doc)
     print(f"cpu_to_t4_ratio={doc['cpu_to_t4_ratio']} local_600_seconds={doc['local_600_seconds']} "
-          f"measured_t4_seconds={doc['measured_t4_seconds']}")
+          f"measured_t4_seconds={doc['measured_t4_seconds']} rule_sha256={doc['admission_rule_sha256'][:16]}")
     return 0
 
 
@@ -118,33 +125,32 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
 
-    run = sub.add_parser("run", help="run a producer under the concurrency sampler")
+    run = sub.add_parser("run", help="run a producer under the concurrency sampler (rule frozen before launch)")
     run.add_argument("--producer", required=True, help="producer argv as one shell-quoted string")
     run.add_argument("--cwd", default=str(REPO))
     run.add_argument("--out-dir", required=True)
     run.add_argument("--env", action="append", default=[], help="KEY=VALUE for the producer (repeatable)")
-    run.add_argument("--pause-pid", action="append", type=int, default=[], help="SIGSTOP this pid for the window")
-    run.add_argument("--settle-seconds", type=float, default=600.0)
+    run.add_argument("--pause-pid", action="append", type=int, default=[],
+                     help="SIGSTOP this pid for the window (identity + transition custody recorded)")
+    run.add_argument("--settle-seconds", type=float, default=900.0)
     run.add_argument("--timeout-seconds", type=float, default=3000.0)
     run.add_argument("--interval-seconds", type=float, default=20.0)
-    run.add_argument("--threshold-pcpu", type=float, default=100.0, help="sampling-time competitor threshold; the verdict re-derives from the >= 5 %% visible list")
+    run.add_argument("--settle-quiet-samples", type=int, default=3, help="consecutive quiet samples before launch")
+    run.add_argument("--threshold-pcpu", type=float, default=25.0, help="a quarter core; whole non-settle window")
     run.add_argument("--visible-pcpu", type=float, default=5.0)
-    run.add_argument("--ancestor-cap-pcpu", type=float, default=100.0)
-    run.add_argument("--aggregate-cap-pcpu", type=float, default=None, help="default 100*(ncpu-4)/2")
+    run.add_argument("--ancestor-cap-pcpu", type=float, default=25.0)
+    run.add_argument("--aggregate-cap-pcpu", type=float, default=None, help="default 100*(P-cores-4)")
     run.set_defaults(func=cmd_run)
 
-    assemble = sub.add_parser("assemble", help="producer receipt + CONCURRENCY.json -> local.v1 receipt")
+    assemble = sub.add_parser("assemble", help="producer receipt + CONCURRENCY.json -> local.v1 receipt (frozen rule)")
     assemble.add_argument("--producer-receipt", required=True)
     assemble.add_argument("--concurrency", required=True)
     assemble.add_argument("--out", required=True)
     assemble.add_argument("--stage-checkpoints", default=None,
-                          help="producer's frame_checkpoints dir (stage_NNNN.npz); enables the impact-weighted count")
-    assemble.add_argument("--stage-tolerance", type=float, default=0.05, help="per-stage slowdown vs median that is LISTED")
-    assemble.add_argument("--impact-tolerance", type=float, default=0.01, help="total stage excess / wall that REFUSES")
-    assemble.add_argument("--threshold-pcpu", type=float, default=100.0, help="competing %%CPU outside the instrumented stages")
+                          help="producer's frame_checkpoints dir (stage_NNNN.npz); diagnostics only")
     assemble.set_defaults(func=cmd_assemble)
 
-    calibrate = sub.add_parser("calibrate", help="local receipt + T4 receipt -> calibration.v1")
+    calibrate = sub.add_parser("calibrate", help="quiesced local receipt + T4 receipt -> calibration.v1")
     calibrate.add_argument("--name", required=True)
     calibrate.add_argument("--local", required=True)
     calibrate.add_argument("--t4-receipt", required=True)

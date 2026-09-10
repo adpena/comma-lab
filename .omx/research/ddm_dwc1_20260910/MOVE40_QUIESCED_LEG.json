@@ -1,6 +1,6 @@
 {
   "schema": "ddm_dwc1.consumer_order.v1",
-  "disposition": "FIRED",
+  "disposition": "FOLDED-PENDING-RERUN",
   "owner": "MAIN",
   "consumer_store": ".omx/research/ddm_dwc1_20260910/MOVE40_QUIESCED_LEG.json",
   "consumes": [
@@ -55,5 +55,10 @@
   },
   "inheritance_proof": "inherit_decode_wall_clock(source_leg=sidecar, runtime_dir=move 40 candidate_runtime, pointer_archive_sha256=986d536b...) -> mode inherited, projected 990.054 s, validate problems []. rp1's round-2 seal (receiver identical except archive.zip + the two pins) inherits this leg.",
   "rlc1_next": "rlc1's cured receiver cannot inherit (different receiver code); its own quiesced timing via tools/quiesced_decode_timing.py run + assemble --stage-checkpoints, projected = local_600 x 1.2420 <= 1,260 s; needs MANIFEST.sha256 refresh (pr9 condition 1) and one twin raw moved off the 8 GiB store first.",
-  "score_claim": false
+  "score_claim": false,
+  "pr10_verdict": {
+    "verdict": "RERUN-REQUIRED",
+    "memo": ".omx/research/ddm_pr10_second_family_review_quiesced_timing_rule_20260910.md",
+    "consequence": "the quiesced/ratio lineage of attempts 1-2 is REFUSED as calibration authority (rule fixed after the runs; self-median hides a uniform pace shift; 38 % of wall uninstrumented); the direct T4 fact 990.053829427 s stands. Replacement rule adopted verbatim in src/tac/decode_timing_concurrency.py v2 (frozen+hashed before launch, 25 % whole-window incl. ancestors, aggregate 100x(P-4)=200, stage rates diagnostic only, 3 consecutive quiet settle samples, paused-process custody). Move 40's base and rlc1's candidate are re-measured under that frozen rule; the sidecar is replaced when the new base passes; no arm inherits the old sidecar (rp1 gated)."
+  }
 }
