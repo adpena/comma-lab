@@ -1,0 +1,36 @@
+{
+  "schema": "ddm_gdc1_validation.v1",
+  "source_checks": {
+    "ruff": "PASS",
+    "focused_pytest": "6 passed",
+    "git_diff_check": "PASS",
+    "python_review_passes_required_before_serializer": 2,
+    "python_review_passes_completed": 2,
+    "review_tracker_status": "32/32 entities reviewed across source and focused test"
+  },
+  "measurement_checks": {
+    "full_population_pairs": 600,
+    "full_population_cells": 117964800,
+    "candidate_points": 6,
+    "all_fit_render_equals_receiver_render": true,
+    "all_coder_repeats_equal": true,
+    "winning_residual_exact_target_closure": true,
+    "retained_manifest_entries": 167,
+    "retained_manifest_bytes": 1648591638,
+    "independent_manifest_rehash": "PASS",
+    "terminal_resume_manifest_verification": "PASS",
+    "terminal_resume_scientific_replay_points": 6,
+    "terminal_resume_scientific_replay": "PASS"
+  },
+  "launch_notes": [
+    "nice -n 10 reported setpriority Operation not permitted; the process continued at inherited priority",
+    "the first terminal-resume attempt refused because free space had fallen below the fresh-launch threshold",
+    "the second terminal-resume attempt exposed a changing resume-timing receipt and was refused before mutating retained authority",
+    "the final runner distinguishes a no-allocation terminal verification from a fresh launch and replays all six packet renders plus exact residual closure"
+  ],
+  "authority": {
+    "axis": "[macOS-CPU scorer-free exact-field measurement, n600]",
+    "score_claim": false,
+    "not_measured": ["d_seg", "d_pose", "archive.zip candidate", "contest-CPU", "contest-CUDA"]
+  }
+}

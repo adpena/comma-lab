@@ -1,0 +1,60 @@
+{
+  "schema": "ddm_gdc1_repo_result_receipt.v1",
+  "axis": "[macOS-CPU scorer-free exact-field measurement, n600]",
+  "score_claim": false,
+  "verdict": "FORMULATION-NO-GO",
+  "verdict_scope": "exact-DP ordered scanline transition program at K=4,6,8,12,16,24",
+  "target_field": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/retained/fields/pass6.u8",
+    "bytes": 117964800,
+    "sha256": "78e57545439515eb29f806cc5a5f7d8b14acf658955cdd7561debb4edf3b7db6"
+  },
+  "retained_result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gdc1_generator_door/scanline_v1/RESULT.json",
+    "bytes": 40545,
+    "sha256": "3c249f8f794972dea295f6d6e5b97983375fcc2f09ff0cbad0c31d2a470593ce"
+  },
+  "retained_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_gdc1_generator_door/scanline_v1/MANIFEST.json",
+    "bytes": 40042,
+    "sha256": "deead883ec32c75f228960ac8a598b10709b5499d5528576d034bc69cc582e88",
+    "entries": 167,
+    "declared_bytes": 1648591638,
+    "independently_verified": true
+  },
+  "bar": {
+    "held_distortion": 0.01711995387438173,
+    "rate_per_byte": 6.658589531221714e-07,
+    "sub012_real_archive_cap": 154507.26560515573,
+    "sub012_strict_integer_archive_cap": 154507,
+    "current_archive_bytes": 180466,
+    "current_tail_envelope_bytes": 119969,
+    "fixed_nontail_bytes": 60497,
+    "required_archive_savings_bytes": 25959,
+    "replacement_real_cap": 94010.26560515573,
+    "replacement_strict_integer_cap": 94010
+  },
+  "points": [
+    {"k": 4, "packet_bytes": 133426, "mismatches": 673602, "projected_replacement_bytes": 329376.8218},
+    {"k": 6, "packet_bytes": 223494, "mismatches": 234295, "projected_replacement_bytes": 291650.4155},
+    {"k": 8, "packet_bytes": 306042, "mismatches": 88304, "projected_replacement_bytes": 331729.6336},
+    {"k": 12, "packet_bytes": 421886, "mismatches": 9311, "projected_replacement_bytes": 424594.5699},
+    {"k": 16, "packet_bytes": 459394, "mismatches": 561, "projected_replacement_bytes": 459557.1949},
+    {"k": 24, "packet_bytes": 475002, "mismatches": 0, "projected_replacement_bytes": 475002.0}
+  ],
+  "winner": {
+    "selection_mode": "minimum packet + transferred GF1 0.2909 B/mismatch over the complete six-point physical roster",
+    "k": 6,
+    "packet_bytes": 223494,
+    "mismatches": 234295,
+    "transferred_residual_bytes": 68156.4155,
+    "real_residual_order": "tile64_time",
+    "real_residual_bytes": 105628,
+    "real_residual_bytes_per_mismatch": 0.4508333511171813,
+    "actual_replacement_bytes": 329122,
+    "actual_over_gate_bytes": 235112,
+    "exact_target_closure": true
+  },
+  "calls": {"training": 0, "scorer": 0, "modal": 0, "mps": 0},
+  "frontier_moved": false
+}
