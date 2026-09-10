@@ -1,0 +1,40 @@
+{
+  "schema": "ddm_rlc3.source_reviews.v1",
+  "path": "experiments/ddm_rlc3_move42_trace.py",
+  "sha256": "436ee464bdd00c9f06a16cfae889d05f2cda5be083aee937010d88b1e06fd5cd",
+  "passes": [
+    {
+      "pass": 1,
+      "scope": "Diff against landed move40 trace; pins, native build ownership, storage routing, complete checkpoint state."
+    },
+    {
+      "pass": 2,
+      "scope": "Adversarial source/data binding, fresh and resumed branches, retained twin control; compiled syntax and --help only; heavy behavior remains untested."
+    }
+  ],
+  "checks": {
+    "source_committed_before_production": true,
+    "move42_archive_pin": true,
+    "move42_field_pin": true,
+    "no_move40_path": true,
+    "native_writes_owned": true,
+    "payload_retention": true,
+    "source_control_refuses": true,
+    "periodic_complete_checkpoint": true,
+    "cap_refuses": true
+  },
+  "real_source_pins": {
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip",
+      "bytes": 180238,
+      "sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+    },
+    "field": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "bytes": 117964800,
+      "sha256": "d5248c775e49d8ac4299d2b0b60ffe5cffbeaafe348ef57986a169d3f118322b"
+    }
+  },
+  "score_claim": false,
+  "research_only": true
+}

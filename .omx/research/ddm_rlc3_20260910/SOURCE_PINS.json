@@ -1,0 +1,27 @@
+{
+  "frozen_contract": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+    "bytes": 2682,
+    "sha256": "59158b8fce89e12c06eb4ae3e1cb71f347daa78a2cc5e8a061e1899be1150c2a"
+  },
+  "pr12_memo": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+    "bytes": 42309,
+    "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+  },
+  "rlc2_stop_memo": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_rebase_rule118_cure_onto_move42_20260910.md",
+    "bytes": 11248,
+    "sha256": "76ba13cf2ef8f91d731a8526d65f3bd96d7d3799c7002e9a99ed56e77fa24caf"
+  },
+  "charter": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_resume_rebase_cure_onto_move42_prefire_intent_charter_20260910.md",
+    "bytes": 6662,
+    "sha256": "6c0250d723fd8ea53773f439fe9d114f2b15df222e9d38793597602b03362386"
+  },
+  "common_contract": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+    "bytes": 4124,
+    "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+  }
+}

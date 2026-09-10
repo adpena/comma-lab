@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_rlc3.handoff.v1",
+  "status": "BLOCKED_GIT_OBJECT_WRITE_BEFORE_CANDIDATE_PRODUCTION",
+  "memo": ".omx/research/ddm_rlc3_resume_rebase_cure_onto_move42_prefire_intent_20260910.md",
+  "source_fallback_commit": "fa74b3399649185d06cd029d046b417a14a030c0",
+  "source_bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle",
+    "bytes": 8291,
+    "sha256": "495606d53a1334e2636dffe6e7079ceca236c6bacc70be9439e629e09c42b0eb"
+  },
+  "source_main_landed": false,
+  "candidate_bytes": null,
+  "candidate_sha256": null,
+  "raw_identity_proved": false,
+  "literal_census_completed": false,
+  "smokes_completed": false,
+  "timing_risk_receipt": null,
+  "intent_path": null,
+  "intent_file_sha256": null,
+  "intent_file_bytes": null,
+  "intent_canonical_digest": null,
+  "normal_validate_seal_refusal": null,
+  "normal_seal_path_refusal": null,
+  "prefire_contract_refusal": null,
+  "serializer_returncode": 17,
+  "serializer_failure": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: .omx/research/ddm_rlc3_20260910/SOURCE_REVIEWS.json: failed to insert into database\nerror: unable to index file '.omx/research/ddm_rlc3_20260910/SOURCE_REVIEWS.json'\nfatal: adding files failed\n",
+  "conditional_arithmetic": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/CONDITIONAL_ARITHMETIC.json",
+    "bytes": 402,
+    "sha256": "c6397f4957fe64667813562464e4f7245fd719354f068b24cac882ff4e4e7077"
+  },
+  "resume_fire_order": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/RESUME_FIRE_ORDER.json",
+    "bytes": 1435,
+    "sha256": "2829698eb8eef0156c9572825aa5aa5e52c7033faf71c9cab6cd9ae4d9b31780"
+  },
+  "source_bundle_verification": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/SOURCE_BUNDLE_VERIFICATION.json",
+    "bytes": 674,
+    "sha256": "802b73d357c60dbc573fe671d0958105ce3ce302d54b5a5cfb3f4f0ee3c9f356"
+  },
+  "no_heavy_job_launched": true,
+  "no_modal_or_authorization_or_completion": true,
+  "shared_index_unchanged": true,
+  "score_claim": false,
+  "research_only": true,
+  "frontier_changed": false,
+  "frontier_line": "composition S 0.1374765052591843 @ 180,238 B [contest-CUDA T4 n600] (move 42)"
+}

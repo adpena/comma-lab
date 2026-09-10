@@ -1,0 +1,40 @@
+{
+  "schema": "ddm_rlc3.final_landing_status.v1",
+  "state": "BLOCKED_GIT_OBJECT_WRITES",
+  "main_landed": false,
+  "source_commit": "fa74b3399649185d06cd029d046b417a14a030c0",
+  "handoff_commit": "fc5bd0d0369876249d58f4be1620a2dad687ba72",
+  "bundles": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle",
+      "bytes": 8291,
+      "sha256": "495606d53a1334e2636dffe6e7079ceca236c6bacc70be9439e629e09c42b0eb",
+      "fallback_commit": "fa74b3399649185d06cd029d046b417a14a030c0",
+      "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.format-patch"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/handoff_serializer/20260910T170358.290971Z-66333/intended-commit.bundle",
+      "bytes": 67635,
+      "sha256": "76cc19394fc3817e3a1cb93eb4d88cf2b7c1ce4e757ac267506028108e4af23f",
+      "fallback_commit": "fc5bd0d0369876249d58f4be1620a2dad687ba72",
+      "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/handoff_serializer/20260910T170358.290971Z-66333/intended-commit.format-patch"
+    }
+  ],
+  "source_verified_files": 2,
+  "handoff_verified_files": 23,
+  "all_blob_hashes_match": true,
+  "exact_file_sets": true,
+  "shared_index_unchanged": true,
+  "pointer": {
+    "pointer_axis": "contest_cuda",
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_score": 0.1374765052591843,
+    "pointer_archive_sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+  },
+  "no_candidate_or_intent_produced": true,
+  "score_claim": false,
+  "owner": "MAIN",
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/LANDING_STATUS.json",
+  "fire_trigger": "Git-writable MAIN harvests both verified bundles; land through serializer before RLC3 resumes production",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER"
+}

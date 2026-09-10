@@ -1,0 +1,13 @@
+{
+  "schema": "ddm_rlc3.conditional_arithmetic.v1",
+  "authority": "DERIVED CONDITIONAL; no candidate measured",
+  "assumed_candidate_bytes": 180178,
+  "base_bytes": 180238,
+  "base_d_seg": 0.00010637,
+  "base_d_pose": 4.66e-06,
+  "net_dS": -3.995153718733028e-05,
+  "conditional_score": 0.13743655372199698,
+  "strict_bar": -2e-05,
+  "maximum_admitted_integer_bytes": 180207,
+  "score_claim": false
+}

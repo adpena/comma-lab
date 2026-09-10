@@ -1,0 +1,8 @@
+{
+  "schema": "ddm_rlc3.storage_preflight.v1",
+  "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42",
+  "free_bytes": 54366003200,
+  "score_claim": false,
+  "created_at_utc": "2026-09-10T16:55:09.192540+00:00",
+  "status": "PASS"
+}

@@ -1,0 +1,64 @@
+[
+  {
+    "argv": [
+      "git",
+      "init",
+      "--bare",
+      "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_bundle_verification.git"
+    ],
+    "returncode": 0,
+    "stdout": "Initialized empty Git repository in /Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_bundle_verification.git/\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_bundle_verification.git",
+      "bundle",
+      "verify",
+      "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle"
+    ],
+    "returncode": 0,
+    "stdout": "The bundle contains this ref:\nfa74b3399649185d06cd029d046b417a14a030c0 refs/heads/serializer-fallback\nThe bundle requires this ref:\n69d12b5bbf54856d2088b4723ad73e6befaf7eac \nThe bundle uses this hash algorithm: sha1\n",
+    "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle is okay\n"
+  },
+  {
+    "argv": [
+      "git",
+      "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_bundle_verification.git",
+      "bundle",
+      "unbundle",
+      "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle"
+    ],
+    "returncode": 0,
+    "stdout": "fa74b3399649185d06cd029d046b417a14a030c0 refs/heads/serializer-fallback\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_bundle_verification.git",
+      "diff-tree",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "fa74b3399649185d06cd029d046b417a14a030c0"
+    ],
+    "returncode": 0,
+    "stdout": ".omx/research/ddm_rlc3_20260910/SOURCE_REVIEWS.json\nexperiments/ddm_rlc3_move42_trace.py\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "git",
+      "--git-dir=/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_bundle_verification.git",
+      "log",
+      "-1",
+      "--format=%B",
+      "fa74b3399649185d06cd029d046b417a14a030c0"
+    ],
+    "returncode": 0,
+    "stdout": "ddm_rlc3: bind retained source-control trace to move42 [no-triality] [p0-ledger-ok]\n\nresearch_only=true; no candidate or score claim. Checkpoint: ddm_rlc3 step 1. Two source review passes; no heavy launch before committed source custody.\n\n# CHECKPOINT_DISCIPLINE_WAIVED:keeper-arm 'ddm_rlc3' landing; resume custody = keeper apparatus (charter + done-receipt + persisted final message), not commit-body checkpoints (auto-appended by the serializer)\n\n",
+    "stderr": ""
+  }
+]

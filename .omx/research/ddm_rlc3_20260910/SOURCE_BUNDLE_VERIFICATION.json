@@ -1,0 +1,19 @@
+{
+  "schema": "ddm_rlc3.bundle_verification.v1",
+  "fallback_commit": "fa74b3399649185d06cd029d046b417a14a030c0",
+  "files": [
+    ".omx/research/ddm_rlc3_20260910/SOURCE_REVIEWS.json",
+    "experiments/ddm_rlc3_move42_trace.py"
+  ],
+  "exact_file_set": true,
+  "all_blob_hashes_match": true,
+  "shared_index_unchanged": true,
+  "head_contains_source": false,
+  "main_landed": false,
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle",
+    "bytes": 8291,
+    "sha256": "495606d53a1334e2636dffe6e7079ceca236c6bacc70be9439e629e09c42b0eb"
+  },
+  "score_claim": false
+}

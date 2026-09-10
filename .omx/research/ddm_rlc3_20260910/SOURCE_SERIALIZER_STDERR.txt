@@ -1,0 +1,4 @@
+[subagent-commit-serializer] REFUSED: ABORT per Catalog #340 STAGING-surface PREVENT (sister of Catalog #314 POST-COMMIT detect). At least one sister subagent has declared one of these files in its in-flight `files_touched` checkpoint within the last 60 minutes. Coordinate via Catalog #230 ownership map OR opt out via the paired-env bypass.
+ABORT: 1 sister subagent collision(s) detected. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" non-negotiable + Catalog #340 STAGING-surface PREVENTION (sister of Catalog #314 POST-COMMIT detect).
+  sister='ddm_rlc3' (checkpoint 1.3 min ago) overlaps on: { experiments/ddm_rlc3_move42_trace.py }
+  Recommendation: coordinate via Catalog #230 ownership map OR commit via tools/subagent_commit_serializer.py with --expected-content-sha256 per Catalog #157 (lets fcntl arbitrate).

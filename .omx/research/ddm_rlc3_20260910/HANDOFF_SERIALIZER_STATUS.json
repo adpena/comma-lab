@@ -1,0 +1,29 @@
+{
+  "returncode": 17,
+  "files": [
+    ".omx/research/ddm_rlc3_20260910/BUNDLE_VERIFICATION_LOG.json",
+    ".omx/research/ddm_rlc3_20260910/CONDITIONAL_ARITHMETIC.json",
+    ".omx/research/ddm_rlc3_20260910/HANDOFF.json",
+    ".omx/research/ddm_rlc3_20260910/INDEX_AFTER_SOURCE.txt",
+    ".omx/research/ddm_rlc3_20260910/INDEX_BEFORE_SOURCE.txt",
+    ".omx/research/ddm_rlc3_20260910/RECALL_SEARCHES.json",
+    ".omx/research/ddm_rlc3_20260910/RESUME_FIRE_ORDER.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_BUNDLE_VERIFICATION.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_PINS.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_ARGV.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_RETRY_ARGV.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_RETRY_STATUS.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_RETRY_STDERR.txt",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_RETRY_STDOUT.txt",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_STATUS.json",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_STDERR.txt",
+    ".omx/research/ddm_rlc3_20260910/SOURCE_SERIALIZER_STDOUT.txt",
+    ".omx/research/ddm_rlc3_20260910/STORAGE_PREFLIGHT.json",
+    ".omx/research/ddm_rlc3_20260910/TASK_EVENTS.json",
+    ".omx/research/ddm_rlc3_20260910/equations_matches.json",
+    ".omx/research/ddm_rlc3_20260910/recall_1.txt",
+    ".omx/research/ddm_rlc3_20260910/recall_2.txt",
+    ".omx/research/ddm_rlc3_resume_rebase_cure_onto_move42_prefire_intent_20260910.md"
+  ],
+  "score_claim": false
+}

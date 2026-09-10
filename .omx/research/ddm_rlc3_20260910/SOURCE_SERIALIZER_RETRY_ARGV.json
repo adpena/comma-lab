@@ -1,0 +1,18 @@
+[
+  ".venv/bin/python",
+  "tools/subagent_commit_serializer.py",
+  "--message",
+  "ddm_rlc3: bind retained source-control trace to move42 [no-triality] [p0-ledger-ok]\n\nresearch_only=true; no candidate or score claim. Checkpoint: ddm_rlc3 step 1. Two source review passes; no heavy launch before committed source custody.",
+  "--label",
+  "ddm_rlc3",
+  "--no-co-author",
+  "--fallback-receipt-dir",
+  "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer",
+  "--files",
+  "experiments/ddm_rlc3_move42_trace.py",
+  ".omx/research/ddm_rlc3_20260910/SOURCE_REVIEWS.json",
+  "--expected-content-sha256",
+  "experiments/ddm_rlc3_move42_trace.py=436ee464bdd00c9f06a16cfae889d05f2cda5be083aee937010d88b1e06fd5cd",
+  "--expected-content-sha256",
+  ".omx/research/ddm_rlc3_20260910/SOURCE_REVIEWS.json=e31c9f8ec4259da0bbc2197c279409b8c7e7cfb6618ccdb9327a6c13ecb8e5f9"
+]

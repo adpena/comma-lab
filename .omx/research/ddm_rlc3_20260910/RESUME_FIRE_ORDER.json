@@ -1,0 +1,26 @@
+{
+  "schema": "ddm_rlc3.resume_fire_order.v1",
+  "actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_rlc3_20260910/SOURCE_BUNDLE_VERIFICATION.json",
+      "fire_trigger": "Git-writable MAIN harvests the verified source bundle",
+      "action": "Land the exact two-file source bundle through the serializer, preserving unrelated work; revalidate exact source hashes and frozen-contract ancestry.",
+      "fallback_commit": "fa74b3399649185d06cd029d046b417a14a030c0",
+      "bundle": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle",
+        "bytes": 8291,
+        "sha256": "495606d53a1334e2636dffe6e7079ceca236c6bacc70be9439e629e09c42b0eb"
+      }
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "ddm_rlc3 successor",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42",
+      "fire_trigger": "The exact reviewed source is in current HEAD and move42 plus the frozen contract remain valid",
+      "action": "Resume the charter at the real move42 trace, then build the counted cure, retain twin full encodes, enforce <=180207 B, prove cold public n600 raw identity, census/manifest/smokes, risk and committed intent; retain exact refusals and never dispatch."
+    }
+  ],
+  "score_claim": false
+}
