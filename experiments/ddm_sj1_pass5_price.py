@@ -132,7 +132,7 @@ def build_tail(prefix: bytes, weights: bytes, stream: bytes) -> bytes:
 
 
 def field_to_u8(npz_path: Path, destination: Path) -> dict:
-    with np.load(npz_path, allow_pickle=False) as data:
+    with np.load(jg2.resolve_artifact(npz_path), allow_pickle=False) as data:
         if set(data.files) != {str(i) for i in range(N_PAIRS)}:
             raise ValueError(f'{npz_path} does not carry all {N_PAIRS} planes')
         field = np.stack([data[str(i)] for i in range(N_PAIRS)])

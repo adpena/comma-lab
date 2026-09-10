@@ -107,6 +107,8 @@ from typing import Any
 
 import numpy as np
 
+from tac.artifact_moved import resolve as resolve_artifact
+
 REPO = Path(__file__).resolve().parents[1]
 
 # --------------------------------------------------------------------------------------
@@ -182,7 +184,7 @@ def sha256_bytes(payload: bytes) -> str:
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
+    with resolve_artifact(path).open("rb") as handle:
         for chunk in iter(lambda: handle.read(1 << 22), b""):
             digest.update(chunk)
     return digest.hexdigest()
@@ -235,7 +237,8 @@ def persist_immutable_npy(path: Path, payload: np.ndarray, *, label: str) -> Non
 
 
 def file_fact(path: Path) -> dict[str, object]:
-    return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+    resolved = resolve_artifact(path)
+    return {"path": str(path), "bytes": resolved.stat().st_size, "sha256": sha256_file(resolved)}
 
 
 def progress(record: dict[str, object]) -> None:
@@ -429,6 +432,7 @@ def load_runtime(root: Path):
 
 def load_tokens(path: Path) -> np.ndarray:
     """Memory-map the (600, 384, 512) uint8 token field."""
+    path = resolve_artifact(path)
     expected = N_PAIRS * PLANE
     size = path.stat().st_size
     if size != expected:
@@ -445,7 +449,7 @@ def apply_edits(tokens: np.ndarray, edits_path: Path | None) -> tuple[np.ndarray
     field = np.array(tokens, dtype=np.uint8)
     if edits_path is None:
         return field, {"edited_pairs": [], "tokens_changed": 0}
-    blob = np.load(edits_path)
+    blob = np.load(resolve_artifact(edits_path))
     changed = 0
     pairs: list[int] = []
     for key in blob.files:

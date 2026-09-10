@@ -1,0 +1,84 @@
+{
+  "status": "STOP_SIGNATURE_CHANGE",
+  "verdict_scope": "INSTANCE: exact mv1 patch rebased over dwc1 under the mv3 charter",
+  "head_before": "9f54ffdb779f5ce0f379047fb75d35f755833a9b",
+  "head_after": "7e770638e5609fed2a3bcfe231508ab11bd0855b",
+  "patch_sha256": "ea104296ba676338472bb884b0356bb88c44e1da122d2eb68e4d6e645d2e6c92",
+  "patch_file_count": 21,
+  "semantic_stop": {
+    "file": "src/tac/candidate_seal.py",
+    "function": "validate_seal",
+    "intervening_commit": "86961e487",
+    "before": {
+      "line": 1131,
+      "signature": "seal_path: Path, *, pointer_path: Path | None=None, check_pointer: bool=True, allow_missing_public_smoke: bool=False",
+      "definition": [
+        "def validate_seal(",
+        "    seal_path: Path,",
+        "    *,",
+        "    pointer_path: Path | None = None,",
+        "    check_pointer: bool = True,",
+        "    allow_missing_public_smoke: bool = False,",
+        ") -> SealValidation:"
+      ]
+    },
+    "after": {
+      "line": 1148,
+      "signature": "seal_path: Path, *, pointer_path: Path | None=None, check_pointer: bool=True, allow_missing_public_smoke: bool=False, require_decode_wall_clock: bool=False",
+      "definition": [
+        "def validate_seal(",
+        "    seal_path: Path,",
+        "    *,",
+        "    pointer_path: Path | None = None,",
+        "    check_pointer: bool = True,",
+        "    allow_missing_public_smoke: bool = False,",
+        "    require_decode_wall_clock: bool = False,",
+        ") -> SealValidation:"
+      ]
+    },
+    "patch_call_file": "src/tac/tests/test_artifact_moved.py",
+    "patch_calls": [
+      {
+        "line": 237,
+        "call": "seal.validate_seal(path, pointer_path=pointer)"
+      },
+      {
+        "line": 239,
+        "call": "seal.validate_seal(path, pointer_path=pointer)"
+      },
+      {
+        "line": 242,
+        "call": "seal.validate_seal(path, pointer_path=pointer)"
+      }
+    ],
+    "compatibility_note": "New keyword is optional with default False; no incompatibility is asserted. The charter explicitly includes any called function signature change in its semantic STOP definition."
+  },
+  "identical_existing_files": 10,
+  "rp1_go_exists": false,
+  "shared_index_unchanged": true,
+  "implementation_applied": false,
+  "catalog_claimed": false,
+  "commit": null,
+  "marked_landed": false,
+  "tests": {
+    "run": false,
+    "passed": 0,
+    "failed": 0
+  },
+  "ruff_run": false,
+  "strict_gate_run": false,
+  "score_claim": false,
+  "research_only": true,
+  "first_observed_head": "8a53de8b0ae58f3af283f645a687413b079366c9",
+  "head_at_final_receipt": "7e770638e5609fed2a3bcfe231508ab11bd0855b",
+  "followups": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mv3_20260910/BLOCKED.json",
+      "fire_trigger": "harvest this blocker",
+      "action": "Amend the signature-change STOP exception for the optional keyword or provide a compliant refreshed patch; then recheck rp1 GO absence.",
+      "task_id": "ddm_mv1_install_20260910"
+    }
+  ]
+}

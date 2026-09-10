@@ -1,0 +1,187 @@
+{
+  "command": [
+    ".venv/bin/python",
+    "tools/list_canonical_equations.py",
+    "--json"
+  ],
+  "returncode": 0,
+  "matches": [
+    {
+      "canonical_consumers": [
+        "ddm_menu1_realized_flip_menu_compiler.pose_amplitude_pool",
+        "task_636_runtime_exporter_governed_inflate_composition",
+        "task_366_joint_descent_pose_wall_scope"
+      ],
+      "canonical_producers": [
+        "tac.canonical_equations.ddm_pa1_posenet_amplitude_twin_laws_20260723",
+        "tools.measure_ddm_pa1_posenet_amplitude_twin"
+      ],
+      "domain_of_validity": {
+        "axis": "[macOS-CPU frozen-scorer advisory]; score_claim=false",
+        "frames": "E2 export baseline (d_pose 162.581 BLOCKED pose stream); within-experiment deltas only",
+        "mechanism": "statistics matching NOT pose-value encoding; post-hoc-stored-corrections-dead law unaffected and binding",
+        "scope": "INSTANCE-positive mechanism; promotion BLOCKED on governed E2 inflate composition + exact parse-back remeasure",
+        "video": "contest 0.mkv n600"
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "pa1_frame0_scorer_stat_free_arm_20260723",
+          "empirical_output": {
+            "d_pose": 147.49104204339514,
+            "d_seg": 0.02861480712890625,
+            "frame1_bytes_changed": 0,
+            "joint_delta_s": -1.9167666862136272,
+            "verdict": "FRAME0_POSE_AMPLITUDE_POSITIVE_N600_ADVISORY"
+          },
+          "inputs": {
+            "arm": "frame0 first-stem-BN scorer-stat affine",
+            "baseline_d_pose": 162.580958694146,
+            "baseline_d_seg": 0.02861480712890625,
+            "delta_bytes": 0,
+            "rate_partition": "FREE_candidate_rule118_pending_receiver_survival"
+          },
+          "measurement_method": "n600 E2 realized frames through literal upstream resize+rgb_to_yuv6 + frozen PoseNet official two-frame path; frame_1 byte-identical (seg collateral structurally zero); 38 batch checkpoints independently re-aggregated; statistics-matching mechanism, NOT pose-value encoding (post-hoc-dead law remains binding); pose wall REMAINS OPEN: 147.49 is ~5 orders above tube",
+          "measurement_utc": "2026-07-23T23:19:00Z",
+          "predicted_output": {
+            "joint_delta_s": -1.9167666862136272
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-23T23:24:01Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_macos_cpu_frozen_scorers",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "composed_into_governed_E2_inflate_with_exact_parseback_remeasure_or_new_realized_frame_family",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/codex_findings_ddm_pa1_posenet_amplitude_twin_20260723_codex.md",
+            "source_sha256": "e012a92268fceec0f5c8bb66e4a76341f7861b7f042dc11106393e0809fe3b43"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/codex_findings_ddm_pa1_posenet_amplitude_twin_20260723_codex.md"
+        },
+        {
+          "anchor_id": "pa1_joint_frame_placement_rejected_20260723",
+          "empirical_output": {
+            "added_seg_errors": 838270,
+            "d_pose": 161.7268879706079,
+            "d_seg": 0.035720909966362846,
+            "joint_delta_s": 0.6045627713391715,
+            "verdict": "REJECTED_joint_frame_placement"
+          },
+          "inputs": {
+            "arm": "same scorer-stat target on BOTH frames",
+            "delta_bytes": 0
+          },
+          "measurement_method": "frame_1 carries seg; pose-affine on frame_1 spends 838,270 seg errors (+0.7106 seg term) against -0.106 pose term -> net +0.6046; confirms the frame_0-structurally-seg-free placement law at the amplitude family; verdict_scope: INSTANCE (this target on this vehicle's frames)",
+          "measurement_utc": "2026-07-23T23:19:00Z",
+          "predicted_output": {
+            "joint_delta_s": 0.6045627713754413
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-23T23:24:01Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_macos_cpu_frozen_scorers",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "composed_into_governed_E2_inflate_with_exact_parseback_remeasure_or_new_realized_frame_family",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/codex_findings_ddm_pa1_posenet_amplitude_twin_20260723_codex.md",
+            "source_sha256": "e012a92268fceec0f5c8bb66e4a76341f7861b7f042dc11106393e0809fe3b43"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/codex_findings_ddm_pa1_posenet_amplitude_twin_20260723_codex.md"
+        },
+        {
+          "anchor_id": "e3_receiver_survival_locked_env_20260724",
+          "empirical_output": {
+            "batch_sha_matches": "38/38 exact vs immutable PA1 checkpoints",
+            "d_pose_composed": 147.49104204339514,
+            "d_seg_composed": 0.02861480712890625,
+            "exact_byte_advisory_S": 41.55855704359477,
+            "frame1_sha_identical_to_E2": true,
+            "locked_evaluate_sh": "PASS exit 0, 842.94s",
+            "rate_regression_S": 0.06381392449036953,
+            "rate_regression_vs_E2_bytes": 95837,
+            "verdict": "PASS_PA1_RECEIVER_SURVIVAL_AND_DEP_CLOSURE_BLOCK_PROMOTION"
+          },
+          "inputs": {
+            "archive_bytes": 439303,
+            "archive_sha256": "dd8fc5fed6ff11e532765dfe6104f02b3b97171b824123312a3ab469c1be6cbe",
+            "coder": "raw LZMA1 1MiB dict (stdlib; brotli absent; deps=['torch'])",
+            "pa1_payload_bytes": 0
+          },
+          "measurement_method": "RECEIVER SURVIVAL PROVEN: governed exporter/receiver derives the scorer-only affine from already-counted decoded E2 frames at decode time (0 payload bytes, rule-118 FREE now RECEIVER-SURVIVED, upgrading FREE_candidate->FREE); exact 38/38 batch byte identity transfers the full-precision pa1 row; FIRST full locked-env evaluate.sh end-to-end PASS of the DDM stack; determinism catch: torch thread-count (1 vs 4) flips fp32 bilinear rounding ties -> raw SHA mismatch; fixed by sealing 4 threads in compiler AND receiver (failed evidence cold-stored, ~11GB certified); OPEN follow-on: LZMA1 semantic-stream cost +95,837B vs brotli Q11 (333,445 vs 428,973 measured) -> declare brotli as dep #2 (PR100/101 precedent, <=2 deps allowed) with LZMA1 fail-closed fallback",
+          "measurement_utc": "2026-07-24T00:45:00Z",
+          "predicted_output": {
+            "d_pose": 147.49104204339514,
+            "d_seg": 0.02861480712890625
+          },
+          "provenance": {
+            "artifact_kind": "research_sidecar",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+            "captured_at_utc": "2026-07-24T00:47:46Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "research_only",
+            "hardware_substrate": "m5_max_locked_upstream_env_4_torch_threads",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "brotli_declared_dep_with_lzma1_fallback_recovers_the_95837B_or_R6_candidate_composes_on_this_receiver",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/codex_findings_ddm_e3_inflate_compose_and_depclose_20260724_codex.md",
+            "source_sha256": "3ebcdc54b9c6511a6d1e5bc3611fefb56699cc751ffd4e5d5acfa6cca1042f70"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/codex_findings_ddm_e3_inflate_compose_and_depclose_20260724_codex.md"
+        }
+      ],
+      "equation_id": "ddm_pa1_posenet_amplitude_twin_laws_v1",
+      "last_calibration_utc": "2026-07-24T00:47:46Z",
+      "latex_form": "\\Delta S = 100\\,\\Delta d_{seg} + \\sqrt{10\\,d_{pose}^{cand}} - \\sqrt{10\\,d_{pose}^{base}} + 25\\,\\Delta B/37{,}545{,}489",
+      "name": "DDM PA1 PoseNet amplitude twin (frame-0 scorer-stat FREE arm + joint-placement rejection)",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "Frozen-scorer statistics matching generalizes to PoseNet: frame-0 scorer-stat affine d_pose 162.581->147.491, dS -1.9168 advisory at 0 bytes; joint-frame arm REJECTED +0.6046",
+      "predicted_vs_empirical_residual": {
+        "RECEIVER SURVIVAL PROVEN: governed exporter/receiver derives the scorer-only affine from already-counted decoded E2 frames at decode time (0 payload bytes, rule-118 FREE now RECEIVER-SURVIVED, upgrading FREE_candidate->FREE); exact 38/38 batch byte identity transfers the full-precision pa1 row; FIRST full locked-env evaluate.sh end-to-end PASS of the DDM stack; determinism catch: torch thread-count (1 vs 4) flips fp32 bilinear rounding ties -> raw SHA mismatch; fixed by sealing 4 threads in compiler AND receiver (failed evidence cold-stored, ~11GB certified); OPEN follow-on: LZMA1 semantic-stream cost +95,837B vs brotli Q11 (333,445 vs 428,973 measured) -> declare brotli as dep #2 (PR100/101 precedent, <=2 deps allowed) with LZMA1 fail-closed fallback": 0.0,
+        "macos_cpu_frozen_scorer_advisory": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-07-23T23:24:01Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "m5_max_macos_cpu_frozen_scorers",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "composed_into_governed_E2_inflate_with_exact_parseback_remeasure_or_new_realized_frame_family",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/codex_findings_ddm_pa1_posenet_amplitude_twin_20260723_codex.md",
+        "source_sha256": "e012a92268fceec0f5c8bb66e4a76341f7861b7f042dc11106393e0809fe3b43"
+      },
+      "python_callable_module_path": "tac.canonical_equations.ddm_pa1_posenet_amplitude_twin_laws_20260723:joint_score_delta",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "d_pose": "mse",
+        "d_seg": "fraction",
+        "delta_bytes": "bytes"
+      },
+      "units_out": {
+        "joint_score_delta": "score"
+      }
+    }
+  ]
+}

@@ -20,6 +20,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.artifact_moved import resolve as resolve_artifact
+
 if str(Path(__file__).resolve().parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -572,16 +574,17 @@ def owner_family(row: dict[str, Any]) -> str:
 
 
 def pinned_file(path: Path) -> dict[str, str]:
-    if not path.is_file() or path.is_symlink():
+    resolved = resolve_artifact(path)
+    if not resolved.is_file() or resolved.is_symlink():
         raise CertifyError(f"pinned file missing or symlinked: {path}")
-    return {"path": str(path), "sha256": sha256_file(path)}
+    return {"path": str(path), "sha256": sha256_file(resolved)}
 
 
 def verify_pin(pin: dict[str, str]) -> Path:
     path = Path(pin["path"])
     if pinned_file(path) != pin:
         raise CertifyError(f"PIN_SHA256_DRIFT:{path}")
-    return path
+    return resolve_artifact(path)
 
 
 def unique_rows(path: Path) -> dict[str, dict[str, Any]]:
@@ -678,6 +681,21 @@ def row_observation_pins(row: dict[str, Any]) -> list[dict[str, str]]:
     return row.get("observation_files", [])
 
 
+def moved_row(source):
+    path = Path(source["path"])
+    if path.exists() or not path.with_name(path.name + ".MOVED.json").is_file():
+        return None
+    receipt = []
+    destination = resolve_artifact(path, receipt=receipt)
+    if any(source.get(k) is not None and source[k] != receipt[0][v] for k, v in (("bytes", "bytes"), ("sha256", "sha256"), ("historical_sha256", "sha256"))):
+        raise CertifyError("MOVED_CERTIFICATE_SOURCE_DRIFT")
+    return dict(source, schema=SCHEMA, certificate_status="MOVED_CERTIFIED",
+                planned_verdict="MOVED_CERTIFIED", verdict="MOVED_CERTIFIED",
+                move_certificate=receipt, moved_to=str(destination), freed_bytes=0,
+                inventory_rank=source.get("inventory_rank", 0), df_before=None, df_after=None,
+                certificate_complete=True, blockers=[], score_claim=False)
+
+
 def plan_retained(args: argparse.Namespace) -> int:
     sources = unique_rows(args.source_ledger)
     selected = [row for row in sources.values() if row.get("certificate_status") == RETAINED_STATUS
@@ -694,6 +712,9 @@ def plan_retained(args: argparse.Namespace) -> int:
     rows = []
     aliases = {}
     for rank, source in enumerate(selected, 1):
+        if (moved := moved_row(source)) is not None:
+            rows.append(moved)
+            continue
         row = dict(source)
         path = source["path"]
         family = owner_family(source)
@@ -738,8 +759,10 @@ def plan_retained(args: argparse.Namespace) -> int:
         if source.get("reproducer_descriptor"):
             row["observation_policy"] = pinned_file(args.closures)
         rows.append(row)
-    hits = repo_reference_hits(aliases, args.repo_root, observation_files=exclusions)
+    hits = repo_reference_hits(aliases, args.repo_root, observation_files=exclusions) if aliases else {}
     for row in rows:
+        if row.get("certificate_status") == "MOVED_CERTIFIED":
+            continue
         row["reference_scan"] = {
             "hits": hits[row["path"]],
             "aliases": aliases[row["path"]],
@@ -793,6 +816,9 @@ def plan(args: argparse.Namespace) -> int:
     rows: list[dict[str, Any]] = []
     aliases_by_path: dict[str, list[str]] = {}
     for rank, item in enumerate(candidates, start=1):
+        if (moved := moved_row(item)) is not None:
+            rows.append(moved)
+            continue
         path = Path(str(item["path"]))
         hash_row = hashes[str(path)]
         for field in ("bytes", "mtime_ns", "device", "inode"):
@@ -852,8 +878,10 @@ def plan(args: argparse.Namespace) -> int:
                 "applied_at_utc": None,
             }
         )
-    reference_hits = repo_reference_hits(aliases_by_path, args.repo_root)
+    reference_hits = repo_reference_hits(aliases_by_path, args.repo_root) if aliases_by_path else {}
     for row in rows:
+        if row.get("certificate_status") == "MOVED_CERTIFIED":
+            continue
         path = str(row["path"])
         hits = reference_hits[path]
         row["reference_scan"] = {
@@ -903,6 +931,8 @@ def _load_ledger(path: Path) -> list[dict[str, Any]]:
 
 
 def _stat_identity_blockers(path: Path, row: dict[str, Any]) -> list[str]:
+    if moved_row(dict(row, path=str(path))):
+        return ["MOVED_CERTIFIED_RETAIN_ELSEWHERE"]
     if not path.is_file() or path.is_symlink():
         return ["RAW_MISSING_OR_NOT_REGULAR"]
     stat = path.stat(follow_symlinks=False)

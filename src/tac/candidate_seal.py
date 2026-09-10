@@ -79,6 +79,9 @@ import stat as stat_module
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from tac.artifact_moved import MovedArtifactError
+from tac.artifact_moved import resolve as resolve_artifact
+
 __all__ = [
     "ARCHIVE_MISSING",
     "CONSISTENT",
@@ -1455,7 +1458,12 @@ def validate_seal(
             )
 
     # ---- 6. retained payload custody -----------------------------------------------------
-    missing_payload = [p for p in document.get("retained_payload_paths", []) if not Path(str(p)).exists()]
+    missing_payload = []
+    for p in document.get("retained_payload_paths", []):
+        try:
+            resolve_artifact(p)
+        except MovedArtifactError as exc:
+            missing_payload.append(f"{p}: {exc}")
     if missing_payload:
         return SealValidation(
             verdict=SEAL_FILE_MISSING,

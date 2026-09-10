@@ -1,0 +1,56 @@
+[
+  {
+    "file": "src/tac/preflight.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "src/tac/candidate_seal.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "experiments/ddm_jg2_tail_reencode.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "experiments/ddm_rp1_rate_rank.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "experiments/ddm_sj1_pass5_price.py",
+    "baseline_diagnostics": 20,
+    "staged_diagnostics": 20,
+    "new_diagnostics": []
+  },
+  {
+    "file": "src/tac/artifact_moved.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "src/tac/artifact_moved_gate.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  },
+  {
+    "file": "src/tac/tests/test_artifact_moved.py",
+    "baseline_diagnostics": 0,
+    "staged_diagnostics": 0,
+    "new_diagnostics": []
+  }
+]

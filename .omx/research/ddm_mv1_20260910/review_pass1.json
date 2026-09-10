@@ -1,0 +1,28 @@
+{
+  "review_pass": 1,
+  "status": "clean",
+  "reviewer": "ddm_mv1",
+  "scope": "Changed definitions, unchanged surrounding source, helper dependencies, fault-injection controls",
+  "shared_assumption": "Paths are logical identifiers; storage locations may change while bytes remain identical. Preserved logical identities prevent checkpoint and seal digest drift.",
+  "findings_closed": [
+    "all-moved plans must skip empty reference scans",
+    "moved rows must compare original SHA and bytes",
+    "unapproved wrappers must not masquerade as the resolver"
+  ],
+  "bounds": [
+    "File MOVED certificates only; legacy directory move schema is not rp1 schema",
+    "AST gate covers literal strings, Path joins and straight-line local aliases; dynamic interprocedural paths require runtime resolution",
+    "Writer requires owner-established quiescence and space admission; interrupted copies are kept"
+  ],
+  "files": {
+    "src/tac/preflight.py": "45459397fc0afc245355d3aed58c51c767e009aaa0c70bbb3ef3ea7a79b9a7a2",
+    "src/tac/candidate_seal.py": "ab766e31aa6ffcd1cb0b9361417434bf56c2e7ea34eec85c80203a338dc686df",
+    "experiments/ddm_jg2_tail_reencode.py": "628b2a2b459dfc9650d0238ce6867559ccd40d5bd158fba1dc7e6a73afba1cf5",
+    "experiments/ddm_vr3_certified_raw_reclaim.py": "74dee98f3e4dce63f21dc6f7b0510dfb099b965f455acd5cd3480b36b44890f3",
+    "experiments/ddm_rp1_rate_rank.py": "816527a75b1463ca03a97b3895d2e08e26b31837731baa54f230e235bbdd6422",
+    "experiments/ddm_sj1_pass5_price.py": "e45de886b0aab20d90b928d3bd7759a888336bded94792fa4c90aeaa2c6082e7",
+    "src/tac/artifact_moved.py": "51483b1cd7a1dc160455c3adfeb357ccae5090f67c4fe1422b56b13dce26b17c",
+    "src/tac/artifact_moved_gate.py": "bb7a24994d66f7f98868f7e9f2fe83a2de31ead2bcef1bb010e593d8926eb2cf",
+    "src/tac/tests/test_artifact_moved.py": "076492ef8b9fe9195efe5004d5edef2bbb1f231e1d5ca70d5056c70dc1b8dbba"
+  }
+}

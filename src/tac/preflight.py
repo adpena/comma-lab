@@ -5197,6 +5197,7 @@ def preflight_all(
         # consumers from quietly reopening a raw-read bypass. WARN-ONLY while
         # the live backlog is classified.
         check_instrument_binds_to_live_pointer(strict=True, verbose=verbose)
+        check_no_bare_cross_arm_artifact_reads(strict=False, verbose=verbose)
         check_ddm_ledger_before_optional_dump(strict=True, verbose=verbose)
         check_no_unvalidated_required_component_jsonl_readers(
             strict=False, verbose=verbose,
@@ -95258,3 +95259,12 @@ def check_frontier_excludes_disqualified_rows(
 
 if __name__ == "__main__":
     _preflight_cli_main()
+def check_no_bare_cross_arm_artifact_reads(*, repo_root=None, strict=False, verbose=False):
+    from tac.artifact_moved_gate import violations
+    try:
+        found = [v for p in sorted((Path(repo_root or REPO_ROOT) / "experiments").glob("ddm_*.py")) for v in violations(p)]
+    except (OSError, ValueError, SyntaxError) as exc:
+        found = [f"custody read census failed: {exc}"]
+    if strict and found:
+        raise PreflightError("Catalog #417 / CLAUDE.md certify-or-block: " + "\n".join(found))
+    return found

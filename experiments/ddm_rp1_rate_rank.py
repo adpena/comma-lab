@@ -155,7 +155,7 @@ class Rp1Error(RuntimeError):
 
 
 def sha256_file(path: Path) -> str:
-    with path.open("rb") as stream:
+    with jg2.resolve_artifact(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
@@ -196,7 +196,7 @@ def load_live_field() -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     base = np.array(jg2.load_tokens(BASE_TOKENS), dtype=np.uint8)
     live = base.copy()
     edited: list[int] = []
-    with np.load(LIVE_FIELD_NPZ, allow_pickle=False) as blob:
+    with np.load(jg2.resolve_artifact(LIVE_FIELD_NPZ), allow_pickle=False) as blob:
         for key in blob.files:
             pair = int(key)
             plane = np.asarray(blob[key], dtype=np.uint8)
