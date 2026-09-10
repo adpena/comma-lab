@@ -39,6 +39,19 @@ boundary the hold waited for. Land it BEFORE rp1's chain starts.
    files (`.omx/state/*`, `*.log`) are NOT committed — the catalog claim tool handles its own state.
 4. `tools/codex_arm_queue.py mark --name ddm_mv1_moved_manifest_resolution_readers --status landed`.
 
+## OPTIMAL FORM
+- Family reference form: the mv1 arm's own landing patch as produced (`.omx/research/ddm_mv1_20260910/landing.patch`,
+  sha256 recorded in `final_real_resolution.json`), reviewed twice by that arm and tested at 171 passing
+  tests (`pytest.log`). This charter lands that exact form; it does not redesign it.
+- Scope-vs-mechanism deltas: NONE to the mechanism. The only permitted deltas are SCOPE/rebase deltas:
+  (a) the catalog number is re-claimed because the counter moved on (the row text is the arm's), (b) the
+  catalog row is appended at the current table end, (c) the pre-existing memo file is compared and skipped
+  if identical. Any mechanism change is a TOY-BRACKET violation — stop and report instead.
+- Provenance pins: patch path + sha as recorded in `final_real_resolution.json`; base head the arm built on
+  (`landing.bundle` ref) vs current HEAD listed in the final message.
+- Verification form: the arm's full test set plus the sister suites named in Deliverable 2; strict gate run
+  with the live count recorded. No smoke substitutes for the test set.
+
 ## Boundaries
 - Do NOT touch `upstream/`, the PR tree `submissions/semantic_joint_ctxmix/`, any
   `/Volumes/*/pact/ddm_rp1_round2/` or `ddm_rlc1_rule118_cure/` artifact, or the running rp1
