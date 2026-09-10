@@ -1,0 +1,19 @@
+{
+  "schema": "ddm_sw1_ssd_audit_after_summary.v1",
+  "axis": "macOS-CPU static apparatus / scorer-free",
+  "command": ".venv/bin/python tools/audit_ssd_authored_signal.py",
+  "elapsed_seconds": 339.5,
+  "scanned_code_like_files": 286984,
+  "reachable_git_blobs": 109219,
+  "object_database_blobs": 118093,
+  "gc_eligible_blobs": 8956,
+  "unreachable_instances": 5610,
+  "unreachable_distinct_blobs": 1596,
+  "bucket_A_third_party_clone": 934,
+  "bucket_B_run_output_coldstore": 320,
+  "bucket_C_authored_owed": 259,
+  "bucket_D_certified_in_place": 83,
+  "owed_gc_eligible": 5,
+  "conclusion": "No source blob became Git-reachable; the measured after-attempt debt remains 259.",
+  "score_claim": false
+}

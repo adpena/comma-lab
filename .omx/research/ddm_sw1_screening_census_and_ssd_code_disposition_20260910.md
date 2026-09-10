@@ -12,6 +12,8 @@ The original 182 cs1 `BLOCKED` code blobs classify as 171 real authored sources 
 
 Fresh full audit before landing the blob copies: 286,984 code-like SSD files scanned; 1,596 distinct blobs absent from reachable Git; buckets A/B/D = 934/320/83; bucket C authored owed = 259. This supersedes the charter's 245 seed count: 17 fresh owed blobs were not in the 243-row cs1/other-extension plan, while one planned blob was no longer in the live owed set. Of the 223 bundle-ready rows, 222 are in the live 259 denominator. Therefore the exact post-apply count is projected, not measured, as 37; the current measured after-attempt count remains 259 because the active sandbox refused every blob insertion.
 
+A separate full post-attempt rerun completed in 339.5 seconds: 286,984 files, 109,219 reachable Git blobs, and buckets A/B/C/D = 934/320/259/83. Thus the measured before/after bucket-C counts are exactly 259 → 259; the ≤50 target remains blocked, not claimed.
+
 The nine serializer batches were each at most 25 files. Git returned rc=128, `unable to create temporary file: Operation not permitted`; the serializer returned rc=17 and retained nine bundles plus format patches. The combined 3,505,145-byte `landing.patch` has SHA-256 `c12aca2cc7ffde761d39e830e454fdea2df2cd5e1e22c4a71d1aec183548c702`. An isolated-clone verification applied all nine messages at base `951bcce1c788065120361413f54ac1a572284f9e`, produced nine commits, and recovered all 223 exact blob files. This proves the patch is applicable; it does not make the blobs reachable from the live repo ref.
 
 The serializer's default fallback routed 7.9 MiB of receipts/bundles to `/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/` before the denial behavior was known. That was an SSD write outside the requested no-write boundary. Nothing was deleted or overwritten, the source SSD trees and their payloads were not mutated, and the new receipts are retained rather than silently removed. The later retry routed fallback locally. This caveat is recorded in the manifest and must travel with the handoff.
@@ -41,6 +43,7 @@ Searched the full `.omx/research/` corpus and arm receipts by content for `scree
 - Screening exemption ledger: `.omx/research/ddm_pm2_20260909/screening_law_exemptions_20260910.jsonl`
 - Zero census: `.omx/research/ddm_sw1_20260910/screening_census_after.json`
 - Fresh SSD audit: `.omx/research/ddm_sw1_20260910/ssd_audit_before.json`
+- Post-attempt audit summary: `.omx/research/ddm_sw1_20260910/ssd_audit_after_summary.json`
 - Append-only disposition rows: `.omx/research/ddm_cs1_ssd_code_certify_20260909.jsonl`
 - Disposition summary: `.omx/research/ddm_sw1_20260910/ssd_disposition_summary.json`
 - Apply manifest and verified mbox: `.omx/research/ddm_sw1_20260910/landing_manifest.json`, `.omx/research/ddm_sw1_20260910/landing.patch`
