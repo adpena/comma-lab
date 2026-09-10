@@ -302,6 +302,37 @@
       "previous_row_sha256": "86f452da106d023173fcd3882bc2ab080640be531d8649d0f80047ef705b46b2",
       "schema": "prefire_contract_consumer_fix.v1",
       "score_claim": false
+    },
+    {
+      "schema": "prefire_contract_consumer_fix.v1",
+      "fix_batch_id": "ledger_reconciliation_event_types_20260910",
+      "previous_row_sha256": "e77ed88e2f28e69246087310c5224c1bb0085a2f780bc75693a98cfa368b9cb3",
+      "definition_parent_sha256": "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
+      "definition_change": false,
+      "consumer_fixes": [
+        {
+          "fix_id": "ledger-reconciliation-events",
+          "scope": "src/tac/deploy/modal/call_id_ledger.py VALID_EVENT_TYPES",
+          "reason": "pr16 \u00a75 / pr17 \u00a74 require a linked terminal reconciliation event; the helper's whitelist rejected both event types (cust1 measured).",
+          "causal_commit": "de1dfd945d18998d6b884b9332a63bb218b9ee08",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_call_id_ledger_accepts_reconciliation_event_types",
+            "src/tac/tests/test_modal_call_id_ledger.py::test_valid_event_types_canonical_set"
+          ]
+        }
+      ],
+      "implementation_commit": "de1dfd945d18998d6b884b9332a63bb218b9ee08",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/PREFIRE_IMPLEMENTATION_MANIFEST_LEDGER_RECONCILIATION.json",
+        "bytes": 2260,
+        "sha256": "baab80435b679418ed680d66e1260e16410cc9e188baa2bdb72c5da3741cc673"
+      },
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr17_run4_disposition_and_consumer_fix_freshness_policy_20260910.md",
+        "bytes": 25656,
+        "sha256": "ab2e0c89016b618ca6d27641edc30850e9d4ab56eeb7f8c4da539f1e9583b787"
+      },
+      "score_claim": false
     }
   ]
 }
