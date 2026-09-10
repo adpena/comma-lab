@@ -1,0 +1,21 @@
+{
+  "reviewer": "ddm_ffi5 self-review",
+  "pass": "corrected-2",
+  "status": "reviewed; no unresolved implementation finding in corrected scope",
+  "files": {
+    "tools/fire_modal_auth_eval.py": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703",
+    "tools/authorize_candidate_first_measurement.py": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
+    "experiments/modal_auth_eval.py": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29",
+    "experiments/contest_auth_eval.py": "7affb36427d86b339dad1b71ede52a447977a6803c914ba6d2bd1ec4e749ec79",
+    "src/tac/tests/test_candidate_prefire_intent.py": "d3b939bf5b36c77f830358b6e8d2f20d5bb503b99ce0c88e60fbc80ce727d3d1"
+  },
+  "adversarial_checks": [
+    "Changing a runtime byte makes the real manifest hash differ and the evaluator refuse; relocating identical file rows passes content comparison while legacy tree comparison still refuses.",
+    "Independent CLI/context pin mutations fail the executed local pre-spawn guard; invalid remote digest fails before payload materialization; missing manifest fails when content expectation is supplied.",
+    "Worker context forwarding and fail-closed wrapper forwarding execute in tests, as does the actual inner argv branch. Real evaluator --help accepts the emitted flag. No hand-written mock signature is pass authority.",
+    "Existing seal digest still validates independently; legacy t4_direct suite passes unchanged. Scope is consumer validation selection, never modified digest definitions.",
+    "Both actual measured hashes are recorded: content equal across 48 local/48 worker files; path-tree hash remains different and preserved. No remote positive-control or score is claimed.",
+    "Ledger lock matches canonical .jsonl.lock; tests include normal and first-measurement routes, snapshot defaults and real repo append. Authorize bare import has a foreign-cwd subprocess.",
+    "Sole serializer rc17 bundle predates correction and is explicitly obsolete. Corrected final source patch and 16-row manifest feed MAIN, without another commit attempt or frozen-receipt edit."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "axis": "[macOS-CPU advisory; scorer-free validation of retained worker provenance]",
+  "local_content_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+  "worker_content_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+  "local_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+  "worker_tree_sha256": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+  "content_validation": "PASS",
+  "legacy_tree_validation": "inflate runtime tree hash mismatch: expected=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 actual=baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+  "file_count_local": 48,
+  "file_count_worker": 48,
+  "provenance_reference": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
+    "bytes": 42595,
+    "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+  },
+  "score_claim": false
+}

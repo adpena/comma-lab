@@ -1,0 +1,18 @@
+{
+  "reviewer": "ddm_ffi5 self-review",
+  "pass": 1,
+  "scope": "all four changed Python files",
+  "findings": [
+    "Corrected the new lock path to the canonical .jsonl.lock spelling before review completion.",
+    "Corrected existing template documentation: auto resolves the path-dependent upload projection, not the seal digest.",
+    "Real retained-root projection reproduces baeb53af exactly; this is an unresolved consumer-path blocker beyond the chartered patch.",
+    "Tests exercise unmocked digest algorithms and the actual registration call with real append/lifecycle. Provider and broad evidence fixtures remain mocked; no score or live dispatch proof."
+  ],
+  "status": "bounded consumer patch reviewed; known retained-root blocker explicitly not closed",
+  "files": {
+    "tools/fire_modal_auth_eval.py": "dfb95ab54b3ce208e410ec2487adf6ed48c0587cfb5ec319ebb52f29dcebba30",
+    "tools/authorize_candidate_first_measurement.py": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
+    "experiments/modal_auth_eval.py": "eeffa3ab0a5b05fc109e48ca78dbbeda929c9c8e5df10e99bbe95382d65fe73f",
+    "src/tac/tests/test_candidate_prefire_intent.py": "d4621901a300389db57ce775672c5af72eab89ade655ef422f5f5e3899a50bc2"
+  }
+}

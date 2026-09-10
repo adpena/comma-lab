@@ -1,0 +1,3 @@
+command: .venv/bin/python tools/list_canonical_equations.py --json
+rc: 0
+

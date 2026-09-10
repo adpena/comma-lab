@@ -1946,16 +1946,19 @@ def _resolve_auth_artifact_output_under_work_dir(
     return resolved
 
 
-def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: str | None) -> None:
-    if not expected_runtime_tree_sha256:
-        return
+def _validate_expected_runtime_tree(
+    prov: dict, expected_runtime_tree_sha256: str | None,
+    expected_runtime_content_tree_sha256: str | None = None,
+) -> None:
     manifest = prov.get("inflate_runtime_manifest")
-    actual = manifest.get("runtime_tree_sha256") if isinstance(manifest, dict) else None
-    if actual != expected_runtime_tree_sha256:
-        raise RuntimeError(
-            "inflate runtime tree hash mismatch: "
-            f"expected={expected_runtime_tree_sha256} actual={actual}"
-        )
+    for field, expected, label in (
+        ("runtime_tree_sha256", expected_runtime_tree_sha256, "tree"),
+        ("runtime_content_tree_sha256", expected_runtime_content_tree_sha256, "content tree"),
+    ):
+        if expected:
+            actual = manifest.get(field) if isinstance(manifest, dict) else None
+            if actual != expected:
+                raise RuntimeError(f"inflate runtime {label} hash mismatch: expected={expected} actual={actual}")
 
 
 def _validate_expected_runtime_files(
@@ -1989,6 +1992,7 @@ def _existing_contest_auth_eval_reuse_blockers(
     device: str,
     video_names_file: Path,
     expected_runtime_tree_sha256: str | None = None,
+    expected_runtime_content_tree_sha256: str | None = None,
     scorer_input_cache_hashes_out: Path | None = None,
 ) -> tuple[dict | None, list[str]]:
     """Validate whether a durable auth-eval JSON can be reused.
@@ -2046,6 +2050,8 @@ def _existing_contest_auth_eval_reuse_blockers(
         and actual_runtime_tree != expected_runtime_tree_sha256
     ):
         blockers.append("expected_runtime_tree_sha256_mismatch")
+    if expected_runtime_content_tree_sha256 and actual_runtime_content_tree != expected_runtime_content_tree_sha256:
+        blockers.append("expected_runtime_content_tree_sha256_mismatch")
 
     if result.get("canonical_score") is None:
         blockers.append("canonical_score_missing")
@@ -3141,6 +3147,8 @@ def main() -> int:
                         help="Don't delete work dir on success (for debugging)")
     parser.add_argument("--expected-runtime-tree-sha256", default=None,
                         help="Fail if the inflate runtime dependency tree hash differs.")
+    parser.add_argument("--expected-runtime-content-tree-sha256", default=None,
+                        help="Fail if runtime content differs, independent of extraction root; retain the actual tree hash in provenance.")
     parser.add_argument("--expected-runtime-files-sha256", default=None,
                         help="Fail if the environment-free runtime FILES digest "
                              "(relative paths + file sha256s + evaluate.py) differs. "
@@ -3311,6 +3319,7 @@ def main() -> int:
             device=args.device,
             video_names_file=video_names_file,
             expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
+            expected_runtime_content_tree_sha256=args.expected_runtime_content_tree_sha256,
             scorer_input_cache_hashes_out=(
                 args.scorer_input_cache_hashes_out.resolve()
                 if args.scorer_input_cache_hashes_out is not None
@@ -3374,7 +3383,7 @@ def main() -> int:
         if inflate_env_overrides:
             prov["inflate_env_overrides"] = inflate_env_overrides
             prov["inflate_env_override_mode"] = "diagnostic_non_promotable"
-        _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256)
+        _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256, args.expected_runtime_content_tree_sha256)
         _validate_expected_runtime_files(prov, args.expected_runtime_files_sha256)
 
         # Receipt hardening (ddm_wc2 Surface B). These ADD provenance; they never touch a

@@ -1,0 +1,20 @@
+{
+  "reviewer": "ddm_ffi5 self-review",
+  "pass": 2,
+  "status": "clean for bounded requested changes; retained-root failure remains explicit",
+  "files": {
+    "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py": "dfb95ab54b3ce208e410ec2487adf6ed48c0587cfb5ec319ebb52f29dcebba30",
+    "/Users/adpena/Projects/pact/tools/authorize_candidate_first_measurement.py": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
+    "/Users/adpena/Projects/pact/experiments/modal_auth_eval.py": "eeffa3ab0a5b05fc109e48ca78dbbeda929c9c8e5df10e99bbe95382d65fe73f",
+    "/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py": "d4621901a300389db57ce775672c5af72eab89ade655ef422f5f5e3899a50bc2"
+  },
+  "attacks": [
+    "argv is measured by unmodified measure_t4_runtime_digest and differs from intent seal hash on the same actual test runtime; removing override makes test fail on auto.",
+    "Re-signed wrong intent runtime hash is refused by real _pf_identity before auth/provider checks; exact refusal code and detail asserted.",
+    "Registration call AST comes from the actual Modal local consumer. Real append preserves prior row, writes canonical repo lock and ledger, and passes candidate_seal SPAWNED registration check; removing path or lock keywords fails tests.",
+    "Foreign cwd is not the importing module root; mocked snapshot defaults would receive the ledger without the new explicit path. This is a local append test, not a Modal spawn claim.",
+    "Import test removes PYTHONPATH and executes standalone authorize module plus transitive experiments import from a foreign cwd. No authorization invoked.",
+    "Known shared assumption falsified: normal upload projection assumes a different root than first-measurement retention. Recorded actual-root projection equals worker hash; no claim that required patch fixes that additional failure.",
+    "Contract and legacy t4_direct files, frozen receipt, source snapshot, and retained SSD evidence unchanged by this arm. Snapshot sidecar index remains non-authoritative existing behavior; only canonical ledger and lock redirected."
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "base_head": "23a72b934392c0a11ed55150b35a983ebc7f63a3",
+  "files": [
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/BASELINE.json",
+      "bytes": 2143,
+      "sha256": "3a9c96fbcf681198bada1ce1600409d08ab61e32d27a2538deb6286889163f20"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/CHARTER_CORRECTION.md",
+      "bytes": 2011,
+      "sha256": "a6476e50114e42e2b7b759f66fecf839caa76d06ec99ee65e580af6846952673"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/EVALUATOR_ARGPARSE_CHECK.json",
+      "bytes": 152,
+      "sha256": "af7d51d03636099827a30690605f8d7615f076dabf4e7fa2594c37eba2d31ff7"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/FREEZE_APPEND_DRAFT.json",
+      "bytes": 2781,
+      "sha256": "ae10d4a69b8ad825550f9e3decf63c8c64626a2aec86fe86ebf829b54e4df678"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json",
+      "bytes": 1849,
+      "sha256": "6af90f45dc3368909ced7b2b01b2bc4d6d48e21959b3aabb5179322aceb53525"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/OBSOLETE_BUNDLE.json",
+      "bytes": 544,
+      "sha256": "789b5e4898f9d56711ce5d15d025d57b9de2d3bcbccb65cd0976ff8e79a03145"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json",
+      "bytes": 2210,
+      "sha256": "c5091f41efa80e373ecabd413c5a7c4d938b8f41de47db348ad0a237892566e7"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/PYTEST_ADJACENT_FINAL.txt",
+      "bytes": 274,
+      "sha256": "4178f37e7e1e7d90e8533b7414348a75e5f7e3c3e57714e0b6904ded05e0f3cd"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/PYTEST_CORRECTED.txt",
+      "bytes": 4260,
+      "sha256": "9f80b7a0ccb662209a53802d73a9addc58b0a6ed991ae07f3d42147e5c685259"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/PYTEST_REQUIRED_FINAL.txt",
+      "bytes": 260,
+      "sha256": "4a16bfb893850de76bc0f6bcbcd914e449c40f5ff3ef4ca07a5095fc15039ac7"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/REAL_CONTENT_VALIDATION.json",
+      "bytes": 1012,
+      "sha256": "704607f38722e32bd551f62c5ea5952831440018f3d5979196d7fabd44278109"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/REAL_RUNTIME_DIGESTS.json",
+      "bytes": 242,
+      "sha256": "4317a758e551ff50d753b7fadfa052096d3cc2712592f17a54e31b9c32e8b1ef"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/RECALL_QUERIES.json",
+      "bytes": 877,
+      "sha256": "d09543ac4d72dd488e415664b933161fb07b4e645f7bc4465f2275f11163d24d"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json",
+      "bytes": 702,
+      "sha256": "56649c3126c0e75ac915cad730d5ec87aa6b6108e058254f14bd2d9877210469"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/REVIEW_CORRECTED_1.json",
+      "bytes": 1815,
+      "sha256": "292a3a3319e09401bcd793138563b3ab9a0d405ee36550f136abfca60e2b219c"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/REVIEW_CORRECTED_2.json",
+      "bytes": 2138,
+      "sha256": "e260ff4792d08d343429752a96a1c0a73d430ded497b8771000c85bfaaf19548"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/REVIEW_MARKS_CORRECTED_1.txt",
+      "bytes": 1071,
+      "sha256": "782f982378c510b65a58773465b6243dabac2446a9cfb7e376181c02d7e6b590"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/REVIEW_MARKS_CORRECTED_2.txt",
+      "bytes": 1071,
+      "sha256": "7c712ed9bb023da96b76869a3a305dff2a427f96710e8b711105719522cbe7a1"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/RUFF_FINAL.txt",
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/SERIALIZER_STATUS.json",
+      "bytes": 454,
+      "sha256": "5f5229ed182900568186c006df3b3955bd279f72ac214ff1f7a89f3944247426"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/SERIALIZER_STDERR.txt",
+      "bytes": 324,
+      "sha256": "ec255cefd4d613c90fea52902297e6067553e7464c0f09ef66e8b867642cdf17"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/SERIALIZER_STDOUT.txt",
+      "bytes": 491,
+      "sha256": "4c1b21b25ffb85226319b5099e381642ac1f9f5c2de144d505edb0befc56edf4"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/design_recall.txt",
+      "bytes": 3911,
+      "sha256": "3c60607c3f2823ac7479cd91516d4e9365f70009cbd9507e27e49c92096c813d"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/equations_recall.txt",
+      "bytes": 74,
+      "sha256": "510604e027b906dbc9a46d5d31e19c044f5a2726e20260c56a6158d13b7af0b0"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/graph_recall.txt",
+      "bytes": 136,
+      "sha256": "fb6eac9026389174e49cfe34e36f7b33588a8e39f40662532f4064326470b2d6"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/ledger_recall.txt",
+      "bytes": 6890,
+      "sha256": "b8bf57da43bcc46afcac7d1ca1af2b9588abbb9d4df76714f5c43342d604be0b"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_20260910/research_recall.txt",
+      "bytes": 75280,
+      "sha256": "39c1acd32106f7fdd7500f904b218a44b425a91f82719b10bad60940da4546c5"
+    },
+    {
+      "path": ".omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md",
+      "bytes": 14202,
+      "sha256": "2482e7eeee94b832eb7d1e3d00f1cf0d328eeea16cc3396f5d1aabaa03b7d28c"
+    },
+    {
+      "path": "experiments/contest_auth_eval.py",
+      "bytes": 154084,
+      "sha256": "7affb36427d86b339dad1b71ede52a447977a6803c914ba6d2bd1ec4e749ec79"
+    },
+    {
+      "path": "experiments/modal_auth_eval.py",
+      "bytes": 84201,
+      "sha256": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29"
+    },
+    {
+      "path": "src/tac/tests/test_candidate_prefire_intent.py",
+      "bytes": 68348,
+      "sha256": "d3b939bf5b36c77f830358b6e8d2f20d5bb503b99ce0c88e60fbc80ce727d3d1"
+    },
+    {
+      "path": "tools/authorize_candidate_first_measurement.py",
+      "bytes": 1658,
+      "sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851"
+    },
+    {
+      "path": "tools/fire_modal_auth_eval.py",
+      "bytes": 69737,
+      "sha256": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703"
+    }
+  ],
+  "score_claim": false
+}

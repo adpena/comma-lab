@@ -1,0 +1,53 @@
+{
+  "head": "73dc73b327df12aa95db4b9a7096b4d64ebcf673",
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+      "bytes": 68534,
+      "sha256": "b092865b85c26187a76db6a7c23e839a41e1c6abeee64e9a51e81a2cb46c32bc"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/authorize_candidate_first_measurement.py",
+      "bytes": 1547,
+      "sha256": "96bab07767e5e7e3f6243c30be3a58e58b232b1111b0088e97367cca2e0c4174"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/modal_auth_eval.py",
+      "bytes": 82320,
+      "sha256": "d0c9fc519b004ba8f250d80ffac9d5f48c8abc3dce256462be4d88665c8071a7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py",
+      "bytes": 56462,
+      "sha256": "3f3f595208f8d83a610be6a95b9a6b477498723b31d2721719f90d4fac1105ec"
+    }
+  ],
+  "pins": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+      "bytes": 10459,
+      "sha256": "f2d94a58cd1abbe29bf089703a79d66c6f20253637da336ff4f8c58bf51ac85b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_20260910.md",
+      "bytes": 18114,
+      "sha256": "39efb49c2e0f34b9c36f7b8a858afe9e68ff7878efa4f637ef650167eedd7560"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_auth_eval_spawn.json",
+      "bytes": 8834,
+      "sha256": "e07653995a4d2496b867e312eb011e61e030a20eb6bb30b62014403573877e94"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+      "bytes": 80671,
+      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/modal_fire_snapshots/20260910T202017Z_ddm_rlc5_first_measurement_t4_run3_20260910/.omx/state/modal_call_id_ledger.jsonl",
+      "bytes": 1504,
+      "sha256": "f80d5fdc147715014b2e39e63b03fe64edd75bdf0bccc5d9d630a5ca4d7cbb50"
+    }
+  ],
+  "freeze_amendments": 3
+}

@@ -1,0 +1,11 @@
+{
+  "serializer_rc": 17,
+  "attempts": 1,
+  "head_after": "23a72b934392c0a11ed55150b35a983ebc7f63a3",
+  "source_files_preserved": true,
+  "commit_claim": false,
+  "bundle_status": "OBSOLETE_PRE_CORRECTION_DO_NOT_LAND",
+  "final_source_commit": null,
+  "final_source_status": "CORRECTED_REVIEWED_WORKING_TREE_MAIN_MUST_LAND",
+  "reason": "MAIN correction was discovered after the sole serializer attempt; no second attempt under the once-only charter."
+}

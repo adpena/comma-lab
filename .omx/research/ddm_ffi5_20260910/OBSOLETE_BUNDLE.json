@@ -1,0 +1,9 @@
+{
+  "status": "DO_NOT_LAND",
+  "fallback_commit": "011a034559af6865573d8d4b16ebf14fced71ea4",
+  "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/serializer/20260910T205148.441608Z-82987/intended-commit.bundle",
+  "reason": "Contains pre-correction implementation, which pins only the normal path-tree hash. Final corrected bytes are in the working tree and FINAL_SOURCE.patch. Preserve the old bundle only as historical custody.",
+  "replacement": "FINAL_SOURCE.patch",
+  "serializer_attempts": 1,
+  "serializer_rc": 17
+}

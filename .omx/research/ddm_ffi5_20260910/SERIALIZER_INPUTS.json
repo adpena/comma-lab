@@ -1,0 +1,106 @@
+[
+  {
+    "path": "tools/fire_modal_auth_eval.py",
+    "sha256": "dfb95ab54b3ce208e410ec2487adf6ed48c0587cfb5ec319ebb52f29dcebba30"
+  },
+  {
+    "path": "tools/authorize_candidate_first_measurement.py",
+    "sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851"
+  },
+  {
+    "path": "experiments/modal_auth_eval.py",
+    "sha256": "eeffa3ab0a5b05fc109e48ca78dbbeda929c9c8e5df10e99bbe95382d65fe73f"
+  },
+  {
+    "path": "src/tac/tests/test_candidate_prefire_intent.py",
+    "sha256": "d4621901a300389db57ce775672c5af72eab89ade655ef422f5f5e3899a50bc2"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md",
+    "sha256": "32f8e4b684b22a5af5d02f3c486040cbaf000edc5d9bb16e231ffa8902cc4c7c"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/BASELINE.json",
+    "sha256": "3a9c96fbcf681198bada1ce1600409d08ab61e32d27a2538deb6286889163f20"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/CHARTER_CORRECTION.md",
+    "sha256": "a6476e50114e42e2b7b759f66fecf839caa76d06ec99ee65e580af6846952673"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/FREEZE_APPEND_DRAFT.json",
+    "sha256": "d9492637e907f9e596d7592057d4b88fe25341b855767275a561e0fce4b67c9d"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/INDEX_BEFORE.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json",
+    "sha256": "b2ac11cc1222e25b2c1aeb8e5264f2d0386ad47b23cc51d6ebd43f6989f1d889"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json",
+    "sha256": "681f11d569045a45d2b6642202645e9971ad93e6b66e81bfb1d895a56092cd73"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/PYTEST_ADJACENT.txt",
+    "sha256": "7e171c66956a29fe96538632632dfec1f1f0659baaf2e550b8f1cbf638073f8b"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/PYTEST_REQUIRED.txt",
+    "sha256": "b21bf21dcebf6c371ab56285fe6c6621d32d0fc1ef5fb02326c3a2bcaa91295b"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/REAL_RUNTIME_DIGESTS.json",
+    "sha256": "4317a758e551ff50d753b7fadfa052096d3cc2712592f17a54e31b9c32e8b1ef"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/RECALL_QUERIES.json",
+    "sha256": "d09543ac4d72dd488e415664b933161fb07b4e645f7bc4465f2275f11163d24d"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json",
+    "sha256": "56649c3126c0e75ac915cad730d5ec87aa6b6108e058254f14bd2d9877210469"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/REVIEW_MARKS_1.txt",
+    "sha256": "c9cff305ec46759ed35f45648616fa176eb9dd2935dbcaee192efec100e3e5d5"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/REVIEW_MARKS_2.txt",
+    "sha256": "8b0ce0f4a2862796d61d4f6b8c6f258f4c1333b516941fa181734070c4505b14"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/REVIEW_PASS_1.json",
+    "sha256": "43f97bc2f95e98e46959ac0e140adbfdf943f4379eb160cb22edb619fb5e182a"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/REVIEW_PASS_2.json",
+    "sha256": "363dd266328ec7d20b2bee649dd5772abd88b5cc597ed05f330ad5743636c5ca"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/RUFF.txt",
+    "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/design_recall.txt",
+    "sha256": "3c60607c3f2823ac7479cd91516d4e9365f70009cbd9507e27e49c92096c813d"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/equations_recall.txt",
+    "sha256": "510604e027b906dbc9a46d5d31e19c044f5a2726e20260c56a6158d13b7af0b0"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/graph_recall.txt",
+    "sha256": "fb6eac9026389174e49cfe34e36f7b33588a8e39f40662532f4064326470b2d6"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/ledger_recall.txt",
+    "sha256": "b8bf57da43bcc46afcac7d1ca1af2b9588abbb9d4df76714f5c43342d604be0b"
+  },
+  {
+    "path": ".omx/research/ddm_ffi5_20260910/research_recall.txt",
+    "sha256": "39c1acd32106f7fdd7500f904b218a44b425a91f82719b10bad60940da4546c5"
+  }
+]

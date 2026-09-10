@@ -497,6 +497,7 @@ def _run_auth_eval_inner(
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
     retained_work_root: str = "",
+    expected_runtime_content_tree_sha256: str = "",
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -771,7 +772,11 @@ def _run_auth_eval_inner(
         "--inflate-device",
         inflate_device_policy,
     ]
-    if expected_runtime_tree_sha256:
+    if expected_runtime_content_tree_sha256:
+        if not retained_work_root:
+            raise ValueError("content-tree validation requires first-measurement retention")
+        cmd.extend(["--expected-runtime-content-tree-sha256", expected_runtime_content_tree_sha256])
+    elif expected_runtime_tree_sha256:
         cmd.extend(["--expected-runtime-tree-sha256", expected_runtime_tree_sha256])
     if scorer_input_cache_hashes:
         cmd.extend(
@@ -926,6 +931,7 @@ def _run_auth_eval_inner(
         "inflate_sh_rel": inflate_sh_rel,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+        "expected_runtime_content_tree_sha256": expected_runtime_content_tree_sha256,
         "scorer_device": scorer_device,
         "inflate_device_policy": inflate_device_policy,
         "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
@@ -1012,10 +1018,12 @@ def _run_auth_eval_fail_closed(
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
     retained_work_root: str = "",
+    expected_runtime_content_tree_sha256: str = "",
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
             retained_work_root=retained_work_root,
+            expected_runtime_content_tree_sha256=expected_runtime_content_tree_sha256,
             archive_bytes=archive_bytes,
             archive_sha256=archive_sha256,
             archive_size_bytes=archive_size_bytes,
@@ -1087,6 +1095,7 @@ def run_auth_eval(
 
     context = first_measurement_context
     retained_root = ""
+    expected_content = ""
     if context:
         import re
         import shutil
@@ -1095,6 +1104,9 @@ def run_auth_eval(
         digest = context.get("first_measurement_authorization_sha256", "")
         if not re.fullmatch(r"[0-9a-f]{64}", digest):
             raise ValueError("invalid first measurement authorization digest")
+        expected_content = context.get("expected_runtime_content_tree_sha256", "")
+        if not isinstance(expected_content, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_content):
+            raise ValueError("invalid first measurement runtime content digest")
         retained_root = str(AUTH_CACHE_VOLUME_ROOT / "first_measurements" / digest)
         if shutil.disk_usage(AUTH_CACHE_VOLUME_ROOT).free < 16 * 1024**3:
             raise ValueError("first measurement storage preflight: need 16 GiB retained-volume headroom")
@@ -1105,6 +1117,7 @@ def run_auth_eval(
         auth_cache_vol.commit()
     result = _run_auth_eval_fail_closed(
         retained_work_root=retained_root,
+        expected_runtime_content_tree_sha256=expected_content,
         archive_bytes=archive_bytes,
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,
@@ -1309,6 +1322,7 @@ def main(
     pair_group_id: str = "",
     single_axis_waiver_reason: str = "",
     first_measurement_context: str = "",
+    expected_runtime_content_tree_sha256: str = "",
 ) -> None:
     """Upload an archive and harvest Modal CUDA auth-eval artifacts."""
 
@@ -1335,6 +1349,9 @@ def main(
         )
 
     first_context = None
+    requested_runtime_content_tree_sha256 = expected_runtime_content_tree_sha256
+    if requested_runtime_content_tree_sha256 and not first_measurement_context:
+        raise SystemExit("FATAL: content-tree pin requires first-measurement context")
     if first_measurement_context:
         from tac.candidate_seal import (
             _pf_read,
@@ -1419,6 +1436,11 @@ def main(
             inflate_sh_rel=inflate_sh_rel,
         )
     )
+    if first_context:
+        _pf_require(bool(expected_runtime_content_tree_sha256)
+                    and requested_runtime_content_tree_sha256 == expected_runtime_content_tree_sha256
+                    and first_context.get("expected_runtime_content_tree_sha256") == expected_runtime_content_tree_sha256,
+                    "PREFIRE_IDENTITY_DRIFT_REFUSED", "first measurement runtime content digest differs")
     scorer_device_policy = str(scorer_device or "cuda").lower()
     if scorer_device_policy not in {"cuda", "cpu"}:
         raise SystemExit("FATAL: --scorer-device must be one of cuda, cpu")
@@ -1584,6 +1606,9 @@ def main(
             raise
         call_id = function_call_id(call)
         register_dispatched_call_id_fail_closed(
+            # The imported ledger module may live in the source snapshot; custody is in the repo cwd.
+            path=Path.cwd() / ".omx/state/modal_call_id_ledger.jsonl",
+            lock_path=Path.cwd() / ".omx/state/modal_call_id_ledger.jsonl.lock",
             call_id=call_id,
             lane_id=lane_id,
             label="modal_auth_eval",

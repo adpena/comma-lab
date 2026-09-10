@@ -429,11 +429,11 @@ def build_dispatch_argv(
     is executed rather than eyeballed (pq1 verified it by hand; hand-verification is the
     step this determinizes).
 
-    --expected-runtime-tree-sha256 is pinned 'auto' on BOTH axes (failure F3). That is not
-    a convenience: the projected and remote tree hashes are environment-coupled and
-    structurally disagree (the r9m deadlock), so both workers accept only ''/'auto'/the
-    runtime FILES digest and REFUSE any other value. Custody is carried by the transport
-    zip sha256 plus that FILES digest.
+    The template emits --expected-runtime-tree-sha256 auto on both axes (failure F3).
+    The normal worker resolves it to the upload projection, whose path-dependent
+    definition is distinct from the seal digest. The first-measurement consumer
+    records the explicit upload projection and additionally pins its content-only
+    digest, which the retained worker validates independently of extraction root.
     """
 
     cmd = [
@@ -678,6 +678,10 @@ def _first_measurement_main(argv: list[str]) -> int:
         runtime = Path(intent["candidate"]["runtime"]["path"])
         archive = Path(intent["candidate"]["archive"]["path"])
         _pf_require(not validate_tree(runtime), "PREFIRE_NON_TIMING_GATE_REFUSED", "runtime upload validator refused")
+        runtime_digests = measure_fire_runtime_digests(runtime)
+        uploaded = runtime_digests["modal_uploaded_runtime"]
+        expected_runtime_tree_sha256 = uploaded["runtime_tree_sha256"]
+        expected_runtime_content_tree_sha256 = uploaded["runtime_content_tree_sha256"]
         context = {
             "prefire_intent_sha256": intent["intent_sha256"], "intent_file_sha256": auth["intent"]["file_sha256"],
             "intent_file_bytes": auth["intent"]["file_bytes"], "first_measurement_authorization_sha256": auth["authorization_sha256"],
@@ -686,6 +690,16 @@ def _first_measurement_main(argv: list[str]) -> int:
             "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400,
             "score_claim": False, "promotion_eligible": False, "adjudication_required": True,
             "authorization_path": str(auth_path.resolve()), "intent_path": str(intent_path.resolve()),
+            "expected_runtime_content_tree_sha256": expected_runtime_content_tree_sha256,
+            "runtime_digests": {
+                "intent_runtime": {"digest_definition": "tac.candidate_seal.measure_runtime_digest",
+                    "sha256": intent["candidate"]["runtime"]["sha256"]},
+                "expected_runtime_tree": {"digest_definition": "tac.decode_wall_clock.measure_t4_runtime_digest",
+                    "sha256": expected_runtime_tree_sha256},
+                "expected_runtime_content_tree": {
+                    "digest_definition": uploaded["digest_definition"] + ".runtime_content_tree_sha256",
+                    "sha256": expected_runtime_content_tree_sha256},
+            },
         }
         context_path = output / "FIRST_MEASUREMENT_CONTEXT.json"
         cmd = build_dispatch_argv(spec=axis_spec("cuda"), archive=archive, runtime_dir=runtime,
@@ -693,6 +707,8 @@ def _first_measurement_main(argv: list[str]) -> int:
             lane_id=auth["lane_id"], instance_job_id=auth["instance_job_id"], claim_agent="MAIN",
             single_axis_waiver_reason=auth["single_axis_waiver_reason"], claim_policy="require_active",
             first_measurement_context=context_path)
+        cmd[cmd.index("--expected-runtime-tree-sha256") + 1] = expected_runtime_tree_sha256
+        cmd += ["--expected-runtime-content-tree-sha256", expected_runtime_content_tree_sha256]
         context["exact_argv"] = cmd
         # The context file is written by this tool AFTER the checks (``_pf_write_new`` below refuses
         # a pre-existing file), so it is the one argv path that legitimately does not exist yet.

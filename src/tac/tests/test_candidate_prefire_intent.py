@@ -451,6 +451,197 @@ def test_dry_run_consumes_nothing_and_explicit_argv(fixture, monkeypatch, capsys
     assert before == set(fixture["repo"].rglob("*"))
 
 
+def test_first_measurement_argv_and_manifest_name_both_real_digests(fixture, monkeypatch, capsys):
+    from tac.decode_wall_clock import measure_t4_runtime_digest
+
+    auth, path, tool, _ = prepare_fire(fixture, monkeypatch)
+    (fixture["repo"] / "upstream").symlink_to(Path(__file__).resolve().parents[3] / "upstream", target_is_directory=True)
+    foreign = fixture["repo"] / "foreign_cwd"
+    foreign.mkdir()
+    monkeypatch.chdir(foreign)
+    assert tool.main(["--first-measurement", str(fixture["path"]),
+        "--first-measurement-authorization", str(path), "--dry-run"]) == 0
+    context = json.loads(capsys.readouterr().out)
+    cmd = context["argv"]
+    expected = measure_t4_runtime_digest(fixture["root"])
+    content = tool.measure_fire_runtime_digests(fixture["root"])["modal_uploaded_runtime"]["runtime_content_tree_sha256"]
+    intent_digest = cs.measure_runtime_digest(fixture["root"]).sha256
+    assert expected != intent_digest
+    assert cmd[cmd.index("--expected-runtime-tree-sha256") + 1] == expected
+    assert cmd[cmd.index("--expected-runtime-content-tree-sha256") + 1] == content
+    assert context["expected_runtime_content_tree_sha256"] == content
+    assert context["runtime_digests"] == {
+        "intent_runtime": {"digest_definition": "tac.candidate_seal.measure_runtime_digest", "sha256": intent_digest},
+        "expected_runtime_tree": {"digest_definition": "tac.decode_wall_clock.measure_t4_runtime_digest", "sha256": expected},
+        "expected_runtime_content_tree": {
+            "digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+            "sha256": content},
+    }
+    manifest = tool.first_measurement_manifest(tool.axis_spec("cuda"), context)
+    manifest_path = tool.write_fire_manifest(foreign, manifest)
+    assert json.loads(manifest_path.read_text())["runtime_digests"] == context["runtime_digests"]
+    assert not cs.first_measurement_consumption_path(auth, fixture["repo"]).exists()
+
+
+def test_first_measurement_still_refuses_changed_intent_runtime_digest(fixture, monkeypatch):
+    _, path, tool, _ = prepare_fire(fixture, monkeypatch)
+    fixture["intent"]["candidate"]["runtime"]["sha256"] = "f" * 64
+    write(fixture["path"], sign(fixture["intent"]))
+    assert tool.main(["--first-measurement", str(fixture["path"]),
+        "--first-measurement-authorization", str(path), "--dry-run"]) == 9
+    refusal = json.loads(next(fixture["repo"].glob("PREFIRE_REFUSAL_*.json")).read_text())
+    assert refusal["code"] == "PREFIRE_IDENTITY_DRIFT_REFUSED"
+    assert "runtime sha256 differs" in refusal["detail"]
+
+
+def test_content_pin_accepts_relocation_but_refuses_one_changed_byte(fixture):
+    from experiments.contest_auth_eval import _runtime_dependency_manifest, _validate_expected_runtime_tree
+    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
+
+    root = fixture["root"]
+    upstream = Path(__file__).resolve().parents[3] / "upstream"
+    local = _runtime_dependency_manifest(root / "inflate.sh", upstream)
+    normal = modal_uploaded_submission_dir_runtime_manifest(local)
+    retained = modal_uploaded_submission_dir_runtime_manifest(local, remote_submission_dir="/retained/run/out/submission_dir")
+    expected = normal["runtime_content_tree_sha256"]
+    assert retained["runtime_tree_sha256"] != normal["runtime_tree_sha256"]
+    assert retained["runtime_content_tree_sha256"] == expected
+    prov = {"inflate_runtime_manifest": retained}
+    _validate_expected_runtime_tree(prov, None, expected)
+    assert prov["inflate_runtime_manifest"]["runtime_tree_sha256"] == retained["runtime_tree_sha256"]
+    with pytest.raises(RuntimeError, match="runtime tree hash mismatch"):
+        _validate_expected_runtime_tree(prov, normal["runtime_tree_sha256"])
+    with pytest.raises(RuntimeError, match="runtime tree hash mismatch"):
+        _validate_expected_runtime_tree(prov, normal["runtime_tree_sha256"], expected)
+    source = root / "inflate.py"
+    source.write_bytes(source.read_bytes() + b"\n")
+    changed = modal_uploaded_submission_dir_runtime_manifest(
+        _runtime_dependency_manifest(root / "inflate.sh", upstream), remote_submission_dir=retained["runtime_root"])
+    with pytest.raises(RuntimeError, match="runtime content tree hash mismatch"):
+        _validate_expected_runtime_tree({"inflate_runtime_manifest": changed}, None, expected)
+    with pytest.raises(RuntimeError, match="runtime content tree hash mismatch"):
+        _validate_expected_runtime_tree({}, None, expected)
+
+
+@pytest.mark.parametrize("changed_pin", [None, "argv", "context"])
+def test_local_content_pin_validation_and_worker_argv(fixture, changed_pin):
+    """Execute actual local guard and worker argv branch; never invoke a provider."""
+    import ast
+
+    source = Path(__file__).resolve().parents[3] / "experiments/modal_auth_eval.py"
+    tree = ast.parse(source.read_text())
+    main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    guard = next(n for n in main.body if isinstance(n, ast.If) and isinstance(n.test, ast.Name)
+        and n.test.id == "first_context" and "runtime content digest differs" in ast.unparse(n))
+    content = load_tool("fire_modal_auth_eval").measure_fire_runtime_digests(fixture["root"])["modal_uploaded_runtime"]["runtime_content_tree_sha256"]
+    ns = {"first_context": {"expected_runtime_content_tree_sha256": "f" * 64 if changed_pin == "context" else content},
+        "expected_runtime_content_tree_sha256": content,
+        "requested_runtime_content_tree_sha256": "f" * 64 if changed_pin == "argv" else content, "_pf_require": cs._pf_require}
+    code = compile(ast.Module(body=[guard], type_ignores=[]), str(source), "exec")
+    if changed_pin:
+        with pytest.raises(cs.PrefireRefusal, match="PREFIRE_IDENTITY_DRIFT_REFUSED"):
+            exec(code, ns)
+        return
+    exec(code, ns)
+    inner = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_run_auth_eval_inner")
+    branch = next(n for n in inner.body if isinstance(n, ast.If) and isinstance(n.test, ast.Name)
+        and n.test.id == "expected_runtime_content_tree_sha256")
+    ns = {"cmd": [], "expected_runtime_content_tree_sha256": content,
+        "retained_work_root": "/retained/run", "expected_runtime_tree_sha256": "a" * 64}
+    code = compile(ast.Module(body=[branch], type_ignores=[]), str(source), "exec")
+    exec(code, ns)
+    assert ns["cmd"] == ["--expected-runtime-content-tree-sha256", content]
+    ns.update(cmd=[], expected_runtime_content_tree_sha256="", retained_work_root="")
+    exec(code, ns)
+    assert ns["cmd"] == ["--expected-runtime-tree-sha256", "a" * 64]
+    ns.update(expected_runtime_content_tree_sha256=content)
+    with pytest.raises(ValueError, match="requires first-measurement retention"):
+        exec(code, ns)
+
+
+def test_content_pin_survives_fail_closed_wrapper():
+    import ast
+
+    source = Path(__file__).resolve().parents[3] / "experiments/modal_auth_eval.py"
+    node = next(n for n in ast.parse(source.read_text()).body
+        if isinstance(n, ast.FunctionDef) and n.name == "_run_auth_eval_fail_closed")
+    module = ast.Module(body=[ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0), node], type_ignores=[])
+    ast.fix_missing_locations(module)
+    ns = {"_run_auth_eval_inner": lambda **kwargs: kwargs}
+    exec(compile(module, str(source), "exec"), ns)
+    result = ns["_run_auth_eval_fail_closed"](archive_bytes=b"fixture", archive_sha256="a" * 64,
+        archive_size_bytes=7, inflate_sh_rel="inflate.sh", submission_dir_zip_bytes=None,
+        submission_dir_zip_sha256=None, source_repo_commit=COMMIT, inflate_timeout=1800, evaluate_timeout=1800,
+        retained_work_root="/retained/run", expected_runtime_content_tree_sha256="b" * 64)
+    assert result["expected_runtime_content_tree_sha256"] == "b" * 64
+
+
+def test_authorize_tool_imports_experiments_from_a_foreign_cwd(tmp_path):
+    """The standalone consumer must close its transitive import graph without PYTHONPATH."""
+    import os
+    import subprocess
+    import sys
+
+    repo = Path(__file__).resolve().parents[3]
+    code = (
+        "import importlib.util\n"
+        f"spec = importlib.util.spec_from_file_location('authorize_tool', "
+        f"{str(repo / 'tools' / 'authorize_candidate_first_measurement.py')!r})\n"
+        "mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)\n"
+        "from experiments.contest_auth_eval import _runtime_dependency_manifest\n"
+        "print('ok')\n"
+    )
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    proc = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env,
+        capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "ok"
+
+
+@pytest.mark.parametrize("first_measurement", [True, False])
+def test_local_registration_uses_repo_ledger_when_imported_from_snapshot(fixture, monkeypatch, first_measurement):
+    """Execute the real call expression and ledger append, without a provider spawn."""
+    import ast
+
+    import tac.deploy.modal.call_id_ledger as ledger
+
+    auth, _ = auth_fixture(fixture, monkeypatch)
+    source = Path(__file__).resolve().parents[3] / "experiments/modal_auth_eval.py"
+    main = next(n for n in ast.parse(source.read_text()).body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    call = next(n for n in ast.walk(main) if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Name) and n.func.id == "register_dispatched_call_id_fail_closed")
+    snapshot = fixture["repo"] / "snapshot"
+    snapshot.mkdir()
+    snapshot_ledger = snapshot / ".omx/state/modal_call_id_ledger.jsonl"
+    monkeypatch.setattr(ledger, "MODAL_CALL_ID_LEDGER_PATH", snapshot_ledger)
+    monkeypatch.setattr(ledger, "MODAL_CALL_ID_LEDGER_LOCK", snapshot_ledger.with_suffix(".jsonl.lock"))
+    monkeypatch.setattr(ledger, "MODAL_CALL_ID_LEDGER_INDEX_PATH", snapshot / "index.json")
+    monkeypatch.chdir(fixture["repo"])
+    monkeypatch.setenv("PACT_MODAL_SOURCE_ROOT", str(snapshot))
+    repo_ledger = fixture["repo"] / ".omx/state/modal_call_id_ledger.jsonl"
+    before = repo_ledger.read_bytes()
+    cs.reserve_first_measurement(auth, repo=fixture["repo"])
+    context = {"prefire_intent_sha256": fixture["intent"]["intent_sha256"],
+        "first_measurement_authorization_sha256": auth["authorization_sha256"],
+        "intent_file_sha256": auth["intent"]["file_sha256"], "intent_file_bytes": auth["intent"]["file_bytes"],
+        "instance_job_id": auth["instance_job_id"]}
+    namespace = {"Path": Path, "register_dispatched_call_id_fail_closed": ledger.register_dispatched_call_id_fail_closed,
+        "call_id": "fc-ffi5-fixture", "lane_id": auth["lane_id"], "gpu_key": "T4", "axis_label": "contest_cuda",
+        "first_context": context if first_measurement else None, "inflate_timeout": 1800, "evaluate_timeout": 1800,
+        "source_repo_commit": COMMIT, "claim_agent": "MAIN", "archive_sha256": fixture["intent"]["candidate"]["archive"]["sha256"],
+        "pairing": {}}
+    eval(compile(ast.Expression(call), str(source), "eval"), namespace)
+    assert repo_ledger.read_bytes().startswith(before)
+    row = json.loads(repo_ledger.read_text().splitlines()[-1])
+    assert row["call_id"] == "fc-ffi5-fixture" and row["event_type"] == "dispatched"
+    assert not snapshot_ledger.exists()
+    assert not snapshot_ledger.with_suffix(".jsonl.lock").exists()
+    assert repo_ledger.with_suffix(".jsonl.lock").exists()
+    if first_measurement:
+        assert cs.transition_first_measurement(auth, "SPAWNED", call_id=row["call_id"], repo=fixture["repo"])["state"] == "SPAWNED"
+
+
 @pytest.mark.parametrize("cloud", [None, ["active-scored-job"]])
 def test_unknown_or_busy_cloud_refuses_before_dispatch(fixture, monkeypatch, cloud):
     _, path, tool, flight = prepare_fire(fixture, monkeypatch)
@@ -555,6 +746,7 @@ def test_worker_wrapper_retains_inputs_raw_and_quarantines(tmp_path, monkeypatch
     commits = []
     def inner(**kwargs):
         root = Path(kwargs["retained_work_root"])
+        assert kwargs["expected_runtime_content_tree_sha256"] == "d" * 64
         assert (root / "INPUT_archive.zip").read_bytes() == b"archive fixture"
         (root / "raw").write_bytes(b"raw fixture")
         return {"passed": True, "score_claim": True, "promotion_eligible": True, "artifacts": {}}
@@ -564,7 +756,7 @@ def test_worker_wrapper_retains_inputs_raw_and_quarantines(tmp_path, monkeypatch
         "auth_cache_vol": SimpleNamespace(commit=lambda: commits.append(True)), "_run_auth_eval_fail_closed": inner}
     exec(compile(module, str(source), "exec"), namespace)
     context = {"first_measurement_authorization_sha256": "a" * 64, "prefire_intent_sha256": "b" * 64,
-               "exact_argv": ["fixture-worker"]}
+               "expected_runtime_content_tree_sha256": "d" * 64, "exact_argv": ["fixture-worker"]}
     result = namespace["run_auth_eval"](b"archive fixture", "c" * 64, 15, first_measurement_context=context)
     assert result["score_claim"] is result["promotion_eligible"] is False
     assert len(commits) == 2

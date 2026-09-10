@@ -1,0 +1,9 @@
+{
+  "command": [
+    ".venv/bin/python",
+    "experiments/contest_auth_eval.py",
+    "--help"
+  ],
+  "rc": 0,
+  "expected_content_flag_present": true
+}

@@ -1,0 +1,12 @@
+tools/fire_modal_auth_eval.py rc=0
+RESCAN: 'tools/fire_modal_auth_eval.py' current entity census 18 (last stored census 18)
+Marked 18 entities in 'tools/fire_modal_auth_eval.py' as 'reviewed'
+tools/authorize_candidate_first_measurement.py rc=0
+RESCAN: 'tools/authorize_candidate_first_measurement.py' current entity census 1 (last stored census 1)
+Marked 1 entities in 'tools/authorize_candidate_first_measurement.py' as 'reviewed'
+experiments/modal_auth_eval.py rc=0
+RESCAN: 'experiments/modal_auth_eval.py' current entity census 18 (last stored census 18)
+Marked 18 entities in 'experiments/modal_auth_eval.py' as 'reviewed'
+src/tac/tests/test_candidate_prefire_intent.py rc=0
+RESCAN: 'src/tac/tests/test_candidate_prefire_intent.py' current entity census 46 (last stored census 46)
+Marked 46 entities in 'src/tac/tests/test_candidate_prefire_intent.py' as 'reviewed'

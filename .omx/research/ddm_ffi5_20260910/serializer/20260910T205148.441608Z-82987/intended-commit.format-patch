@@ -1,0 +1,989 @@
+From 011a034559af6865573d8d4b16ebf14fced71ea4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alejandro=20Pe=C3=B1a?= <adpena@gmail.com>
+Date: Thu, 10 Sep 2026 15:51:49 -0500
+Subject: [PATCH] ddm_ffi5: first-measurement consumer pins, repo ledger and
+ import closure; retain unresolved worker-root diagnosis [no-triality]
+ [p0-ledger-ok]
+
+# CHECKPOINT_DISCIPLINE_WAIVED:keeper-arm 'ddm_ffi5' landing; resume custody = keeper apparatus (charter + done-receipt + persisted final message), not commit-body checkpoints (auto-appended by the serializer)
+---
+ .omx/research/ddm_ffi5_20260910/BASELINE.json |  53 +++++
+ .../FREEZE_APPEND_DRAFT.json                  |  48 +++++
+ .../ddm_ffi5_20260910/INDEX_BEFORE.txt        |   0
+ .../ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json   |  23 +++
+ ...RE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json |  62 ++++++
+ .../ddm_ffi5_20260910/PYTEST_ADJACENT.txt     |   2 +
+ .../ddm_ffi5_20260910/PYTEST_REQUIRED.txt     |   3 +
+ .../REAL_RUNTIME_DIGESTS.json                 |   5 +
+ .../ddm_ffi5_20260910/RECALL_QUERIES.json     |  54 +++++
+ .../RETAINED_ROOT_DIAGNOSIS.json              |  11 +
+ .../ddm_ffi5_20260910/REVIEW_MARKS_1.txt      |  12 ++
+ .../ddm_ffi5_20260910/REVIEW_MARKS_2.txt      |  12 ++
+ .../ddm_ffi5_20260910/REVIEW_PASS_1.json      |  18 ++
+ .../ddm_ffi5_20260910/REVIEW_PASS_2.json      |  20 ++
+ .omx/research/ddm_ffi5_20260910/RUFF.txt      |   1 +
+ .../ddm_ffi5_20260910/design_recall.txt       |   5 +
+ .../ddm_ffi5_20260910/equations_recall.txt    |   3 +
+ .../ddm_ffi5_20260910/graph_recall.txt        |   1 +
+ .../ddm_ffi5_20260910/ledger_recall.txt       |   4 +
+ .../ddm_ffi5_20260910/research_recall.txt     | 189 ++++++++++++++++++
+ ...ment_consumer_fixes_amendment3_20260910.md |  86 ++++++++
+ experiments/modal_auth_eval.py                |   3 +
+ .../tests/test_candidate_prefire_intent.py    | 102 ++++++++++
+ .../authorize_candidate_first_measurement.py  |   1 +
+ tools/fire_modal_auth_eval.py                 |  19 +-
+ 25 files changed, 732 insertions(+), 5 deletions(-)
+ create mode 100644 .omx/research/ddm_ffi5_20260910/BASELINE.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/FREEZE_APPEND_DRAFT.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/INDEX_BEFORE.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/PYTEST_ADJACENT.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/PYTEST_REQUIRED.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/REAL_RUNTIME_DIGESTS.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/RECALL_QUERIES.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/REVIEW_MARKS_1.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/REVIEW_MARKS_2.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/REVIEW_PASS_1.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/REVIEW_PASS_2.json
+ create mode 100644 .omx/research/ddm_ffi5_20260910/RUFF.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/design_recall.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/equations_recall.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/graph_recall.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/ledger_recall.txt
+ create mode 100644 .omx/research/ddm_ffi5_20260910/research_recall.txt
+ create mode 100644 .omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md
+
+diff --git a/.omx/research/ddm_ffi5_20260910/BASELINE.json b/.omx/research/ddm_ffi5_20260910/BASELINE.json
+new file mode 100644
+index 000000000..12da22c11
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/BASELINE.json
+@@ -0,0 +1,53 @@
++{
++  "head": "73dc73b327df12aa95db4b9a7096b4d64ebcf673",
++  "files": [
++    {
++      "path": "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
++      "bytes": 68534,
++      "sha256": "b092865b85c26187a76db6a7c23e839a41e1c6abeee64e9a51e81a2cb46c32bc"
++    },
++    {
++      "path": "/Users/adpena/Projects/pact/tools/authorize_candidate_first_measurement.py",
++      "bytes": 1547,
++      "sha256": "96bab07767e5e7e3f6243c30be3a58e58b232b1111b0088e97367cca2e0c4174"
++    },
++    {
++      "path": "/Users/adpena/Projects/pact/experiments/modal_auth_eval.py",
++      "bytes": 82320,
++      "sha256": "d0c9fc519b004ba8f250d80ffac9d5f48c8abc3dce256462be4d88665c8071a7"
++    },
++    {
++      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py",
++      "bytes": 56462,
++      "sha256": "3f3f595208f8d83a610be6a95b9a6b477498723b31d2721719f90d4fac1105ec"
++    }
++  ],
++  "pins": [
++    {
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
++      "bytes": 10459,
++      "sha256": "f2d94a58cd1abbe29bf089703a79d66c6f20253637da336ff4f8c58bf51ac85b"
++    },
++    {
++      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_20260910.md",
++      "bytes": 18114,
++      "sha256": "39efb49c2e0f34b9c36f7b8a858afe9e68ff7878efa4f637ef650167eedd7560"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_auth_eval_spawn.json",
++      "bytes": 8834,
++      "sha256": "e07653995a4d2496b867e312eb011e61e030a20eb6bb30b62014403573877e94"
++    },
++    {
++      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
++      "bytes": 80671,
++      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
++    },
++    {
++      "path": "/Users/adpena/Projects/pact/.omx/tmp/modal_fire_snapshots/20260910T202017Z_ddm_rlc5_first_measurement_t4_run3_20260910/.omx/state/modal_call_id_ledger.jsonl",
++      "bytes": 1504,
++      "sha256": "f80d5fdc147715014b2e39e63b03fe64edd75bdf0bccc5d9d630a5ca4d7cbb50"
++    }
++  ],
++  "freeze_amendments": 3
++}
+diff --git a/.omx/research/ddm_ffi5_20260910/FREEZE_APPEND_DRAFT.json b/.omx/research/ddm_ffi5_20260910/FREEZE_APPEND_DRAFT.json
+new file mode 100644
+index 000000000..d875e9a97
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/FREEZE_APPEND_DRAFT.json
+@@ -0,0 +1,48 @@
++{
++  "schema": "prefire_contract_amendment.v1",
++  "amendment_id": "ddm_pr14_manifest_in_receiver_risk_digest",
++  "adjudication_memo": {
++    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr14_adjudicate_manifest_in_normalized_receiver_digest_20260910.md",
++    "bytes": 48452,
++    "sha256": "6e1732baea1912731fef6a53abca0cb94faf2e9440accc304dd9b34e593bade9"
++  },
++  "definition_change": {
++    "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
++    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
++    "excluded_relative_paths": [
++      "MANIFEST.sha256"
++    ],
++    "raw_manifest_still_required": true,
++    "executable_difference_policy": "REFUSE"
++  },
++  "reference_receiver": {
++    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
++    "legacy_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
++    "amended_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
++    "included_file_count": 49,
++    "raw_input_pinset_sha256": "663b36aed2656b9e56fb5c8867b8ebd083e8b241a6d8741d091c2762318f9f3d",
++    "excluded_manifest": {
++      "bytes": 4570,
++      "sha256": "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
++    }
++  },
++  "candidate_receiver": {
++    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime",
++    "legacy_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
++    "amended_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
++    "included_file_count": 49,
++    "raw_input_pinset_sha256": "046621cb5c4c1d5c67f2ab2d4857ee750b97e885b95713930acfcc4c46f3a9dc",
++    "excluded_manifest": {
++      "bytes": 4570,
++      "sha256": "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
++    }
++  },
++  "implementation_commit": "${FULL_IMPLEMENTATION_LANDING_COMMIT}",
++  "implementation_manifest": {
++    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json",
++    "bytes": 2072,
++    "sha256": "681f11d569045a45d2b6642202645e9971ad93e6b66e81bfb1d895a56092cd73"
++  },
++  "score_claim": false,
++  "note": "DRAFT amendment[3]: consumer-only explicit upload-projection digest plus named intent digest; repo-root call ledger and lock; authorize repo import path. All contract rules and scoped digest definitions unchanged. MAIN appends only after source landing and committed-blob manifest verification. This does NOT cure the retained-volume runtime-root mismatch proved in ddm_ffi5; no retry authorized by this draft. pr16 post-hoc ratification owed."
++}
+diff --git a/.omx/research/ddm_ffi5_20260910/INDEX_BEFORE.txt b/.omx/research/ddm_ffi5_20260910/INDEX_BEFORE.txt
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/.omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json b/.omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json
+new file mode 100644
+index 000000000..56107ecdf
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json
+@@ -0,0 +1,23 @@
++[
++  {
++    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
++    "owner": "MAIN",
++    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910",
++    "fire_trigger": "Harvest this completed code/test package and serializer receipt",
++    "action": "Land the exact four reviewed Python files, memo and evidence in one serializer commit if the arm cannot land; verify all 15 manifest rows against committed blobs and replace the draft commit placeholder; append freeze amendment[3] without rewriting [0..2]."
++  },
++  {
++    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
++    "owner": "MAIN / pr16",
++    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json",
++    "fire_trigger": "Harvest ddm_ffi5; before any later authorization or retry",
++    "action": "Adjudicate and charter the separate retained-root projection consumer cure. Prove expected-versus-actual parity at the real retained worker root while preserving full payload retention, byte custody, and unchanged legacy t4_direct rules. Re-pin any further implementation change prospectively."
++  },
++  {
++    "disposition": "FOLDED",
++    "owner": "MAIN",
++    "consumer_store": ".omx/research/ddm_rlc5_20260910",
++    "fire_trigger": "Only after retained-root cure, all implementation freezes and fresh committed intent/authorization pass existing gates",
++    "action": "Any future first measurement, harvest and completion remains in the existing MAIN lifecycle; this arm issues no new dispatch order and does not reuse run3 nonce/job."
++  }
++]
+diff --git a/.omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json b/.omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json
+new file mode 100644
+index 000000000..90beaf66e
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json
+@@ -0,0 +1,62 @@
++[
++  {
++    "path": "experiments/modal_auth_eval.py",
++    "sha256": "eeffa3ab0a5b05fc109e48ca78dbbeda929c9c8e5df10e99bbe95382d65fe73f"
++  },
++  {
++    "path": "src/tac/candidate_seal.py",
++    "sha256": "f8ffeadda93757ff218630d85550d12ea386e09648e07897d478e86ada233ece"
++  },
++  {
++    "path": "src/tac/checkpoint_maturity.py",
++    "sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5"
++  },
++  {
++    "path": "src/tac/decode_wall_clock.py",
++    "sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff"
++  },
++  {
++    "path": "src/tac/deploy/modal/auth_eval.py",
++    "sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1"
++  },
++  {
++    "path": "src/tac/deploy/modal/call_id_ledger.py",
++    "sha256": "2edb975b53e1ac9a1e46474d51711c7fadf06820fb15fa11d63c2248bb4e9015"
++  },
++  {
++    "path": "src/tac/deploy/modal/result_json.py",
++    "sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d"
++  },
++  {
++    "path": "src/tac/deploy/modal/single_flight.py",
++    "sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d"
++  },
++  {
++    "path": "src/tac/git_custody_read.py",
++    "sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5"
++  },
++  {
++    "path": "src/tac/modal_source_snapshot.py",
++    "sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290"
++  },
++  {
++    "path": "tools/authorize_candidate_first_measurement.py",
++    "sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851"
++  },
++  {
++    "path": "tools/fire_modal_auth_eval.py",
++    "sha256": "dfb95ab54b3ce208e410ec2487adf6ed48c0587cfb5ec319ebb52f29dcebba30"
++  },
++  {
++    "path": "tools/launch_detached_process.py",
++    "sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa"
++  },
++  {
++    "path": "tools/make_candidate_seal.py",
++    "sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791"
++  },
++  {
++    "path": "tools/modal_harvest_poller.py",
++    "sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f"
++  }
++]
+diff --git a/.omx/research/ddm_ffi5_20260910/PYTEST_ADJACENT.txt b/.omx/research/ddm_ffi5_20260910/PYTEST_ADJACENT.txt
+new file mode 100644
+index 000000000..b718ebd61
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/PYTEST_ADJACENT.txt
+@@ -0,0 +1,2 @@
++..............................................                           [100%]
++46 passed in 1.15s
+diff --git a/.omx/research/ddm_ffi5_20260910/PYTEST_REQUIRED.txt b/.omx/research/ddm_ffi5_20260910/PYTEST_REQUIRED.txt
+new file mode 100644
+index 000000000..9727616e9
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/PYTEST_REQUIRED.txt
+@@ -0,0 +1,3 @@
++........................................................................ [ 51%]
++.....................................................................    [100%]
++141 passed in 3.69s
+diff --git a/.omx/research/ddm_ffi5_20260910/REAL_RUNTIME_DIGESTS.json b/.omx/research/ddm_ffi5_20260910/REAL_RUNTIME_DIGESTS.json
+new file mode 100644
+index 000000000..c333434b4
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/REAL_RUNTIME_DIGESTS.json
+@@ -0,0 +1,5 @@
++{
++  "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
++  "seal": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
++  "t4": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891"
++}
+diff --git a/.omx/research/ddm_ffi5_20260910/RECALL_QUERIES.json b/.omx/research/ddm_ffi5_20260910/RECALL_QUERIES.json
+new file mode 100644
+index 000000000..b54214a94
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/RECALL_QUERIES.json
+@@ -0,0 +1,54 @@
++[
++  [
++    "research",
++    [
++      "rg",
++      "-n",
++      "-m",
++      "3",
++      "runtime.tree.hash|measure_t4_runtime_digest|register_dispatched_call_id|verify_dispatch_paths",
++      ".omx/research",
++      "--glob",
++      "*.md"
++    ]
++  ],
++  [
++    "graph",
++    [
++      "rg",
++      "-n",
++      "-m",
++      "3",
++      "first.measurement|runtime.digest|dispatch.path",
++      ".omx/research",
++      "--glob",
++      "CANONICAL_RESEARCH_INDEX*",
++      "--glob",
++      "sub015_DAG_*"
++    ]
++  ],
++  [
++    "design",
++    [
++      "rg",
++      "-n",
++      "-m",
++      "3",
++      "first.measurement|runtime.digest|dispatch.path",
++      "docs",
++      "SPEC.md"
++    ]
++  ],
++  [
++    "ledger",
++    [
++      "rg",
++      "-n",
++      "-m",
++      "6",
++      "first.measurement|runtime.digest|ddm_ffi5",
++      ".omx/state/canonical_task_status.jsonl",
++      ".omx/state/lane_registry.json"
++    ]
++  ]
++]
+diff --git a/.omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json b/.omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json
+new file mode 100644
+index 000000000..1e3556729
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/RETAINED_ROOT_DIAGNOSIS.json
+@@ -0,0 +1,11 @@
++{
++  "axis": "[macOS-CPU advisory; scorer-free provenance reconstruction]",
++  "intent_runtime_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
++  "worker_recorded_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/59bb0b6a5089593af1f6da57394ea88c9fad198594345223cc286152e08777c5/out/submission_dir",
++  "projected_at_retained_root": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
++  "worker_actual": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
++  "matches": true,
++  "file_rows_equal": true,
++  "provenance_sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405",
++  "score_claim": false
++}
+diff --git a/.omx/research/ddm_ffi5_20260910/REVIEW_MARKS_1.txt b/.omx/research/ddm_ffi5_20260910/REVIEW_MARKS_1.txt
+new file mode 100644
+index 000000000..96d591cab
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/REVIEW_MARKS_1.txt
+@@ -0,0 +1,12 @@
++tools/fire_modal_auth_eval.py rc=0
++RESCAN: 'tools/fire_modal_auth_eval.py' current entity census 18 (last stored census 18)
++Marked 18 entities in 'tools/fire_modal_auth_eval.py' as 'reviewed'
++tools/authorize_candidate_first_measurement.py rc=0
++RESCAN: 'tools/authorize_candidate_first_measurement.py' current entity census 1 (last stored census 1)
++Marked 1 entities in 'tools/authorize_candidate_first_measurement.py' as 'reviewed'
++experiments/modal_auth_eval.py rc=0
++RESCAN: 'experiments/modal_auth_eval.py' current entity census 18 (last stored census 18)
++Marked 18 entities in 'experiments/modal_auth_eval.py' as 'reviewed'
++src/tac/tests/test_candidate_prefire_intent.py rc=0
++RESCAN: 'src/tac/tests/test_candidate_prefire_intent.py' current entity census 46 (last stored census 42)
++Marked 46 entities in 'src/tac/tests/test_candidate_prefire_intent.py' as 'reviewed'
+diff --git a/.omx/research/ddm_ffi5_20260910/REVIEW_MARKS_2.txt b/.omx/research/ddm_ffi5_20260910/REVIEW_MARKS_2.txt
+new file mode 100644
+index 000000000..b8373c17a
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/REVIEW_MARKS_2.txt
+@@ -0,0 +1,12 @@
++tools/fire_modal_auth_eval.py rc=0
++RESCAN: 'tools/fire_modal_auth_eval.py' current entity census 18 (last stored census 18)
++Marked 18 entities in 'tools/fire_modal_auth_eval.py' as 'reviewed'
++tools/authorize_candidate_first_measurement.py rc=0
++RESCAN: 'tools/authorize_candidate_first_measurement.py' current entity census 1 (last stored census 1)
++Marked 1 entities in 'tools/authorize_candidate_first_measurement.py' as 'reviewed'
++experiments/modal_auth_eval.py rc=0
++RESCAN: 'experiments/modal_auth_eval.py' current entity census 18 (last stored census 18)
++Marked 18 entities in 'experiments/modal_auth_eval.py' as 'reviewed'
++src/tac/tests/test_candidate_prefire_intent.py rc=0
++RESCAN: 'src/tac/tests/test_candidate_prefire_intent.py' current entity census 46 (last stored census 46)
++Marked 46 entities in 'src/tac/tests/test_candidate_prefire_intent.py' as 'reviewed'
+diff --git a/.omx/research/ddm_ffi5_20260910/REVIEW_PASS_1.json b/.omx/research/ddm_ffi5_20260910/REVIEW_PASS_1.json
+new file mode 100644
+index 000000000..58c6d45a7
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/REVIEW_PASS_1.json
+@@ -0,0 +1,18 @@
++{
++  "reviewer": "ddm_ffi5 self-review",
++  "pass": 1,
++  "scope": "all four changed Python files",
++  "findings": [
++    "Corrected the new lock path to the canonical .jsonl.lock spelling before review completion.",
++    "Corrected existing template documentation: auto resolves the path-dependent upload projection, not the seal digest.",
++    "Real retained-root projection reproduces baeb53af exactly; this is an unresolved consumer-path blocker beyond the chartered patch.",
++    "Tests exercise unmocked digest algorithms and the actual registration call with real append/lifecycle. Provider and broad evidence fixtures remain mocked; no score or live dispatch proof."
++  ],
++  "status": "bounded consumer patch reviewed; known retained-root blocker explicitly not closed",
++  "files": {
++    "tools/fire_modal_auth_eval.py": "dfb95ab54b3ce208e410ec2487adf6ed48c0587cfb5ec319ebb52f29dcebba30",
++    "tools/authorize_candidate_first_measurement.py": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
++    "experiments/modal_auth_eval.py": "eeffa3ab0a5b05fc109e48ca78dbbeda929c9c8e5df10e99bbe95382d65fe73f",
++    "src/tac/tests/test_candidate_prefire_intent.py": "d4621901a300389db57ce775672c5af72eab89ade655ef422f5f5e3899a50bc2"
++  }
++}
+diff --git a/.omx/research/ddm_ffi5_20260910/REVIEW_PASS_2.json b/.omx/research/ddm_ffi5_20260910/REVIEW_PASS_2.json
+new file mode 100644
+index 000000000..765570f2a
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/REVIEW_PASS_2.json
+@@ -0,0 +1,20 @@
++{
++  "reviewer": "ddm_ffi5 self-review",
++  "pass": 2,
++  "status": "clean for bounded requested changes; retained-root failure remains explicit",
++  "files": {
++    "/Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py": "dfb95ab54b3ce208e410ec2487adf6ed48c0587cfb5ec319ebb52f29dcebba30",
++    "/Users/adpena/Projects/pact/tools/authorize_candidate_first_measurement.py": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
++    "/Users/adpena/Projects/pact/experiments/modal_auth_eval.py": "eeffa3ab0a5b05fc109e48ca78dbbeda929c9c8e5df10e99bbe95382d65fe73f",
++    "/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py": "d4621901a300389db57ce775672c5af72eab89ade655ef422f5f5e3899a50bc2"
++  },
++  "attacks": [
++    "argv is measured by unmodified measure_t4_runtime_digest and differs from intent seal hash on the same actual test runtime; removing override makes test fail on auto.",
++    "Re-signed wrong intent runtime hash is refused by real _pf_identity before auth/provider checks; exact refusal code and detail asserted.",
++    "Registration call AST comes from the actual Modal local consumer. Real append preserves prior row, writes canonical repo lock and ledger, and passes candidate_seal SPAWNED registration check; removing path or lock keywords fails tests.",
++    "Foreign cwd is not the importing module root; mocked snapshot defaults would receive the ledger without the new explicit path. This is a local append test, not a Modal spawn claim.",
++    "Import test removes PYTHONPATH and executes standalone authorize module plus transitive experiments import from a foreign cwd. No authorization invoked.",
++    "Known shared assumption falsified: normal upload projection assumes a different root than first-measurement retention. Recorded actual-root projection equals worker hash; no claim that required patch fixes that additional failure.",
++    "Contract and legacy t4_direct files, frozen receipt, source snapshot, and retained SSD evidence unchanged by this arm. Snapshot sidecar index remains non-authoritative existing behavior; only canonical ledger and lock redirected."
++  ]
++}
+diff --git a/.omx/research/ddm_ffi5_20260910/RUFF.txt b/.omx/research/ddm_ffi5_20260910/RUFF.txt
+new file mode 100644
+index 000000000..1f5f344d0
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/RUFF.txt
+@@ -0,0 +1 @@
++All checks passed!
+diff --git a/.omx/research/ddm_ffi5_20260910/design_recall.txt b/.omx/research/ddm_ffi5_20260910/design_recall.txt
+new file mode 100644
+index 000000000..412579d98
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/design_recall.txt
+@@ -0,0 +1,5 @@
++docs/pr100_latent_sidecar_porting_proposal_20260504.md:105:Same dispatch path as existing apogee_intN lanes via the dispatch trio.
++docs/meta_bug_class_catalog.md:212:162. `check_operator_authorize_canonical_use` — Refuses `scripts/operator_authorize_*.sh` wrappers that don't delegate to the canonical entry point. Scan scope: every wrapper matching `scripts/operator_authorize_*.sh`. Acceptance: wrapper body invokes `tools/operator_authorize.py` directly OR routes through `tools/run_modal_smoke_before_full.py` OR the wrapper's first 10 lines carry a `# OPERATOR_AUTHORIZE_LEGACY_OK:<reason>` waiver. Bug class: the canonical operator-authorize entry point is `tools/operator_authorize.py` (single source of truth for recipe lookup + cost-band gating + dispatch wiring). Hand-rolled wrappers that bypass it can drift from the recipe schema, skip cost-band consultation, or fire stale dispatch paths. STRICT-FLIPPED 2026-05-13 per FIX-WAVE-3 R3-2 backfill (initially legacy-allowlisted under Catalog #176; legacy entry now removed). Live count at landing 2026-05-13: zero; current (2026-05-17): 1 (see drift reconciliation note below). Dedicated tests: `src/tac/tests/test_check_162_operator_authorize_canonical_use.py` (6 tests). Memory: `feedback_fix_wave_3_r3_findings_LANDED_20260513.md`. Cross-ref Catalog #176. **2026-05-17 drift reconciliation per Q1 sister + Catalog #185**: live count drifted from zero to 1 via the new master-gradient operator-authorize wrapper (`scripts/operator_authorize_master_gradient_fec6_modal_cpu.sh`) which neither delegates to `tools/operator_authorize.py` nor carries the legacy waiver. Operator-routable: refactor to thin shim delegating to canonical entry point with the canonical `--recipe <name>` form. Sister of Catalog #185 — this catalog row carries the actual empirical count per "no signal loss" discipline.
++docs/meta_bug_class_catalog.md:234:170. `check_substrate_recipes_declare_min_vram_gb_floor` — REVIEW-OMNI Medium NV5 (Carmack). Refuses substrate operator-authorize recipes (`.omx/operator_authorize_recipes/substrate_*_modal_*_dispatch.yaml`) that don't declare a top-level `min_vram_gb: <int>` field (>= 1 GB). Bug class: Council C OOM fix not validated across substrate trainers; T4 (16GB) and A10G (22GB shared) may OOM at 384x512 + batch_size=32. Without per-recipe declared minimum, the dispatch path cannot refuse instances below the declared floor. Same-line waiver: `# MIN_VRAM_GB_OK:<reason>` for substrates with no minimum (e.g. proxy / smoke variants); placeholder `<reason>` literal rejected. Initial landing: warn-only (22 legacy recipes; backfill-or-waive sweep is a separate wave per CLAUDE.md "Strict-flip atomicity rule"). STRICT-FLIPPED 2026-05-13 per FIX-WAVE-1 (live count = 0). 15 dedicated tests in `src/tac/tests/test_check_170_substrate_recipe_min_vram_gb.py`. Memory: same.
++docs/meta_bug_class_catalog.md:240:173. `check_substrate_dispatch_honors_canary_first_ordering` — REVIEW-OMNI Medium C4 (Quantizr/Fridrich). Refuses substrate operator-authorize recipes that don't declare `canary_status` (one of `canary` / `post_canary_dependent` / `independent_substrate`). A `post_canary_dependent` recipe MUST also declare `canary_dependency: <substrate_id>` so the dispatch path can verify the canary has at least one successful contest-CUDA anchor before firing. Bug class: sane_hnerv had 5 failed first-anchor attempts on 2026-05-12; treating sane_hnerv as just-one-of-N in parallel fan-out is a Race-mode rigor inversion at the wrong moment (no contest race active). Same-line waiver: `# CANARY_FIRST_OK:<reason>`; placeholder rejected. Initial landing: warn-only (22 legacy recipes; backfill sweep separate). STRICT-FLIPPED 2026-05-13 per FIX-WAVE-1 (live count = 0). 18 dedicated tests in `src/tac/tests/test_check_173_substrate_recipe_canary_status.py`. Memory: same.
++rg: SPEC.md: No such file or directory (os error 2)
+diff --git a/.omx/research/ddm_ffi5_20260910/equations_recall.txt b/.omx/research/ddm_ffi5_20260910/equations_recall.txt
+new file mode 100644
+index 000000000..93ae68bd4
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/equations_recall.txt
+@@ -0,0 +1,3 @@
++command: .venv/bin/python tools/list_canonical_equations.py --json
++rc: 0
++
+diff --git a/.omx/research/ddm_ffi5_20260910/graph_recall.txt b/.omx/research/ddm_ffi5_20260910/graph_recall.txt
+new file mode 100644
+index 000000000..d66db69b4
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/graph_recall.txt
+@@ -0,0 +1 @@
++.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:5857:  grok-test IS a first measurement of the store+warp vehicle.
+diff --git a/.omx/research/ddm_ffi5_20260910/ledger_recall.txt b/.omx/research/ddm_ffi5_20260910/ledger_recall.txt
+new file mode 100644
+index 000000000..16e24545f
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/ledger_recall.txt
+@@ -0,0 +1,4 @@
++.omx/state/canonical_task_status.jsonl:897:{"actual_delta_s":null,"blockers":["Current pre-fire seal requires completed timing receipt; future t4_direct cannot bootstrap it; second-family decision required."],"commit_shas":[],"completed_at_utc":null,"event_actor":"ddm_rlc2","event_notes":"{\"schema\": \"ddm_rlc2.contract_decision_fire_order.v1\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"owner\": \"MAIN and second family\", \"consumer_store\": \".omx/research/ddm_rlc2_20260910/CONTRACT_DECISION_FIRE_ORDER.json\", \"fire_trigger\": \"Harvest committed or verified-bundle STOP packet before any rlc2 materialization or fire\", \"action\": \"Adjudicate PROPOSED_CONTRACT.md; if approved, implement and prospectively freeze a separately typed first-measurement intent and consumer, preserving completed t4_direct validation. Then resume the original charter from real twin re-encode through full cold n600 raw identity, refreshed manifest, public smoke, literal census and staged intent; MAIN alone fires and harvests its own T4 receipt; validate full seal and exact score before promotion.\", \"proposal\": \".omx/research/ddm_rlc2_20260910/PROPOSED_CONTRACT.md\", \"approved\": false, \"implemented\": false, \"modal_authorized_for_this_arm\": false, \"local_calibration\": \"SUSPENDED\", \"candidate_exists\": false, \"dependent_rebase_and_fire_disposition\": \"FOLDED into this decision-gated original charter chain\", \"decision_receipt\": null, \"score_claim\": false}","event_timestamp_utc":"2026-09-10T14:42:24.375231Z","event_type":"blocked","owner":"ddm_rlc2","predicted_cost_usd":null,"predicted_delta_s_band":null,"schema_version":"canonical_task_status_v1_20260518","session_id":"ddm_rlc2_20260910","source_design_memo":".omx/research/ddm_rlc2_rebase_rule118_cure_onto_move42_20260910.md","started_at_utc":null,"status":"blocked","task_id":"ddm_rlc2_rebase_rule118_cure_onto_move42_20260910","test_status":"n_a","title":"Rebase counted rule118 cure onto move42 under timing seal contract","written_at_utc":"2026-09-10T14:42:24.375231Z","written_host":"mac.lan","written_pid":61879}
++.omx/state/canonical_task_status.jsonl:898:{"actual_delta_s":null,"blockers":[],"commit_shas":[],"completed_at_utc":null,"event_actor":"ddm_rlc2","event_notes":"{\"schema\": \"ddm_rlc2.contract_decision_fire_order.v1\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"owner\": \"MAIN and second family\", \"consumer_store\": \".omx/research/ddm_rlc2_20260910/CONTRACT_DECISION_FIRE_ORDER.json\", \"fire_trigger\": \"Harvest committed or verified-bundle STOP packet before any rlc2 materialization or fire\", \"action\": \"Adjudicate PROPOSED_CONTRACT.md; if approved, implement and prospectively freeze a separately typed first-measurement intent and consumer, preserving completed t4_direct validation. Then resume the original charter from real twin re-encode through full cold n600 raw identity, refreshed manifest, public smoke, literal census and staged intent; MAIN alone fires and harvests its own T4 receipt; validate full seal and exact score before promotion.\", \"proposal\": \".omx/research/ddm_rlc2_20260910/PROPOSED_CONTRACT.md\", \"approved\": false, \"implemented\": false, \"modal_authorized_for_this_arm\": false, \"local_calibration\": \"SUSPENDED\", \"candidate_exists\": false, \"dependent_rebase_and_fire_disposition\": \"FOLDED into this decision-gated original charter chain\", \"decision_receipt\": null, \"score_claim\": false}","event_timestamp_utc":"2026-09-10T14:42:24.395850Z","event_type":"registered","owner":"MAIN and second family","predicted_cost_usd":null,"predicted_delta_s_band":null,"schema_version":"canonical_task_status_v1_20260518","session_id":"ddm_rlc2_20260910","source_design_memo":".omx/research/ddm_rlc2_rebase_rule118_cure_onto_move42_20260910.md","started_at_utc":null,"status":"pending","task_id":"ddm_rlc2_rebase_rule118_cure_onto_move42_20260910::CONTRACT_DECISION","test_status":"pending","title":"Adjudicate first-measurement intent lifecycle for an unseen receiver","written_at_utc":"2026-09-10T14:42:24.395850Z","written_host":"mac.lan","written_pid":61879}
++.omx/state/canonical_task_status.jsonl:920:{"actual_delta_s":null,"blockers":[],"commit_shas":[],"completed_at_utc":null,"event_actor":"ddm_rlc5","event_notes":"{\"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"owner\": \"MAIN\", \"consumer_store\": \"/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json\", \"fire_trigger\": \"Exact intent bytes committed; live amended validation passes; pointer remains move43; current cost preflight and exclusive MAIN lane claim pass\", \"action\": \"Authorize and execute one first-measurement T4 dispatch through the frozen authorization and fire tools.\"}","event_timestamp_utc":"2026-09-10T19:59:30.482289Z","event_type":"registered","owner":"MAIN","predicted_cost_usd":null,"predicted_delta_s_band":null,"schema_version":"canonical_task_status_v1_20260518","session_id":"ddm_rlc5_20260910","source_design_memo":".omx/research/ddm_rlc5_rebase_counted_rider_cure_onto_move43_amended_prefire_intent_20260910.md","started_at_utc":null,"status":"pending","task_id":"ddm_rlc5_rebase_counted_rider_cure_onto_move43_amended_prefire_intent_20260910::MAIN_FIRST_MEASUREMENT","test_status":"pending","title":"Authorize and execute one first-measurement T4 dispatch through the frozen authorization and fire tools.","written_at_utc":"2026-09-10T19:59:30.482289Z","written_host":"mac.lan","written_pid":28747}
++.omx/state/canonical_task_status.jsonl:921:{"actual_delta_s":null,"blockers":[],"commit_shas":[],"completed_at_utc":null,"event_actor":"ddm_rlc5","event_notes":"{\"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"owner\": \"MAIN\", \"consumer_store\": \"/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/first_measurement/MODAL_REMOTE_RESULT.json\", \"fire_trigger\": \"Harvest of the authorized same-intent T4 dispatch\", \"action\": \"Complete the first-fire lifecycle and consider a frontier packet only if exact net dS is below -2e-5 versus move43 and actual T4 decode is at most 1260 seconds.\"}","event_timestamp_utc":"2026-09-10T19:59:30.502950Z","event_type":"registered","owner":"MAIN","predicted_cost_usd":null,"predicted_delta_s_band":null,"schema_version":"canonical_task_status_v1_20260518","session_id":"ddm_rlc5_20260910","source_design_memo":".omx/research/ddm_rlc5_rebase_counted_rider_cure_onto_move43_amended_prefire_intent_20260910.md","started_at_utc":null,"status":"pending","task_id":"ddm_rlc5_rebase_counted_rider_cure_onto_move43_amended_prefire_intent_20260910::MAIN_HARVEST","test_status":"pending","title":"Complete the first-fire lifecycle and consider a frontier packet only if exact net dS is below -2e-5 versus move43 and actual T4 decode is at most 1260 seconds.","written_at_utc":"2026-09-10T19:59:30.502950Z","written_host":"mac.lan","written_pid":28747}
+diff --git a/.omx/research/ddm_ffi5_20260910/research_recall.txt b/.omx/research/ddm_ffi5_20260910/research_recall.txt
+new file mode 100644
+index 000000000..7a5926218
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_20260910/research_recall.txt
+@@ -0,0 +1,189 @@
++.omx/research/frame_exploit_selector_packet_20260514_codex.md:337:  command template using the Modal-uploaded runtime-tree hash.
++.omx/research/cuda_axis_frontier_eval_verdict_20260610.md:131:fail-closed FATAL aborts (pairing-flag conflict + missing runtime-tree-hash + claim-conflict) cost
++.omx/research/wunderkind_g1_v3_per_pair_adaptive_sigma_full_stack_design_20260516.md:402:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/ddm_pq1_submission_packet_prep_20260815/REVIEW_PASS8_FRESH_EYES.md:39:| **F2** | 4, 7 — NEW class: the canonical receipt predates its own inputs | **`pre_submission_compliance.gen3.r4.json` was produced before the round-7 fix batch changed two of the four files it scans, and no re-run was performed.** `r4` reads `README.md` (packet), `report.txt`, `archive_manifest.json`, and `PR_BODY_DRAFT.md`. Round 7 rewrote `PR_BODY_DRAFT.md:1` and `README.md:1-5`. The receipt proves its own staleness: `post_deadline_submission_policy.statement_preview` still reads **`"# submission name: sz1 composed re-encode"`** — the exact string round-7 F5 ruled non-compliant. Six checks consume those two files (`public_hygiene`, `post_deadline_submission_policy`, `public_template_placeholders`, `public_source_reproducibility`, `hosted_archive`, `public_evidence_axis_labels`). The packet's own precedent is the opposite: round 5's fixes were *also* on custody-excluded surfaces (`report.txt` text, manifest key, staged docs) and `r4` exists **because** those fixes triggered a re-run plus a measured hash-neutrality proof. Round 7's batch got neither. | UTC times: `r4` written `09:56:23Z`; `PR_BODY_DRAFT.md` `12:32:31Z`; packet `README.md` `12:33Z`; fix commit `cfe778f18b` `12:34:45Z`. `git show 1a74d8f2d1:…/PR_BODY_DRAFT.md \| head -1` → `# submission name: sz1 composed re-encode`; current line 1 → `# submission name: sz1_composed_reencode`. Four documents assert r4 is current: `COMPLIANCE_RUNBOOK.md:145-152` ("the CANONICAL terminal receipt … All review passes from round 6 onward count against r4"), `SWAP_PROCEDURE.md:86-89`, `ADVERSARIAL_REVIEW_SCAFFOLD.md:18-21`, `GAP_REPORT.json` supersession note. The scaffold's round-7 row says "Packet bytes untouched (README.md is custody-excluded)" — true for the runtime-tree hash, and irrelevant to whether the checker read the file. | **MEDIUM-HIGH** |
++.omx/research/ddm_pq1_submission_packet_prep_20260815/REVIEW_PASS10_FRESH_EYES.md:66:- **The 34-file runtime tree hashes: UNAFFECTED, and r5 is NOT invalidated.**
++.omx/research/ddm_pq1_submission_packet_prep_20260815/REVIEW_PASS7_FRESH_EYES.md:44:| **F4** | 7 — new class: path resolution | **`PACKET_TARGET.json` points at a file that does not exist.** `active_candidate.generation_manifest` = `"generations/gen3_sz1_composed_split/GENERATION_MANIFEST.json"`. Nothing is there. `auth_runtime.file_inventory` compounds it: "GENERATION_MANIFEST.json files{} — per-file sha256 for the full tree" — so the packet's per-file custody inventory is unreachable from the canonical target file. The move was deliberate (the runbook records "non-standard metadata moved to `gen3_receipts/` so the runtime-tree hash matches the sealed value"); `PACKET_TARGET.json` was never updated and round 6 did not touch it. | `/usr/bin/find` over `generations/`: the file is at **`generations/gen3_receipts/GENERATION_MANIFEST.json`** (52 `files{}` entries, carries the `cpu_axis` block). `CPU_AXIS_SEALED_FIRE_ORDER.json` cites it correctly as "GENERATION_MANIFEST.json cpu_axis (gen3)". Every other path in `PACKET_TARGET.json` resolves — I checked all eight. | **MEDIUM** |
++.omx/research/codex_fresh_eyes_drivescript_c3vq_C_20260601T121346Z.md:268:- runtime-tree hash and inflated output aggregate hash;
++.omx/research/ddm_pq1_submission_packet_prep_20260815/GENERATION_LOG.md:97:deliberately NOT regenerated: the pinned runtime-tree hash is computed over that
++.omx/research/ddm_pq1_submission_packet_prep_20260815/GENERATION_LOG.md:134:exact-authority row validated runtime-tree hash `0d0fc008d6a3…` over the sealed
++.omx/research/ddm_pq1_submission_packet_prep_20260815/GENERATION_LOG.md:175:deliberately unedited because the evaluated runtime-tree hash was computed over
++.omx/research/public_pr95_pr96_no_dispatch_intake_20260504_codex.md:159:  eval custody records device, torch version, runtime tree hash, sample count,
++.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_20260910.md:10:1. **Dispatch-path ordering — RATIFY.** Excluding exactly the context file that the tool itself creates after validation is the narrow cure; every other argv and known spawn path remains under `verify_dispatch_paths`. Freeze amendment `[1]` is a valid append-only implementation re-pin. Provenance correction: `21c9b17ba6957ecf0661288d0d7b4aaaac55b2c4` is the causal code-change commit; `808da43c02a32ae328fd73c707331b9aaee2ac36` is a later reachable implementation snapshot containing those bytes, not the change commit.
++.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_20260910.md:32:| Dispatch-path ordering | A locally produced future path is not pre-existing evidence; every actual argv/spawn dependency must resolve before spend. `_pf_write_new` must still refuse replacement. | Historical change `21c9b17b` filters only arguments exactly equal to `str(context_path)` before `verify_dispatch_paths`; `_pf_write_new(context_path, context)` remains later. The amendment `[1]` manifest pins the resulting fire-tool blob `e30105d9...` at snapshot `808da43c...`. | `test_dispatch_path_guard_catches_the_ps2_failure` proves unresolved known spawn paths still fail. The retained run3 directory contains both `FIRST_MEASUREMENT_CONTEXT.json` and an axis-tagged `FIRE_MANIFEST.json`, a real positive control that the formerly impossible pass path was reached. | **RATIFY** |
++.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_20260910.md:34:| Authorization-tool import closure | A committed consumer must import all of its transitive runtime-digest dependencies from any working directory; pytest's implicit repo root is not a runtime guarantee. Any source change in `PREFIRE_IMPLEMENTATION_PATHS` requires a fresh manifest/freeze append before a new intent. | `authorize_candidate_first_measurement.py:9-10` adds only `REPO/src`; `decode_wall_clock.py:189-196` imports `experiments.contest_auth_eval` inside `measure_t4_runtime_digest`. `quiesced_decode_timing.py:34-36` and fire-tool commit `6c74c56f...` provide the matching precedent. | From `/private/tmp` with `PYTHONPATH` removed, `src`-only reproduction raised `ModuleNotFoundError: No module named 'experiments'`; inserting the repo root at index 1 made the import pass. | **AMEND** |
++.omx/research/canonical_submission_pipeline_specification_memo_20260526.md:732:| #339 | silent-no-spawn extinction (post-spawn) | Phase 6 | register_dispatched_call_id_fail_closed |
++.omx/research/canonical_submission_pipeline_specification_memo_20260526.md:786:| Layer 5 (paired_auth_eval) Modal silent-no-spawn recurrence | Low | Orphaned paid GPU | Catalog #339 + #360 already structurally extincted; Phase 6 acceptance verifies register_dispatched_call_id_fail_closed routing |
++.omx/research/ddm_pv1_provenance_lineage_citation_audit_20260817.md:202:These cannot be fixed without changing the evaluated runtime-tree hash `7acedb07e670e76c…` and
++.omx/research/wunderkind_g1_v2_wire_grammar_class_shift_full_stack_design_20260516.md:567:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/v1_faiss_v8_learned_compression_faiss_design_20260519.md:152:| Modal call_id ledger registration | `tac.deploy.modal.call_id_ledger.register_dispatched_call_id_fail_closed` (Catalog #245 + #339) | ADOPT_CANONICAL_BECAUSE_SERVES | Per Catalog #245 + #339: ALL Modal dispatches MUST register call_id fail-closed to prevent orphan paid dispatch bug class. NO substrate-specific reason to fork. |
++.omx/research/hnerv_hdm3_runtime_adapter_parity_20260507_codex.md:96:The runtime tree hash will change because the adapter now includes a normalizer
++.omx/research/nscs02_downsampled_renderer_cargo_cult_unwind_design_20260516.md:190:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/ddm_mv1_20260910/staged/docs/meta_bug_class_catalog.md:382:245. `check_modal_dispatches_register_call_id` — MODAL-CALL-ID-LEDGER-CANONICAL-HELPER self-protection 2026-05-15 (per `feedback_modal_call_id_ledger_canonical_landed_20260515.md` + operator directive *"perhaps canonicalize and record the call_id in a log or archive or in review_tracker duckdb or similar"*). Refuses any source-code site under `experiments/`, `tools/`, `scripts/`, `src/tac/` that invokes `fn.spawn(...)` (or recognized aliases `function.spawn` / `run_lane_training_<gpu>.spawn` / `modal_fn.spawn` / `modal_func.spawn`) on a Modal `Function` object WITHOUT one of: (a) a reference to `register_dispatched_call_id` (or sister tokens `from tac.deploy.modal.call_id_ledger import` / `tac.deploy.modal.call_id_ledger` / `MODAL_CALL_ID_LEDGER_PATH`) in the ±100-line window around the spawn invocation; (b) a same-line `# CALL_ID_LEDGER_REGISTRATION_OK:<rationale>` waiver (placeholder `<rationale>` / `<reason>` literals rejected so the gate's docstring example cannot self-waive). Bug class anchor: pre-Catalog #245, Modal call_ids were captured at SCATTERED surfaces — `experiments/results/lane_*_modal/modal_call_id.txt` (per-dispatch text) + `experiments/results/lane_*_modal/modal_metadata.json` (per-dispatch JSON) + `.omx/state/active_lane_dispatch_claims.md` (markdown ledger w/ embedded ids) + `tools/harvest_modal_calls.py` (crawler that re-discovers them). There was NO single source-of-truth for "show me every call_id we have ever dispatched in chronological order, including outcome". Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: every dispatch via `modal_train_lane.py` MUST be followed by a scheduled harvest within 24h; the harvester relied on per-dispatch metadata files whose discovery cost is O(N_dispatches) `glob` calls — a fragile primary index for an audit-grade ledger. Companion runtime fix landed `src/tac/deploy/modal/call_id_ledger.py` (~600 LOC mirroring the canonical `tac.deploy.lightning.active_jobs_state.py` pattern: fcntl-locked JSONL append-only at `.omx/state/modal_call_id_ledger.jsonl`; transactional `.tmp.<uuid12>` + `os.replace`; strict-load helper raises `CallIdLedgerCorruptError`; quarantines `.corrupt.<utc>` on JSON parse failure; APPEND-ONLY per CLAUDE.md HISTORICAL_PROVENANCE Catalog #110/#113/#132 — outcomes are NEW rows referencing the same `call_id`). Public API: `register_dispatched_call_id(call_id, lane_id, label, ...)` / `update_call_id_outcome(call_id, status, ...)` / `query_by_call_id` / `query_by_lane` / `query_unharvested(older_than_seconds=N)` / `query_all_post_utc(utc_str)` / `latest_status_by_call_id` / `load_call_ids_strict`. Schema: 5 event_types (`dispatched` / `harvested` / `failed` / `stale` / `manually_terminated`), 25-field row including `call_id` / `lane_id` / `label` / `platform` / `gpu` / `expected_cost_usd` / `expected_axis` / `recipe` / `dispatched_at_utc` / `harvested_at_utc` / `status` / `rc` / `elapsed_seconds` / `cost_actual_usd` / `score` / `score_axis` / `archive_sha256` / `archive_bytes` / `evidence_grade` / `max_seconds` / `mounted_code_git_head` / `agent` / `subagent_id` / `session_id` / `written_at_utc` / `written_pid` / `written_host`. Producer wire-ins (same commit batch): `experiments/modal_train_lane.py` (registers immediately after fn.spawn() returns + sentinel files write) + `experiments/modal_component_sensitivity_shards.py` (registers per-shard call_id). Consumer wire-in: `tools/backfill_modal_call_id_ledger.py` (one-time historical backfill: emitted 114 dispatched + 107 outcome rows from the historical `experiments/results/lane_*_modal/modal_metadata.json` + `harvest_summary.json` corpus). `MODAL_CALL_ID_LEDGER_PATH` registered in Catalog #131 (`check_no_bare_writes_to_shared_state`) `_SHARED_STATE_PATH_MARKERS` so direct writes outside the canonical helper are refused; `_ledger_lock` registered in `_BARE_WRITE_LOCK_TOKENS`; `register_dispatched_call_id` / `update_call_id_outcome` / `load_call_ids_strict` / `_append_event_locked` registered in `_BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS`; the canonical helper file itself registered in `_BARE_WRITE_CANONICAL_HELPERS` exclusion list. Self-exempt: `src/tac/deploy/modal/call_id_ledger.py` (canonical helper), `src/tac/deploy/modal/auth_eval.py` (provides `function_call_id` helper), `tools/backfill_modal_call_id_ledger.py` (historical backfill helper), `src/tac/preflight.py` (gate's own pattern literals); test files + `experiments/results/` + `_intake_` + `.omx/oss_export/` + `build/lib/` excluded. **STRICT-FLIPPED 2026-05-15** at landing per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: 0 (the only two existing producers landed the canonical wire-in in the same commit batch). 34 dedicated tests in `src/tac/tests/test_modal_call_id_ledger.py` covering schema validation (4 tests: schema_version pinned + valid_event_types canonical set + valid_statuses == event_types + terminal_statuses subset), register_dispatched_call_id happy path + validation (8 tests: writes row + persists to disk + rejects empty call_id/lane_id/label + rejects newline in id + extra kwargs attached + extra cannot overwrite reserved), update_call_id_outcome (4 tests: appends new row + rejects invalid status + event_type overrides status + does NOT mutate dispatched row per CLAUDE.md HISTORICAL_PROVENANCE), load_call_ids lenient (3 tests: empty when missing + skips malformed lines + skips non-dict rows), load_call_ids_strict per Catalog #138 (4 tests: empty when missing + raises on malformed JSON + raises on non-dict root + clean file returns rows), quarantine on corrupt (1 test: quarantines and refuses), atomic write (1 test: no .tmp leakage), query helpers (5 tests: by_call_id chronological + by_lane returns all + post_utc filters + unharvested only dispatched + age filter), latest_status_by_call_id (1 test), 4-process spawn pool concurrency stress (1 test: 20 rows survive across 4 procs × 5 rows each), full call_id lifecycle (1 test: dispatch → harvest+failure+stale across 3 distinct call_ids), JSONL byte-stable format with sort_keys=True (1 test). Backfill executed in same commit batch: `tools/backfill_modal_call_id_ledger.py --execute` emitted 114 dispatched + 107 outcome rows from the historical `experiments/results/lane_*_modal/modal_metadata.json` corpus to `.omx/state/modal_call_id_ledger.jsonl` (221 total events). Sister of Catalog #131 (`check_no_bare_writes_to_shared_state` — META gate that this gate's path is registered into) + Catalog #138 (`check_state_writers_strict_load_for_mutating_path` — strict-load discipline; #245 mirrors via `load_call_ids_strict` + `CallIdLedgerCorruptError`) + Catalog #128 (`check_continual_learning_writes_use_lock` — sister fcntl-locked JSONL writer) + Catalog #143 (`check_paid_job_register_before_submit` — sister "register before paid network call" pattern). Together they extinct the "Modal call_id orphaned at the per-dispatch sentinel layer" bug class structurally. Memory: `feedback_modal_call_id_ledger_canonical_landed_20260515.md`. Lane: `lane_modal_call_id_ledger_canonical_helper_20260515`.
++.omx/research/ddm_mv1_20260910/staged/docs/meta_bug_class_catalog.md:560:339. `check_modal_dispatcher_registers_call_id_before_successful_exit` — SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION self-protection 2026-05-19 (per operator NON-NEGOTIABLE *"such bugs must be permanently fixed and self-protected against"* + 3 empirical anchors today: Z6 Wave 2 4c dispatch / STC v2 dispatch / STC sister dispatch — ALL exhibited the same silent-no-spawn pattern). **Bug class anchor**: `experiments/modal_train_lane.py::main` called `fn.spawn()` successfully (paid GPU meter started on Modal account) THEN the canonical `register_dispatched_call_id` call was wrapped in `try/except Exception as exc: print(WARNING)` at lines 1921-1960 — silently swallowing any fcntl-lock contention / disk-full / sister-subagent edit / `CallIdLedgerCorruptError`. The wrapper exited rc=0 with no ledger row → harvester invisible per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable → operator effort wasted (recipe flips + operator-frontier-override + dispatch invocations all landed with zero downstream effect). Refuses any state of `experiments/modal_train_lane.py` where the post-spawn registration call sits inside a silent-swallow `try/except` handler (broad `Exception` / `BaseException` / bare `except`) that lacks `raise` / `sys.exit` / re-raise. Also refuses absence of registration call entirely. **Companion 4-layer fix**: (1) NEW canonical helper `register_dispatched_call_id_fail_closed(...)` in `src/tac/deploy/modal/call_id_ledger.py` raises new `LedgerRegistrationFailedError` on any failure; on failure, best-effort writes a `recover_<call_id>_<uuid>.json` dump to `.omx/state/modal_call_id_ledger_recovery_tmp/` so `tools/harvest_modal_calls.py --recover-from-tmp` can replay the dispatched event later. (2) `experiments/modal_train_lane.py` wrapper replaced silent swallow with `register_dispatched_call_id_fail_closed` + explicit `except LedgerRegistrationFailedError: sys.exit(13)` per Catalog #339 fail-closed contract. (3) NEW sister mitigation in `tools/operator_authorize.py::_dispatch_modal`: after `_modal_output_indicates_spawned_call` confirms `.spawn()` happened, extract `call_id=fc-...` from stdout AND poll the canonical ledger via new `poll_ledger_for_call_id(...)` helper (10s window); raise `SystemExit` citing Catalog #339 if the ledger row never appears. (4) THIS STRICT preflight gate AST-scans `experiments/modal_train_lane.py` for the silent-swallow regression pattern. **Acceptance**: (a) canonical fail-closed helper used + no try/except OR try/except handler invokes `raise` / `sys.exit` / `SystemExit`; (b) narrow `except` (e.g. `except RuntimeError`) accepted as not-broad-swallow; (c) same-line `# SILENT_NO_SPAWN_LEDGER_SWALLOW_OK:<rationale>` waiver on the `def main` line OR `try:` line with non-placeholder rationale ≥4 chars (placeholder `<rationale>` / `<reason>` / short rationales rejected per Catalog #287 sister discipline so the gate's docstring example cannot self-waive). **STRICT-from-byte-one** per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" + "Strict-flip atomicity rule" — live count at landing: 0 (the 4-layer fix lands in same commit batch; the wrapper now calls `register_dispatched_call_id_fail_closed` and explicitly catches+sys.exit(13)). Sister of Catalog #245 (canonical Modal call_id ledger) + Catalog #131 (fcntl-locked bare-write discipline) + Catalog #138 (strict-load discipline) + Catalog #143 (paid-job register-before-submit). Together they extinct the orphan-paid-Modal-dispatch bug class STRUCTURALLY at FOUR surfaces: register pending row BEFORE submit (#143) + canonical ledger source of truth (#245) + fcntl-locked + strict-load discipline (#131/#138) + fail-closed registration AFTER spawn (#339 — THIS gate). Tests: 20 in `src/tac/tests/test_check_339_silent_no_spawn_extinction.py` covering live-repo regression / silent-swallow flagged (3 patterns: except Exception / bare except / except BaseException) / no-registration-call flagged / canonical fail-closed accepted (4 patterns: bare call / try+sys.exit / try+raise / narrow except) / waiver semantics (rationale accepted + placeholder rejected + short rejected) / strict-mode raises with Catalog #339 message / strict-silent-on-clean / missing-target-silent / string-repo-root / syntax-error-tolerated / orchestrator-wire-in-strict-true regression / Catalog #185 sister-callable regression. Plus 15 sister tests in `src/tac/tests/test_modal_train_lane_silent_no_spawn_fix.py` covering canonical helper happy path / re-raises on failure / last-resort tmp dump written / diagnostic when dump also fails / exception chaining / poll returns True when row present / poll timeout / poll tolerates corrupt ledger / wrapper uses fail-closed helper / wrapper sys.exit(13) on failure / no legacy silent swallow / operator_authorize has poll helper + extract helper + polls ledger + raises SystemExit. 35/35 tests pass. **6-hook wire-in declaration** per Catalog #125: hook #1 sensitivity-map = N/A (defensive validator gate); hook #2 Pareto constraint = N/A; hook #3 bit-allocator = N/A; hook #4 cathedral autopilot dispatch = **ACTIVE** (THIS gate ensures no dispatch can land an orphan-paid-Modal-call invisible to the harvester); hook #5 continual-learning posterior = **ACTIVE** (canonical ledger remains the SINGLE source of truth for every Modal dispatch's lifecycle); hook #6 probe-disambiguator = N/A. Memory: `feedback_silent_no_spawn_structural_extinction_landed_20260519.md`. Lane: `lane_silent_no_spawn_structural_extinction_20260519` L1 (impl_complete + strict_preflight + memory_entry).
++.omx/research/ddm_mv1_20260910/staged/docs/meta_bug_class_catalog.md:614:377. `check_module_existence_check_is_case_sensitive` — MODAL DISPATCH RUNTIME-TREE-HASH LOCAL vs WORKER PARITY self-protection 2026-05-28 (per Wave N+9 Slot 4 PR111-candidate paired-CUDA RATIFICATION DEFER `6bc74e074` empirical anchor + CLAUDE.md "Apples-to-apples evidence discipline" + "Bugs must be permanently fixed AND self-protected against" non-negotiables + CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable). Refuses any state of `experiments/contest_auth_eval.py` that drops the canonical `_path_exists_case_sensitive` helper OR drops the `iterdir` token in `_module_exists` / `_module_paths`. **Bug class anchor**: PR111 composite (NSCS06 v8 chroma_lut + Compound C heterogeneous bit, sha `dfff1358638ef7f7`, 1.92 MB) paired-CUDA RATIFICATION 4× DEFER 2026-05-28 (Modal call_ids `fc-01KSQVET...` + `fc-01KSQVFG...` + `fc-01KSQVM7...` + `fc-01KSQVMY...`; cumulative paid Modal spend ~$0.06 producing ZERO score evidence). Empirical receipts: pre-fix LOCAL projector computed CUDA=`efa31c12...` / CPU=`c886528c...` but Modal worker actual was CUDA=`1e9bf123...` / CPU=`60256159...`; deterministic mismatch across 2 attempts × 2 axes. Root cause: `_module_exists` / `_module_paths` used `Path.exists()` which case-folds on macOS HFS+/APFS / Windows NTFS; LOCAL projector picked up phantom `tac.dykstra_pareto_solver.Polytope` (capital P) via `polytope.py` case-fold match; Linux Modal worker correctly returned False. `module_count` diverged 37 (LOCAL) vs 36 (WORKER); `file_count` diverged 40 vs 39; `repo_local_tac_import_manifest` dict-payload diverged cascading into `runtime_tree_sha256` mismatch failing dispatch pre-validation at `experiments/contest_auth_eval.py::_validate_expected_runtime_tree` with `RuntimeError("inflate runtime tree hash mismatch: expected=... actual=...")`. **Canonical fix** (companion landing in same commit batch): NEW `_path_exists_case_sensitive(path)` helper walks `parent.iterdir()` and requires exact basename match for every component; symlinks + missing paths handled conservatively (return False); `_module_exists` + `_module_paths` route through the new helper. Empirical proof: post-fix LOCAL projector produces CUDA=`1e9bf123e8eac353591c2fa57af96d3eb330855d34d375faa886dc9c32026afb` + CPU=`60256159c7d65405fca5139d8ffd4a81a8444c13ed0dd804fd0aecb6097b55e6` = EXACT MATCH with Modal worker actual hashes; phantom Polytope module eliminated from `repo_local_tac_import_manifest.root_import_modules`; `module_count` correctly 36; `file_count` correctly 39. **Acceptance**: (a) both required tokens (`_path_exists_case_sensitive` + `iterdir`) present in `experiments/contest_auth_eval.py`; (b) target file missing is silent (sister gates own existence). NO waiver mechanism — the canonical helper IS the contract. **STRICT-from-byte-one** per CLAUDE.md "Strict-flip atomicity rule" — the canonical fix lands in same commit batch driving live count to 0. Sister of Catalog #146 (contest-compliant inflate runtime template; design surface) + Catalog #205 (canonical `select_inflate_device`; per-file inflate.py device-fork surface) + Catalog #229 (premise-verification-before-edit; pre-edit discipline) + Catalog #270 (canonical dispatch optimization protocol umbrella) + Catalog #287 (placeholder-rationale rejection) + Catalog #307 (paradigm-vs-implementation falsification; this incident was IMPLEMENTATION-LEVEL not paradigm-level per the Catalog #307 classification) + Catalog #313 (probe-outcomes ledger; sister PROCEED row supersedes the DEFER row) + Catalog #323 (canonical Provenance umbrella) + Catalog #344 (canonical equations registry; canonical equation `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1` registered in same commit batch + canonical anti-pattern `modal_dispatch_local_projector_vs_worker_extraction_root_divergence_v1` registered via `tac.canonical_anti_patterns.register_anti_pattern`) + Catalog #348 (retroactive sweep for new gate; companion memo emitted) + Catalog #176 (META-meta: STRICT-callsite-has-CLAUDE.md-row — THIS entry satisfies that META gate) + Catalog #185 (META-meta-meta: Live count: 0 verified empirically) + Catalog #299 (catalog quota brake under 400; current 377 well under). Together they extinct the LOCAL-projector-vs-Modal-worker runtime-tree-hash divergence bug class STRUCTURALLY at FOUR orthogonal surfaces: source-text helper presence (#377 — THIS gate) + canonical equation positive invariant (#344) + canonical anti-pattern negative recurrence (#344 sister) + probe-outcomes ledger PROCEED disambiguation (#313). **Catalog #299 quota brake decision**: NEW gate (NOT scope extension of #205 / #146 / #270) because the macOS case-fold filesystem-semantics surface is structurally distinct from device-selection (#205) / contest runtime contract (#146) / Tier 1/2/3 hardware optimization (#270) surfaces; the canonical 2-landing pattern (immediate fix + sister STRICT gate) is the cathedral-friendly pattern per CLAUDE.md "Beauty, simplicity, and developer experience" + the 13th OPTIMAL-TRIO standing directive. **6-hook wire-in declaration** per Catalog #125: hook #1 sensitivity-map = N/A (defensive validator gate); hook #2 Pareto constraint = ACTIVE via NEW canonical equation `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1` Pareto polytope constraint (hash parity invariant); hook #3 bit-allocator = N/A; hook #4 cathedral autopilot dispatch = **ACTIVE** (canonical equation IS the infrastructure-layer disambiguator; future dispatch wrappers cannot silently re-introduce the macOS case-fold sub-class because the STRICT gate refuses regression structurally); hook #5 continual-learning posterior = **ACTIVE** (canonical equation + EmpiricalAnchor row + canonical anti-pattern + EmpiricalFalsification row all land in the canonical posterior); hook #6 probe-disambiguator = **ACTIVE** (hash parity IS the canonical infrastructure-layer disambiguator between LOCAL-projector-matches-worker vs LOCAL-projector-diverges-from-worker). Mission contribution per Catalog #300: `frontier_protecting` (extincts the silent-paired-dispatch-pre-validation-failure bug class structurally so future PR111-candidate / sister composite RATIFICATIONS cannot lose paid Modal spend to macOS case-fold; preserves apples-to-apples evidence discipline per CLAUDE.md). Tests: 16 in `src/tac/tests/test_modal_runtime_tree_hash_local_vs_worker_parity.py` (path_exists_case_sensitive unit + module_exists + module_paths + 3 PR111 empirical regression guards including exact CUDA + CPU hash match + phantom Polytope module absence) + 7 in `src/tac/tests/test_check_377_module_existence_case_sensitive.py` (live-repo regression + missing-token detection + strict-raise + waiver-N/A semantics + missing-target silent). Retroactive sweep per Catalog #348: `.omx/research/retroactive_sweep_for_catalog_377_20260528T183000Z.md`. Memory: `feedback_pr111_paired_cuda_ratification_infrastructure_fix_landed_20260528.md`. Lane: `lane_pr111_paired_cuda_ratification_infrastructure_fix_20260528` L1 (impl_complete + strict_preflight + canonical_equation + canonical_anti_pattern + probe_outcome + memory_entry).
++.omx/research/codex_findings_rnerv_pact_z8_residual_lane_research_20260531T223036Z_subagent.md:79:with `archive.zip` bytes, payload bucket bytes, runtime-tree hash, source
++.omx/research/wave_n30_adversarial_negative_receipts_audit_20260528.md:23:    rationale: "PR111 4 paired dispatches failed BEFORE training (runtime tree hash mismatch); recipe gate insufficient without Catalog #325 per-substrate symposium evidence + Catalog #377 macOS case-sensitive runtime tree parity"
++.omx/research/wave_n30_adversarial_negative_receipts_audit_20260528.md:102:| **R7** | PR111 composite paired-CUDA RATIFICATION DEFERRED | `6bc74e074` | 4 paired dispatches failed rc=1 both axes via runtime tree hash mismatch (LOCAL projector `efa31c12` vs WORKER actual `1e9bf123`) | **IMPLEMENTATION-LEVEL** INFRASTRUCTURE-FAILURE; PARADIGM composite NSCS06 v8 + Compound C INTACT per Catalog #307; root cause = macOS HFS+ case-fold via `Path.exists()` → phantom `Polytope` module detection | Catalog #377 `_path_exists_case_sensitive` helper LANDED commit `925b1c0a6`; re-fire after Wave N+29 symposium memo lands per Catalog #325 |
++.omx/research/yousfi_fridrich_floor_grand_council_20260502.md:246:- `archive_profile`: member sizes, SHA-256, runtime tree hash, decoder schema,
++.omx/research/pr106_runtime_consumption_sha_guard_20260513_codex.md:136:  - Gate #26 now threads expected archive and runtime-tree hashes for both R2
++.omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md:859:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/overnight_qq_nscs06_v8_re_dispatch_with_observability_active_landed_20260521.md:74:  via `register_dispatched_call_id_fail_closed`; ledger row registered for
++.omx/research/codex_findings_materializer_runtime_context_harvest_20260526T225005Z_codex.md:90:runtime tree hashes when present.
++.omx/research/contest_faithful_swarm_execution_20260502_codex.md:435:  bytes, SHA, runtime tree hash, sample count, component fields, and source
++.omx/research/contest_faithful_swarm_execution_20260502_codex.md:5364:- The patched runtime tree hash differs from the original C091 replay
++.omx/research/council_t2_pr101_lc_v2_clone_plus_cascade_a_fec10_v14_v2_per_substrate_symposium_20260528.md:84:5. **Cite-able**: archive sha + bytes + runtime tree hash all canonicalized; provenance per Catalog #323 canonical Provenance umbrella; V14-V2 paired_modal_plan.json carries pair_group_id + claim agent + lane_id
++.omx/research/codex_findings_exact_readiness_expected_runtime_identity_20260527T194308Z_codex.md:12:- Exact-readiness records both observed and expected runtime tree hashes from
++.omx/research/codex_findings_exact_readiness_expected_runtime_identity_20260527T194308Z_codex.md:18:  `expected_runtime_tree_sha256` beside the observed runtime tree hash.
++.omx/research/codex_findings_exact_readiness_expected_runtime_identity_20260527T194308Z_codex.md:19:- Materializer submission closure no longer treats observed runtime-tree hashes
++.omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md:174:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/shannon_floor_claim_matrix_20260430_codex.md:262:    The runtime tree hash changed from original C-091
++.omx/research/pr101_fec6_fixed_huffman_k16_selector_20260515_codex.md:112:- `failed_runtime_tree_hash_mismatch`: CPU extractor runtime tree is
++.omx/research/phase_7_paired_auth_eval_canonical_helper_landed_20260526.md:43:     `gate_auth_eval_call` + `register_dispatched_call_id_fail_closed`
++.omx/research/phase_7_paired_auth_eval_canonical_helper_landed_20260526.md:428:  for `gate_auth_eval_call` + `register_dispatched_call_id_fail_closed`
++.omx/research/clickpolish_pr110_phase2_modal_runbook_20260710.md:65:- Record call_id at spawn (`tac.deploy.modal.call_id_ledger.register_dispatched_call_id`); **HARVEST OR LOSE** — schedule harvest same turn: `tools/harvest_modal_calls.py --execute --from-ledger --call-id <fc-…>`.
++.omx/research/overnight_ww_mlx_native_portable_primitives_plus_selfcomp_rewrite_plus_cuda_t4_eval_pipeline_landed_20260521.md:122:- **hook #5 continual-learning posterior**: ACTIVE — every Tier-2 dispatch outcome registers via `tac.deploy.modal.call_id_ledger.register_dispatched_call_id_fail_closed` per Catalog #245 + #339, and downstream `tac.continual_learning.posterior_update_locked` per Catalog #128 receives the `[contest-CUDA]` anchor through canonical Provenance per Catalog #287/#323
++.omx/research/b1_e7_vq_k_sweep_remediated_dispatch_landed_20260519.md:174:**SUCCESS**: dispatch fired, call_id `fc-01KS1HQQ0F9GY1VYCQESSH4R4K` on A10G, label `substrate_vq_vae_k_sweep_modal_t4_dispatch_20260520T015850Z_k_2_slot_gg_v2`, lane_id `lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518`. Per Catalog #339 `register_dispatched_call_id_fail_closed` confirmed the call_id is in `.omx/state/modal_call_id_ledger.jsonl` (event_type=dispatched, status=dispatched). Per Catalog #245 the canonical ledger pattern is honored.
++.omx/research/ddm_re1_realization_engineered_candidate_20260813.md:137:  deterministic runtime-tree hash.
++.omx/research/pr106_lrl1_artifact_reducer_20260506_codex.md:49:archive remains blocked on exact CUDA auth eval, runtime tree hash provenance,
++.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:23816:ic1 sealed its runtime-tree hash from its PRE-LANDING worktree state; MAIN's local recompute on
++.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:28628:- Convention note for #1115: seal runtime-tree hash (d9e39a36…, arm) vs fire-tool staged-tree
++.omx/research/dp1_paired_smoke_dispatch_pre_authorization_checklist_20260520.md:85:| `modal_train_lane.py` Catalog #339 fail-closed | grep `register_dispatched_call_id_fail_closed\|LedgerRegistrationFailedError` | 5 references; canonical fix landed | ✓ |
++.omx/research/dp1_paired_smoke_dispatch_pre_authorization_checklist_20260520.md:110:| 7 | #245 | Modal call_id canonical ledger | **PASS** | `tac.deploy.modal.call_id_ledger.register_dispatched_call_id_fail_closed` fcntl-locked JSONL APPEND-ONLY |
++.omx/research/dp1_paired_smoke_dispatch_pre_authorization_checklist_20260520.md:111:| 8 | #339 | Modal silent-no-spawn structural extinction | **PASS** | 5 references to `register_dispatched_call_id_fail_closed` + `LedgerRegistrationFailedError` in `experiments/modal_train_lane.py`; canonical fix landed |
++.omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md:1010:5. **Cite-chain.** Every behavior signal anchors to canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. Call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction.
++.omx/research/pr79_s1_lossless_action_repack_20260503_codex.md:67:`contest_auth_eval.json`, runtime tree hash, component gates, manifest, and
++.omx/research/ddm_jo1u2_materializer_cure_20260821.md:135:`modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1`.
++.omx/research/tier_1_resurrection_5_pr106_lanes_05_06_reformulated_uniward_grayscale_lut_full_stack_design_20260516.md:668:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_charter_20260910.md:8:   sha 57f613af8c82c7d7…):** `tools/fire_modal_auth_eval.py` first-measurement mode ran `verify_dispatch_paths` over an argv that names
++.omx/research/ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_charter_20260910.md:17:   `src`; `tac.decode_wall_clock.measure_t4_runtime_digest` imports `experiments.contest_auth_eval` → ModuleNotFoundError
++.omx/research/hdm4_exact_cuda_compliance_review_20260513_codex.md:42:runtime-tree hash differs from the Modal exact-CUDA runtime tree. Treat that as a
++.omx/research/public_leaderboard_followup_20260504_codex.md:41:| #99 `hnerv_muon_lc` | title/text `0.19667` | `0.19668072586615531` | `178546` | `278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb` | HNeRV, one stored `0.bin`, schema-driven decoder, fp16 scales, latent correction sidecar | Highest threat if T4-valid. Body claims CPU, runtime selects CUDA when available and pip-installs brotli if absent. Contest-compliance review should focus on dependency closure and runtime tree hash. |
++.omx/research/public_leaderboard_followup_20260504_codex.md:85:  bytes, so runtime tree hash must be preserved exactly for any comparison.
++.omx/research/path_3_f_z8_hierarchical_predictive_coding_substrate_design_20260526.md:312:Every behavior signal anchors to canonical tuple `(substrate_id=z8_hierarchical_predictive_coding, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`.
++.omx/research/canonical_helper_pattern_audit_20260517.md:77:**Wire-in surface:** When the Layer 2 CLI extractor (G1 above) fires a Modal CPU run to compute a master-gradient anchor, the dispatch SHOULD register itself via `tac.deploy.modal.call_id_ledger.register_dispatched_call_id` per Catalog #245 AND the resulting `MasterGradient.measurement_call_id` field SHOULD reference that call_id. Then `cost_band_calibration` can be cross-joined via call_id to attribute the wall-clock + cost of master-gradient measurement to its own posterior. This requires no schema evolution on either side, only correct producer-side wiring in the CLI extractor.
++.omx/research/codex_findings_submission_bundle_byte_shaving_compliance_20260605T004402Z_codex.md:65:  artifacts as authority, runtime tree hash custody, no dummy/proxy promotion,
++.omx/research/codex_findings_submission_bundle_byte_shaving_compliance_20260605T004402Z_codex.md:222:   minify only generic code; keep a runtime tree hash and a source-to-minified
++.omx/research/pr111_composite_paired_cuda_ratification_infrastructure_deferred_landed_20260528.md:9:    verbatim: "4 dispatches × 2 axes × 0 score evidence is not 'rigor' — it's an unfixable runtime-tree-hash predictor bug masquerading as paired-axis validation. Until the LOCAL vs Modal-worker tree hash divergence in tools/dispatch_modal_paired_auth_eval.py::_modal_uploaded_runtime_hashes_for_axis is fixed, NO PR111 RATIFICATION can land. Stop dispatching; fix the predictor."
++.omx/research/pr111_composite_paired_cuda_ratification_infrastructure_deferred_landed_20260528.md:73:   Adversary both flagged the runtime-tree-hash predictor as CARGO-CULTED; verdict DEFER.
++.omx/research/pr111_composite_paired_cuda_ratification_infrastructure_deferred_landed_20260528.md:81:   produce byte-stable composite archive sha `dfff1358638ef7f7`; runtime-tree-hash
++.omx/research/overnight_xx_selfcomp_tier_2_paid_modal_a100_first_anchor_dispatch_landed_20260521.md:112:- **Catalog #245 + #339** canonical Modal call_id ledger fail-closed registration via `register_dispatched_call_id_fail_closed`
++.omx/research/subagent_queue_routing_20260520T120607Z.md:40:register_dispatched_call_id was wrapped in silent-swallow try/except,
++.omx/research/codex_findings_runtime_expected_tree_identity_20260527T193943Z_codex.md:9:contract, rather than letting an observed runtime tree hash silently stand in as
++.omx/research/codex_findings_runtime_expected_tree_identity_20260527T193943Z_codex.md:15:  runtime tree hash.
++.omx/research/codex_findings_runtime_expected_tree_identity_20260527T193943Z_codex.md:36:that still emits only an observed runtime tree hash should be treated as
++.omx/research/hnerv_hdm8_active_scorecard_refresh_20260514_codex.md:30:HDM8 exposed a provider-custody footgun: local runtime-tree hashes and Modal
++.omx/research/hnerv_hdm8_active_scorecard_refresh_20260514_codex.md:31:uploaded `--submission-dir` runtime-tree hashes differ because the tree hash
++.omx/research/hnerv_hdm8_active_scorecard_refresh_20260514_codex.md:40:with the wrong expected runtime-tree hash. HDM packet readiness artifacts also
++.omx/research/ddm_rr5_jg5_rider_remeasure_20260820.md:88:runtime tree hash. `ddm_rr8`'s native corrector port moves the runtime tree alone (archive
++.omx/research/ddm_f26p_runtime_cpu_lift_20260814.md:242:`modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1`,
++.omx/research/council_z8_hierarchical_predictive_coding_per_substrate_symposium_20260518.md:662:4. **Cathedral autopilot dispatch hook** = ACTIVE per Catalog #245 modal_call_id_ledger + Catalog #167 smoke-before-full pattern. Z8 dispatch (when authorized per reactivation Path 3) registered via `tac.deploy.modal.call_id_ledger.register_dispatched_call_id` BEFORE Modal `.spawn()` returns; harvested via canonical `tools/harvest_modal_calls.py` within 24h.
++.omx/research/ddm_cpu1_cpu_axis_adjudication_20260820.md:357:→ `.spawn()` → `register_dispatched_call_id_fail_closed` → claim transition to `..._spawned`.
++.omx/research/ddm_ffi4_implement_pr14_scoped_risk_digest_amendment_20260910.md:184:`ddm_r9m_first_contest_cpu_row_20260804/runtime_tree_hash_verification_20260804.md:7–24`
++.omx/research/tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_20260516.md:919:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256, beta_value, path_variant)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/z6_candidate4c_scorer_logit_trainer_readiness_20260518_codex.md:1689:raw-output hashes but no top-level runtime-tree hash. That left the proof
++.omx/research/lane12_fixed_renderer_burn_unblock_review_20260503_codex.md:152:   bytes, component trace, adjudicated JSON, runtime tree hash, and manifest.
++.omx/research/codex_findings_materializer_runtime_identity_preservation_20260527T180906Z_codex.md:15:The harvest overlay now imports canonical runtime tree hash fields, extracts
++.omx/research/codex_findings_materializer_runtime_identity_preservation_20260527T180906Z_codex.md:18:different runtime tree hash, the harvester records an explicit identity blocker
++.omx/research/recursive_adversarial_greenup_review_20260504_codex.md:138:  `inflate.sh` runtime support, runtime tree/hash custody, and manifest
++.omx/research/ddm_rr7_t4_wallclock_verdict_20260820.md:212:| 2 | **Unit tests were poisoning the production single-flight ledger.** `test_modal_auth_eval.py` fixtures wrote fake `fc-test-modal-auth*` ids into `.omx/state/modal_call_id_ledger.jsonl` as permanently-live `dispatched` rows. Four had accumulated and **refused this paid dispatch**. The module already had an autouse fixture isolating tests FROM the guard; it did not stop them POISONING the guard's data for everyone else. Fixed at `register_dispatched_call_id` (the ledger module), which the `_fail_closed` wrapper resolves at call time. Proven: 55 tests pass, ledger row count unchanged at 876. | `8095963f79` |
++.omx/research/ddm_c1_composed_candidate_spec_603_613_20260723.md:202:| **R4 — contest packet byte-close** | Attach a deterministic `inflate.sh` runtime, run it twice, require bit-identical full output, runtime-tree hash, archive SHA/size, no scorer weights or GT tables, <=1,800 s, and strict archive audit at 200,000 B. | `tools/audit_archive.py <archive> --strict --max-bytes 200000`. There is currently no DDM composed-runtime exporter in this branch; generic WITNESS byte-close tooling is not a valid substitute. This missing exporter is a named binding blocker. |
++.omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md:386:5. **Cite-able.** Every behavior signal anchors to canonical tuple `(substrate_id=tt5l_v2, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. Call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/codex_findings_hfv1_pr101_exact_eval_readiness_20260521T064257Z_codex.md:25:- Modal uploaded runtime-tree hashes through the canonical paired dispatcher;
++.omx/research/codex_findings_hfv1_pr101_exact_eval_readiness_20260521T064257Z_codex.md:95:Modal uploaded runtime-tree hashes are identical across the three archives
++.omx/research/atw_codec_v2_cooperative_receiver_full_stack_design_20260516.md:800:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/ddm_sr1_submission_gauntlet_20260817.md:338:it later changes the runtime tree hash and forces a refire.
++.omx/research/ddm_sr1_submission_gauntlet_20260817.md:344:4. Portable runtime tree hash + file count.
++.omx/research/pr106_format0d_modal_runtime_hash_contract_hardening_20260516_codex.md:35:- classification: `refused_dispatch_runtime_tree_hash_contract_mismatch`
++.omx/research/c082_pr75_lossless_repack_hardening_addendum_20260503_codex.md:49:- runtime tree hash must be recorded because identical archive bytes can score
++.omx/research/cheap_signal_first_dispatch_wave_synthesis_20260519T063932Z.md:36:Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": this is NOT a normal `.spawn()` detach pattern — a normal detach would have produced a call_id in the canonical ledger via `tac.deploy.modal.call_id_ledger.register_dispatched_call_id`. The wrapper appears to have exited BEFORE the spawn registration.
++.omx/research/hfv1_pr101_exact_eval_readiness_verification_smoke_20260521T080013Z.md:99:Both registered via canonical `register_dispatched_call_id` + auto-recovered:
++.omx/research/cascade_c_prime_wave_2_paired_axis_empirical_anchor_landed_20260526.md:127:- **Catalog #360** pre-spawn observability verified (`register_dispatched_call_id_fail_closed` path active in `experiments/modal_train_lane.py`).
++.omx/research/ddm_fx2_20260809/FX2_RECEIPT.md:54:The search covered the current 28,841-file `.omx/research` corpus with content queries for `fx1_runtime_tree|shared FX1|shared-runtime` (18 matching files), `three[- ]argument|3[- ]arg|video.names.file` (418), and `bare[- ]python|python3[- ]only|legacy bare-python` (10). It also covered the one `CANONICAL_RESEARCH_INDEX*` file, all 11 `sub015_DAG_*` files, the design/SPEC query surface (400 files), `.omx/state/canonical_task_status.jsonl`, the harness bridge, current arm receipts/queue, and the canonical-equation registry. No FX1/three-argument/bare-Python-specific equation was found in those named scopes; the relevant generic equation is `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1`.
++.omx/research/ddm_fx2_20260809/FX2_RECEIPT.md:56:Beyond the charter seeds, recall found the already-landed BL1 PR103 fix, the manifest hash consumer, upstream's stale-output masking risk, DV1's syntax-only proof boundary, the historical DV1 verifier's moving-reference hazard, and the requirement to recompute runtime-tree hashes after this edit. Those findings changed the run to use a fresh path plus rc/marker/full-hash proof, update both runtime custody hashes, consolidate into Catalog #146, and avoid the dirty live DV1 tree.
++.omx/research/a_stack_nscs01_02_03_composition_full_stack_design_20260516.md:798:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/pr77_action_pose_mixed_container_candidates_20260503_codex.md:125:`contest_auth_eval.json`, logs, archive SHA/bytes, runtime tree hash, and
++.omx/research/pr75_lossless_micro_packer_worker_20260503.md:111:4. preserve `contest_auth_eval.json`, logs, runtime tree hash, archive SHA, bytes, and recomputed score.
++.omx/research/codex_findings_operation_portfolio_exact_readiness_bridge_20260525T235722Z_codex.md:28:The chain now records 3 exact-readiness bridge reports, 3 blocked candidates, and 0 ready candidates. Top blockers include missing archive/runtime manifests, missing `inflate.sh` / `report.txt`, unresolved receiver-contract blockers, missing runtime-tree hashes, and active-floor byte blockers. That means the chain is high-value acquisition signal, not dispatch authority.
++.omx/research/codex_findings_operation_portfolio_exact_readiness_bridge_20260525T235722Z_codex.md:44:2. Convert the exact-readiness blocker summary into a prioritized receiver repair queue, starting with runtime tree hashes and full-frame parity context.
++.omx/research/council_t2_composite_nscs06_v8_plus_compound_c_pr111_candidate_per_substrate_symposium_20260528.md:121:9. **PR111 paired-CUDA infrastructure DEFER memo**: commit `6bc74e074` — 4 paired Modal dispatches failed rc=1 both axes via runtime tree hash mismatch (macOS case-insensitive Path.exists() picked up phantom `tac.dykstra_pareto_solver.Polytope`); fixed per Catalog #377 STRICT gate; recipe re-enabled at commit pending. **CRITICAL**: even with infrastructure fixed, the symposium per Catalog #325 must land BEFORE next paired-CUDA dispatch per the operator's just-saved course-correction.
++.omx/research/comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo_20260518.md:298:| D1.4 | **modal_call_id_ledger.register_dispatched_call_id** (per-dispatch Modal call_id ledger per Catalog #245 canonical 4-layer pattern) | `src/tac/deploy/modal/call_id_ledger.py::register_dispatched_call_id` + `update_call_id_outcome` + sister queries | ACTIVE | 5/6 hooks | HARD-EARNED |
++.omx/research/comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo_20260518.md:435:| `tac.deploy.modal.call_id_ledger.register_dispatched_call_id` | NO (orthogonal) | partial — store `master_gradient_anchor_for_archive` reference | add `master_gradient_archive_sha256` optional field |
++.omx/research/atw_v2_1_faiss_ivf_pq_substrate_design_memo_20260518.md:147:**New observability artifact for V2-1**: `experiments/results/atw_v2_1_faiss_pq_codebook_quality_report.json` — codebook reconstruction error per region per training step + MI between PQ-encoded channel + A1 latents (sister to existing 323-byte probe). Persisted via canonical `register_dispatched_call_id` per Catalog #245.
++.omx/research/retroactive_sweep_for_catalog_377_20260528T183000Z.md:24:- stderr contains: `RuntimeError: inflate runtime tree hash mismatch: expected=<sha> actual=<sha>`
++.omx/research/retroactive_sweep_for_catalog_377_20260528T183000Z.md:53:  | xargs grep -l 'runtime tree hash mismatch\|inflate runtime tree\|_module_exists\|case-fold\|case_fold' 2>/dev/null
++.omx/research/retroactive_sweep_for_catalog_377_20260528T183000Z.md:88:- Canonical equation: `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1`
++.omx/research/public_pr86_pr87_intake_20260504_codex.md:120:   claim and runtime-tree hash custody.
++.omx/research/council_per_substrate_symposium_pr106_05_06_reformulated_20260517.md:167:5. **Cite-able**: Manifests cite archive SHA via canonical `register_dispatched_call_id` per Catalog #245. Run-tuple `(substrate=<variant>, commit=<git_HEAD>, config=<recipe>, random_seed=<pinned>, upstream_snapshot_sha256=<pin>)`. INTACT-WITH-BACKFILL-ON-DISPATCH.
++.omx/research/p0_1111_review_round11_20260818.md:138:runtime-tree hash `0d0fc008d6a3…` is computed over the sealed tree containing
++.omx/research/p0_1111_review_round11_20260818.md:149:runtime-tree hash and breaks replay against the exact-authority row — the README
++.omx/research/wire_in_rigor_audit_per_component_dossier_20260520T124439Z.md:86:- **Producer-consumer chain**: `fn.spawn()` → `register_dispatched_call_id_fail_closed` → harvester polls + appends `harvested` event.
++.omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md:1251:  `inflate_renderer.py` changes the runtime tree hash while archive-like
++.omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md:1253:- `AGENTS.md` now requires runtime tree hashes for exact eval provenance and
++.omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md:1254:  marks identical archive SHA with different runtime tree hashes as a
++.omx/research/ddm_od1_20260805/CAMPAIGN_SPEC.md:147:- Source archive sha and runtime tree hash.
++.omx/research/ddm_pq10_codex_packet_review_round_20260820.md:208:- The CPU and CUDA runtime-tree hashes differ because their canonical manifests include host-specific path metadata while their 36 measured file digests and portable content tree match. This is plausible from the equal `runtime_files_sha256` and `runtime_content_tree_sha256`; the final packet should use the authority tree per axis and the portable content identity for the cross-axis join rather than assert one tree hash transfers.
++.omx/research/z7_mamba_2_stability_design_space_20260518.md:171:- PV-0: canonical helpers (`tac.scorer.load_default_scorers`, `tac.deploy.modal.call_id_ledger.register_dispatched_call_id`, `tac.probe_outcomes_ledger.register_probe_outcome`, `tac.council_continual_learning.append_council_anchor`, `tac.optimization.mamba2_predictor.Mamba2Predictor`) ALL importable
++.omx/research/codex_findings_materializer_exact_readiness_bridge_20260523T224437Z_codex.md:62:  runtime-tree hashes, and missing runtime-consumption proof.
++.omx/research/current_score_lowering_roadmap_20260510_codex.md:214:  pre-dispatch support hash, not the evaluated runtime-tree hash.
++.omx/research/current_score_lowering_roadmap_20260510_codex.md:605:  the packet compiler's runtime-tree hash
++.omx/research/current_score_lowering_roadmap_20260510_codex.md:613:Fix landed: T1 remote dispatch now computes the expected runtime-tree hash
++.omx/research/3_smoke_paid_gpu_reactivation_wave_blocker_audit_20260519T042301Z.md:98:- PV-0: canonical helpers exist (`tac.probe_outcomes_ledger.register_probe_outcome`, `tac.deploy.modal.call_id_ledger.register_dispatched_call_id`, `tac.council_continual_learning.append_council_anchor`, `tools/operator_authorize.py`) — CONFIRMED via direct path checks
++.omx/research/nscs06_v8_path_b_wavelet_residual_full_stack_design_20260516.md:796:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/contest_harness_bug_classes_20260504_codex.md:25:- Manifests should record the exact runtime path, runtime tree hash when
++.omx/research/cascade_c_prime_wave_3_paired_axis_empirical_anchor_LANDED_20260526.md:110:- Catalog #245 Modal call_id ledger — fail-closed registration via `register_dispatched_call_id_fail_closed`
++.omx/research/ddm_yr1_yousfi_adversarial_pr_review_20260902.md:368:- Canonical equation `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1` requires the local
++.omx/research/overnight_jj_dp1_re_train_plus_4_arm_paired_auth_eval_post_gg_361_fix_landed_20260521.md:171:- Catalog #245: canonical Modal call_id ledger 4-layer pattern — 2 NEW dispatched rows via `register_dispatched_call_id_fail_closed` (auto-emitted by operator_authorize.py dispatch chain per #339)
++.omx/research/overnight_jj_dp1_re_train_plus_4_arm_paired_auth_eval_post_gg_361_fix_landed_20260521.md:178:- Catalog #339: silent-no-spawn extinction — operator_authorize → modal_train_lane uses `register_dispatched_call_id_fail_closed` for both arms
++.omx/research/overnight_jj_dp1_re_train_plus_4_arm_paired_auth_eval_post_gg_361_fix_landed_20260521.md:202:- `.omx/state/modal_call_id_ledger.jsonl` (2 `dispatched` event rows appended via `register_dispatched_call_id_fail_closed`)
++.omx/research/codex_rnerv_srneerv_byte_grammar_stack_design_20260601T122839Z_subagentB.md:413:- runtime tree hash and file manifest;
++.omx/research/ddm_hv1_harvest_to_pointer_autopilot_20260904.md:162:**And a guard so this class cannot reach the meter again:** `verify_dispatch_paths` checks,
++.omx/research/dp1_pr101_composition_design_memo_20260518.md:1401:| `register_dispatched_call_id(...)` | `tac.deploy.modal.call_id_ledger` | #245 |
++.omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md:192:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/wave_3_end_of_day_operator_routable_command_sheet_20260520.md:108:The canonical chain fires: local_pre_deploy_check (Catalog #243) → codex pre-dispatch review (Catalog #271) → probe-predecessor (Catalog #313) → sentinel files check (Catalog #166) → NVML env block (Catalog #244) → Modal HEAD parity → `.spawn()` → `register_dispatched_call_id_fail_closed` (Catalog #339) → 24h harvest window (Catalog #330) → byte-mutation smoke (Catalog #272) → canonical equation update (Catalog #344) → autopilot re-rank (Catalog #335).
++.omx/research/final_pr_stack_synthesis_20260504_codex.md:80:| PR95 HNeRV | whole-stack external replacement | Not stream-stackable with PR85/STBM. It could become the public replacement anchor if exact CUDA replay reproduces the report | Strict archive/source custody, dependency closure, runtime tree hash, exact CUDA 600-sample JSON |
++.omx/research/hf_jobs_billing_unblock_523_hinton_surrogate_20260520.md:115:| Catalog #339 sister fail-closed registration helper | impl_complete | `tac.deploy.hf_jobs.job_id_ledger.register_dispatched_hf_jobs_id_fail_closed` (sister of Catalog #339 Modal `register_dispatched_call_id_fail_closed`) |
++.omx/research/t4_symposium_wave_n13_where_we_are_what_is_underway_how_to_proceed_particularly_portable_mlx_first_20260528.md:209:  - modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1  # per Catalog #377 sister
++.omx/research/t4_symposium_wave_n13_where_we_are_what_is_underway_how_to_proceed_particularly_portable_mlx_first_20260528.md:633:**Empirical anchor**: pre-fix LOCAL projector (macOS) computed CUDA=`efa31c12...` / CPU=`c886528c...` runtime-tree-hash but Modal worker (Linux ext4) actual was CUDA=`1e9bf123...` / CPU=`60256159...`. Root cause: `_module_exists` used `Path.exists()` which case-folds on macOS HFS+/APFS / Windows NTFS; LOCAL projector picked up phantom `tac.dykstra_pareto_solver.Polytope` (capital P) via `polytope.py` case-fold match; Linux Modal worker correctly returned False.
++.omx/research/t4_symposium_wave_n13_where_we_are_what_is_underway_how_to_proceed_particularly_portable_mlx_first_20260528.md:637:**MLX-first portability lesson**: ANY canonical bridge that crosses platforms (macOS dev / Linux Modal worker / Windows operator desktop / etc.) MUST be case-sensitive at the filesystem-semantics layer. The numpy-portable inflate bridge per §4.2 is platform-agnostic at the byte level (NPSD grammar is case-sensitive); the canonical equation `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1` registered per Catalog #377 sister formalizes this invariant.
++.omx/research/pr106_component_moving_cell_materialization_20260515_codex.md:140:different uploaded-runtime tree hashes for the same `submission_dir` because
++.omx/research/dp1_procedural_codebook_paired_smoke_pre_dispatch_design_20260520T232120Z.md:276:# Modal .spawn() per Catalog #245 → register_dispatched_call_id_fail_closed
++.omx/research/batched_reactivation_lane17_imp_stc_apogee_int4_full_stack_design_20260516.md:784:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/nscs06_v8_phase_4_paired_modal_t4_dispatch_operator_authorized_pr110_baseline_landed_20260521.md:65:  - "Modal call_id registered to canonical ledger via Catalog #339 fail-closed register_dispatched_call_id_fail_closed at .omx/state/modal_call_id_ledger.jsonl: schema_version=1, event_type=dispatched, mounted_code_git_head=ff827a5a8c59, expected_axis=cuda, gpu=T4, max_seconds=14400"
++.omx/research/nscs06_v8_phase_4_paired_modal_t4_dispatch_operator_authorized_pr110_baseline_landed_20260521.md:158:Canonical Modal call_id ledger row registered at `.omx/state/modal_call_id_ledger.jsonl` via Catalog #245 + Catalog #339 fail-closed `register_dispatched_call_id_fail_closed` helper. event_type=`dispatched`. status=`dispatched`.
++.omx/research/nscs06_v8_phase_4_paired_modal_t4_dispatch_operator_authorized_pr110_baseline_landed_20260521.md:210:| Catalog #131/#138/#245 fcntl-locked JSONL | PASS | Modal call_id ledger row appended via canonical `register_dispatched_call_id_fail_closed` (Catalog #339); APPEND-ONLY per Catalog #110 |
++.omx/research/path_3_i_v1_faiss_ivf_pq_substrate_design_decision_20260526.md:78:| Modal call_id ledger registration | `tac.deploy.modal.call_id_ledger.register_dispatched_call_id_fail_closed` (Catalog #245 + #339) | ADOPT_CANONICAL_BECAUSE_SERVES | Per Catalog #245+#339 ALL Modal dispatches MUST register fail-closed |
++.omx/research/ddm_dr1_dispatch_infra_repair_20260814.md:73:Both `experiments/modal_auth_eval.py` and `experiments/modal_auth_eval_cpu.py` now call `register_dispatched_call_id_fail_closed` immediately after resolving the call ID and before writing spawn metadata. The record includes lane, axis, recipe, hardware, source commit, archive identity, and pair group.
++.omx/research/ddm_dr1_dispatch_infra_repair_20260814.md:105:Beyond the charter seeds, the recall found: FS1 commit `9778fb0679` deliberately moved MT1 to the pre-mount `base_image`; AC1's poll/ledger separation makes local deadlines nonterminal; DT1's dependency closure covered worker imports but not the dispatcher image's Python package topology; and the canonical equation `modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1` records prior local/worker path drift. These changed the plan from editing `experiments/__init__.py` or extending the poll deadline to repairing the image package closure, adding a worker import smoke, registering call IDs at the true spawn boundary, and keeping legacy recovery receipt-authenticated.
++.omx/research/codex_findings_runtime_adapter_identity_false_authority_20260527T142937Z_codex.md:23:- the live `tree_sha256(runtime_dir)` must match the declared runtime tree hash;
++.omx/research/atw_codec_v1_cargo_cult_unwind_design_20260516.md:183:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/overnight_vv_nscs06_v8_phase_4_retry_with_catalog_202_bypass_landed_20260521.md:68:9. **Catalog #245+#339 ledger row appended**: `.omx/state/modal_call_id_ledger.jsonl` line 448 (`register_dispatched_call_id_fail_closed` per fail-closed contract)
++.omx/research/overnight_vv_nscs06_v8_phase_4_retry_with_catalog_202_bypass_landed_20260521.md:113:- `.omx/state/modal_call_id_ledger.jsonl` (appended via `register_dispatched_call_id_fail_closed` per Catalog #245+#339 canonical helper — APPEND-ONLY per Catalog #110/#113 discipline)
++.omx/research/overnight_vv_nscs06_v8_phase_4_retry_with_catalog_202_bypass_landed_20260521.md:121:- **Catalog #110/#113** APPEND-ONLY HISTORICAL_PROVENANCE: only NEW files are THIS landing memo + auto-emitted `modal_call_id.txt`; existing OVERNIGHT-UU/RR/QQ/DD memos NEVER mutated; ledger append-only per `register_dispatched_call_id_fail_closed`
++.omx/research/codex_md_files_cross_pollination_synergy_audit_20260520T041700Z.md:250:**Observation**: codex DP1 harvest bug investigation surfaced `register_dispatched_call_id_fail_closed` + `LedgerRegistrationFailedError` from main-thread Catalog #339 landing. Some older codex Modal dispatch memos may have unregistered call_ids.
++.omx/research/mps_gap_experiment_infrastructure_built_20260519T043638Z.md:167:5. Continual-learning posterior — **ACTIVE**: every dispatch registers a call_id in `.omx/state/modal_call_id_ledger.jsonl` via the canonical `register_dispatched_call_id` (Catalog #245); the gap verdict is appended as a probe outcome via `register_probe_outcome` (Catalog #313)
++.omx/research/codex_findings_mlx_ssd_posterior_partner_review_20260531T012000Z_codex.md:9:- `src/tac/canonical_equations/modal_dispatch_runtime_tree_hash_parity.py`
++.omx/research/codex_findings_mlx_ssd_posterior_partner_review_20260531T012000Z_codex.md:35:   - Validated the Modal runtime-tree hash parity builder against the existing
++.omx/research/codex_findings_mlx_ssd_posterior_partner_review_20260531T012000Z_codex.md:65:- Modal runtime-tree hash parity suite: 16 passed.
++.omx/research/cascade_c_prime_wave_4_paired_axis_dispatched_pending_harvest_20260526.md:33:- **Catalog #245 register_dispatched_call_id_fail_closed**: SUCCESS (canonical ledger row landed)
++.omx/research/sane_hnerv_cargo_cult_unwind_design_20260516.md:182:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/comprehensive_codebase_research_sweep_20260520T050500Z.md:254:- `register_dispatched_call_id_fail_closed` per Catalog #339 (silent-no-spawn extinction)
++.omx/research/dp1_re_dispatch_reduced_budget_landed_20260521.md:58:`register_dispatched_call_id_fail_closed` per Catalog #245 + Catalog #339.
++.omx/research/arm_final_messages/ddm_re1x_round1_full_n600_eval_20260813T175607Z.md:27:- Patching or monkey-patching it would invalidate the required runtime-tree hash.
++.omx/research/pr79_next_byte_candidates_20260503_worker.md:75:`contest_auth_eval.json`, runtime tree hash, archive SHA, bytes, and component
++.omx/research/cascade_c_prime_subagent_c_combined_trainer_plus_paired_cuda_modal_smoke_landed_20260526.md:60:- **Catalog #339** register_dispatched_call_id_fail_closed (operator_authorize wrapper invoked it)
++.omx/research/overnight_cc_dp1_path_a_auth_eval_refire_blocked_by_vendor_stub_bug_landed_20260521.md:126:- Catalog #339: silent-no-spawn extinction — used `register_dispatched_call_id_fail_closed` for all 4 arms
++.omx/research/ddm_r9m_first_contest_cpu_row_20260804/runtime_tree_hash_verification_20260804.md:1:# r9m runtime-tree hash mismatch — VERIFIED path projection, not drift (2026-08-04)
++.omx/research/tier_1_resurrection_4_pr101_compressai_balle_reformulated_full_stack_design_20260516.md:595:5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
++.omx/research/ddm_gs3_gestalt_after_submission_20260903.md:566:`_mount_path()` in both app modules (byte-for-byte no-op when unset; VERIFIED on the real modules); plus `verify_dispatch_paths(cwd, argv)` refuses
++.omx/research/ddm_gs3_gestalt_after_submission_20260903.md:601:Call fc-01M1QE7C0KYRX56GBGX6FAEF6G, snapshot ON (1fbc7c066: cwd stays the repo root; mounts via `PACT_MODAL_SOURCE_ROOT`; `verify_dispatch_paths`
++.omx/research/external_optimizer_research_metalagrangian_20260502_worker.md:239:- For each new candidate builder or remote script, require its manifest to include: builder source SHA-256, exact command, input archive bytes/SHA, source policy bytes/SHA, runtime tree hash if exact-evaled, and `score_claim=false` until exact eval.
++.omx/research/external_optimizer_research_metalagrangian_20260502_worker.md:549:- Output includes structured `contest_auth_eval.json`, archive bytes/SHA, recomputed components, logs, and runtime tree hash/provenance.
++.omx/research/external_optimizer_research_metalagrangian_20260502_worker.md:564:- Archive bytes/SHA match manifest and runtime tree hash is recorded.
++.omx/research/cascade_c_prime_wave_6_fresh_archive_cheap_smoke_validates_wave_5_inflate_fix_landed_20260526.md:183:- Catalog #245 Modal call_id ledger via `register_dispatched_call_id_fail_closed`
++.omx/research/t3_grand_council_symposium_apparatus_meta_bugs_rigor_flaws_mistakes_20260520.md:265:- **Structural protection**: refuses `experiments/modal_train_lane.py::main` from silent-swallow `except Exception` around canonical `register_dispatched_call_id` call; companion `LedgerRegistrationFailedError` raises fail-closed.
++.omx/research/overnight_r_dp1_3rd_attempt_re_dispatch_landed_20260521.md:53:Both registered in canonical Modal call_id ledger via `register_dispatched_call_id_fail_closed` per Catalog #245 + Catalog #339. Both confirmed `IN_FLIGHT` at 13:53Z poll-once (T+3min); predicted completion at ~14:35-14:36Z (T+45min cap) OR earlier if Stage 4 Phase 2 fits the new budget.
++.omx/research/codex_findings_runtime_identity_mlx_repair_cascade_20260527T205544Z_codex.md:10:- The byte-shaving materializer completion contract now carries the expected runtime-tree hash and tests that a nested receiver-verification mismatch fails the materializer postcondition.
++.omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_charter_20260910.md:4:failed in 5.7 s: `RuntimeError: inflate runtime tree hash mismatch: expected=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891
++.omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_charter_20260910.md:14:   dependency-manifest definition that the NORMAL seal path supplies via `tac.decode_wall_clock.measure_t4_runtime_digest`
++.omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_charter_20260910.md:18:   `measure_t4_runtime_digest(runtime)` and that the intent's digest is still validated separately.
+diff --git a/.omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md b/.omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md
+new file mode 100644
+index 000000000..c9ce2ad71
+--- /dev/null
++++ b/.omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md
+@@ -0,0 +1,86 @@
++# ddm_ffi5 — first-measurement consumer amendment[3], 2026-09-10
++
++The exact pointer is UNMOVED. The three chartered consumer changes are implemented and host-tested, with **141 required tests + 46 adjacent tests passing**, Ruff clean, and two recorded review passes per changed Python file. **This is not a complete cure for run3:** its retained evidence disproves the charter's seal-digest diagnosis. A separate retained-root projection mismatch remains, and MAIN must close it before another fire.
++
++## Finding → code → test
++
++| Finding | Code | Executed regression |
++|---|---|---|
++| Explicit expected upload digest, separately validated intent identity | `tools/fire_modal_auth_eval.py::_first_measurement_main` calls the unchanged `measure_t4_runtime_digest(runtime)`, places it in the actual argv, and records both named definitions in context and thus FIRE_MANIFEST. Existing intent validation remains before this computation and before reservation/spawn. | `test_first_measurement_argv_and_manifest_name_both_real_digests`: foreign cwd, real digest functions, argv equality, distinct intent hash, persisted manifest equality. `test_first_measurement_still_refuses_changed_intent_runtime_digest`: a re-signed wrong runtime hash fails with `PREFIRE_IDENTITY_DRIFT_REFUSED: runtime sha256 differs` before subprocess. |
++| Snapshot-relative ledger registration | `experiments/modal_auth_eval.py::main` supplies the real repo cwd's canonical ledger **and its matching `.jsonl.lock`** to the actual fail-closed registration call. The dispatcher already used `cwd=REPO`; the imported ledger module's `__file__` default was the actual source of the snapshot path. | `test_local_registration_uses_repo_ledger_when_imported_from_snapshot` (first-measurement and normal variants): execute the production call expression with snapshot module defaults, real file append/lock, preserve the old row, assert no snapshot ledger/lock, and pass the real SPAWNED registration check. No provider spawn. |
++| Authorize import closure | `tools/authorize_candidate_first_measurement.py` adds exactly `sys.path.insert(1, str(REPO))` after `src`. | `test_authorize_tool_imports_experiments_from_a_foreign_cwd`: bare subprocess, no PYTHONPATH, real module and transitive `experiments.contest_auth_eval` import. No authorization invoked. |
++
++## Real rlc5 hashes and diagnosis correction
++
++MEASURED here [macOS-CPU advisory; scorer-free byte/provenance inspection], using read-only runtime `/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime`:
++
++| Definition | SHA-256 |
++|---|---|
++| `tac.candidate_seal.measure_runtime_digest` (intent/runtime identity) | `f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669` |
++| `tac.decode_wall_clock.measure_t4_runtime_digest` (normal upload projection) | `e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891` |
++| Same upload-projector algorithm, projected to the actual retained worker root | `baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af` |
++
++`REAL_RUNTIME_DIGESTS.json` and `RETAINED_ROOT_DIAGNOSIS.json` retain these measurements. The last digest exactly equals run3's recorded worker actual digest; projected file rows equal recorded file rows. No scorer, remote execution, or payload materialization was needed.
++
++Run3 context's argv used **auto**, not the intent hash. Its local request resolved auto to `e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891` — already the charter's requested digest. The retained-root branch of `_run_auth_eval` instead extracts below `retained_work_root/out/submission_dir`, whose resolved physical volume prefix is part of the existing dependency-manifest tree definition. The ordinary projector assumes the normal extraction destination. Projecting the same input manifest to the worker's recorded `runtime_root` reproduces `baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af` exactly. The run3 return code is 1, passed=false; it is terminal failure evidence, not a score.
++
++Therefore substituting the seal digest is INSTANCE-CLOSED as run3's cause. The requested explicit pin/dual recording is delivered, but will not alone make the retained worker pass. No scoped digest definition or legacy validator was changed to hide that fact. The recorded runtime-root is diagnostic input from a retained provenance receipt, not a local evidence path to open. MAIN/pr16 must adjudicate a separate consumer-path cure before authorizing another run.
++
++## Validation and review
++
++- `.venv/bin/python -m pytest src/tac/tests/test_candidate_prefire_intent.py src/tac/tests/test_candidate_seal.py src/tac/tests/test_decode_wall_clock_t4_direct.py -q`: **141 passed**, `PYTEST_REQUIRED.txt`.
++- `.venv/bin/python -m pytest tools/tests/test_fire_modal_auth_eval_axis.py src/tac/tests/test_modal_source_snapshot.py src/tac/tests/test_fire_modal_lane_id_promotable.py -q`: **46 passed**, `PYTEST_ADJACENT.txt`.
++- `.venv/bin/python -m ruff check tools/fire_modal_auth_eval.py tools/authorize_candidate_first_measurement.py experiments/modal_auth_eval.py src/tac/tests/test_candidate_prefire_intent.py`: clean, `RUFF.txt`.
++- Review 1: consumer correctness and call-site tracing. Review 2: hostile mutation reasoning, custody/lock matching, independent identity refusal, import closure, and the disproved shared root assumption. Per-file hashes and limits are in `REVIEW_PASS_1.json` / `REVIEW_PASS_2.json`; eight successful tracker marks in `REVIEW_MARKS_1.txt` / `REVIEW_MARKS_2.txt`. No override or external-review claim.
++
++These are host apparatus tests, not contest measurements. Broad existing fixtures substitute Git/raw transport and provider state; the relevant new digest computations, argv, ledger append, lifecycle check and imports execute real code. The ledger sidecar index's existing module-relative behavior is not score authority and is not changed by this bounded ledger/lock patch.
++
++## Implementation manifest and landing
++
++`PREFIRE_IMPLEMENTATION_MANIFEST_AMENDMENT3.json` has every one of the 15 sorted `PREFIRE_IMPLEMENTATION_PATHS`, hashed from the reviewed post-edit bytes. `FREEZE_APPEND_DRAFT.json` preserves amendment[2]'s schema, adjudication and exact scoped definition, changes only the implementation pins and explanatory note, and deliberately carries the charter-requested implementation-commit placeholder. It is a DRAFT, never a valid freeze receipt or authorization.
++
++Commit LAST and once via the serializer with every post-edit SHA, no co-author trailer, and `[no-triality] [p0-ledger-ok]`. `SERIALIZER_STATUS.json` will carry the actual return code and landing/fallback outcome; if objects are denied, the files remain in the shared tree for MAIN. The explicit fallback directory is this arm's local evidence directory, to honor the stricter no-Volumes-write boundary; only the bounded source bundle/patch is eligible, and the serializer's storage reserve is not bypassed. MAIN must verify the manifest against the resulting committed blobs before replacing the draft placeholder and appending amendment[3]. No premature committed-manifest claim is made here.
++
++## Provenance pins
++
++| Object | SHA-256 | Bytes |
++|---|---|---|
++| `PREFIRE_CONTRACT_FROZEN.json` | `f2d94a58cd1abbe29bf089703a79d66c6f20253637da336ff4f8c58bf51ac85b` | 10459 |
++| `ddm_pr15_ratify_fire_tool_fix_amendment1_and_first_measurement_findings_20260910.md` | `39efb49c2e0f34b9c36f7b8a858afe9e68ff7878efa4f637ef650167eedd7560` | 18114 |
++| `modal_auth_eval_spawn.json` | `e07653995a4d2496b867e312eb011e61e030a20eb6bb30b62014403573877e94` | 8834 |
++| `MODAL_REMOTE_RESULT.json` | `525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5` | 80671 |
++| `modal_call_id_ledger.jsonl` | `f80d5fdc147715014b2e39e63b03fe64edd75bdf0bccc5d9d630a5ca4d7cbb50` | 1504 |
++
++Full paths are in `BASELINE.json`. The frozen receipt has amendments[0..2] and was not edited. Reference implementation snapshots `808da43c02a32ae328fd73c707331b9aaee2ac36` and `7a837a9de38f1be1d6a023e0a6caab0e7696a1a2` remain historical; pointer move 43 was handed off under commit `48109233e`, archive `7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e`. The pointer is live untracked state, not a file present in that commit.
++
++## RECALL EVIDENCE
++
++Before editing I searched the full `.omx/research/` memo corpus by content for `runtime.tree.hash|measure_t4_runtime_digest|register_dispatched_call_id|verify_dispatch_paths`; canonical indexes and `sub015_DAG_*` for `first.measurement|runtime.digest|dispatch.path`; `docs/` and `SPEC.md` for those same terms; task ledger and lane registry for `first.measurement|runtime.digest|ddm_ffi5`. Exact argv and bounded results are retained in `RECALL_QUERIES.json`, `research_recall.txt`, `graph_recall.txt`, `design_recall.txt`, and `ledger_recall.txt`. Canonical equation listing succeeded; no matching `runtime digest`, `first_measurement`, `prefire`, or `dispatch path` term was found in that JSON scope (`equations_recall.txt`). A lightweight external memory-registry search found no ffi5/first-measurement consumer entry; no external memory fact was used.
++
++Beyond the seed list, the actual r9m memo (`ddm_r9m_first_contest_cpu_row_20260804/runtime_tree_hash_verification_20260804.md`) documented path projection, byte-identical file rows, and a never-taken fallback import changing provenance. The hv1/gs3 dispatch-path records established that snapshot imports and repo cwd are intentionally separate. The old graph match concerned another vehicle's first measurement and adds no rule here. Design catalog entries reinforce fail-closed registration; existing MAIN task rows already own later fire/harvest. This recall changed the investigation: compare projection roots and module-relative ledger defaults, rather than accept the charter's causal summary. That comparison found the exact retained-root reproduction above.
++
++## Boundaries and dispositions
++
++No Modal command/API, fire, live authorization, nonce reservation, timing window, n600 scorer, decode, training or pointer move was performed. Unit-test fixture lifecycle operations are isolated temporary state. No writes to either SSD, upstream, PR trees, sealed/source-snapshot trees, gdc2's live directory, frozen receipt, legacy `decode_wall_clock.py`, or forbidden common-contract files. Unrelated dirty work and staged index are preserved. No contract schema, gate or scoped digest definition changed. No bulk artifact was created or discarded.
++
++`NEXT_FIRE_ORDERS.json` is the consumer store for all dispositions; the code landing and actual-root cure are QUEUED-WITH-A-FIRE-ORDER for MAIN, and any eventual producer/authorize/fire/harvest chain is FOLDED into MAIN's existing lifecycle. The tests and retained-root reconstruction are completed local work, not a new score or authorization.
++
++## NEXT_IF_RESUMED
++
++- **QUEUED-WITH-A-FIRE-ORDER; owner MAIN; consumer store `.omx/research/ddm_ffi5_20260910/`; trigger harvest of this packet:** land exact reviewed bytes if needed, verify all 15 manifest pins at the landing commit, and append amendment[3] from the draft without rewriting old rows.
++- **QUEUED-WITH-A-FIRE-ORDER; owner MAIN/pr16; consumer store `RETAINED_ROOT_DIAGNOSIS.json`; trigger harvest, before any later authorization:** adjudicate and implement the separate retained-root projection cure, prove worker parity with full retention and custody, and prospectively re-pin changed consumers.
++
++## LIVE-HYPOTHESES
++
++- Aligning the expected projection with the retained extraction root, or preserving a stable decode root while retaining all bytes, can close the observed remote mismatch. Plausible because the existing projector at the recorded root reproduces the worker hash exactly. Implementation and a permitted real pass remain untested.
++
++## DEAD-ENDS
++
++- Run3 passed the intent's seal hash: INSTANCE-CLOSED by retained argv/local request and real measurements; it passed the normal upload-projection hash.
++- The three chartered edits alone make run3 runnable: INSTANCE-CLOSED by exact reproduction of the remaining path-dependent mismatch. Do not retry on this patch alone.
++- Relying on imported-module defaults for canonical ledger custody: closed by the snapshot-default regression; explicit repo ledger and matching lock are required.
++- Weakening replay guards, rewriting old freeze rows, changing digest definitions, or treating run3 as an exact score: outside the authorized contract; none performed.
++
++composition S 0.1372848557085275 @ 180,466 B [contest-CUDA T4 n600] (move 43) unchanged.
++
++<!-- # FORMALIZATION_PENDING: consumer implementation and scorer-free provenance reconstruction, no new measured score row -->
+diff --git a/experiments/modal_auth_eval.py b/experiments/modal_auth_eval.py
+index 63a49a54d..17dc2fc82 100644
+--- a/experiments/modal_auth_eval.py
++++ b/experiments/modal_auth_eval.py
+@@ -1584,6 +1584,9 @@ def main(
+             raise
+         call_id = function_call_id(call)
+         register_dispatched_call_id_fail_closed(
++            # The imported ledger module may live in the source snapshot; custody is in the repo cwd.
++            path=Path.cwd() / ".omx/state/modal_call_id_ledger.jsonl",
++            lock_path=Path.cwd() / ".omx/state/modal_call_id_ledger.jsonl.lock",
+             call_id=call_id,
+             lane_id=lane_id,
+             label="modal_auth_eval",
+diff --git a/src/tac/tests/test_candidate_prefire_intent.py b/src/tac/tests/test_candidate_prefire_intent.py
+index 89a15a19a..39e11c224 100644
+--- a/src/tac/tests/test_candidate_prefire_intent.py
++++ b/src/tac/tests/test_candidate_prefire_intent.py
+@@ -451,6 +451,108 @@ def test_dry_run_consumes_nothing_and_explicit_argv(fixture, monkeypatch, capsys
+     assert before == set(fixture["repo"].rglob("*"))
+ 
+ 
++def test_first_measurement_argv_and_manifest_name_both_real_digests(fixture, monkeypatch, capsys):
++    from tac.decode_wall_clock import measure_t4_runtime_digest
++
++    auth, path, tool, _ = prepare_fire(fixture, monkeypatch)
++    foreign = fixture["repo"] / "foreign_cwd"
++    foreign.mkdir()
++    monkeypatch.chdir(foreign)
++    assert tool.main(["--first-measurement", str(fixture["path"]),
++        "--first-measurement-authorization", str(path), "--dry-run"]) == 0
++    context = json.loads(capsys.readouterr().out)
++    cmd = context["argv"]
++    expected = measure_t4_runtime_digest(fixture["root"])
++    intent_digest = cs.measure_runtime_digest(fixture["root"]).sha256
++    assert expected != intent_digest
++    assert cmd[cmd.index("--expected-runtime-tree-sha256") + 1] == expected
++    assert context["runtime_digests"] == {
++        "intent_runtime": {"digest_definition": "tac.candidate_seal.measure_runtime_digest", "sha256": intent_digest},
++        "expected_runtime_tree": {"digest_definition": "tac.decode_wall_clock.measure_t4_runtime_digest", "sha256": expected},
++    }
++    manifest = tool.first_measurement_manifest(tool.axis_spec("cuda"), context)
++    manifest_path = tool.write_fire_manifest(foreign, manifest)
++    assert json.loads(manifest_path.read_text())["runtime_digests"] == context["runtime_digests"]
++    assert not cs.first_measurement_consumption_path(auth, fixture["repo"]).exists()
++
++
++def test_first_measurement_still_refuses_changed_intent_runtime_digest(fixture, monkeypatch):
++    _, path, tool, _ = prepare_fire(fixture, monkeypatch)
++    fixture["intent"]["candidate"]["runtime"]["sha256"] = "f" * 64
++    write(fixture["path"], sign(fixture["intent"]))
++    assert tool.main(["--first-measurement", str(fixture["path"]),
++        "--first-measurement-authorization", str(path), "--dry-run"]) == 9
++    refusal = json.loads(next(fixture["repo"].glob("PREFIRE_REFUSAL_*.json")).read_text())
++    assert refusal["code"] == "PREFIRE_IDENTITY_DRIFT_REFUSED"
++    assert "runtime sha256 differs" in refusal["detail"]
++
++
++def test_authorize_tool_imports_experiments_from_a_foreign_cwd(tmp_path):
++    """The standalone consumer must close its transitive import graph without PYTHONPATH."""
++    import os
++    import subprocess
++    import sys
++
++    repo = Path(__file__).resolve().parents[3]
++    code = (
++        "import importlib.util\n"
++        f"spec = importlib.util.spec_from_file_location('authorize_tool', "
++        f"{str(repo / 'tools' / 'authorize_candidate_first_measurement.py')!r})\n"
++        "mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)\n"
++        "from experiments.contest_auth_eval import _runtime_dependency_manifest\n"
++        "print('ok')\n"
++    )
++    env = dict(os.environ)
++    env.pop("PYTHONPATH", None)
++    proc = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env,
++        capture_output=True, text=True, timeout=120)
++    assert proc.returncode == 0, proc.stderr
++    assert proc.stdout.strip() == "ok"
++
++
++@pytest.mark.parametrize("first_measurement", [True, False])
++def test_local_registration_uses_repo_ledger_when_imported_from_snapshot(fixture, monkeypatch, first_measurement):
++    """Execute the real call expression and ledger append, without a provider spawn."""
++    import ast
++
++    import tac.deploy.modal.call_id_ledger as ledger
++
++    auth, _ = auth_fixture(fixture, monkeypatch)
++    source = Path(__file__).resolve().parents[3] / "experiments/modal_auth_eval.py"
++    main = next(n for n in ast.parse(source.read_text()).body if isinstance(n, ast.FunctionDef) and n.name == "main")
++    call = next(n for n in ast.walk(main) if isinstance(n, ast.Call)
++        and isinstance(n.func, ast.Name) and n.func.id == "register_dispatched_call_id_fail_closed")
++    snapshot = fixture["repo"] / "snapshot"
++    snapshot.mkdir()
++    snapshot_ledger = snapshot / ".omx/state/modal_call_id_ledger.jsonl"
++    monkeypatch.setattr(ledger, "MODAL_CALL_ID_LEDGER_PATH", snapshot_ledger)
++    monkeypatch.setattr(ledger, "MODAL_CALL_ID_LEDGER_LOCK", snapshot_ledger.with_suffix(".jsonl.lock"))
++    monkeypatch.setattr(ledger, "MODAL_CALL_ID_LEDGER_INDEX_PATH", snapshot / "index.json")
++    monkeypatch.chdir(fixture["repo"])
++    monkeypatch.setenv("PACT_MODAL_SOURCE_ROOT", str(snapshot))
++    repo_ledger = fixture["repo"] / ".omx/state/modal_call_id_ledger.jsonl"
++    before = repo_ledger.read_bytes()
++    cs.reserve_first_measurement(auth, repo=fixture["repo"])
++    context = {"prefire_intent_sha256": fixture["intent"]["intent_sha256"],
++        "first_measurement_authorization_sha256": auth["authorization_sha256"],
++        "intent_file_sha256": auth["intent"]["file_sha256"], "intent_file_bytes": auth["intent"]["file_bytes"],
++        "instance_job_id": auth["instance_job_id"]}
++    namespace = {"Path": Path, "register_dispatched_call_id_fail_closed": ledger.register_dispatched_call_id_fail_closed,
++        "call_id": "fc-ffi5-fixture", "lane_id": auth["lane_id"], "gpu_key": "T4", "axis_label": "contest_cuda",
++        "first_context": context if first_measurement else None, "inflate_timeout": 1800, "evaluate_timeout": 1800,
++        "source_repo_commit": COMMIT, "claim_agent": "MAIN", "archive_sha256": fixture["intent"]["candidate"]["archive"]["sha256"],
++        "pairing": {}}
++    eval(compile(ast.Expression(call), str(source), "eval"), namespace)
++    assert repo_ledger.read_bytes().startswith(before)
++    row = json.loads(repo_ledger.read_text().splitlines()[-1])
++    assert row["call_id"] == "fc-ffi5-fixture" and row["event_type"] == "dispatched"
++    assert not snapshot_ledger.exists()
++    assert not snapshot_ledger.with_suffix(".jsonl.lock").exists()
++    assert repo_ledger.with_suffix(".jsonl.lock").exists()
++    if first_measurement:
++        assert cs.transition_first_measurement(auth, "SPAWNED", call_id=row["call_id"], repo=fixture["repo"])["state"] == "SPAWNED"
++
++
+ @pytest.mark.parametrize("cloud", [None, ["active-scored-job"]])
+ def test_unknown_or_busy_cloud_refuses_before_dispatch(fixture, monkeypatch, cloud):
+     _, path, tool, flight = prepare_fire(fixture, monkeypatch)
+diff --git a/tools/authorize_candidate_first_measurement.py b/tools/authorize_candidate_first_measurement.py
+index 08b06f2a3..32f760acc 100644
+--- a/tools/authorize_candidate_first_measurement.py
++++ b/tools/authorize_candidate_first_measurement.py
+@@ -8,6 +8,7 @@ from pathlib import Path
+ 
+ REPO = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(REPO / "src"))
++sys.path.insert(1, str(REPO))  # tac.decode_wall_clock imports experiments.contest_auth_eval for the T4 digest
+ from tac.candidate_seal import (  # noqa: E402
+     PrefireRefusal,
+     _pf_write_new,
+diff --git a/tools/fire_modal_auth_eval.py b/tools/fire_modal_auth_eval.py
+index 838636401..edcf9a98d 100644
+--- a/tools/fire_modal_auth_eval.py
++++ b/tools/fire_modal_auth_eval.py
+@@ -429,11 +429,11 @@ def build_dispatch_argv(
+     is executed rather than eyeballed (pq1 verified it by hand; hand-verification is the
+     step this determinizes).
+ 
+-    --expected-runtime-tree-sha256 is pinned 'auto' on BOTH axes (failure F3). That is not
+-    a convenience: the projected and remote tree hashes are environment-coupled and
+-    structurally disagree (the r9m deadlock), so both workers accept only ''/'auto'/the
+-    runtime FILES digest and REFUSE any other value. Custody is carried by the transport
+-    zip sha256 plus that FILES digest.
++    The template emits --expected-runtime-tree-sha256 auto on both axes (failure F3).
++    The normal worker resolves it to the upload projection, whose path-dependent
++    definition is distinct from the seal digest. The first-measurement consumer
++    replaces auto with the explicit measure_t4_runtime_digest upload projection
++    and records that definition separately from the intent's runtime digest.
+     """
+ 
+     cmd = [
+@@ -629,6 +629,7 @@ def _first_measurement_main(argv: list[str]) -> int:
+         write_prefire_refusal,
+     )
+     from tac.checkpoint_maturity import pointer_promotion_verdict
++    from tac.decode_wall_clock import measure_t4_runtime_digest
+     from tac.deploy.modal.auth_eval import ClaimSpec, require_active_modal_auth_eval_claim
+     from tac.deploy.modal.single_flight import single_flight_findings
+ 
+@@ -678,6 +679,7 @@ def _first_measurement_main(argv: list[str]) -> int:
+         runtime = Path(intent["candidate"]["runtime"]["path"])
+         archive = Path(intent["candidate"]["archive"]["path"])
+         _pf_require(not validate_tree(runtime), "PREFIRE_NON_TIMING_GATE_REFUSED", "runtime upload validator refused")
++        expected_runtime_tree_sha256 = measure_t4_runtime_digest(runtime)
+         context = {
+             "prefire_intent_sha256": intent["intent_sha256"], "intent_file_sha256": auth["intent"]["file_sha256"],
+             "intent_file_bytes": auth["intent"]["file_bytes"], "first_measurement_authorization_sha256": auth["authorization_sha256"],
+@@ -686,6 +688,12 @@ def _first_measurement_main(argv: list[str]) -> int:
+             "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400,
+             "score_claim": False, "promotion_eligible": False, "adjudication_required": True,
+             "authorization_path": str(auth_path.resolve()), "intent_path": str(intent_path.resolve()),
++            "runtime_digests": {
++                "intent_runtime": {"digest_definition": "tac.candidate_seal.measure_runtime_digest",
++                    "sha256": intent["candidate"]["runtime"]["sha256"]},
++                "expected_runtime_tree": {"digest_definition": "tac.decode_wall_clock.measure_t4_runtime_digest",
++                    "sha256": expected_runtime_tree_sha256},
++            },
+         }
+         context_path = output / "FIRST_MEASUREMENT_CONTEXT.json"
+         cmd = build_dispatch_argv(spec=axis_spec("cuda"), archive=archive, runtime_dir=runtime,
+@@ -693,6 +701,7 @@ def _first_measurement_main(argv: list[str]) -> int:
+             lane_id=auth["lane_id"], instance_job_id=auth["instance_job_id"], claim_agent="MAIN",
+             single_axis_waiver_reason=auth["single_axis_waiver_reason"], claim_policy="require_active",
+             first_measurement_context=context_path)
++        cmd[cmd.index("--expected-runtime-tree-sha256") + 1] = expected_runtime_tree_sha256
+         context["exact_argv"] = cmd
+         # The context file is written by this tool AFTER the checks (``_pf_write_new`` below refuses
+         # a pre-existing file), so it is the one argv path that legitimately does not exist yet.

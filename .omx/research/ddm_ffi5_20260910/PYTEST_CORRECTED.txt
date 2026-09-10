@@ -1,0 +1,69 @@
+..............................................F......................... [ 21%]
+........................................................................ [ 43%]
+........................................................................ [ 65%]
+.................F...................................................... [ 87%]
+........................................                                 [100%]
+=================================== FAILURES ===================================
+_______ test_first_measurement_argv_and_manifest_name_both_real_digests ________
+
+fixture = {'intent': {'schema': 'candidate_prefire_intent.v1', 'state': 'PREFIRE_FIRST_MEASUREMENT_ONLY', 'candidate_id': 'fixtu...ybt6vcwjs200000gn/T/pytest-of-adpena/pytest-274/test_first_measurement_argv_an0/canonical_frontier_pointer.json'), ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1098387c0>
+capsys = <_pytest.capture.CaptureFixture object at 0x10996a990>
+
+    def test_first_measurement_argv_and_manifest_name_both_real_digests(fixture, monkeypatch, capsys):
+        from tac.decode_wall_clock import measure_t4_runtime_digest
+    
+        auth, path, tool, _ = prepare_fire(fixture, monkeypatch)
+        foreign = fixture["repo"] / "foreign_cwd"
+        foreign.mkdir()
+        monkeypatch.chdir(foreign)
+        assert tool.main(["--first-measurement", str(fixture["path"]),
+            "--first-measurement-authorization", str(path), "--dry-run"]) == 0
+        context = json.loads(capsys.readouterr().out)
+        cmd = context["argv"]
+        expected = measure_t4_runtime_digest(fixture["root"])
+        content = tool.measure_fire_runtime_digests(fixture["root"])["modal_uploaded_runtime"]["runtime_content_tree_sha256"]
+        intent_digest = cs.measure_runtime_digest(fixture["root"]).sha256
+        assert expected != intent_digest
+>       assert cmd[cmd.index("--expected-runtime-tree-sha256") + 1] == expected
+E       AssertionError: assert '47bb7671ce81...8d35dec276f2d' == 'e70e0e72477f...8e2d3757d0b87'
+E         
+E         - e70e0e72477fbffce542166a118361b77826e4791f63f5656118e2d3757d0b87
+E         + 47bb7671ce811204a650e5d1dd96ad452df033aec41b61202bd8d35dec276f2d
+
+/Users/adpena/Projects/pact/src/tac/tests/test_candidate_prefire_intent.py:469: AssertionError
+_________ test_mount_ignore_still_excludes_git_tree_and_special_files __________
+
+    def test_mount_ignore_still_excludes_git_tree_and_special_files() -> None:
+        """The socket-race extinction (``.git/fsmonitor--daemon.ipc``) MUST remain:
+        the ``.git`` dir-name exclusion catches it regardless of whether the path
+        resolves on disk. A resolvable socket/FIFO is still excluded; an
+        unresolvable non-.git path defaults to KEEP (Modal's enumeration decides)."""
+        import os
+        import socket
+        import tempfile
+    
+        from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
+    
+        # .git tree always excluded (mount-relative form, does not resolve in CWD).
+        assert ignore_generated_mount_path(Path(".git/fsmonitor--daemon.ipc")) is True
+        assert ignore_generated_mount_path(Path(".git/index")) is True
+        assert ignore_generated_mount_path(Path("upstream/.git/config")) is True
+    
+        # A path that does NOT resolve and is NOT under an excluded dir defaults to
+        # KEEP (the bug-class fix) — Modal's own enumeration handles the real path.
+        assert ignore_generated_mount_path(Path("definitely_does_not_exist_xyz.bin")) is False
+    
+        # A REAL socket that resolves on disk is still excluded.
+        with tempfile.TemporaryDirectory() as td:
+            sock_path = Path(td) / "live.sock"
+            srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+>               srv.bind(str(sock_path))
+E               PermissionError: [Errno 1] Operation not permitted
+
+src/tac/tests/test_modal_auth_eval.py:280: PermissionError
+=========================== short test summary info ============================
+FAILED src/tac/tests/test_candidate_prefire_intent.py::test_first_measurement_argv_and_manifest_name_both_real_digests
+FAILED src/tac/tests/test_modal_auth_eval.py::test_mount_ignore_still_excludes_git_tree_and_special_files
+2 failed, 326 passed in 7.86s

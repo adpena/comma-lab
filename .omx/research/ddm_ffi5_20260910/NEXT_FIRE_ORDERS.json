@@ -1,0 +1,30 @@
+[
+  {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/FINAL_SOURCE.patch",
+    "fire_trigger": "Harvest this corrected final handoff",
+    "action": "Land FINAL_SOURCE.patch and the exact FINAL_INTENDED_FILES.json bytes in one serializer commit; verify all 16 implementation manifest rows at that commit, fill the draft commit placeholder and append freeze amendment[3]. Do not land obsolete fallback commit 011a0345."
+  },
+  {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/PYTEST_CORRECTED.txt",
+    "fire_trigger": "Unrestricted host available at landing",
+    "action": "Run the existing test_mount_ignore_still_excludes_git_tree_and_special_files test; sandbox denied Unix socket bind here. Retain the host result in this arm evidence store."
+  },
+  {
+    "disposition": "FOLDED",
+    "owner": "ddm_ffi5",
+    "consumer_store": "experiments/contest_auth_eval.py and experiments/modal_auth_eval.py; REAL_CONTENT_VALIDATION.json",
+    "fire_trigger": "MAIN CHARTER_CORRECTION.md read",
+    "action": "Retained-root cause cured as authorized with content-only validation, tree custody preserved, actual rlc5 provenance passes and changed-byte regression refuses; no further path-rule amendment requested by this arm."
+  },
+  {
+    "disposition": "FOLDED",
+    "owner": "MAIN",
+    "consumer_store": ".omx/research/ddm_rlc5_20260910",
+    "fire_trigger": "Corrected source landed and frozen; fresh committed intent plus authorization and all existing gates pass",
+    "action": "Later producer/authorization/fire/harvest/completion belongs to existing MAIN lifecycle. No new dispatch order from this arm; do not reuse run3 nonce/job."
+  }
+]

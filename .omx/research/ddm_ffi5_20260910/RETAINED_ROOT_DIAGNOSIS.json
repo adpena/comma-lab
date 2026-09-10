@@ -1,0 +1,11 @@
+{
+  "axis": "[macOS-CPU advisory; scorer-free provenance reconstruction]",
+  "intent_runtime_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+  "worker_recorded_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/59bb0b6a5089593af1f6da57394ea88c9fad198594345223cc286152e08777c5/out/submission_dir",
+  "projected_at_retained_root": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+  "worker_actual": "baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+  "matches": true,
+  "file_rows_equal": true,
+  "provenance_sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405",
+  "score_claim": false
+}

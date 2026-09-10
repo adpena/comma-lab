@@ -1,0 +1,20 @@
+{
+  "reviewer": "ddm_ffi5 self-review",
+  "pass": "corrected-1",
+  "status": "reviewed",
+  "files": {
+    "tools/fire_modal_auth_eval.py": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703",
+    "tools/authorize_candidate_first_measurement.py": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
+    "experiments/modal_auth_eval.py": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29",
+    "experiments/contest_auth_eval.py": "7affb36427d86b339dad1b71ede52a447977a6803c914ba6d2bd1ec4e749ec79",
+    "src/tac/tests/test_candidate_prefire_intent.py": "d3b939bf5b36c77f830358b6e8d2f20d5bb503b99ce0c88e60fbc80ce727d3d1"
+  },
+  "findings": [
+    "Followed corrected source-to-argv-to-local-guard-to-context-to-remote-wrapper-to-inner-argv-to-evaluator chain; all expected-content values originate in the existing upload manifest, not worker self-acceptance.",
+    "Local half compares measured content with both CLI and context before spawn; remote validates nonempty SHA before retention/materialization; uploaded zip SHA custody remains intact.",
+    "First worker emits content flag instead of path-tree flag; normal worker still emits tree flag. Evaluator validates every nonempty supplied expectation, so specifying content does not suppress a separately supplied tree requirement.",
+    "Reuse path also checks new expected content; provenance retains actual path-dependent tree without rewriting it.",
+    "Existing t4_direct implementation and all prior digest definitions unchanged. Additional evaluator consumer is not in PREFIRE_IMPLEMENTATION_PATHS and must be explicitly included in corrected 16-row manifest.",
+    "146 required tests pass; 181 adjacent pass. One pre-existing Unix socket test is sandbox-blocked, recorded rather than claimed passed."
+  ]
+}

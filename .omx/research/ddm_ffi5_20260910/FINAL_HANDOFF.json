@@ -1,0 +1,25 @@
+{
+  "status": "CORRECTED_SOURCE_READY_MAIN_MUST_LAND",
+  "serializer_attempts": 1,
+  "serializer_rc": 17,
+  "obsolete_fallback_commit": "011a034559af6865573d8d4b16ebf14fced71ea4",
+  "corrected_commit": null,
+  "required_tests_passed": 146,
+  "adjacent_tests_passed": 181,
+  "sandbox_blocked_test": "test_mount_ignore_still_excludes_git_tree_and_special_files",
+  "ruff": "PASS",
+  "corrected_reviews_per_python_file": 2,
+  "implementation_manifest_rows": 16,
+  "index_unchanged": true,
+  "read_only_pins_unchanged": true,
+  "reverse_patch_check_rc": 0,
+  "source_patch": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/FINAL_SOURCE.patch",
+    "bytes": 159606,
+    "sha256": "f56bbed633a2cd05ff9fa61f244379e26851b66b0b974d9f09e31f773c0ac1a7"
+  },
+  "intended_file_count": 33,
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi5_20260910/NEXT_FIRE_ORDERS.json",
+  "frontier": "composition S 0.1372848557085275 @ 180,466 B [contest-CUDA T4 n600] (move 43) unchanged",
+  "score_claim": false
+}
