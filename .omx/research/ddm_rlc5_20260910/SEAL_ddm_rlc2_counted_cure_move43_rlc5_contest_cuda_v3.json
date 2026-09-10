@@ -1,0 +1,333 @@
+{
+  "schema": "candidate_seal.v3",
+  "candidate_id": "ddm_rlc2_counted_cure_move43_rlc5",
+  "sealed_at_utc": "2026-09-10T22:30:59.575514+00:00",
+  "sealed_by": "MAIN",
+  "axis": "contest_cuda",
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+    "bytes": 180406
+  },
+  "runtime": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+    "sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "total_bytes": 1009765
+  },
+  "receiver_pins": [
+    {
+      "relative_path": "inflate.py",
+      "bytes": 2735,
+      "sha256": "139a198801e498465a90e2cd74bfd8c17582e4a4cec5e0749786c4aa0b71b764"
+    },
+    {
+      "relative_path": "inflate.sh",
+      "bytes": 3380,
+      "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+    }
+  ],
+  "admit_bar": {
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold",
+    "net_dS_threshold": -2e-05,
+    "derivation": {
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.1372848557085275,
+      "pointer_archive_sha256_at_seal": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    }
+  },
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+        "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/candidate/data",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/candidate/output",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/candidate/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "scope": "ordinary declared-axis gate; not full decode",
+        "seconds": 3.2411464169999817,
+        "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/frontier/data",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/frontier/output",
+          "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_smoke/frontier/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime",
+        "scope": "ordinary declared-axis gate; not full decode",
+        "seconds": 3.6008916670107283,
+        "tree_sha256": "68fae56a0709ebc435e1fb99019beb16d97e2a30948a44a33866f999e6032a8c"
+      }
+    },
+    "public_path_probe_seconds": 180,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+        "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "scope": "setup observer only; actual full public twins are separate",
+        "seconds": 2.292588959011482,
+        "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime",
+        "scope": "setup observer only; actual full public twins are separate",
+        "seconds": 2.5489170830114745,
+        "tree_sha256": "68fae56a0709ebc435e1fb99019beb16d97e2a30948a44a33866f999e6032a8c"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "decode_wall_clock": {
+    "schema": "candidate_decode_wall_clock.v2",
+    "mode": "t4_direct",
+    "score_claim": false,
+    "candidate_t4_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+      "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+    },
+    "runtime_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+    "receiver_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+    "t4_runtime_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+    "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+    "t4_seconds_field": [
+      "artifacts",
+      "contest_auth_eval.json",
+      "inflate_elapsed_seconds"
+    ],
+    "t4_archive_sha256_field": [
+      "expected_archive_sha256"
+    ],
+    "t4_runtime_sha256_field": [
+      "expected_runtime_tree_sha256"
+    ],
+    "t4_hardware_field": [
+      "artifacts",
+      "modal_cuda_preflight.json",
+      "torch_cuda_device_name"
+    ],
+    "t4_cuda_available_field": [
+      "artifacts",
+      "modal_cuda_preflight.json",
+      "torch_cuda_available"
+    ],
+    "t4_timing_scope": "cold_public_entrypoint_decode",
+    "measured_t4_decode_seconds": 1232.418725255,
+    "projected_t4_decode_seconds": 1232.418725255,
+    "limit_seconds": 1260.0,
+    "first_measurement_runtime_custody": {
+      "schema": "first_measurement_runtime_custody.v1",
+      "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+      "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+      "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+      "expected_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+      "worker_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+      "runtime_files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
+      "runtime_file_count": 48,
+      "normal_projected_runtime_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+      "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664/out/submission_dir",
+      "retained_runtime_tree_sha256": "e44a61a1b2b2e5dab42488cdb1c33cef04e6a516b5be4ad361576c9df93506ee",
+      "sources": {
+        "context": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+            "bytes": 4973,
+            "sha256": "f0fe10b83a913fb59b92874d7fda8f276d4844038855f35ea9d1dc9059a50eec"
+          },
+          "field_path": [
+            "expected_runtime_content_tree_sha256"
+          ]
+        },
+        "request": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+            "bytes": 7341,
+            "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+          },
+          "field_path": [
+            "expected_runtime_content_tree_sha256"
+          ]
+        },
+        "result": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+            "bytes": 242556,
+            "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+          },
+          "field_path": [
+            "expected_runtime_content_tree_sha256"
+          ]
+        },
+        "argv": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+            "bytes": 7341,
+            "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+          },
+          "field_path": [
+            "exact_argv"
+          ],
+          "flag": "--expected-runtime-content-tree-sha256"
+        },
+        "provenance": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+            "bytes": 242556,
+            "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+          },
+          "field_path": [
+            "artifacts",
+            "provenance.json"
+          ],
+          "manifest_field_path": [
+            "inflate_runtime_manifest"
+          ]
+        }
+      }
+    }
+  },
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/twin0.member",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/retained/twin1.member",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/ARCHIVE_PARSEBACK.json"
+  ],
+  "falsifiers": [
+    "Full real move43 archive must be at most 180435 bytes; rate-only net dS must be strictly below -2e-5 against 180466 bytes.",
+    "Both complete independently encoded member payloads and complete ZIP twins must be byte-identical; source-control encode must reconstruct the shipped move43 stream and archive.",
+    "Cold literal inflate.sh output must contain all 600 pairs, token cache DISABLED, no checkpoint resume, and every raw byte equal to retained move43 raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc.",
+    "Amended timing-risk receiver digest must equal 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw manifest remains in every custody check.",
+    "Risk ceiling must not exceed 1260 seconds; only MAIN may authorize a committed intent and measure actual T4 decode and exact score. No timing or score authority is conferred by this intent.",
+    "Both normal seal paths must refuse exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, crash, or subprocess attempt closes this real door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer arm."
+  ],
+  "notes": "",
+  "seal_sha256": "5372bc7e5c84d1b6b44a8b976474165076390996798dcec5d2a6968a61b48722",
+  "decode_wall_clock_reference": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json",
+    "bytes": 4733,
+    "sha256": "c708f817cacfa6f180a85560dfb77d01b5bb10e784d8eb6e816a6dbb5c17b191"
+  },
+  "prefire_intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+    "bytes": 16065,
+    "sha256": "e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0"
+  },
+  "first_measurement_authorization": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v8.json",
+    "bytes": 1707,
+    "sha256": "d698d260864bf375e5ab18b4ba5bea0151d277b6a0d229254b1f695def449be6"
+  },
+  "first_measurement_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+    "bytes": 242556,
+    "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+  },
+  "prefire_intent_sha256": "af30ba258ccb20f77288df9579aabff8ab44b86a192426122c26821ee009e4ad",
+  "first_measurement_runtime_custody": {
+    "schema": "first_measurement_runtime_custody.v1",
+    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+    "expected_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+    "worker_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+    "runtime_files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
+    "runtime_file_count": 48,
+    "normal_projected_runtime_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664/out/submission_dir",
+    "retained_runtime_tree_sha256": "e44a61a1b2b2e5dab42488cdb1c33cef04e6a516b5be4ad361576c9df93506ee",
+    "sources": {
+      "context": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 4973,
+          "sha256": "f0fe10b83a913fb59b92874d7fda8f276d4844038855f35ea9d1dc9059a50eec"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "request": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+          "bytes": 7341,
+          "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "result": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "bytes": 242556,
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "argv": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+          "bytes": 7341,
+          "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+        },
+        "field_path": [
+          "exact_argv"
+        ],
+        "flag": "--expected-runtime-content-tree-sha256"
+      },
+      "provenance": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "bytes": 242556,
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        },
+        "field_path": [
+          "artifacts",
+          "provenance.json"
+        ],
+        "manifest_field_path": [
+          "inflate_runtime_manifest"
+        ]
+      }
+    }
+  }
+}
