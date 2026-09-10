@@ -1367,7 +1367,8 @@ def test_run3_retained_provenance_projection_and_terminal_refusal(tmp_path):
 def test_completed_seal_anchor_mirror_lifts_quarantine_only_with_a_valid_seal(tmp_path, monkeypatch):
     """rlc5 → move 44 (2026-09-10): a completed candidate_seal.v3 must reach experiments/results as an anchor
     mirror, and a receipt still carrying its quarantine keys must be refused by the poller's builder."""
-    import importlib.util, json
+    import importlib.util
+    import json
     from pathlib import Path as _P
     spec = importlib.util.spec_from_file_location("wcsam", _P("tools/write_completed_seal_anchor_mirror.py"))
     tool = importlib.util.module_from_spec(spec)
