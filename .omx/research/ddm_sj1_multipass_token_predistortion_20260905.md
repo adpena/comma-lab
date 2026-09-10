@@ -2174,6 +2174,132 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ---
 
+## 34. PASS 6 on the move-42 field — the CLOSED family re-opens, and the object change is why
+
+**Status: SEALED, awaiting MAIN's fire.** Seal
+`/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/SEAL_ddm_sj1_token_predistortion_pass6_contest_cuda.json`
+(sha `295aea570485b801…`, SEAL_VALID). Archive **180,466 B** sha
+`7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e`, runtime digest
+`68fae56a0709ebc4`, 48 files.
+
+### 34a. Why a closed family was re-run at all
+
+Pass 5 CLOSED this family under this arm's own pre-registered rule: 80 admitted cells of a
+12,614-cell residual = 0.634 %, below the 1 %/pass bar. That verdict was drawn on the
+**move-37 field**. Four pointer moves later the OBJECT had changed — move 38 (this arm's 42
+pairs), moves 39/40 (rp1's 253 pairs, a 282-pair union), move 42 (rp1 round 2, 160 pairs and
+1,054 tokens plus a carrier re-solve). Set arithmetic on the two fields, measured before the
+pass: **365 of the 600 token planes differ, 235 do not.**
+
+### 34b. The reach, and the decomposition that was pre-registered before the number
+
+| | pass 4 | pass 5 | **pass 6** |
+|---|---:|---:|---:|
+| residual entering the pass | 12,866 | 12,614 | **12,540** |
+| cells repaired | 423 | 237 | **499** |
+| fraction of the residual | 3.288 % | 1.879 % | **3.979 %** |
+| tokens | 415 | 235 | **489** |
+| cells/token | 1.0193 | 1.0085 | **1.0204** |
+
+The family came back **2.12× stronger than the pass at which it was declared converged**.
+The decomposition (pre-registered 14:54:51Z at pass-progress 41/600, receipt
+`REACH_DECOMPOSITION.json`) says exactly where it came from:
+
+| column | positions | meaning |
+|---|---:|---|
+| carryover (pass 5 accepted it too) | 114 | owes NOTHING to the object change |
+| **new on the 365 FRESH pairs** | **375** | the re-opening, and only this column |
+| **new on the 235 STALE pairs** | **0** | exactly zero |
+
+Fresh 1.156 positions/pair vs stale 0.285 — and every one of the stale 0.285 is carryover.
+**Not one new repair exists on a pair whose render did not move.**
+
+**The control (F11), free and strict.** `--pass-index` is ledger-only, the striding and batch
+matched pass 5's 5/8, and the render is a per-pair function of that pair's plane and index —
+so a stale pair presents pass 6 a byte-identical search and must accept the SAME positions.
+On the 34 stale pairs carrying dropped pass-5 moves: **67 of 67 re-found, fraction exactly
+1.000000, zero pairs disagreeing.** That is rp1's control-group shape reproduced, and it is
+what licenses reading the zero above as physics rather than instrument noise.
+
+**Law:** a token-repair family exhausts **per OBJECT, never per VEHICLE**; a sister arm's
+**argmax-NEUTRAL** edits still move the RENDER, and a moved render re-opens the pool in
+proportion to the pairs touched, and only on those pairs. Memory
+`repair_family_exhausts_per_object_20260910`.
+
+### 34c. The candidate: 161 pairs, three legs, every one measured
+
+Lagrange subset **161 of 251 edited pairs, 344 of 499 cells, 335 tokens**.
+
+| leg | value | how |
+|---|---:|---|
+| seg | **−2.9180e-04** | 12,540 → 12,196 cells, MEASURED on the shipped decode |
+| rate | **+1.4649e-04** | +228 B = 220 stream + 8 carrier, EXACT container delta |
+| pose | **−4.6142e-05** | RESOLVED pose 4.586763e-06 vs base 4.649477e-06 — a CREDIT |
+| **net** | **−1.93835e-04** | 9.7× the −2e-05 bar |
+
+Projected S **0.13728267021291818** on this arm's established (optimistic) convention;
+**0.13728505533523924** carrying the local pose DELTA onto the T4 print instead. The spread
+is 7.712e-06 — the pose-print class the last three packets each measured.
+
+Price: **5.2537 bits/token** against a 10.4585 break-even, margin **1.991×**, inside the
+banked range 4.820–6.400. The ledger predicted 219.70 B and the coder charged 220 (+0.14 %) —
+the smallest ledger residual this arm has measured (prior: −1.96 / +5.70 / +19.6 B).
+
+### 34d. The instrument catch that would have poisoned the price
+
+The first control encode went through `ddm_jg2_tail_reencode.py --stage encode` (rp1's route)
+and came back **UNPROVEN**, `delta_trustworthy: false`. That loop emits the FreeCorrector/HPAC
+stream — **120,200 B** for move 42's field — not the tc1-mixed stream the archive actually
+ships, **119,613 B**. The instrument refused to certify its own number and the number was not
+used. Re-run through `ddm_sj1_pass5_price.py`, whose gate 2 is exactly this question, the
+control reproduced the shipped tail **byte-for-byte** (sha `106d1f51…`) and the rebuilt control
+archive came back **byte-identical to the live pointer** (sha `f111ab42…`, 180,238 B). The
+HPAC stream the correct instrument reports for the same field is 120,200 B — the two
+instruments agree on the object and differ only in which coder they report.
+
+### 34e. Frame 0, measured INSIDE the admission — and why it is not shipped
+
+Swept the **47 pose-bound dropped pairs** (seg+rate favourable, resolved pose kills them;
+stake −2.968e-05 if pose were free). 19 had a better mode than shipped. Three admissions:
+
+| variant | adopted | kept | cells | selector Δ | net | fixed point |
+|---|---:|---:|---:|---:|---:|---|
+| no frame 0 | 0 | 161 | 344 | 0 B | −2.10043e-04 | n/a |
+| frame 0, unrestricted | 14 | 170 | 361 | +12 B | −2.08306e-04 | **BROKEN** — 5 adopted pairs fall outside the kept set |
+| frame 0, fixed point | 6 | 167 | 355 | +5 B | **−2.11549e-04** | HOLDS |
+
+The fixed-point variant WINS, by −1.506e-06. It is **not shipped for a BUILD reason**: this
+arm's `close` step has no selector splice (zero references to the selector in
+`ddm_sj1_joint_admission.py`). Shipping it needs a new archive-mutation path for the selector
+blob — a receiver-payload change owing its own gates — for 0.075× of one admit bar. Named
+blocker, recorded in `FRAME0_VERDICT.json`, reactivatable on any successor field. Note this is
+a DIFFERENT disposition from rp1's at move 42 (which declined for an economic reason, 0.1× the
+bar); both are recorded.
+
+### 34f. The seal blocker that was closed before it could bite
+
+`inherit_decode_wall_clock` requires the SOURCE leg's own archive sha to equal the pointer's.
+Move 42's seal carries an **inherited** leg sourced from move 40 — so inheriting move 40's
+sidecar would have been refused (source archive `986d536b` ≠ pointer `f111ab42`), and move 42's
+own leg cannot be a source because an inherited leg may never be one. Built a **`t4_direct` leg
+for move 42 itself** from its own Modal harvest: **978.1235589080001 s on Tesla T4** against a
+1,260 s limit (`POINTER42_t4_direct.decode_wall_clock.json`). The candidate's leg inherits from
+that.
+
+### 34g. Gates
+
+`flips_before` 12,540 EXACTLY (F1, pre-registered) · F11 67/67 · **seg on the shipped bytes
+12,196 predicted = 12,196 measured, zero disagreement** (F4) · twins byte-identical at all
+three stages (F5) · control identity twice, archive and tail suffix (F6) · pose base on move
+42's own configuration, gate PASS at ratio 0.99774 (F7) · no silent revert, 161 differ and
+every other plane is byte-identical to the live row (F10) · close identity control PASSED,
+hpac/semantic/tail byte-identical, only the carrier moved 18,602 → 18,610 · parseback pin_check
+PASS, 962 s · public smoke REACHED_TOKEN_DECODE 240.02 s both sides · pre-registered rule A
+(stop below 54 cells) did not fire at 499.
+
+
+---
+
 ## Frontier line
 
 `sj1 S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40, sha `986d536b31ed1079…`; the canonical pointer file is the SoT)
