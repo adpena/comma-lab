@@ -18,7 +18,11 @@ tag="${2:?tag}"
 # made the driver refuse the Lagrange-selected `subset` field it was written to price.
 case "$field" in *[!A-Za-z0-9_]*|'') echo "field must be a plain identifier" >&2; exit 2 ;; esac
 
-root=/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price
+# The store is the PRICER's to name, not this driver's.  Hardcoding it here meant a
+# re-based generation (a new ROOT bound to a new pointer) looked at the OLD store, found a
+# completed ENCODE_0600.json and exited "already complete" without encoding anything --
+# the same shape as the hardcoded field list this driver already got wrong once.
+root="${SJ1_PRICE_ROOT:-/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price}"
 work="$root/encode/$field/$tag"
 
 frame() {

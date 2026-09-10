@@ -49,12 +49,21 @@ import numpy as np  # noqa: E402
 from experiments import ddm_jg2_tail_reencode as jg2  # noqa: E402
 from experiments import ddm_tc1_mixer_codec as tc1  # noqa: E402
 
-ROOT = Path('/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price')
-BULK = Path('/Volumes/APDataStore/pact/ddm_sj1_pass5')
-LIVE = Path('/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime')
+#: ROOT and LIVE are the two objects a re-base moves.  They are env-overridable rather than
+#: edited, because the pointer moves under this arm faster than a source edit can follow --
+#: and because editing a module that has encodes in flight kills their checkpoints
+#: ([[binding_hash_whole_module_kills_checkpoints_20260909]]).  A generation is a new ROOT
+#: plus the new pointer's tree; INPUTS.json then pins both by sha, so a stale LIVE cannot
+#: silently price against the wrong body.
+ROOT = Path(os.environ.get('SJ1_PRICE_ROOT', '/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price'))
+BULK = Path(os.environ.get('SJ1_PRICE_BULK', '/Volumes/APDataStore/pact/ddm_sj1_pass5'))
+LIVE = Path(os.environ.get('SJ1_PRICE_LIVE',
+                           '/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime'))
 SJ1 = Path('/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion')
-CONTROL_NPZ = SJ1 / 'admission_pass4/field_admitted.npz'
-CANDIDATE_NPZ = SJ1 / 'passes/pass5_gt/field_after.npz'
+CONTROL_NPZ = Path(os.environ.get('SJ1_PRICE_CONTROL_NPZ',
+                                  str(SJ1 / 'admission_pass4/field_admitted.npz')))
+CANDIDATE_NPZ = Path(os.environ.get('SJ1_PRICE_CANDIDATE_NPZ',
+                                    str(SJ1 / 'passes/pass5_gt/field_after.npz')))
 TC1_WEIGHTS = Path('/Volumes/VertigoDataTier/pact/ddm_tc1_tail_shared_mixer/rebase_pc2/mixer/weights_i8.bin')
 POINTER = REPO / '.omx/state/canonical_frontier_pointer.json'
 AXIS = '[macOS-CPU advisory / scorer-free EXACT byte measurement]'
