@@ -33,6 +33,26 @@
       "attempt": "move40 (dwc1, under rp1's three n600 shards)",
       "wall_seconds": 1243.9751226250082,
       "verdict": "REFUSED by dwc1 (no count); 1.56x the quiesced time \u2014 the contention the calibration must exclude"
+    },
+    {
+      "attempt": "move40_quiesced3 (frozen pr10 rule b94474c6)",
+      "wall_seconds": 783.0568056249904,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "stage_excess_fraction": 0.0039,
+      "verdict": "REFUSED by the frozen rule: dasd 95-97 % for ~3.3 min from ~6 min in, syspolicyd 33-64 % alongside, aggregate >= 200 % once; count 3",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced3_local_refused.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced3/CONCURRENCY_attempt3_refused.json"
+    },
+    {
+      "attempt": "move40_quiesced4 (frozen rule; caffeinate -u asserted)",
+      "wall_seconds": 784.771636666992,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "stage_excess_fraction": 0.0015,
+      "verdict": "REFUSED by the frozen rule: dasd 95-97 % for ~3.7 min from ~8.7 min in, syspolicyd 27-73 %, aggregate >= 200 % four times; count 3. User-activity assertion did not prevent the burst",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced4_local.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced4/CONCURRENCY.json"
     }
   ],
   "calibration": {
@@ -60,5 +80,6 @@
     "verdict": "RERUN-REQUIRED",
     "memo": ".omx/research/ddm_pr10_second_family_review_quiesced_timing_rule_20260910.md",
     "consequence": "the quiesced/ratio lineage of attempts 1-2 is REFUSED as calibration authority (rule fixed after the runs; self-median hides a uniform pace shift; 38 % of wall uninstrumented); the direct T4 fact 990.053829427 s stands. Replacement rule adopted verbatim in src/tac/decode_timing_concurrency.py v2 (frozen+hashed before launch, 25 % whole-window incl. ancestors, aggregate 100x(P-4)=200, stage rates diagnostic only, 3 consecutive quiet settle samples, paused-process custody). Move 40's base and rlc1's candidate are re-measured under that frozen rule; the sidecar is replaced when the new base passes; no arm inherits the old sidecar (rp1 gated)."
-  }
+  },
+  "reading_after_four_cold_runs": "797.1 / 785.1 / 783.1 / 784.8 s (spread 1.8 %), bit-identical raw each time; stage-rate diagnostics show <= 0.7 % excess. Every run overlapped a macOS dasd+syspolicyd burst (~95 % + up to 73 %, 3-5 min, recurring ~every 16 min) that the frozen quarter-core rule counts. A 13-min decode cannot fit between bursts by period alone; MAIN does not amend the rule itself \u2014 ddm_pr11 (sol xhigh) adjudicates on these receipts."
 }
