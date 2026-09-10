@@ -140,10 +140,36 @@ def guard() -> dict:
     for relative, fact in inputs['runtime_sources'].items():
         if jg2.file_fact(LIVE / relative) != fact:
             raise RuntimeError(f'live runtime drift at {relative}')
-    for name in FIELDS:
-        if jg2.file_fact(Path(inputs['fields'][name]['u8']['path'])) != inputs['fields'][name]['u8']:
+    for name, entry in inputs['fields'].items():
+        if jg2.file_fact(Path(entry['u8']['path'])) != entry['u8']:
             raise RuntimeError(f'{name} field custody changed')
     return inputs
+
+
+def add_field(name: str, npz_path: Path) -> dict:
+    """Register a further field for pricing -- the Lagrange-SELECTED subset.
+
+    The subset the sweep picks is a different object from the full pass field and must be
+    priced by its OWN real re-encode: the per-pair ledger sum RANKS pairs but under-charges
+    the container (pass 3 measured +19.6 B on a 370-pair subset, pass 4 +5.70 B on 112).
+    At pass 5's margin that difference is decisive, not cosmetic.
+    """
+    inputs = guard()
+    if name in inputs['fields']:
+        raise ValueError(f'field {name} is already registered; fields are immutable here')
+    if not name.isidentifier():
+        raise ValueError('field name must be a plain identifier')
+    u8 = field_to_u8(npz_path, ROOT / 'retained/fields' / f'{name}.u8')
+    control = np.fromfile(inputs['fields']['control']['u8']['path'],
+                          dtype=np.uint8).reshape(N_PAIRS, EVAL_H, EVAL_W)
+    plane = np.fromfile(u8['path'], dtype=np.uint8).reshape(N_PAIRS, EVAL_H, EVAL_W)
+    per_pair = (control != plane).reshape(N_PAIRS, -1).sum(axis=1)
+    inputs['fields'][name] = dict(
+        npz=jg2.file_fact(npz_path), u8=u8,
+        delta_vs_control=dict(tokens_changed=int(per_pair.sum()),
+                              pairs_changed=int((per_pair > 0).sum()),
+                              per_pair=per_pair.astype(int).tolist()))
+    return record(ROOT / 'INPUTS.json', inputs)
 
 
 def initialize() -> dict:
@@ -355,14 +381,16 @@ def load_encode(field_name: str, tag: str) -> dict:
     return json.loads(path.read_text())
 
 
-def price(tags: tuple[str, ...]) -> dict:
+def price(tags: tuple[str, ...], candidate: str = 'candidate', seg_gain_bytes: float | None = None,
+          seg_cells: float | None = None) -> dict:
     inputs = guard()
     parts = jg2.split_member(jg2.read_archive_member(LIVE / 'archive.zip'))
     prefix, weights, shipped_stream = split_tail(parts['tail'])
     live_bytes = inputs['pointer_archive']['bytes']
+    fields = ('control', candidate)
 
     streams, twins, ideal = {}, {}, {}
-    for name in FIELDS:
+    for name in fields:
         runs = [load_encode(name, tag) for tag in tags]
         payloads = [Path(r['outputs']['mixed']['path']).read_bytes() for r in runs]
         if any(p != payloads[0] for p in payloads[1:]):
@@ -376,7 +404,7 @@ def price(tags: tuple[str, ...]) -> dict:
         raise RuntimeError('CONTROL IDENTITY FAILED at price time')
 
     archives = {}
-    for name in FIELDS:
+    for name in fields:
         member = jg2.join_member(dict(parts, tail=build_tail(prefix, weights, streams[name])))
         destination = ROOT / 'retained' / f'archive_{name}.zip'
         preflight(destination, len(member) + 4096)
@@ -385,13 +413,20 @@ def price(tags: tuple[str, ...]) -> dict:
     if archives['control']['bytes'] != live_bytes:
         raise RuntimeError('rebuilt control archive does not reproduce the live byte count')
 
-    changed = inputs['field_delta']['tokens_changed']
-    delta_bytes = archives['candidate']['bytes'] - archives['control']['bytes']
-    delta_stream = len(streams['candidate']) - len(streams['control'])
-    first_order = (sum(ideal['candidate']['per_frame'][1]) - sum(ideal['control']['per_frame'][1])) / 8
+    entry = inputs['fields'][candidate]
+    delta = entry.get('delta_vs_control') or inputs['field_delta']
+    changed = delta['tokens_changed']
+    delta_bytes = archives[candidate]['bytes'] - archives['control']['bytes']
+    delta_stream = len(streams[candidate]) - len(streams['control'])
+    first_order = (sum(ideal[candidate]['per_frame'][1]) - sum(ideal['control']['per_frame'][1])) / 8
     break_even = inputs['break_even_bits_per_changed_token']
-    bits_per_token = delta_bytes * 8 / changed
-    seg_gain_bytes = 301.72664703369134
+    bits_per_token = delta_bytes * 8 / changed if changed else None
+    if seg_gain_bytes is None:
+        seg_gain_bytes = 301.72664703369134
+    if seg_cells is not None:
+        # A SUBSET repairs fewer cells and therefore carries its own break-even; reusing the
+        # full pass's 10.2715 would price the subset against a gain it does not deliver.
+        break_even = seg_cells * (100.0 / (N_PAIRS * EVAL_H * EVAL_W)) / (25 / 37_545_489) * 8 / changed
     dS_rate = delta_bytes * 25 / 37_545_489
     dS_seg = -seg_gain_bytes * 25 / 37_545_489
 
@@ -403,7 +438,8 @@ def price(tags: tuple[str, ...]) -> dict:
         delta_archive_bytes=delta_bytes, delta_stream_bytes=delta_stream,
         first_order_ideal_delta_bytes=first_order,
         realized_over_first_order=(delta_bytes / first_order) if first_order else None,
-        tokens_changed=changed, pairs_changed=inputs['field_delta']['pairs_changed'],
+        candidate_field=candidate, seg_cells=seg_cells,
+        tokens_changed=changed, pairs_changed=delta['pairs_changed'],
         bits_per_changed_token=bits_per_token,
         break_even_bits_per_changed_token=break_even,
         margin_ratio=break_even / bits_per_token if bits_per_token else None,
@@ -413,7 +449,7 @@ def price(tags: tuple[str, ...]) -> dict:
         admit_bar_net_dS=inputs['admit_bar_net_dS'],
         rate_seg_clears_bar_before_pose=bool(dS_rate + dS_seg < inputs['admit_bar_net_dS']),
     )
-    return record(ROOT / 'PRICE.json', result)
+    return record(ROOT / f'PRICE_{candidate}.json', result)
 
 
 def ledger() -> dict:
@@ -446,19 +482,31 @@ def ledger() -> dict:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('stage', choices=['init', 'encode', 'price', 'ledger'])
-    parser.add_argument('--field', choices=list(FIELDS), default='control')
+    parser.add_argument('stage', choices=['init', 'add-field', 'encode', 'price', 'ledger'])
+    parser.add_argument('--field', default='control',
+                        help='a field name registered in INPUTS.json by init or add-field')
+    parser.add_argument('--npz', type=Path, default=None, help='add-field: the field npz')
+    parser.add_argument('--candidate', default='candidate', help='price: which field to price')
+    parser.add_argument('--seg-cells', type=float, default=None,
+                        help='price: cells this field repairs, so the break-even is its own')
+    parser.add_argument('--seg-gain-bytes', type=float, default=None)
     parser.add_argument('--tag', default='primary')
     parser.add_argument('--stop', type=int, default=N_PAIRS)
     parser.add_argument('--tags', nargs='+', default=['primary', 'repeat'])
     args = parser.parse_args()
     if args.stage == 'init':
         print(json.dumps(initialize(), sort_keys=True)[:2000])
+    elif args.stage == 'add-field':
+        if args.npz is None:
+            raise SystemExit('add-field requires --npz')
+        out = add_field(args.field, args.npz)
+        print(json.dumps({k: v['u8'] for k, v in out['fields'].items()}, sort_keys=True))
     elif args.stage == 'encode':
         out = encode(args.field, args.tag, args.stop)
         print(json.dumps({k: v for k, v in out.items() if k != 'per_frame_ideal_bits'}, sort_keys=True))
     elif args.stage == 'price':
-        print(json.dumps(price(tuple(args.tags)), sort_keys=True))
+        print(json.dumps(price(tuple(args.tags), args.candidate,
+                               args.seg_gain_bytes, args.seg_cells), sort_keys=True))
     else:
         out = ledger()
         print(json.dumps({k: v for k, v in out.items() if k != 'rows'}, sort_keys=True))
