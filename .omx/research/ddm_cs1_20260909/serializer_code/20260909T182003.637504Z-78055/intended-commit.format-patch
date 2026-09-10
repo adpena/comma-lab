@@ -1,0 +1,281 @@
+From 60937321b713099f6f735c34198c0089f4e8a840 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alejandro=20Pe=C3=B1a?= <adpena@gmail.com>
+Date: Wed, 9 Sep 2026 13:20:04 -0500
+Subject: [PATCH] ddm_cs1 consolidation: resumable SSD audit and retained
+ closed-arm drivers [no-triality] [p0-ledger-ok]
+
+Checkpoint: tools/subagent_checkpoint.py ddm_cs1 step 3. Two clean Python review passes; source-only custody, no historical driver execution.
+---
+ .../s1a/run_off_seed2_resume_r8.sh            |  16 ++
+ .../landed_source/s1a/run_off_sequential.sh   |  18 +++
+ experiments/ddm_cs1_disposition_ssd_code.py   | 147 ++++++++++++++++++
+ experiments/ddm_cs1_resumable_ssd_audit.py    |  58 +++++++
+ 4 files changed, 239 insertions(+)
+ create mode 100644 .omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_seed2_resume_r8.sh
+ create mode 100644 .omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_sequential.sh
+ create mode 100644 experiments/ddm_cs1_disposition_ssd_code.py
+ create mode 100644 experiments/ddm_cs1_resumable_ssd_audit.py
+
+diff --git a/.omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_seed2_resume_r8.sh b/.omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_seed2_resume_r8.sh
+new file mode 100644
+index 000000000..c60ced2f9
+--- /dev/null
++++ b/.omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_seed2_resume_r8.sh
+@@ -0,0 +1,16 @@
++#!/bin/bash
++# s1a stage-A seed-2 RESUME driver (r8) — continues the r7 run killed by an
++# external SIGKILL at 2026-08-25T18:40:23Z (~ep30 of seed 20260816).
++# Resumes from wd3_epoch_0030.pt via the masked-identity cure (a5fd9ace0b).
++# Sealed MAIN_LAUNCH_ORDER sha 708eae6a...; seed-1 (20260815) completed rc=0 PASS.
++set -uo pipefail
++cd /Users/adpena/Projects/pact
++export PYTORCH_ENABLE_MPS_FALLBACK=0
++export PYTHONDONTWRITEBYTECODE=1
++echo "=== OFF seed 20260816 RESUME(ep30) start $(date -u +%FT%TZ) ==="
++.venv/bin/python experiments/ddm_wd3_scorer_aware_width_distillation.py train \
++  --compiled-config "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/training/off_seed_20260816/COMPILED_CONFIG_resume_ep30.json"
++rc=$?
++echo "=== OFF seed 20260816 RESUME rc=${rc} end $(date -u +%FT%TZ) ==="
++if [ "${rc}" -ne 0 ]; then exit "${rc}"; fi
++echo "BOTH_OFF_SEEDS_COMPLETE"
+diff --git a/.omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_sequential.sh b/.omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_sequential.sh
+new file mode 100644
+index 000000000..fe199f3df
+--- /dev/null
++++ b/.omx/research/ddm_cs1_20260909/landed_source/s1a/run_off_sequential.sh
+@@ -0,0 +1,18 @@
++#!/bin/bash
++# s1a stage-A sequential OFF driver (sealed MAIN_LAUNCH_ORDER sha 708eae6a...)
++# driver-computes-verdict: rc propagates; each trainer run is itself resumable-from-disk.
++set -uo pipefail
++cd /Users/adpena/Projects/pact
++# env demanded by the trainer's _device guard (PYTORCH_ENABLE_MPS_FALLBACK must be "0")
++# + the #1122 AppleDouble/pycache cure for SSD-adjacent runs
++export PYTORCH_ENABLE_MPS_FALLBACK=0
++export PYTHONDONTWRITEBYTECODE=1
++for seed in 20260815 20260816; do
++  echo "=== OFF seed ${seed} start $(date -u +%FT%TZ) ==="
++  .venv/bin/python experiments/ddm_wd3_scorer_aware_width_distillation.py train \
++    --compiled-config "/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter/training/off_seed_${seed}/COMPILED_CONFIG.json"
++  rc=$?
++  echo "=== OFF seed ${seed} rc=${rc} end $(date -u +%FT%TZ) ==="
++  if [ "${rc}" -ne 0 ]; then exit "${rc}"; fi
++done
++echo "BOTH_OFF_SEEDS_COMPLETE"
+diff --git a/experiments/ddm_cs1_disposition_ssd_code.py b/experiments/ddm_cs1_disposition_ssd_code.py
+new file mode 100644
+index 000000000..541bbcecc
+--- /dev/null
++++ b/experiments/ddm_cs1_disposition_ssd_code.py
+@@ -0,0 +1,147 @@
++"""Reproduce archive-pin-only build products; preserve all other debt as blocked.
++
++No SSD writes and no execution of recovered sources. A certificate requires exact
++byte reconstruction from a reachable Git blob, not similarity or a filename guess.
++"""
++
++import argparse
++import hashlib
++import importlib.util
++import json
++import re
++import subprocess
++from pathlib import Path
++
++SHA_LINE = re.compile(rb"(?m)^ARCHIVE_SHA256 = [\'\"][0-9a-f]{64}[\'\"]$")
++SIZE_LINE = re.compile(rb"(?m)^ARCHIVE_BYTES = [0-9]+$")
++
++
++def normalize(data):
++    return SIZE_LINE.sub(b"ARCHIVE_BYTES = SIZE", SHA_LINE.sub(b'ARCHIVE_SHA256 = "PIN"', data))
++
++
++def reproduce(template, target):
++    sha_lines = SHA_LINE.findall(target)
++    size_lines = SIZE_LINE.findall(target)
++    if len(sha_lines) != 1 or len(size_lines) != 1:
++        return None
++    if len(SHA_LINE.findall(template)) != 1 or len(SIZE_LINE.findall(template)) != 1:
++        return None
++    rebuilt = SIZE_LINE.sub(lambda _: size_lines[0], SHA_LINE.sub(lambda _: sha_lines[0], template))
++    return rebuilt if rebuilt == target else None
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--scan", type=Path, required=True)
++    parser.add_argument("--work", type=Path, required=True)
++    parser.add_argument("--ledger", type=Path, required=True)
++    parser.add_argument("--apply-certificates", action="store_true")
++    args = parser.parse_args()
++    for path in (args.work, args.ledger):
++        if Path("/Volumes") in path.resolve().parents:
++            raise ValueError("SSD mutation is forbidden")
++    spec = importlib.util.spec_from_file_location("ssd_audit", "tools/audit_ssd_authored_signal.py")
++    audit = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(audit)
++    reachable = audit.reachable_git_blobs()
++    templates = json.loads((args.work / "repin_templates.json").read_text())
++    keeper = json.loads((args.work / "keeper_before.json").read_text())
++    landings = {r["source"]: r for r in json.loads((args.work / "source_landings.json").read_text())}
++    existing = audit.load_certified()
++    report = json.loads(args.scan.read_text())
++    rows = []
++    retained = args.work / "reproduced_code"
++    retained.mkdir(exist_ok=True)
++    for item in report["owed"]:
++        if item["ext"] not in (".py", ".sh"):
++            continue
++        source = Path(item["representative_path"])
++        data = source.read_bytes()
++        blob = hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
++        if blob != item["blob_sha1"]:
++            raise ValueError(f"source changed since scan: {source}")
++        sha = hashlib.sha256(data).hexdigest()
++        row = {
++            "path": str(source),
++            "blob_sha1": blob,
++            "sha256": sha,
++            "bytes": len(data),
++            "instance_count": item["instance_count"],
++            "owner": "MAIN / source-owner reconciliation",
++            "disposition": "BLOCKED",
++            "reason": "No verified committed reproducer or terminal keeper owner for this exact authored source; bytes retained.",
++            "consumer_store": str(args.ledger),
++            "fire_trigger": "Owner supplies exact reproducer or keeper-terminal source review and serializer landing.",
++        }
++        owners = [r for name, r in keeper.items() if name in source.parts]
++        if owners and any(r.get("status") not in ("landed", "closed") for r in owners):
++            row["reason"] = "Keeper owner is not landed/closed; charter forbids landing live-arm code."
++            row["owner"] = owners[0]["name"]
++        if blob in reachable:
++            row.update(disposition="MATCHED", reason="Exact blob now reachable from a Git ref; no SSD change.")
++        elif str(source) in landings:
++            row.update(
++                disposition="READY_FOR_SERIALIZER",
++                landing=landings[str(source)],
++                owner="ddm_cs1",
++                reason="Keeper-closed S1A shell driver copied byte-identically; syntax and source review complete.",
++            )
++        elif source.name == "inflate.py":
++            template = templates.get(hashlib.sha256(normalize(data)).hexdigest())
++            if template and template["blob_sha1"] in reachable:
++                original = subprocess.check_output(["git", "cat-file", "blob", template["blob_sha1"]])
++                rebuilt = reproduce(original, data)
++                if rebuilt is not None:
++                    output = retained / (sha + ".bin")
++                    output.write_bytes(rebuilt)
++                    row.update(
++                        disposition="CERTIFIED",
++                        owner="ddm_cs1",
++                        reason="Generated archive-pin-only runtime copy; exact reconstruction from reachable template passes.",
++                        reproducer={
++                            "git_blob_sha1": template["blob_sha1"],
++                            "source_path": template["path"],
++                            "operation": "replace exactly one ARCHIVE_SHA256 line and one ARCHIVE_BYTES line",
++                            "sha_line": SHA_LINE.findall(data)[0].decode(),
++                            "size_line": SIZE_LINE.findall(data)[0].decode(),
++                            "helper": "experiments/ddm_cs1_disposition_ssd_code.py::reproduce",
++                        },
++                        retained_reproduction=str(output),
++                    )
++        elif str(source).endswith("/retained_controls/ddm_sw1_absolute_path_positive_control.py"):
++            literal = b'ROOT = "/Volumes/PrivateSw1/control"\n'
++            if data == literal:
++                output = retained / (sha + ".bin")
++                output.write_bytes(literal)
++                row.update(
++                    disposition="CERTIFIED",
++                    owner="ddm_cs1",
++                    reason="Historical deliberate absolute-path detector fixture, proved by ddm_sw1_portable_paths_secrets_scrub_20260820.md table P3.",
++                    reproducer={"literal_utf8": literal.decode()},
++                    retained_reproduction=str(output),
++                )
++        rows.append(row)
++    args.ledger.parent.mkdir(parents=True, exist_ok=True)
++    args.ledger.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
++    if args.apply_certificates:
++        for row in rows:
++            if row["disposition"] == "CERTIFIED" and row["blob_sha1"] not in existing:
++                audit.append_certification(
++                    row["blob_sha1"],
++                    row["reason"] + " Reproducer and sha256: " + str(args.ledger),
++                    "ddm_cs1",
++                    row["path"],
++                )
++    print(
++        json.dumps(
++            {
++                status: sum(r["disposition"] == status for r in rows)
++                for status in sorted({r["disposition"] for r in rows})
++            }
++        )
++    )
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/experiments/ddm_cs1_resumable_ssd_audit.py b/experiments/ddm_cs1_resumable_ssd_audit.py
+new file mode 100644
+index 000000000..b844460e7
+--- /dev/null
++++ b/experiments/ddm_cs1_resumable_ssd_audit.py
+@@ -0,0 +1,58 @@
++"""Run the existing SSD audit with a resumable, stat-validated hash journal.
++
++Apparatus only. Never writes to scan roots. Resume by repeating this command.
++"""
++
++import argparse
++import importlib.util
++import json
++from pathlib import Path
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--resume-from", type=Path, required=True)
++    parser.add_argument("--manifest", type=Path, required=True)
++    args = parser.parse_args()
++    for path in (args.resume_from, args.manifest):
++        if Path("/Volumes") in path.resolve().parents:
++            raise ValueError("This charter forbids SSD writes")
++    spec = importlib.util.spec_from_file_location("ssd_audit", "tools/audit_ssd_authored_signal.py")
++    audit = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(audit)
++    records = {}
++    if args.resume_from.exists():
++        for line in args.resume_from.read_text().splitlines():
++            try:
++                row = json.loads(line)
++                records[row["path"]] = row
++            except (ValueError, KeyError):
++                continue
++    original = audit.blob_sha1
++    with args.resume_from.open("a", buffering=1) as journal:
++
++        def cached_hash(path):
++            try:
++                stat = path.stat()
++                signature = [stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns]
++                old = records.get(str(path))
++                if old and old["signature"] == signature:
++                    return old["blob_sha1"]
++                digest = original(path)
++                after = path.stat()
++                if signature != [after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns]:
++                    return None
++                if digest is not None:
++                    row = {"path": str(path), "signature": signature, "blob_sha1": digest}
++                    journal.write(json.dumps(row) + "\n")
++                    records[str(path)] = row
++                return digest
++            except OSError:
++                return None
++
++        audit.blob_sha1 = cached_hash
++        return audit.main(["--write-cache", "--manifest", str(args.manifest)])
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

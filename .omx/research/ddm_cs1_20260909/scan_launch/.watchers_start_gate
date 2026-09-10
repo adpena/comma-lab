@@ -1,0 +1,8 @@
+{
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/scan_launch/launch_manifest.json",
+    "monotonic_launch_counter": 1149,
+    "pid": 60738
+  },
+  "schema": "detached_local_process_watchers_start_gate.v1"
+}

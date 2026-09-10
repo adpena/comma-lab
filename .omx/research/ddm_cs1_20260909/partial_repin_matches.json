@@ -1,0 +1,23 @@
+[
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_bz2d_distortion/store/runtime_bz2_field/inflate.py",
+    "template": {
+      "blob_sha1": "e7250b8160e4ddd13b621ddbb3271dd88ce02481",
+      "path": ".omx/research/ddm_oc2_origin_consolidation_20260820/jg5_ssd_only_sources/body_runtime_subset455/inflate.py"
+    }
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_rf1_renderer_film_rung/candidate_runtime_r1/inflate.py",
+    "template": {
+      "blob_sha1": "e7250b8160e4ddd13b621ddbb3271dd88ce02481",
+      "path": ".omx/research/ddm_oc2_origin_consolidation_20260820/jg5_ssd_only_sources/body_runtime_subset455/inflate.py"
+    }
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_fire_v1/inflate.py",
+    "template": {
+      "blob_sha1": "e7250b8160e4ddd13b621ddbb3271dd88ce02481",
+      "path": ".omx/research/ddm_oc2_origin_consolidation_20260820/jg5_ssd_only_sources/body_runtime_subset455/inflate.py"
+    }
+  }
+]

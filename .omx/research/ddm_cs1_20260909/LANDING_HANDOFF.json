@@ -1,0 +1,32 @@
+{
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "main_landed": false,
+  "commit": "6dfcc6c3ddd0f50d5fc58e81b8f0e6638726fc9b",
+  "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/serializer_final/20260909T183425.158308Z-7637/intended-commit.bundle",
+  "bundle_sha256": "9fda5ccc60d3cf1617f8181f860cf2d3e43c1e482d14a3eca40c542119ef5f06",
+  "receipt": "/Users/adpena/Projects/pact/.omx/research/ddm_cs1_20260909/serializer_final/20260909T183425.158308Z-7637/receipts.jsonl",
+  "verified_file_count": 41,
+  "bundle_verify": "PASS",
+  "index_empty_at_handoff": true,
+  "supersedes": [
+    "60937321b713099f6f735c34198c0089f4e8a840",
+    "d99f358793b121643ad8affc7a126a875ca3d458"
+  ],
+  "ssd_writes": 0,
+  "scorer_jobs": 0,
+  "distinct_code_blobs": 266,
+  "source_instances": 1479,
+  "dispositions": {
+    "CERTIFIED": 82,
+    "BLOCKED": 182,
+    "BUNDLE_READY_MAIN_MUST_LAND": 2
+  },
+  "landed_wave_arms": 14,
+  "live_excluded_wave_arms": 3,
+  "followon_tasks": [
+    "ddm_cs1_consolidation_debt_20260909::ITEM_1",
+    "ddm_cs1_consolidation_debt_20260909::ITEM_2"
+  ],
+  "owner": "MAIN",
+  "consumer_memo": ".omx/research/ddm_cs1_consolidation_debt_20260909.md"
+}
