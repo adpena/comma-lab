@@ -85,3 +85,5 @@ runtime has not been measured here.
 DEAD-ENDS: Full-plane scanning per group is unnecessary for these exact maps;
 the incremental API matched the declared complete-map outputs in the tested
 34-frame control scope. No compression formulation was closed.
+
+verdict_scope: formulation — tc4's five declared causal context maps and their greedy composition on the move-41 tail (maps 3/4 under the 20 B bar; composition −32 B vs the standalone sum); the mixer's context axis as a family is NOT closed by these measurements.
