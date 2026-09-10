@@ -2104,6 +2104,71 @@ on this object, in order:
 
 ---
 
+## 33. CLOSING — the move table, and the laws with their receipts
+
+This arm's round on this object is complete. The singles family converged, the composition
+landed, and frame 0 is a repair lever for a future edit round rather than a round of its own.
+
+### 33a. The move table
+
+Every row is contest-CUDA T4 n600, verified at source from its own lane receipt. Rows this
+arm OWNS are bold.
+
+| move | label | S | bytes | Δ |
+|---:|---|---:|---:|---:|
+| 24 | fs2_base | 0.14784474152757654 | 180,023 | — |
+| 25 | cl2_lambda1_repack | 0.14781744131049854 | 179,982 | −2.730022e-05 |
+| 26 | rc1_model_section_recode | 0.14666350774473783 | 178,249 | −1.153934e-03 |
+| 27 | pc1_v3_lattice_x4 | 0.14519815690761109 | 176,448 | −1.465351e-03 |
+| 28 | pc1_v3x8 | 0.14451779131217160 | 175,576 | −6.803656e-04 |
+| 29 | pc1_v3x16 | 0.14411787458634504 | 174,786 | −3.999167e-04 |
+| **30** | **sj1 pass 2a** | **0.13981401728396281** | 180,904 | **−4.303857e-03** |
+| **31** | **sj1 pass 3** | **0.13900437796841966** | 181,645 | **−8.096393e-04** |
+| 32 | rc2_hpac_semistatic_mixing | 0.13885056455024844 | 181,414 | −1.538134e-04 |
+| 33 | pc2_carrier_scales_resolve | 0.13882326433317044 | 181,373 | −2.730022e-05 |
+| **34** | **sj1 pass 4** | **0.13867171823146562** | 181,521 | **−1.515461e-04** |
+| 35 | cmp1_rc3_tc1_composed | 0.13817298987557713 | 180,772 | −4.987284e-04 |
+| 36 | cmp2_sm1_semantic_coder | 0.13791730003757818 | 180,388 | −2.556898e-04 |
+| **37** | **sj1 pass 5** | **0.13789029376306361** | 180,436 | **−2.700627e-05** |
+| 38 | rp1_rate_directed | 0.13766931482209041 | 180,186 | −2.209789e-04 |
+| **39** | **sj1 × rp1 composition** | **0.13763861019288715** | **180,233** | **−3.070463e-05** |
+
+(The table is ordinal within this arm's own pointer lineage; MAIN's global numbering runs
+two higher from move 32 onward. The sha, bytes and score are the identity — the ordinal is
+not.) **Campaign: −1.020613e-02 over 16 rows. This arm owns 6 of them, −5.331e-03 total.**
+
+### 33b. The laws, each with the receipt that measured it
+
+| law | receipt |
+|---|---|
+| **Token error amplifies to argmax; the residual is renderer boundary jitter at CORRECT tokens** (86.25%) | §16, §21 |
+| **The token grid is exhausted in both shapes.** Singles refused 89.46% of the residual; the two-cell SLIDE reaches 10.77% of that refused set at 1.53× over break-even | §24 |
+| **The reachable remainder differs IN KIND from the unreachable**: Lane 56.93× vs 40.11×, isolated cells 95.30% vs 86.47%, row centroid 208.1 vs 200.9 — the grid eats near-field isolated Lane specks | §25b, `CENSUS.json` |
+| **The §21 "singletons rose" reading was a level switch**; on either statistic held fixed the granularity is FLAT | §25a |
+| **A pass's price must be re-derived under the coder that is LIVE** — 7.7957 bits/token under tc1's mixer against a 10.2715 break-even, projected 7.7203 (1.0098×) | §26, `PRICE_candidate.json` |
+| **The per-pair ledger residual is small and EITHER-signed** (+19.6, +5.70, **−1.96** B), not a one-signed under-charge | §27c |
+| **Adding surprise stays LOCAL** at this density: 228.925 of 229.191 B on the 126 edited pairs | §26c |
+| **The carrier re-solve is the largest single effect in the chain** — it removed 1,235 bars of pose damage on the full pass-5 field, which still failed | §27a |
+| **A projection whose seg leg is verified at zero-cell disagreement carries NO modelling error**: the residual is EXACTLY the sum of the two 8-dp print gaps, twice, to the last digit | §29a, §32a |
+| **Frame-0 re-selection is a REPAIR, not a general win**: 74/84 on edit-broken pairs against 78/600 on the shipped field, a 1,174× population-gain difference, and no point on its Lagrange ladder clears the bar alone | §28, §30 |
+| **Token-additivity does NOT imply seg-additivity**: 80 repairs → 74, all six losses on the 13-pair overlap of 282 | §31d, `SEGCHECK_composed.json` |
+| **Rate composition is mildly anti-synergic** (+6.4%/token, the yield law in the mirror) **and the container search is two-sided** — it handed the 3 B back | §31c, §31e |
+| **A stale pointer table pairs the wrong carrier with the right renders**; pm2's magnitude gate caught it at 21.3× where eyeballing would not have caught 2× | §31e, the move-38/39 table append |
+
+### 33c. What the next round inherits
+
+1. **The frame-0 repair, priced INSIDE an edit round's admission** on exactly the pairs that
+   round breaks — never as a standalone round (§30a measures that it cannot clear the bar).
+   Its blob curve is cheap where it matters: k=9 costs +5 B, k=30 costs +26 B.
+2. **Four pairs this composition carries at zero or negative repair** (237, 293, 398, 565).
+   Dropping them needs its own twin encode to price.
+3. **The representation-level boundary door.** §25b's split is its brief: 12,540 cells
+   remain, 86% with a CORRECT stored token and a wrong render, 99.6% one-pixel boundary
+   jitter, rows 128–319 carrying all of it, and the near-field isolated-Lane corner that the
+   token grid has been eating is nearly gone.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 

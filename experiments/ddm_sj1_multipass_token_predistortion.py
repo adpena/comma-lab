@@ -512,6 +512,25 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=4.89e-06,
         score_t4=0.1376693148220904,
     ),
+    #: MOVE 40 -- LIVE.  THIS ARM'S move-38 subset RE-BASED onto move 39 by
+    #: re-verification: 282-pair union, 13 overlapping pairs, zero position collisions,
+    #: and the seg recount that mattered -- 80 repairs became 74, all six losses on the
+    #: overlap.  Lane ddm_sj1_t4_compose39_rp1_union_20260910, call
+    #: fc-01M24MA90ER7YTGRTCX9SNQNM4, -3.070463e-05 S on +47 B.  The projection residual
+    #: was +2.839377e-06 and is again EXACTLY the sum of the two 8-dp print gaps.
+    PointerRow(
+        label="sj1_compose39_rp1_union",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime"
+        ),
+        archive_sha256=(
+            "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+        ),
+        archive_bytes=180_233,
+        d_seg_t4=0.00010636,
+        d_pose_t4=4.89e-06,
+        score_t4=0.13763861019288715,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
