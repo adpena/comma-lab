@@ -1,0 +1,15 @@
+{
+  "patch_applies_to_current_base_files": true,
+  "all_post_edit_hashes_match": true,
+  "file_count": 14,
+  "patch_sha256": "d5f6586a3b71fbf89aff70690db993ae2275dc25ac8f3dd524f145bc0be84932",
+  "shared_source_unchanged": {
+    "experiments/ddm_vr3_certified_raw_reclaim.py": true,
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py": true,
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py": true
+  },
+  "ledger_sha_unchanged": true,
+  "shared_index_used_by_arm": false,
+  "staged_paths_at_final_observation": [],
+  "score_claim": false
+}

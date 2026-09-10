@@ -1,0 +1,15 @@
+{
+  "command": [
+    "rg",
+    "--hidden",
+    "-n",
+    "certif.*reclaim|process.gate|cwd census",
+    ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+    ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+    "docs",
+    ".omx/state/canonical_task_status.jsonl"
+  ],
+  "rc": 0,
+  "stdout": ".omx/state/canonical_task_status.jsonl:545:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"codex:ddm_cn5\",\"event_notes\":\"QUEUED-WITH-A-FIRE-ORDER. Current df measured 138060192 KiB free on Vertigo and 710609152 KiB free on APDataStore, so SR2's below-150-GiB trigger is active. Consumer store /Volumes/APDataStore/pact/. Fire only after a read-only owner/liveness census identifies the next inactive family and a machine-readable manifest records source path, bytes, file hashes/tree hash, provenance, cold destination, and symlink plan. Do not select the uncertified regen2 tree or any live solve/terminal directory.\",\"event_timestamp_utc\":\"2026-08-13T17:44:38.816828Z\",\"event_type\":\"registered\",\"owner\":\"storage-custody successor\",\"predicted_cost_usd\":0.0,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_cn5_20260813\",\"source_design_memo\":\".omx/research/ddm_sr2_vertigo_space_reclaim_20260811.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_sr2_vertigo_reclaim_threshold_20260813\",\"test_status\":\"pending\",\"title\":\"Reclaim Vertigo after the 150 GiB free-space threshold re-fired\",\"written_at_utc\":\"2026-08-13T17:44:38.816828Z\",\"written_host\":\"Primary\",\"written_pid\":63991}\n.omx/state/canonical_task_status.jsonl:711:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_sr3\",\"event_notes\":\"SR3 consumed #1165 storage input: SA1 and B2E are RECLAIMED_VERIFIED with complete per-file SHA round trips. Live AP free 48109191168 B exceeds the post-CAS W96B trigger 33569378304 B and 36 GiB stop condition. Storage blocker PAID; QUEUED-WITH-A-FIRE-ORDER to MAIN using SEALED_FIRE_ORDER_W96B.json. No aligned training launched by SR3. Evidence: .omx/research/ddm_sr3_ap_certify_compress_reclaim_20260826.md.\",\"event_timestamp_utc\":\"2026-08-26T23:07:27.276980Z\",\"event_type\":\"status_change\",\"owner\":\"MAIN\",\"predicted_cost_usd\":null,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_sr3_20260826\",\"source_design_memo\":\".omx/research/ddm_w96a_aligned_config_renderer_window_20260826.md\",\"started_at_utc\":\"2026-08-26T20:19:40.424445Z\",\"status\":\"in_progress\",\"task_id\":\"ddm_w96a_aligned_config_renderer_window\",\"test_status\":\"green\",\"title\":\"Measure the film-W96 renderer at the aligned expected-flip configuration\",\"written_at_utc\":\"2026-08-26T23:07:27.276980Z\",\"written_host\":\"Primary\",\"written_pid\":14435}\ndocs/runbooks/local_disk_reclaim_cadence.md:6:on 2026-09-04. Full account: `.omx/research/ddm_dk1_local_disk_certify_and_move_reclaim_20260904.md`.\n",
+  "stderr": ""
+}

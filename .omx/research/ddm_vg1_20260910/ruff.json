@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/ruff",
+    "check",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
+  ],
+  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/ddm_vg1_work",
+  "rc": 0,
+  "stdout": "All checks passed!\n",
+  "stderr": ""
+}

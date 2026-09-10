@@ -460,6 +460,8 @@ def process_gate(family: str) -> dict[str, Any]:
     process_ids: set[int] = set()
     cwd_by_pid: dict[int, str] = {}
     cwd_commands: dict[int, str] = {}
+    process_commands: dict[int, str] = {}
+    cwd_pids: set[int] = set()
     owner_token = re.compile(r"(^|[^a-z0-9])" + re.escape(family) + r"([^a-z0-9]|$)")
     for command in commands:
         try:
@@ -474,7 +476,8 @@ def process_gate(family: str) -> dict[str, Any]:
             lines = [line.split(None, 2) for line in result.stdout.splitlines()]
             if any(len(line) != 3 or not line[0].isdigit() or not line[1].isdigit() for line in lines):
                 raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed ps")
-            process_ids = {int(line[0]) for line in lines}
+            process_commands = {int(line[0]): line[2] for line in lines}
+            process_ids = set(process_commands)
             if len(process_ids) != len(lines) or not {1, os.getpid()}.issubset(process_ids):
                 raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:init or self invisible")
             hits = [
@@ -486,7 +489,7 @@ def process_gate(family: str) -> dict[str, Any]:
             if hits:
                 raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{hits}")
             # ps necessarily exits before lsof starts; its own short-lived child
-            # row is not a missing consumer. Other missing processes fail closed.
+            # row is not a missing consumer. Retain other unreadable cwd rows.
             process_ids.difference_update(
                 int(line[0]) for line in lines
                 if int(line[1]) == os.getpid() and Path(line[2]).name == "ps"
@@ -498,23 +501,35 @@ def process_gate(family: str) -> dict[str, Any]:
             current_pid: int | None = None
             for line in result.stdout.splitlines():
                 if line.startswith("p") and line[1:].isdigit():
-                    if current_pid is not None and current_pid not in cwd_by_pid:
-                        raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:missing cwd")
                     current_pid = int(line[1:])
-                    if current_pid in cwd_by_pid:
+                    if current_pid in cwd_pids:
                         raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:duplicate cwd pid")
+                    cwd_pids.add(current_pid)
                 elif line.startswith("n/") and current_pid is not None and current_pid not in cwd_by_pid:
                     cwd_by_pid[current_pid] = line[1:]
                 elif line.startswith("c") and len(line) > 1 and current_pid is not None and current_pid not in cwd_commands:
                     cwd_commands[current_pid] = line[1:]
                 elif line != "fcwd" or current_pid is None:
                     raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed cwd record")
-    # A successful lsof exit with only self visible is still a blind census.
-    # Races or inaccessible processes require a fresh complete observation.
-    # lsof can observe new processes (including itself). Their command names
-    # must be checked as well; a missing ps process still cannot be excused.
-    if not process_ids.issubset(cwd_by_pid) or set(cwd_commands) != set(cwd_by_pid):
+    # A ps census must see init and self; lsof must independently see self
+    # and another ps-listed process. Empty/self-only output remains blind.
+    # Missing cwd is per-process uncertainty, not malformed field syntax.
+    if (
+        os.getpid() not in cwd_by_pid
+        or not (process_ids.intersection(cwd_by_pid) - {os.getpid()})
+        or cwd_pids != set(cwd_commands)
+    ):
         raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed or incomplete cwd census")
+    cwd_unreadable = [
+        {"pid": pid, "command": cwd_commands.get(pid, process_commands.get(pid)), "cwd_unreadable": True}
+        for pid in sorted((process_ids | cwd_pids) - set(cwd_by_pid))
+    ]
+    unreadable_hits = [
+        row for row in cwd_unreadable
+        if row["pid"] != os.getpid() and owner_token.search(Path(row["command"]).name)
+    ]
+    if unreadable_hits:
+        raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{unreadable_hits}")
     cwd_hits = [
         (pid, cwd)
         for pid, cwd in cwd_by_pid.items()
@@ -526,7 +541,11 @@ def process_gate(family: str) -> dict[str, Any]:
     ]
     if cwd_hits:
         raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{cwd_hits}")
-    return {"visible": True, "owner": family, "commands": receipts, "checked_at_utc": utc_now()}
+    return {
+        "visible": True, "status": "COMPLETE", "owner": family, "commands": receipts,
+        "cwd_unreadable": cwd_unreadable, "ps_process_count": len(process_ids),
+        "cwd_readable_count": len(cwd_by_pid), "checked_at_utc": utc_now(),
+    }
 
 
 def owner_family(row: dict[str, Any]) -> str:

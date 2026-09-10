@@ -1,0 +1,36 @@
+{
+  "finding": "Clean adversarial delta review: complete means all observed PIDs are classified, not all cwd values readable. Every unreadable PID has a ps/lsof command; either source can refuse an owner. Empty/self-only/observer-only, commandless, duplicate, warning and malformed inputs remain closed. argv never queried. Apply consumers preserve all other certificate/reference/hash/open-file gates. Read-only integration tests explicitly skip here; they are pending host evidence.",
+  "changed_functions": [
+    "process_gate"
+  ],
+  "tracker": [
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr3_certified_raw_reclaim.py",
+        "--status",
+        "reviewed"
+      ],
+      "rc": 0,
+      "stdout": "RESCAN: 'experiments/ddm_vr3_certified_raw_reclaim.py' current entity census 33 (last stored census 33)\nMarked 33 entities in 'experiments/ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n",
+      "stderr": "",
+      "sha256": "2b094c9c8b05a0005ad773ee146640e3f67d79c42d88a304237f7fede185f1f8"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+        "--status",
+        "reviewed"
+      ],
+      "rc": 0,
+      "stdout": "RESCAN: 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' current entity census 26 (last stored census 26)\nMarked 26 entities in 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' as 'reviewed'\n",
+      "stderr": "",
+      "sha256": "8d92b1a4dec7b184ec27ccecf7a0a51e51b1dec4afa96d10753f0fb84061276a"
+    }
+  ]
+}

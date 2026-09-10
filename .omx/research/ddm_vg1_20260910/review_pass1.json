@@ -1,0 +1,33 @@
+{
+  "finding": "Clean delta review: command provenance, unreadable owner refusal, duplicate PID detection, missing-command rejection and independent self/nonself visibility anchors. Existing certificate and apply gates unchanged. Live tests skipped, not claimed passed.",
+  "tracker": [
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr3_certified_raw_reclaim.py",
+        "--status",
+        "reviewed"
+      ],
+      "rc": 0,
+      "stdout": "RESCAN: 'experiments/ddm_vr3_certified_raw_reclaim.py' current entity census 33 (last stored census 0)\nMarked 33 entities in 'experiments/ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n",
+      "stderr": "",
+      "sha256": "2b094c9c8b05a0005ad773ee146640e3f67d79c42d88a304237f7fede185f1f8"
+    },
+    {
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+        "--status",
+        "reviewed"
+      ],
+      "rc": 0,
+      "stdout": "RESCAN: 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' current entity census 26 (last stored census 0)\nMarked 26 entities in 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' as 'reviewed'\n",
+      "stderr": "",
+      "sha256": "8d92b1a4dec7b184ec27ccecf7a0a51e51b1dec4afa96d10753f0fb84061276a"
+    }
+  ]
+}

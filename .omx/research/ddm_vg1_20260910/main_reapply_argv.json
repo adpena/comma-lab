@@ -1,0 +1,24 @@
+{
+  "cwd": "/Users/adpena/Projects/pact",
+  "argv": [
+    ".venv/bin/python",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "apply",
+    "--ledger",
+    ".omx/research/ddm_vr5_reclaim_plan_bz2d_revalidate_20260910.jsonl",
+    "--expected-ledger-sha256",
+    "36416b17a70b4814fee681bc5c438b0ef87dec25f4b418eae5317c4ff97b6413",
+    "--journal",
+    ".omx/research/ddm_vr5_apply_journal_bz2d_20260910.jsonl",
+    "--target-bytes",
+    "3662409600"
+  ],
+  "executed": false,
+  "preconditions": [
+    "Land exact reviewed patch",
+    "Capture visible-host ps and lsof, verify missing-cwd classification",
+    "Run both live integration controls without skips",
+    "Keep every existing apply gate enabled"
+  ],
+  "score_claim": false
+}

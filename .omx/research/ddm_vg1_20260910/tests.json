@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-m",
+    "pytest",
+    "--rootdir=.",
+    "--confcutdir=.",
+    "-q",
+    "-rs",
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
+  ],
+  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/ddm_vg1_work",
+  "rc": 0,
+  "stdout": "................................................................ss...    [100%]\n=========================== short test summary info ============================\nSKIPPED [2] experiments/tests/test_ddm_vr5_certified_raw_reclaim.py:515: live ps visibility unavailable: [Errno 1] Operation not permitted: 'ps'\n67 passed, 2 skipped in 0.44s\n",
+  "stderr": ""
+}

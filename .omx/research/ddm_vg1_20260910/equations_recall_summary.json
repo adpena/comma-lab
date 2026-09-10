@@ -1,0 +1,14 @@
+{
+  "command": [
+    ".venv/bin/python",
+    "tools/list_canonical_equations.py",
+    "--json"
+  ],
+  "returncode": 0,
+  "records": 482,
+  "query": "reclaim|cwd census (case-insensitive serialized entry text)",
+  "matches": [],
+  "full_retained_path": ".omx/research/ddm_vg1_20260910/equations_recall.json",
+  "full_retained_bytes": 3686581,
+  "full_retained_sha256": "f76218f0f4ab438a996e16212ee73dc88adc42496fb71a3da298176e4d884476"
+}

@@ -1,0 +1,604 @@
+diff --git a/experiments/ddm_vr3_certified_raw_reclaim.py b/experiments/ddm_vr3_certified_raw_reclaim.py
+--- a/experiments/ddm_vr3_certified_raw_reclaim.py
++++ b/experiments/ddm_vr3_certified_raw_reclaim.py
+@@ -460,6 +460,8 @@
+     process_ids: set[int] = set()
+     cwd_by_pid: dict[int, str] = {}
+     cwd_commands: dict[int, str] = {}
++    process_commands: dict[int, str] = {}
++    cwd_pids: set[int] = set()
+     owner_token = re.compile(r"(^|[^a-z0-9])" + re.escape(family) + r"([^a-z0-9]|$)")
+     for command in commands:
+         try:
+@@ -474,7 +476,8 @@
+             lines = [line.split(None, 2) for line in result.stdout.splitlines()]
+             if any(len(line) != 3 or not line[0].isdigit() or not line[1].isdigit() for line in lines):
+                 raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed ps")
+-            process_ids = {int(line[0]) for line in lines}
++            process_commands = {int(line[0]): line[2] for line in lines}
++            process_ids = set(process_commands)
+             if len(process_ids) != len(lines) or not {1, os.getpid()}.issubset(process_ids):
+                 raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:init or self invisible")
+             hits = [
+@@ -486,7 +489,7 @@
+             if hits:
+                 raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{hits}")
+             # ps necessarily exits before lsof starts; its own short-lived child
+-            # row is not a missing consumer. Other missing processes fail closed.
++            # row is not a missing consumer. Retain other unreadable cwd rows.
+             process_ids.difference_update(
+                 int(line[0]) for line in lines
+                 if int(line[1]) == os.getpid() and Path(line[2]).name == "ps"
+@@ -498,23 +501,35 @@
+             current_pid: int | None = None
+             for line in result.stdout.splitlines():
+                 if line.startswith("p") and line[1:].isdigit():
+-                    if current_pid is not None and current_pid not in cwd_by_pid:
+-                        raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:missing cwd")
+                     current_pid = int(line[1:])
+-                    if current_pid in cwd_by_pid:
++                    if current_pid in cwd_pids:
+                         raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:duplicate cwd pid")
++                    cwd_pids.add(current_pid)
+                 elif line.startswith("n/") and current_pid is not None and current_pid not in cwd_by_pid:
+                     cwd_by_pid[current_pid] = line[1:]
+                 elif line.startswith("c") and len(line) > 1 and current_pid is not None and current_pid not in cwd_commands:
+                     cwd_commands[current_pid] = line[1:]
+                 elif line != "fcwd" or current_pid is None:
+                     raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed cwd record")
+-    # A successful lsof exit with only self visible is still a blind census.
+-    # Races or inaccessible processes require a fresh complete observation.
+-    # lsof can observe new processes (including itself). Their command names
+-    # must be checked as well; a missing ps process still cannot be excused.
+-    if not process_ids.issubset(cwd_by_pid) or set(cwd_commands) != set(cwd_by_pid):
++    # A ps census must see init and self; lsof must independently see self
++    # and another ps-listed process. Empty/self-only output remains blind.
++    # Missing cwd is per-process uncertainty, not malformed field syntax.
++    if (
++        os.getpid() not in cwd_by_pid
++        or not (process_ids.intersection(cwd_by_pid) - {os.getpid()})
++        or cwd_pids != set(cwd_commands)
++    ):
+         raise CertifyError("PROCESS_VISIBILITY_UNAVAILABLE:malformed or incomplete cwd census")
++    cwd_unreadable = [
++        {"pid": pid, "command": cwd_commands.get(pid, process_commands.get(pid)), "cwd_unreadable": True}
++        for pid in sorted((process_ids | cwd_pids) - set(cwd_by_pid))
++    ]
++    unreadable_hits = [
++        row for row in cwd_unreadable
++        if row["pid"] != os.getpid() and owner_token.search(Path(row["command"]).name)
++    ]
++    if unreadable_hits:
++        raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{unreadable_hits}")
+     cwd_hits = [
+         (pid, cwd)
+         for pid, cwd in cwd_by_pid.items()
+@@ -526,7 +541,11 @@
+     ]
+     if cwd_hits:
+         raise CertifyError(f"LIVE_OWNER_PROCESS:{family}:{cwd_hits}")
+-    return {"visible": True, "owner": family, "commands": receipts, "checked_at_utc": utc_now()}
++    return {
++        "visible": True, "status": "COMPLETE", "owner": family, "commands": receipts,
++        "cwd_unreadable": cwd_unreadable, "ps_process_count": len(process_ids),
++        "cwd_readable_count": len(cwd_by_pid), "checked_at_utc": utc_now(),
++    }
+ 
+ 
+ def owner_family(row: dict[str, Any]) -> str:
+diff --git a/experiments/tests/test_ddm_vr5_certified_raw_reclaim.py b/experiments/tests/test_ddm_vr5_certified_raw_reclaim.py
+--- a/experiments/tests/test_ddm_vr5_certified_raw_reclaim.py
++++ b/experiments/tests/test_ddm_vr5_certified_raw_reclaim.py
+@@ -428,3 +428,127 @@
+     consumer.write_text('RAW = "' + raw + '"\n')
+     hits = mod.repo_reference_hits({raw: [raw]}, repo)[raw]
+     assert any("experiments/consumer.py" in h for h in hits), hits
++
++
++@pytest.mark.parametrize("shape", ["omitted", "command_only", "last_command_only"])
++def test_visible_host_records_unreadable_cwd(monkeypatch, shape):
++    self_pid = os.getpid()
++    missing = "p123\ncpython3\n"
++    output = f"p414\ncloginwindow\nfcwd\nn/\np{self_pid}\ncpytest\nfcwd\nn/work/repo\n"
++    if shape == "command_only":
++        output = missing + output
++    elif shape == "last_command_only":
++        output += missing
++
++    def run(command, **kwargs):
++        if command[0] == "ps":
++            return subprocess.CompletedProcess(command, 0, f"1 0 launchd\n414 1 loginwindow\n123 1 python3\n{self_pid} 1 pytest\n", "")
++        if command[0] == "pgrep":
++            return subprocess.CompletedProcess(command, 1, "", "")
++        return subprocess.CompletedProcess(command, 0, output, "")
++
++    monkeypatch.setattr(vr3.subprocess, "run", run)
++    result = vr3.process_gate("ddm_bz2d")
++    assert result["status"] == "COMPLETE"
++    assert result["cwd_unreadable"] == [
++        {"pid": 1, "command": "launchd", "cwd_unreadable": True},
++        {"pid": 123, "command": "python3", "cwd_unreadable": True},
++    ]
++
++
++@pytest.mark.parametrize("source", ["ps", "lsof"])
++def test_unreadable_owner_command_refuses(monkeypatch, source):
++    def run(command, **kwargs):
++        if command[0] == "ps":
++            owner = "321 1 /work/ddm_bz2d_worker\n" if source == "ps" else ""
++            return subprocess.CompletedProcess(command, 0, f"1 0 launchd\n{os.getpid()} 1 pytest\n{owner}", "")
++        if command[0] == "pgrep":
++            return subprocess.CompletedProcess(command, 1, "", "")
++        return subprocess.CompletedProcess(command, 0, f"p1\nclaunchd\nn/\np{os.getpid()}\ncpytest\nn/work/repo\np321\ncddm_bz2d_worker\n", "")
++
++    monkeypatch.setattr(vr3.subprocess, "run", run)
++    with pytest.raises(vr3.CertifyError, match="LIVE_OWNER_PROCESS"):
++        vr3.process_gate("ddm_bz2d")
++
++
++def test_captured_host_lsof_without_init_with_controlled_ps(monkeypatch):
++    # lsof bytes are real host input; ps/self identity below are explicit controls.
++    capture = json.loads((Path(__file__).parent / "fixtures/ddm_vg1_sandbox_process_capture.json").read_text())
++    observed = capture[2]
++    pids = [int(line[1:]) for line in observed["stdout"].splitlines() if line.startswith("p")]
++    assert 1 not in pids
++    monkeypatch.setattr(vr3.os, "getpid", lambda: pids[0])
++
++    def run(command, **kwargs):
++        if command[0] == "ps":
++            output = "1 0 launchd\n" + "".join(f"{pid} 1 controlled_command\n" for pid in pids)
++            return subprocess.CompletedProcess(command, 0, output, "")
++        if command[0] == "pgrep":
++            return subprocess.CompletedProcess(command, 1, "", "")
++        return subprocess.CompletedProcess(command, observed["returncode"], observed["stdout"], observed["stderr"])
++
++    monkeypatch.setattr(vr3.subprocess, "run", run)
++    result = vr3.process_gate("ddm_vg1fixture")
++    assert result["cwd_readable_count"] == len(pids)
++    assert result["cwd_unreadable"] == [{"pid": 1, "command": "launchd", "cwd_unreadable": True}]
++
++
++def test_captured_sandbox_ps_denial_remains_closed(monkeypatch):
++    capture = json.loads((Path(__file__).parent / "fixtures/ddm_vg1_sandbox_process_capture.json").read_text())
++    assert "Operation not permitted" in capture[0]["error"]
++
++    def run(command, **kwargs):
++        assert command[0] == "ps"
++        raise PermissionError(capture[0]["error"])
++
++    monkeypatch.setattr(vr3.subprocess, "run", run)
++    with pytest.raises(vr3.CertifyError, match="PROCESS_VISIBILITY_UNAVAILABLE"):
++        vr3.process_gate("ddm_bz2d")
++
++
++@pytest.mark.parametrize("role", ["owner", "reviewer"])
++def test_live_named_process_and_argv_only_reviewer(tmp_path, role):
++    # Read-only gate integration; no raw, archive, apply, or reclaim is involved.
++    try:
++        visibility = subprocess.run(["ps", "-axo", "pid=,ppid=,comm="], capture_output=True, text=True, check=False)
++    except OSError as exc:
++        pytest.skip(f"live ps visibility unavailable: {exc}")
++    if visibility.returncode or visibility.stderr:
++        pytest.skip(f"live ps visibility unavailable: {visibility.stderr}")
++    import shutil
++
++    family = "ddm_bz2d"
++    work = tmp_path / (family if role == "owner" else "review")
++    work.mkdir()
++    executable = work / (family if role == "owner" else "reviewer")
++    shutil.copyfile("/bin/sleep" if role == "owner" else "/bin/sh", executable)
++    executable.chmod(0o700)
++    argv = [str(executable), "30"] if role == "owner" else [str(executable), "-c", "read answer", family]
++    child = subprocess.Popen(argv, cwd=work, stdin=subprocess.PIPE)
++    try:
++        assert child.poll() is None
++        if role == "owner":
++            with pytest.raises(vr3.CertifyError, match="LIVE_OWNER_PROCESS"):
++                vr3.process_gate(family)
++        else:
++            assert vr3.process_gate(family)["visible"]
++    finally:
++        child.terminate()
++        child.communicate(timeout=5)
++
++
++@pytest.mark.parametrize("mode", ["observer_only", "warning", "duplicate_unreadable"])
++def test_partial_census_cannot_claim_visibility(monkeypatch, mode):
++    def run(command, **kwargs):
++        if command[0] == "ps":
++            return subprocess.CompletedProcess(command, 0, f"1 0 launchd\n123 1 python3\n{os.getpid()} 1 pytest\n", "")
++        if command[0] == "pgrep":
++            return subprocess.CompletedProcess(command, 1, "", "")
++        output = f"p{os.getpid()}\ncpytest\nn/work/repo\np456\nclsof\nn/work/repo\n"
++        if mode == "duplicate_unreadable":
++            output += "p123\ncpython3\np123\ncpython3\n"
++        return subprocess.CompletedProcess(command, 0, output, "permission warning" if mode == "warning" else "")
++
++    monkeypatch.setattr(vr3.subprocess, "run", run)
++    with pytest.raises(vr3.CertifyError, match="PROCESS_VISIBILITY_UNAVAILABLE"):
++        vr3.process_gate("ddm_bz2d")
+diff --git a/experiments/tests/fixtures/ddm_vg1_sandbox_process_capture.json b/experiments/tests/fixtures/ddm_vg1_sandbox_process_capture.json
+new file mode 100644
+--- /dev/null
++++ b/experiments/tests/fixtures/ddm_vg1_sandbox_process_capture.json
+@@ -0,0 +1,34 @@
++[
++  {
++    "command": [
++      "ps",
++      "-axo",
++      "pid=,ppid=,comm="
++    ],
++    "error": "PermissionError(1, 'Operation not permitted')"
++  },
++  {
++    "command": [
++      "pgrep",
++      "-x",
++      "ddm_bz2d"
++    ],
++    "returncode": 3,
++    "stdout": "",
++    "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
++  },
++  {
++    "command": [
++      "lsof",
++      "-n",
++      "-P",
++      "-d",
++      "cwd",
++      "-F",
++      "pcn"
++    ],
++    "returncode": 0,
++    "stdout": "p198\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np414\ncloginwindow\nfcwd\nn/\np614\ncdistnoted\nfcwd\nn/\np648\nccfprefsd\nfcwd\nn/\np650\ncUserEventAgent\nfcwd\nn/\np656\ncContinuityCaptureAgent\nfcwd\nn/\np659\ncuniversalaccessd\nfcwd\nn/\np665\ncpboard\nfcwd\nn/\np667\ncWindowManager\nfcwd\nn/\np669\nclsd\nfcwd\nn/\np679\ncnsurlsessiond\nfcwd\nn/\np680\ncrapportd\nfcwd\nn/\np681\ncusernoted\nfcwd\nn/\np684\ncusernotificationsd\nfcwd\nn/\np688\ncTerminal\nfcwd\nn/\np694\ncidentityservicesd\nfcwd\nn/\np695\ncSystem Settings\nfcwd\nn/\np699\ncneagent\nfcwd\nn/\np701\ncsharingd\nfcwd\nn/\np708\ncsharedfilelistd\nfcwd\nn/\np711\nccoreauthd\nfcwd\nn/\np718\ncchronod\nfcwd\nn/\np719\ncChatGPT\nfcwd\nn/\np733\ncUserNotificationCenter\nfcwd\nn/\np736\ncghostty\nfcwd\nn/\np738\ncCMFSyncAgent\nfcwd\nn/\np739\ncDock\nfcwd\nn/\np742\ncControlCenter\nfcwd\nn/\np743\ncfontd\nfcwd\nn/\np744\ncSystemUIServer\nfcwd\nn/\np745\ncStatusKitAgent\nfcwd\nn/\np746\ncFinder\nfcwd\nn/\np747\ncfileproviderd\nfcwd\nn/\np750\ncAccessibilityUIServer\nfcwd\nn/\np751\ncstudentd\nfcwd\nn/\np754\nccorespeechd\nfcwd\nn/\np758\ncfontworker\nfcwd\nn/\np761\ncWallpaperAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.wallpaper.agent/Data\np764\ncfamilycircled\nfcwd\nn/\np773\ncNotificationCenter\nfcwd\nn/Users/adpena/Library/Containers/com.apple.notificationcenterui/Data\np774\ncViewBridgeAuxiliary\nfcwd\nn/\np775\nccorespotlightd\nfcwd\nn/\np782\ncaudioaccessoryd\nfcwd\nn/\np784\ncAMPDeviceDiscoveryAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.AMPDeviceDiscoveryAgent/Data\np794\ncWallpaperAerialsExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.wallpaper.extension.aerials/Data\np802\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np815\ncimagent\nfcwd\nn/\np819\ncWiFiAgent\nfcwd\nn/\np839\ncmediaremoteagent\nfcwd\nn/\np840\ncuseractivityd\nfcwd\nn/\np843\ncavconferenced\nfcwd\nn/\np846\ncGeneralSettings\nfcwd\nn/Users/adpena/Library/Containers/com.apple.systempreferences.GeneralSettings/Data\np863\ncVTDecoderXPCService\nfcwd\nn/\np885\nccom.apple.dock.extra\nfcwd\nn/\np886\nccom.apple.dock.external.extra.a\nfcwd\nn/\np887\nccom.apple.dock.external.extra.a\nfcwd\nn/\np910\ncSpotlight\nfcwd\nn/\np914\nccom.apple.CloudDocs.iCloudDrive\nfcwd\nn/Users/adpena/Library/Containers/com.apple.CloudDocs.iCloudDriveFileProvider/Data\np916\ncCursorUIViewService\nfcwd\nn/\np918\ncUniversalControl\nfcwd\nn/\np924\ncBooksSpotlightExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.iBooks.iBooksSpotlightExtension/Data\np925\ncContactsCoreSpotlightExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.contacts.ContactsCoreSpotlightExtension/Data\np930\ncbrowser_crashpad_handler\nfcwd\nn/\np932\ncbrowser_crashpad_handler\nfcwd\nn/\np939\ncCodex (Service)\nfcwd\nn/\np940\ncCodex (Service)\nfcwd\nn/\np943\ncCodex (Service)\nfcwd\nn/\np946\nccom.apple.podcasts.SpotlightInd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.podcasts.SpotlightIndexExtension/Data\np1021\ncAppleIDSettings\nfcwd\nn/Users/adpena/Library/Containers/com.apple.systempreferences.AppleIDSettings/Data\np1098\ncimklaunchagent\nfcwd\nn/\np1101\ncicdd\nfcwd\nn/\np1106\ncAirPlayUIAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.AirPlayUIAgent/Data\np1108\ncdiagnostics_agent\nfcwd\nn/\np1109\ncopen\nfcwd\nn/\np1110\ncTextInputMenuAgent\nfcwd\nn/\np1116\ncFamilySettings\nfcwd\nn/\np1122\ncHeadphoneSettingsExtension\nfcwd\nn/\np1124\ncFollowUpSettingsExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.FollowUpSettings.FollowUpSettingsExtension/Data\np1126\ncVPN\nfcwd\nn/\np1127\ncctkahp\nfcwd\nn/\np1129\ncTailscale\nfcwd\nn/Users/adpena/Library/Containers/io.tailscale.ipn.macos/Data\np1130\ncExpressVPN\nfcwd\nn/\np1132\ncClassroomSettings\nfcwd\nn/\np1171\ncIPNExtension\nfcwd\nn/Users/adpena/Library/Containers/io.tailscale.ipn.macos.network-extension/Data\np1267\ncCalendarWidgetExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.iCal.CalendarWidgetExtension/Data\np1357\nccom.apple.SafariPlatformSupport\nfcwd\nn/Users/adpena/Library/Containers/com.apple.SafariPlatformSupport.Helper/Data\np1361\ncbare-modifier-monitor\nfcwd\nn/\np1367\nccodex\nfcwd\nn/\np1374\ncCodex (Renderer)\nfcwd\nn/\np1375\ncCodex (Renderer)\nfcwd\nn/\np1380\ncRemindersSpotlightIndexExtensio\nfcwd\nn/Users/adpena/Library/Containers/com.apple.reminders.spotlightindexextension/Data\np1473\ncmdbulkimport\nfcwd\nn/\np1508\ncfskit_agent\nfcwd\nn/\np1531\nccom.apple.fskit.exfat\nfcwd\nn/Users/adpena/Library/Containers/com.apple.fskit.exfat/Data\np1559\nccom.apple.fskit.msdos\nfcwd\nn/Users/adpena/Library/Containers/com.apple.fskit.msdos/Data\np1569\nccom.apple.Notes.SpotlightIndexE\nfcwd\nn/Users/adpena/Library/Containers/com.apple.Notes.SpotlightIndexExtension/Data\np1601\nccsimporter\nfcwd\nn/Users/adpena/Library/Containers/com.apple.systempreferences.SpotlightIndexExtension/Data\np1605\ncpeopled\nfcwd\nn/\np1657\ncThemeWidgetControlViewService\nfcwd\nn/\np1658\nccom.apple.mail.SpotlightIndexEx\nfcwd\nn/Users/adpena/Library/Containers/com.apple.mail.SpotlightIndexExtension/Data\np1700\ncnode_repl\nfcwd\nn/\np1701\ncnode\nfcwd\nn/\np1702\ncnode\nfcwd\nn/Applications/ChatGPT.app/Contents/Resources/plugins/openai-bundled/plugins/codex-app-tools\np1704\ncnode\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-curated-remote/data-analytics/0.2.10-13ceeea1f599\np1727\ncnode_repl\nfcwd\nn/\np1732\nccloudflared\nfcwd\nn/\np1895\ncCodex (Renderer)\nfcwd\nn/\np1896\ncCodex (Renderer)\nfcwd\nn/\np1986\nc2.1.265\nfcwd\nn/Users/adpena/Projects/pact\np2026\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np2028\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np2129\nccodex-code-mode-host\nfcwd\nn/\np2462\ncspotlightknowledged\nfcwd\nn/\np3112\nchomeenergyd\nfcwd\nn/\np5215\ncPasswordBreachAgent\nfcwd\nn/\np7467\ncmobilerepaird\nfcwd\nn/\np7468\ncbetaenrollmentagent\nfcwd\nn/\np9438\ncIMAutomaticHistoryDeletionAgent\nfcwd\nn/\np12563\ncremindd\nfcwd\nn/\np12673\ncMessagesBlastDoorService\nfcwd\nn/\np12676\ncmdwrite\nfcwd\nn/\np14594\ncmediaanalysisd-access\nfcwd\nn/\np15233\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np15242\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np15243\nc2.1.265\nfcwd\nn/Users/adpena/Projects/pact\np16911\ncnbagent\nfcwd\nn/\np16917\nccontactsdonationagent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.contacts.donation-agent/Data\np16918\ncavatarsd\nfcwd\nn/\np19308\ncMessagesBlastDoorService\nfcwd\nn/\np21479\ncfrauddefensed\nfcwd\nn/\np21612\nccoreautha\nfcwd\nn/\np23949\ncPlugInLibraryService\nfcwd\nn/\np26065\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np26069\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np26109\ncbash\nfcwd\nn/Users/adpena/Projects/pact\np26996\ncssh-agent\nfcwd\nn/\np27078\ncIDSBlastDoorService\nfcwd\nn/\np29832\ncknowledgeconstructiond\nfcwd\nn/\np31252\ncIntelligencePlatformComputeServ\nfcwd\nn/\np32381\ncbash\nfcwd\nn/Users/adpena/Projects/pact\np32384\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np32385\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np42508\ncMessagesBlastDoorService\nfcwd\nn/\np42574\ncIMTranscoderAgent\nfcwd\nn/\np42575\ncMessagesBlastDoorService\nfcwd\nn/\np42584\ncintents_helper\nfcwd\nn/\np42632\ncintents_helper\nfcwd\nn/\np46049\ncRemoteManagementAgent\nfcwd\nn/\np46053\ncSafariConfigurationSubscriber\nfcwd\nn/\np46054\ncSecuritySubscriber\nfcwd\nn/\np46055\ncInteractiveLegacyProfilesSubscr\nfcwd\nn/\np46057\ncScreenSharingSubscriber\nfcwd\nn/\np46058\ncLegacyProfilesSubscriber\nfcwd\nn/\np46060\ncPasscodeSettingsSubscriber\nfcwd\nn/\np46061\ncAccountSubscriber\nfcwd\nn/\np46062\ncManagedAppsSubscriber\nfcwd\nn/\np46064\ncManagementTestSubscriber\nfcwd\nn/\np46066\ncASConfigurationSubscriber\nfcwd\nn/\np46067\ncManagedSettingsSubscriber\nfcwd\nn/\np48203\ncMessagesBlastDoorService\nfcwd\nn/\np48282\ncMessages Assistant Extension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.messages.AssistantExtension/Data\np56314\ncAppleIntelligenceReportingProce\nfcwd\nn/\np64729\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np67520\ncPython\nfcwd\nn/Users/adpena/Projects/pact\np67530\nccodex\nfcwd\nn/Users/adpena/Projects/pact\np67638\ncnode\nfcwd\nn/Users/adpena/Projects/pact\np67639\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np67640\ncSkyComputerUseClient\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-bundled/computer-history/1.0.1000926\np67694\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np67751\ncnode\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-curated-remote/data-analytics/0.2.10-13ceeea1f599\np68099\nccodex-code-mode-host\nfcwd\nn/Users/adpena/Projects/pact\np70637\ncPlugInLibraryService\nfcwd\nn/\np70640\nccom.apple.photos.ImageConversio\nfcwd\nn/Users/adpena/Library/Containers/com.apple.photos.ImageConversionService/Data\np70749\ncSkyComputerUseService\nfcwd\nn/\np71330\ncPython\nfcwd\nn/Users/adpena/Projects/pact\np71336\nccodex\nfcwd\nn/Users/adpena/Projects/pact\np71435\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np71436\ncnode\nfcwd\nn/Users/adpena/Projects/pact\np71437\ncSkyComputerUseClient\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-bundled/computer-history/1.0.1000926\np71497\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np71552\ncnode\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-curated-remote/data-analytics/0.2.10-13ceeea1f599\np71883\nccodex-code-mode-host\nfcwd\nn/Users/adpena/Projects/pact\np73237\ncmdworker_shared\nfcwd\nn/\np73281\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73301\nccaffeinate\nfcwd\nn/Users/adpena/Projects/pact\np73364\nctrustevaluationagent\nfcwd\nn/\np73365\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73377\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73416\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np73418\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73449\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73795\ncssh\nfcwd\nn/\np73858\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np73862\nclsof\nfcwd\nn/Users/adpena/Projects/pact\np74148\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np78593\ncPowerChime\nfcwd\nn/\np78605\ncDiskUnmountWatcher\nfcwd\nn/\np79025\ncpassd\nfcwd\nn/\np79382\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np79667\ncHomeEnergyWidgetsExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.Home.HomeEnergyWidgets/Data\np80267\ncWeatherWidget\nfcwd\nn/Users/adpena/Library/Containers/com.apple.weather.widget/Data\np80506\ncmediaanalysisd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.mediaanalysisd/Data\np80508\ncsirittsd\nfcwd\nn/\np80513\ncsiriinferenced\nfcwd\nn/\np80514\ncspotlightknowledged.updater\nfcwd\nn/\np80516\ncsuggestd\nfcwd\nn/\np80519\ncIMDPersistenceAgent\nfcwd\nn/\np80520\nccom.apple.quicklook.ThumbnailsA\nfcwd\nn/\np80522\nciconservicesagent\nfcwd\nn/\np80523\nctalagentd\nfcwd\nn/\np80524\ncroutined\nfcwd\nn/Users/adpena/Library/Containers/com.apple.routined/Data\np80525\ncsiriactionsd\nfcwd\nn/\np80527\ncappstoreagent\nfcwd\nn/\np80528\nccallservicesd\nfcwd\nn/\np80529\ncsearchpartyuseragent\nfcwd\nn/\np80530\nccloudd\nfcwd\nn/\np80531\ncamsengagementd\nfcwd\nn/\np80533\nctransparencyd\nfcwd\nn/\np80535\nccontactsd\nfcwd\nn/\np80536\ncsiriknowledged\nfcwd\nn/\np80537\ncknowledge-agent\nfcwd\nn/\np80539\ncaxassetsd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.accessibility.axassetsd/Data\np80540\ncCoreServicesUIAgent\nfcwd\nn/\np80541\ncTextInputSwitcher\nfcwd\nn/\np80543\ncnetworkserviceproxy\nfcwd\nn/\np80544\ncdonotdisturbd\nfcwd\nn/\np80546\ncfinanced\nfcwd\nn/\np80549\nclinkd\nfcwd\nn/\np80550\ncamsaccountsd\nfcwd\nn/\np80552\nctipsd\nfcwd\nn/\np80553\ncFeatureAccessAgent\nfcwd\nn/\np80555\nccalaccessd\nfcwd\nn/\np80556\ncnewsd\nfcwd\nn/\np80558\ncakd\nfcwd\nn/\np80559\ncintelligenceplatformd\nfcwd\nn/\np80560\ncfindmylocateagent\nfcwd\nn/\np80561\ncpostersyncd\nfcwd\nn/\np80562\nctextunderstandingd\nfcwd\nn/\np80565\ncreplicatord\nfcwd\nn/\np80566\ncgenerativeexperiencesd\nfcwd\nn/\np80567\ncAuthenticationServicesAgent\nfcwd\nn/\np80569\ncbird\nfcwd\nn/\np80571\ncitunescloudd\nfcwd\nn/\np80574\ncCallHistorySyncHelper\nfcwd\nn/\np80575\nctextcomposerd\nfcwd\nn/\np80576\ncBiomeAgent\nfcwd\nn/\np80577\nciCloudNotificationAgent\nfcwd\nn/\np80578\ncpromotedcontentd\nfcwd\nn/\np80579\nccom.apple.geod\nfcwd\nn/Users/adpena/Library/Containers/com.apple.geod/Data\np80581\ncmanagedcorespotlightd\nfcwd\nn/\np80583\ncmanagedappdistributionagent\nfcwd\nn/\np80584\ncadprivacyd\nfcwd\nn/\np80585\ncsyncdefaultsd\nfcwd\nn/\np80586\ncScreenTimeAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.ScreenTimeAgent/Data\np80590\ncassistant_cdmd\nfcwd\nn/\np80593\ncSafariBookmarksSyncAgent\nfcwd\nn/\np80594\ncappleaccountd\nfcwd\nn/\np80595\ncparsecd\nfcwd\nn/\np80596\ncBackgroundTaskManagementAgent\nfcwd\nn/\np80597\ncIMTransferAgent\nfcwd\nn/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/com.apple.imtransferservices.IMTransferAgent\np80599\nccommunicationtrustd\nfcwd\nn/\np80600\nccloudphotod\nfcwd\nn/\np80601\ncIOUIAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.IOUIAgent/Data\np80603\ncamsondevicestoraged\nfcwd\nn/\np80605\ncndoagent\nfcwd\nn/\np80606\nctriald\nfcwd\nn/\np80607\nccom.apple.CloudPhotosConfigurat\nfcwd\nn/Users/adpena/Library/Containers/com.apple.CloudPhotosConfiguration/Data\np80609\ncCallHistoryPluginHelper\nfcwd\nn/\np80611\ncmilod\nfcwd\nn/\np80612\ncstickersd\nfcwd\nn/\np80614\ncweatherd\nfcwd\nn/\np80615\ncCommCenter\nfcwd\nn/\np80616\ncvoicebankingd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.voicebankingd/Data\np80617\nccom.apple.sbd\nfcwd\nn/\np80624\ncUsageTrackingAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.UsageTrackingAgent/Data\np80626\ncciphermld\nfcwd\nn/\np80627\ncContextService\nfcwd\nn/\np80628\nccom.apple.Safari.SafeBrowsing.S\nfcwd\nn/\np80629\ncModelCatalogAgent\nfcwd\nn/\np80630\ncmaild\nfcwd\nn/\np80632\ncaskpermissiond\nfcwd\nn/\np80633\ncSiri\nfcwd\nn/Users/adpena/Library/Containers/com.apple.Siri/Data\np80636\ncsociallayerd\nfcwd\nn/\np80637\nccdpd\nfcwd\nn/\np80640\ncdmd\nfcwd\nn/\np80641\nctranslationd\nfcwd\nn/\np80642\ncintelligencecontextd\nfcwd\nn/\np80643\ncmlhostd\nfcwd\nn/\np80644\ncfilevaultd\nfcwd\nn/\np80645\ncswcd\nfcwd\nn/\np80647\ncTrustedPeersHelper\nfcwd\nn/\np80648\ncbluetoothuserd\nfcwd\nn/\np80649\ncswtransparencyd\nfcwd\nn/\np80652\ncdeleted\nfcwd\nn/\np80655\ncproactived\nfcwd\nn/\np80656\ncrecentsd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.corerecents.recentsd/Data\np80660\ncprogressd\nfcwd\nn/\np80663\ncdiagnosticextensionsd\nfcwd\nn/\np80664\ncgeoanalyticsd\nfcwd\nn/\np80668\ncprivatecloudcomputed\nfcwd\nn/private/tmp\np80672\ncappplaceholdersyncd\nfcwd\nn/\np80677\ncCategoriesService\nfcwd\nn/\np80678\ncProtectedCloudKeySyncing\nfcwd\nn/\np80680\ncAssetCacheLocatorService\nfcwd\nn/\np80684\nchomeeventsd\nfcwd\nn/\np80688\ncanalyticsagent\nfcwd\nn/\np80693\ncseserviced\nfcwd\nn/\np80697\ncdprivacyd\nfcwd\nn/\np80700\ncbusinessservicesd\nfcwd\nn/\np80703\ncAudioComponentRegistrar\nfcwd\nn/\np80705\ncctkd\nfcwd\nn/\np80707\ncCloudKeychainProxy\nfcwd\nn/\np80709\ncdevicecheckd\nfcwd\nn/\np80710\ncMENotificationAgent\nfcwd\nn/\np80711\ncAPFSUserAgent\nfcwd\nn/\np80713\ncproactiveeventtrackerd\nfcwd\nn/\np80715\ncSafariLaunchAgent\nfcwd\nn/\np80718\nclockdownmoded\nfcwd\nn/\np80722\ncinputanalyticsd\nfcwd\nn/\np80724\ncMTLAssetUpgraderD\nfcwd\nn/\np80733\ncXProtectPluginService\nfcwd\nn/\np80734\nccom.apple.Safari.History\nfcwd\nn/\np80738\nclocalizationswitcherd\nfcwd\nn/\np80741\ncfollowupd\nfcwd\nn/\np80744\ncbackgroundassets.user\nfcwd\nn/\np80747\ncmetrickitd\nfcwd\nn/\np80748\ncEscrowSecurityAlert\nfcwd\nn/\np80749\ncPodcastContentService\nfcwd\nn/\np80752\ncpbs\nfcwd\nn/\np80754\ncintelligencetasksd\nfcwd\nn/\np80756\nckeychainsharingmessagingd\nfcwd\nn/\np80761\ncloginitemregisterd\nfcwd\nn/\np80763\nccom.apple.BKAgentService\nfcwd\nn/Users/adpena/Library/Containers/com.apple.BKAgentService/Data\np80771\ncXProtect\nfcwd\nn/\np80774\ncmlruntimed\nfcwd\nn/\np80786\nccom.apple.accessibility.mediaac\nfcwd\nn/\np80794\ncDiskArbitrationAgent\nfcwd\nn/\np80798\ncinstallerauthagent\nfcwd\nn/\np80800\ncgeodMachServiceBridge\nfcwd\nn/\np80807\nccom.apple.tonelibraryd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.tonelibraryd/Data\np80809\ncfudHelperAgent\nfcwd\nn/\np80810\nccsnameddatad\nfcwd\nn/\np80816\ncmapssyncd\nfcwd\nn/\np80818\ncintelligentroutingd\nfcwd\nn/\np80819\ncaccountsd\nfcwd\nn/\np80821\ncdataaccessd\nfcwd\nn/\np80822\ncpkd\nfcwd\nn/\np80824\ncreplayd\nfcwd\nn/\np80825\ncScopedBookmarkAgent\nfcwd\nn/\np80826\ncphotolibraryd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.photolibraryd/Data\np80828\nctccd\nfcwd\nn/\np80830\ncsecinitd\nfcwd\nn/\np80837\ncContextStoreAgent\nfcwd\nn/\np80839\ncReportCrash\nfcwd\nn/\np80841\ncassistantd\nfcwd\nn/\np80842\ncheard\nfcwd\nn/\np80845\ncGamePolicyAgent\nfcwd\nn/\np80846\ncmdworker\nfcwd\nn/\np80848\nctrustd\nfcwd\nn/\np80850\ncassessmentagent\nfcwd\nn/\np80852\ncManagedSettingsAgent\nfcwd\nn/\np80855\ncCoreLocationAgent\nfcwd\nn/\np80856\ncfeedbackd\nfcwd\nn/\np80857\nccontainermanagerd\nfcwd\nn/\np80858\ncBTLEServerAgent\nfcwd\nn/\np80861\ncduetexpertd\nfcwd\nn/\np80865\nccommerce\nfcwd\nn/\np80867\ncUIKitSystem\nfcwd\nn/\np80868\ncmobiletimerd\nfcwd\nn/\np80869\ncKeychain Circle Notification\nfcwd\nn/\np80870\nccom.apple.hiservices-xpcservice\nfcwd\nn/\np80871\ncShortcutsViewService\nfcwd\nn/Users/adpena/Library/Containers/com.apple.WorkflowKit.ShortcutsViewService/Data\np80874\ncSidecarRelay\nfcwd\nn/\np80877\ncliveactivitiesd\nfcwd\nn/\np80878\ncsecd\nfcwd\nn/\np80879\ncSoftwareUpdateNotificationManag\nfcwd\nn/\np80882\ncAppSSOAgent\nfcwd\nn/\np80884\nchomed\nfcwd\nn/\np80897\ncPlugInLibraryService\nfcwd\nn/\np80908\ncPlugInLibraryService\nfcwd\nn/\np80911\ncintelligenceflowd\nfcwd\nn/\np80915\ncnsattributedstringagent\nfcwd\nn/\np80918\ncCloudTelemetryService\nfcwd\nn/\np80924\nccom.apple.FaceTime.FTConversati\nfcwd\nn/\np80928\nclocalspeechrecognition\nfcwd\nn/\np80942\nclocalspeechrecognition\nfcwd\nn/\np80972\ncCoreThreadCommissionerServiced\nfcwd\nn/\np80992\ncContainerMetadataExtractor\nfcwd\nn/\np80995\nccom.apple.SafariPlatformSupport\nfcwd\nn/Users/adpena/Library/Containers/com.apple.SafariPlatformSupport.Helper/Data\np81008\ncTrialArchivingService\nfcwd\nn/\np81010\ncSetStoreUpdateService\nfcwd\nn/\np81021\ncCloudTelemetryService\nfcwd\nn/\np81107\ncgamecontrolleragentd\nfcwd\nn/\np81137\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81138\ncMauiAUSP\nfcwd\nn/Users/adpena/Library/Containers/com.apple.ax.MauiTTSSupport.MauiAUSP/Data\np81139\ncWardaSynthesizer\nfcwd\nn/Users/adpena/Library/Containers/com.apple.speech.MacinTalkFramework.WardaSynthesizer/Data\np81146\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81147\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81152\ncphotoanalysisd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.photoanalysisd/Data\np81154\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81155\ncAUCrashHandlerService\nfcwd\nn/\np81157\ncSetStoreUpdateService\nfcwd\nn/\np81175\ncMessagesBlastDoorService\nfcwd\nn/\np81207\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81327\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np81328\nccaffeinate\nfcwd\nn/Users/adpena/Projects/pact\np81364\nccom.apple.siri.embeddedspeech\nfcwd\nn/\np81685\ncSiriSuggestionsBookkeepingServi\nfcwd\nn/\np82485\ncSiriNCService\nfcwd\nn/Users/adpena/Library/Containers/com.apple.SiriNCService/Data\np83538\ncFPCKService\nfcwd\nn/\np84577\ncSetStoreUpdateService\nfcwd\nn/\np86265\ncextensionkitservice\nfcwd\nn/\np89898\ncSAExtensionOrchestrator\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.SAExtensionOrchestrator/Data\np89899\ncextensionkitservice\nfcwd\nn/\np89901\ncBiomeSELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.BiomeSELFIngestor/Data\np89902\ncIFTelemetrySELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.IFTelemetrySELFIngestor/Data\np89906\ncIFTranscriptSELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.IFTranscriptSELFIngestor/Data\np89908\ncGMSSELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.siri.GMSSELFIngestor/Data\np90503\ncThemeWidgetControlViewService\nfcwd\nn/\np90591\ncMTLCompilerService\nfcwd\nn/\np95693\ncextensionkitservice\nfcwd\nn/\np99180\ncparsec-fbf\nfcwd\nn/\n",
++    "stderr": ""
++  }
++]
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_reclaim_gate_cwd_census_20260910.md b/.omx/research/ddm_vg1_reclaim_gate_cwd_census_20260910.md
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_reclaim_gate_cwd_census_20260910.md
+@@ -0,0 +1,73 @@
++# ddm_vg1 — reclaim cwd census fix; visible-host validation pending
++
++2026-09-10. `[no-triality] [p0-ledger-ok]`. Axis: **[macOS-CPU process/custody apparatus]**. `research_only=true`; `score_claim=false`.
++
++The proposed fix passes **67 tests; 2 live integration tests are SKIPPED** because this session cannot launch ps. Ruff passes and two visible delta reviews are recorded through the unmodified review tracker in the isolated workspace. No reclaim/apply ran, no SSD payload was changed, and **0 bytes were reclaimed**. The exact-score frontier did not move. The charter is **PARTIAL: source and controlled-input verification complete; paired visible-host capture and real-process controls remain owed**. The one serializer attempt returned **rc=9, WAIT_AND_RETRY**, before Git object insertion: the older ddm_sw2 checkpoint still claims the same two Python files, although the hot state records sw2 as quit and cd3 as landed. No ownership guard was bypassed. The final verified patch and post-edit hashes are retained in `ddm_vg1_20260910/landing.patch` and `landing_manifest.json`; **no live commit landed**. The attempted packet is separately retained as `attempt1_landing.patch`; only this memo changed afterward to record the refusal.
++
++## Finding and scope
++
++MEASURED: `lsof -n -P -d cwd -F pcn` returns rc=0, empty stderr, and **422 distinct process rows**, all with COMMAND, fcwd and absolute name fields, but **no PID 1**. Its original stdout is retained byte-for-byte as text in the fixture. `ps -axo pid=,ppid=,comm=` raises PermissionError; `pgrep -x ddm_bz2d` returns rc=3 with process-list-unavailable diagnostics. Those failures are retained too. This is a real sandbox capture, NOT a paired unsandboxed ps/lsof census.
++
++SOURCE-VERIFIED: the old gate demands PID 1 in ps and then demands every ps PID in lsof's cwd set. Thus omitting PID 1 from otherwise well-formed lsof output suffices to raise MAIN's exact error. The charter's likely missing-cwd root cause is supported by code and this capture; it is not fully established on MAIN's original process population. The prediction that at least 5% of host PIDs lack cwd remains UNMEASURED: no successful ps denominator exists here. lsof itself did NOT fail in this capture, so the charter's lsof-command-failure falsifier did not fire here.
++
++Only `process_gate` changes in the executor (AST comparison verified). It keeps a ps command map and a separate lsof PID set. A missing cwd is classified as `cwd_unreadable`, with PID and command, including omitted ps PIDs and command-only lsof records. Either command source still refuses an owner token. `COMPLETE` means every observed PID has a classification; it does not mean every cwd was readable. An unreadable generic-command process could have an owner cwd; acceptance of that residual uncertainty is the charter's explicit command-only policy for unreadable PIDs, not proof that all processes are idle.
++
++Independent visibility anchors remain mandatory: ps must see init and self; lsof must see self plus another ps-listed PID. An lsof-only observer cannot establish that second anchor. Tool failures/warnings, malformed or duplicate records, missing COMMAND fields, empty/self-only/observer-only censuses, owner commands, readable owner cwd, and exact-name pgrep matches still refuse. Full argv is never searched. Unrecognized relative-name/error fields still refuse; no speculative permission-string allowlist was added. All archive/runtime/hash/reference/descriptor and protected-tree gates are unchanged.
++
++## Verification
++
++- Existing vr3/vr5 suite: 57 cases retained. Added controlled cases: 10 passes for omitted/command-only/final unreadable rows, owner refusal from either command source, actual lsof replay with explicitly controlled ps/self identity, actual ps-denial replay, observer-only, warning, and duplicate unreadable records.
++- Both real process controls are implemented: copied executable named `ddm_bz2d` in a matching cwd must refuse; a waiting reviewer shell with the token only in argv must pass. Both skip before launching a child when ps is unavailable. Neither was exercised here. Run these on MAIN's visible host before treating this change as host-validated.
++- The actual lsof fixture is 422 rows; its test uses a SYNTHETIC ps table. It is parser regression evidence, not a claim that real ps succeeded.
++- Review receipts: `ddm_vg1_20260910/review_pass1.json`, `review_pass2.json`; commands/results: `tests.json`, `ruff.json`. Reviews apply to post-edit hashes. No Python review override was used.
++- Source edits were made only in an isolated small copy. Shared production source, upstream, live candidate trees, staged index and the reclaim ledger were not edited by this arm. No large payload, job or scorer was launched. Local artifacts are small source/manifests, not discarded payload measurements.
++
++## MAIN re-apply command — NOT executed
++
++The unchanged ledger SHA is `36416b17a70b4814fee681bc5c438b0ef87dec25f4b418eae5317c4ff97b6413`: **20 rows, 1 DELETABLE row, 3,662,409,600 admitted B**. This is a ledger admission, not fresh raw/hash/liveness clearance. After landing and visible-host verification, from `/Users/adpena/Projects/pact`:
++
++```sh
++.venv/bin/python experiments/ddm_vr3_certified_raw_reclaim.py apply \
++  --ledger .omx/research/ddm_vr5_reclaim_plan_bz2d_revalidate_20260910.jsonl \
++  --expected-ledger-sha256 36416b17a70b4814fee681bc5c438b0ef87dec25f4b418eae5317c4ff97b6413 \
++  --journal .omx/research/ddm_vr5_apply_journal_bz2d_20260910.jsonl \
++  --target-bytes 3662409600
++```
++
++The argv was copied from MAIN's failed launch manifest and verified against the actual parser; it is also in `ddm_vg1_20260910/main_reapply_argv.json`. It intentionally retains every fail-closed revalidation. If the ledger changes, this command must refuse and MAIN must use a newly verified plan digest.
++
++Visible-host test command after landing:
++
++```sh
++.venv/bin/python -m pytest -q -rs experiments/tests/test_ddm_vr3_certified_raw_reclaim.py experiments/tests/test_ddm_vr5_certified_raw_reclaim.py
++```
++
++Require both live cases to run, not skip. Preserve a paired ps/lsof capture and the gate receipt. If lsof itself fails there, retain the block and investigate the charter's proposed ps-command census plus per-candidate `lsof -p PID -d cwd -Fn` path; do not waive visibility.
++
++## RECALL EVIDENCE
++
++Read the charter/common contract, PROGRAM, governing CLAUDE/AGENTS no-fake, mutation, storage, checkpoint, review and serializer rules, operating manual, current hot state, actual gate/tests, failed launch and prior cd3/vr4 receipts. No ddm_vg1 predecessor checkpoint existed. Memory-registry query `reclaim|cwd.census|process.gate|vg1` found no match; no memory fact is used.
++
++Independent research content query: `cwd census|cwd_unreadable|PROCESS_VISIBILITY_UNAVAILABLE|process_gate` over `.omx/research` Markdown. Index/DAG/design/task query: `certif.*reclaim|process.gate|cwd census` over the canonical research index, capstone DAG, docs and canonical task JSONL. Exact queries/results are retained in `research_recall.json` and `design_tasks_recall.json`. The canonical-equations CLI returned its registry; no reclaim/cwd-census entry was found in that returned scope (`equations_recall.json`). Beyond charter seeds, the local-disk reclaim cadence distinguishes deleted logical bytes from actual freed capacity, and the task ledger retains owner/liveness fire conditions. This kept our result at 0 reclaimed B and our re-apply explicitly gated; it did not justify broadening this patch into cleanup. No alternative cwd parser was found in these searched index/DAG/design scopes.
++
++The contract's old frontier literals are superseded by the current canonical pointer/hot state. Six scientific integration hooks are N/A: this apparatus unit changes no scorer, codec, law, optimizer, allocator or dispatch. Consumer wiring is the retained landing packet and MAIN's existing bz2d apply journal.
++
++## NEXT_IF_RESUMED
++
++- **QUEUED-WITH-A-FIRE-ORDER** — owner MAIN; consumer store `.omx/research/ddm_vg1_20260910/landing_manifest.json` and main Git; fire trigger this packet is harvested and MAIN reconciles the abandoned ddm_sw2 checkpoint ownership claim. Verify the patch/hash manifest, rerun the serializer with the final post-edit hashes, and land only this reviewed delta in a Git-writable session if not already landed.
++- **QUEUED-WITH-A-FIRE-ORDER** — owner MAIN; consumer store `.omx/research/ddm_vg1_20260910/`; fire trigger the reviewed source is available on a visible host. Retain paired ps/lsof output and run both real-process integration controls without skips; confirm unreadable rows are classified and the gate preserves refusal cases.
++- **QUEUED-WITH-A-FIRE-ORDER** — owner MAIN; consumer store `.omx/research/ddm_vr5_apply_journal_bz2d_20260910.jsonl`; fire trigger host validation passes and the ledger SHA still matches. Execute the exact command above, allowing every existing revalidation to refuse on drift.
++
++## LIVE-HYPOTHESES
++
++- Missing cwd rows explain MAIN's failure: the captured lsof excludes PID 1 and the old predicate requires it. The paired unsandboxed capture is still needed to determine the full missing-PID population and confirm all host-specific shapes.
++- The unchanged bz2d admission may become reclaimable after the fix: the ledger still admits exactly one row. Current apply-time references, payload hashes and liveness remain unmeasured here.
++
++## DEAD-ENDS
++
++- Requiring cwd for every ps PID is rejected as a reliable macOS parser rule for the captured shape: valid lsof output omits init.
++- Empty/self-only lsof or unavailable ps/pgrep as idleness proof remains rejected; retained regressions refuse these.
++- Full-argv owner matching remains rejected: a reviewer may merely name the arm, and the existing narrowed command/cwd tests preserve that distinction.
++- Claiming all charter validation complete is rejected for this session: both live controls skipped and no successful paired ps capture exists. Negative scope: this session/host-visibility instance, not the parser formulation generally.
++
++Existing own-vehicle frontier, unchanged by this arm: **S 0.13766931482209038 @ 180,186 B [contest-CUDA T4 n600]** (current local canonical pointer; no new score measured).
+diff --git a/.omx/research/ddm_vg1_20260910/base_manifest.json b/.omx/research/ddm_vg1_20260910/base_manifest.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/base_manifest.json
+@@ -0,0 +1,8 @@
++{
++  "base_commit": "ec0448e4eeb4f7a8d4badae831010c323d742519",
++  "files": {
++    "experiments/ddm_vr3_certified_raw_reclaim.py": "025fd7d07c931b509c4afef58a0173172392af02d7ba699bbdd269889e01f2bf",
++    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py": "9a53770d41b1e7a59671bef0857a4d45f2458e354bf1a3883123a9a2ab551149",
++    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py": "f71bdd740a4a9b8ca18b7feef16c2805f4e402467945d0d708bfdd39eebbaaad"
++  }
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/sandbox_process_capture.json b/.omx/research/ddm_vg1_20260910/sandbox_process_capture.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/sandbox_process_capture.json
+@@ -0,0 +1,34 @@
++[
++  {
++    "command": [
++      "ps",
++      "-axo",
++      "pid=,ppid=,comm="
++    ],
++    "error": "PermissionError(1, 'Operation not permitted')"
++  },
++  {
++    "command": [
++      "pgrep",
++      "-x",
++      "ddm_bz2d"
++    ],
++    "returncode": 3,
++    "stdout": "",
++    "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
++  },
++  {
++    "command": [
++      "lsof",
++      "-n",
++      "-P",
++      "-d",
++      "cwd",
++      "-F",
++      "pcn"
++    ],
++    "returncode": 0,
++    "stdout": "p198\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np414\ncloginwindow\nfcwd\nn/\np614\ncdistnoted\nfcwd\nn/\np648\nccfprefsd\nfcwd\nn/\np650\ncUserEventAgent\nfcwd\nn/\np656\ncContinuityCaptureAgent\nfcwd\nn/\np659\ncuniversalaccessd\nfcwd\nn/\np665\ncpboard\nfcwd\nn/\np667\ncWindowManager\nfcwd\nn/\np669\nclsd\nfcwd\nn/\np679\ncnsurlsessiond\nfcwd\nn/\np680\ncrapportd\nfcwd\nn/\np681\ncusernoted\nfcwd\nn/\np684\ncusernotificationsd\nfcwd\nn/\np688\ncTerminal\nfcwd\nn/\np694\ncidentityservicesd\nfcwd\nn/\np695\ncSystem Settings\nfcwd\nn/\np699\ncneagent\nfcwd\nn/\np701\ncsharingd\nfcwd\nn/\np708\ncsharedfilelistd\nfcwd\nn/\np711\nccoreauthd\nfcwd\nn/\np718\ncchronod\nfcwd\nn/\np719\ncChatGPT\nfcwd\nn/\np733\ncUserNotificationCenter\nfcwd\nn/\np736\ncghostty\nfcwd\nn/\np738\ncCMFSyncAgent\nfcwd\nn/\np739\ncDock\nfcwd\nn/\np742\ncControlCenter\nfcwd\nn/\np743\ncfontd\nfcwd\nn/\np744\ncSystemUIServer\nfcwd\nn/\np745\ncStatusKitAgent\nfcwd\nn/\np746\ncFinder\nfcwd\nn/\np747\ncfileproviderd\nfcwd\nn/\np750\ncAccessibilityUIServer\nfcwd\nn/\np751\ncstudentd\nfcwd\nn/\np754\nccorespeechd\nfcwd\nn/\np758\ncfontworker\nfcwd\nn/\np761\ncWallpaperAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.wallpaper.agent/Data\np764\ncfamilycircled\nfcwd\nn/\np773\ncNotificationCenter\nfcwd\nn/Users/adpena/Library/Containers/com.apple.notificationcenterui/Data\np774\ncViewBridgeAuxiliary\nfcwd\nn/\np775\nccorespotlightd\nfcwd\nn/\np782\ncaudioaccessoryd\nfcwd\nn/\np784\ncAMPDeviceDiscoveryAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.AMPDeviceDiscoveryAgent/Data\np794\ncWallpaperAerialsExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.wallpaper.extension.aerials/Data\np802\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np815\ncimagent\nfcwd\nn/\np819\ncWiFiAgent\nfcwd\nn/\np839\ncmediaremoteagent\nfcwd\nn/\np840\ncuseractivityd\nfcwd\nn/\np843\ncavconferenced\nfcwd\nn/\np846\ncGeneralSettings\nfcwd\nn/Users/adpena/Library/Containers/com.apple.systempreferences.GeneralSettings/Data\np863\ncVTDecoderXPCService\nfcwd\nn/\np885\nccom.apple.dock.extra\nfcwd\nn/\np886\nccom.apple.dock.external.extra.a\nfcwd\nn/\np887\nccom.apple.dock.external.extra.a\nfcwd\nn/\np910\ncSpotlight\nfcwd\nn/\np914\nccom.apple.CloudDocs.iCloudDrive\nfcwd\nn/Users/adpena/Library/Containers/com.apple.CloudDocs.iCloudDriveFileProvider/Data\np916\ncCursorUIViewService\nfcwd\nn/\np918\ncUniversalControl\nfcwd\nn/\np924\ncBooksSpotlightExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.iBooks.iBooksSpotlightExtension/Data\np925\ncContactsCoreSpotlightExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.contacts.ContactsCoreSpotlightExtension/Data\np930\ncbrowser_crashpad_handler\nfcwd\nn/\np932\ncbrowser_crashpad_handler\nfcwd\nn/\np939\ncCodex (Service)\nfcwd\nn/\np940\ncCodex (Service)\nfcwd\nn/\np943\ncCodex (Service)\nfcwd\nn/\np946\nccom.apple.podcasts.SpotlightInd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.podcasts.SpotlightIndexExtension/Data\np1021\ncAppleIDSettings\nfcwd\nn/Users/adpena/Library/Containers/com.apple.systempreferences.AppleIDSettings/Data\np1098\ncimklaunchagent\nfcwd\nn/\np1101\ncicdd\nfcwd\nn/\np1106\ncAirPlayUIAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.AirPlayUIAgent/Data\np1108\ncdiagnostics_agent\nfcwd\nn/\np1109\ncopen\nfcwd\nn/\np1110\ncTextInputMenuAgent\nfcwd\nn/\np1116\ncFamilySettings\nfcwd\nn/\np1122\ncHeadphoneSettingsExtension\nfcwd\nn/\np1124\ncFollowUpSettingsExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.FollowUpSettings.FollowUpSettingsExtension/Data\np1126\ncVPN\nfcwd\nn/\np1127\ncctkahp\nfcwd\nn/\np1129\ncTailscale\nfcwd\nn/Users/adpena/Library/Containers/io.tailscale.ipn.macos/Data\np1130\ncExpressVPN\nfcwd\nn/\np1132\ncClassroomSettings\nfcwd\nn/\np1171\ncIPNExtension\nfcwd\nn/Users/adpena/Library/Containers/io.tailscale.ipn.macos.network-extension/Data\np1267\ncCalendarWidgetExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.iCal.CalendarWidgetExtension/Data\np1357\nccom.apple.SafariPlatformSupport\nfcwd\nn/Users/adpena/Library/Containers/com.apple.SafariPlatformSupport.Helper/Data\np1361\ncbare-modifier-monitor\nfcwd\nn/\np1367\nccodex\nfcwd\nn/\np1374\ncCodex (Renderer)\nfcwd\nn/\np1375\ncCodex (Renderer)\nfcwd\nn/\np1380\ncRemindersSpotlightIndexExtensio\nfcwd\nn/Users/adpena/Library/Containers/com.apple.reminders.spotlightindexextension/Data\np1473\ncmdbulkimport\nfcwd\nn/\np1508\ncfskit_agent\nfcwd\nn/\np1531\nccom.apple.fskit.exfat\nfcwd\nn/Users/adpena/Library/Containers/com.apple.fskit.exfat/Data\np1559\nccom.apple.fskit.msdos\nfcwd\nn/Users/adpena/Library/Containers/com.apple.fskit.msdos/Data\np1569\nccom.apple.Notes.SpotlightIndexE\nfcwd\nn/Users/adpena/Library/Containers/com.apple.Notes.SpotlightIndexExtension/Data\np1601\nccsimporter\nfcwd\nn/Users/adpena/Library/Containers/com.apple.systempreferences.SpotlightIndexExtension/Data\np1605\ncpeopled\nfcwd\nn/\np1657\ncThemeWidgetControlViewService\nfcwd\nn/\np1658\nccom.apple.mail.SpotlightIndexEx\nfcwd\nn/Users/adpena/Library/Containers/com.apple.mail.SpotlightIndexExtension/Data\np1700\ncnode_repl\nfcwd\nn/\np1701\ncnode\nfcwd\nn/\np1702\ncnode\nfcwd\nn/Applications/ChatGPT.app/Contents/Resources/plugins/openai-bundled/plugins/codex-app-tools\np1704\ncnode\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-curated-remote/data-analytics/0.2.10-13ceeea1f599\np1727\ncnode_repl\nfcwd\nn/\np1732\nccloudflared\nfcwd\nn/\np1895\ncCodex (Renderer)\nfcwd\nn/\np1896\ncCodex (Renderer)\nfcwd\nn/\np1986\nc2.1.265\nfcwd\nn/Users/adpena/Projects/pact\np2026\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np2028\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np2129\nccodex-code-mode-host\nfcwd\nn/\np2462\ncspotlightknowledged\nfcwd\nn/\np3112\nchomeenergyd\nfcwd\nn/\np5215\ncPasswordBreachAgent\nfcwd\nn/\np7467\ncmobilerepaird\nfcwd\nn/\np7468\ncbetaenrollmentagent\nfcwd\nn/\np9438\ncIMAutomaticHistoryDeletionAgent\nfcwd\nn/\np12563\ncremindd\nfcwd\nn/\np12673\ncMessagesBlastDoorService\nfcwd\nn/\np12676\ncmdwrite\nfcwd\nn/\np14594\ncmediaanalysisd-access\nfcwd\nn/\np15233\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np15242\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np15243\nc2.1.265\nfcwd\nn/Users/adpena/Projects/pact\np16911\ncnbagent\nfcwd\nn/\np16917\nccontactsdonationagent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.contacts.donation-agent/Data\np16918\ncavatarsd\nfcwd\nn/\np19308\ncMessagesBlastDoorService\nfcwd\nn/\np21479\ncfrauddefensed\nfcwd\nn/\np21612\nccoreautha\nfcwd\nn/\np23949\ncPlugInLibraryService\nfcwd\nn/\np26065\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np26069\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np26109\ncbash\nfcwd\nn/Users/adpena/Projects/pact\np26996\ncssh-agent\nfcwd\nn/\np27078\ncIDSBlastDoorService\nfcwd\nn/\np29832\ncknowledgeconstructiond\nfcwd\nn/\np31252\ncIntelligencePlatformComputeServ\nfcwd\nn/\np32381\ncbash\nfcwd\nn/Users/adpena/Projects/pact\np32384\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np32385\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np42508\ncMessagesBlastDoorService\nfcwd\nn/\np42574\ncIMTranscoderAgent\nfcwd\nn/\np42575\ncMessagesBlastDoorService\nfcwd\nn/\np42584\ncintents_helper\nfcwd\nn/\np42632\ncintents_helper\nfcwd\nn/\np46049\ncRemoteManagementAgent\nfcwd\nn/\np46053\ncSafariConfigurationSubscriber\nfcwd\nn/\np46054\ncSecuritySubscriber\nfcwd\nn/\np46055\ncInteractiveLegacyProfilesSubscr\nfcwd\nn/\np46057\ncScreenSharingSubscriber\nfcwd\nn/\np46058\ncLegacyProfilesSubscriber\nfcwd\nn/\np46060\ncPasscodeSettingsSubscriber\nfcwd\nn/\np46061\ncAccountSubscriber\nfcwd\nn/\np46062\ncManagedAppsSubscriber\nfcwd\nn/\np46064\ncManagementTestSubscriber\nfcwd\nn/\np46066\ncASConfigurationSubscriber\nfcwd\nn/\np46067\ncManagedSettingsSubscriber\nfcwd\nn/\np48203\ncMessagesBlastDoorService\nfcwd\nn/\np48282\ncMessages Assistant Extension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.messages.AssistantExtension/Data\np56314\ncAppleIntelligenceReportingProce\nfcwd\nn/\np64729\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np67520\ncPython\nfcwd\nn/Users/adpena/Projects/pact\np67530\nccodex\nfcwd\nn/Users/adpena/Projects/pact\np67638\ncnode\nfcwd\nn/Users/adpena/Projects/pact\np67639\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np67640\ncSkyComputerUseClient\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-bundled/computer-history/1.0.1000926\np67694\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np67751\ncnode\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-curated-remote/data-analytics/0.2.10-13ceeea1f599\np68099\nccodex-code-mode-host\nfcwd\nn/Users/adpena/Projects/pact\np70637\ncPlugInLibraryService\nfcwd\nn/\np70640\nccom.apple.photos.ImageConversio\nfcwd\nn/Users/adpena/Library/Containers/com.apple.photos.ImageConversionService/Data\np70749\ncSkyComputerUseService\nfcwd\nn/\np71330\ncPython\nfcwd\nn/Users/adpena/Projects/pact\np71336\nccodex\nfcwd\nn/Users/adpena/Projects/pact\np71435\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np71436\ncnode\nfcwd\nn/Users/adpena/Projects/pact\np71437\ncSkyComputerUseClient\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-bundled/computer-history/1.0.1000926\np71497\ncnode_repl\nfcwd\nn/Users/adpena/Projects/pact\np71552\ncnode\nfcwd\nn/Users/adpena/.codex/plugins/cache/openai-curated-remote/data-analytics/0.2.10-13ceeea1f599\np71883\nccodex-code-mode-host\nfcwd\nn/Users/adpena/Projects/pact\np73237\ncmdworker_shared\nfcwd\nn/\np73281\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73301\nccaffeinate\nfcwd\nn/Users/adpena/Projects/pact\np73364\nctrustevaluationagent\nfcwd\nn/\np73365\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73377\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73416\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np73418\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73449\ncsleep\nfcwd\nn/Users/adpena/Projects/pact\np73795\ncssh\nfcwd\nn/\np73858\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np73862\nclsof\nfcwd\nn/Users/adpena/Projects/pact\np74148\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np78593\ncPowerChime\nfcwd\nn/\np78605\ncDiskUnmountWatcher\nfcwd\nn/\np79025\ncpassd\nfcwd\nn/\np79382\nczsh\nfcwd\nn/Users/adpena/Projects/pact\np79667\ncHomeEnergyWidgetsExtension\nfcwd\nn/Users/adpena/Library/Containers/com.apple.Home.HomeEnergyWidgets/Data\np80267\ncWeatherWidget\nfcwd\nn/Users/adpena/Library/Containers/com.apple.weather.widget/Data\np80506\ncmediaanalysisd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.mediaanalysisd/Data\np80508\ncsirittsd\nfcwd\nn/\np80513\ncsiriinferenced\nfcwd\nn/\np80514\ncspotlightknowledged.updater\nfcwd\nn/\np80516\ncsuggestd\nfcwd\nn/\np80519\ncIMDPersistenceAgent\nfcwd\nn/\np80520\nccom.apple.quicklook.ThumbnailsA\nfcwd\nn/\np80522\nciconservicesagent\nfcwd\nn/\np80523\nctalagentd\nfcwd\nn/\np80524\ncroutined\nfcwd\nn/Users/adpena/Library/Containers/com.apple.routined/Data\np80525\ncsiriactionsd\nfcwd\nn/\np80527\ncappstoreagent\nfcwd\nn/\np80528\nccallservicesd\nfcwd\nn/\np80529\ncsearchpartyuseragent\nfcwd\nn/\np80530\nccloudd\nfcwd\nn/\np80531\ncamsengagementd\nfcwd\nn/\np80533\nctransparencyd\nfcwd\nn/\np80535\nccontactsd\nfcwd\nn/\np80536\ncsiriknowledged\nfcwd\nn/\np80537\ncknowledge-agent\nfcwd\nn/\np80539\ncaxassetsd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.accessibility.axassetsd/Data\np80540\ncCoreServicesUIAgent\nfcwd\nn/\np80541\ncTextInputSwitcher\nfcwd\nn/\np80543\ncnetworkserviceproxy\nfcwd\nn/\np80544\ncdonotdisturbd\nfcwd\nn/\np80546\ncfinanced\nfcwd\nn/\np80549\nclinkd\nfcwd\nn/\np80550\ncamsaccountsd\nfcwd\nn/\np80552\nctipsd\nfcwd\nn/\np80553\ncFeatureAccessAgent\nfcwd\nn/\np80555\nccalaccessd\nfcwd\nn/\np80556\ncnewsd\nfcwd\nn/\np80558\ncakd\nfcwd\nn/\np80559\ncintelligenceplatformd\nfcwd\nn/\np80560\ncfindmylocateagent\nfcwd\nn/\np80561\ncpostersyncd\nfcwd\nn/\np80562\nctextunderstandingd\nfcwd\nn/\np80565\ncreplicatord\nfcwd\nn/\np80566\ncgenerativeexperiencesd\nfcwd\nn/\np80567\ncAuthenticationServicesAgent\nfcwd\nn/\np80569\ncbird\nfcwd\nn/\np80571\ncitunescloudd\nfcwd\nn/\np80574\ncCallHistorySyncHelper\nfcwd\nn/\np80575\nctextcomposerd\nfcwd\nn/\np80576\ncBiomeAgent\nfcwd\nn/\np80577\nciCloudNotificationAgent\nfcwd\nn/\np80578\ncpromotedcontentd\nfcwd\nn/\np80579\nccom.apple.geod\nfcwd\nn/Users/adpena/Library/Containers/com.apple.geod/Data\np80581\ncmanagedcorespotlightd\nfcwd\nn/\np80583\ncmanagedappdistributionagent\nfcwd\nn/\np80584\ncadprivacyd\nfcwd\nn/\np80585\ncsyncdefaultsd\nfcwd\nn/\np80586\ncScreenTimeAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.ScreenTimeAgent/Data\np80590\ncassistant_cdmd\nfcwd\nn/\np80593\ncSafariBookmarksSyncAgent\nfcwd\nn/\np80594\ncappleaccountd\nfcwd\nn/\np80595\ncparsecd\nfcwd\nn/\np80596\ncBackgroundTaskManagementAgent\nfcwd\nn/\np80597\ncIMTransferAgent\nfcwd\nn/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/com.apple.imtransferservices.IMTransferAgent\np80599\nccommunicationtrustd\nfcwd\nn/\np80600\nccloudphotod\nfcwd\nn/\np80601\ncIOUIAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.IOUIAgent/Data\np80603\ncamsondevicestoraged\nfcwd\nn/\np80605\ncndoagent\nfcwd\nn/\np80606\nctriald\nfcwd\nn/\np80607\nccom.apple.CloudPhotosConfigurat\nfcwd\nn/Users/adpena/Library/Containers/com.apple.CloudPhotosConfiguration/Data\np80609\ncCallHistoryPluginHelper\nfcwd\nn/\np80611\ncmilod\nfcwd\nn/\np80612\ncstickersd\nfcwd\nn/\np80614\ncweatherd\nfcwd\nn/\np80615\ncCommCenter\nfcwd\nn/\np80616\ncvoicebankingd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.voicebankingd/Data\np80617\nccom.apple.sbd\nfcwd\nn/\np80624\ncUsageTrackingAgent\nfcwd\nn/Users/adpena/Library/Containers/com.apple.UsageTrackingAgent/Data\np80626\ncciphermld\nfcwd\nn/\np80627\ncContextService\nfcwd\nn/\np80628\nccom.apple.Safari.SafeBrowsing.S\nfcwd\nn/\np80629\ncModelCatalogAgent\nfcwd\nn/\np80630\ncmaild\nfcwd\nn/\np80632\ncaskpermissiond\nfcwd\nn/\np80633\ncSiri\nfcwd\nn/Users/adpena/Library/Containers/com.apple.Siri/Data\np80636\ncsociallayerd\nfcwd\nn/\np80637\nccdpd\nfcwd\nn/\np80640\ncdmd\nfcwd\nn/\np80641\nctranslationd\nfcwd\nn/\np80642\ncintelligencecontextd\nfcwd\nn/\np80643\ncmlhostd\nfcwd\nn/\np80644\ncfilevaultd\nfcwd\nn/\np80645\ncswcd\nfcwd\nn/\np80647\ncTrustedPeersHelper\nfcwd\nn/\np80648\ncbluetoothuserd\nfcwd\nn/\np80649\ncswtransparencyd\nfcwd\nn/\np80652\ncdeleted\nfcwd\nn/\np80655\ncproactived\nfcwd\nn/\np80656\ncrecentsd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.corerecents.recentsd/Data\np80660\ncprogressd\nfcwd\nn/\np80663\ncdiagnosticextensionsd\nfcwd\nn/\np80664\ncgeoanalyticsd\nfcwd\nn/\np80668\ncprivatecloudcomputed\nfcwd\nn/private/tmp\np80672\ncappplaceholdersyncd\nfcwd\nn/\np80677\ncCategoriesService\nfcwd\nn/\np80678\ncProtectedCloudKeySyncing\nfcwd\nn/\np80680\ncAssetCacheLocatorService\nfcwd\nn/\np80684\nchomeeventsd\nfcwd\nn/\np80688\ncanalyticsagent\nfcwd\nn/\np80693\ncseserviced\nfcwd\nn/\np80697\ncdprivacyd\nfcwd\nn/\np80700\ncbusinessservicesd\nfcwd\nn/\np80703\ncAudioComponentRegistrar\nfcwd\nn/\np80705\ncctkd\nfcwd\nn/\np80707\ncCloudKeychainProxy\nfcwd\nn/\np80709\ncdevicecheckd\nfcwd\nn/\np80710\ncMENotificationAgent\nfcwd\nn/\np80711\ncAPFSUserAgent\nfcwd\nn/\np80713\ncproactiveeventtrackerd\nfcwd\nn/\np80715\ncSafariLaunchAgent\nfcwd\nn/\np80718\nclockdownmoded\nfcwd\nn/\np80722\ncinputanalyticsd\nfcwd\nn/\np80724\ncMTLAssetUpgraderD\nfcwd\nn/\np80733\ncXProtectPluginService\nfcwd\nn/\np80734\nccom.apple.Safari.History\nfcwd\nn/\np80738\nclocalizationswitcherd\nfcwd\nn/\np80741\ncfollowupd\nfcwd\nn/\np80744\ncbackgroundassets.user\nfcwd\nn/\np80747\ncmetrickitd\nfcwd\nn/\np80748\ncEscrowSecurityAlert\nfcwd\nn/\np80749\ncPodcastContentService\nfcwd\nn/\np80752\ncpbs\nfcwd\nn/\np80754\ncintelligencetasksd\nfcwd\nn/\np80756\nckeychainsharingmessagingd\nfcwd\nn/\np80761\ncloginitemregisterd\nfcwd\nn/\np80763\nccom.apple.BKAgentService\nfcwd\nn/Users/adpena/Library/Containers/com.apple.BKAgentService/Data\np80771\ncXProtect\nfcwd\nn/\np80774\ncmlruntimed\nfcwd\nn/\np80786\nccom.apple.accessibility.mediaac\nfcwd\nn/\np80794\ncDiskArbitrationAgent\nfcwd\nn/\np80798\ncinstallerauthagent\nfcwd\nn/\np80800\ncgeodMachServiceBridge\nfcwd\nn/\np80807\nccom.apple.tonelibraryd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.tonelibraryd/Data\np80809\ncfudHelperAgent\nfcwd\nn/\np80810\nccsnameddatad\nfcwd\nn/\np80816\ncmapssyncd\nfcwd\nn/\np80818\ncintelligentroutingd\nfcwd\nn/\np80819\ncaccountsd\nfcwd\nn/\np80821\ncdataaccessd\nfcwd\nn/\np80822\ncpkd\nfcwd\nn/\np80824\ncreplayd\nfcwd\nn/\np80825\ncScopedBookmarkAgent\nfcwd\nn/\np80826\ncphotolibraryd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.photolibraryd/Data\np80828\nctccd\nfcwd\nn/\np80830\ncsecinitd\nfcwd\nn/\np80837\ncContextStoreAgent\nfcwd\nn/\np80839\ncReportCrash\nfcwd\nn/\np80841\ncassistantd\nfcwd\nn/\np80842\ncheard\nfcwd\nn/\np80845\ncGamePolicyAgent\nfcwd\nn/\np80846\ncmdworker\nfcwd\nn/\np80848\nctrustd\nfcwd\nn/\np80850\ncassessmentagent\nfcwd\nn/\np80852\ncManagedSettingsAgent\nfcwd\nn/\np80855\ncCoreLocationAgent\nfcwd\nn/\np80856\ncfeedbackd\nfcwd\nn/\np80857\nccontainermanagerd\nfcwd\nn/\np80858\ncBTLEServerAgent\nfcwd\nn/\np80861\ncduetexpertd\nfcwd\nn/\np80865\nccommerce\nfcwd\nn/\np80867\ncUIKitSystem\nfcwd\nn/\np80868\ncmobiletimerd\nfcwd\nn/\np80869\ncKeychain Circle Notification\nfcwd\nn/\np80870\nccom.apple.hiservices-xpcservice\nfcwd\nn/\np80871\ncShortcutsViewService\nfcwd\nn/Users/adpena/Library/Containers/com.apple.WorkflowKit.ShortcutsViewService/Data\np80874\ncSidecarRelay\nfcwd\nn/\np80877\ncliveactivitiesd\nfcwd\nn/\np80878\ncsecd\nfcwd\nn/\np80879\ncSoftwareUpdateNotificationManag\nfcwd\nn/\np80882\ncAppSSOAgent\nfcwd\nn/\np80884\nchomed\nfcwd\nn/\np80897\ncPlugInLibraryService\nfcwd\nn/\np80908\ncPlugInLibraryService\nfcwd\nn/\np80911\ncintelligenceflowd\nfcwd\nn/\np80915\ncnsattributedstringagent\nfcwd\nn/\np80918\ncCloudTelemetryService\nfcwd\nn/\np80924\nccom.apple.FaceTime.FTConversati\nfcwd\nn/\np80928\nclocalspeechrecognition\nfcwd\nn/\np80942\nclocalspeechrecognition\nfcwd\nn/\np80972\ncCoreThreadCommissionerServiced\nfcwd\nn/\np80992\ncContainerMetadataExtractor\nfcwd\nn/\np80995\nccom.apple.SafariPlatformSupport\nfcwd\nn/Users/adpena/Library/Containers/com.apple.SafariPlatformSupport.Helper/Data\np81008\ncTrialArchivingService\nfcwd\nn/\np81010\ncSetStoreUpdateService\nfcwd\nn/\np81021\ncCloudTelemetryService\nfcwd\nn/\np81107\ncgamecontrolleragentd\nfcwd\nn/\np81137\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81138\ncMauiAUSP\nfcwd\nn/Users/adpena/Library/Containers/com.apple.ax.MauiTTSSupport.MauiAUSP/Data\np81139\ncWardaSynthesizer\nfcwd\nn/Users/adpena/Library/Containers/com.apple.speech.MacinTalkFramework.WardaSynthesizer/Data\np81146\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81147\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81152\ncphotoanalysisd\nfcwd\nn/Users/adpena/Library/Containers/com.apple.photoanalysisd/Data\np81154\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81155\ncAUCrashHandlerService\nfcwd\nn/\np81157\ncSetStoreUpdateService\nfcwd\nn/\np81175\ncMessagesBlastDoorService\nfcwd\nn/\np81207\nccom.apple.audio.SandboxHelper\nfcwd\nn/\np81327\ncpython3.13\nfcwd\nn/Users/adpena/Projects/pact\np81328\nccaffeinate\nfcwd\nn/Users/adpena/Projects/pact\np81364\nccom.apple.siri.embeddedspeech\nfcwd\nn/\np81685\ncSiriSuggestionsBookkeepingServi\nfcwd\nn/\np82485\ncSiriNCService\nfcwd\nn/Users/adpena/Library/Containers/com.apple.SiriNCService/Data\np83538\ncFPCKService\nfcwd\nn/\np84577\ncSetStoreUpdateService\nfcwd\nn/\np86265\ncextensionkitservice\nfcwd\nn/\np89898\ncSAExtensionOrchestrator\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.SAExtensionOrchestrator/Data\np89899\ncextensionkitservice\nfcwd\nn/\np89901\ncBiomeSELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.BiomeSELFIngestor/Data\np89902\ncIFTelemetrySELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.IFTelemetrySELFIngestor/Data\np89906\ncIFTranscriptSELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.lighthouse.IFTranscriptSELFIngestor/Data\np89908\ncGMSSELFIngestor\nfcwd\nn/Users/adpena/Library/Containers/com.apple.siri.GMSSELFIngestor/Data\np90503\ncThemeWidgetControlViewService\nfcwd\nn/\np90591\ncMTLCompilerService\nfcwd\nn/\np95693\ncextensionkitservice\nfcwd\nn/\np99180\ncparsec-fbf\nfcwd\nn/\n",
++    "stderr": ""
++  }
++]
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/research_recall.json b/.omx/research/ddm_vg1_20260910/research_recall.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/research_recall.json
+@@ -0,0 +1,14 @@
++{
++  "command": [
++    "rg",
++    "--hidden",
++    "-n",
++    "cwd census|cwd_unreadable|PROCESS_VISIBILITY_UNAVAILABLE|process_gate",
++    ".omx/research",
++    "--glob",
++    "*.md"
++  ],
++  "rc": 0,
++  "stdout": ".omx/research/charters/ddm_vg1_reclaim_process_gate_cwd_census_robust_20260910.md:1:# ddm_vg1 \u2014 make the narrowed reclaim process gate's cwd census robust on this host (it now FAILS CLOSED on MAIN's own apply with \"PROCESS_VISIBILITY_UNAVAILABLE: malformed or incomplete cwd census\"), keep every fail-closed property, and hand MAIN the exact re-apply command for the bz2d row (charter, 2026-09-10)\n.omx/research/charters/ddm_vg1_reclaim_process_gate_cwd_census_robust_20260910.md:3:Tokens: `[no-triality] [p0-ledger-ok]` \u00b7 Owner: codex arm (gpt-6-astra, high) \u00b7 Spawned by MAIN 2026-09-10. Sources: cd3 (`.omx/research/ddm_cd3_ssd_code_debt_final_20260910.md`, `a7cb75034`: the gate narrowed from full-argv matching to command name + cwd; 57 tests), the failed apply (`.omx/tmp/codex_runs/vr5_apply_bz2d_20260910/run.log`: `FATAL: CertifyError: PROCESS_VISIBILITY_UNAVAILABLE:malformed or incomplete cwd census` \u2014 run by MAIN outside any sandbox, with `ps`/`pgrep`/`lsof` available), the fresh plan ledger `.omx/research/ddm_vr5_reclaim_plan_bz2d_revalidate_20260910.jsonl` (1 DELETABLE row: bz2d, 3,662,409,600 B; sha 36416b17\u2026), vr4/vr5 (an empty lsof under a blind sandbox proves nothing \u2014 the gate MUST still fail closed when process visibility is genuinely absent). Axes: apparatus; `score_claim=false`.\n.omx/research/charters/ddm_vg1_reclaim_process_gate_cwd_census_robust_20260910.md:6:Find why the cwd census is malformed on a visible host (likely: `lsof -d cwd` output shape on macOS \u2014 kernel/zombie rows without a cwd, permission-denied rows for other users' processes, or a parse that requires every pid to have a cwd row) and fix the census so that (a) a visible host with some unreadable cwd rows yields a COMPLETE census with those pids recorded as `cwd_unreadable` (and the gate refuses only if an unreadable pid's COMMAND matches the owner token), (b) a host with no process visibility still raises PROCESS_VISIBILITY_UNAVAILABLE. Tests: the malformed shape captured from this host (record the real `lsof`/`ps` output as the fixture), the blind-sandbox shape, a real owner process (command named ddm_bz2d with cwd under the target) \u2192 REFUSE, a reviewer process whose argv merely names the arm \u2192 PASS. Do not run apply; hand MAIN the exact command (ledger sha unchanged unless you re-plan).\n.omx/research/ddm_vr4_both_ssds_certified_reclaim_successor_20260909.md:16:`pgrep -alf 'ddm_(sj1|rp1|bnd1|cmp2)|inflate|reclaim'` returned 3: `sysmon request failed with error: sysmond service not found` and `pgrep: Cannot get process list`. The independent `ps` launch raised `PermissionError(1, 'Operation not permitted')`. A single-target `lsof` returned 1 with no output, but that is not adequate proof of an idle host when process visibility is unavailable. Exact commands and output are retained in `ddm_vr4_20260909/process_gate.json`.\n.omx/research/ddm_cd3_ssd_code_debt_final_20260910.md:84:`experiments/ddm_vr3_certified_raw_reclaim.py::process_gate` reads `ps ... comm=`, exact-name `pgrep -x`, and lsof process COMMAND/cwd fields. It no longer scans full argv text. An owner token must have boundaries on both sides. Every relevant ps process must have cwd evidence; every lsof cwd process must have a COMMAND. Extra processes first observed by lsof also have their command checked. The short-lived ps observer is accounted for by its command and parent PID. Unknown/malformed records, missing cwd, unavailable ps/pgrep/lsof, and warnings all fail closed.\n.omx/research/ddm_cd3_ssd_code_debt_final_20260910.md:86:The inherited sw2 patch incorrectly allowed a self-only cwd census. Review caught and fixed this before packaging. The bz2d journal's ruff argv reference is reproduced by the argv-only fixture; real owner command/cwd controls still refuse. All existing archive/runtime/hash/reference/open-descriptor gates remain in the executor. A complete host process view is still required, so this proposal does not promise that MAIN's apply will pass.\n.omx/research/ddm_cd3_ssd_code_debt_final_20260910.md:102:Independent full-corpus content query over research memos/arm receipts: `retain.with.owner|AUTHORED.OWED|LSOF_SCAN_FAILED_AT_APPLY|process.gate|source.hash.tamper`; retained matched paths in `recall_corpus_paths.txt`. Queried `ssd.*(authored|code|certif)|retain.with.owner|process.gate` in CANONICAL_RESEARCH_INDEX*, sub015_DAG_* and docs, and related terms plus vr3/vr4/vr5/cs1 owner IDs in the canonical task store. Enumerated the canonical-equations registry with `tools/list_canonical_equations.py --json`: 481 rows, no match for `ssd_authored`, `process_gate`, `retain_with_owner`, or `source custody`; exact output and summary retained.\n.omx/research/ddm_cd3_ssd_code_debt_final_20260910.md:122:- A self-only or empty cwd census is closed as an idleness proof: it can hide an owner process and now refuses.\n",
++  "stderr": ""
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/design_tasks_recall.json b/.omx/research/ddm_vg1_20260910/design_tasks_recall.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/design_tasks_recall.json
+@@ -0,0 +1,15 @@
++{
++  "command": [
++    "rg",
++    "--hidden",
++    "-n",
++    "certif.*reclaim|process.gate|cwd census",
++    ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
++    ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
++    "docs",
++    ".omx/state/canonical_task_status.jsonl"
++  ],
++  "rc": 0,
++  "stdout": ".omx/state/canonical_task_status.jsonl:545:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"codex:ddm_cn5\",\"event_notes\":\"QUEUED-WITH-A-FIRE-ORDER. Current df measured 138060192 KiB free on Vertigo and 710609152 KiB free on APDataStore, so SR2's below-150-GiB trigger is active. Consumer store /Volumes/APDataStore/pact/. Fire only after a read-only owner/liveness census identifies the next inactive family and a machine-readable manifest records source path, bytes, file hashes/tree hash, provenance, cold destination, and symlink plan. Do not select the uncertified regen2 tree or any live solve/terminal directory.\",\"event_timestamp_utc\":\"2026-08-13T17:44:38.816828Z\",\"event_type\":\"registered\",\"owner\":\"storage-custody successor\",\"predicted_cost_usd\":0.0,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_cn5_20260813\",\"source_design_memo\":\".omx/research/ddm_sr2_vertigo_space_reclaim_20260811.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_sr2_vertigo_reclaim_threshold_20260813\",\"test_status\":\"pending\",\"title\":\"Reclaim Vertigo after the 150 GiB free-space threshold re-fired\",\"written_at_utc\":\"2026-08-13T17:44:38.816828Z\",\"written_host\":\"Primary\",\"written_pid\":63991}\n.omx/state/canonical_task_status.jsonl:711:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_sr3\",\"event_notes\":\"SR3 consumed #1165 storage input: SA1 and B2E are RECLAIMED_VERIFIED with complete per-file SHA round trips. Live AP free 48109191168 B exceeds the post-CAS W96B trigger 33569378304 B and 36 GiB stop condition. Storage blocker PAID; QUEUED-WITH-A-FIRE-ORDER to MAIN using SEALED_FIRE_ORDER_W96B.json. No aligned training launched by SR3. Evidence: .omx/research/ddm_sr3_ap_certify_compress_reclaim_20260826.md.\",\"event_timestamp_utc\":\"2026-08-26T23:07:27.276980Z\",\"event_type\":\"status_change\",\"owner\":\"MAIN\",\"predicted_cost_usd\":null,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_sr3_20260826\",\"source_design_memo\":\".omx/research/ddm_w96a_aligned_config_renderer_window_20260826.md\",\"started_at_utc\":\"2026-08-26T20:19:40.424445Z\",\"status\":\"in_progress\",\"task_id\":\"ddm_w96a_aligned_config_renderer_window\",\"test_status\":\"green\",\"title\":\"Measure the film-W96 renderer at the aligned expected-flip configuration\",\"written_at_utc\":\"2026-08-26T23:07:27.276980Z\",\"written_host\":\"Primary\",\"written_pid\":14435}\ndocs/runbooks/local_disk_reclaim_cadence.md:6:on 2026-09-04. Full account: `.omx/research/ddm_dk1_local_disk_certify_and_move_reclaim_20260904.md`.\n",
++  "stderr": ""
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/tests.json b/.omx/research/ddm_vg1_20260910/tests.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/tests.json
+@@ -0,0 +1,17 @@
++{
++  "command": [
++    "/Users/adpena/Projects/pact/.venv/bin/python",
++    "-m",
++    "pytest",
++    "--rootdir=.",
++    "--confcutdir=.",
++    "-q",
++    "-rs",
++    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
++    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
++  ],
++  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/ddm_vg1_work",
++  "rc": 0,
++  "stdout": "................................................................ss...    [100%]\n=========================== short test summary info ============================\nSKIPPED [2] experiments/tests/test_ddm_vr5_certified_raw_reclaim.py:515: live ps visibility unavailable: [Errno 1] Operation not permitted: 'ps'\n67 passed, 2 skipped in 0.44s\n",
++  "stderr": ""
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/ruff.json b/.omx/research/ddm_vg1_20260910/ruff.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/ruff.json
+@@ -0,0 +1,12 @@
++{
++  "command": [
++    "/Users/adpena/Projects/pact/.venv/bin/ruff",
++    "check",
++    "experiments/ddm_vr3_certified_raw_reclaim.py",
++    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
++  ],
++  "cwd": "/Users/adpena/Projects/pact/.omx/tmp/ddm_vg1_work",
++  "rc": 0,
++  "stdout": "All checks passed!\n",
++  "stderr": ""
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/review_pass1.json b/.omx/research/ddm_vg1_20260910/review_pass1.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/review_pass1.json
+@@ -0,0 +1,33 @@
++{
++  "finding": "Clean delta review: command provenance, unreadable owner refusal, duplicate PID detection, missing-command rejection and independent self/nonself visibility anchors. Existing certificate and apply gates unchanged. Live tests skipped, not claimed passed.",
++  "tracker": [
++    {
++      "command": [
++        "/Users/adpena/Projects/pact/.venv/bin/python",
++        "tools/review_tracker.py",
++        "mark-file",
++        "experiments/ddm_vr3_certified_raw_reclaim.py",
++        "--status",
++        "reviewed"
++      ],
++      "rc": 0,
++      "stdout": "RESCAN: 'experiments/ddm_vr3_certified_raw_reclaim.py' current entity census 33 (last stored census 0)\nMarked 33 entities in 'experiments/ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n",
++      "stderr": "",
++      "sha256": "2b094c9c8b05a0005ad773ee146640e3f67d79c42d88a304237f7fede185f1f8"
++    },
++    {
++      "command": [
++        "/Users/adpena/Projects/pact/.venv/bin/python",
++        "tools/review_tracker.py",
++        "mark-file",
++        "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
++        "--status",
++        "reviewed"
++      ],
++      "rc": 0,
++      "stdout": "RESCAN: 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' current entity census 26 (last stored census 0)\nMarked 26 entities in 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' as 'reviewed'\n",
++      "stderr": "",
++      "sha256": "8d92b1a4dec7b184ec27ccecf7a0a51e51b1dec4afa96d10753f0fb84061276a"
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/review_pass2.json b/.omx/research/ddm_vg1_20260910/review_pass2.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/review_pass2.json
+@@ -0,0 +1,36 @@
++{
++  "finding": "Clean adversarial delta review: complete means all observed PIDs are classified, not all cwd values readable. Every unreadable PID has a ps/lsof command; either source can refuse an owner. Empty/self-only/observer-only, commandless, duplicate, warning and malformed inputs remain closed. argv never queried. Apply consumers preserve all other certificate/reference/hash/open-file gates. Read-only integration tests explicitly skip here; they are pending host evidence.",
++  "changed_functions": [
++    "process_gate"
++  ],
++  "tracker": [
++    {
++      "command": [
++        "/Users/adpena/Projects/pact/.venv/bin/python",
++        "tools/review_tracker.py",
++        "mark-file",
++        "experiments/ddm_vr3_certified_raw_reclaim.py",
++        "--status",
++        "reviewed"
++      ],
++      "rc": 0,
++      "stdout": "RESCAN: 'experiments/ddm_vr3_certified_raw_reclaim.py' current entity census 33 (last stored census 33)\nMarked 33 entities in 'experiments/ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n",
++      "stderr": "",
++      "sha256": "2b094c9c8b05a0005ad773ee146640e3f67d79c42d88a304237f7fede185f1f8"
++    },
++    {
++      "command": [
++        "/Users/adpena/Projects/pact/.venv/bin/python",
++        "tools/review_tracker.py",
++        "mark-file",
++        "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
++        "--status",
++        "reviewed"
++      ],
++      "rc": 0,
++      "stdout": "RESCAN: 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' current entity census 26 (last stored census 26)\nMarked 26 entities in 'experiments/tests/test_ddm_vr5_certified_raw_reclaim.py' as 'reviewed'\n",
++      "stderr": "",
++      "sha256": "8d92b1a4dec7b184ec27ccecf7a0a51e51b1dec4afa96d10753f0fb84061276a"
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/main_reapply_argv.json b/.omx/research/ddm_vg1_20260910/main_reapply_argv.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/main_reapply_argv.json
+@@ -0,0 +1,24 @@
++{
++  "cwd": "/Users/adpena/Projects/pact",
++  "argv": [
++    ".venv/bin/python",
++    "experiments/ddm_vr3_certified_raw_reclaim.py",
++    "apply",
++    "--ledger",
++    ".omx/research/ddm_vr5_reclaim_plan_bz2d_revalidate_20260910.jsonl",
++    "--expected-ledger-sha256",
++    "36416b17a70b4814fee681bc5c438b0ef87dec25f4b418eae5317c4ff97b6413",
++    "--journal",
++    ".omx/research/ddm_vr5_apply_journal_bz2d_20260910.jsonl",
++    "--target-bytes",
++    "3662409600"
++  ],
++  "executed": false,
++  "preconditions": [
++    "Land exact reviewed patch",
++    "Capture visible-host ps and lsof, verify missing-cwd classification",
++    "Run both live integration controls without skips",
++    "Keep every existing apply gate enabled"
++  ],
++  "score_claim": false
++}
+\ No newline at end of file
+diff --git a/.omx/research/ddm_vg1_20260910/equations_recall_summary.json b/.omx/research/ddm_vg1_20260910/equations_recall_summary.json
+new file mode 100644
+--- /dev/null
++++ b/.omx/research/ddm_vg1_20260910/equations_recall_summary.json
+@@ -0,0 +1,14 @@
++{
++  "command": [
++    ".venv/bin/python",
++    "tools/list_canonical_equations.py",
++    "--json"
++  ],
++  "returncode": 0,
++  "records": 482,
++  "query": "reclaim|cwd census (case-insensitive serialized entry text)",
++  "matches": [],
++  "full_retained_path": ".omx/research/ddm_vg1_20260910/equations_recall.json",
++  "full_retained_bytes": 3686581,
++  "full_retained_sha256": "f76218f0f4ab438a996e16212ee73dc88adc42496fb71a3da298176e4d884476"
++}
+\ No newline at end of file

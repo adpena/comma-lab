@@ -428,3 +428,127 @@ def test_reclaim_custody_artifacts_are_not_consumer_references(tmp_path):
     consumer.write_text('RAW = "' + raw + '"\n')
     hits = mod.repo_reference_hits({raw: [raw]}, repo)[raw]
     assert any("experiments/consumer.py" in h for h in hits), hits
+
+
+@pytest.mark.parametrize("shape", ["omitted", "command_only", "last_command_only"])
+def test_visible_host_records_unreadable_cwd(monkeypatch, shape):
+    self_pid = os.getpid()
+    missing = "p123\ncpython3\n"
+    output = f"p414\ncloginwindow\nfcwd\nn/\np{self_pid}\ncpytest\nfcwd\nn/work/repo\n"
+    if shape == "command_only":
+        output = missing + output
+    elif shape == "last_command_only":
+        output += missing
+
+    def run(command, **kwargs):
+        if command[0] == "ps":
+            return subprocess.CompletedProcess(command, 0, f"1 0 launchd\n414 1 loginwindow\n123 1 python3\n{self_pid} 1 pytest\n", "")
+        if command[0] == "pgrep":
+            return subprocess.CompletedProcess(command, 1, "", "")
+        return subprocess.CompletedProcess(command, 0, output, "")
+
+    monkeypatch.setattr(vr3.subprocess, "run", run)
+    result = vr3.process_gate("ddm_bz2d")
+    assert result["status"] == "COMPLETE"
+    assert result["cwd_unreadable"] == [
+        {"pid": 1, "command": "launchd", "cwd_unreadable": True},
+        {"pid": 123, "command": "python3", "cwd_unreadable": True},
+    ]
+
+
+@pytest.mark.parametrize("source", ["ps", "lsof"])
+def test_unreadable_owner_command_refuses(monkeypatch, source):
+    def run(command, **kwargs):
+        if command[0] == "ps":
+            owner = "321 1 /work/ddm_bz2d_worker\n" if source == "ps" else ""
+            return subprocess.CompletedProcess(command, 0, f"1 0 launchd\n{os.getpid()} 1 pytest\n{owner}", "")
+        if command[0] == "pgrep":
+            return subprocess.CompletedProcess(command, 1, "", "")
+        return subprocess.CompletedProcess(command, 0, f"p1\nclaunchd\nn/\np{os.getpid()}\ncpytest\nn/work/repo\np321\ncddm_bz2d_worker\n", "")
+
+    monkeypatch.setattr(vr3.subprocess, "run", run)
+    with pytest.raises(vr3.CertifyError, match="LIVE_OWNER_PROCESS"):
+        vr3.process_gate("ddm_bz2d")
+
+
+def test_captured_host_lsof_without_init_with_controlled_ps(monkeypatch):
+    # lsof bytes are real host input; ps/self identity below are explicit controls.
+    capture = json.loads((Path(__file__).parent / "fixtures/ddm_vg1_sandbox_process_capture.json").read_text())
+    observed = capture[2]
+    pids = [int(line[1:]) for line in observed["stdout"].splitlines() if line.startswith("p")]
+    assert 1 not in pids
+    monkeypatch.setattr(vr3.os, "getpid", lambda: pids[0])
+
+    def run(command, **kwargs):
+        if command[0] == "ps":
+            output = "1 0 launchd\n" + "".join(f"{pid} 1 controlled_command\n" for pid in pids)
+            return subprocess.CompletedProcess(command, 0, output, "")
+        if command[0] == "pgrep":
+            return subprocess.CompletedProcess(command, 1, "", "")
+        return subprocess.CompletedProcess(command, observed["returncode"], observed["stdout"], observed["stderr"])
+
+    monkeypatch.setattr(vr3.subprocess, "run", run)
+    result = vr3.process_gate("ddm_vg1fixture")
+    assert result["cwd_readable_count"] == len(pids)
+    assert result["cwd_unreadable"] == [{"pid": 1, "command": "launchd", "cwd_unreadable": True}]
+
+
+def test_captured_sandbox_ps_denial_remains_closed(monkeypatch):
+    capture = json.loads((Path(__file__).parent / "fixtures/ddm_vg1_sandbox_process_capture.json").read_text())
+    assert "Operation not permitted" in capture[0]["error"]
+
+    def run(command, **kwargs):
+        assert command[0] == "ps"
+        raise PermissionError(capture[0]["error"])
+
+    monkeypatch.setattr(vr3.subprocess, "run", run)
+    with pytest.raises(vr3.CertifyError, match="PROCESS_VISIBILITY_UNAVAILABLE"):
+        vr3.process_gate("ddm_bz2d")
+
+
+@pytest.mark.parametrize("role", ["owner", "reviewer"])
+def test_live_named_process_and_argv_only_reviewer(tmp_path, role):
+    # Read-only gate integration; no raw, archive, apply, or reclaim is involved.
+    try:
+        visibility = subprocess.run(["ps", "-axo", "pid=,ppid=,comm="], capture_output=True, text=True, check=False)
+    except OSError as exc:
+        pytest.skip(f"live ps visibility unavailable: {exc}")
+    if visibility.returncode or visibility.stderr:
+        pytest.skip(f"live ps visibility unavailable: {visibility.stderr}")
+    import shutil
+
+    family = "ddm_bz2d"
+    work = tmp_path / (family if role == "owner" else "review")
+    work.mkdir()
+    executable = work / (family if role == "owner" else "reviewer")
+    shutil.copyfile("/bin/sleep" if role == "owner" else "/bin/sh", executable)
+    executable.chmod(0o700)
+    argv = [str(executable), "30"] if role == "owner" else [str(executable), "-c", "read answer", family]
+    child = subprocess.Popen(argv, cwd=work, stdin=subprocess.PIPE)
+    try:
+        assert child.poll() is None
+        if role == "owner":
+            with pytest.raises(vr3.CertifyError, match="LIVE_OWNER_PROCESS"):
+                vr3.process_gate(family)
+        else:
+            assert vr3.process_gate(family)["visible"]
+    finally:
+        child.terminate()
+        child.communicate(timeout=5)
+
+
+@pytest.mark.parametrize("mode", ["observer_only", "warning", "duplicate_unreadable"])
+def test_partial_census_cannot_claim_visibility(monkeypatch, mode):
+    def run(command, **kwargs):
+        if command[0] == "ps":
+            return subprocess.CompletedProcess(command, 0, f"1 0 launchd\n123 1 python3\n{os.getpid()} 1 pytest\n", "")
+        if command[0] == "pgrep":
+            return subprocess.CompletedProcess(command, 1, "", "")
+        output = f"p{os.getpid()}\ncpytest\nn/work/repo\np456\nclsof\nn/work/repo\n"
+        if mode == "duplicate_unreadable":
+            output += "p123\ncpython3\np123\ncpython3\n"
+        return subprocess.CompletedProcess(command, 0, output, "permission warning" if mode == "warning" else "")
+
+    monkeypatch.setattr(vr3.subprocess, "run", run)
+    with pytest.raises(vr3.CertifyError, match="PROCESS_VISIBILITY_UNAVAILABLE"):
+        vr3.process_gate("ddm_bz2d")
