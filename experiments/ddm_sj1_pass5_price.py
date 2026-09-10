@@ -461,13 +461,25 @@ def price(tags: tuple[str, ...], candidate: str = 'candidate', seg_gain_bytes: f
     return record(ROOT / f'PRICE_{candidate}.json', result)
 
 
-def ledger() -> dict:
-    """Per-pair ideal-bit cost of the pass-5 edits -- a RANKING for the subset sweep."""
+def ledger(candidate_field: str = 'candidate') -> dict:
+    """Per-pair ideal-bit cost of a field's edits -- a RANKING for the subset sweep.
+
+    WHICH field is priced is the caller's business, exactly as it is for ``price``.  The
+    first version hardcoded the name ``candidate`` in two places, and both were wrong for
+    any generation whose field is registered under its own name: ``load_encode`` raised on
+    a receipt that does not exist, and ``per_pair_tokens`` came from ``field_delta``, which
+    only ever describes the pair of fields ``init`` happened to register.  That is the same
+    hardcoded-field-list defect ``ddm_sj1_pass5_encode.sh``'s header already records.
+    """
     inputs = guard()
-    per_pair_tokens = inputs['field_delta']['per_pair']
-    runs = {name: load_encode(name, 'primary') for name in FIELDS}
+    control_u8 = np.fromfile(inputs['fields']['control']['u8']['path'],
+                             dtype=np.uint8).reshape(N_PAIRS, -1)
+    candidate_u8 = np.fromfile(inputs['fields'][candidate_field]['u8']['path'],
+                               dtype=np.uint8).reshape(N_PAIRS, -1)
+    per_pair_tokens = (control_u8 != candidate_u8).sum(axis=1).astype(int).tolist()
+    runs = {name: load_encode(name, 'primary') for name in ('control', candidate_field)}
     control = np.asarray(runs['control']['per_frame_ideal_bits'][1], dtype=np.float64)
-    candidate = np.asarray(runs['candidate']['per_frame_ideal_bits'][1], dtype=np.float64)
+    candidate = np.asarray(runs[candidate_field]['per_frame_ideal_bits'][1], dtype=np.float64)
     delta_bits = candidate - control
     rows = [dict(pair=i, tokens=int(per_pair_tokens[i]), delta_bits=float(delta_bits[i]),
                  delta_bytes=float(delta_bits[i] / 8))
@@ -477,7 +489,7 @@ def ledger() -> dict:
     # MEASURED per-pair ledger rather than the uniform bytes-per-changed-token fallback
     # that `token_rate_model_direction_dependence_v1` measured wrong by 2.24x.
     ledger_files = {}
-    for name, vector in (('control', control), ('candidate', candidate)):
+    for name, vector in (('control', control), (candidate_field, candidate)):
         destination = ROOT / 'retained' / f'bits_mixed_{name}.npy'
         preflight(destination, vector.nbytes + 4096)
         np.save(destination, vector)
@@ -517,5 +529,5 @@ if __name__ == '__main__':
         print(json.dumps(price(tuple(args.tags), args.candidate,
                                args.seg_gain_bytes, args.seg_cells), sort_keys=True))
     else:
-        out = ledger()
+        out = ledger(args.candidate)
         print(json.dumps({k: v for k, v in out.items() if k != 'rows'}, sort_keys=True))
