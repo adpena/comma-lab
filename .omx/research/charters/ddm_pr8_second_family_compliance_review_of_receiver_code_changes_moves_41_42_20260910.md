@@ -20,7 +20,7 @@ Review only; a local CPU decode timing of the public entrypoint on ≤ 20 frames
 - rc1: identity via the library path failed in f26_inflate (public entrypoint is the proof); the hide-data-in-code fake (NO-FAKE #6/#7) is the class this review exists for. # VERDICT_SCOPE_OK: this charter issues no negative of its own; it audits compliance
 
 ## OPTIMAL FORM
-- Reference form: pr5/pr6/pr7 for the review standard; the payload-cleanliness audit bundle of the "Native eval-time runtime discipline" section (binary_source_audit / embedded_constants_audit) as the checklist. SCOPE reductions: none. MECHANISM reductions FORBIDDEN: no trusting the arm's own compliance claims.
+- Reference form: pr5 (`3607c7252`), pr6 (`72565bdab`) and pr7 (`6da7a0fbe`) for the review standard, tc3 (`62451b9d3`) as the reference runtime change; the payload-cleanliness audit bundle of the "Native eval-time runtime discipline" section (binary_source_audit / embedded_constants_audit) as the checklist. SCOPE reductions: none. MECHANISM reductions FORBIDDEN: no trusting the arm's own compliance claims.
 - **PRIOR-LAW PREDICTION (falsifiable):** as above.
 
 ## DELIVERABLE
