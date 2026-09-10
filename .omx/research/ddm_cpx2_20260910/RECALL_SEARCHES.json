@@ -1,0 +1,67 @@
+[
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "cpu.{0,30}refus|submission_policy_adjudication|raw_auth_eval_does_not_verify_submission_policy_gates|runtime.{0,20}digest",
+      ".omx/research",
+      "--glob",
+      "*.md"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_cpx2_20260910/recall_0.txt",
+    "bytes": 83023,
+    "sha256": "b75d3ed40bc3abea47991983f721547533de65c082ffbf8dad7100e91201297c"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "cpu.{0,30}refus|policy.adjudicat|runtime.{0,20}digest",
+      "docs",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/operator_p0_ledger.jsonl"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_cpx2_20260910/recall_1.txt",
+    "bytes": 8686,
+    "sha256": "a21238de32711957744d133f53fcdf7b7365b1c54704d1ea39e56db7d1d04ed8"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "cpu.{0,30}refus|policy.adjudicat|runtime.{0,20}digest",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_cpx2_20260910/recall_2.txt",
+    "bytes": 2447,
+    "sha256": "89e65d7713b33e5d132149b30059e3d4f92c2a7bd1ac9ea3f272ae9a88c74dbc"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_cpx2_20260910/recall_3.txt",
+    "bytes": 3703678,
+    "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+  }
+]

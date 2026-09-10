@@ -1,0 +1,28 @@
+{
+  "schema": "contest_cpu_axis_refusal.v1",
+  "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+  "archive_bytes": 180466,
+  "runtime_digest_definition": "contest_auth_eval.runtime_files_sha256.v1",
+  "runtime_files_sha256": "ffdbde488ac17d3708b09d9b462aa62ef3b63d6d57e4198347995912df15e5ce",
+  "receiver": {
+    "target": "linux-nvidia-t4",
+    "launcher_line": 83,
+    "launcher_text": "python \"$HERE/inflate.py\" \"$DATA_DIR\" \"$base\" \"$OUTPUT_DIR/$base.raw\"",
+    "guard_line": 56,
+    "guard_text": "if not torch.cuda.is_available():",
+    "error": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+  },
+  "modal_call_id": "fc-01M26CHH4H0FHJ0EANBWP4WMZN",
+  "receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6_cpu_20260910/MODAL_REMOTE_RESULT.json",
+    "bytes": 46900,
+    "sha256": "48071edcc7ee0a7b6a1ec93d7db9661753af0bbef93d136cd7351797e7c87c91"
+  },
+  "adjudication": {
+    "path": ".omx/research/ddm_sj1_pass6_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json",
+    "bytes": 955,
+    "sha256": "d9c60343cc5a6c528d9b83806a562f2d5b2f0d296638cd610a23e325adaa09bc"
+  },
+  "selected_axis": "contest_cuda",
+  "cpu_metrics_absent_by_design": true
+}

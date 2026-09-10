@@ -1,0 +1,6 @@
+RESCAN: 'src/tac/auth_eval_schema.py' current entity census 26 (last stored census 26)
+Marked 26 entities in 'src/tac/auth_eval_schema.py' as 'reviewed'
+RESCAN: 'scripts/pre_submission_compliance_check.py' current entity census 87 (last stored census 87)
+Marked 87 entities in 'scripts/pre_submission_compliance_check.py' as 'reviewed'
+RESCAN: 'src/tac/tests/test_contest_cpu_axis_refusal.py' current entity census 16 (last stored census 16)
+Marked 16 entities in 'src/tac/tests/test_contest_cpu_axis_refusal.py' as 'reviewed'

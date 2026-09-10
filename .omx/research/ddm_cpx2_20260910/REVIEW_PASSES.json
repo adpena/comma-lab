@@ -1,0 +1,32 @@
+{
+  "scope": "macOS-CPU checker diagnostic; no scoring",
+  "files": {
+    "src/tac/auth_eval_schema.py": "ee150085090a2e289f9e7d834384cd3940cc253df6c8b498015916dddc4f468d",
+    "scripts/pre_submission_compliance_check.py": "d9d91ac94ea632def83ef667277bb1dd1d5e05a0e704b258a137db0b4f3e56c9",
+    "src/tac/tests/test_contest_cpu_axis_refusal.py": "8f07332402a4f14b4b7f411d2dcdfad6d01f781daebc25b2d5b11aedff152245"
+  },
+  "reviews": [
+    {
+      "pass": "ddm_cpx2_clean_1",
+      "reviewer": "independent cpx2_review",
+      "result": "clean on final hashes",
+      "coverage": "retained evidence vs live packet; argv parsing; metric absence; policy preserves release failures; final JSON type semantics",
+      "assumption_challenge": "Hashes bind operator-retained custody records, not cryptographic provider identity. No score breakthrough is claimed from relaxing authority."
+    },
+    {
+      "pass": "ddm_cpx2_clean_2",
+      "reviewer": "ddm_cpx2",
+      "result": "clean on final hashes",
+      "coverage": "full checker call sites and failed-check counts; strict CPU path unchanged; schema corruption tests; returned policy isolation; raw references captured before inspection and rechecked",
+      "assumption_challenge": "A CPU refusal is not a score. Removing missing-metric errors is valid only with the explicit CUDA axis and matching archive/runtime evidence."
+    }
+  ],
+  "fixed_findings": [
+    "duplicate and abbreviated/equal command shadows",
+    "Boolean returncode alias",
+    "retained metric contamination",
+    "unknown refusal-version fallthrough",
+    "Boolean vs numeric policy equality",
+    "global policy list aliasing"
+  ]
+}

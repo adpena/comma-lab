@@ -1,0 +1,30 @@
+[
+  {
+    "id": "cpx1_cpu_receipt_cure",
+    "disposition": "FOLDED",
+    "owner": "ddm_cpx2",
+    "consumer_store": ".omx/research/ddm_cpx2_20260910/CPU_AXIS_REFUSAL.json",
+    "fire_trigger": "move-43 receipt supplied and verified; consumed in 91/93 real check"
+  },
+  {
+    "id": "cpx2_landing",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": ".omx/research/ddm_cpx2_20260910/SERIALIZER_STATUS.json",
+    "fire_trigger": "rc 17 plus verified intended bundle; land exact bundle after harvest"
+  },
+  {
+    "id": "receiver_import_hygiene",
+    "disposition": "FOLDED",
+    "owner": "operator + MAIN",
+    "consumer_store": ".omx/research/ddm_swp2_20260910/BLOCKERS.json",
+    "fire_trigger": "operator selects receiver correction; fresh exact evidence required after any receiver change"
+  },
+  {
+    "id": "hosted_manifest",
+    "disposition": "FOLDED",
+    "owner": "operator + MAIN",
+    "consumer_store": ".omx/research/ddm_swp2_20260910/BLOCKERS.json",
+    "fire_trigger": "non-hosting clearance and explicit publish confirmation; retain downloaded bytes and genuine hosted manifest before strict release PASS"
+  }
+]

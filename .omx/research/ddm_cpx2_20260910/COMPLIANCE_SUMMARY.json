@@ -1,0 +1,37 @@
+{
+  "axis": "[macOS-CPU checker diagnostic]",
+  "before": {
+    "passed": 85,
+    "total": 93,
+    "rc": 1
+  },
+  "after": {
+    "passed": 91,
+    "total": 93,
+    "rc": 1
+  },
+  "changed_checks": [
+    "auth_eval_raw_promotion_policy_blockers_absent",
+    "contest_cpu_auth_eval_score_parseable",
+    "contest_cpu_auth_eval_archive_sha_matches",
+    "contest_cpu_auth_eval_archive_size_matches",
+    "contest_cpu_auth_eval_schema_metric_consistency",
+    "contest_cpu_auth_eval_runtime_tree_recorded"
+  ],
+  "remaining_failures": [
+    {
+      "details": "disallowed=['submissions/_staging_move43_pr140_swap/runtime/rc3_shared_mixer.py:experiments', 'submissions/_staging_move43_pr140_swap/runtime/sm1_semantic_mixer.py:experiments']",
+      "name": "submission_runtime_imports_within_allowlist",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "strict contest-final packets require --hosted-archive-manifest-json",
+      "name": "hosted_archive_manifest_supplied",
+      "passed": false,
+      "severity": "error"
+    }
+  ],
+  "score_recomputed_from_retained_cuda_components": 0.1372848557085275,
+  "score_measurement_performed": false
+}

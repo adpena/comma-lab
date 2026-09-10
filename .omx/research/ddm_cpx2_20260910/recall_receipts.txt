@@ -1,0 +1,7 @@
+.omx/research/ddm_sj1_pass6_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json:7: "verdict": "REFUSED_BY_DESIGN",
+.omx/research/ddm_cpx2_20260910/COMPLIANCE.json:573:      "details": "submission_policy_adjudication.v1: review recorded; raw flags unchanged; release_ready=False",
+.omx/research/ddm_cpx2_20260910/COMPLIANCE.json:1192:  "submission_policy_adjudication": {
+.omx/research/ddm_cpx2_20260910/COMPLIANCE.json:1768:    "schema": "submission_policy_adjudication.v1",
+.omx/research/ddm_cpx2_20260910/CPU_AXIS_REFUSAL.json:2:  "schema": "contest_cpu_axis_refusal.v1",
+.omx/research/ddm_cpx2_20260910/RECALL_SEARCHES.json:7:      "cpu.{0,30}refus|submission_policy_adjudication|raw_auth_eval_does_not_verify_submission_policy_gates|runtime.{0,20}digest",
+.omx/research/ddm_cpx1_20260910/STOP_RECEIPT.json:5:  "exact_stop_sentence": "STOP: A genuine submission_policy_adjudication.v1 cannot be produced from this packet’s passed checks because the retained CPU refusal binds a different archive and a different content-only runtime digest.",

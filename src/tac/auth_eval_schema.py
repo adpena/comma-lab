@@ -523,3 +523,292 @@ def _require_exact_field(
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
+
+
+CPU_AXIS_REFUSAL_SCHEMA = "contest_cpu_axis_refusal.v1"
+RUNTIME_FILES_DIGEST_DEFINITION = "contest_auth_eval.runtime_files_sha256.v1"
+
+
+def runtime_files_digest(manifest: dict[str, Any]) -> str:
+    """Hash the evaluator's environment-free files + evaluate.py projection.
+
+    This is the definition in experiments.contest_auth_eval._runtime_dependency_manifest,
+    not runtime_tree_sha256 or runtime_content_tree_sha256. Callers must obtain
+    the manifest by hashing the current packet; a claimed digest is insufficient.
+    """
+    import hashlib
+
+    rows = manifest["files"]
+    names = [row["relative_path"] for row in rows]
+    if not rows or len(names) != len(set(names)):
+        raise ValueError("empty or duplicate runtime file rows")
+    payload = {
+        "files": sorted(
+            ({key: row[key] for key in ("relative_path", "bytes", "sha256")} for row in rows),
+            key=lambda row: str(row["relative_path"]),
+        ),
+        "upstream_evaluate_py": manifest["upstream_evaluate_py"],
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def retained_json_reference(path: Path) -> dict[str, Any]:
+    """Identify retained JSON bytes without changing or adjudicating them."""
+    import hashlib
+
+    data = path.read_bytes()
+    return {"path": str(path), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def _read_bound_json(reference: dict[str, Any]) -> dict[str, Any]:
+    """Read a strict file reference and refuse stale, malformed or changed bytes."""
+    import hashlib
+
+    if set(reference) != {"path", "bytes", "sha256"}:
+        raise ValueError("invalid retained reference fields")
+    data = Path(reference["path"]).read_bytes()
+    if type(reference["bytes"]) is not int or len(data) != reference["bytes"]:
+        raise ValueError("retained reference size mismatch")
+    if hashlib.sha256(data).hexdigest() != reference["sha256"]:
+        raise ValueError("retained reference sha mismatch")
+    payload = json.loads(data)
+    if not isinstance(payload, dict):
+        raise ValueError("retained JSON must be an object")
+    return payload
+
+
+def required_contest_cpu_axis_refusal_blockers(
+    payload: dict[str, Any],
+    *,
+    selected_axis: str,
+    archive: dict[str, Any],
+    submission_dir: Path,
+    runtime_manifest: dict[str, Any],
+) -> list[str]:
+    """Validate a metric-free refusal against retained evidence and live files.
+
+    An adjudication is custody evidence, not a CPU evaluation. The outer remote
+    runtime digest can be empty on refusal; the retained provenance, command pin,
+    adjudication's receipt reference and independently measured packet must agree.
+    No provider call or receiver execution occurs here.
+    """
+    import ast
+    import hashlib
+
+    blockers: list[str] = []
+    if selected_axis != "contest_cuda" or payload.get("selected_axis") != "contest_cuda":
+        blockers.append("refusal_requires_selected_contest_cuda")
+    # Closed fields forbid metric aliases and unexpected nested score containers.
+    expected = {"schema", "archive_sha256", "archive_bytes", "runtime_digest_definition",
+                "runtime_files_sha256", "receiver", "modal_call_id", "receipt",
+                "adjudication", "selected_axis", "cpu_metrics_absent_by_design"}
+    if set(payload) != expected or payload.get("schema") != CPU_AXIS_REFUSAL_SCHEMA:
+        blockers.append("refusal_schema_fields_invalid_metrics_forbidden")
+    if payload.get("cpu_metrics_absent_by_design") is not True:
+        blockers.append("cpu_metrics_must_be_absent_by_design")
+    try:
+        actual_digest = runtime_files_digest(runtime_manifest)
+        if (payload.get("runtime_digest_definition") != RUNTIME_FILES_DIGEST_DEFINITION
+                or payload.get("runtime_files_sha256") != actual_digest):
+            blockers.append("refusal_runtime_digest_mismatch")
+        archive_path = submission_dir / "archive.zip"
+        actual_archive = {"sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                          "bytes": archive_path.stat().st_size}
+        if (archive.get("sha256") != actual_archive["sha256"]
+                or payload.get("archive_sha256") != actual_archive["sha256"]):
+            blockers.append("refusal_archive_sha_mismatch")
+        if (type(payload.get("archive_bytes")) is not int
+                or archive.get("bytes") != actual_archive["bytes"]
+                or payload.get("archive_bytes") != actual_archive["bytes"]):
+            blockers.append("refusal_archive_size_mismatch")
+        adjudication = _read_bound_json(payload["adjudication"])
+        remote = _read_bound_json(payload["receipt"])
+        if (adjudication.get("schema") != "cpu_axis_adjudication.v1"
+                or adjudication.get("axis") != "contest_cpu"
+                or adjudication.get("verdict") != "REFUSED_BY_DESIGN"
+                or adjudication.get("receipt") != payload["receipt"]
+                or adjudication.get("archive_sha256") != actual_archive["sha256"]
+                or adjudication.get("archive_bytes") != actual_archive["bytes"]
+                or adjudication.get("call") != payload["modal_call_id"]
+                or not str(payload["modal_call_id"]).startswith("fc-")
+                or adjudication.get("cpu_metrics_absent_by_design") is not True
+                or adjudication.get("score_claim") is not False
+                or type(adjudication.get("returncode")) is not int
+                or adjudication.get("returncode") != 1):
+            blockers.append("refusal_adjudication_binding_invalid")
+        artifacts = remote["artifacts"]
+        provenance = artifacts["provenance.json"]
+        if isinstance(provenance, str):
+            provenance = json.loads(provenance)
+        retained_manifest = provenance["inflate_runtime_manifest"]
+        if (runtime_files_digest(retained_manifest) != actual_digest
+                or retained_manifest.get("runtime_files_sha256") != actual_digest):
+            blockers.append("refusal_retained_runtime_mismatch")
+        command = remote["command"]
+        if (not isinstance(command, list) or not all(isinstance(arg, str) for arg in command)
+                or command.count("--device") != 1
+                or command.count("--expected-runtime-files-sha256") != 1
+                or any(
+                    arg.startswith("--") and any(
+                        flag.startswith(arg.split("=", 1)[0]) and arg != flag
+                        for flag in ("--device", "--expected-runtime-files-sha256")
+                    ) for arg in command
+                )):
+            raise ValueError("ambiguous CPU command binding flags")
+        pin = command.index("--expected-runtime-files-sha256")
+        device = command.index("--device")
+        if command[pin + 1] != actual_digest or command[device + 1] != "cpu":
+            blockers.append("refusal_command_binding_invalid")
+        if (remote.get("expected_archive_sha256") != actual_archive["sha256"]
+                or remote.get("expected_archive_size_bytes") != actual_archive["bytes"]
+                or provenance.get("archive_sha256") != actual_archive["sha256"]
+                or provenance.get("archive_size_bytes") != actual_archive["bytes"]):
+            blockers.append("refusal_retained_archive_mismatch")
+        if (remote.get("passed") is not False or type(remote.get("returncode")) is not int
+                or remote.get("returncode") != 1
+                or remote.get("score_axis") != "contest_cpu"
+                or remote.get("score_claim") is not False
+                or remote.get("promotion_eligible") is not False
+                or provenance.get("device") != "cpu"
+                or provenance.get("platform_system") != "Linux"
+                or provenance.get("platform_machine") != "x86_64"
+                or provenance.get("cuda_available") is not False
+                or any("contest_auth_eval.json" in name for name in artifacts)):
+            blockers.append("refusal_not_metric_free_cpu_failure")
+        metric_names = {"score", "canonical_score", "score_recomputed_from_components", "score_components",
+                        "avg_segnet_dist", "avg_posenet_dist", "seg", "pose", "rate", "rate_unscaled",
+                        "d_seg", "d_pose", "S", "metrics"}
+        if metric_names & (remote.keys() | provenance.keys() | adjudication.keys()):
+            blockers.append("refusal_retained_metrics_forbidden")
+        outer_tree = remote.get("expected_runtime_tree_sha256")
+        if outer_tree and outer_tree != retained_manifest.get("runtime_tree_sha256"):
+            blockers.append("refusal_outer_runtime_mismatch")
+        receiver = payload["receiver"]
+        if set(receiver) != {"target", "launcher_line", "launcher_text", "guard_line", "guard_text", "error"}:
+            raise ValueError("invalid receiver fields")
+        launcher = (submission_dir / "inflate.sh").read_text().splitlines()
+        source_text = (submission_dir / "inflate.py").read_text()
+        source = source_text.splitlines()
+        guard = next((node for node in ast.walk(ast.parse(source_text))
+                      if isinstance(node, ast.If) and node.lineno == receiver["guard_line"]), None)
+        if (guard is None or ast.unparse(guard.test) != "not torch.cuda.is_available()"
+                or len(guard.body) != 1 or not isinstance(guard.body[0], ast.Raise)
+                or not isinstance(guard.body[0].exc, ast.Call)
+                or ast.unparse(guard.body[0].exc.func) != "RuntimeError"
+                or len(guard.body[0].exc.args) != 1
+                or not isinstance(guard.body[0].exc.args[0], ast.Constant)
+                or guard.body[0].exc.args[0].value != receiver["error"]):
+            blockers.append("refusal_guard_does_not_raise_recorded_error")
+        if (receiver["target"] != "linux-nvidia-t4"
+                or type(receiver["launcher_line"]) is not int or receiver["launcher_line"] < 1
+                or type(receiver["guard_line"]) is not int or receiver["guard_line"] < 1
+                or launcher[receiver["launcher_line"] - 1].strip() != receiver["launcher_text"]
+                or receiver["launcher_text"] != 'python "$HERE/inflate.py" "$DATA_DIR" "$base" "$OUTPUT_DIR/$base.raw"'
+                or source[receiver["guard_line"] - 1].strip() != receiver["guard_text"]
+                or receiver["guard_text"] != "if not torch.cuda.is_available():"
+                or "linux-nvidia-t4" not in receiver["error"]
+                or "RuntimeError: " + receiver["error"] not in artifacts["contest_auth_eval.stderr.log"]
+                or 'line ' + str(receiver["guard_line"] + 1) + ', in main' not in artifacts["contest_auth_eval.stderr.log"]):
+            blockers.append("refusal_receiver_guard_not_bound")
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, SyntaxError) as exc:
+        blockers.append(f"refusal_evidence_invalid:{type(exc).__name__}:{exc}")
+    return blockers
+
+
+SUBMISSION_POLICY_ADJUDICATION_SCHEMA = "submission_policy_adjudication.v1"
+RAW_CUDA_POLICY_REVIEW_BLOCKERS = {
+    "promotion_blockers": [
+        "raw_auth_eval_does_not_verify_submission_policy_gates",
+        "cpu_leaderboard_reproduction_not_adjudicated",
+        "pre_submission_compliance_check_not_recorded",
+    ],
+    "rank_or_kill_blockers": [
+        "raw_auth_eval_not_rank_or_kill_authority",
+        "requires_adjudicated_cuda_cpu_policy_review",
+    ],
+}
+# These remain FAILED in the compliance report and in the review receipt.
+# Recording policy review does not grant release, rank, or promotion authority.
+POLICY_REVIEW_RELEASE_BLOCKERS = frozenset({
+    "submission_runtime_imports_within_allowlist", "hosted_archive_manifest_supplied",
+})
+RAW_POLICY_CHECK = "auth_eval_raw_promotion_policy_blockers_absent"
+
+
+def submission_policy_adjudication(
+    *,
+    archive: dict[str, Any],
+    runtime_files_sha256: str,
+    cuda_receipt: dict[str, Any],
+    cpu_refusal_receipt: dict[str, Any],
+    checks: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Record this checker's completed CUDA-only review, retaining release debt.
+
+    Only the raw evaluator's five known requests for policy review are resolved.
+    Unknown raw blockers or any other packet error fail closed. The caller must
+    supply its own current, complete checks, including the validated CPU refusal;
+    persisted user-supplied passed-check flags are never an input to the checker.
+    """
+    try:
+        raw = _read_bound_json(cuda_receipt)
+        refusal = _read_bound_json(cpu_refusal_receipt)
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+    if ({key: raw.get(key) for key in RAW_CUDA_POLICY_REVIEW_BLOCKERS}
+            != RAW_CUDA_POLICY_REVIEW_BLOCKERS
+            or raw.get("score_axis") != "contest_cuda"
+            or raw.get("exact_cuda_eval_complete") is not True
+            or raw.get("score_claim_valid") is not True
+            or refusal.get("schema") != CPU_AXIS_REFUSAL_SCHEMA
+            or refusal.get("archive_sha256") != archive.get("sha256")
+            or refusal.get("archive_bytes") != archive.get("bytes")
+            or refusal.get("runtime_files_sha256") != runtime_files_sha256):
+        return None
+    by_name = {row["name"]: row for row in checks}
+    required = {
+        "auth_eval_archive_sha_matches", "auth_eval_archive_size_matches",
+        "auth_eval_schema_metric_consistency", "auth_eval_explicit_exact_cuda_stamp",
+        "auth_eval_selected_axis_matches_submission_gate", "auth_eval_t4_equivalent",
+        "contest_cpu_auth_eval_score_parseable", "contest_cpu_auth_eval_archive_sha_matches",
+        "contest_cpu_auth_eval_archive_size_matches", "contest_cpu_auth_eval_schema_metric_consistency",
+        "contest_cpu_auth_eval_runtime_tree_recorded", "contest_cpu_auth_eval_runtime_tree_matches_cuda",
+        "submission_runtime_manifest_computable", "submission_runtime_tree_matches_auth_eval",
+    }
+    if len(by_name) != len(checks) or any(by_name.get(name, {}).get("passed") is not True for name in required):
+        return None
+    unresolved = [row for row in checks if not row["passed"] and row["name"] != RAW_POLICY_CHECK]
+    if any(row["name"] not in POLICY_REVIEW_RELEASE_BLOCKERS for row in unresolved):
+        return None
+    return {
+        "schema": SUBMISSION_POLICY_ADJUDICATION_SCHEMA,
+        "selected_axis": "contest_cuda",
+        "archive_sha256": archive["sha256"], "archive_bytes": archive["bytes"],
+        "runtime_digest_definition": RUNTIME_FILES_DIGEST_DEFINITION,
+        "runtime_files_sha256": runtime_files_sha256,
+        "cuda_receipt": cuda_receipt, "cpu_refusal_receipt": cpu_refusal_receipt,
+        "basis": "current_packet_checks_and_bound_cpu_axis_refusal",
+        "resolved_raw_review_blockers": {key: list(value) for key, value in RAW_CUDA_POLICY_REVIEW_BLOCKERS.items()},
+        "passed_checks": [row for row in checks if row["passed"] and row["name"] != RAW_POLICY_CHECK],
+        "unresolved_release_checks": unresolved,
+        "review_complete": True,
+        "release_ready": not unresolved,
+        "cpu_metrics_absent_by_design": True,
+        "cpu_leaderboard_reproduction_eligible": False,
+        "promotion_eligible": False, "rank_or_kill_eligible": False,
+        "note": "Records policy review only; raw evaluation flags remain unchanged. Remaining checks still block release.",
+    }
+
+
+def submission_policy_adjudication_matches(
+    payload: dict[str, Any], *, current_packet_adjudication: dict[str, Any] | None,
+) -> bool:
+    """Accept only the exact object derived from this invocation's packet checks."""
+    if current_packet_adjudication is None or payload.get("schema") != SUBMISSION_POLICY_ADJUDICATION_SCHEMA:
+        return False
+    try:
+        return json.dumps(payload, sort_keys=True, allow_nan=False) == json.dumps(
+            current_packet_adjudication, sort_keys=True, allow_nan=False,
+        )
+    except (ValueError, TypeError):
+        return False

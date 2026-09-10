@@ -42,7 +42,13 @@ ensure_repo_imports(REPO_ROOT)
 from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
 from tools.claim_lane_dispatch import TERMINAL_PREFIXES as CLAIM_TERMINAL_PREFIXES  # noqa: E402
 from tac.auth_eval_schema import (  # noqa: E402
+    RAW_POLICY_CHECK,
     eval_metric_summary,
+    required_contest_cpu_axis_refusal_blockers,
+    retained_json_reference,
+    runtime_files_digest,
+    submission_policy_adjudication,
+    submission_policy_adjudication_matches,
     required_exact_eval_metric_blockers,
 )
 from tac.preflight import check_public_release_hygiene  # noqa: E402
@@ -1743,6 +1749,7 @@ def inspect_contest_cpu_auth_eval(
     contest_final: bool = False,
     selected_axis: str = "contest_cuda",
     max_submission_score: float = DEFAULT_MAX_SUBMISSION_SCORE,
+    submission_dir: Path | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
@@ -1770,6 +1777,38 @@ def inspect_contest_cpu_auth_eval(
     _add(checks, "contest_cpu_auth_eval_json_object", payload is not None, _rel(path))
     if payload is None:
         return {"path": _rel(path), "exists": True, "required": required}, checks
+
+    if (str(payload.get("schema", "")).startswith("contest_cpu_axis_refusal.")
+            or ("cpu_metrics_absent_by_design" in payload and "selected_axis" in payload)):
+        blockers = ["refusal_requires_live_submission_tree"]
+        if submission_dir is not None:
+            try:
+                manifest = _submission_runtime_manifest(submission_dir)
+                blockers = required_contest_cpu_axis_refusal_blockers(
+                    payload, selected_axis=selected_axis, archive=archive,
+                    submission_dir=submission_dir, runtime_manifest=manifest,
+                )
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                blockers = [f"refusal_live_runtime_unreadable:{exc}"]
+        basis = "cpu_axis_refusal_adjudicated" if not blockers else "cpu_axis_refusal_refused"
+        details = json.dumps({"basis": basis, "blockers": blockers,
+                              "runtime_digest_definition": payload.get("runtime_digest_definition"),
+                              "runtime_files_sha256": payload.get("runtime_files_sha256"),
+                              "cpu_metrics_absent_by_design": True}, sort_keys=True)
+        for suffix in ("score_parseable", "archive_sha_matches", "archive_size_matches",
+                       "schema_metric_consistency", "runtime_tree_recorded"):
+            _add(checks, "contest_cpu_auth_eval_" + suffix, not blockers, details)
+        cuda_values = set(_auth_runtime_candidates(cuda_auth_eval).values())
+        matched_cuda = (not blockers and bool(cuda_values) and
+                        bool({manifest["runtime_tree_sha256"],
+                              manifest["portable_runtime_tree_sha256_without_custody_files"]} & cuda_values))
+        _add(checks, "contest_cpu_auth_eval_runtime_tree_matches_cuda", matched_cuda, details)
+        return {"path": _rel(path), "exists": True, "required": required,
+                "record": None, "strict_formula": None,
+                "basis": basis, "refusal_valid": not blockers and matched_cuda,
+                "runtime_files_sha256": payload.get("runtime_files_sha256"),
+                "cpu_metrics_absent_by_design": True,
+                "runtime_tree_candidates": {}, "runtime_tree_pruned_candidates": {}}, checks
 
     record = parse_auth_eval_payload(payload)
     _add(
@@ -3215,6 +3254,12 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     elif args.contest_final:
         _add(checks, "expected_archive_size_bytes_supplied", False, "contest-final requires explicit archive bytes")
 
+    # Bind review output to the same input bytes inspected below. The canonical
+    # policy helper rereads these references and refuses a concurrent change.
+    policy_input_refs = None
+    if args.contest_final and auth_path.is_file() and cpu_auth_path.is_file():
+        policy_input_refs = (retained_json_reference(auth_path), retained_json_reference(cpu_auth_path))
+
     auth_record, auth_checks = inspect_auth_eval(auth_path, archive, args)
     sections["auth_eval"] = auth_record
     checks.extend(auth_checks)
@@ -3230,6 +3275,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         contest_final=args.contest_final,
         selected_axis=args.submission_score_axis,
         max_submission_score=args.max_submission_score,
+        submission_dir=submission_dir,
     )
     sections["contest_cpu_auth_eval"] = cpu_auth_record
     checks.extend(cpu_auth_checks)
@@ -3457,6 +3503,34 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             f"tac.frontier_scan errored: {exc!r}; frontier-regression check SKIPPED",
             severity="error" if args.contest_final else "warning",
         )
+
+    # Resolve only the raw evaluator's request for policy review. This uses
+    # checks from this invocation, never a user-supplied JSON of passing flags.
+    # Receiver/import and hosted-manifest failures stay in the report unchanged.
+    if (args.contest_final and args.submission_score_axis == "contest_cuda"
+            and cpu_auth_record.get("refusal_valid") is True and policy_input_refs is not None):
+        policy = submission_policy_adjudication(
+            archive=archive,
+            runtime_files_sha256=runtime_files_digest(runtime_record),
+            cuda_receipt=policy_input_refs[0],
+            cpu_refusal_receipt=policy_input_refs[1],
+            checks=[asdict(check) for check in checks],
+        )
+        if policy is not None:
+            # Consume the serialized schema object which will be retained in
+            # the report; compare it to the current packet-derived expectation.
+            serialized_policy = json.loads(json_text(policy))
+            sections["submission_policy_adjudication"] = serialized_policy
+            accepted = submission_policy_adjudication_matches(
+                serialized_policy, current_packet_adjudication=policy,
+            )
+            for index, check in enumerate(checks):
+                if check.name == RAW_POLICY_CHECK:
+                    checks[index] = Check(
+                        name=check.name, passed=accepted, severity=check.severity,
+                        details="submission_policy_adjudication.v1: review recorded; "
+                        "raw flags unchanged; release_ready=" + str(policy["release_ready"]),
+                    )
 
     passed = all(check.passed or check.severity != "error" for check in checks)
     return {

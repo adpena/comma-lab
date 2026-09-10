@@ -1,0 +1,21 @@
+{
+  "receipts_query": [
+    "rg",
+    "-n",
+    "-i",
+    "REFUSED_BY_DESIGN|contest_cpu_axis_refusal|submission_policy_adjudication",
+    ".omx/research",
+    "--glob",
+    "*.json",
+    "--glob",
+    "*.jsonl",
+    "--glob",
+    "!ddm_cpx2_20260910/**"
+  ],
+  "rc": 0,
+  "matches_lines": 7,
+  "equations_root_type": "list",
+  "equations_rows": 483,
+  "equations_query": "cpu.{0,30}refus|policy.adjudicat|runtime.{0,20}digest",
+  "equation_matches": []
+}

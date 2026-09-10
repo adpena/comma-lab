@@ -1,0 +1,22 @@
+{
+  "cpu_retained_provenance": {
+    "runtime_tree_sha256": "7968630fa7ea13c7d61f1d3845706e0ae67fa29cf09886a18a6d89f5d192e814",
+    "runtime_content_tree_sha256": "5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab",
+    "runtime_files_sha256_recomputed": "ffdbde488ac17d3708b09d9b462aa62ef3b63d6d57e4198347995912df15e5ce",
+    "file_count": 45
+  },
+  "cuda_retained_provenance": {
+    "runtime_tree_sha256": "a726739a52452f8824c4eb9f98322f927b8b5d2d4c6ac1717911f61b841a9803",
+    "runtime_content_tree_sha256": "5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab",
+    "runtime_files_sha256_recomputed": "ffdbde488ac17d3708b09d9b462aa62ef3b63d6d57e4198347995912df15e5ce",
+    "file_count": 45
+  },
+  "live_staged_packet": {
+    "runtime_tree_sha256": "750fc1e4e099db72d138d67db2e9d4028786531b4fbbadfe1587a5bfc8ccb8d7",
+    "runtime_content_tree_sha256": "5863425ffe98033df7be70716563a7583473981d69349f7d49533a14764027ab",
+    "runtime_files_sha256_recomputed": "ffdbde488ac17d3708b09d9b462aa62ef3b63d6d57e4198347995912df15e5ce",
+    "file_count": 45
+  },
+  "outer_cpu_expected_runtime_tree_sha256": "",
+  "binding_basis": "adjudication binds retained receipt by path/bytes/sha; retained provenance manifest and CPU argv pin bind environment-free runtime_files_sha256; checker recomputes staged files plus evaluate.py"
+}
