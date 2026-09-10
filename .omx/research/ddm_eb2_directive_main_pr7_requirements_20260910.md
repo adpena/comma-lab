@@ -1,0 +1,1 @@
+# MAIN → ddm_eb2 directive (2026-09-10 ~17:45Z): read the MAIN ADDENDUM appended to your charter — pr7 (6da7a0fbe) found eb1's classes non-physical; any conditional floor you report must charge Z, prove A_z physical, upper-bound the max ball, and use the exact realized D on the same object. The real residual coder's size is the decisive number.
