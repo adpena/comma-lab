@@ -1263,3 +1263,20 @@ def test_keeper_argv_carries_the_chosen_model_and_effort(q):
     assert "model_reasoning_effort=medium" in text
     default = q.keeper_source("arm_y", ".omx/research/charters/y.md", "xhigh")
     assert f"'-m', '{q.ARM_MODEL}'" in default
+
+
+def test_add_refuses_a_reused_arm_id_unless_deliberate(q, tmp_path):
+    # 2026-09-10: MAIN reused `sw2` and `eb1` within one night; the check is structural now.
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "research" / "charters").mkdir(parents=True)
+    (repo / ".omx" / "research" / "ddm_eb1_buried_eureka_sweep_20260731.md").write_text("old arm\n")
+    charter = repo / ".omx" / "research" / "charters" / "ddm_eb1_new_thing_20260910.md"
+    charter.write_text("new charter\n")
+    hits = q.arm_id_collisions("ddm_eb1_new_thing", charter, repo=repo)
+    assert hits == [".omx/research/ddm_eb1_buried_eureka_sweep_20260731.md"]
+    assert q.arm_id_collisions("ddm_zz9_fresh", charter, repo=repo) == []
+    # the charter's own file never counts as a collision
+    assert q.arm_id_collisions("ddm_eb1_new_thing", None, repo=repo) == [
+        ".omx/research/ddm_eb1_buried_eureka_sweep_20260731.md",
+        ".omx/research/charters/ddm_eb1_new_thing_20260910.md",
+    ]

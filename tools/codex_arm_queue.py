@@ -2276,12 +2276,47 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     return problems
 
 
+_ARM_ID_RE = re.compile(r"^ddm_([a-z]+[0-9]+[a-z]?)_")
+
+
+def arm_id_collisions(name: str, prompt_file: Path | None, repo: Path = _REPO) -> list[str]:
+    """Files in .omx/research (and charters/) that reuse this arm's `ddm_<id>_` prefix.
+
+    Operator-banked law (memory codex_arms_run_gpt6_astra…, 2026-09-10): charter ids must be
+    unique across the research corpus — the keeper's continuation logic and every receipt
+    reader match by id, and MAIN reused `sw2` and then `eb1` within one night despite a
+    printed check that nobody acted on. The check is now structural: `add` refuses.
+    """
+    m = _ARM_ID_RE.match(name)
+    if not m:
+        return []
+    prefix = f"ddm_{m.group(1)}_"
+    own = {prompt_file.name} if prompt_file is not None else set()
+    hits: list[str] = []
+    for d in (repo / ".omx" / "research", repo / ".omx" / "research" / "charters"):
+        if not d.is_dir():
+            continue
+        for f in sorted(d.iterdir()):
+            if f.name.startswith(prefix) and f.name not in own:
+                hits.append(str(f.relative_to(repo)))
+    return hits
+
+
 def cmd_add(args) -> int:
     prompt_file, refusal = charter_file_path(args.prompt)
     if refusal is not None:
         print(f"REFUSED {args.name}: {refusal}", file=sys.stderr)
         return 2
     assert prompt_file is not None
+    collisions = arm_id_collisions(args.name, prompt_file)
+    if collisions and not getattr(args, "allow_id_reuse", False):
+        print(
+            f"REFUSED {args.name}: arm id already used by {len(collisions)} corpus file(s) "
+            f"(first: {collisions[0]}); pick an unused ddm_<id>_ or pass --allow-id-reuse "
+            "for a deliberate successor generation of the SAME arm",
+            file=sys.stderr,
+        )
+        return 5
     if _is_managed_charter(prompt_file):
         custody_debt = _research_birth_custody_refusal()
         prompt_rel = _managed_charter_rel(prompt_file)
@@ -2612,6 +2647,11 @@ def main(argv=None) -> int:
             "reasoning effort for THIS arm, chosen per task (operator 2026-08-08: "
             f"high->ultra). Default {DEFAULT_ARM_EFFORT}."
         ),
+    )
+    p.add_argument(
+        "--allow-id-reuse",
+        action="store_true",
+        help="permit a ddm_<id>_ prefix that already exists in .omx/research (a deliberate successor generation of the same arm)",
     )
     p.add_argument(
         "--model",
