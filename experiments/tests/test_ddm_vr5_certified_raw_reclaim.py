@@ -515,14 +515,16 @@ def test_live_named_process_and_argv_only_reviewer(tmp_path, role):
         pytest.skip(f"live ps visibility unavailable: {exc}")
     if visibility.returncode or visibility.stderr:
         pytest.skip(f"live ps visibility unavailable: {visibility.stderr}")
-    import shutil
+    import os
 
     family = "ddm_bz2d"
     work = tmp_path / (family if role == "owner" else "review")
     work.mkdir()
     executable = work / (family if role == "owner" else "reviewer")
-    shutil.copyfile("/bin/sleep" if role == "owner" else "/bin/sh", executable)
-    executable.chmod(0o700)
+    # A SYMLINK, never a copy: macOS kills a copied system binary at exec (code
+    # signing, SIGKILL -9 — measured 2026-09-10 when this fixture copied /bin/sleep),
+    # while `ps comm` reports the exec path's last component, i.e. the link name.
+    os.symlink("/bin/sleep" if role == "owner" else "/bin/sh", executable)
     argv = [str(executable), "30"] if role == "owner" else [str(executable), "-c", "read answer", family]
     child = subprocess.Popen(argv, cwd=work, stdin=subprocess.PIPE)
     try:
