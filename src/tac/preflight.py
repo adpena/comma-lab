@@ -7745,6 +7745,9 @@ def preflight_all(
         check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
             strict=True, verbose=verbose
         )
+        # Catalog #418: MAIN owns the live journal decision; strict-flip after
+        # MAIN disqualifies move 41, refreshes, and records a zero live census.
+        check_frontier_excludes_disqualified_rows(strict=False, verbose=verbose)
 
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
@@ -95201,6 +95204,56 @@ def check_subset_default_scope_fields(
             + "\n  ".join((violations + parse_errors)[:20])
         )
     return violations + parse_errors
+
+
+def check_frontier_excludes_disqualified_rows(
+    *, repo_root: Path | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """Catalog #418: reject effective/local pointer rows vetoed by the journal.
+
+    A substantive ``frontier_disqualification_waiver`` in pointer JSON waives
+    this audit only; packet and pointer writers never honor it. Malformed
+    journals cannot be waived. Historical mirror rows are never changed.
+    """
+    from tac.frontier_disqualifications import (
+        active_disqualifications,
+        disqualification_for,
+        substantive_rationale,
+    )
+
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    try:
+        active = active_disqualifications(root)
+        path = root / ".omx/state/canonical_frontier_pointer.json"
+        data = json.loads(path.read_text()) if path.exists() else {}
+        if not isinstance(data, dict):
+            raise ValueError("pointer must be an object")
+        for key in ("effective_frontier", "our_local_frontier_contest_cpu", "our_local_frontier_contest_cuda"):
+            row = data.get(key)
+            if row is None:
+                continue
+            if not isinstance(row, dict):
+                raise ValueError(f"{key} must be an object")
+            if (key == "effective_frontier" and row.get("source") == "upstream_official_leaderboard"
+                    and not row.get("lane_id") and not row.get("archive_sha256")):
+                continue
+            veto = disqualification_for(active, row.get("lane_id"), row.get("archive_sha256"))
+            if veto:
+                violations.append(f"{key}: disqualified {veto['lane_id']} {veto['archive_sha256']}: "
+                                  f"{veto['reason_class']}: {veto['rationale']} ({veto['evidence']})")
+        if violations and substantive_rationale(data.get("frontier_disqualification_waiver")):
+            if verbose:
+                print("[catalog-418] audit WAIVED; publication remains refused")
+            violations = []
+    except (ValueError, OSError, UnicodeError) as exc:
+        violations.append(f"disqualification validation failed closed: {exc}")
+    if verbose:
+        print(f"[catalog-418] {len(violations)} pointer/journal violation(s)")
+    if strict and violations:
+        raise PreflightError("Catalog #418 / Frontier scores are pointer-only / NO FAKE: "
+                             + "\n".join(violations))
+    return violations
 
 
 if __name__ == "__main__":

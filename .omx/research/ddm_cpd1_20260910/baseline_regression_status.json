@@ -1,0 +1,5 @@
+{
+  "baseline": "HEAD:src/tac/canonical_frontier_pointer.py",
+  "returncode": 1,
+  "test": "test_loader_recomposes_minimum_and_ignores_stale_cached_winner"
+}

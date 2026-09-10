@@ -140,6 +140,9 @@ def prior_anchor_from_pointer(repo_root: Path, axis: str) -> PriorAnchor:
     data = anchor.as_dict() if hasattr(anchor, "as_dict") else dict(anchor)
     extra = data.get("extra") or {}
     lane = data.get("lane_id") or extra.get("lane_id")
+    from tac.frontier_disqualifications import require_qualified
+
+    require_qualified(repo_root, lane, data.get("archive_sha256"))
     return PriorAnchor(
         label=str(lane or data.get("archive_sha256", "")[:8] or "prior"),
         score=data.get("score"),
@@ -353,6 +356,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from tac.frontier_disqualifications import eligibility_lock
+
+    with eligibility_lock(args.repo_root):
+        return _main(args)
+
+
+def _main(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
     if args.move_number is None:
         derived = next_move_number(repo_root)
@@ -386,7 +396,7 @@ def main(argv: list[str] | None = None) -> int:
             except (OSError, json.JSONDecodeError):
                 call_id = None
     try:
-        row = score_row_from_harvest(payload, lane_id=args.lane_id, call_id=call_id)
+        row = score_row_from_harvest(payload, lane_id=args.lane_id or payload.get("lane_id"), call_id=call_id)
     except HarvestRefusal as exc:
         print(f"REFUSED (row): {exc}", file=sys.stderr)
         return 2
@@ -425,7 +435,15 @@ def main(argv: list[str] | None = None) -> int:
         hardware_bits.append(f"n{row.n_samples}")
     axis_label_full = " ".join([axis_label, *hardware_bits])
 
-    prior = _prior_components_from_mirror(repo_root, prior_anchor_from_pointer(repo_root, axis))
+    from tac.frontier_disqualifications import require_qualified
+
+    try:
+        require_qualified(repo_root, payload.get("lane_id"), row.archive_sha256)
+        require_qualified(repo_root, row.lane_id, row.archive_sha256)
+        prior = _prior_components_from_mirror(repo_root, prior_anchor_from_pointer(repo_root, axis))
+    except (ValueError, OSError) as exc:
+        print(f"REFUSED (disqualification): {exc}", file=sys.stderr)
+        return 8
     beats = prior.score is None or row.score < prior.score
     arithmetic = target_arithmetic(row)
     plan = PacketPlan(

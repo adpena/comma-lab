@@ -57,6 +57,9 @@ def _render_pointer_summary(pointer: CanonicalFrontierPointer) -> str:
     lines.append(f"Schema:       {pointer.schema_version}")
     lines.append(f"Refreshed at: {pointer.last_refreshed_utc}")
     lines.append(f"Auto-update:  {pointer.auto_update_on_dispatch_completion}")
+    for row in pointer.disqualified_rows:
+        lines.append(f"DISQUALIFIED {row['lane_id']} {row['archive_sha256']}: "
+                     f"{row['reason_class']} — {row['rationale']} (evidence: {row['evidence']})")
     lines.append("")
     lines.append("-" * 72)
     lines.append("EFFECTIVE FRONTIER (COMPETITIVE SCORE TO BEAT)")

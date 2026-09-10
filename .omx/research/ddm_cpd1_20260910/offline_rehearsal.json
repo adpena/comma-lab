@@ -1,0 +1,79 @@
+{
+  "axis": "macOS-CPU static apparatus; no scorer",
+  "score_claim": false,
+  "source_mirrors": [
+    {
+      "path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_tc3_t4_lane_predictor_tail_20260910.json",
+      "sha256": "c51d53deeac6e9cd79b85fba6a96074abebe055504fcd40328d6a0d82d98f74a",
+      "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
+      "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "bytes": 180154,
+      "reported_score": 0.13758600733559048,
+      "recomputed_score": 0.13758600733559048,
+      "difference": 0.0
+    },
+    {
+      "path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_sj1_t4_compose39_rp1_union_20260910.json",
+      "sha256": "e93e5449022198aa2eb5ffb69d176953780ab727ff44360a2d9ec7878eb1c670",
+      "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "bytes": 180233,
+      "reported_score": 0.13763861019288715,
+      "recomputed_score": 0.13763861019288715,
+      "difference": 0.0
+    }
+  ],
+  "live_pointer_sha256_before_and_after": "22bceacf016785e43d1ebe0c6813372b96ccd1852a9af472db5edd5f74358f4c",
+  "live_journal_bytes": 0,
+  "fixture_root": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/offline_rehearsal",
+  "stale_pointer_violations": [
+    "effective_frontier: disqualified ddm_tc3_t4_lane_predictor_tail_20260910 299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936: rule118_content_in_code: Offline rehearsal only: pr8 traces class 1 and rows 128..319 to video-selected constants in free receiver code. (/Users/adpena/Projects/pact/.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md)",
+    "our_local_frontier_contest_cuda: disqualified ddm_tc3_t4_lane_predictor_tail_20260910 299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936: rule118_content_in_code: Offline rehearsal only: pr8 traces class 1 and rows 128..319 to video-selected constants in free receiver code. (/Users/adpena/Projects/pact/.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md)"
+  ],
+  "refreshed_effective_frontier": {
+    "score": 0.13763861019288715,
+    "source": "our_local_frontier_contest_cuda",
+    "source_kind": "owned_or_banked_local_exact_anchor",
+    "axis": "contest_cuda",
+    "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+    "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
+    "hardware_substrate": "linux_x86_64_t4",
+    "measured_at_utc": null,
+    "evidence_grade": "contest-CUDA",
+    "custody": "local_anchor_record; inspect lane policy before submission",
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "role": "competitive_score_to_beat"
+  },
+  "disqualified_rows": [
+    {
+      "action": "disqualify",
+      "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "evidence": "/Users/adpena/Projects/pact/.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md",
+      "evidence_sha256": "f15160ba4f8437f46534b6ba892caeb7ee7236ddeb704efab422c9ae24c372e9",
+      "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
+      "rationale": "Offline rehearsal only: pr8 traces class 1 and rows 128..319 to video-selected constants in free receiver code.",
+      "reason_class": "rule118_content_in_code",
+      "reinstated_at": null,
+      "score_claim": false,
+      "when": "2026-09-10T07:56:13.855662+00:00",
+      "who": "ddm_cpd1_fixture_only",
+      "why": null
+    }
+  ],
+  "full_live_anchor_count": 459,
+  "full_live_projection_best_per_axis": {
+    "contest_cpu": {
+      "lane_id": null,
+      "archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+      "score": 0.1880443979880752
+    },
+    "contest_cuda": {
+      "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "score": 0.13763861019288715
+    }
+  },
+  "full_live_projected_disqualified_count": 2,
+  "live_preflight_violations": [],
+  "quota_violations": []
+}

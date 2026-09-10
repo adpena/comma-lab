@@ -1,0 +1,1930 @@
+From 3731a6c29e6319bb355d1993be75cd0bfa8b634b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alejandro=20Pe=C3=B1a?= <adpena@gmail.com>
+Date: Thu, 10 Sep 2026 03:01:44 -0500
+Subject: [PATCH] ddm_cpd1: protect disqualified frontier references with
+ Catalog 418 and regressions [no-triality] [p0-ledger-ok]
+
+# CHECKPOINT_DISCIPLINE_WAIVED:keeper-arm 'ddm_cpd1' landing; resume custody = keeper apparatus (charter + done-receipt + persisted final message), not commit-body checkpoints (auto-appended by the serializer)
+---
+ .../baseline_regression_status.json           |   5 +
+ .omx/research/ddm_cpd1_20260910/check_0.log   |   1 +
+ .omx/research/ddm_cpd1_20260910/check_1.log   |   4 +
+ .omx/research/ddm_cpd1_20260910/checks.json   |  42 +
+ .../ddm_cpd1_20260910/equations_recall.json   | 764 ++++++++++++++++++
+ .../ddm_cpd1_20260910/offline_rehearsal.json  |  79 ++
+ .../ddm_cpd1_20260910/review_tracker.log      |  54 ++
+ .omx/research/ddm_cpd1_20260910/reviews.json  |  43 +
+ ..._cpd1_pointer_disqualification_20260910.md | 155 ++++
+ ...roactive_sweep_for_catalog_418_20260910.md |  19 +
+ docs/meta_bug_class_catalog.md                |   2 +
+ src/tac/preflight.py                          |  53 ++
+ .../tests/test_frontier_disqualifications.py  | 556 +++++++++++++
+ ...test_training_effective_frontier_target.py |   9 +-
+ 14 files changed, 1784 insertions(+), 2 deletions(-)
+ create mode 100644 .omx/research/ddm_cpd1_20260910/baseline_regression_status.json
+ create mode 100644 .omx/research/ddm_cpd1_20260910/check_0.log
+ create mode 100644 .omx/research/ddm_cpd1_20260910/check_1.log
+ create mode 100644 .omx/research/ddm_cpd1_20260910/checks.json
+ create mode 100644 .omx/research/ddm_cpd1_20260910/equations_recall.json
+ create mode 100644 .omx/research/ddm_cpd1_20260910/offline_rehearsal.json
+ create mode 100644 .omx/research/ddm_cpd1_20260910/review_tracker.log
+ create mode 100644 .omx/research/ddm_cpd1_20260910/reviews.json
+ create mode 100644 .omx/research/ddm_cpd1_pointer_disqualification_20260910.md
+ create mode 100644 .omx/research/retroactive_sweep_for_catalog_418_20260910.md
+ create mode 100644 src/tac/tests/test_frontier_disqualifications.py
+
+diff --git a/.omx/research/ddm_cpd1_20260910/baseline_regression_status.json b/.omx/research/ddm_cpd1_20260910/baseline_regression_status.json
+new file mode 100644
+index 000000000..fb1addae0
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/baseline_regression_status.json
+@@ -0,0 +1,5 @@
++{
++  "baseline": "HEAD:src/tac/canonical_frontier_pointer.py",
++  "returncode": 1,
++  "test": "test_loader_recomposes_minimum_and_ignores_stale_cached_winner"
++}
+diff --git a/.omx/research/ddm_cpd1_20260910/check_0.log b/.omx/research/ddm_cpd1_20260910/check_0.log
+new file mode 100644
+index 000000000..1f5f344d0
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/check_0.log
+@@ -0,0 +1 @@
++All checks passed!
+diff --git a/.omx/research/ddm_cpd1_20260910/check_1.log b/.omx/research/ddm_cpd1_20260910/check_1.log
+new file mode 100644
+index 000000000..3159f34e9
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/check_1.log
+@@ -0,0 +1,4 @@
++........................................................................ [ 45%]
++........................................................................ [ 91%]
++.............                                                            [100%]
++157 passed in 2.70s
+diff --git a/.omx/research/ddm_cpd1_20260910/checks.json b/.omx/research/ddm_cpd1_20260910/checks.json
+new file mode 100644
+index 000000000..1c3eeba80
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/checks.json
+@@ -0,0 +1,42 @@
++[
++  {
++    "argv": [
++      ".venv/bin/python",
++      "-m",
++      "ruff",
++      "check",
++      "src/tac/frontier_disqualifications.py",
++      "src/tac/frontier_scan.py",
++      "src/tac/canonical_frontier_pointer.py",
++      "src/tac/preflight.py",
++      "tools/frontier_disqualify.py",
++      "tools/refresh_canonical_frontier.py",
++      "tools/pointer_move_packet.py",
++      "src/tac/tests/test_frontier_disqualifications.py",
++      "src/tac/tests/test_training_effective_frontier_target.py"
++    ],
++    "returncode": 0,
++    "seconds": 0.03595741699973587,
++    "log": ".omx/research/ddm_cpd1_20260910/check_0.log"
++  },
++  {
++    "argv": [
++      ".venv/bin/python",
++      "-m",
++      "pytest",
++      "-q",
++      "src/tac/tests/test_frontier_disqualifications.py",
++      "src/tac/tests/test_canonical_frontier_pointer.py",
++      "src/tac/tests/test_frontier_scan.py",
++      "src/tac/tests/test_frontier_scan_and_check_316.py",
++      "src/tac/tests/test_frontier_refresh_walks_ranked_candidates.py",
++      "src/tac/tests/test_pointer_move_packet.py",
++      "src/tac/tests/test_training_effective_frontier_target.py",
++      "src/tac/tests/test_check_299_catalog_quota_pointer_doc.py",
++      "--disable-warnings"
++    ],
++    "returncode": 0,
++    "seconds": 3.24599662500259,
++    "log": ".omx/research/ddm_cpd1_20260910/check_1.log"
++  }
++]
+diff --git a/.omx/research/ddm_cpd1_20260910/equations_recall.json b/.omx/research/ddm_cpd1_20260910/equations_recall.json
+new file mode 100644
+index 000000000..3088fe338
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/equations_recall.json
+@@ -0,0 +1,764 @@
++[
++  {
++    "canonical_consumers": [
++      "reports/latest.md",
++      "CLAUDE.md",
++      "tools/cathedral_autopilot_autonomous_loop.py"
++    ],
++    "canonical_producers": [
++      "tac.canonical_frontier_pointer",
++      "tools/scan_best_anchor_per_axis.py"
++    ],
++    "domain_of_validity": {
++      "qualifying_axes": [
++        "[contest-CPU]",
++        "[contest-CUDA]"
++      ],
++      "qualifying_hardware": [
++        "linux_x86_64_cpu",
++        "linux_x86_64_t4",
++        "linux_x86_64_a10g",
++        "linux_x86_64_a100",
++        "linux_x86_64_4090",
++        "linux_x86_64_h100",
++        "linux_x86_64_l40s"
++      ]
++    },
++    "empirical_anchors": [
++      {
++        "anchor_id": "local_frontier_0p19205_contest_cpu_gha_linux_x86_64_20260519",
++        "empirical_output": {
++          "frontier_score": 0.19205
++        },
++        "inputs": {
++          "axis": "[contest-CPU]",
++          "hardware": "linux_x86_64_cpu"
++        },
++        "measurement_method": "gha_linux_x86_64_cpu_eval",
++        "measurement_utc": "2026-05-19T00:00:00Z",
++        "predicted_output": {
++          "frontier_score": 0.19205
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-05-19T13:42:14Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "unknown",
++          "measurement_axis": "[predicted]",
++          "promotion_eligible": false,
++          "rejection_reason": "canonical_equations_registry_initial_population",
++          "score_claim_valid": false,
++          "source_path": ".omx/state/canonical_frontier_pointer.json",
++          "source_sha256": "96c0f72aadf9d40d399ff761cf0937de5d9ac1a93bdd3d1c8b97ce231b5ed819"
++        },
++        "residual": 0.0,
++        "source_artifact": ".omx/state/canonical_frontier_pointer.json"
++      }
++    ],
++    "equation_id": "canonical_frontier_pointer_v1",
++    "last_calibration_utc": "2026-05-19T00:00:00Z",
++    "latex_form": "F = \\text{argmax}_{\\text{anchor}} \\text{score}(\\text{anchor}) \\text{ over qualifying hardware} \\times \\text{qualifying axis}",
++    "name": "Frontier scores are pointer-only; hardcoded literals drift",
++    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
++    "one_line_summary": "F = argmax_anchor score(anchor) over qualifying hardware x qualifying axis; consult tac.canonical_frontier_pointer instead of hardcoded literals.",
++    "predicted_vs_empirical_residual": {
++      "gha_linux_x86_64_cpu_eval": 0.0
++    },
++    "provenance": {
++      "artifact_kind": "predicted_from_model",
++      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++      "captured_at_utc": "2026-05-19T13:42:14Z",
++      "composed_from": [],
++      "contest_archive_member_name": "",
++      "contest_archive_zip_path": "",
++      "evidence_grade": "predicted",
++      "hardware_substrate": "unknown",
++      "measurement_axis": "[predicted]",
++      "promotion_eligible": false,
++      "rejection_reason": "",
++      "score_claim_valid": false,
++      "source_path": "<predictor:canonical_frontier_pointer.v1>",
++      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
++    },
++    "python_callable_module_path": "tac.canonical_frontier_pointer:load_canonical_frontier_pointer_lenient",
++    "schema_version": "canonical_equation_v1_20260519",
++    "units_in": {
++      "axis": "str_axis_tag",
++      "hardware": "str_substrate_token"
++    },
++    "units_out": {
++      "frontier_score": "float_contest_score"
++    }
++  },
++  {
++    "canonical_consumers": [
++      "tac.cathedral_consumers.meta_resurrection_audit_v2_consumer"
++    ],
++    "canonical_producers": [
++      "tac.cathedral_consumers.meta_resurrection_audit_v2_consumer"
++    ],
++    "domain_of_validity": {
++      "applies_to": "substrate_substitution_composition_patterns",
++      "canonical_baseline_source": "catalog_343_canonical_frontier_pointer",
++      "meta_bug_class": "M1_wrong_baseline_mistaken_for_paradigm_failure",
++      "structural_extinction": "catalog_343_plus_catalog_368"
++    },
++    "empirical_anchors": [
++      {
++        "anchor_id": "v14_to_v14_v2_dqs1_frontier_substitution_20260526",
++        "empirical_output": 1.0,
++        "inputs": {
++          "canonical_baseline": "dqs1_rank021_canonical_frontier",
++          "wrong_baseline": "pr101_fec6_above_frontier"
++        },
++        "measurement_method": "paired_cpu_cuda_apples_to_apples_per_catalog_343_346",
++        "measurement_utc": "2026-05-27T05:50:00Z",
++        "predicted_output": 1.0,
++        "provenance": {
++          "artifact_kind": "predicted_from_model",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++          "captured_at_utc": "2026-05-27T05:50:00Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "predicted",
++          "hardware_substrate": "meta_adjudication_methodology_synthesis",
++          "measurement_axis": "[predicted]",
++          "promotion_eligible": false,
++          "rejection_reason": "",
++          "score_claim_valid": false,
++          "source_path": "<predictor:wrong_baseline_substitution_score_amplification_v1_anchor_v14>",
++          "source_sha256": "3fa9c10d47db968a48185c0eddf3e27e12e760ecde240b9746647606e9239da2"
++        },
++        "residual": 0.0,
++        "source_artifact": ".omx/research/meta_resurrection_audit_v2_inherently_broken_implementations_landed_20260526.md \u00a73.3.8 + \u00a75.1"
++      }
++    ],
++    "equation_id": "wrong_baseline_substitution_score_amplification_v1",
++    "last_calibration_utc": "2026-05-27T05:50:00Z",
++    "latex_form": "A = \\frac{\\Delta S_{\\text{canonical-frontier-baseline}}}{\\Delta S_{\\text{wrong-baseline}}}",
++    "name": "Wrong-baseline substitution score amplification (META-bug M1)",
++    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
++    "one_line_summary": "amplification = score_change_at_canonical_frontier_baseline / score_change_at_wrong_baseline (M1; FORMALIZATION_PENDING)",
++    "predicted_vs_empirical_residual": {
++      "amplification_factor": 0.0
++    },
++    "provenance": {
++      "artifact_kind": "predicted_from_model",
++      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++      "captured_at_utc": "2026-05-27T05:50:00Z",
++      "composed_from": [],
++      "contest_archive_member_name": "",
++      "contest_archive_zip_path": "",
++      "evidence_grade": "predicted",
++      "hardware_substrate": "meta_adjudication_methodology_synthesis",
++      "measurement_axis": "[predicted]",
++      "promotion_eligible": false,
++      "rejection_reason": "",
++      "score_claim_valid": false,
++      "source_path": "<predictor:wrong_baseline_substitution_score_amplification_v1>",
++      "source_sha256": "3004944f1108a4ecc5ba78b89f79941fdc33259c86aa4f5cf3e2696ecf4eb80c"
++    },
++    "python_callable_module_path": "tac.cathedral_consumers.meta_resurrection_audit_v2_consumer:consume_candidate",
++    "schema_version": "canonical_equation_v1_20260519",
++    "units_in": {
++      "score_at_broken_impl": "score_units",
++      "score_at_correct_impl": "score_units"
++    },
++    "units_out": {
++      "amplification_factor": "dimensionless_ratio"
++    }
++  },
++  {
++    "canonical_consumers": [
++      "src.tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_populator",
++      "tac.master_gradient",
++      "tools.canvas_multiop_composition_closed_form_prediction_sweep",
++      "tac.cathedral_consumers.mlx_per_pair_master_gradient_consumer",
++      "tac.canonical_frontier_pointer"
++    ],
++    "canonical_producers": [
++      "tools/extract_master_gradient_mlx.py",
++      "tac.master_gradient_mlx_extractor",
++      "tac.master_gradient_mlx_pipeline"
++    ],
++    "domain_of_validity": {
++      "archive_families": [
++        "pr101_fec6_fixed_huffman_k16",
++        "pr101_lc_v2"
++      ],
++      "fd_rel_eps_range": [
++        0.001,
++        0.05
++      ],
++      "formalization_status": "FORMALIZATION_PENDING_predicted_only_gates_paid_fire_phase",
++      "measurement_axes": [
++        "[macOS-MLX research-signal]"
++      ],
++      "n_pairs_range": [
++        1,
++        600
++      ]
++    },
++    "empirical_anchors": [
++      {
++        "anchor_id": "fec6_frontier_64pair_macos_mlx_20260527",
++        "empirical_output": {
++          "d_pose": 0.0013857031526072205,
++          "d_seg": 0.001112461089178396
++        },
++        "inputs": {
++          "archive_sha256_prefix": "6bae0201fb082457",
++          "fd_rel_eps": 0.01,
++          "n_decoder_tensors": 28,
++          "n_pairs_total": 600,
++          "n_pairs_used": 64,
++          "npy_shape": [
++            178517,
++            64,
++            3
++          ]
++        },
++        "measurement_method": "per_tensor_central_fd_via_mlx_scorer_oracle_projected_per_byte",
++        "measurement_utc": "2026-05-27T13:48:50.494215+00:00",
++        "predicted_output": {
++          "d_pose": 0.0013857031526072205,
++          "d_seg": 0.001112461089178396
++        },
++        "provenance": {
++          "artifact_kind": "predicted_from_model",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++          "captured_at_utc": "2026-05-27T13:48:50Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "predicted",
++          "hardware_substrate": "darwin_arm64_m5_max_macos_mlx_advisory",
++          "measurement_axis": "[macOS-MLX research-signal]",
++          "promotion_eligible": false,
++          "rejection_reason": "",
++          "score_claim_valid": false,
++          "source_path": "<predictor:mlx_per_pair_master_gradient_per_byte_fd.v1>",
++          "source_sha256": "151a11afb07e3901be2208efe8a8e48dbb93d485cb543cd370f4aeec2aa3a816"
++        },
++        "residual": 0.0,
++        "source_artifact": ".omx/state/master_gradient_fec6_frontier_mlx_per_pair_64pair_20260527.npy"
++      }
++    ],
++    "equation_id": "mlx_per_pair_master_gradient_per_byte_fd_v1",
++    "last_calibration_utc": "2026-05-27T13:48:50.494215+00:00",
++    "latex_form": "G[b,p,a] = \\frac{\\partial D_a^{(p)}}{\\partial t(b)} \\cdot \\frac{|s_t|}{n_t}",
++    "name": "MLX-local per-pair per-byte master gradient (per-tensor FD, projected)",
++    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
++    "one_line_summary": "d(seg/pose distortion_p)/d(archive_byte) via per-decoder-tensor central FD through the MLX scorer oracle, projected per-byte by the fec6 int8+fp16 Jacobian. macOS-MLX research-signal; NON-PROMOTABLE.",
++    "predicted_vs_empirical_residual": {
++      "fec6_frontier_64pair_macos_mlx_predicted_only": 0.0
++    },
++    "provenance": {
++      "artifact_kind": "predicted_from_model",
++      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++      "captured_at_utc": "2026-05-27T13:48:50Z",
++      "composed_from": [],
++      "contest_archive_member_name": "",
++      "contest_archive_zip_path": "",
++      "evidence_grade": "predicted",
++      "hardware_substrate": "darwin_arm64_m5_max_macos_mlx_advisory",
++      "measurement_axis": "[macOS-MLX research-signal]",
++      "promotion_eligible": false,
++      "rejection_reason": "",
++      "score_claim_valid": false,
++      "source_path": "<predictor:mlx_per_pair_master_gradient_per_byte_fd.v1>",
++      "source_sha256": "151a11afb07e3901be2208efe8a8e48dbb93d485cb543cd370f4aeec2aa3a816"
++    },
++    "python_callable_module_path": "tac.master_gradient_mlx_extractor:extract_mlx_per_pair_master_gradient",
++    "schema_version": "canonical_equation_v1_20260519",
++    "units_in": {
++      "archive_byte_index": "int_inner_decoder_mantissa_byte_index",
++      "decoder_tensor": "fp32_weight_tensor",
++      "fd_rel_eps": "dimensionless_rms_multiplier"
++    },
++    "units_out": {
++      "per_byte_per_pair_sensitivity": "d_distortion_per_unit_weight_magnitude_scaled_by_fp16_jacobian"
++    }
++  },
++  {
++    "canonical_consumers": [
++      "tools/cathedral_autopilot_autonomous_loop.py:invoke_dykstra_pareto_solver_on_candidates",
++      "tac.cathedral_consumers.dykstra_pareto_solver_consumer.consume_candidate",
++      "tac.cathedral_consumers.dykstra_pareto_solver_consumer.update_from_anchor"
++    ],
++    "canonical_producers": [
++      "tac.dykstra_pareto_solver.solve_pareto_polytope_intersection",
++      "tac.dykstra_pareto_solver.DykstraParetoSolver.solve",
++      "tac.findings_lagrangian.dual_solver_phase_2.compute_per_axis_dual_variables",
++      "tac.findings_lagrangian.dual_solver_phase_2.dykstra_alternating_projections_3_axis"
++    ],
++    "domain_of_validity": {
++      "convergence_rate": "O(log(1/epsilon)) per Boyd 2004 Theorem 1 for convex polytopes; canonical 3-axis case typically 10-20 iterations at epsilon=1e-5",
++      "domain_of_validity_excluded": [
++        "non_convex_polytope_intersection",
++        "infinite_dimensional_polytope",
++        "polytope_with_equality_constraints_use_projected_gradient"
++      ],
++      "domain_of_validity_included": [
++        "per_axis_pareto_polytope_intersection",
++        "compound_stacking_within_canonical_frontier_pointer_bounds",
++        "axis_aligned_3_axis_pareto_polytope_canonical_case",
++        "general_polytope_with_halfspace_constraints"
++      ],
++      "input_type": "Polytope axis_bounds + initial point",
++      "output_type": "ParetoSolverVerdict (per-axis duals + tight axes + feasibility)"
++    },
++    "empirical_anchors": [],
++    "equation_id": "dykstra_pareto_polytope_intersection_compounding_v1",
++    "last_calibration_utc": "2026-05-28T13:30:00Z",
++    "latex_form": "x_{k+1} = \\pi_{P_{(k \\bmod m)}}(x_k + d_k);\\ L(x,\\lambda) = f(x) + \\sum_i \\lambda_i g_i(x);\\ \\text{tight} = \\{i : \\lambda_i > 0\\}",
++    "name": "Dykstra Pareto Polytope Intersection Compounding",
++    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
++    "one_line_summary": "Per-axis polytope intersection via Dykstra 1983 alternating projections theorem; per-axis Lagrangian dual variables identify tight constraints (next-cycle attack direction).",
++    "predicted_vs_empirical_residual": {},
++    "provenance": {
++      "artifact_kind": "predicted_from_model",
++      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++      "captured_at_utc": "2026-05-28T13:33:48Z",
++      "composed_from": [],
++      "contest_archive_member_name": "",
++      "contest_archive_zip_path": "",
++      "evidence_grade": "predicted",
++      "hardware_substrate": "canonical_design_2026_05_28",
++      "measurement_axis": "[predicted]",
++      "promotion_eligible": false,
++      "rejection_reason": "",
++      "score_claim_valid": false,
++      "source_path": "<predictor:dykstra_pareto_polytope_intersection_compounding_v1>",
++      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
++    },
++    "python_callable_module_path": "tac.dykstra_pareto_solver:solve_pareto_polytope_intersection",
++    "schema_version": "canonical_equation_v1_20260519",
++    "units_in": {
++      "axis_bounds": "per_axis_score_units_seg_pose_or_archive_bytes_delta",
++      "initial_point": "per_axis_score_units_seg_pose_or_archive_bytes_delta",
++      "max_iterations": "iteration_count",
++      "tolerance": "L_inf_norm_threshold"
++    },
++    "units_out": {
++      "adjustment_factor": "bounded_scalar_in_0_95_to_1_05_per_Catalog_341",
++      "per_axis_dual_variables": "non_negative_lagrange_multipliers_per_Boyd_Dattorro_2006",
++      "projection_point": "per_axis_score_units_seg_pose_or_archive_bytes_delta",
++      "slack_axes": "axis_name_tuple_lambda_near_zero",
++      "tight_constraint_axes": "axis_name_tuple_lambda_above_threshold"
++    }
++  },
++  {
++    "canonical_consumers": [
++      "tac.witness_control.shadow_controller",
++      "tools/costate_digest.py"
++    ],
++    "canonical_producers": [
++      "tools/costate_shadow_report.py",
++      "experiments/train_levelset_witness_realized_through_R_mlx.py"
++    ],
++    "domain_of_validity": {
++      "measurement_axis": [
++        "macOS-CPU advisory"
++      ],
++      "note": "\u03bb(t) is time-varying: use the LOCAL window (5 same-stage verdicts); linear horizon projection overpredicts under transient decay (ep450 below-band miss recorded)",
++      "state": "aggregate (d_seg, d_pose, blob_bytes) verdict rows; per-class \u03bb is a NAMED GAP until #253/#255 attribution feeds per-class rows",
++      "vehicle": [
++        "softmax_of_sdf_levelset_witness"
++      ]
++    },
++    "empirical_anchors": [
++      {
++        "anchor_id": "costate_shadow_backtest_205_20260705",
++        "empirical_output": {
++          "ep325_realized": "correct: the ep300->325 rise was onset-transient-shaped; erosion only confirmable at the 3rd tau verdict",
++          "ep350_horizon_realized": "+0.0119 implied-S over ep350->375 \u2014 INSIDE the predicted band (central 7x high: transient decay)",
++          "ep450_horizon_realized": "+0.0004 implied-S over ep450->475 \u2014 BELOW the band (creep deceleration + pose still descending)",
++          "l7_muon_costates": "UNIDENTIFIABLE (stages never ran in any available log) \u2014 returned honestly, not guessed",
++          "rollback_recoverable": "+0.166..+0.187 S (advisory implied), best=ep300"
++        },
++        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
++        "inputs": {
++          "run_log": "experiments/results/levelset_n600_witness_20260703T120444Z/run.log",
++          "tool": "tools/costate_shadow_report.py --as-of-epoch {300,325,350,400,450,525}",
++          "verdicts": "n600 advisory verdict rows ep0..525 (CE ep25-275, tau ep300-525)"
++        },
++        "measurement_method": "shadow-controller backtest: as-of truncated replay over the real log",
++        "measurement_utc": "2026-07-05T07:30:00Z",
++        "predicted_output": {
++          "ep325": "WATCH (transition transient, do not act)",
++          "ep350": "DIVERGING_ERASING -> ROLLBACK (\u0394S -0.1655) + STOP (\u0394S -0.0825 band [-0.1552,-0.0097] over 25ep)",
++          "ep450_windowed_25ep": "+0.0060 band [+0.0018,+0.0103] continued-creep cost"
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-07-11T14:51:22Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "apple_m5_max_cpu_mlx",
++          "measurement_axis": "macOS-CPU advisory NON-PROMOTABLE",
++          "promotion_eligible": false,
++          "rejection_reason": "re-anchor when a run reaches l7/Muon stages (their costates are the named identifiability gaps) or when a second-order \u03bb-decay model lands (the ep450 below-band miss is its trigger)",
++          "score_claim_valid": false,
++          "source_path": ".omx/research/costate_controller_design_20260705.md",
++          "source_sha256": "36fbdebee1a6b134b35480d91b55be38c9b9e5e322a53f624c25590303b0de65"
++        },
++        "residual": 0.0706,
++        "source_artifact": ".omx/research/costate_controller_design_20260705.md"
++      },
++      {
++        "anchor_id": "score_economics_cell_byte_waterlines_20260710",
++        "empirical_output": {
++          "archive_byte_price_S": 6.6585895312e-07,
++          "byte_needs_cells": 0.785479,
++          "cell_buys_bytes": 1.273108,
++          "pose_caveat": "NO fixed pose-per-byte: the sqrt(10\u00b7d_pose) marginal 5/sqrt(10\u00b7d_pose) is operating-point dependent; use the exact sqrt DIFFERENCE for finite moves, never the tangent. Advisory arithmetic corrections: sqrt(10\u00b70.018)=0.424264 (NOT ~0.02); 0.022/0.00161=13.6646 and the 0.022 row is n24, not an n600 matched ratio.",
++          "seg_cell_price_S": 8.4771050347e-07,
++          "verdict_scope": "DERIVED (exact score-law arithmetic). The waterlines are one-axis-held-fixed EQUIVALENCES, NOT predictions \u2014 recompute Pose + component interactions at the realized byte-closed candidate; means != ends, pointer 0.19110 UNMOVED.",
++          "waterline_sub015_bytes": 61724.52,
++          "waterline_sub015_cells": 48483.33,
++          "waterline_sub019_bytes": 1651.74,
++          "waterline_sub019_cells": 1297.41
++        },
++        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
++        "inputs": {
++          "advisory": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md + ADVISORY_vehicle_line_synthesis_20260710.md",
++          "custody_sha256": "evaluate.py 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b (frozen checkout git 991b317c41fe3aac657e0f0cb88fd831b2e4185a)",
++          "n600_seg_surface": "600\u00b7384\u00b7512 = 117,964,800 scored cells",
++          "pointer": "0.19109982419209975 [contest-CPU] (canonical_frontier_pointer)",
++          "rate_denom": "37,545,489 bytes (single-video videos/0.mkv; evaluate.py:55-69)",
++          "score_law": "S = 100\u00b7d_seg + sqrt(10\u00b7d_pose) + 25\u00b7bytes/37_545_489"
++        },
++        "measurement_method": "exact score-law arithmetic on the frozen evaluator constants + local pointer",
++        "measurement_utc": "2026-07-10T00:00:00Z",
++        "predicted_output": {
++          "question": "exact single-axis exchange rates + distance-to-sub-0.19 / sub-0.15 waterlines"
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-07-11T14:51:22Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "apple_m5_max_cpu",
++          "measurement_axis": "macOS-CPU advisory NON-PROMOTABLE",
++          "promotion_eligible": false,
++          "rejection_reason": "recompute the waterlines when the canonical pointer moves; recompute the Pose contribution at the realized candidate's measured d_pose (the sqrt term is not linear)",
++          "score_claim_valid": false,
++          "source_path": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
++          "source_sha256": "cd1914912ccbb1f8f7d771af81849ebf98c2f948270eacade6a702dafaf14231"
++        },
++        "residual": 0.0,
++        "source_artifact": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md"
++      },
++      {
++        "anchor_id": "costate_organ_426_seal_walkforward_20260711",
++        "empirical_output": {
++          "analytic_partials_exact": "\u03bb_seg partials exact-linear (lstsq residual 5.1e-7; fitted class weights recover canonical GT areas) \u2014 DERIVED",
++          "interpretability_tax_gone": "the +8% interpretable-head cost is ELIMINATED \u2014 the interpretable prototype head is ALSO the best predictor",
++          "look_ahead_artifact": "the n=5 LOO 4.2x was a LOOK-AHEAD artifact; under walk-forward ridge LOSES to persistence (0.003535 vs 0.002896)",
++          "plateau_regime_loss": "amortized \u03bb LOSES to persistence in PLATEAU regimes (0.0007 vs 0.0017-0.0030); the meta-\u03bb self-monitor flags it live (trust 0.72)",
++          "self_activation": "rehabilitated-NOT-decisive (flips best at n=8 but 5/8 folds, p\u22480.36)",
++          "shipped_mode": "SINGLE_BEST=prototype (parsimony + Rudin); re-arbitrated per accrual",
++          "verdict_scope": "INSTANCE \u2014 n=1 trajectory / 1 vehicle / 8 intervals, fold variance ~30x; GEPA/Bregman adoption margins ~0.5% WITHIN NOISE = provisional-until-accrual (the triality-native compounding ledger is the cure). MEANS (the organ never ships); pointer 0.19108282 UNMOVED.",
++          "winner_family": "prototype/Bregman/BSF: E_prototype WF 0.002513, E_bregman 0.002501, F_bsf 0.002513 (tri-gate PASS, ~14% better than persistence at n=8) \u2014 the Rudin/Nielsen/Goodfire arms are the MEASURED winners"
++        },
++        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
++        "inputs": {
++          "gate": "tri-gate = LOO \u2227 WALK-FORWARD (deployment-faithful) \u2227 binding-floor 0.8",
++          "organ": "tac.witness_control.{lambda_net,costate_panel,control_alphabet,prototype_router} + tac.witness_dsl.costate_agent_dsl",
++          "tool": "tools/lambda_net_backtest.py --archs (chunked)",
++          "trajectory": "#205 (levelset_v752_baseline_20260710T185913Z) advisory verdicts, grew 5->8 same-stage intervals during review (free out-of-sample)"
++        },
++        "measurement_method": "walk-forward tri-gate backtest over the #205 trajectory (n=8 same-stage intervals); LOO look-ahead bias measured + extincted",
++        "measurement_utc": "2026-07-11T12:00:00Z",
++        "predicted_output": {
++          "memo_era_claim_n5": "ridge-SOLVE fMAE 0.003379 vs persistence 0.005632 = 4.2x/per-class \u2014 the ORIGINAL (Einstein) headline"
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-07-11T14:51:22Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "apple_m5_max_cpu_mlx",
++          "measurement_axis": "macOS-CPU advisory NON-PROMOTABLE",
++          "promotion_eligible": false,
++          "rejection_reason": "re-arbitrate the winning architecture as the trajectory ledger accrues (>=3 trajectory records; the VAPO crossover is DETECTED not scheduled); the ~0.5% Bregman/GEPA margins resolve only out-of-noise with more out-of-sample intervals",
++          "score_claim_valid": false,
++          "source_path": ".omx/research/costate_organ_capabilities_limits_envelope_20260711.md",
++          "source_sha256": "2559c70fd33b4b9a7ad5a16535dfd8eea1ef4cb077b6c7c7f9cd4a5d132dc945"
++        },
++        "residual": 0.000639,
++        "source_artifact": ".omx/research/costate_organ_capabilities_limits_envelope_20260711.md"
++      },
++      {
++        "anchor_id": "scorer_model_arms_430_backtest_20260711",
++        "empirical_output": {
++          "430_replay": "organ's state-gated cascade beats the hand-scheduled #205 curriculum on all 3 replay models: \u222bd_seg\u00b7dep 6.283 vs 8.649 (\u221227%) on the walk-forward-winning prototype model; self-replay MAE 0.0054 / final gap 1.6e-4; selective \u2248 always-on in-model (\u03940.4%: transient-only prefix, a gate always active \u2014 the gate question is NOT in-model-resolvable; live A/B owed)",
++          "ball_agreement": "margin-surrogate flip set vs advection-ball label-change set: IoU 0.732, prec/rec 0.844 \u2014 faithful (2306.04431)",
++          "comma10k_prior": "rarity reweight Lane 3.51x / Movable 1.22x from SegNet's real training distribution \u2014 converges with the measured flip crux WITHOUT any trajectory or scorer forward",
++          "forecast_gate_honest_negative": "ALL scorer-prior formulations are forecast-NEUTRAL-or-worse: \u03c6-rescale INERT (\u2261 ridge, the solve refits it away); shrink-to-prior WORSE at early folds (\u03ba-scale variance at n=2). verdict_scope: formulation \u00d72. The arms' measured wins: binding AUROC 1.0 + the audited sensors + per-class \u03bb for #430",
++          "plateau_onset": "at 9 intervals the WHOLE model family loses walk-forward to persistence (E_bregman 0.002839 vs 0.002792) \u2014 the envelope's plateau-regime prediction confirmed out-of-sample; meta-\u03bb prefer_persistence is the correct posture",
++          "smoothed_argmax_exact": "per-class \u2202(smoothed d_seg)/\u2202\u03b4_c through the real frozen SegNet's cached margins: finite-diff rel gap 5.6e-7 (ZERO model error; \u03b5=\u03c4 median margin)",
++          "verdict_scope": "INSTANCE (1 trajectory) for the replay; the smoothed-argmax exactness + comma10k shares are trajectory-free. MEANS; pointer 0.19108282 UNMOVED."
++        },
++        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
++        "inputs": {
++          "arms": "tac.witness_control.scorer_model_arms (H/I/J/K/L/M) + schedule_backtest (#430)",
++          "caches": "gt_n96.npz margins/lstars + 192 REAL comma10k masks (experiments/results/comma10k_regime_prior) + \u03c3_cc\u2032 #382",
++          "tool": "tools/schedule_bundle_backtest.py (durable JSON artifact)",
++          "trajectory": "#205 levelset_v752_baseline (10 verdicts / 9 intervals at measurement \u2014 grew during the build, free out-of-sample)"
++        },
++        "measurement_method": "tournament backtest (LOO\u2227WF\u2227binding) + early-fold walk-forward + ball-agreement audit + 4-policy model-based schedule replay",
++        "measurement_utc": "2026-07-11T13:50:00Z",
++        "predicted_output": {
++          "430": "state-gated coordinated bundles beat independently-clocked floors (2607.08716 selective-intervention, MEASURED-elsewhere +8.3pp)",
++          "survey_order": "#428 survey: metric relaxation (#1) before learned surrogate; scorer priors should cure the n=1 fragility"
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-07-11T14:51:22Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "apple_m5_max_cpu",
++          "measurement_axis": "macOS-CPU advisory NON-PROMOTABLE",
++          "promotion_eligible": false,
++          "rejection_reason": "re-arbitrate per organ-ledger accrual; the learned surrogate (survey #2) unblocks only by beating the zero-model-error smoothed-argmax baseline; the #430 LIVE A/B is the ticket's standing gates_owed",
++          "score_claim_valid": false,
++          "source_path": ".omx/research/scorer_model_arms_430_schedule_20260711.md",
++          "source_sha256": "a059d5d047c9cd78b7fef96cc5bb236fab1d33781d98d9af8c37058e0152a77b"
++        },
++        "residual": 4.7e-05,
++        "source_artifact": ".omx/research/scorer_model_arms_430_schedule_20260711.md"
++      },
++      {
++        "anchor_id": "aniso_perclass_lambda_433_backtest_20260711",
++        "empirical_output": {
++          "comma10k_family": "R (rarity direction + score-law scale + coupling) WF 0.003895 \u2248 ridge; the scale cure works (early-fold 0.00527 vs L's 0.0222, 4.2\u00d7 better) but the rarity DIRECTION adds nothing over Q \u21d2 family CLOSED for forecast at this n on this vehicle (direction retained as sensor; reopen at \u22653 ledger records)",
++          "coupling_convergence": "C_phys Lane\u2192Road 0.494 \u2261 the K-arm's independent adjacency\u22991/\u03c3 measurement 0.499",
++          "fisher_two_regimes": "annulus susceptibility 0.577 in 5.6% area \u2014 re-derives the #333 annulus concentration from cache; per-class profiles differ sharply (Lane ~100% boundary; Road 33/67; Undriv 72/28)",
++          "flip_temperature": "\u03b5_flip 1.048 (advection-ball rank-matched, L85); at the global-median \u03b5 the sensitivity field degenerates to AREA shares (classes-as-area-knobs) \u2014 measured",
++          "openpilot_isolated": "O \u2261 ridge (absorption); S WF 0.003777 > Q 0.003067 \u21d2 NO distinct organ win; witness-side-only stands",
++          "p0_forecast_verdict": "prior-mean formulation P WF 0.003182 / early-fold 0.004265 beats ridge (0.003902/0.005201) AND is the FIRST ridge-family arm to beat persistence at early folds (0.004715); BUT the isotropic ablation Q (M0=I, same 1-dof-\u03ba machinery) is equal-or-better (0.003067/0.004024) \u21d2 the measured win is the SCORE-LAW-PINNED-SCALE FORMULATION; the aniso-coupled DIRECTION is forecast-neutral at n=9 (verdict_scope: instance). C_phys remains the #430 per-class \u03bb physics readout (structure, not forecast)",
++          "rl_posttraining": "GEPA cycle 2: 11/11 candidates REFUSED vs incumbent E_bregman 0.002839; SAO trust region INERT at pre-registered radii (positive control binds) \u21d2 WF error is model bias; RL/SFT needs ledger accrual (synthetic-data survey is the named unblock)",
++          "verdict_scope": "INSTANCE (1 trajectory, 9 intervals, plateau-dominated). MEANS; pointer 0.19108282 UNMOVED."
++        },
++        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
++        "inputs": {
++          "arms": "tac.witness_control.aniso_perclass_lambda (N/O/P/Q/R/S) over lambda_net make_model",
++          "caches": "gt_n96.npz margins/lstars + \u03c3_cc\u2032 #382 + comma10k prior + registered along-tangent deficit (25/8)",
++          "tool": "tools/aniso_perclass_lambda_backtest.py (durable JSON artifact aniso_perclass_lambda_backtest_20260711T144317Z.json)",
++          "trajectory": "#205 levelset_v752_baseline (10 verdicts / 9 intervals)"
++        },
++        "measurement_method": "tournament backtest (LOO\u2227WF\u2227binding) + early-fold walk-forward + isotropic-ablation A/B + SAO positive control + GEPA cycle 2",
++        "measurement_utc": "2026-07-11T14:43:00Z",
++        "predicted_output": {
++          "p0_directive": "bulk \u00d7 sensitivity \u00d7 impact = ONE interacting per-class anisotropic system (operator 2026-07-11); the aniso-coupled prior-mean arm should beat the isotropic-independent baseline walk-forward"
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-07-11T14:51:22Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "apple_m5_max_cpu",
++          "measurement_axis": "macOS-CPU advisory NON-PROMOTABLE",
++          "promotion_eligible": false,
++          "rejection_reason": "re-run P-vs-Q per organ-ledger accrual (the aniso direction resolves out-of-noise only with regime-rich intervals); the comma10k family reopens at \u22653 trajectory records",
++          "score_claim_valid": false,
++          "source_path": ".omx/research/aniso_perclass_lambda_433_20260711.md",
++          "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
++        },
++        "residual": 0.000115,
++        "source_artifact": ".omx/research/aniso_perclass_lambda_433_20260711.md"
++      }
++    ],
++    "equation_id": "costate_lambda_marginal_ds_v1",
++    "last_calibration_utc": "2026-07-05T07:30:00Z",
++    "latex_form": "\\lambda=\\Big(100,\\ \\frac{5}{\\sqrt{10\\,d_{pose}}},\\ \\frac{25}{37545489}\\Big),\\quad\\frac{dS}{dep}=\\lambda\\cdot\\frac{dx}{dep}\\ \\pm\\ \\sqrt{\\textstyle\\sum_i(\\lambda_i\\,se_i)^2}",
++    "name": "Costate \u03bb = \u2202S/\u2202x: (100, 5/sqrt(10\u00b7d_pose), 25/37545489) + chained dS/dep = \u03bb\u00b7dx/dep \u00b1 sqrt(\u03a3(\u03bb_i\u00b7se_i)\u00b2) \u2014 the triality's fourth object",
++    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
++    "one_line_summary": "The marginal-\u0394S shadow price: exact score-law partials + measured windowed trajectory chain; BACKTESTED on #205 (WATCH@325, EROSION@350, rollback +0.17 S).",
++    "predicted_vs_empirical_residual": {
++      "aniso_perclass_433_p_vs_q_wf_gap": 0.000115,
++      "ep350_horizon_25ep_in_band_central_gap": 0.0706,
++      "ep450_horizon_25ep_below_band_gap": 0.0056,
++      "organ_426_amortization_ridge_walkforward_deficit": 0.000639,
++      "score_economics_waterlines_derived": 0.0,
++      "scorer_arms_430_plateau_onset_wf_deficit": 4.7e-05
++    },
++    "provenance": {
++      "artifact_kind": "predicted_from_model",
++      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
++      "captured_at_utc": "2026-07-11T14:51:22Z",
++      "composed_from": [],
++      "contest_archive_member_name": "",
++      "contest_archive_zip_path": "",
++      "evidence_grade": "predicted",
++      "hardware_substrate": "apple_m5_max_cpu_mlx",
++      "measurement_axis": "predicted",
++      "promotion_eligible": false,
++      "rejection_reason": "",
++      "score_claim_valid": false,
++      "source_path": "<predictor:costate_lambda_marginal_ds.v1>",
++      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
++    },
++    "python_callable_module_path": "tac.canonical_equations.costate_lambda_marginal_ds_20260705:chained_ds_depoch",
++    "schema_version": "canonical_equation_v1_20260519",
++    "units_in": {
++      "d_pose": "dimensionless",
++      "dbytes_slope": "bytes per epoch",
++      "dpose_slope": "d_pose per epoch",
++      "dseg_slope": "d_seg per epoch"
++    },
++    "units_out": {
++      "dS_depoch": "S per epoch (advisory implied-S units)"
++    }
++  },
++  {
++    "canonical_consumers": [
++      "every pure-rate fire order and admission bar: call pure_rate_byte_bar_from_pointer() instead of copying a byte count, so the bar cannot go stale when the pointer moves on rate",
++      "tools/codex_arm_queue.py retraction reasons \u2014 the derivation a retracted stale-bar row should be re-filed against",
++      "rate-route rungs (mp2, rfo2, wd2 successors) that quote a required cut"
++    ],
++    "canonical_producers": [
++      ".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
++      ".omx/research/ddm_mc36_dual_axis_t4_verdict_20260814.md (the -37 flip seg leg that makes cp135 a distortion counter-example)",
++      ".omx/research/ddm_hv1_harvest_compose_ep508_20260815.md (the frozen distortion legs seg 0.029611 / pose 0.008294576541331089)"
++    ],
++    "domain_of_validity": {
++      "applies_to": "candidates whose only changed score term is rate \u2014 a recode, a repack, a section shrink that is proven distortion-neutral (e.g. by decoded-token identity plus raw-output byte identity, as hv1 was admitted)",
++      "axis": "[DERIVED exact arithmetic over contest-CUDA T4 n600 receipts] \u2014 the law carries no measurement authority and is never a score claim",
++      "denominator_is_an_input": "D is read from upstream/evaluate.py's videos/ rglob sum (Catalog #812); a videos/ change moves the bar and must be passed explicitly",
++      "does_not_apply_to": "any candidate that moves d_seg or d_pose. For those the distortion leg is no longer the base's, so this threshold is simply wrong; quote .omx/state/canonical_frontier_pointer.json and re-measure both legs. The cp135 anchor above is the worked counter-example: one distortion move shifted the bar 48.058 B.",
++      "research_only": false
++    },
++    "empirical_anchors": [
++      {
++        "anchor_id": "pure_rate_bar_is_frozen_over_the_frozen_distortion_lineage_20260816",
++        "empirical_output": {
++          "cp135_counter_example": {
++            "bar_bytes": 168297.5395,
++            "distortion_leg_offset_S": 3.2e-05,
++            "mechanism": "cp135 -> MC36 was a DISTORTION move: the MC36 dual-axis T4 verdict measures its seg leg at -37 flips = -3.136529e-5 S, so cp135's seg+pose sits above the frontier's and its pure-rate bar is 48.058 B lower",
++            "offset_vs_live_bar_bytes": -48.058,
++            "verdict": "REFUTED for cp135 \u2014 the four-base claim is FALSE at its own first base; the identity is scoped to the frozen-distortion sub-lineage, and the caveat is the condition that generates it"
++          },
++          "frozen_distortion_lineage": {
++            "bar_bytes": 168345.5977,
++            "max_spread_bytes": 7.23e-11,
++            "members": [
++              "MC36_variant_C",
++              "e480b_v2",
++              "hv1_ep0634"
++            ],
++            "verdict": "CONFIRMED \u2014 decode-identical distortion, one shared bar"
++          },
++          "noted_not_resolved": "the widely-quoted MC36 S 0.1619344578804448 and the value implied by cp135 plus MC36's own measured net \u0394S (-1.99799e-5) disagree by 7.005e-7 S \u2014 0.07x the 1e-5 naming bar, so it moves no verdict here, but a tight MC36-based seg claim must go to the primary T4 receipt"
++        },
++        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
++        "inputs": {
++          "axis": "[contest-CUDA T4 n600]",
++          "bases": {
++            "MC36_variant_C": {
++              "S": 0.1619344578804448,
++              "archive_bytes": 186269
++            },
++            "cp135": {
++              "S": 0.16195513827824176,
++              "archive_bytes": 186252
++            },
++            "e480b_v2": {
++              "S": 0.1600920261571558,
++              "archive_bytes": 183502
++            },
++            "hv1_ep0634": {
++              "S": 0.15959729295498598,
++              "archive_bytes": 182759
++            }
++          },
++          "denominator": 37545489,
++          "precision": "44 significant digits (decimal.Decimal)",
++          "target_score": 0.15
++        },
++        "measurement_method": "exact decimal arithmetic on published complete-S rows and archive byte counts; distortion leg recovered by subtracting the rate term, so no rounded component figure enters the derivation. No scorer forward, no decode, no dispatch.",
++        "measurement_utc": "2026-08-16T18:00:00Z",
++        "predicted_output": {
++          "claim_under_test": "ddm_fb1: the sub-0.15 byte bar is identical off all four bases (cp135 -> MC36 -> e480b v2 -> hv1) to four decimal places"
++        },
++        "provenance": {
++          "artifact_kind": "research_sidecar",
++          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++          "captured_at_utc": "2026-08-16T18:00:00Z",
++          "composed_from": [],
++          "contest_archive_member_name": "",
++          "contest_archive_zip_path": "",
++          "evidence_grade": "research_only",
++          "hardware_substrate": "linux_x86_64_t4",
++          "measurement_axis": "[DERIVED exact arithmetic over contest-CUDA T4 n600 receipts] \u2014 the law carries no measurement authority and is never a score claim",
++          "promotion_eligible": false,
++          "rejection_reason": "re-derive whenever the canonical frontier pointer moves on a DISTORTION axis, or whenever upstream/evaluate.py's rate denominator changes; a rate-only pointer move needs no recalibration, which is the point of the law",
++          "score_claim_valid": false,
++          "source_path": ".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
++          "source_sha256": "07462ded20686262337c036c953256a585c47521f0b10e71a263b79e8d061fb4"
++        },
++        "residual": 0.0,
++        "source_artifact": ".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md"
++      }
++    ],
++    "equation_id": "sub015_pure_rate_archive_byte_bar_v1",
++    "last_calibration_utc": "2026-08-16T18:00:00Z",
++    "latex_form": "B^{\\ast}=\\frac{D}{25}\\left(0.15-\\left(S_{base}-\\frac{25\\,B_{base}}{D}\\right)\\right),\\quad D=37{,}545{,}489",
++    "name": "Sub-0.15 pure-rate archive byte bar, derived from the live pointer rather than copied from a snapshot",
++    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
++    "one_line_summary": "bar_bytes = (0.15 - (S_base - 25*B_base/D)) * D / 25. Stale-proof for PURE-RATE work; invalid the moment a candidate moves d_seg or d_pose.",
++    "predicted_vs_empirical_residual": {
++      "registration": 0.0
++    },
++    "provenance": {
++      "artifact_kind": "research_sidecar",
++      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
++      "captured_at_utc": "2026-08-16T18:00:00Z",
++      "composed_from": [],
++      "contest_archive_member_name": "",
++      "contest_archive_zip_path": "",
++      "evidence_grade": "research_only",
++      "hardware_substrate": "linux_x86_64_t4",
++      "measurement_axis": "[DERIVED exact arithmetic over contest-CUDA T4 n600 receipts] \u2014 the law carries no measurement authority and is never a score claim",
++      "promotion_eligible": false,
++      "rejection_reason": "re-derive whenever the canonical frontier pointer moves on a DISTORTION axis, or whenever upstream/evaluate.py's rate denominator changes; a rate-only pointer move needs no recalibration, which is the point of the law",
++      "score_claim_valid": false,
++      "source_path": ".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
++      "source_sha256": "07462ded20686262337c036c953256a585c47521f0b10e71a263b79e8d061fb4"
++    },
++    "python_callable_module_path": "tac.canonical_equations.sub015_pure_rate_archive_byte_bar_20260816:pure_rate_byte_bar",
++    "schema_version": "canonical_equation_v1_20260519",
++    "units_in": {
++      "base_archive_bytes": "bytes of the base archive.zip",
++      "base_score": "S (contest score, complete-S row)",
++      "target_score": "S"
++    },
++    "units_out": {
++      "bar_bytes": "bytes",
++      "required_cut_bytes": "bytes"
++    }
++  }
++]
+diff --git a/.omx/research/ddm_cpd1_20260910/offline_rehearsal.json b/.omx/research/ddm_cpd1_20260910/offline_rehearsal.json
+new file mode 100644
+index 000000000..da2f1ee47
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/offline_rehearsal.json
+@@ -0,0 +1,79 @@
++{
++  "axis": "macOS-CPU static apparatus; no scorer",
++  "score_claim": false,
++  "source_mirrors": [
++    {
++      "path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_tc3_t4_lane_predictor_tail_20260910.json",
++      "sha256": "c51d53deeac6e9cd79b85fba6a96074abebe055504fcd40328d6a0d82d98f74a",
++      "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
++      "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
++      "bytes": 180154,
++      "reported_score": 0.13758600733559048,
++      "recomputed_score": 0.13758600733559048,
++      "difference": 0.0
++    },
++    {
++      "path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_sj1_t4_compose39_rp1_union_20260910.json",
++      "sha256": "e93e5449022198aa2eb5ffb69d176953780ab727ff44360a2d9ec7878eb1c670",
++      "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
++      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
++      "bytes": 180233,
++      "reported_score": 0.13763861019288715,
++      "recomputed_score": 0.13763861019288715,
++      "difference": 0.0
++    }
++  ],
++  "live_pointer_sha256_before_and_after": "22bceacf016785e43d1ebe0c6813372b96ccd1852a9af472db5edd5f74358f4c",
++  "live_journal_bytes": 0,
++  "fixture_root": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/offline_rehearsal",
++  "stale_pointer_violations": [
++    "effective_frontier: disqualified ddm_tc3_t4_lane_predictor_tail_20260910 299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936: rule118_content_in_code: Offline rehearsal only: pr8 traces class 1 and rows 128..319 to video-selected constants in free receiver code. (/Users/adpena/Projects/pact/.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md)",
++    "our_local_frontier_contest_cuda: disqualified ddm_tc3_t4_lane_predictor_tail_20260910 299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936: rule118_content_in_code: Offline rehearsal only: pr8 traces class 1 and rows 128..319 to video-selected constants in free receiver code. (/Users/adpena/Projects/pact/.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md)"
++  ],
++  "refreshed_effective_frontier": {
++    "score": 0.13763861019288715,
++    "source": "our_local_frontier_contest_cuda",
++    "source_kind": "owned_or_banked_local_exact_anchor",
++    "axis": "contest_cuda",
++    "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
++    "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
++    "hardware_substrate": "linux_x86_64_t4",
++    "measured_at_utc": null,
++    "evidence_grade": "contest-CUDA",
++    "custody": "local_anchor_record; inspect lane policy before submission",
++    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
++    "role": "competitive_score_to_beat"
++  },
++  "disqualified_rows": [
++    {
++      "action": "disqualify",
++      "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
++      "evidence": "/Users/adpena/Projects/pact/.omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md",
++      "evidence_sha256": "f15160ba4f8437f46534b6ba892caeb7ee7236ddeb704efab422c9ae24c372e9",
++      "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
++      "rationale": "Offline rehearsal only: pr8 traces class 1 and rows 128..319 to video-selected constants in free receiver code.",
++      "reason_class": "rule118_content_in_code",
++      "reinstated_at": null,
++      "score_claim": false,
++      "when": "2026-09-10T07:56:13.855662+00:00",
++      "who": "ddm_cpd1_fixture_only",
++      "why": null
++    }
++  ],
++  "full_live_anchor_count": 459,
++  "full_live_projection_best_per_axis": {
++    "contest_cpu": {
++      "lane_id": null,
++      "archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
++      "score": 0.1880443979880752
++    },
++    "contest_cuda": {
++      "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
++      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
++      "score": 0.13763861019288715
++    }
++  },
++  "full_live_projected_disqualified_count": 2,
++  "live_preflight_violations": [],
++  "quota_violations": []
++}
+diff --git a/.omx/research/ddm_cpd1_20260910/review_tracker.log b/.omx/research/ddm_cpd1_20260910/review_tracker.log
+new file mode 100644
+index 000000000..9369d9d7b
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/review_tracker.log
+@@ -0,0 +1,54 @@
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/frontier_disqualifications.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'src/tac/frontier_disqualifications.py' current entity census 7 (last stored census 0)
++Marked 7 entities in 'src/tac/frontier_disqualifications.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/frontier_scan.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'src/tac/frontier_scan.py' current entity census 41 (last stored census 41)
++Marked 41 entities in 'src/tac/frontier_scan.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/canonical_frontier_pointer.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'src/tac/canonical_frontier_pointer.py' current entity census 28 (last stored census 28)
++Marked 28 entities in 'src/tac/canonical_frontier_pointer.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/preflight.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'src/tac/preflight.py' current entity census 1358 (last stored census 1357)
++Marked 1358 entities in 'src/tac/preflight.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "tools/frontier_disqualify.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'tools/frontier_disqualify.py' current entity census 1 (last stored census 0)
++Marked 1 entities in 'tools/frontier_disqualify.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "tools/refresh_canonical_frontier.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'tools/refresh_canonical_frontier.py' current entity census 2 (last stored census 2)
++Marked 2 entities in 'tools/refresh_canonical_frontier.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "tools/pointer_move_packet.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'tools/pointer_move_packet.py' current entity census 14 (last stored census 13)
++Marked 14 entities in 'tools/pointer_move_packet.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/tests/test_frontier_disqualifications.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_root", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'src/tac/tests/test_frontier_disqualifications.py' current entity census 40 (last stored census 0)
++Marked 40 entities in 'src/tac/tests/test_frontier_disqualifications.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/tests/test_training_effective_frontier_target.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_root", "--pass", "cpd1-clean-1"], "returncode": 0}
++RESCAN: 'src/tac/tests/test_training_effective_frontier_target.py' current entity census 5 (last stored census 5)
++Marked 5 entities in 'src/tac/tests/test_training_effective_frontier_target.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/frontier_disqualifications.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'src/tac/frontier_disqualifications.py' current entity census 7 (last stored census 7)
++Marked 7 entities in 'src/tac/frontier_disqualifications.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/frontier_scan.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'src/tac/frontier_scan.py' current entity census 41 (last stored census 41)
++Marked 41 entities in 'src/tac/frontier_scan.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/canonical_frontier_pointer.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'src/tac/canonical_frontier_pointer.py' current entity census 28 (last stored census 28)
++Marked 28 entities in 'src/tac/canonical_frontier_pointer.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/preflight.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'src/tac/preflight.py' current entity census 1358 (last stored census 1358)
++Marked 1358 entities in 'src/tac/preflight.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "tools/frontier_disqualify.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'tools/frontier_disqualify.py' current entity census 1 (last stored census 1)
++Marked 1 entities in 'tools/frontier_disqualify.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "tools/refresh_canonical_frontier.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'tools/refresh_canonical_frontier.py' current entity census 2 (last stored census 2)
++Marked 2 entities in 'tools/refresh_canonical_frontier.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "tools/pointer_move_packet.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_tests_review", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'tools/pointer_move_packet.py' current entity census 14 (last stored census 14)
++Marked 14 entities in 'tools/pointer_move_packet.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/tests/test_frontier_disqualifications.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_root", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'src/tac/tests/test_frontier_disqualifications.py' current entity census 40 (last stored census 40)
++Marked 40 entities in 'src/tac/tests/test_frontier_disqualifications.py' as 'reviewed'
++{"argv": [".venv/bin/python", "tools/review_tracker.py", "mark-file", "src/tac/tests/test_training_effective_frontier_target.py", "--status", "reviewed", "--reviewer", "ddm_cpd1_root", "--pass", "cpd1-clean-2"], "returncode": 0}
++RESCAN: 'src/tac/tests/test_training_effective_frontier_target.py' current entity census 5 (last stored census 5)
++Marked 5 entities in 'src/tac/tests/test_training_effective_frontier_target.py' as 'reviewed'
+diff --git a/.omx/research/ddm_cpd1_20260910/reviews.json b/.omx/research/ddm_cpd1_20260910/reviews.json
+new file mode 100644
+index 000000000..49344b046
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_20260910/reviews.json
+@@ -0,0 +1,43 @@
++{
++  "scope": "new helper and CLI; changed scanner/pointer/refresh/packet functions; preflight #418 function and callsite only; trainer fixture diff; new tests independently read by root",
++  "reviewer": "tests_review (implementation), root (independent review of authored tests)",
++  "passes": [
++    {
++      "pass": 1,
++      "findings": [],
++      "hashes": {
++        "src/tac/frontier_disqualifications.py": "a5ba612a8d6138eea4c1debac856b7c2999d0b5a345771effcfff88cfd7b0b3d",
++        "src/tac/frontier_scan.py": "379b125ae95dcf8ffcf223edcb4060aee44187e7d97111c3698a71e24b7a25b6",
++        "src/tac/canonical_frontier_pointer.py": "829f768591c3ab9ee797a45d6cc2e73588390b2396f4f0d0f076cbc03b01de23",
++        "src/tac/preflight.py": "dcaa703f4734eba81f48369313c03facf81424b09e8af9a61e9176ac84ad31e9",
++        "tools/frontier_disqualify.py": "2e87c46f06405fa7bffd5817ef71d27cbb92672da839ab2ea4535f0807d948de",
++        "tools/refresh_canonical_frontier.py": "abc1587f0d1c904a06a11f1d10d24ca86a44ea2069db3c8f369b2b9d568ac581",
++        "tools/pointer_move_packet.py": "a80addb6fb2f17a52f3f8d267b03c1cab8a934ae441273c0813a3246260584f4",
++        "src/tac/tests/test_frontier_disqualifications.py": "1c99c861288d4201b7589b0270ba51c174ffc1d4d533c018273e983e3520a183",
++        "src/tac/tests/test_training_effective_frontier_target.py": "7bf096c6e904e4702c4cae3aef1f57913d405b2058fd4430a7006d6d5432ff76"
++      }
++    },
++    {
++      "pass": 2,
++      "findings": [],
++      "hashes": {
++        "src/tac/frontier_disqualifications.py": "a5ba612a8d6138eea4c1debac856b7c2999d0b5a345771effcfff88cfd7b0b3d",
++        "src/tac/frontier_scan.py": "379b125ae95dcf8ffcf223edcb4060aee44187e7d97111c3698a71e24b7a25b6",
++        "src/tac/canonical_frontier_pointer.py": "829f768591c3ab9ee797a45d6cc2e73588390b2396f4f0d0f076cbc03b01de23",
++        "src/tac/preflight.py": "dcaa703f4734eba81f48369313c03facf81424b09e8af9a61e9176ac84ad31e9",
++        "tools/frontier_disqualify.py": "2e87c46f06405fa7bffd5817ef71d27cbb92672da839ab2ea4535f0807d948de",
++        "tools/refresh_canonical_frontier.py": "abc1587f0d1c904a06a11f1d10d24ca86a44ea2069db3c8f369b2b9d568ac581",
++        "tools/pointer_move_packet.py": "a80addb6fb2f17a52f3f8d267b03c1cab8a934ae441273c0813a3246260584f4",
++        "src/tac/tests/test_frontier_disqualifications.py": "1c99c861288d4201b7589b0270ba51c174ffc1d4d533c018273e983e3520a183",
++        "src/tac/tests/test_training_effective_frontier_target.py": "7bf096c6e904e4702c4cae3aef1f57913d405b2058fd4430a7006d6d5432ff76"
++      }
++    }
++  ],
++  "fixed_findings": [
++    "override cannot rename original receipt identity",
++    "packet shared eligibility lock excludes concurrent journal append",
++    "same SHA different identified receiver remains eligible",
++    "upstream source label cannot hide local identity",
++    "recompute uses disqualified_rows projection"
++  ]
++}
+diff --git a/.omx/research/ddm_cpd1_pointer_disqualification_20260910.md b/.omx/research/ddm_cpd1_pointer_disqualification_20260910.md
+new file mode 100644
+index 000000000..7d4a7a979
+--- /dev/null
++++ b/.omx/research/ddm_cpd1_pointer_disqualification_20260910.md
+@@ -0,0 +1,155 @@
++# ddm_cpd1 — journaled frontier disqualification
++
++Tokens: `[no-triality] [p0-ledger-ok]`. Apparatus only; `research_only=true`, `score_claim=false`.
++# FORMALIZATION_PENDING: eligibility and custody apparatus; no new scoring equation or empirical codec law
++
++The disqualification mechanism is implemented and tested. The live pointer is unchanged; MAIN alone
++performs the actual disqualification. The canonical journal is intentionally empty. Landing status,
++bundle refs and hashes are recorded in `.omx/research/ddm_cpd1_20260910/LANDING_HANDOFF.json`.
++
++## Measured result and boundaries
++
++All apparatus counts below are MEASURED [macOS-CPU static apparatus / scorer-free fixtures].
++No training, scorer, encode, decode, paid dispatch, upstream mutation, or new contest row ran.
++Historical anchor mirror files were not edited. Existing archive bytes and receiver contents were
++not revalidated by this task; the compliance adjudication is the cited pr8 review and gs3 Addendum 22.
++
++- New regression suite: 53 fixture cases covering selection, append-prefix preservation, reinstatement,
++  reason classes, malformed journals, placeholder refusal, both axes, preflight positive/negative/waiver,
++  packet refusal, identity aliases, concurrent decisions, writer revalidation and dispatch auto-refresh.
++- Focused sister suites and quota tests: final command, counts, wall time and output in `checks.json`
++  and `check_1.log` under the receipt directory. Ruff covers all nine changed Python files.
++- Offline rehearsal used exact copied move-40/move-41 mirror bytes plus a copy of the live pointer.
++  Before refresh the disqualification preflight refuses the copied stale pointer; afterward it passes
++  and both local selection and effective selection choose move 40. The original mirrors and live
++  pointer retain their hashes. Source hashes and arithmetic are in `offline_rehearsal.json`.
++- Full live-source scan: 459 loaded anchors, 2 records excluded by the fixture decision; the resulting
++  CUDA minimum is move 40. This is an offline eligibility projection, not a live journal mutation.
++- Catalog #418 claimed. Current live journal has 0 bytes and no active decisions. Live audit and
++  quota audit return zero; the former is not evidence that MAIN has completed its required action.
++
++The charter's line prediction holds for its four named files: 97 added lines, 3 removed lines across
++pointer module, refresh CLI, packet CLI and the new operator CLI. The necessary shared journal helper
++adds 144 lines and scanner integration adds 11; these are disclosed separately rather than hidden
++inside the four-file count. The all-source filter is required before top-five truncation. Catalog
++#343's dispatch auto-refresh API remains intact and its actual hook is fixture-tested.
++
++## Mechanism
++
++`.omx/state/frontier_disqualifications.jsonl` is the sole mutation. Each event carries lane ID,
++archive SHA-256, one of four reason classes, evidence path and SHA-256, rationale, actor, timestamp,
++action, and reinstatement fields. Appends flush and fsync under locks; malformed or unterminated
++history refuses replay/append. Reinstatement appends a new event and preserves all prior bytes.
++This protects application writes; it is not tamper-proof storage against external manual deletion.
++
++Identity is the pair `(lane_id, archive_sha256)`: the same archive can have distinct receivers.
++If a legacy record lacks an identity field, match conservatively using what is present. A packet
++checks the recorded receipt lane independently of a command-line lane override. Missing recorded
++lane may conservatively refuse an archive even when the caller supplies another lane; restoring
++trusted receipt identity is the remedy, not treating an override as proof.
++
++Every scanner source receives an in-memory `extra.disqualified` projection before ranking. Mirror
++bytes remain unchanged. The pointer excludes vetoed current/prior anchors on both axes, preserves
++upstream competition, and exposes active decisions in `disqualified_rows` and `refresh_provenance`.
++The human refresh summary prints each reason, rationale and evidence. Recompute also consumes the
++stored audit list. Before writing, the pointer writer checks the current journal under the same
++canonical lock used by journal appends. A decision racing a scan can refuse that refresh; dispatch
++outcome persistence remains intact under the existing auto-refresh failure contract.
++
++Packets hold a shared eligibility lock for all stages; journal appends take its exclusive lock
++before the canonical pointer lock. This prevents eligibility changes midway through publication
++without deadlocking the refresh subprocess. A later disqualification does not rewrite historical
++packet events; MAIN then refreshes the pointer. No claim is made that this journal discovers
++compliance violations: the operator's evidence-backed decisions are its input.
++
++Catalog #418 checks effective and both local pointer rows, including an upstream-winning pointer
++whose local anchor remains disqualified. A fake upstream source label cannot hide local identity.
++A substantive JSON `frontier_disqualification_waiver` waives only the audit, never packet or pointer
++publication; malformed journal data cannot be waived. The callsite is WARN-ONLY until MAIN completes
++the charter's live decision and zero-census condition. The existing file-level quota waiver passes
++#299; no live protection is retired. This umbrella covers local anchors, effective pointer and
++malformed decision history rather than introducing three gates.
++
++## MAIN fire order
++
++Run from `/Users/adpena/Projects/pact` after landing the implementation and protection batches:
++
++```sh
++.venv/bin/python tools/frontier_disqualify.py \
++  --lane ddm_tc3_t4_lane_predictor_tail_20260910 \
++  --archive-sha256 299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936 \
++  --reason-class rule118_content_in_code \
++  --evidence .omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md \
++  --who MAIN \
++  --rationale 'pr8 traces Lane class 1 and rows 128..319 to video-selected constants embedded in free receiver code; gs3 Addendum 22 retracts move 41.'
++.venv/bin/python tools/refresh_canonical_frontier.py --no-update-upstream
++.venv/bin/python -c 'from tac.preflight import check_frontier_excludes_disqualified_rows; check_frontier_excludes_disqualified_rows(strict=True, verbose=True)'
++```
++
++Verify the selected lane is `ddm_sj1_t4_compose39_rp1_union_20260910`, with the move-41 reason surfaced.
++Then flip #418's `preflight_all()` call to `strict=True`, update its catalog row, and land the live
++journal, refreshed pointer and strict flip together. Reinstatement uses the same lane/SHA with
++`--reinstate --rationale '...substantive new evidence...'`; `--evidence` may point to the new review.
++The API does not infer that a newly rebuilt archive repairs an older lane/archive pair.
++
++## RECALL EVIDENCE
++
++- Charter and full common contract read, then PROGRAM, CLAUDE/AGENTS (identical), operating manual,
++  live board, lane registry and task stores. Memory registry search terms `pointer.disqual`, `cpd1`,
++  `common.contract` returned no relevant entry; no unverified remembered score used.
++- Full `.omx/research/` content search: `disqualif|pointer.*qualif|qualif.*pointer`; targeted pr8,
++  gs3 Addendum 22, pm2 and pointer-shadowing receipts reviewed. Beyond charter seeds, rv13's
++  same-archive/different-runtime custody finding in `frontier_scan.py` ruled out SHA-only identity.
++  The September 5 ranked-candidate repair and its behavioral test exposed the top-five shadowing
++  boundary; this changed the plan to filter all scanner inputs before truncation.
++- Canonical equations CLI JSON filtered for `canonical_frontier_pointer|disqualification`; six
++  relevant records retained in `equations_recall.json`. The existing pointer law and wrong-baseline
++  substitution law support retaining official competition separately from local custody. No new
++  scoring law was registered for eligibility apparatus.
++- Research index/DAG and docs/SPEC surfaces searched by the same terms. Hits on historical
++  supersampling and design disqualification did not supply a journal mechanism; no additional
++  mechanism found in this scope. Canonical task store had no cpd1 row; operator P0 ledger explicitly
++  routed this mechanism to MAIN. Retained scoped extracts are in the receipt directory.
++- Source review found a pre-existing training-target test edited only the first live leaderboard
++  entry. A newly present runner-up then beat its expected test minimum. The failure reproduced
++  using the unchanged HEAD pointer module; the test now controls the whole ranked table.
++
++## Review and integration
++
++Two final visible independent review passes cover all changed implementation surfaces; root also
++independently reviewed the new tests. `reviews.json` pins exact post-edit hashes. Preflight review
++is explicitly limited to the new function/callsite, not all unrelated code in that module.
++`review_tracker.log` records both marks per Python file; no review override is used.
++Fixed review findings: lane override bypass; packet/journal publication race; overbroad archive-only
++refusal of a separately identified receiver; upstream-label bypass; audit-only recompute omission.
++
++Apparatus lane: `ddm_cpd1_pointer_disqualification_20260910`. Canonical task rows track implementation,
++MAIN's live decision, and strict flip. The training-fixture repair is FOLDED into this batch.
++The six solver hooks (sensitivity, Pareto, bit allocator, candidate dispatch, empirical-score posterior,
++research probe disambiguator) are N/A: this work neither changes a codec nor measures a score.
++Production consumers are scanner, pointer refresh/write/recompute, packet CLI and preflight.
++`council_predicted_mission_contribution=frontier_protecting`; no research efficacy claim.
++
++The fix and self-protection are separate serializer intentions, using post-edit hashes and no
++attribution trailer. Shared staged index and unrelated dirty work are preserved. Shared lane/task
++metadata contains sister work; only this arm's own metadata patch is retained for MAIN to reconcile,
++never whole-file-staged. Exact landing outcome and any Git-object-denial bundle refs are in the handoff.
++
++## NEXT_IF_RESUMED
++
++- **QUEUED-WITH-A-FIRE-ORDER** — Owner MAIN; consumer `.omx/research/ddm_cpd1_20260910/LANDING_HANDOFF.json`; fire on a writable Git object store if serializer fallback is used. Land both exact intention bundles and reconcile only cpd1 metadata hunks; rerun affected checks if resolution changes code.
++- **QUEUED-WITH-A-FIRE-ORDER** — Owner MAIN; consumer `.omx/state/frontier_disqualifications.jsonl` and `.omx/state/canonical_frontier_pointer.json`, task `ddm_cpd1::main_disqualify`; fire at implementation/protection harvest. Run the exact command above, refresh, and verify move 40 and the surfaced reason.
++- **QUEUED-WITH-A-FIRE-ORDER** — Owner MAIN; consumer `src/tac/preflight.py` and `docs/meta_bug_class_catalog.md`, task `ddm_cpd1::strict_flip`; fire immediately after that live refresh passes strict audit with zero violations. Flip and land in the same batch as the live decision.
++
++**LIVE-HYPOTHESES:** The live MAIN transition should match the rehearsal because it consumes the same
++retained anchors and journal predicate. This remains unexecuted on live state by design. No untested
++codec or score-improvement hypothesis is introduced.
++
++**DEAD-ENDS:** Filtering after top-five truncation can hide valid successors. Reusing a vetoed prior
++restores a disqualified row. SHA-only vetoes conflate distinct receivers. A lane override cannot prove
++new custody. An initial packet check alone permits concurrent invalidation. These implementation
++paths are closed by the new regression suite; no research family is declared dead.
++
++OWN-VEHICLE SUBMITTABLE FRONTIER unchanged: **move 40, S 0.13763861019288715 @ 180,233 B
++[contest-CUDA T4 n600]**, archive `986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857`.
++<!-- HISTORICAL_SCORE_LITERAL_OK: retained move40 source mirrors and gs3 Addendum22 rederived in cpd1 offline_rehearsal.json; this apparatus task makes no new score -->
+diff --git a/.omx/research/retroactive_sweep_for_catalog_418_20260910.md b/.omx/research/retroactive_sweep_for_catalog_418_20260910.md
+new file mode 100644
+index 000000000..61c86cf49
+--- /dev/null
++++ b/.omx/research/retroactive_sweep_for_catalog_418_20260910.md
+@@ -0,0 +1,19 @@
++# Catalog 418 retroactive sweep — disqualified pointer identity
++
++Apparatus only, `score_claim=false`, `[no-triality] [p0-ledger-ok]`.
++# FORMALIZATION_PENDING: eligibility journal guard rather than an empirical scoring law
++
++Symptom: an exact but compliance-retracted row remains selectable as local/effective frontier;
++a fallback prior or a lane override can reintroduce it. Pre-fix window: pointer introduction
++through this charter, with move41/pr8/gs3 Addendum22 the concrete incident.
++
++Content queries `disqualif|pointer.*qualif|qualif.*pointer` searched research memos, research
++index/DAG, docs, and task stores. The current all-source scan loads 459 anchors; an offline
++projection of MAIN's prescribed decision excludes 2 records and selects move40. Retained evidence:
++`.omx/research/ddm_cpd1_20260910/offline_rehearsal.json`.
++
++Historical KILL/DEFER/FALSIFY wording was found on unrelated sampled research verdicts, not another
++pointer disqualification mechanism in this scope. No experimental family is reopened or closed by
++this apparatus sweep. Priority: MAIN's move41 decision is first; then strict flip on the zero census.
++The live journal is empty and not mutated by this arm, so a zero current audit is not proof of cure.
++Both actions are QUEUED-WITH-A-FIRE-ORDER in canonical task status and the cpd1 memo.
+diff --git a/docs/meta_bug_class_catalog.md b/docs/meta_bug_class_catalog.md
+index 70d884eba..99926f4bc 100644
+--- a/docs/meta_bug_class_catalog.md
++++ b/docs/meta_bug_class_catalog.md
+@@ -675,3 +675,5 @@ Catalog #291 OSS-hermetic implementation note (2026-05-15 follow-up): the runtim
+ 416. `lint_charter_screening_law` — **WARN by default**, integrated into queue recall advisories and strict optimal-form refusal under `TAC_SCREENING_LAW_STRICT=1`. An OPTIMAL FORM sampled SCOPE reduction must declare actuator confinement (`pair-confined` or `global`); global subset screens require a substantive `TOY-BRACKET`, otherwise they are verdict-invalid MECHANISM reductions. Existing census: 93/371 charters lack declarations. Strict-flip is queued until a new zero census; no historical mechanism verdict is inferred from these warnings. Evidence: `.omx/research/ddm_pm2_20260909/screening_census.json`.
+ 
+ The operator-requested four gates use three claimed catalog numbers: pose and coder share #415. Existing CLAUDE.md file-level quota waiver is retained; no existing protection is retired to make room. This batch is apparatus (`score_claim=false`) and changes no measured value. It follows the fix-plus-structural-gate two-landing rule within one serializer batch. Gate 4's strict-flip condition is not met; its counted cleanup has an explicit fire order in the pm2 memo.
++
++418. `check_frontier_excludes_disqualified_rows` — **WARN-ONLY** in `preflight_all()` until MAIN journals move 41's disqualification, refreshes, and verifies zero live violations. Checks effective and both local pointer rows against the append-only `.omx/state/frontier_disqualifications.jsonl`; malformed journals fail closed. A substantive JSON `frontier_disqualification_waiver` waives only this audit, never packet or pointer publication. Journal events carry lane+archive identity, reason class, evidence hash, actor, timestamp and rationale; reinstatement appends a new event. Scanner filters projected decisions before top-five ranking; packet checks original receipt identity and prior, with a shared eligibility lock across all publication stages; pointer writer rechecks under its lock. MAIN alone performs the live decision. Existing file-level quota waiver applies to this charter-directed protection; no existing gate retired. Evidence: `.omx/research/ddm_cpd1_pointer_disqualification_20260910.md`.
+diff --git a/src/tac/preflight.py b/src/tac/preflight.py
+index 7c9872186..23efb1267 100644
+--- a/src/tac/preflight.py
++++ b/src/tac/preflight.py
+@@ -7745,6 +7745,9 @@ def preflight_all(
+         check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
+             strict=True, verbose=verbose
+         )
++        # Catalog #418: MAIN owns the live journal decision; strict-flip after
++        # MAIN disqualifies move 41, refreshes, and records a zero live census.
++        check_frontier_excludes_disqualified_rows(strict=False, verbose=verbose)
+ 
+         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
+         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
+@@ -95203,5 +95206,55 @@ def check_subset_default_scope_fields(
+     return violations + parse_errors
+ 
+ 
++def check_frontier_excludes_disqualified_rows(
++    *, repo_root: Path | None = None, strict: bool = False, verbose: bool = False,
++) -> list[str]:
++    """Catalog #418: reject effective/local pointer rows vetoed by the journal.
++
++    A substantive ``frontier_disqualification_waiver`` in pointer JSON waives
++    this audit only; packet and pointer writers never honor it. Malformed
++    journals cannot be waived. Historical mirror rows are never changed.
++    """
++    from tac.frontier_disqualifications import (
++        active_disqualifications,
++        disqualification_for,
++        substantive_rationale,
++    )
++
++    root = Path(repo_root or REPO_ROOT)
++    violations: list[str] = []
++    try:
++        active = active_disqualifications(root)
++        path = root / ".omx/state/canonical_frontier_pointer.json"
++        data = json.loads(path.read_text()) if path.exists() else {}
++        if not isinstance(data, dict):
++            raise ValueError("pointer must be an object")
++        for key in ("effective_frontier", "our_local_frontier_contest_cpu", "our_local_frontier_contest_cuda"):
++            row = data.get(key)
++            if row is None:
++                continue
++            if not isinstance(row, dict):
++                raise ValueError(f"{key} must be an object")
++            if (key == "effective_frontier" and row.get("source") == "upstream_official_leaderboard"
++                    and not row.get("lane_id") and not row.get("archive_sha256")):
++                continue
++            veto = disqualification_for(active, row.get("lane_id"), row.get("archive_sha256"))
++            if veto:
++                violations.append(f"{key}: disqualified {veto['lane_id']} {veto['archive_sha256']}: "
++                                  f"{veto['reason_class']}: {veto['rationale']} ({veto['evidence']})")
++        if violations and substantive_rationale(data.get("frontier_disqualification_waiver")):
++            if verbose:
++                print("[catalog-418] audit WAIVED; publication remains refused")
++            violations = []
++    except (ValueError, OSError, UnicodeError) as exc:
++        violations.append(f"disqualification validation failed closed: {exc}")
++    if verbose:
++        print(f"[catalog-418] {len(violations)} pointer/journal violation(s)")
++    if strict and violations:
++        raise PreflightError("Catalog #418 / Frontier scores are pointer-only / NO FAKE: "
++                             + "\n".join(violations))
++    return violations
++
++
+ if __name__ == "__main__":
+     _preflight_cli_main()
+diff --git a/src/tac/tests/test_frontier_disqualifications.py b/src/tac/tests/test_frontier_disqualifications.py
+new file mode 100644
+index 000000000..2c047dec3
+--- /dev/null
++++ b/src/tac/tests/test_frontier_disqualifications.py
+@@ -0,0 +1,556 @@
++"""Disqualification custody and admission regressions; all state is fixture-local."""
++
++from __future__ import annotations
++
++import importlib.util
++import json
++import sys
++from dataclasses import replace
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++
++from tac import canonical_frontier_pointer as cfp
++from tac.frontier_disqualifications import (
++    active_disqualifications,
++    append_disqualification,
++    disqualification_for,
++    require_qualified,
++)
++from tac.frontier_scan import build_frontier_scan_payload, collect_all_anchors
++
++SHA_A = "a" * 64
++SHA_B = "b" * 64
++JOURNAL = ".omx/state/frontier_disqualifications.jsonl"
++POINTER = ".omx/state/canonical_frontier_pointer.json"
++RATIONALE = "Receiver embeds video-selected lane constants outside the counted archive."
++REINSTATE = "Counted archive now carries the constants and the receiver review passed."
++REPO = Path(__file__).resolve().parents[3]
++
++
++def _json(root: Path, rel: str, value: object) -> Path:
++    path = root / rel
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(json.dumps(value), encoding="utf-8")
++    return path
++
++
++def _ban(root: Path, lane: str = "lane_bad", sha: str = SHA_A, **updates):
++    evidence = root / "evidence.md"
++    evidence.write_text("Audited receiver stores video-derived constants in free code.\n")
++    args = {
++        "lane_id": lane,
++        "archive_sha256": sha,
++        "reason_class": "rule118_content_in_code",
++        "evidence": str(evidence),
++        "rationale": RATIONALE,
++        "who": "fixture-reviewer",
++    }
++    args.update(updates)
++    return append_disqualification(root, **args)
++
++
++def _mirror(root: Path, lane: str, sha: str, score: float = 0.14, axis: str = "contest_cuda"):
++    return _json(
++        root,
++        f"experiments/results/modal_auth_eval_mirror/contest_auth_eval_{lane}.json",
++        {
++            "schema": "modal_auth_eval_anchor_mirror.v2",
++            "score": score,
++            "score_axis": axis,
++            "archive_sha256": sha,
++            "lane_id": lane,
++            "hardware_substrate": "linux_x86_64_cpu" if axis == "contest_cpu" else "linux_x86_64_t4",
++            "runtime_tree_sha256": "c" * 64,
++            "archive_size_bytes": 180233,
++            "evidence_grade": "contest-CPU" if axis == "contest_cpu" else "contest-CUDA",
++        },
++    )
++
++
++def _tool(name: str):
++    spec = importlib.util.spec_from_file_location(f"cpd1_{name}", REPO / "tools" / f"{name}.py")
++    assert spec and spec.loader
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++def _gate(root: Path, *, strict: bool = False):
++    from tac.preflight import check_frontier_excludes_disqualified_rows
++
++    return check_frontier_excludes_disqualified_rows(repo_root=root, strict=strict, verbose=False)
++
++
++def test_missing_journal_is_empty_and_does_not_create_state(tmp_path):
++    assert active_disqualifications(tmp_path) == []
++    require_qualified(tmp_path, "lane_good", SHA_A)
++    assert not (tmp_path / JOURNAL).exists()
++
++
++def test_append_preserves_exact_prefix_and_reason_evidence(tmp_path):
++    first = _ban(tmp_path)
++    prefix = (tmp_path / JOURNAL).read_bytes()
++    _ban(tmp_path, "lane_other", SHA_B, reason_class="custody")
++    assert (tmp_path / JOURNAL).read_bytes().startswith(prefix)
++    assert len((tmp_path / JOURNAL).read_text().splitlines()) == 2
++    assert first["reason_class"] == "rule118_content_in_code"
++    assert Path(first["evidence"]).is_file()
++    assert first["rationale"] == RATIONALE
++    assert first["who"] == "fixture-reviewer"
++    assert len(active_disqualifications(tmp_path)) == 2
++
++
++@pytest.mark.parametrize("reason", ["rule118_content_in_code", "decode_budget", "determinism", "custody"])
++def test_all_declared_reason_classes_are_accepted(tmp_path, reason):
++    assert _ban(tmp_path, reason_class=reason)["reason_class"] == reason
++
++
++@pytest.mark.parametrize("rationale", ["", "TODO", "TBD", "placeholder", "n/a"])
++def test_placeholder_rationale_cannot_mutate_journal(tmp_path, rationale):
++    with pytest.raises(ValueError):
++        _ban(tmp_path, rationale=rationale)
++    assert not (tmp_path / JOURNAL).exists() or not (tmp_path / JOURNAL).read_bytes()
++
++
++@pytest.mark.parametrize("sha", ["", "a" * 63, "g" * 64, "a" * 65])
++def test_invalid_archive_identity_is_rejected(tmp_path, sha):
++    with pytest.raises(ValueError):
++        _ban(tmp_path, sha=sha)
++
++
++def test_empty_lane_is_rejected(tmp_path):
++    with pytest.raises(ValueError):
++        _ban(tmp_path, lane="")
++
++
++def test_unknown_reason_class_is_rejected(tmp_path):
++    with pytest.raises(ValueError):
++        _ban(tmp_path, reason_class="operator_dislikes_score")
++
++
++def test_missing_evidence_is_rejected(tmp_path):
++    with pytest.raises(ValueError):
++        _ban(tmp_path, evidence="missing-review.md")
++
++
++def test_reinstatement_appends_and_preserves_original_reason(tmp_path):
++    _ban(tmp_path)
++    before = (tmp_path / JOURNAL).read_bytes()
++    append_disqualification(
++        tmp_path, lane_id="lane_bad", archive_sha256=SHA_A, rationale=REINSTATE, who="fixture-reviewer", reinstate=True
++    )
++    assert active_disqualifications(tmp_path) == []
++    assert (tmp_path / JOURNAL).read_bytes().startswith(before)
++    history = [json.loads(line) for line in (tmp_path / JOURNAL).read_text().splitlines()]
++    assert [event["action"] for event in history] == ["disqualify", "reinstate"]
++    assert history[0]["rationale"] == RATIONALE
++    require_qualified(tmp_path, "lane_bad", SHA_A)
++
++
++def test_unknown_reinstatement_is_rejected(tmp_path):
++    with pytest.raises(ValueError):
++        append_disqualification(tmp_path, lane_id="lane_bad", archive_sha256=SHA_A, rationale=REINSTATE, reinstate=True)
++
++
++def test_reinstatement_does_not_clear_other_archive_on_same_lane(tmp_path):
++    _ban(tmp_path)
++    _ban(tmp_path, sha=SHA_B)
++    append_disqualification(tmp_path, lane_id="lane_bad", archive_sha256=SHA_A, rationale=REINSTATE, reinstate=True)
++    active = active_disqualifications(tmp_path)
++    assert len(active) == 1 and active[0]["archive_sha256"] == SHA_B
++
++
++def test_repeated_ban_cycle_is_not_permanently_reinstated(tmp_path):
++    _ban(tmp_path)
++    append_disqualification(tmp_path, lane_id="lane_bad", archive_sha256=SHA_A, rationale=REINSTATE, reinstate=True)
++    _ban(tmp_path, reason_class="decode_budget")
++    assert active_disqualifications(tmp_path)[0]["reason_class"] == "decode_budget"
++    assert len((tmp_path / JOURNAL).read_text().splitlines()) == 3
++
++
++@pytest.mark.parametrize("contents", ["not-json\n", "[]\n", '{"action":"disqualify"}\n'])
++def test_malformed_journal_fails_closed(tmp_path, contents):
++    path = tmp_path / JOURNAL
++    path.parent.mkdir(parents=True)
++    path.write_text(contents)
++    with pytest.raises(ValueError):
++        active_disqualifications(tmp_path)
++    with pytest.raises(ValueError):
++        _ban(tmp_path)
++    assert path.read_text() == contents
++
++
++def test_match_uses_pair_when_both_identity_fields_are_known(tmp_path):
++    _ban(tmp_path)
++    rows = active_disqualifications(tmp_path)
++    assert disqualification_for(rows, "lane_bad", SHA_A)
++    assert disqualification_for(rows, "lane_bad", SHA_B) is None
++    assert disqualification_for(rows, "lane_other", SHA_A) is None
++
++
++@pytest.mark.parametrize("lane,sha", [(None, SHA_A), ("lane_bad", None)])
++def test_missing_anchor_identity_matches_known_field_fail_closed(tmp_path, lane, sha):
++    _ban(tmp_path)
++    assert disqualification_for(active_disqualifications(tmp_path), lane, sha)
++    with pytest.raises(ValueError, match="disqualif"):
++        require_qualified(tmp_path, lane, sha)
++
++
++def test_projection_changes_only_loaded_anchor_not_historical_mirror(tmp_path):
++    mirror = _mirror(tmp_path, "lane_bad", SHA_A)
++    original = mirror.read_bytes()
++    _ban(tmp_path)
++    anchors = collect_all_anchors(tmp_path)
++    assert len(anchors) == 1
++    assert anchors[0].extra["disqualified"]
++    assert not anchors[0].is_qualifying()
++    assert mirror.read_bytes() == original
++
++
++def test_six_better_disqualified_rows_cannot_shadow_healthy_seventh(tmp_path):
++    for index in range(6):
++        lane, sha = f"lane_blocked_{index}", f"{index + 1:064x}"
++        _mirror(tmp_path, lane, sha, 0.13 + index * 0.001)
++        _ban(tmp_path, lane, sha)
++    _mirror(tmp_path, "lane_good", SHA_B, 0.14)
++    scan = build_frontier_scan_payload(tmp_path)
++    assert scan["best_per_axis"]["contest_cuda"]["extra"]["lane_id"] == "lane_good"
++    pointer = cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False)
++    assert pointer.our_local_frontier_contest_cuda.lane_id == "lane_good"
++    assert pointer.effective_frontier["score"] == 0.14
++    assert len(pointer.as_dict()["disqualified_rows"]) == 6
++    assert pointer.refresh_provenance["disqualified_rows"]
++
++
++@pytest.mark.parametrize("axis", ["contest_cpu", "contest_cuda"])
++def test_disqualified_prior_is_not_preserved_when_no_replacement_exists(tmp_path, axis):
++    _mirror(tmp_path, "lane_bad", SHA_A, axis=axis)
++    prior = cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=True)
++    assert getattr(prior, f"our_local_frontier_{axis}")
++    _ban(tmp_path)
++    pointer = cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False)
++    assert getattr(pointer, f"our_local_frontier_{axis}") is None
++    assert pointer.effective_frontier is None
++    assert pointer.as_dict()["disqualified_rows"]
++
++
++def test_reinstatement_restores_selection(tmp_path):
++    _mirror(tmp_path, "lane_bad", SHA_A, 0.13)
++    _mirror(tmp_path, "lane_good", SHA_B, 0.14)
++    _ban(tmp_path)
++    assert (
++        cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False).effective_frontier["score"]
++        == 0.14
++    )
++    append_disqualification(tmp_path, lane_id="lane_bad", archive_sha256=SHA_A, rationale=REINSTATE, reinstate=True)
++    assert (
++        cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False).effective_frontier["score"]
++        == 0.13
++    )
++
++
++def test_upstream_refresh_preserves_disqualification_audit_and_public_minimum(tmp_path):
++    _mirror(tmp_path, "lane_bad", SHA_A, 0.13)
++    _mirror(tmp_path, "lane_good", SHA_B, 0.15)
++    _ban(tmp_path)
++    snapshot = {
++        "fetch_status": "ok",
++        "fetched_at_utc": "2026-09-10T00:00:00Z",
++        "best_entry": {"score": 0.14, "name": "public leader"},
++    }
++    pointer = cfp.refresh_canonical_frontier_from_upstream_leaderboard(
++        repo_root=tmp_path, write=True, fetcher=lambda **_: snapshot
++    )
++    assert pointer.effective_frontier["score"] == 0.14
++    assert pointer.our_local_frontier_contest_cuda.lane_id == "lane_good"
++    assert pointer.as_dict()["disqualified_rows"]
++    assert pointer.refresh_provenance["disqualified_rows"]
++    local = cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False)
++    assert local.upstream_leaderboard_snapshot == snapshot
++    assert local.effective_frontier["score"] == 0.14
++
++
++def test_dispatch_auto_refresh_skips_disqualified_row(tmp_path, monkeypatch):
++    _mirror(tmp_path, "lane_bad", SHA_A, 0.13)
++    _mirror(tmp_path, "lane_good", SHA_B, 0.14)
++    _ban(tmp_path)
++    monkeypatch.setitem(
++        sys.modules,
++        "tac.master_gradient_mlx_pipeline",
++        SimpleNamespace(auto_schedule_mlx_per_pair_extraction_for_frontier=lambda **_: None),
++    )
++    pointer = cfp.auto_refresh_canonical_frontier_after_dispatch_outcome(
++        status="harvested", score=0.13, archive_sha256=SHA_A, repo_root=tmp_path
++    )
++    assert pointer is not None
++    assert pointer.our_local_frontier_contest_cuda.lane_id == "lane_good"
++    assert json.loads((tmp_path / POINTER).read_text())["disqualified_rows"]
++
++
++def test_preflight_accepts_empty_journal(tmp_path):
++    assert _gate(tmp_path, strict=True) == []
++
++
++def test_preflight_refuses_active_effective_frontier(tmp_path):
++    _json(tmp_path, POINTER, {"effective_frontier": {"lane_id": "lane_bad", "archive_sha256": SHA_A}})
++    _ban(tmp_path)
++    violations = _gate(tmp_path)
++    assert violations and "lane_bad" in str(violations)
++    from tac.preflight import PreflightError
++
++    with pytest.raises(PreflightError):
++        _gate(tmp_path, strict=True)
++
++
++def test_preflight_allows_different_archive_on_same_lane(tmp_path):
++    _json(tmp_path, POINTER, {"effective_frontier": {"lane_id": "lane_bad", "archive_sha256": SHA_B}})
++    _ban(tmp_path)
++    assert _gate(tmp_path, strict=True) == []
++
++
++@pytest.mark.parametrize(
++    "waiver,allowed",
++    [
++        ("TODO", False),
++        ("Historical pointer held for offline incident reconstruction; this file is not admission authority.", True),
++    ],
++)
++def test_preflight_waiver_requires_substantive_rationale(tmp_path, waiver, allowed):
++    _json(
++        tmp_path,
++        POINTER,
++        {
++            "effective_frontier": {"lane_id": "lane_bad", "archive_sha256": SHA_A},
++            "frontier_disqualification_waiver": waiver,
++        },
++    )
++    _ban(tmp_path)
++    assert bool(_gate(tmp_path)) is not allowed
++    with pytest.raises(ValueError):
++        require_qualified(tmp_path, "lane_bad", SHA_A)
++
++
++def test_packet_prior_refuses_disqualified_identity(tmp_path):
++    _mirror(tmp_path, "lane_bad", SHA_A)
++    cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=True)
++    _ban(tmp_path)
++    with pytest.raises(ValueError, match="disqualif"):
++        _tool("pointer_move_packet").prior_anchor_from_pointer(tmp_path, "contest_cuda")
++
++
++@pytest.mark.parametrize("override_lane", ["lane_bad", "lane_renamed", None])
++def test_packet_candidate_refuses_before_any_stage_mutation(tmp_path, capsys, override_lane):
++    _ban(tmp_path)
++    harvest = _json(
++        tmp_path,
++        "harvest.json",
++        {
++            "avg_segnet_dist": 0.0001,
++            "avg_posenet_dist": 0.00001,
++            "archive_size_bytes": 180000,
++            "expected_archive_sha256": SHA_A,
++            "expected_runtime_tree_sha256": "c" * 64,
++            "n_samples": 600,
++            "score_axis": "contest_cuda",
++            "passed": True,
++            "validation_errors": [],
++            "gpu_model": "Tesla T4",
++            "lane_id": "lane_bad",
++        },
++    )
++    rc = _tool("pointer_move_packet").main(
++        [
++            "--repo-root",
++            str(tmp_path),
++            "--harvest",
++            str(harvest),
++            *(["--lane-id", override_lane] if override_lane else []),
++            "--move-number",
++            "42",
++            "--apply",
++            "--no-custody",
++        ]
++    )
++    output = capsys.readouterr()
++    assert rc != 0 and "disqualif" in (output.out + output.err).lower()
++    assert not (tmp_path / ".omx/state/pointer_move_events.jsonl").exists()
++    assert not (tmp_path / POINTER).exists()
++
++
++def test_cli_disqualification_and_reinstatement_roundtrip(tmp_path, capsys):
++    evidence = tmp_path / "review.md"
++    evidence.write_text("Measured receiver compliance violation.\n")
++    cli = _tool("frontier_disqualify")
++    common = ["--repo-root", str(tmp_path), "--lane", "lane_bad", "--archive-sha256", SHA_A]
++    assert (
++        cli.main(
++            [
++                *common,
++                "--reason-class",
++                "rule118_content_in_code",
++                "--evidence",
++                str(evidence),
++                "--rationale",
++                RATIONALE,
++                "--who",
++                "fixture-reviewer",
++            ]
++        )
++        == 0
++    )
++    assert active_disqualifications(tmp_path)
++    assert cli.main([*common, "--reinstate", "--rationale", REINSTATE]) == 0
++    assert active_disqualifications(tmp_path) == []
++
++
++def test_writer_rechecks_journal_after_pointer_computation(tmp_path):
++    _mirror(tmp_path, "lane_bad", SHA_A)
++    pointer = cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False)
++    _ban(tmp_path)
++    with pytest.raises(ValueError, match="disqualif"):
++        cfp.write_canonical_frontier_pointer_locked(pointer, repo_root=tmp_path)
++    assert not (tmp_path / POINTER).exists()
++
++
++def test_preflight_rejects_corrupt_journal_even_with_audit_waiver(tmp_path):
++    _json(tmp_path, POINTER, {"frontier_disqualification_waiver": RATIONALE})
++    (tmp_path / JOURNAL).write_text("malformed journal\n")
++    assert _gate(tmp_path)
++
++
++def test_preflight_rejects_disqualified_local_anchor_when_upstream_wins(tmp_path):
++    _json(
++        tmp_path,
++        POINTER,
++        {
++            "effective_frontier": {"source": "upstream_official_leaderboard", "score": 0.1},
++            "our_local_frontier_contest_cuda": {"lane_id": "lane_bad", "archive_sha256": SHA_A},
++        },
++    )
++    _ban(tmp_path)
++    assert _gate(tmp_path)
++
++
++def test_packet_blocks_concurrent_ban_until_publication_finishes(tmp_path, monkeypatch):
++    from threading import Event, Thread
++
++    harvest = _json(
++        tmp_path,
++        "harvest.json",
++        {
++            "avg_segnet_dist": 0.0001,
++            "avg_posenet_dist": 0.00001,
++            "archive_size_bytes": 180000,
++            "expected_archive_sha256": SHA_A,
++            "expected_runtime_tree_sha256": "c" * 64,
++            "n_samples": 600,
++            "score_axis": "contest_cuda",
++            "passed": True,
++            "validation_errors": [],
++            "gpu_model": "Tesla T4",
++            "lane_id": "lane_bad",
++        },
++    )
++    packet = _tool("pointer_move_packet")
++    attempted, finished = Event(), Event()
++
++    def concurrent_ban():
++        attempted.set()
++        _ban(tmp_path)
++        finished.set()
++
++    writer = Thread(target=concurrent_ban, daemon=True)
++
++    def run_with_concurrent_ban(cmd, *, cwd, apply, label):
++        if label == "refresh pointer from local state":
++            writer.start()
++            assert attempted.wait(1)
++            assert not finished.wait(0.05), "journal mutation interleaved with packet publication"
++        return {"rc": 0, "label": label}
++
++    monkeypatch.setattr(packet, "_run", run_with_concurrent_ban)
++    try:
++        rc = packet.main(
++            [
++                "--repo-root",
++                str(tmp_path),
++                "--harvest",
++                str(harvest),
++                "--lane-id",
++                "lane_bad",
++                "--move-number",
++                "42",
++                "--apply",
++                "--no-custody",
++            ]
++        )
++    finally:
++        if writer.ident is not None:
++            writer.join(timeout=2)
++    assert rc == 0
++    assert finished.is_set(), "journal writer did not resume after packet released its lock"
++    assert active_disqualifications(tmp_path)
++    assert (tmp_path / ".omx/state/pointer_move_events.jsonl").exists()
++
++
++def test_packet_accepts_independently_identified_receiver_on_same_archive(tmp_path, monkeypatch):
++    _ban(tmp_path, lane="lane_bad")
++    harvest = _json(
++        tmp_path,
++        "harvest.json",
++        {
++            "avg_segnet_dist": 0.0001,
++            "avg_posenet_dist": 0.00001,
++            "archive_size_bytes": 180000,
++            "expected_archive_sha256": SHA_A,
++            "expected_runtime_tree_sha256": "d" * 64,
++            "n_samples": 600,
++            "score_axis": "contest_cuda",
++            "passed": True,
++            "validation_errors": [],
++            "gpu_model": "Tesla T4",
++            "lane_id": "lane_good",
++        },
++    )
++    packet = _tool("pointer_move_packet")
++    monkeypatch.setattr(packet, "_run", lambda *args, **kwargs: {"rc": 0})
++    assert (
++        packet.main(
++            [
++                "--repo-root",
++                str(tmp_path),
++                "--harvest",
++                str(harvest),
++                "--lane-id",
++                "lane_good",
++                "--move-number",
++                "42",
++                "--no-custody",
++            ]
++        )
++        == 0
++    )
++
++
++def test_recompute_uses_pointer_disqualification_audit_without_anchor_projection(tmp_path):
++    _mirror(tmp_path, "lane_bad", SHA_A)
++    pointer = cfp.refresh_canonical_frontier_from_local_state(repo_root=tmp_path, write=False)
++    _ban(tmp_path)
++    pointer = replace(pointer, disqualified_rows=active_disqualifications(tmp_path))
++    assert not pointer.our_local_frontier_contest_cuda.extra.get("disqualified")
++    assert cfp.recompute_effective_frontier(pointer) is None
++
++
++@pytest.mark.parametrize("key", ["effective_frontier", "our_local_frontier_contest_cuda"])
++def test_preflight_upstream_source_label_cannot_hide_local_disqualified_identity(tmp_path, key):
++    _json(
++        tmp_path,
++        POINTER,
++        {
++            key: {"source": "upstream_official_leaderboard", "lane_id": "lane_bad", "archive_sha256": SHA_A},
++        },
++    )
++    _ban(tmp_path)
++    assert _gate(tmp_path)
+diff --git a/src/tac/tests/test_training_effective_frontier_target.py b/src/tac/tests/test_training_effective_frontier_target.py
+index 10949d97f..c03b5af83 100644
+--- a/src/tac/tests/test_training_effective_frontier_target.py
++++ b/src/tac/tests/test_training_effective_frontier_target.py
+@@ -45,7 +45,7 @@ def test_module_frontier_equals_live_effective_pointer() -> None:
+     pointer = load_canonical_frontier_pointer_strict(repo_root=REPO)
+     expected = effective_frontier_score(pointer)
+     assert expected is not None
+-    assert trainer.FRONTIER == expected
++    assert expected == trainer.FRONTIER
+ 
+ 
+ def test_loader_recomposes_minimum_and_ignores_stale_cached_winner(tmp_path: Path) -> None:
+@@ -58,7 +58,12 @@ def test_loader_recomposes_minimum_and_ignores_stale_cached_winner(tmp_path: Pat
+     payload["our_local_frontier_contest_cpu"]["score"] = 0.31
+     payload["our_local_frontier_contest_cuda"]["score"] = 0.29
+     payload["upstream_leaderboard_snapshot"]["best_entry"]["score"] = 0.17
+-    payload["upstream_leaderboard_snapshot"]["entries"][0]["score"] = 0.17
++    # Control the entire ranked table: a new live runner-up must not silently
++    # become this fixture's minimum after only the first entry is changed.
++    payload["upstream_leaderboard_snapshot"]["entries"] = [
++        {"rank": 1, "name": "fixture_first", "score": 0.17},
++        {"rank": 2, "name": "fixture_second", "score": 0.18},
++    ]
+     payload["effective_frontier"]["score"] = 0.99
+     _write_pointer(tmp_path, payload)
+ 

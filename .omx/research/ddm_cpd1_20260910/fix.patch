@@ -1,0 +1,446 @@
+diff --git a/src/tac/frontier_disqualifications.py b/src/tac/frontier_disqualifications.py
+new file mode 100644
+index 000000000..209cd32cf
+--- /dev/null
++++ b/src/tac/frontier_disqualifications.py
+@@ -0,0 +1,144 @@
++"""Append-only eligibility decisions; mirror bytes remain historical provenance.
++
++Identity is (lane, archive), not archive alone: different receivers can share
++archive bytes. Missing lane/SHA in legacy consumers is matched conservatively.
++The pointer lock serializes journal mutations with pointer publication.
++"""
++
++from __future__ import annotations
++
++import fcntl
++import getpass
++import hashlib
++import json
++import os
++import re
++from contextlib import contextmanager
++from datetime import UTC, datetime
++from pathlib import Path
++
++JOURNAL = Path(".omx/state/frontier_disqualifications.jsonl")
++REASON_CLASSES = ("rule118_content_in_code", "decode_budget", "determinism", "custody")
++
++
++@contextmanager
++def eligibility_lock(repo_root: Path | str, *, exclusive: bool = False):
++    """Hold packet eligibility through all stages; decisions wait for readers."""
++    path = Path(repo_root) / ".omx/state/.frontier_eligibility.lock"
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with path.open("a") as lock:
++        fcntl.flock(lock, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
++        yield
++
++
++def substantive_rationale(value: object) -> bool:
++    """Reject empty, templated, and placeholder explanations (Catalog #287)."""
++    return (
++        isinstance(value, str)
++        and len(value.strip()) >= 12
++        and not re.search(r"[<>]|\b(todo|tbd|placeholder|pending|fixme)\b", value, re.I)
++        and value.strip().lower() not in {"test rationale", "some rationale", "not applicable"}
++    )
++
++
++def _validate_event(row: dict) -> None:
++    if not isinstance(row, dict) or row.get("action") not in {"disqualify", "reinstate"}:
++        raise ValueError("invalid disqualification event/action")
++    if not isinstance(row.get("lane_id"), str) or not row["lane_id"].strip():
++        raise ValueError("disqualification lane_id is required")
++    if not re.fullmatch(r"[0-9a-f]{64}", str(row.get("archive_sha256", ""))):
++        raise ValueError("archive_sha256 must be 64 lowercase hex characters")
++    if row.get("reason_class") not in REASON_CLASSES or not substantive_rationale(row.get("rationale")):
++        raise ValueError("valid reason class and substantive rationale required")
++    for key in ("who", "when", "evidence"):
++        if not isinstance(row.get(key), str) or not row[key].strip():
++            raise ValueError(f"disqualification {key} is required")
++    try:
++        timestamp = datetime.fromisoformat(row["when"])
++    except ValueError as exc:
++        raise ValueError("invalid disqualification timestamp") from exc
++    if timestamp.tzinfo is None:
++        raise ValueError("disqualification timestamp requires timezone")
++    if row["action"] == "reinstate" and (
++        row.get("reinstated_at") != row["when"] or row.get("why") != row["rationale"]
++    ):
++        raise ValueError("reinstatement must carry reinstated_at and why")
++
++
++def active_disqualifications(repo_root: Path | str) -> list[dict]:
++    """Replay every event, failing closed on corruption or invalid transitions."""
++    path = Path(repo_root) / JOURNAL
++    try:
++        raw = path.read_text(encoding="utf-8")
++    except FileNotFoundError:
++        return []  # Legacy repositories have no decisions yet.
++    active: dict[tuple[str, str], dict] = {}
++    for number, line in enumerate(raw.splitlines(), 1):
++        try:
++            row = json.loads(line)
++            _validate_event(row)
++            key = (row["lane_id"], row["archive_sha256"])
++            if row["action"] == "reinstate":
++                if key not in active:
++                    raise ValueError("cannot reinstate an inactive row")
++                del active[key]
++            else:
++                active[key] = row
++        except (ValueError, TypeError, KeyError) as exc:
++            raise ValueError(f"{path}:{number}: invalid disqualification journal: {exc}") from exc
++    if raw and not raw.endswith("\n"):
++        raise ValueError(f"{path}: unterminated journal record; repair custody before append")
++    return list(active.values())
++
++
++def disqualification_for(rows: list[dict], lane_id: str | None, archive_sha256: str | None) -> dict | None:
++    """Look up exact identity; legacy missing identity never hides a known veto."""
++    return next((row for row in rows
++                 if (not lane_id or row["lane_id"] == lane_id)
++                 and (not archive_sha256 or row["archive_sha256"] == archive_sha256)), None)
++
++
++def require_qualified(repo_root: Path | str, lane_id: str | None, archive_sha256: str | None) -> None:
++    """Refuse a disqualified row before any packet or pointer publication."""
++    row = disqualification_for(active_disqualifications(repo_root), lane_id, archive_sha256)
++    if row:
++        raise ValueError(f"disqualified {row['lane_id']} {row['archive_sha256']}: "
++                         f"{row['reason_class']}: {row['rationale']} (evidence: {row['evidence']})")
++
++
++def append_disqualification(
++    repo_root: Path | str, *, lane_id: str, archive_sha256: str,
++    reason_class: str | None = None, evidence: str | None = None,
++    rationale: str, who: str | None = None, reinstate: bool = False,
++) -> dict:
++    """Persist one fsynced decision under lock; never rewrite earlier records."""
++    root = Path(repo_root)
++    path = root / JOURNAL
++    path.parent.mkdir(parents=True, exist_ok=True)
++    lock_path = path.parent / ".canonical_frontier_pointer.lock"
++    with eligibility_lock(root, exclusive=True), lock_path.open("a") as lock:
++        fcntl.flock(lock, fcntl.LOCK_EX)
++        rows = active_disqualifications(root)
++        prior = disqualification_for(rows, lane_id, archive_sha256)
++        if reinstate and (not prior or (prior["lane_id"], prior["archive_sha256"]) != (lane_id, archive_sha256)):
++            raise ValueError("cannot reinstate an inactive row")
++        evidence = evidence or (prior["evidence"] if reinstate and prior else None)
++        evidence_path = root / (evidence or "")
++        if not evidence_path.is_file():
++            raise ValueError("evidence must name an existing file")
++        now = datetime.now(UTC).isoformat()
++        row = {
++            "action": "reinstate" if reinstate else "disqualify",
++            "lane_id": lane_id, "archive_sha256": archive_sha256,
++            "reason_class": reason_class or (prior["reason_class"] if reinstate and prior else None),
++            "evidence": evidence, "evidence_sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
++            "rationale": rationale, "who": who or getpass.getuser(), "when": now,
++            "reinstated_at": now if reinstate else None, "why": rationale if reinstate else None,
++            "score_claim": False,
++        }
++        _validate_event(row)
++        with path.open("a", encoding="utf-8") as stream:
++            stream.write(json.dumps(row, sort_keys=True) + "\n")
++            stream.flush()
++            os.fsync(stream.fileno())
++    return row
+diff --git a/src/tac/frontier_scan.py b/src/tac/frontier_scan.py
+index cd8923d1e..78cb48143 100644
+--- a/src/tac/frontier_scan.py
++++ b/src/tac/frontier_scan.py
+@@ -142,6 +142,7 @@ class Anchor:
+             self.axis in QUALIFYING_AXES
+             and self.hardware_substrate.lower() in QUALIFYING_HARDWARE
+             and self.score > 0
++            and not self.extra.get("disqualified")
+         )
+ 
+ 
+@@ -486,6 +487,13 @@ def collect_all_anchors(repo_root: Path | str) -> list[Anchor]:
+     anchors.extend(load_modal_call_id_ledger_anchors(repo_root))
+     anchors.extend(load_active_lane_dispatch_claims_anchors(repo_root))
+     anchors.extend(load_experiments_results_anchors(repo_root))
++    from tac.frontier_disqualifications import active_disqualifications, disqualification_for
++
++    decisions = active_disqualifications(repo_root)
++    for anchor in anchors:
++        anchor.extra["disqualified"] = disqualification_for(
++            decisions, anchor.extra.get("lane_id"), anchor.archive_sha256
++        )
+     return anchors
+ 
+ 
+@@ -851,6 +859,9 @@ def build_frontier_scan_payload(repo_root: Path | str) -> dict[str, object]:
+     drift = detect_drift(best, cited)
+     return {
+         "schema": "pact_frontier_scan_v1",
++        "disqualified_rows": [
++            _serialize_anchor(anchor) for anchor in all_anchors if anchor.extra.get("disqualified")
++        ],
+         "best_per_axis": {
+             axis: _serialize_anchor(anchors[0])
+             for axis, anchors in best.items()
+diff --git a/src/tac/canonical_frontier_pointer.py b/src/tac/canonical_frontier_pointer.py
+index 9991e1d14..9c7943b2b 100644
+--- a/src/tac/canonical_frontier_pointer.py
++++ b/src/tac/canonical_frontier_pointer.py
+@@ -175,6 +175,7 @@ class CanonicalFrontierPointer:
+     # specific records above intact: an upstream score is a target, not local
+     # archive authority.
+     effective_frontier: dict[str, Any] | None = None
++    disqualified_rows: list[dict[str, Any]] = field(default_factory=list)
+ 
+     def as_dict(self) -> dict[str, Any]:
+         return {
+@@ -196,6 +197,7 @@ class CanonicalFrontierPointer:
+             "auto_update_on_dispatch_completion": bool(self.auto_update_on_dispatch_completion),
+             "pointer_refresh_command": str(self.pointer_refresh_command),
+             "refresh_provenance": dict(self.refresh_provenance),
++            "disqualified_rows": list(self.disqualified_rows),
+             "effective_frontier": (
+                 dict(self.effective_frontier) if isinstance(self.effective_frontier, Mapping) else None
+             ),
+@@ -220,6 +222,7 @@ class CanonicalFrontierPointer:
+                 data.get("pointer_refresh_command") or ".venv/bin/python tools/refresh_canonical_frontier.py"
+             ),
+             refresh_provenance=dict(data.get("refresh_provenance") or {}),
++            disqualified_rows=list(data.get("disqualified_rows") or []),
+             effective_frontier=(
+                 dict(data.get("effective_frontier") or {})
+                 if isinstance(data.get("effective_frontier"), Mapping)
+@@ -313,6 +316,16 @@ def write_canonical_frontier_pointer_locked(
+     try:
+         fcntl.flock(lock_fd, fcntl.LOCK_EX)
+         try:
++            from tac.frontier_disqualifications import require_qualified
++
++            for row in (pointer.our_local_frontier_contest_cpu, pointer.our_local_frontier_contest_cuda):
++                if row is not None:
++                    require_qualified(repo_root, row.lane_id, row.archive_sha256)
++            effective = pointer.effective_frontier
++            if effective and (effective.get("source") != "upstream_official_leaderboard"
++                              or effective.get("lane_id") or effective.get("archive_sha256")):
++                require_qualified(repo_root, pointer.effective_frontier.get("lane_id"),
++                                  pointer.effective_frontier.get("archive_sha256"))
+             tmp_path.write_text(payload, encoding="utf-8")
+             os.replace(str(tmp_path), str(resolved_path))
+         finally:
+@@ -592,6 +605,7 @@ def _build_effective_frontier(
+     cuda_anchor: AnchorRecord | None,
+     upstream_snapshot: Mapping[str, Any] | None,
+     upstream_snapshot_at_utc: str | None,
++    disqualified_rows: list[dict[str, Any]] | None = None,
+ ) -> dict[str, Any] | None:
+     """Select ``min(our exact anchors, current official leaderboard best)``.
+ 
+@@ -600,12 +614,16 @@ def _build_effective_frontier(
+     does not grant archive custody, replay authority, or submission ownership.
+     """
+ 
++    from tac.frontier_disqualifications import disqualification_for
++
+     candidates: list[dict[str, Any]] = []
+     for source_key, anchor in (
+         ("our_local_frontier_contest_cpu", cpu_anchor),
+         ("our_local_frontier_contest_cuda", cuda_anchor),
+     ):
+-        if anchor is None or not math.isfinite(anchor.score) or anchor.score <= 0:
++        if anchor is None or anchor.extra.get("disqualified") or not math.isfinite(anchor.score) or anchor.score <= 0:
++            continue
++        if disqualification_for(disqualified_rows or [], anchor.lane_id, anchor.archive_sha256):
+             continue
+         candidates.append(
+             {
+@@ -679,6 +697,7 @@ def recompute_effective_frontier(pointer: CanonicalFrontierPointer) -> dict[str,
+             else None
+         ),
+         upstream_snapshot_at_utc=pointer.upstream_leaderboard_snapshot_at_utc,
++        disqualified_rows=pointer.disqualified_rows,
+     )
+ 
+ 
+@@ -701,10 +720,12 @@ def refresh_canonical_frontier_from_local_state(
+ 
+     # Avoid circular import: ``tac.frontier_scan`` may not need this module
+     # but the canonical refresher consumes the scanner.
++    from tac.frontier_disqualifications import active_disqualifications, disqualification_for
+     from tac.frontier_scan import build_frontier_scan_payload
+ 
+     repo_root_path = Path(repo_root)
+     payload = build_frontier_scan_payload(repo_root_path)
++    disqualified_rows = active_disqualifications(repo_root_path)
+     best = payload.get("best_per_axis") or {}
+     ranked = payload.get("top_5_per_axis") or {}
+ 
+@@ -742,10 +763,19 @@ def refresh_canonical_frontier_from_local_state(
+     maturity_refusals: list[dict[str, Any]] = []
+ 
+     def _gate_axis(axis: str, prior_anchor: AnchorRecord | None) -> AnchorRecord | None:
++        def eligible(anchor: AnchorRecord | None) -> bool:
++            return anchor is not None and not anchor.extra.get("disqualified") and not disqualification_for(
++                disqualified_rows, anchor.lane_id, anchor.archive_sha256
++            )
++
++        if not eligible(prior_anchor):
++            prior_anchor = None
+         candidates = _candidates(axis)
+         if not candidates:
+             return prior_anchor
+         for candidate in candidates:
++            if not eligible(candidate):
++                continue
+             chosen, refusal = _gate_axis_anchor(candidate, prior_anchor, axis_label=axis)
+             if refusal is None:
+                 return chosen
+@@ -778,6 +808,7 @@ def refresh_canonical_frontier_from_local_state(
+         last_refreshed_utc=_now_iso(),
+         auto_update_on_dispatch_completion=True,
+         pointer_refresh_command=".venv/bin/python tools/refresh_canonical_frontier.py",
++        disqualified_rows=disqualified_rows,
+         refresh_provenance={
+             "refresh_kind": "local_state",
+             "refreshed_at_utc": _now_iso(),
+@@ -785,6 +816,8 @@ def refresh_canonical_frontier_from_local_state(
+             "refresher_host": socket.gethostname(),
+             "scan_stats": payload.get("scan_stats"),
+             "checkpoint_maturity_refusals": maturity_refusals,
++            "disqualified_rows": disqualified_rows,
++            "disqualification_journal": ".omx/state/frontier_disqualifications.jsonl",
+         },
+         effective_frontier=_build_effective_frontier(
+             cpu_anchor=cpu_anchor,
+@@ -979,6 +1012,7 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
+         last_refreshed_utc=_now_iso(),
+         auto_update_on_dispatch_completion=pointer.auto_update_on_dispatch_completion,
+         pointer_refresh_command=pointer.pointer_refresh_command,
++        disqualified_rows=pointer.disqualified_rows,
+         refresh_provenance={
+             "refresh_kind": "local_state+upstream_leaderboard",
+             "refreshed_at_utc": _now_iso(),
+@@ -988,6 +1022,8 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
+             "upstream_fetch_error": snapshot.get("fetch_error"),
+             "scan_stats": pointer.refresh_provenance.get("scan_stats"),
+             "checkpoint_maturity_refusals": pointer.refresh_provenance.get("checkpoint_maturity_refusals", []),
++            "disqualified_rows": pointer.disqualified_rows,
++            "disqualification_journal": ".omx/state/frontier_disqualifications.jsonl",
+         },
+         effective_frontier=_build_effective_frontier(
+             cpu_anchor=pointer.our_local_frontier_contest_cpu,
+diff --git a/tools/frontier_disqualify.py b/tools/frontier_disqualify.py
+new file mode 100644
+index 000000000..33186946c
+--- /dev/null
++++ b/tools/frontier_disqualify.py
+@@ -0,0 +1,37 @@
++#!/usr/bin/env python
++"""Journal an operator's disqualification or reinstatement; then refresh explicitly."""
++
++from __future__ import annotations
++
++import argparse
++import json
++from pathlib import Path
++
++from tac.frontier_disqualifications import REASON_CLASSES, append_disqualification
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parent.parent)
++    parser.add_argument("--lane", required=True)
++    parser.add_argument("--archive-sha256", required=True)
++    parser.add_argument("--reason-class", choices=REASON_CLASSES)
++    parser.add_argument("--evidence")
++    parser.add_argument("--rationale", required=True)
++    parser.add_argument("--who")
++    parser.add_argument("--reinstate", action="store_true")
++    args = parser.parse_args(argv)
++    try:
++        row = append_disqualification(
++            args.repo_root, lane_id=args.lane, archive_sha256=args.archive_sha256,
++            reason_class=args.reason_class, evidence=args.evidence,
++            rationale=args.rationale, who=args.who, reinstate=args.reinstate,
++        )
++    except (ValueError, OSError) as exc:
++        parser.exit(2, f"REFUSED: {exc}\n")
++    print(json.dumps({"event": row, "next": "Run tools/refresh_canonical_frontier.py"}, sort_keys=True))
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/tools/refresh_canonical_frontier.py b/tools/refresh_canonical_frontier.py
+index ae6d2a1e5..6fbf96514 100755
+--- a/tools/refresh_canonical_frontier.py
++++ b/tools/refresh_canonical_frontier.py
+@@ -57,6 +57,9 @@ def _render_pointer_summary(pointer: CanonicalFrontierPointer) -> str:
+     lines.append(f"Schema:       {pointer.schema_version}")
+     lines.append(f"Refreshed at: {pointer.last_refreshed_utc}")
+     lines.append(f"Auto-update:  {pointer.auto_update_on_dispatch_completion}")
++    for row in pointer.disqualified_rows:
++        lines.append(f"DISQUALIFIED {row['lane_id']} {row['archive_sha256']}: "
++                     f"{row['reason_class']} — {row['rationale']} (evidence: {row['evidence']})")
+     lines.append("")
+     lines.append("-" * 72)
+     lines.append("EFFECTIVE FRONTIER (COMPETITIVE SCORE TO BEAT)")
+diff --git a/tools/pointer_move_packet.py b/tools/pointer_move_packet.py
+index 33abeeaba..3b615a766 100644
+--- a/tools/pointer_move_packet.py
++++ b/tools/pointer_move_packet.py
+@@ -140,6 +140,9 @@ def prior_anchor_from_pointer(repo_root: Path, axis: str) -> PriorAnchor:
+     data = anchor.as_dict() if hasattr(anchor, "as_dict") else dict(anchor)
+     extra = data.get("extra") or {}
+     lane = data.get("lane_id") or extra.get("lane_id")
++    from tac.frontier_disqualifications import require_qualified
++
++    require_qualified(repo_root, lane, data.get("archive_sha256"))
+     return PriorAnchor(
+         label=str(lane or data.get("archive_sha256", "")[:8] or "prior"),
+         score=data.get("score"),
+@@ -353,6 +356,13 @@ def build_parser() -> argparse.ArgumentParser:
+ 
+ def main(argv: list[str] | None = None) -> int:
+     args = build_parser().parse_args(argv)
++    from tac.frontier_disqualifications import eligibility_lock
++
++    with eligibility_lock(args.repo_root):
++        return _main(args)
++
++
++def _main(args: argparse.Namespace) -> int:
+     repo_root = Path(args.repo_root).resolve()
+     if args.move_number is None:
+         derived = next_move_number(repo_root)
+@@ -386,7 +396,7 @@ def main(argv: list[str] | None = None) -> int:
+             except (OSError, json.JSONDecodeError):
+                 call_id = None
+     try:
+-        row = score_row_from_harvest(payload, lane_id=args.lane_id, call_id=call_id)
++        row = score_row_from_harvest(payload, lane_id=args.lane_id or payload.get("lane_id"), call_id=call_id)
+     except HarvestRefusal as exc:
+         print(f"REFUSED (row): {exc}", file=sys.stderr)
+         return 2
+@@ -425,7 +435,15 @@ def main(argv: list[str] | None = None) -> int:
+         hardware_bits.append(f"n{row.n_samples}")
+     axis_label_full = " ".join([axis_label, *hardware_bits])
+ 
+-    prior = _prior_components_from_mirror(repo_root, prior_anchor_from_pointer(repo_root, axis))
++    from tac.frontier_disqualifications import require_qualified
++
++    try:
++        require_qualified(repo_root, payload.get("lane_id"), row.archive_sha256)
++        require_qualified(repo_root, row.lane_id, row.archive_sha256)
++        prior = _prior_components_from_mirror(repo_root, prior_anchor_from_pointer(repo_root, axis))
++    except (ValueError, OSError) as exc:
++        print(f"REFUSED (disqualification): {exc}", file=sys.stderr)
++        return 8
+     beats = prior.score is None or row.score < prior.score
+     arithmetic = target_arithmetic(row)
+     plan = PacketPlan(
+diff --git a/.omx/state/frontier_disqualifications.jsonl b/.omx/state/frontier_disqualifications.jsonl
+new file mode 100644
+index 000000000..e69de29bb

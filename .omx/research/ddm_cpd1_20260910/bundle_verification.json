@@ -1,0 +1,51 @@
+[
+  {
+    "label": "fix",
+    "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_fix/20260910T080142.668468Z-15790/intended-commit.bundle",
+    "bundle_sha256": "9f75370fe564213d376ebfe96fb52fa8bc94cb241bb42fef8fb99ef9df1daf30",
+    "verification_rc": 0,
+    "verification_stdout": "The bundle contains this ref:\n94795e03225b04fc8233a697ef54259228a6058f refs/heads/serializer-fallback\nThe bundle requires this ref:\n47695081bdd79b4c86a6e615860a1656578b3538 \nThe bundle uses this hash algorithm: sha1\n",
+    "verification_stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_fix/20260910T080142.668468Z-15790/intended-commit.bundle is okay\n",
+    "refs": "94795e03225b04fc8233a697ef54259228a6058f refs/heads/serializer-fallback",
+    "receipts": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_fix/20260910T080142.668468Z-15790/receipts.jsonl",
+    "format_patch": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_fix/20260910T080142.668468Z-15790/intended-commit.format-patch",
+    "intention_sha256": "91b943ef4731ac41fadd1f7523faf20e09518cc5d0ebb7bf39328a9546c7dc9a",
+    "files": {
+      "src/tac/frontier_disqualifications.py": "a5ba612a8d6138eea4c1debac856b7c2999d0b5a345771effcfff88cfd7b0b3d",
+      "src/tac/frontier_scan.py": "379b125ae95dcf8ffcf223edcb4060aee44187e7d97111c3698a71e24b7a25b6",
+      "src/tac/canonical_frontier_pointer.py": "829f768591c3ab9ee797a45d6cc2e73588390b2396f4f0d0f076cbc03b01de23",
+      "tools/frontier_disqualify.py": "2e87c46f06405fa7bffd5817ef71d27cbb92672da839ab2ea4535f0807d948de",
+      "tools/refresh_canonical_frontier.py": "abc1587f0d1c904a06a11f1d10d24ca86a44ea2069db3c8f369b2b9d568ac581",
+      "tools/pointer_move_packet.py": "a80addb6fb2f17a52f3f8d267b03c1cab8a934ae441273c0813a3246260584f4",
+      ".omx/state/frontier_disqualifications.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "label": "protection",
+    "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_protection/20260910T080143.764558Z-15848/intended-commit.bundle",
+    "bundle_sha256": "13e637534fb2533e35b9ce06e21abbd6323014a58276fe116f313bd38e333210",
+    "verification_rc": 0,
+    "verification_stdout": "The bundle contains this ref:\n3731a6c29e6319bb355d1993be75cd0bfa8b634b refs/heads/serializer-fallback\nThe bundle requires this ref:\n47695081bdd79b4c86a6e615860a1656578b3538 \nThe bundle uses this hash algorithm: sha1\n",
+    "verification_stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_protection/20260910T080143.764558Z-15848/intended-commit.bundle is okay\n",
+    "refs": "3731a6c29e6319bb355d1993be75cd0bfa8b634b refs/heads/serializer-fallback",
+    "receipts": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_protection/20260910T080143.764558Z-15848/receipts.jsonl",
+    "format_patch": "/Users/adpena/Projects/pact/.omx/research/ddm_cpd1_20260910/serializer_protection/20260910T080143.764558Z-15848/intended-commit.format-patch",
+    "intention_sha256": "952b03318fe946571d7e5fc6e415a8512ad2b1f0e41bc5a3236e6c33491506b7",
+    "files": {
+      "src/tac/preflight.py": "dcaa703f4734eba81f48369313c03facf81424b09e8af9a61e9176ac84ad31e9",
+      "src/tac/tests/test_frontier_disqualifications.py": "1c99c861288d4201b7589b0270ba51c174ffc1d4d533c018273e983e3520a183",
+      "src/tac/tests/test_training_effective_frontier_target.py": "7bf096c6e904e4702c4cae3aef1f57913d405b2058fd4430a7006d6d5432ff76",
+      "docs/meta_bug_class_catalog.md": "1841c25e335ad5000a9601336fd03af80f9dea2584317ffaaaeab5f9091e2970",
+      ".omx/research/ddm_cpd1_pointer_disqualification_20260910.md": "b6dcf650d4236912ab17947a0926289bcf9a9e944f437a1c0e89ce31b07ec40e",
+      ".omx/research/retroactive_sweep_for_catalog_418_20260910.md": "481ec2736ee5262ac02f087c48945b4bd8fd942f7e0908c4b39a5139728c3508",
+      ".omx/research/ddm_cpd1_20260910/checks.json": "dc5fa1ebead38f1c32fa7a2cc1c0c2627391ca5bfc5f21b87421ac3a3f0cd10b",
+      ".omx/research/ddm_cpd1_20260910/check_0.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      ".omx/research/ddm_cpd1_20260910/check_1.log": "ec9a66ae999d8b2d7f0d6d640ab6a05ff1c654a3cdc6fb1c5f27c3fea839f577",
+      ".omx/research/ddm_cpd1_20260910/reviews.json": "5cdcfcd68012808f4d7bb63fef0cef88b685d5a2a8fe62ff52014f95de5d29a0",
+      ".omx/research/ddm_cpd1_20260910/review_tracker.log": "72f6b72acd1a85c3235480a8a386085c7fcceaed237423fdc6b5c7ee6ca66aad",
+      ".omx/research/ddm_cpd1_20260910/offline_rehearsal.json": "f4ce9c05574b81412ad5304d4920ed106c7bf91e07b998c2185ba60faa1fcc62",
+      ".omx/research/ddm_cpd1_20260910/equations_recall.json": "bf914ce8c0d33101b66c6f465a6fcf599bdd6fd2a936237024b617e077dca49f",
+      ".omx/research/ddm_cpd1_20260910/baseline_regression_status.json": "d5cabe3958e9e950dc01a6e9c98397e5b458ded0f11f398b90027ee842c2ec47"
+    }
+  }
+]

@@ -1,0 +1,19 @@
+[
+  {
+    "designated_date": "2026-08-18",
+    "evidence": "move 41 RETRACTED as a pointer (pr8 P0: rule-118 content in receiver code; gs3 Addendum 22 6a17b63b9); SUBMITTABLE pointer = move 40 S 0.13763861019288715 @ 180,233 B; tc4's row failed the 30-min T4 budget; cure (rlc1), disqualification mechanism (cpd1), decode-budget leg (dwc1) live",
+    "last_verified_utc": "2026-09-10T07:45:34Z",
+    "next_action": "rp1 round-2 seal against move 40 \u2192 fire \u2192 packet 42; rlc1 cure \u2192 pr9 check \u2192 fire; cpd1 \u2192 MAIN disqualifies move 41 in the pointer JSON; mv1 landing at rp1's boundary",
+    "p0_id": "p0_1111_completion_and_frontier_lowering_20260817",
+    "source": "review round 7 harvest (fresh-eyes Opus arm #3)",
+    "status": "in_progress",
+    "task_ids": [
+      1111
+    ],
+    "verbatim_ask": "5 consecutive clean review passes (fresh-eyes preferred for >=2) then final one-line operator confirm incl. hosting authorization",
+    "watch_paths": [
+      ".omx/research/ddm_pq1_submission_packet_prep_20260815/ADVERSARIAL_REVIEW_SCAFFOLD.md"
+    ],
+    "written_at_utc": "2026-09-10T07:45:34Z"
+  }
+]

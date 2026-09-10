@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      ".venv/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "src/tac/frontier_disqualifications.py",
+      "src/tac/frontier_scan.py",
+      "src/tac/canonical_frontier_pointer.py",
+      "src/tac/preflight.py",
+      "tools/frontier_disqualify.py",
+      "tools/refresh_canonical_frontier.py",
+      "tools/pointer_move_packet.py",
+      "src/tac/tests/test_frontier_disqualifications.py",
+      "src/tac/tests/test_training_effective_frontier_target.py"
+    ],
+    "returncode": 0,
+    "seconds": 0.03595741699973587,
+    "log": ".omx/research/ddm_cpd1_20260910/check_0.log"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "src/tac/tests/test_frontier_disqualifications.py",
+      "src/tac/tests/test_canonical_frontier_pointer.py",
+      "src/tac/tests/test_frontier_scan.py",
+      "src/tac/tests/test_frontier_scan_and_check_316.py",
+      "src/tac/tests/test_frontier_refresh_walks_ranked_candidates.py",
+      "src/tac/tests/test_pointer_move_packet.py",
+      "src/tac/tests/test_training_effective_frontier_target.py",
+      "src/tac/tests/test_check_299_catalog_quota_pointer_doc.py",
+      "--disable-warnings"
+    ],
+    "returncode": 0,
+    "seconds": 3.24599662500259,
+    "log": ".omx/research/ddm_cpd1_20260910/check_1.log"
+  }
+]

@@ -142,6 +142,7 @@ class Anchor:
             self.axis in QUALIFYING_AXES
             and self.hardware_substrate.lower() in QUALIFYING_HARDWARE
             and self.score > 0
+            and not self.extra.get("disqualified")
         )
 
 
@@ -486,6 +487,13 @@ def collect_all_anchors(repo_root: Path | str) -> list[Anchor]:
     anchors.extend(load_modal_call_id_ledger_anchors(repo_root))
     anchors.extend(load_active_lane_dispatch_claims_anchors(repo_root))
     anchors.extend(load_experiments_results_anchors(repo_root))
+    from tac.frontier_disqualifications import active_disqualifications, disqualification_for
+
+    decisions = active_disqualifications(repo_root)
+    for anchor in anchors:
+        anchor.extra["disqualified"] = disqualification_for(
+            decisions, anchor.extra.get("lane_id"), anchor.archive_sha256
+        )
     return anchors
 
 
@@ -851,6 +859,9 @@ def build_frontier_scan_payload(repo_root: Path | str) -> dict[str, object]:
     drift = detect_drift(best, cited)
     return {
         "schema": "pact_frontier_scan_v1",
+        "disqualified_rows": [
+            _serialize_anchor(anchor) for anchor in all_anchors if anchor.extra.get("disqualified")
+        ],
         "best_per_axis": {
             axis: _serialize_anchor(anchors[0])
             for axis, anchors in best.items()

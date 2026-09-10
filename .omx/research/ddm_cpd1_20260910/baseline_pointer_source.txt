@@ -175,7 +175,6 @@ class CanonicalFrontierPointer:
     # specific records above intact: an upstream score is a target, not local
     # archive authority.
     effective_frontier: dict[str, Any] | None = None
-    disqualified_rows: list[dict[str, Any]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -197,7 +196,6 @@ class CanonicalFrontierPointer:
             "auto_update_on_dispatch_completion": bool(self.auto_update_on_dispatch_completion),
             "pointer_refresh_command": str(self.pointer_refresh_command),
             "refresh_provenance": dict(self.refresh_provenance),
-            "disqualified_rows": list(self.disqualified_rows),
             "effective_frontier": (
                 dict(self.effective_frontier) if isinstance(self.effective_frontier, Mapping) else None
             ),
@@ -222,7 +220,6 @@ class CanonicalFrontierPointer:
                 data.get("pointer_refresh_command") or ".venv/bin/python tools/refresh_canonical_frontier.py"
             ),
             refresh_provenance=dict(data.get("refresh_provenance") or {}),
-            disqualified_rows=list(data.get("disqualified_rows") or []),
             effective_frontier=(
                 dict(data.get("effective_frontier") or {})
                 if isinstance(data.get("effective_frontier"), Mapping)
@@ -316,16 +313,6 @@ def write_canonical_frontier_pointer_locked(
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
         try:
-            from tac.frontier_disqualifications import require_qualified
-
-            for row in (pointer.our_local_frontier_contest_cpu, pointer.our_local_frontier_contest_cuda):
-                if row is not None:
-                    require_qualified(repo_root, row.lane_id, row.archive_sha256)
-            effective = pointer.effective_frontier
-            if effective and (effective.get("source") != "upstream_official_leaderboard"
-                              or effective.get("lane_id") or effective.get("archive_sha256")):
-                require_qualified(repo_root, pointer.effective_frontier.get("lane_id"),
-                                  pointer.effective_frontier.get("archive_sha256"))
             tmp_path.write_text(payload, encoding="utf-8")
             os.replace(str(tmp_path), str(resolved_path))
         finally:
@@ -605,7 +592,6 @@ def _build_effective_frontier(
     cuda_anchor: AnchorRecord | None,
     upstream_snapshot: Mapping[str, Any] | None,
     upstream_snapshot_at_utc: str | None,
-    disqualified_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     """Select ``min(our exact anchors, current official leaderboard best)``.
 
@@ -614,16 +600,12 @@ def _build_effective_frontier(
     does not grant archive custody, replay authority, or submission ownership.
     """
 
-    from tac.frontier_disqualifications import disqualification_for
-
     candidates: list[dict[str, Any]] = []
     for source_key, anchor in (
         ("our_local_frontier_contest_cpu", cpu_anchor),
         ("our_local_frontier_contest_cuda", cuda_anchor),
     ):
-        if anchor is None or anchor.extra.get("disqualified") or not math.isfinite(anchor.score) or anchor.score <= 0:
-            continue
-        if disqualification_for(disqualified_rows or [], anchor.lane_id, anchor.archive_sha256):
+        if anchor is None or not math.isfinite(anchor.score) or anchor.score <= 0:
             continue
         candidates.append(
             {
@@ -697,7 +679,6 @@ def recompute_effective_frontier(pointer: CanonicalFrontierPointer) -> dict[str,
             else None
         ),
         upstream_snapshot_at_utc=pointer.upstream_leaderboard_snapshot_at_utc,
-        disqualified_rows=pointer.disqualified_rows,
     )
 
 
@@ -720,12 +701,10 @@ def refresh_canonical_frontier_from_local_state(
 
     # Avoid circular import: ``tac.frontier_scan`` may not need this module
     # but the canonical refresher consumes the scanner.
-    from tac.frontier_disqualifications import active_disqualifications, disqualification_for
     from tac.frontier_scan import build_frontier_scan_payload
 
     repo_root_path = Path(repo_root)
     payload = build_frontier_scan_payload(repo_root_path)
-    disqualified_rows = active_disqualifications(repo_root_path)
     best = payload.get("best_per_axis") or {}
     ranked = payload.get("top_5_per_axis") or {}
 
@@ -763,19 +742,10 @@ def refresh_canonical_frontier_from_local_state(
     maturity_refusals: list[dict[str, Any]] = []
 
     def _gate_axis(axis: str, prior_anchor: AnchorRecord | None) -> AnchorRecord | None:
-        def eligible(anchor: AnchorRecord | None) -> bool:
-            return anchor is not None and not anchor.extra.get("disqualified") and not disqualification_for(
-                disqualified_rows, anchor.lane_id, anchor.archive_sha256
-            )
-
-        if not eligible(prior_anchor):
-            prior_anchor = None
         candidates = _candidates(axis)
         if not candidates:
             return prior_anchor
         for candidate in candidates:
-            if not eligible(candidate):
-                continue
             chosen, refusal = _gate_axis_anchor(candidate, prior_anchor, axis_label=axis)
             if refusal is None:
                 return chosen
@@ -808,7 +778,6 @@ def refresh_canonical_frontier_from_local_state(
         last_refreshed_utc=_now_iso(),
         auto_update_on_dispatch_completion=True,
         pointer_refresh_command=".venv/bin/python tools/refresh_canonical_frontier.py",
-        disqualified_rows=disqualified_rows,
         refresh_provenance={
             "refresh_kind": "local_state",
             "refreshed_at_utc": _now_iso(),
@@ -816,8 +785,6 @@ def refresh_canonical_frontier_from_local_state(
             "refresher_host": socket.gethostname(),
             "scan_stats": payload.get("scan_stats"),
             "checkpoint_maturity_refusals": maturity_refusals,
-            "disqualified_rows": disqualified_rows,
-            "disqualification_journal": ".omx/state/frontier_disqualifications.jsonl",
         },
         effective_frontier=_build_effective_frontier(
             cpu_anchor=cpu_anchor,
@@ -1012,7 +979,6 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
         last_refreshed_utc=_now_iso(),
         auto_update_on_dispatch_completion=pointer.auto_update_on_dispatch_completion,
         pointer_refresh_command=pointer.pointer_refresh_command,
-        disqualified_rows=pointer.disqualified_rows,
         refresh_provenance={
             "refresh_kind": "local_state+upstream_leaderboard",
             "refreshed_at_utc": _now_iso(),
@@ -1022,8 +988,6 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
             "upstream_fetch_error": snapshot.get("fetch_error"),
             "scan_stats": pointer.refresh_provenance.get("scan_stats"),
             "checkpoint_maturity_refusals": pointer.refresh_provenance.get("checkpoint_maturity_refusals", []),
-            "disqualified_rows": pointer.disqualified_rows,
-            "disqualification_journal": ".omx/state/frontier_disqualifications.jsonl",
         },
         effective_frontier=_build_effective_frontier(
             cpu_anchor=pointer.our_local_frontier_contest_cpu,

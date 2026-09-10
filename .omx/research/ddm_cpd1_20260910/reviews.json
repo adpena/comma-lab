@@ -1,0 +1,43 @@
+{
+  "scope": "new helper and CLI; changed scanner/pointer/refresh/packet functions; preflight #418 function and callsite only; trainer fixture diff; new tests independently read by root",
+  "reviewer": "tests_review (implementation), root (independent review of authored tests)",
+  "passes": [
+    {
+      "pass": 1,
+      "findings": [],
+      "hashes": {
+        "src/tac/frontier_disqualifications.py": "a5ba612a8d6138eea4c1debac856b7c2999d0b5a345771effcfff88cfd7b0b3d",
+        "src/tac/frontier_scan.py": "379b125ae95dcf8ffcf223edcb4060aee44187e7d97111c3698a71e24b7a25b6",
+        "src/tac/canonical_frontier_pointer.py": "829f768591c3ab9ee797a45d6cc2e73588390b2396f4f0d0f076cbc03b01de23",
+        "src/tac/preflight.py": "dcaa703f4734eba81f48369313c03facf81424b09e8af9a61e9176ac84ad31e9",
+        "tools/frontier_disqualify.py": "2e87c46f06405fa7bffd5817ef71d27cbb92672da839ab2ea4535f0807d948de",
+        "tools/refresh_canonical_frontier.py": "abc1587f0d1c904a06a11f1d10d24ca86a44ea2069db3c8f369b2b9d568ac581",
+        "tools/pointer_move_packet.py": "a80addb6fb2f17a52f3f8d267b03c1cab8a934ae441273c0813a3246260584f4",
+        "src/tac/tests/test_frontier_disqualifications.py": "1c99c861288d4201b7589b0270ba51c174ffc1d4d533c018273e983e3520a183",
+        "src/tac/tests/test_training_effective_frontier_target.py": "7bf096c6e904e4702c4cae3aef1f57913d405b2058fd4430a7006d6d5432ff76"
+      }
+    },
+    {
+      "pass": 2,
+      "findings": [],
+      "hashes": {
+        "src/tac/frontier_disqualifications.py": "a5ba612a8d6138eea4c1debac856b7c2999d0b5a345771effcfff88cfd7b0b3d",
+        "src/tac/frontier_scan.py": "379b125ae95dcf8ffcf223edcb4060aee44187e7d97111c3698a71e24b7a25b6",
+        "src/tac/canonical_frontier_pointer.py": "829f768591c3ab9ee797a45d6cc2e73588390b2396f4f0d0f076cbc03b01de23",
+        "src/tac/preflight.py": "dcaa703f4734eba81f48369313c03facf81424b09e8af9a61e9176ac84ad31e9",
+        "tools/frontier_disqualify.py": "2e87c46f06405fa7bffd5817ef71d27cbb92672da839ab2ea4535f0807d948de",
+        "tools/refresh_canonical_frontier.py": "abc1587f0d1c904a06a11f1d10d24ca86a44ea2069db3c8f369b2b9d568ac581",
+        "tools/pointer_move_packet.py": "a80addb6fb2f17a52f3f8d267b03c1cab8a934ae441273c0813a3246260584f4",
+        "src/tac/tests/test_frontier_disqualifications.py": "1c99c861288d4201b7589b0270ba51c174ffc1d4d533c018273e983e3520a183",
+        "src/tac/tests/test_training_effective_frontier_target.py": "7bf096c6e904e4702c4cae3aef1f57913d405b2058fd4430a7006d6d5432ff76"
+      }
+    }
+  ],
+  "fixed_findings": [
+    "override cannot rename original receipt identity",
+    "packet shared eligibility lock excludes concurrent journal append",
+    "same SHA different identified receiver remains eligible",
+    "upstream source label cannot hide local identity",
+    "recompute uses disqualified_rows projection"
+  ]
+}
