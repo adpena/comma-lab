@@ -1,0 +1,31 @@
+import json, math
+S = "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/retained"
+sel = json.load(open(f"{S}/fs1_select.json"))
+out = {}
+for v in sel["variants"]:
+    out[f"{v['strategy']}@{v['margin_gate']:g}"] = {
+        "changed": v["changed_count"], "active": v["active_pairs"],
+        "blob": v["blob_bytes"], "dB": v["delta_bytes"],
+        "min_ratio": v["min_adopted_ratio"],
+        "gain": v["n600_mean_d_pose_gain"],
+        "net": v["price"]["net_delta_S"],
+    }
+print("SELECT VARIANTS"); print(json.dumps(out, indent=1))
+bo = [v for v in sel["variants"] if v["strategy"]=="byte_optimal" and abs(v["margin_gate"]-1.01)<1e-9][0]
+fr = bo["byte_frontier"]
+print("frontier length", len(fr), "opt at", max(range(len(fr)), key=lambda i:-fr[i]["net_delta_S"]))
+print("frontier head/tail:", json.dumps([fr[0], fr[len(fr)//2], fr[-1]]))
+for v in ("A_ratio_gate_101","B_byte_optimal_101"):
+    b = json.load(open(f"{S}/fs1_build_{v}.json"))
+    c = json.load(open(f"{S}/fs1_compose_{v}.json"))
+    st = json.load(open(f"{S}/fs1_stage_{v}.json"))
+    print("="*16, v)
+    print(" archive", b["candidate"]["sha256"][:16], b["candidate"]["bytes"], "dB", b["candidate"]["delta_bytes"])
+    print(" blob", b["candidate"]["selector_blob_bytes"], "sha", b["candidate"]["selector_blob_sha256"][:16], "active", b["candidate"]["selector_active_pairs"])
+    print(" d_pose", c["candidate"]["d_pose"], "leg", c["candidate"]["pose_leg"])
+    print(" dS_pose", c["delta"]["delta_S_pose"], "dS_rate", c["delta"]["delta_S_rate"], "net", c["delta"]["net_delta_S"])
+    print(" projected S", c["t4_composition"]["projected_candidate_S"])
+    print(" repro rel diff", c["projection_reproduction"]["relative_difference"])
+    print(" admissible", c["admissibility"]["admissible"], "95% [", c["admissibility"]["interval_95_low"], ",", c["admissibility"]["interval_95_high"], "]")
+    print(" unchanged", c["unchanged_pairs"])
+    print(" stage files", st["file_count"], st["files_differing_from_source"], "runtime bytes", st["total_bytes"])

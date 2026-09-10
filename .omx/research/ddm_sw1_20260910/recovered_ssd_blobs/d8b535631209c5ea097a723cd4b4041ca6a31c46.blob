@@ -1,0 +1,74 @@
+"""ddm_ql1: align the pytest watchdog with the ep725 cold-decode cost these tests declare."""
+
+from __future__ import annotations
+
+import pathlib
+import sys
+
+T = pathlib.Path("src/tac/witness_dsl/tests")
+
+BLOCK = '''# TIMEOUT BUDGET 2026-09-03 (ddm_ql1). These tests drive the ep725 COLD decode, which runs four
+# full decodes (canonical NumPy x2 then shipped-runtime subprocess x2, adapter
+# _decode_executable_source_materialized). MEASURED: one shipped n2 decode costs 15.6-16.7 s and the
+# whole cold path 65.6 s on an idle machine -- over the repo-wide pytest-timeout ceiling of 60 s
+# (pyproject.toml). The cold surface is a module-scoped cache, so ANY test in this module can be the
+# one that pays for filling it; the budget therefore belongs at module scope, not on one test.
+# 180 s is not a new number: it is what this module's own decode call already asks for
+# (timeout_seconds=180.0) and what the single pre-existing @pytest.mark.timeout(180) in this file
+# already used. This raises a harness watchdog only -- every assertion still runs unchanged.
+pytestmark = pytest.mark.timeout(180)
+'''
+
+PER_TEST = {
+    "test_ep725_levelset_predictor_adapter.py": (
+        (
+            "test_real_explicit_member_runtime_decode_is_source_independent_and_causally_bound",
+            "test_real_ep725_n2_double_decode_is_hash_bound_bit_exact_and_label_owned",
+        ),
+    ),
+    "test_bounded_target_g_encoder.py": (
+        ("test_real_ep725_n2_v2_control_exactly_reconstructs_frozen_target_without_transport",),
+    ),
+}
+
+MODULE_LEVEL = {
+    "test_taskspace_monolithic_pga_receiver.py": "_MAX_PACKET_BYTES",
+    "test_taskspace_g17_actuator_ir_v1.py": None,
+}
+
+MARK = (
+    "@pytest.mark.timeout(180)  # ddm_ql1 2026-09-03: cold ep725 decode = 4 decodes, 65.6 s measured\n"
+)
+
+for filename, anchor_prefix in MODULE_LEVEL.items():
+    path = T / filename
+    text = path.read_text()
+    if "pytestmark = pytest.mark.timeout(180)" in text:
+        print(f"SKIP {filename}: module mark present")
+        continue
+    lines = text.splitlines(keepends=True)
+    insert_at = None
+    for i, line in enumerate(lines):
+        if line.startswith(("@pytest.fixture", "@cache", "def test_", "@dataclass")):
+            insert_at = i
+            break
+    if insert_at is None:
+        sys.exit(f"no insertion anchor in {filename}")
+    lines.insert(insert_at, BLOCK + "\n\n")
+    path.write_text("".join(lines))
+    print(f"OK   {filename}: module-level timeout(180)")
+
+for filename, (tests,) in PER_TEST.items():
+    path = T / filename
+    text = path.read_text()
+    changed = 0
+    for name in tests:
+        needle = f"def {name}("
+        if text.count(needle) != 1:
+            sys.exit(f"test not unique in {filename}: {name}")
+        if MARK.strip() in text.split(needle)[0].rsplit("\n\n", 1)[-1]:
+            continue
+        text = text.replace(needle, MARK + f"def {name}(", 1)
+        changed += 1
+    path.write_text(text)
+    print(f"OK   {filename}: {changed} per-test timeout marks")

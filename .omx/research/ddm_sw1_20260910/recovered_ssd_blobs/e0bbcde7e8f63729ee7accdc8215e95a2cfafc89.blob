@@ -1,0 +1,40 @@
+#!/bin/bash
+# ddm_ane2 SCREEN: split-point ladder + per-op sensitivity, both scorers, n120
+# stratified against the cached n600 CPU-torch fp32 authority.  Sequential by
+# design: ONE process at a time (the Metal belongs to cl2/md3).
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+E="$OUT/enumerate.json"
+RAW=experiments/results/mlx_fleet_gt_cache/gt_n600.npz
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+
+echo "=== [1/4] posenet ladder ==="
+$PY $EXP ladder --model posenet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_posenet.npz --raw $RAW \
+  --splits 0 1 2 4 8 16 32 64 128 192 286 \
+  --modes CPU_AND_NE CPU_ONLY --reps 20 --eval-pairs 120 \
+  --out-dir $OUT/screen --out $OUT/screen/ladder_posenet_n120.json
+
+echo "=== [2/4] segnet ladder ==="
+$PY $EXP ladder --model segnet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_segnet.npz --raw $RAW \
+  --splits 0 1 2 4 8 12 16 32 64 128 297 \
+  --modes CPU_AND_NE CPU_ONLY --reps 20 --eval-pairs 120 \
+  --out-dir $OUT/screen --out $OUT/screen/ladder_segnet_n120.json
+
+echo "=== [3/4] posenet sensitivity (16 groups) ==="
+$PY $EXP sensitivity --model posenet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_posenet.npz --raw $RAW \
+  --groups 16 --eval-pairs 120 --placement \
+  --out-dir $OUT/screen --out $OUT/screen/sensitivity_posenet_n120.json
+
+echo "=== [4/4] segnet sensitivity (16 groups) ==="
+$PY $EXP sensitivity --model segnet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_segnet.npz --raw $RAW \
+  --groups 16 --eval-pairs 120 --placement \
+  --out-dir $OUT/screen --out $OUT/screen/sensitivity_segnet_n120.json
+
+echo "SCREEN COMPLETE"

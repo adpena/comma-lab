@@ -1,0 +1,21 @@
+# JF2 serializer commit blocker and MAIN landing handoff
+
+The required serializer was invoked with the JF2 memo as the sole explicit file, `base=new`, its then-current post-edit SHA-256, `[no-triality] [p0-ledger-ok]`, Markdown-only `REVIEW_GATE_OVERRIDE=1`, label `ddm_jf2`, and `--no-co-author`.
+
+Git refused before staging with return code 128:
+
+```text
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: .omx/research/ddm_jf2_terminal_diagonal_harvest_20260826.md: failed to insert into database
+error: unable to index file '.omx/research/ddm_jf2_terminal_diagonal_harvest_20260826.md'
+fatal: adding files failed
+```
+
+The staged index remained empty. The shared canonical ledger is deliberately excluded because unrelated OR1/D3B appends arrived while JF2 ran; JF2's own lifecycle rows are already present through the locked canonical writer.
+
+MAIN should verify `BUNDLE_MANIFEST.json`, apply or compare `COMMIT_INTENT.patch`, require final memo SHA-256 `c070c80e569593debd422cf1eec149f47e3d198790b4f116b86ed669e222c38b`, and run the manifest's exact serializer command. The intended landing contains only:
+
+`.omx/research/ddm_jf2_terminal_diagonal_harvest_20260826.md`
+
+JF2 makes no commit claim. No scorer, Modal job, evaluator, or pointer mutation occurred.

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+for _ in $(seq 1 900); do
+  [ -f "$OUT/stage5/hybrid_band0.05_t64_h32.json" ] && break
+  sleep 10
+done
+sleep 5
+exec bash "$OUT/run_stage6.sh"

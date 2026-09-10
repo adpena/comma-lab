@@ -1,0 +1,28 @@
+#!/bin/bash
+# ddm_ane2 STAGE 3 -- the INPUT control ane1 owed.
+#
+# ane1 measured SegNet fp16 at 4.818e-05 on a decode of the pointer body; the
+# 2026-07-13 lane measured 2.4746e-02 on GT frames; ane1 could not separate the
+# INPUT from the TOOLCHAIN because its decode is gone.  This arm's GT number
+# (9.71e-04, n120) plus this run's number on a REAL generated decode, both
+# through the SAME toolchain, separates them.  The generated frames are also the
+# operationally relevant input: the scorer reads the codec's output, not GT.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+GEN=/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/identity_v1/out/0.raw
+
+echo "=== [1/2] segnet reference on a GENERATED decode (n120 stratified) ==="
+$PY $EXP reference --model segnet --raw "$GEN" --pairs 120 --threads 1 \
+  --out-dir $OUT/reference_generated --out $OUT/reference_generated_n120.json
+
+echo "=== [2/2] fp16, the k=64 knee, and fp32 on the generated decode ==="
+$PY $EXP ladder --model segnet --enumerate-json $OUT/enumerate.json \
+  --reference $OUT/reference_generated/reference_segnet.npz --raw "$GEN" \
+  --splits 0 32 64 128 297 --modes CPU_AND_NE CPU_ONLY --reps 20 \
+  --out-dir $OUT/stage3 --out $OUT/stage3/ladder_segnet_generated_n120.json
+
+echo "STAGE3 COMPLETE"

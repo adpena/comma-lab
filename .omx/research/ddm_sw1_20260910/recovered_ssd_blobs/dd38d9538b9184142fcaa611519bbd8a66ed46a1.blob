@@ -1,0 +1,70 @@
+"""Splice the rendered tables into the ddm_ane2 memo body at its TABLE_ markers."""
+from __future__ import annotations
+import re, subprocess, sys
+from pathlib import Path
+
+REPO = Path("/Users/adpena/Projects/pact")
+OUT = Path("/Volumes/VertigoDataTier/pact/ddm_ane2_precision")
+HEAD = REPO / ".omx/research/ddm_ane2_engineer_the_precision_drift_20260905.md"
+BODY = OUT / "memo_body_presplice.md"
+
+# marker -> the exact "### ..." heading of the rendered table that fills it
+MARKERS = {
+    "TABLE_POSE_LADDER": "### PoseNet split ladder (fp16 prefix / fp32 tail of k ops), n120 stratified",
+    "TABLE_SEG_LADDER_GT": "### SegNet split ladder (GT frames), n120 stratified",
+    "TABLE_SEG_LADDER_GEN": "### SegNet split ladder (GENERATED decode), n120 stratified",
+    "TABLE_SEG_LADDER_GEN_N600": "### SegNet split ladder (GENERATED decode, n600 FINALIST), n120 stratified",
+    "TABLE_POSE_SENS": "### posenet per-op-group sensitivity (ONE group fp16, rest fp32), n120",
+    "TABLE_SEG_SENS": "### segnet per-op-group sensitivity (ONE group fp16, rest fp32), n120",
+    "TABLE_POSE_MIRROR": "### posenet fp32-HEAD mirror ladder (first N ops fp32, rest fp16), n120",
+    "TABLE_SEG_MIRROR": "### segnet fp32-HEAD mirror ladder (first N ops fp32, rest fp16), n120",
+    "TABLE_UNITS_FP16": "### compute-unit control -- PoseNet all-fp16 (posenet_ane_split_k0.mlpackage)",
+    "TABLE_UNITS_FP32_POSE": "### compute-unit control -- PoseNet all-fp32 (posenet_ane_split_k286.mlpackage)",
+    "TABLE_UNITS_FP32_SEG": "### compute-unit control -- SegNet all-fp32 (segnet_ane_split_k297.mlpackage)",
+    "TABLE_POSE_TARGETED": "### posenet profile-guided fp32 sets -- GT frames, n120",
+    "TABLE_SEG_TARGETED_GT": "### segnet profile-guided fp32 sets -- GT frames, n120",
+    "TABLE_SEG_TARGETED_GEN": "### segnet profile-guided fp32 sets -- GENERATED decode, n120",
+    "TABLE_SEG_TARGETED_N600": "### segnet profile-guided fp32 sets -- GENERATED decode, n600 FINALIST, n600",
+}
+
+
+def sections(text: str) -> dict[str, str]:
+    out, current, buf = {}, None, []
+    for line in text.splitlines():
+        if line.startswith("### "):
+            if current:
+                out[current] = "\n".join(buf).strip()
+            current, buf = line.strip(), []
+        elif current:
+            buf.append(line)
+    if current:
+        out[current] = "\n".join(buf).strip()
+    return out
+
+
+def main() -> int:
+    rendered = subprocess.run(
+        [str(REPO / ".venv/bin/python"), str(OUT / "render_tables.py")],
+        capture_output=True, text=True, cwd=str(OUT), check=True,
+    ).stdout
+    table = sections(rendered)
+    body = BODY.read_text()
+    missing = []
+    for marker, heading in MARKERS.items():
+        if marker not in body:
+            continue
+        if heading not in table:
+            missing.append(f"{marker} -> {heading!r}")
+            continue
+        body = body.replace(marker, table[heading])
+    leftover = sorted(set(re.findall(r"\bTABLE_[A-Z0-9_]+\b", body)))
+    if missing or leftover:
+        print("UNRESOLVED:", missing, leftover, file=sys.stderr)
+        return 2
+    HEAD.write_text(HEAD.read_text().split("<!-- SECTION: PRIOR-LAW -->")[0] + body + "\n")
+    print(f"spliced -> {HEAD} ({len(HEAD.read_text().splitlines())} lines)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

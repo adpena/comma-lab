@@ -1,0 +1,62 @@
+# ddm_ane2 PRE-REGISTRATION — the random-walk drift model, written BEFORE the ladder ran
+
+Written 2026-09-05, after the op enumeration (SegNet 297 compute ops, PoseNet 286) and after the
+n600 reference started, but BEFORE any ladder or sensitivity rung was measured.  Recorded so the
+memo can count this prediction honestly rather than fitting it after the fact.
+
+## The model (DERIVED)
+
+fp16 unit roundoff is `2^-11 = 4.883e-04`.  If each fp16 op contributes an independent relative
+perturbation of that size, the trunk's output relative error accumulates as a random walk:
+
+    rel_error(N_fp16 ops) ~= sqrt(N_fp16) * 4.883e-04
+
+### The fit that motivates it (ane1's n600 numbers, arithmetic only)
+
+PoseNet dim 0: `|ref| = 31.16`, `|delta_fp16| = 0.2598` -> relative `8.337e-03`.
+Predicted at N = 286 fp16 ops: `sqrt(286) * 4.883e-04 = 8.257e-03`.
+**Measured / predicted = 1.0097 — a 1.0% agreement.**  That is the motivation, not a proof: one
+point can fit one parameter.  The ladder is the test, because the model makes a SHAPE prediction.
+
+## The predictions the ladder can falsify
+
+**P1 (shape).** Drift falls as `sqrt(N_fp16)`, NOT as a step.  Concretely, PoseNet's dim-0 relative
+error at split k should be `sqrt(286 - k) * 4.883e-04`:
+
+| k (fp32 tail ops) | fp16 ops | predicted rel err dim 0 | predicted |delta| |
+|---:|---:|---:|---:|
+| 0 | 286 | 8.26e-03 | 0.257 |
+| 8 | 278 | 8.14e-03 | 0.254 |
+| 32 | 254 | 7.78e-03 | 0.242 |
+| 128 | 158 | 6.14e-03 | 0.191 |
+| 192 | 94 | 4.73e-03 | 0.148 |
+
+If instead ONE op carries the drift, the ladder shows a cliff at that op and a floor elsewhere.
+These two shapes are not confusable at this resolution.
+
+**P2 (pose is unreachable by ANY split).**  Required per-dim error on dim 0 for the self-MSE to be
+1% of d_pose = 7.77e-06: `delta_0 <= sqrt(6 * 0.01 * 7.77e-06) = 6.83e-04`, i.e. relative
+`2.19e-05`.  Under P1: `sqrt(N_fp16) * 4.883e-04 <= 2.19e-05` needs `N_fp16 <= 0.002` — **zero fp16
+ops.**  Even at the loosest bar in the charter (per-dim `<= sqrt(d_pose) = 2.79e-03`, relative
+`8.95e-05`) the answer is `N_fp16 <= 0.034` — still zero.  So the charter's FALSIFIER ("no split
+with >= 30% fp16 FLOPs reaches either bar") is predicted to FIRE on the pose axis.
+
+**P3 (SegNet is reachable, and where).**  SegNet needs a `4.818e-05 -> 3.3e-05` reduction = 1.46x.
+Near zero the top-2 margin density is approximately flat, so flip rate is proportional to logit
+noise, which under P1 is proportional to `sqrt(N_fp16)`.  A 1.46x reduction therefore needs
+`N_fp16` cut by `1.46^2 = 2.13x`: `297 / 2.13 = 139` fp16 ops, i.e. **k ~= 158**, leaving **47% of
+ops in fp16**.  That is above the charter's 30% floor, so on the SegNet axis the falsifier is
+predicted NOT to fire.
+
+**P4 (what that split would cost).**  If latency splits proportionally between ane1's measured
+endpoints (SegNet fp16 `CPU_AND_NE` 4.91 ms, SegNet fp32 `CPU_ONLY` 85.77 ms), k=158 costs
+`0.47*4.91 + 0.53*85.77 = 47.8 ms` against cpu-torch 1-thread `313.74 ms` = **6.6x**, which would
+beat the `coreml_cpu_fp32` bit-exact route's 3.28x.  This leg is the weakest of the four: it assumes
+no partition-boundary cost and no per-op cast cost, and both are real.  Treat 6.6x as an upper
+bound.
+
+## What would make me abandon the model
+
+Any of: a ladder rung whose drift is more than 2x off the `sqrt(N_fp16)` curve; a sensitivity
+profile in which one group carries more than half the total drift; a mixed graph that places 0 ops
+on the ANE (which would make the whole ladder a CPU-only exercise and kill P4 outright).

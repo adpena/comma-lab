@@ -1,0 +1,118 @@
+# ddm_bz2d — PRE-REGISTERED adjudication (written BEFORE the number landed)
+
+Written 2026-08-30 while the advisory was still rendering (50/600 masters at the time of
+writing), so the reading rule cannot be fitted to the answer.
+
+## What this row measures
+
+The **measurement vehicle**: bz2's token field, re-encoded through lb1's shipped HPAC model,
+spliced into lb1's own body. 157,024 B, sha
+`34c4efd96c406f34024d9f72fb3f66ce47aaf6a09f725a2a6232495af368f0eb`.
+
+**Token identity CONTROL PASSED** (`TOKEN_IDENTITY_CONTROL.json`): the shipping runtime's
+decoded field is byte-identical to bz2's own retained `archive_parseback_tokens.u8`
+(117,964,800 B, sha `968ffca2…`). The semantic renderer and pose carrier are byte-identical
+to lb1's own (proven inside the pointer archive at offsets 13,529 / 44,385). Therefore the
+render is bz2's render, and **this row's d_seg / d_pose ARE bz2's** — measured, not transferred.
+
+## The arithmetic, three bodies sharing ONE render
+
+rate = 25·B / 37,545,489.
+
+| body | bytes | rate | sub-0.12 distortion budget |
+|---|---:|---:|---:|
+| bz2 born-generator body | 100,862 | 0.067160 | **0.052840** |
+| measurement vehicle | 157,024 | 0.104556 | 0.015444 |
+| lb1 pointer (its OWN tokens, different render) | 180,083 | 0.119910 | 0.000090 |
+
+lb1's own legs, for scale: seg 0.020139 + pose 0.007981 = **0.028120**.
+
+## The pre-registered falsifier
+
+> **realized seg + pose ≤ 0.052840 ⇒ THE CROSS intersection is NON-EMPTY at n=4, and bz2 is a
+> sub-0.12 candidate outright** (advisory axis; an authority row would still be owed).
+>
+> **realized seg + pose > 0.052840 ⇒ bz2 fails sub-0.12**, and the magnitude decides the
+> FIT-vs-RENDER question for the whole small-body family.
+
+## CORRECTION to my own earlier framing — the pose leg is NOT construction-protected
+
+I previously wrote that bz2's d_pose "has a construction-based reason to sit near lb1's
+6.37e-6, because the pose machinery is not swapped." **That reasoning is refuted by our own
+measured finding #1222: PoseNet scores the FRAMES, so the RENDERER carries pose, not the pose
+carrier** (refuted by 1,356× in the wrong direction when I last leaned on it). The frames DID
+change here — a different token field renders differently. So **both legs are genuine unknowns**,
+and the honest falsifier is the pose-agnostic joint form above, not a seg-only bar.
+
+The seg-only bar is recorded ONLY as a conditional, clearly labelled:
+
+- IF d_pose happened to land at lb1's 6.37e-6 (pose term 0.007981), THEN bz2 clears iff
+  **d_seg ≤ 0.00044859** — an allowance of **2.23×** lb1's 0.00020139.
+- The measurement vehicle itself would need d_seg ≤ 0.00007463, which is *tighter than lb1's
+  own d_seg*. So the 157,024 B vehicle cannot clear sub-0.12 even if bz2 does; it pays 56,162 B
+  more for the same render. It is an instrument, never a candidate. Do not confuse the two rows.
+
+## The mechanism bracket — CORRECTED AT SOURCE before the number landed
+
+⚠ **My first draft of this section said "bz2's field differs from LB1's on 1.12% of native token
+positions." That is the WRONG OBJECT.** Read at source
+(`ddm_bz2_bornsmall_capacity_ceiling/NATIVE_ANCESTOR_COMPARISON.json`), the figure is
+`gt_mismatch_fraction` = **0.011229510837131076 — disagreement with the GROUND-TRUTH token
+field**, not with lb1's field. The receipt states its own scope in two places I had not read:
+`axis: "[native categorical representation diagnostic; NOT d_seg]"` and `warning: "native
+categorical comparison only; no scorer or score credit"`. This is the [[#1260]] genus (a retained
+field does not carry its own reading semantics) caught inside the very document that invokes it.
+
+The corrected statement: **bz2's token field is 98.8770% token-correct against GT**
+(1,324,687 disagreements of 117,964,800). Its bs3 ancestor is 98.8698% (1,333,187) — bz2 is
+8,500 positions better, with 74,650 sites changed between them.
+
+What that does and does not license:
+
+- It does NOT give a d_seg prediction. Token error and argmax error are different quantities
+  separated by the renderer's paint, R, uint8, and SegNet — the receipt says so itself.
+- The naive identity bound (every token error → one argmax flip) would give d_seg ≈ 0.011230 →
+  seg 1.1230 S, **21.3× bz2's whole 0.052840 budget**. But identity is exactly the assumption
+  MST1 refuted in the other direction: R and uint8 measured as net *repairers* (78.71% of
+  manufactured seg error is already present at the NATIVE render).
+- The genuinely decisive comparison — lb1's OWN token-vs-GT error rate — is **UNMEASURED here**.
+  Without it there is no principled attenuation factor to quote, so this section quotes none.
+
+**Consequence for the reading rule:** the joint falsifier (seg + pose ≤ 0.052840) is UNCHANGED and
+remains the verdict. The seg-only conditional (d_seg ≤ 0.00044859 at lb1-like pose) is UNCHANGED —
+it was derived from the score arithmetic, not from the token figure. Only the *mechanism story*
+moves, and it moves from "a 25× attenuation is needed" to "the attenuation is unquantified; the
+measurement is the first number that will constrain it."
+
+## THE MATCHED-LINEAGE BASELINE — found before the number, and it changes the comparison
+
+`ddm_bo2_born_small_distortion/retained/perclass/perclass_base_dx2.json` carries
+`gt_lineage: "PYAV_YUV420_TO_RGB via AVVideoDataset (authority=False)"` — **byte-identical to the
+lineage string in this advisory's own log.** Same GT table, same instrument, same n600.
+
+Its dx2-base row: **`avg_segnet_dist_recomputed` = 0.00034740024142795135.**
+
+That is **1.725×** lb1's CUDA-authority d_seg 0.00020139. So the correct comparison for this row is
+**against 0.00034740 on the PYAV lineage**, NOT against 0.00020139 on the CUDA axis. Comparing my
+PYAV d_seg to lb1's CUDA d_seg would be the wrong-object error twice in one document.
+
+The matched instrument also gives the adjudication its decomposition for free:
+`gt_argmax_n600.u8` + `base_dx2_comp_argmax_n600.u8` + the per-class schema
+(`per_class[].{flips, contribution_to_d_seg, share_of_all_flips, within_class_flip_rate,
+dominant_confusion_to}` + `confusion_gt_by_comp` 5×5). bz2's argmax runs through the *same* schema
+→ a like-for-like per-class attribution, no new instrument invented.
+
+**Recorded consequence:** the joint falsifier (seg + pose ≤ 0.052840) is stated in SCORE units and
+the score is defined on the CUDA authority axis. This advisory cannot settle it outright; it
+delivers a PYAV-lineage regime read plus a matched-lineage RATIO (bz2 ÷ dx2-base, both PYAV). The
+ratio is the transferable quantity; the absolute PYAV d_seg is not.
+
+## What is NOT claimed here
+
+No score. Axis `[macOS-CPU frozen-scorer advisory]`, `score_claim=false`, `promotable=false`.
+GT lineage on this path is **PyAV**, not the DALI table (#1142): d_seg is the primary read
+(seg fork measured 1.43×), d_pose is a REGIME read only (pose fork 0.887–1,627× per pair).
+bz2's own fire order asked for the DALI-lineage terminal; this run does not satisfy that half,
+and the memo must say so rather than quietly substituting one lineage for the other.
+
+**Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**

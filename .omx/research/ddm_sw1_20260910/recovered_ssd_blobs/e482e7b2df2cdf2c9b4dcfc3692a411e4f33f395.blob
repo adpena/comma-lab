@@ -1,0 +1,11 @@
+The two MODEL sections of the RX1 container — the SM3R renderer body (66,339 params packed as 3/4-bit signed codes, prune masks, fp16 scales) and the
+IHS1 HPAC probability model (20,416 integer rows) — had only ever been coded by generic compressors (Brotli q11, XZ, ck2's parameter-free 2-plane byte
+de-interleave). rc1 codes their PACKED INTEGER CODES with an adaptive per-group tree coder (contexts are pure geometry: group, position; no transmitted
+model, rule-118 clean) and restores each body byte-for-byte in the receiver before any parser runs: semantic 30,856 → 30,246 B (−610), hpac 13,466 →
+12,343 B (−1,123). Brotli sits within 0.8 % / 0.3 % of the code streams' order-0 entropy only where the packing width is CONSTANT; where the width changes
+every few hundred symbols (IHS1) it cannot, which is why the smaller body gave the larger credit. xz −9e and zstd −22 both LOSE to Brotli on these bodies.
+Decoded field (token sha cc10a7b0…), carrier and tail are byte-identical to cl2; twin encode byte-identical; +0.11 s inflate. Attempt 1 on T4 failed in
+3.6 s because `runtime/f26_inflate.py` read the semantic magic before the codec dispatch — the arm's identity check had run through the library path, not
+`inflate.sh`; the fix restores the rider before the magic guard, and the public path was exercised locally to the CUDA gate on both trees before the
+re-seal. Seal `SEAL_ddm_rc1_model_section_adaptive_recode_contest_cuda.json` (file sha 9ef5b420…, canonical digest 32968e32…); memo
+`ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md`; commits 8979e18aa, feb9e5804.
