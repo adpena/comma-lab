@@ -1,0 +1,81 @@
+{
+  "schema": "ddm_sw1_landing_fallback.v1",
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "reason": "Git object insertion was denied by the active sandbox (serializer rc=17).",
+  "base_head": "951bcce1c788065120361413f54ac1a572284f9e",
+  "candidate_blob_count": 223,
+  "batch_count": 9,
+  "batch_limit": 25,
+  "landing_patch": ".omx/research/ddm_sw1_20260910/landing.patch",
+  "landing_patch_sha256": "c12aca2cc7ffde761d39e830e454fdea2df2cd5e1e22c4a71d1aec183548c702",
+  "fallback_batches": [
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235047.932046Z-78521/intended-commit.format-patch",
+      "format_patch_sha256": "6eb23ba94019048a9bcf97a7de13098aa09eb89352ef5d79721ebd46a29eed16",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235047.932046Z-78521/intended-commit.bundle",
+      "bundle_sha256": "d7a601f1cbe700038d40d13e80006bc0f9784f903538456c7817a400a70c317c",
+      "fallback_commit": "d07523e46f4c6d5263b15735d046c4e3b7bdd80e"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235051.535337Z-78831/intended-commit.format-patch",
+      "format_patch_sha256": "601b1d711064c4d22e976fc88a8edce70e914820e8c352c42c7d80fcdc52272a",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235051.535337Z-78831/intended-commit.bundle",
+      "bundle_sha256": "283339aa61acfeb53ce09585a5b6595873bfd23a6c1ca45996714ffcb7e84a77",
+      "fallback_commit": "6d6e7e362cb4f808d0eba258131be98f6fa50632"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235055.263501Z-79142/intended-commit.format-patch",
+      "format_patch_sha256": "93ae8f834d20216d9daaf9bdab4f1f418677634f1be954a603776b50ea4d000a",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235055.263501Z-79142/intended-commit.bundle",
+      "bundle_sha256": "01a805c7edabbe77935d3042be4e76e4220167a633738327018a18003890aa4d",
+      "fallback_commit": "dfe4961e51c84a4ca75e7b3a83a86ff5da08d598"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235059.211306Z-79458/intended-commit.format-patch",
+      "format_patch_sha256": "b771a22e501e9d6f284b09d99daa1f333ef2e04877eed2dded6fec2e24ccedb7",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235059.211306Z-79458/intended-commit.bundle",
+      "bundle_sha256": "37e082d41ea5ddcb22c8e6858640d13d0c9de383098cfb399ec20140269bc266",
+      "fallback_commit": "bebcc691d478d8624052c43dd68a8bf5f66278b1"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235102.860181Z-79762/intended-commit.format-patch",
+      "format_patch_sha256": "f1d57ce4d1e0b99083128b009b87717d308ad9621937b9848b3bef33ede0071a",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235102.860181Z-79762/intended-commit.bundle",
+      "bundle_sha256": "7d04d6b8456f7535d60564176330ab8ff4ea3b96f69d8bca38fca784dad0363f",
+      "fallback_commit": "496375f9e77cabb974768dcaac72036f437dce27"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235106.639179Z-80071/intended-commit.format-patch",
+      "format_patch_sha256": "6e7e4a3e69d3c9acbad1783db0ce714356d40147ae7159d0d3239e8984e033e7",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235106.639179Z-80071/intended-commit.bundle",
+      "bundle_sha256": "37a242bf54c649276155234fe0ef8f7bee66cfd1961965051b73d471d3f8e5bc",
+      "fallback_commit": "94b17ba04898fac31a1814c2e2864e50f15a0a62"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235110.453008Z-80405/intended-commit.format-patch",
+      "format_patch_sha256": "968c933389e9a1a9e33902f97702996e82278cd4a17d397a0db177cace91e7c2",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235110.453008Z-80405/intended-commit.bundle",
+      "bundle_sha256": "70048a07320f02bde5635702f78319c612a21503275907bc41e90c6de1293211",
+      "fallback_commit": "e642fcbb482531dbb4ec6e761d58cab7a4c2c1d7"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235114.216888Z-81037/intended-commit.format-patch",
+      "format_patch_sha256": "6b9c09345e5ba01c1f2e62a2091a374629a6ea7a771e9db50a7e11d016649ebe",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235114.216888Z-81037/intended-commit.bundle",
+      "bundle_sha256": "0c38414fc43877049a18684f5a0783645df140c16c070927677845e2042748df",
+      "fallback_commit": "c8d113ddd64a51541d66dc3f55b3358628ee3474"
+    },
+    {
+      "format_patch": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235117.854927Z-81426/intended-commit.format-patch",
+      "format_patch_sha256": "44b8fae3522c2326e39f3cb5e1b31c8a4e9c11a8b50d4989dc30fedb4126c0e5",
+      "bundle": "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks/20260909T235117.854927Z-81426/intended-commit.bundle",
+      "bundle_sha256": "923ede9cecb5aeddfbe9454887cdbb47840aea26016d316ed72a39cb14eedcf2",
+      "fallback_commit": "f9dd4b537c06c935370d2b295178a87f3da82823"
+    }
+  ],
+  "local_exact_blob_root": ".omx/research/ddm_sw1_20260910/recovered_ssd_blobs",
+  "source_ssds_mutated_by_disposition": false,
+  "caveat": "The serializer automatically wrote its fallback bundles under the Vertigo ddm_sw1 receipt root after Git object denial; those receipts must be retained.",
+  "apply_order": "Verify all recorded SHA-256 values, then apply each fallback format patch as a separate serializer commit in listed order; rerun the full SSD audit afterward.",
+  "written_at_utc": "2026-09-09T23:58:39+00:00"
+}

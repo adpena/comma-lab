@@ -25,6 +25,11 @@ CS1_LEDGER = REPO / ".omx/research/ddm_cs1_ssd_code_certify_20260909.jsonl"
 OTHER_OWED = REPO / ".omx/research/ddm_cs1_20260909/other_extensions_owed.json"
 RUFF_RECEIPT = REPO / ".omx/research/ddm_sw1_20260910/blocked_ruff_before.json"
 DESTINATION_ROOT = REPO / ".omx/research/ddm_sw1_20260910/recovered_ssd_blobs"
+LANDING_PATCH = REPO / ".omx/research/ddm_sw1_20260910/landing.patch"
+LANDING_MANIFEST = REPO / ".omx/research/ddm_sw1_20260910/landing_manifest.json"
+FALLBACK_ROOT = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_sw1/receipts/commit_serializer_fallbacks"
+)
 
 HARD_RUFF_CODES = frozenset({"F821", "B023", "invalid-syntax"})
 NON_REAL_PATH_TOKENS = (
@@ -325,6 +330,100 @@ def finalize() -> list[dict]:
     return verified
 
 
+def record_bundle_blocker() -> list[dict]:
+    """Close pending rows against already-retained serializer fallback bundles."""
+    all_rows = load_jsonl(CS1_LEDGER)
+    finals = [row for row in all_rows if row.get("event_type") == "disposition_final"]
+    if len(finals) != 243:
+        raise ValueError(f"expected 243 final rows, found {len(finals)}")
+    if any(row.get("event_type") == "disposition_commit_blocked" for row in all_rows):
+        raise ValueError("commit-blocked rows already exist; refuse duplicate append")
+    custody: dict[str, dict] = {}
+    for receipt_path in sorted(FALLBACK_ROOT.glob("*/receipts.jsonl")):
+        for receipt in load_jsonl(receipt_path):
+            if receipt.get("event_type") != "git_object_write_denial_bundle_fallback":
+                continue
+            for item in receipt.get("files", []):
+                custody[item["path"]] = receipt
+    blocked = []
+    for row in finals:
+        terminal = dict(row)
+        terminal["event_type"] = "disposition_commit_blocked"
+        if row["disposition"] == "LANDED_EXACT_SOURCE_BLOB_PENDING_COMMIT":
+            destination = row["repo_relative_destination"]
+            receipt = custody.get(destination)
+            if receipt is None:
+                raise ValueError(f"no verified serializer fallback receipt for {destination}")
+            terminal["disposition"] = "BUNDLE_READY_MAIN_MUST_LAND"
+            terminal["fallback_bundle"] = receipt["bundle_path"]
+            terminal["fallback_bundle_sha256"] = receipt["bundle_sha256"]
+            terminal["fallback_format_patch"] = receipt["format_patch_path"]
+            terminal["fallback_format_patch_sha256"] = receipt["format_patch_sha256"]
+            terminal["fallback_commit"] = receipt["fallback_commit"]
+            terminal["reason"] = (
+                "Serializer rc=17: the sandbox denied Git object insertion. Exact bytes remain "
+                "locally materialized and are also retained in a verified fallback bundle."
+            )
+            terminal["fire_trigger"] = (
+                "MAIN with Git-object write authority verifies the bundle SHA, applies its format "
+                "patch through the serializer, and reruns the authored-signal audit."
+            )
+        blocked.append(terminal)
+    append_rows(CS1_LEDGER, blocked)
+    return blocked
+
+
+def write_landing_artifacts() -> list[dict]:
+    """Compose the serializer's bounded fallback patches into one handoff mbox."""
+    rows = load_jsonl(CS1_LEDGER)
+    blocked = [row for row in rows if row.get("event_type") == "disposition_commit_blocked"]
+    candidates = [row for row in blocked if row["disposition"] == "BUNDLE_READY_MAIN_MUST_LAND"]
+    if len(candidates) != 223:
+        raise ValueError(f"expected 223 bundle-ready rows, found {len(candidates)}")
+    by_patch: dict[str, dict] = {}
+    for row in candidates:
+        by_patch[row["fallback_format_patch"]] = {
+            "format_patch": row["fallback_format_patch"],
+            "format_patch_sha256": row["fallback_format_patch_sha256"],
+            "bundle": row["fallback_bundle"],
+            "bundle_sha256": row["fallback_bundle_sha256"],
+            "fallback_commit": row["fallback_commit"],
+        }
+    parts = []
+    for patch_path, item in sorted(by_patch.items()):
+        data = Path(patch_path).read_bytes()
+        if sha256(data) != item["format_patch_sha256"]:
+            raise ValueError(f"fallback format patch changed: {patch_path}")
+        parts.append(data.rstrip(b"\n") + b"\n")
+    combined = b"\n".join(parts)
+    LANDING_PATCH.write_bytes(combined)
+    manifest = {
+        "schema": "ddm_sw1_landing_fallback.v1",
+        "status": "BUNDLE_READY_MAIN_MUST_LAND",
+        "reason": "Git object insertion was denied by the active sandbox (serializer rc=17).",
+        "base_head": "951bcce1c788065120361413f54ac1a572284f9e",
+        "candidate_blob_count": len(candidates),
+        "batch_count": len(by_patch),
+        "batch_limit": 25,
+        "landing_patch": str(LANDING_PATCH.relative_to(REPO)),
+        "landing_patch_sha256": sha256(combined),
+        "fallback_batches": [by_patch[path] for path in sorted(by_patch)],
+        "local_exact_blob_root": str(DESTINATION_ROOT.relative_to(REPO)),
+        "source_ssds_mutated_by_disposition": False,
+        "caveat": (
+            "The serializer automatically wrote its fallback bundles under the Vertigo ddm_sw1 "
+            "receipt root after Git object denial; those receipts must be retained."
+        ),
+        "apply_order": (
+            "Verify all recorded SHA-256 values, then apply each fallback format patch as a "
+            "separate serializer commit in listed order; rerun the full SSD audit afterward."
+        ),
+        "written_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    LANDING_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return candidates
+
+
 def summary(rows: list[dict]) -> dict:
     counts: dict[str, int] = {}
     for row in rows:
@@ -334,9 +433,24 @@ def summary(rows: list[dict]) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("plan", "materialize", "finalize"))
+    parser.add_argument(
+        "action",
+        choices=(
+            "plan",
+            "materialize",
+            "finalize",
+            "record-bundle-blocker",
+            "write-landing-artifacts",
+        ),
+    )
     args = parser.parse_args()
-    actions = {"plan": plan, "materialize": materialize, "finalize": finalize}
+    actions = {
+        "plan": plan,
+        "materialize": materialize,
+        "finalize": finalize,
+        "record-bundle-blocker": record_bundle_blocker,
+        "write-landing-artifacts": write_landing_artifacts,
+    }
     rows = actions[args.action]()
     print(json.dumps(summary(rows), indent=2))
     return 0

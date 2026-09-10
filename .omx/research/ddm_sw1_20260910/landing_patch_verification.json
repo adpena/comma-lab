@@ -1,0 +1,12 @@
+{
+  "schema": "ddm_sw1_landing_patch_verification.v1",
+  "axis": "macOS-CPU static apparatus / scorer-free",
+  "landing_patch_sha256": "c12aca2cc7ffde761d39e830e454fdea2df2cd5e1e22c4a71d1aec183548c702",
+  "verification": "PASS",
+  "method": "Applied the nine-message mbox to an isolated clone at base 951bcce1c788065120361413f54ac1a572284f9e.",
+  "applied_commits": 9,
+  "exact_blob_files_present": 223,
+  "batch_limit": 25,
+  "source_ssd_deletions": 0,
+  "score_claim": false
+}
