@@ -745,6 +745,7 @@ def main(argv: list[str] | None = None) -> int:
         # ordinary fire gets the typed seal refusal before any staged-tree mutation.
         verdict = validate_seal(
             seal_path,
+            require_decode_wall_clock=True,
             allow_missing_public_smoke=(
                 not seal_has_public_smoke and bool(args.allow_seal_without_public_smoke)
             ),

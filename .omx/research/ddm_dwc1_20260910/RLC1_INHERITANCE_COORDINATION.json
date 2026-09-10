@@ -1,0 +1,12 @@
+{
+  "schema": "ddm_dwc1.consumer_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN / rlc1",
+  "consumer_store": ".omx/research/ddm_dwc1_20260910/RLC1_INHERITANCE_COORDINATION.json",
+  "fire_trigger": "rlc1 receiver freeze before make_candidate_seal",
+  "action": "Consume move40 timing backfill; inherit only if normalized receiver digest equals the eligible pointer receiver and source leg strictly passes. Any rule-118/fixed-point/map implementation change requires its own local timing and valid calibration.",
+  "current_state": "Move41 is an actual1336.668977565s failed control. Move40 fresh copied shell proxy queued sequentially aftertc4 under8GiB unique-byte custody. Process count unavailable in sandbox; unquiesced receipt cannot grant PASS.",
+  "measurement_store": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts",
+  "source_directive": ".omx/research/ddm_dwc1_directive_main_pr8_margin_finding_20260910.md",
+  "score_claim": false
+}

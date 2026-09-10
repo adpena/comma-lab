@@ -1,0 +1,17 @@
+{
+  "schema": "ddm_dwc1.consumer_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": ".omx/research/ddm_dwc1_20260910/MAIN_MARGIN_DECISION.json",
+  "fire_trigger": "harvest timing backfill and final guard",
+  "action": "Consume move40 backfill and resolve missing admissible local concurrency evidence before same-receiver inheritance; keep actual move41/tc4 timing failures as controls. Move41 retraction is already owned and decided by MAIN/pr8.",
+  "evidence": [
+    ".omx/research/ddm_dwc1_20260910/TC3_BACKFILL.json",
+    ".omx/research/ddm_dwc1_20260910/MOVE40_T4_EVIDENCE.json"
+  ],
+  "score_claim": false,
+  "superseded_action": {
+    "disposition": "FOLDED",
+    "reason": "MAIN live directive retracts move41 and selects move40 as submittable; no independent timing waiver invented by dwc1"
+  }
+}

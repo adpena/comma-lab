@@ -1,0 +1,28 @@
+[
+  {
+    "role": "tc3",
+    "runtime": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime",
+    "source_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_tc3_t4_lane_predictor_tail_20260910/MODAL_REMOTE_RESULT.json",
+      "sha256": "6003c4be549ee32aa703e0c782bf816c57eaa4cf5cb7ccc1abf362c04402d012"
+    },
+    "expected": "9fd76419b5e27118d670d457481c72a2df6c68068101e7ea62477e8e763ad4c1",
+    "actual": "9fd76419b5e27118d670d457481c72a2df6c68068101e7ea62477e8e763ad4c1",
+    "match": true,
+    "score_claim": false,
+    "digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
+  },
+  {
+    "role": "tc4",
+    "runtime": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime",
+    "source_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json",
+      "sha256": "566ac554e06b17f1f1f3f4adb02f151065438c2056d16f3feb4836c8effd0974"
+    },
+    "expected": "43cf992c5435be853451ce2b4152c27aa6f29a60a5582b7e575aacabab550ef5",
+    "actual": "43cf992c5435be853451ce2b4152c27aa6f29a60a5582b7e575aacabab550ef5",
+    "match": true,
+    "score_claim": false,
+    "digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
+  }
+]

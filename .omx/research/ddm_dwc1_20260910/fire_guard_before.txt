@@ -1,0 +1,156 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+___________ test_missing_timing_refuses_before_any_subprocess[True] ____________
+
+tmp_path = PosixPath('/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pytest-of-adpena/pytest-169/test_missing_timing_refuses_be0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109c28b00>
+dry_run = True
+
+    @pytest.mark.parametrize('dry_run', [True, False])
+    def test_missing_timing_refuses_before_any_subprocess(tmp_path, monkeypatch, dry_run):
+        runtime, _ = _stage_candidate(tmp_path)
+        seal = _seal(tmp_path, runtime, tolerance=1.0)
+        doc = load_seal(seal)
+        doc.pop('decode_wall_clock')
+        doc['schema'] = 'candidate_seal.v1'
+        doc['seal_sha256'] = compute_seal_sha256(doc)
+        seal.write_text(json.dumps(doc))
+        pointer = _write_pointer(tmp_path)
+        assert validate_seal(seal, pointer_path=pointer).ok
+        fire = _load_fire_tool()
+        _forbid_subprocess(monkeypatch, fire)
+        monkeypatch.setattr(fire, 'validate_seal',
+                            lambda path, **kw: validate_seal(path, pointer_path=pointer, **kw))
+        output = tmp_path / 'fire_output'
+        argv = ['--seal', str(seal), '--output-dir', str(output), '--lane-id', 'lane_test',
+                '--instance-job-id', 'job_test', '--single-axis-waiver-reason',
+                'synthetic no-dispatch timing contract test']
+        if dry_run:
+            argv.append('--dry-run')
+>       assert fire.main(argv) == 7
+               ^^^^^^^^^^^^^^^
+
+tools/tests/test_fire_modal_decode_wall_clock.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/fire_modal_auth_eval.py:934: in main
+    manifest["stage4_claims"] = reconcile_claims(
+tools/fire_modal_auth_eval.py:487: in reconcile_claims
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO)  # subprocess-no-check-OK: success judged by JSON-parse of stdout below; unparseable reconcile closes NOTHING (fail-safe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (['/Users/adpena/Projects/pact/.venv/bin/python', '/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py', 'reconcile', '--format', 'json'],)
+kwargs = {'capture_output': True, 'text': True, 'cwd': PosixPath('/Users/adpena/Projects/pact')}
+
+    def _explode(*args, **kwargs):  # pragma: no cover - firing here is the failure
+>       raise AssertionError(f"the fire path reached a subprocess on a refused seal: {args!r}")
+E       AssertionError: the fire path reached a subprocess on a refused seal: (['/Users/adpena/Projects/pact/.venv/bin/python', '/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py', 'reconcile', '--format', 'json'],)
+
+src/tac/tests/test_candidate_seal.py:641: AssertionError
+----------------------------- Captured stdout call -----------------------------
+SEAL: SEAL VALID: sm3r_keep01 [contest_cuda] — archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree
+PIN: archive 139 B sha 49994d10791f3a25…
+SEAL: SEAL PIN CONSISTENT: receiver pins the staged archive (139 B sha 49994d10791f3a25…)
+PUBLIC SMOKE: PRESENT + SEAL VALIDATED
+___________ test_missing_timing_refuses_before_any_subprocess[False] ___________
+
+tmp_path = PosixPath('/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pytest-of-adpena/pytest-169/test_missing_timing_refuses_be1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109046780>
+dry_run = False
+
+    @pytest.mark.parametrize('dry_run', [True, False])
+    def test_missing_timing_refuses_before_any_subprocess(tmp_path, monkeypatch, dry_run):
+        runtime, _ = _stage_candidate(tmp_path)
+        seal = _seal(tmp_path, runtime, tolerance=1.0)
+        doc = load_seal(seal)
+        doc.pop('decode_wall_clock')
+        doc['schema'] = 'candidate_seal.v1'
+        doc['seal_sha256'] = compute_seal_sha256(doc)
+        seal.write_text(json.dumps(doc))
+        pointer = _write_pointer(tmp_path)
+        assert validate_seal(seal, pointer_path=pointer).ok
+        fire = _load_fire_tool()
+        _forbid_subprocess(monkeypatch, fire)
+        monkeypatch.setattr(fire, 'validate_seal',
+                            lambda path, **kw: validate_seal(path, pointer_path=pointer, **kw))
+        output = tmp_path / 'fire_output'
+        argv = ['--seal', str(seal), '--output-dir', str(output), '--lane-id', 'lane_test',
+                '--instance-job-id', 'job_test', '--single-axis-waiver-reason',
+                'synthetic no-dispatch timing contract test']
+        if dry_run:
+            argv.append('--dry-run')
+>       assert fire.main(argv) == 7
+               ^^^^^^^^^^^^^^^
+
+tools/tests/test_fire_modal_decode_wall_clock.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/fire_modal_auth_eval.py:934: in main
+    manifest["stage4_claims"] = reconcile_claims(
+tools/fire_modal_auth_eval.py:487: in reconcile_claims
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO)  # subprocess-no-check-OK: success judged by JSON-parse of stdout below; unparseable reconcile closes NOTHING (fail-safe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (['/Users/adpena/Projects/pact/.venv/bin/python', '/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py', 'reconcile', '--format', 'json'],)
+kwargs = {'capture_output': True, 'text': True, 'cwd': PosixPath('/Users/adpena/Projects/pact')}
+
+    def _explode(*args, **kwargs):  # pragma: no cover - firing here is the failure
+>       raise AssertionError(f"the fire path reached a subprocess on a refused seal: {args!r}")
+E       AssertionError: the fire path reached a subprocess on a refused seal: (['/Users/adpena/Projects/pact/.venv/bin/python', '/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py', 'reconcile', '--format', 'json'],)
+
+src/tac/tests/test_candidate_seal.py:641: AssertionError
+----------------------------- Captured stdout call -----------------------------
+SEAL: SEAL VALID: sm3r_keep01 [contest_cuda] — archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree
+PIN: archive 139 B sha 49994d10791f3a25…
+SEAL: SEAL PIN CONSISTENT: receiver pins the staged archive (139 B sha 49994d10791f3a25…)
+PUBLIC SMOKE: PRESENT + SEAL VALIDATED
+___________ test_timing_waiver_is_not_hidden_in_public_smoke_waiver ____________
+
+tmp_path = PosixPath('/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pytest-of-adpena/pytest-169/test_timing_waiver_is_not_hidd0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109d4e9f0>
+
+    def test_timing_waiver_is_not_hidden_in_public_smoke_waiver(tmp_path, monkeypatch):
+        runtime, _ = _stage_candidate(tmp_path)
+        seal = _seal(tmp_path, runtime, tolerance=1.0)
+        doc = load_seal(seal)
+        doc.pop('decode_wall_clock')
+        doc['schema'] = 'candidate_seal.v1'
+        doc['seal_sha256'] = compute_seal_sha256(doc)
+        seal.write_text(json.dumps(doc))
+        pointer = _write_pointer(tmp_path)
+        fire = _load_fire_tool()
+        _forbid_subprocess(monkeypatch, fire)
+        monkeypatch.setattr(fire, 'validate_seal',
+                            lambda path, **kw: validate_seal(path, pointer_path=pointer, **kw))
+>       assert fire.main(['--seal', str(seal), '--output-dir', str(tmp_path / 'out'),
+            '--lane-id', 'lane_test', '--instance-job-id', 'job_test', '--single-axis-waiver-reason',
+            'synthetic no-dispatch timing test', '--allow-seal-without-public-smoke',
+            'existing scored custody replay does not authorize missing timing']) == 7
+
+tools/tests/test_fire_modal_decode_wall_clock.py:59: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/fire_modal_auth_eval.py:934: in main
+    manifest["stage4_claims"] = reconcile_claims(
+tools/fire_modal_auth_eval.py:487: in reconcile_claims
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO)  # subprocess-no-check-OK: success judged by JSON-parse of stdout below; unparseable reconcile closes NOTHING (fail-safe)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (['/Users/adpena/Projects/pact/.venv/bin/python', '/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py', 'reconcile', '--format', 'json'],)
+kwargs = {'capture_output': True, 'text': True, 'cwd': PosixPath('/Users/adpena/Projects/pact')}
+
+    def _explode(*args, **kwargs):  # pragma: no cover - firing here is the failure
+>       raise AssertionError(f"the fire path reached a subprocess on a refused seal: {args!r}")
+E       AssertionError: the fire path reached a subprocess on a refused seal: (['/Users/adpena/Projects/pact/.venv/bin/python', '/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py', 'reconcile', '--format', 'json'],)
+
+src/tac/tests/test_candidate_seal.py:641: AssertionError
+----------------------------- Captured stdout call -----------------------------
+SEAL: SEAL VALID: sm3r_keep01 [contest_cuda] — archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree
+PIN: archive 139 B sha 49994d10791f3a25…
+SEAL: SEAL PIN CONSISTENT: receiver pins the staged archive (139 B sha 49994d10791f3a25…)
+PUBLIC SMOKE: PRESENT + SEAL VALIDATED
+=========================== short test summary info ============================
+FAILED tools/tests/test_fire_modal_decode_wall_clock.py::test_missing_timing_refuses_before_any_subprocess[True]
+FAILED tools/tests/test_fire_modal_decode_wall_clock.py::test_missing_timing_refuses_before_any_subprocess[False]
+FAILED tools/tests/test_fire_modal_decode_wall_clock.py::test_timing_waiver_is_not_hidden_in_public_smoke_waiver
+3 failed in 0.39s

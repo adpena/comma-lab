@@ -1,0 +1,110 @@
+experiments/ddm_dwc1_timing.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [0m[NORMAL][0m experiments/ddm_dwc1_timing.py
+
+  [1mSummary:[0m 6 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+experiments/ddm_dwc1_components.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [0m[NORMAL][0m experiments/ddm_dwc1_components.py
+
+  [1mSummary:[0m 9 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+experiments/ddm_dwc1_move40_timing.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [0m[NORMAL][0m experiments/ddm_dwc1_move40_timing.py
+
+  [1mSummary:[0m 7 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+src/tac/decode_wall_clock.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [33m[STANDARD][0m src/tac/decode_wall_clock.py
+
+  [1mSummary:[0m 14 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+src/tac/candidate_seal.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [33m[STANDARD][0m src/tac/candidate_seal.py
+
+  [1mSummary:[0m 43 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+src/tac/tests/test_decode_wall_clock.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [33m[STANDARD][0m src/tac/tests/test_decode_wall_clock.py
+
+  [1mSummary:[0m 29 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+src/tac/tests/test_candidate_seal.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [33m[STANDARD][0m src/tac/tests/test_candidate_seal.py
+
+  [1mSummary:[0m 48 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+tools/make_candidate_seal.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [0m[NORMAL][0m tools/make_candidate_seal.py
+
+  [1mSummary:[0m 3 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+tools/tests/test_fire_modal_decode_wall_clock.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [0m[NORMAL][0m tools/tests/test_fire_modal_decode_wall_clock.py
+
+  [1mSummary:[0m 2 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+
+tools/fire_modal_auth_eval.py
+
+[1m  Policy Compliance Check[0m
+  ============================================================
+
+  [0m[NORMAL][0m tools/fire_modal_auth_eval.py
+
+  [1mSummary:[0m 15 entities compliant, [31m0 violations[0m
+  [32mAll checked entities meet their review policy.[0m
+
+

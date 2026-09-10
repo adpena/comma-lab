@@ -1,0 +1,26 @@
+[
+  {
+    "role": "tc3",
+    "source_path": "/Volumes/APDataStore/pact/ddm_tc3_t4_lane_predictor_tail_20260910/MODAL_REMOTE_RESULT.json",
+    "source_sha256": "6003c4be549ee32aa703e0c782bf816c57eaa4cf5cb7ccc1abf362c04402d012",
+    "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+    "modal_elapsed_seconds": 1397.861626581,
+    "score_claim": false,
+    "inflate_elapsed_seconds": 1336.668977565,
+    "evaluate_elapsed_seconds": 45.55585827300001,
+    "margin_seconds": -76.66897756499998,
+    "verdict": "REFUSE_MEASURED_DECODE_OVER_1260",
+    "scope": "INSTANCE"
+  },
+  {
+    "role": "tc4",
+    "source_path": "/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json",
+    "source_sha256": "566ac554e06b17f1f1f3f4adb02f151065438c2056d16f3feb4836c8effd0974",
+    "archive_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+    "modal_elapsed_seconds": 1808.7922327479998,
+    "score_claim": false,
+    "inflate_elapsed_seconds_lower_bound": 1800,
+    "verdict": "REFUSE_MEASURED_TIMEOUT",
+    "scope": "INSTANCE"
+  }
+]

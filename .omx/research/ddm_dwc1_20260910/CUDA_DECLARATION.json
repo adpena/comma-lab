@@ -1,0 +1,97 @@
+{
+  "schema": "ddm_dwc1.cuda_declaration.v1",
+  "score_claim": false,
+  "same_cpu_refusal": true,
+  "rows": {
+    "tc3": {
+      "source_receipt": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/PUBLIC_SMOKE.json",
+      "source_sha256": "6ea22a7fc9931a3ef0d93c73df3004572e246917771610d19e817bf018a8db5d",
+      "public_refusal": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip",
+        "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/public_smoke/candidate/attempt_0000/shell/data",
+          "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/public_smoke/candidate/attempt_0000/shell/output",
+          "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/public_smoke/candidate/attempt_0000/shell/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "log": {
+          "bytes": 870,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/public_smoke/candidate/attempt_0000/shell/run.log",
+          "sha256": "cede88ef257e476c4d9a8d549b01a7cae3e8205a60ba5c812a21257c44e8a9fe"
+        },
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime",
+        "seconds": 4.166856999996526,
+        "tree_sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8"
+      },
+      "verified_runtime_sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+      "declaration_intact": true
+    },
+    "tc4": {
+      "source_receipt": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/PUBLIC_SMOKE.json",
+      "source_sha256": "7d3bbb654844a636fd11645c97cbb7e3855dac1d784ddd7c6734ec4c10e77d98",
+      "public_refusal": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+        "archive_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+        "argv": [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/public_smoke/candidate/attempt_0001/shell/data",
+          "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/public_smoke/candidate/attempt_0001/shell/output",
+          "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/public_smoke/candidate/attempt_0001/shell/file_list.txt"
+        ],
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "log": {
+          "bytes": 830,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/public_smoke/candidate/attempt_0001/shell/run.log",
+          "sha256": "844d0beca7c030c51c861dc43a048bc1522190c59876b6fee31eab5142cdd4bb"
+        },
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime",
+        "seconds": 4.10038041700318,
+        "tree_sha256": "43763bb711a2beabc996b37b23fcd266ae04c7815022cc97b402c595447ae987"
+      },
+      "verified_runtime_sha256": "43763bb711a2beabc996b37b23fcd266ae04c7815022cc97b402c595447ae987",
+      "declaration_intact": true
+    },
+    "move40": {
+      "source_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/public_entrypoint_smoke.json",
+        "sha256": "0fa64c6ebc9b57beea6352bc60b7f7d0a1a9d561c48a8ad979a4849775d834a6"
+      },
+      "public_refusal": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+        "seconds": 2.0339229106903076,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/inflate.py\", line 57, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a"
+      },
+      "verified_runtime_sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a",
+      "declaration_intact": true,
+      "comparison_normalization": "remove only RuntimeError: prefix emitted by the older smoke recorder"
+    }
+  },
+  "note": "Revalidated existing executed shell refusal receipts against current runtime bytes; advisory switch is a proxy route, not declared contest CPU support",
+  "same_cpu_refusal_semantics": true
+}

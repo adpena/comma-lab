@@ -89,6 +89,8 @@ __all__ = [
     "SEAL_AXES",
     "SEAL_BAR_DRIFT",
     "SEAL_BYTE_DRIFT",
+    "SEAL_DECODE_WALL_CLOCK_INVALID",
+    "SEAL_DECODE_WALL_CLOCK_MISSING",
     "SEAL_FILE_MISSING",
     "SEAL_PLACEHOLDER_PIN",
     "SEAL_PUBLIC_SMOKE_INVALID",
@@ -96,6 +98,7 @@ __all__ = [
     "SEAL_RECEIVER_PIN_MISMATCH",
     "SEAL_RUNTIME_DRIFT",
     "SEAL_SCHEMA",
+    "SEAL_SCHEMA_V1",
     "SEAL_SCHEMA_VIOLATION",
     "SEAL_SHA_DRIFT",
     "SEAL_TAMPERED",
@@ -535,7 +538,10 @@ def repin_receiver(
 # BRICK 2 — the seal DOCUMENT: freeze every pin, constrain the fire path to consume it.
 # ======================================================================================
 
-SEAL_SCHEMA = "candidate_seal.v1"
+SEAL_SCHEMA_V1 = "candidate_seal.v1"
+SEAL_SCHEMA = "candidate_seal.v2"
+SEAL_DECODE_WALL_CLOCK_MISSING = "SEAL_DECODE_WALL_CLOCK_MISSING"
+SEAL_DECODE_WALL_CLOCK_INVALID = "SEAL_DECODE_WALL_CLOCK_INVALID"
 
 #: Verdicts of the seal-document layer.  Deliberately a separate namespace from brick 1's
 #: pin verdicts: a caller must never confuse "this tree's receiver names this archive"
@@ -982,6 +988,7 @@ def build_seal(
     axis: str = "contest_cuda",
     admit_bar: AdmitBar,
     public_entrypoint_smoke: dict,
+    decode_wall_clock: dict | None = None,
     receiver_relative_paths: tuple[str, ...] = (DEFAULT_RECEIVER_NAME, "inflate.sh"),
     archive_member_name: str = "",
     retained_payload_paths: tuple[str, ...] = (),
@@ -1015,6 +1022,15 @@ def build_seal(
     if smoke_problems:
         raise SealContractError("public-entrypoint smoke refused: " + "; ".join(smoke_problems))
 
+    from tac.decode_wall_clock import validate_decode_wall_clock
+
+    timing_problems, _ = validate_decode_wall_clock(
+        decode_wall_clock, runtime_dir=runtime_dir, archive_path=archive_path,
+        pointer_archive_sha256=admit_bar.pointer_archive_sha256_at_seal,
+    )
+    if timing_problems:
+        raise SealContractError("decode wall-clock refused: " + "; ".join(timing_problems))
+
     # Older producers predate digest naming. Validate their bytes first, then name the
     # verified algorithm on a private copy; never mutate a retained input receipt.
     public_entrypoint_smoke = json.loads(json.dumps(public_entrypoint_smoke))
@@ -1046,6 +1062,7 @@ def build_seal(
         "receiver_pins": receivers,
         "admit_bar": admit_bar.to_dict(),
         "public_entrypoint_smoke": public_entrypoint_smoke,
+        "decode_wall_clock": json.loads(json.dumps(decode_wall_clock)),
         "retained_payload_paths": [str(p) for p in retained_payload_paths],
         "falsifiers": list(falsifiers),
         "notes": notes,
@@ -1134,6 +1151,7 @@ def validate_seal(
     pointer_path: Path | None = None,
     check_pointer: bool = True,
     allow_missing_public_smoke: bool = False,
+    require_decode_wall_clock: bool = False,
 ) -> SealValidation:
     """Re-verify EVERY pin against disk.  Fail-closed with a typed reason.
 
@@ -1168,7 +1186,7 @@ def validate_seal(
     for name in ("retained_payload_paths", "falsifiers"):
         if name in document and not isinstance(document[name], list):
             problems.append(f"field {name!r} must be a list, got {type(document[name]).__name__}")
-    if "schema" in document and document["schema"] != SEAL_SCHEMA:
+    if "schema" in document and document["schema"] not in (SEAL_SCHEMA_V1, SEAL_SCHEMA):
         # No ``None`` escape hatch: an unversioned seal is one this validator cannot claim to
         # understand, and claiming to is how a v2 document gets validated by v1 rules.
         problems.append(f"unknown seal schema {document.get('schema')!r}; this validator speaks {SEAL_SCHEMA}")
@@ -1411,6 +1429,30 @@ def validate_seal(
             )
     elif allow_missing_public_smoke:
         observed["public_entrypoint_smoke"] = {"missing_allowed_by_consumer": True}
+
+    timing_block = document.get("decode_wall_clock")
+    if timing_block is None:
+        observed["decode_wall_clock"] = "absent"
+        if require_decode_wall_clock or document["schema"] == SEAL_SCHEMA:
+            return SealValidation(
+                verdict=SEAL_DECODE_WALL_CLOCK_MISSING, seal_path=seal_path,
+                candidate_id=candidate_id, axis=axis,
+                problems=("seal lacks required decode_wall_clock measurement",), observed=observed,
+            )
+    else:
+        from tac.decode_wall_clock import validate_decode_wall_clock
+
+        timing_problems, timing_observed = validate_decode_wall_clock(
+            timing_block, runtime_dir=runtime_dir, archive_path=archive_path,
+            pointer_archive_sha256=AdmitBar.from_dict(document["admit_bar"]).pointer_archive_sha256_at_seal,
+        )
+        observed["decode_wall_clock"] = timing_observed
+        if timing_problems:
+            return SealValidation(
+                verdict=SEAL_DECODE_WALL_CLOCK_INVALID, seal_path=seal_path,
+                candidate_id=candidate_id, axis=axis,
+                problems=tuple(timing_problems), observed=observed,
+            )
 
     # ---- 6. retained payload custody -----------------------------------------------------
     missing_payload = [p for p in document.get("retained_payload_paths", []) if not Path(str(p)).exists()]

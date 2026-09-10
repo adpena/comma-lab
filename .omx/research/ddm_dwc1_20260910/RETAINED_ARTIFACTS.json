@@ -1,0 +1,3569 @@
+{
+  "allocated_bytes": 3984261120,
+  "artifacts": [
+    {
+      "bytes": 903,
+      "device": 16777240,
+      "inode": 4936299,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/BINDING.json",
+      "sha256": "568f9033cb3885bce43a2a054f7520467a01ed8afb4eb2e8f0f4c824f5a03390"
+    },
+    {
+      "bytes": 903,
+      "device": 16777240,
+      "inode": 4936290,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/BINDING_prelaunch_failure.json",
+      "sha256": "1d207365a5f28024010e22cbec8c8ab29485515b749d1ada4c329dba606a8199"
+    },
+    {
+      "bytes": 14317,
+      "device": 16777240,
+      "inode": 4936446,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/TIMING.json",
+      "sha256": "d04b7130c7dd777944ff522c6a00a8e613f8fd5605e3464f7ec8b0ae5ed2d080"
+    },
+    {
+      "bytes": 2379,
+      "device": 16777240,
+      "inode": 4936301,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/attempt_0001/LAUNCH.json",
+      "sha256": "e4e14533f8afe645497013c291248a589e6afa571c4e55591baa8eeaed0a70cd"
+    },
+    {
+      "bytes": 14317,
+      "device": 16777240,
+      "inode": 4936447,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/attempt_0001/RESULT.json",
+      "sha256": "d04b7130c7dd777944ff522c6a00a8e613f8fd5605e3464f7ec8b0ae5ed2d080"
+    },
+    {
+      "bytes": 6200,
+      "device": 16777240,
+      "inode": 4936302,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/attempt_0001/stdout.log",
+      "sha256": "ac027a2d9894a8540095665651450c2988792e11955daa71a193b8d59d852302"
+    },
+    {
+      "bytes": 180054,
+      "device": 16777240,
+      "inode": 4936288,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/data/p",
+      "sha256": "f0291f979fdc2b1cfbddfb6b9c40df968fb6b5559f70f337c3fbf20ad6e8f75e"
+    },
+    {
+      "bytes": 7,
+      "device": 16777240,
+      "inode": 4936289,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/files.txt",
+      "sha256": "78435bc8b51e55c10427a9ee37298160ab3a1724e33187bb755689ec1bc8ec54"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936441,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/LATEST.json",
+      "sha256": "123a1c3bff4e48c83c6eebc7c714399afb41e3608af5da31502459d5e25f1ca3"
+    },
+    {
+      "bytes": 8615,
+      "device": 16777240,
+      "inode": 4936318,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0025.json",
+      "sha256": "f8862eb788a44fffb545c6931663ff1ba6a23026ebd5e5bdd63bae0747826bc5"
+    },
+    {
+      "bytes": 553559,
+      "device": 16777240,
+      "inode": 4936317,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0025.npz",
+      "sha256": "913e7bd80691d611c700255a068ec5f08a6c300bc49d99c89aa79846371a9d8b"
+    },
+    {
+      "bytes": 8615,
+      "device": 16777240,
+      "inode": 4936321,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0050.json",
+      "sha256": "6ed59ea638ee15e24ccfa92b6999a02852c6276a6f894d5ef58c81fb23bd5ae7"
+    },
+    {
+      "bytes": 629701,
+      "device": 16777240,
+      "inode": 4936320,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0050.npz",
+      "sha256": "beb008d7bffe41896eb482f58076b5cc94c39f1a5a2d17fb2f8580a49920be66"
+    },
+    {
+      "bytes": 8615,
+      "device": 16777240,
+      "inode": 4936324,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0075.json",
+      "sha256": "7edfc53fa34dcb9413df465226fd87bfe57d3ac8489d8a04fd75c32bcd4648e1"
+    },
+    {
+      "bytes": 708242,
+      "device": 16777240,
+      "inode": 4936323,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0075.npz",
+      "sha256": "e1c4f90c7d822210b71f08b95a4cd184ab0c202505794c309a3320537f3f8a8e"
+    },
+    {
+      "bytes": 8616,
+      "device": 16777240,
+      "inode": 4936327,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0100.json",
+      "sha256": "ce2f35b59a1ed2220f351cef9245d96d172fdddebce78826bd17659eb0a0d290"
+    },
+    {
+      "bytes": 768090,
+      "device": 16777240,
+      "inode": 4936326,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0100.npz",
+      "sha256": "eaf5c326050431dd1d735a40eea9de04b467490fc6b357ecfc236789fcd267be"
+    },
+    {
+      "bytes": 8616,
+      "device": 16777240,
+      "inode": 4936330,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0125.json",
+      "sha256": "42ee3195d931280047dfd901b9ee19025a89a49d096f125eeb453e96044dc1c7"
+    },
+    {
+      "bytes": 822116,
+      "device": 16777240,
+      "inode": 4936329,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0125.npz",
+      "sha256": "e68c3033424624dff4ca0abea2cb408d48aca69db133893be66b188a51767c54"
+    },
+    {
+      "bytes": 8616,
+      "device": 16777240,
+      "inode": 4936333,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0150.json",
+      "sha256": "92f6d0d79e2175266556867635a665a4dfa10986afaac49229f2c3507a70101f"
+    },
+    {
+      "bytes": 875170,
+      "device": 16777240,
+      "inode": 4936332,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0150.npz",
+      "sha256": "189d9520582b217a46948b48a82c462a0a747bb404e4d5234ccdd2ac77e02238"
+    },
+    {
+      "bytes": 8616,
+      "device": 16777240,
+      "inode": 4936336,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0175.json",
+      "sha256": "924348057c857db1453ab0c833a4655e9369dec15cc276d171bf32284f1961ad"
+    },
+    {
+      "bytes": 921782,
+      "device": 16777240,
+      "inode": 4936335,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0175.npz",
+      "sha256": "b04b226590cb4239684a69911f8b4d1258fdbbffd36b07633e23db44c3d4948e"
+    },
+    {
+      "bytes": 8616,
+      "device": 16777240,
+      "inode": 4936339,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0200.json",
+      "sha256": "b23473b5c85d25d22348e5ba2ea89ade7b01fc414da341b75d7a681dcbf22aff"
+    },
+    {
+      "bytes": 960098,
+      "device": 16777240,
+      "inode": 4936338,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0200.npz",
+      "sha256": "4770a45833c4f30a111082335a33ae2b8129dc5956e8a93eb099d5bef7c39e3a"
+    },
+    {
+      "bytes": 8616,
+      "device": 16777240,
+      "inode": 4936342,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0225.json",
+      "sha256": "720b58493e3bceb50dbafc427b2f20489b673cb88fd3d96a8d92115af2386784"
+    },
+    {
+      "bytes": 991896,
+      "device": 16777240,
+      "inode": 4936341,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0225.npz",
+      "sha256": "37d629433560fc0583e18c009af97d6c0c073b5f4e3a46517131eef979dc81c4"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936345,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0250.json",
+      "sha256": "aac1cae1bd7ce2d278c2c9d5a08af614781f7438607d99ed8eb82774cf168207"
+    },
+    {
+      "bytes": 1023245,
+      "device": 16777240,
+      "inode": 4936344,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0250.npz",
+      "sha256": "d3f6b57e851a3c8aa8a26e35ea8aa603b8f4e2ad56a832a583cf44d1115273bb"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936348,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0275.json",
+      "sha256": "3e5c2af5f3501e531444234689fd90a9aa6fc6806f87cca53650eb2cfc52db3f"
+    },
+    {
+      "bytes": 1054741,
+      "device": 16777240,
+      "inode": 4936347,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0275.npz",
+      "sha256": "e0f378c99139082f99f709cfdadb619731433bdfc0fe0fb4fb8ccf14b1559a7b"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936351,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0300.json",
+      "sha256": "746866470351dab55090a8a1a6832f5809cfb67643609d9f1776bbff1bf77530"
+    },
+    {
+      "bytes": 1087520,
+      "device": 16777240,
+      "inode": 4936350,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0300.npz",
+      "sha256": "4920cdaf20a4b737281016482a38e3a2cb89eb66472936001f0ff2a1402f9aff"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936354,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0325.json",
+      "sha256": "a69a2aaed9761e2d675d5a6b8d15323406f34c7345d9d40e130ec4f5f2e4ec0c"
+    },
+    {
+      "bytes": 1120163,
+      "device": 16777240,
+      "inode": 4936353,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0325.npz",
+      "sha256": "a250bd37f46c80de089f084c13edee39262c63a163e2fa2a72791da50d62141b"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936357,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0350.json",
+      "sha256": "8763ee1f2608f1e0f896232efd80c889225f25dfdd4f0373556636b26a03a26d"
+    },
+    {
+      "bytes": 1149533,
+      "device": 16777240,
+      "inode": 4936356,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0350.npz",
+      "sha256": "fcf6074f3371b7bfd9b63fbdcbb1b9fe3f638f10df20234e5fef8121e6a894a1"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936360,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0375.json",
+      "sha256": "139e4182450cb989f39e222250184cae5fee2b4c44f1c79ad555a458978cbef5"
+    },
+    {
+      "bytes": 1176489,
+      "device": 16777240,
+      "inode": 4936359,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0375.npz",
+      "sha256": "6cc16719e987c53c3b1cdb260fea7ed54f69e70056b9a5c0682c485e3187f435"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936363,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0400.json",
+      "sha256": "b0a73e24d421f63abb1911b509c2e44b37d9cdad683d93abe24e82a79d2a88c7"
+    },
+    {
+      "bytes": 1205697,
+      "device": 16777240,
+      "inode": 4936362,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0400.npz",
+      "sha256": "1e1b7f2ea84e7c210f60890968ab29e8127c6719b8ba5e9822de6094719a56e2"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936366,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0425.json",
+      "sha256": "699e4f1a9d10e622588b2aac93d3e31447f6cfd7d7b74d7aa49d7ace24e85f1c"
+    },
+    {
+      "bytes": 1235911,
+      "device": 16777240,
+      "inode": 4936365,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0425.npz",
+      "sha256": "a163497ff977e9136098d5eeaed18def5674c42e5ab851cfcd47054aef07af03"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936369,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0450.json",
+      "sha256": "714427077ed214bd5e54afa3d30af7603f9a491482bbcb2942be80ab5f22921d"
+    },
+    {
+      "bytes": 1270155,
+      "device": 16777240,
+      "inode": 4936368,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0450.npz",
+      "sha256": "2cbb75735ea1e04f60395c3f147441192cf3d7bb0b1c12abb55d6aecb1690342"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936372,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0475.json",
+      "sha256": "1b67df2714a1317b8a68ab616465bd253a8e2ae9b66847b4a781d5ce4ae30fca"
+    },
+    {
+      "bytes": 1315892,
+      "device": 16777240,
+      "inode": 4936371,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0475.npz",
+      "sha256": "90289ea662f1b83d4472eded1bde69cb623cbd5ea2317fe9a5245da5886fe6b5"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936381,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0500.json",
+      "sha256": "7fbdcca99d9a7ec1e49f70fe659b546045dee201725ee9e2e64017bcc6849061"
+    },
+    {
+      "bytes": 1347686,
+      "device": 16777240,
+      "inode": 4936380,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0500.npz",
+      "sha256": "c734dfb8a9c1d1ed9fbf57c90dc38daa5872d2b997131af2e77903ed9eadbbc0"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936384,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0525.json",
+      "sha256": "082c7186c5413aa3a90a179e0728c6e36bf3f57cc985f24efc63dd933556c8cc"
+    },
+    {
+      "bytes": 1394165,
+      "device": 16777240,
+      "inode": 4936383,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0525.npz",
+      "sha256": "7ce829c42ef42a225e831376879911dfc4c9eaddc6e31e9cff1f1e96c1649598"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936434,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0550.json",
+      "sha256": "5e1ae0966b0ff3123b1264c76a26e028dcde5d961d885e1eaaec6619fe0f2c81"
+    },
+    {
+      "bytes": 1430807,
+      "device": 16777240,
+      "inode": 4936433,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0550.npz",
+      "sha256": "86cfc40fc48e4fe0e91fd26ae522c9080f10b1c2f665ed99641121965c961fb7"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936437,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0575.json",
+      "sha256": "2915e235a796135df523d6ba0e77fa4800861589002922edbb1f034595dc1f1b"
+    },
+    {
+      "bytes": 1467567,
+      "device": 16777240,
+      "inode": 4936436,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0575.npz",
+      "sha256": "22fef6730065865fa115a23e70372c49e810aab663f79347d25cdef1254e036e"
+    },
+    {
+      "bytes": 8617,
+      "device": 16777240,
+      "inode": 4936440,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0600.json",
+      "sha256": "123a1c3bff4e48c83c6eebc7c714399afb41e3608af5da31502459d5e25f1ca3"
+    },
+    {
+      "bytes": 1506851,
+      "device": 16777240,
+      "inode": 4936439,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/frame_checkpoints/stage_0600.npz",
+      "sha256": "7769f195aad45c3b2dafb7cd340f3f801225b0d90f3ae15425a4b8ecef05192f"
+    },
+    {
+      "bytes": 3703,
+      "device": 16777240,
+      "inode": 4936444,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+      "sha256": "d5d331702bb94fc8ba43c1d43e00f518def4cfbbe9d981bf320840fb469ef6b8"
+    },
+    {
+      "bytes": 117964800,
+      "device": 16777240,
+      "inode": 4936443,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5"
+    },
+    {
+      "bytes": 3662409600,
+      "device": 16777240,
+      "inode": 4936445,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output/0.raw",
+      "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+    },
+    {
+      "bytes": 3667,
+      "device": 16777240,
+      "inode": 4936272,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/README.md",
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    {
+      "bytes": 180154,
+      "device": 16777240,
+      "inode": 4936283,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/archive.zip",
+      "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936"
+    },
+    {
+      "bytes": 183043,
+      "device": 16777240,
+      "inode": 4936273,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/compress.py",
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    {
+      "bytes": 7353,
+      "device": 16777240,
+      "inode": 4936282,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "bytes": 13389,
+      "device": 16777240,
+      "inode": 4936279,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    {
+      "bytes": 17471,
+      "device": 16777240,
+      "inode": 4936280,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "bytes": 8282,
+      "device": 16777240,
+      "inode": 4936281,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "bytes": 13810,
+      "device": 16777240,
+      "inode": 4936277,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "bytes": 5881,
+      "device": 16777240,
+      "inode": 4936276,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "bytes": 20916,
+      "device": 16777240,
+      "inode": 4936278,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 2728,
+      "device": 16777240,
+      "inode": 4936232,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/inflate.py",
+      "sha256": "e8ba07f75e4f3daf34b1378a1d0735c313207915e48ba7555fcd051bf4dc5e6e"
+    },
+    {
+      "bytes": 3351,
+      "device": 16777240,
+      "inode": 4936274,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/inflate.sh",
+      "sha256": "e70f623130c62ed829d48526c4428143624fb980100b4df81373c3fa2e9eb1f7"
+    },
+    {
+      "bytes": 57,
+      "device": 16777240,
+      "inode": 4936251,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "bytes": 2058,
+      "device": 16777240,
+      "inode": 4936238,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "bytes": 1578,
+      "device": 16777240,
+      "inode": 4936234,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "bytes": 8206,
+      "device": 16777240,
+      "inode": 4936241,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "bytes": 7074,
+      "device": 16777240,
+      "inode": 4936259,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "bytes": 25232,
+      "device": 16777240,
+      "inode": 4936236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "bytes": 12929,
+      "device": 16777240,
+      "inode": 4936263,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "bytes": 54,
+      "device": 16777240,
+      "inode": 4936245,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "bytes": 4230,
+      "device": 16777240,
+      "inode": 4936247,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "bytes": 4875,
+      "device": 16777240,
+      "inode": 4936243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "bytes": 4027,
+      "device": 16777240,
+      "inode": 4936246,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "bytes": 2904,
+      "device": 16777240,
+      "inode": 4936244,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "bytes": 5638,
+      "device": 16777240,
+      "inode": 4936248,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "bytes": 9656,
+      "device": 16777240,
+      "inode": 4936249,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "bytes": 50299,
+      "device": 16777240,
+      "inode": 4936253,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "bytes": 40911,
+      "device": 16777240,
+      "inode": 4936240,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "bytes": 26781,
+      "device": 16777240,
+      "inode": 4936255,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "bytes": 29176,
+      "device": 16777240,
+      "inode": 4936266,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "bytes": 4964,
+      "device": 16777240,
+      "inode": 4936264,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "bytes": 14709,
+      "device": 16777240,
+      "inode": 4936260,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "bytes": 34979,
+      "device": 16777240,
+      "inode": 4936265,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "bytes": 31470,
+      "device": 16777240,
+      "inode": 4936269,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "bytes": 10952,
+      "device": 16777240,
+      "inode": 4936235,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "bytes": 13327,
+      "device": 16777240,
+      "inode": 4936268,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    {
+      "bytes": 10527,
+      "device": 16777240,
+      "inode": 4936257,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "bytes": 15952,
+      "device": 16777240,
+      "inode": 4936256,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "bytes": 20916,
+      "device": 16777240,
+      "inode": 4936250,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 31341,
+      "device": 16777240,
+      "inode": 4936270,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    {
+      "bytes": 8010,
+      "device": 16777240,
+      "inode": 4936237,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    {
+      "bytes": 34450,
+      "device": 16777240,
+      "inode": 4936239,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/residual_archive.py",
+      "sha256": "c27961db42380f0f70e70e60c09c103f7f0e9408dcf7b3d8c93c799345a95204"
+    },
+    {
+      "bytes": 15421,
+      "device": 16777240,
+      "inode": 4936261,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "bytes": 20793,
+      "device": 16777240,
+      "inode": 4936271,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    {
+      "bytes": 9693,
+      "device": 16777240,
+      "inode": 4936252,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "bytes": 8753,
+      "device": 16777240,
+      "inode": 4936262,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    {
+      "bytes": 8590,
+      "device": 16777240,
+      "inode": 4936258,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 11908,
+      "device": 16777240,
+      "inode": 4936267,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/tc3_geometry.py",
+      "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+    },
+    {
+      "bytes": 5940,
+      "device": 16777240,
+      "inode": 4936254,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/runtime/tc3_mixer.py",
+      "sha256": "28b4aec3999066b6ddc6af88346f5e83827ad11f2d50857216d51299b527ef43"
+    },
+    {
+      "bytes": 1276,
+      "device": 16777240,
+      "inode": 4936310,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/scratch/xcrun_db",
+      "sha256": "04e66facf6dee8debb9f4ffc1b02ddb5627508c6540cae0390f661c23804aa3f"
+    },
+    {
+      "bytes": 883,
+      "device": 16777240,
+      "inode": 4936519,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/BINDING.json",
+      "sha256": "74761d67642a616fc91f00a2e43dcec0acb2d8fdffd8b0bb8d5e06c5f030b5db"
+    },
+    {
+      "bytes": 14638,
+      "device": 16777240,
+      "inode": 4938390,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/TIMING.json",
+      "sha256": "08990cb41b7241757853429e754f2dba505f3f0555c7bc9998103dfa7645e76e"
+    },
+    {
+      "bytes": 2365,
+      "device": 16777240,
+      "inode": 4936521,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/attempt_0000/LAUNCH.json",
+      "sha256": "d864aec8f17fe2a7f2d6b424f61a3197b2aa7734daf0a6abddebc4845e95db8a"
+    },
+    {
+      "bytes": 14638,
+      "device": 16777240,
+      "inode": 4938391,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/attempt_0000/RESULT.json",
+      "sha256": "08990cb41b7241757853429e754f2dba505f3f0555c7bc9998103dfa7645e76e"
+    },
+    {
+      "bytes": 6207,
+      "device": 16777240,
+      "inode": 4936522,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/attempt_0000/stdout.log",
+      "sha256": "e02b8b31643fb634ff05573ceb51b1eec6ced9fd730e60fc6e2c27a4cd222ab8"
+    },
+    {
+      "bytes": 179921,
+      "device": 16777240,
+      "inode": 4936517,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/data/p",
+      "sha256": "e5771ab912ed4321ea5fcb95f5b6ea0aaa9374b262ab77325e87dfc8dc85bca8"
+    },
+    {
+      "bytes": 7,
+      "device": 16777240,
+      "inode": 4936518,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/files.txt",
+      "sha256": "78435bc8b51e55c10427a9ee37298160ab3a1724e33187bb755689ec1bc8ec54"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938331,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/LATEST.json",
+      "sha256": "bd266700b9ca3e14e1fd5d28f2f4c305882984254aeee952449ce4ffd97c3ce4"
+    },
+    {
+      "bytes": 8947,
+      "device": 16777240,
+      "inode": 4936543,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0025.json",
+      "sha256": "2c6e7e1af3f1637c7ead06fd89ebb53721bc01de1b4f38a205da98641070e0a0"
+    },
+    {
+      "bytes": 567048,
+      "device": 16777240,
+      "inode": 4936542,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0025.npz",
+      "sha256": "74fbee6aac0e540dd31b16800501b8f674cdcfac564ec4621fed71a1d1f81dd5"
+    },
+    {
+      "bytes": 8947,
+      "device": 16777240,
+      "inode": 4936548,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0050.json",
+      "sha256": "c3ea9503aacbd1b7992f59fced75c82a5ef31a50fe6e99f2857b1428792e7a17"
+    },
+    {
+      "bytes": 643955,
+      "device": 16777240,
+      "inode": 4936547,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0050.npz",
+      "sha256": "d5c6f879b21d4a9ca01a4819195c7403cd36a6e7b4f00ad456bec50cf0bef70a"
+    },
+    {
+      "bytes": 8947,
+      "device": 16777240,
+      "inode": 4936551,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0075.json",
+      "sha256": "9b3b02beb997d79adf73fc20f52368e687d41c17fbe42236251e135185f6fef9"
+    },
+    {
+      "bytes": 723302,
+      "device": 16777240,
+      "inode": 4936550,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0075.npz",
+      "sha256": "50a94fd47bb598a575772f18670a5c62a07278e6182c982cd7d061d0b747b90d"
+    },
+    {
+      "bytes": 8948,
+      "device": 16777240,
+      "inode": 4936554,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0100.json",
+      "sha256": "62b9839dd6589664a4b82cbf0e6e3c16b08b1f2df801cc50f8285e667a2aff39"
+    },
+    {
+      "bytes": 784117,
+      "device": 16777240,
+      "inode": 4936553,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0100.npz",
+      "sha256": "b1a9c3d876e4f98e5d5fbbc165a44fa0a41a872bd2c9b8d75704400f7f1ee13b"
+    },
+    {
+      "bytes": 8948,
+      "device": 16777240,
+      "inode": 4936558,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0125.json",
+      "sha256": "bc1ed42fa5c3361bd3a08c05b4493ff1643880f610b976f9e72582475125405c"
+    },
+    {
+      "bytes": 838634,
+      "device": 16777240,
+      "inode": 4936557,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0125.npz",
+      "sha256": "f0278d3dd58ffe97d53728ed30650bc61c14f291c3f0039f60d6efc3de715f4d"
+    },
+    {
+      "bytes": 8948,
+      "device": 16777240,
+      "inode": 4936561,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0150.json",
+      "sha256": "53c9b819834e318723a029749c1b4708015a9995f72aa260936b1e92b514eb4b"
+    },
+    {
+      "bytes": 892331,
+      "device": 16777240,
+      "inode": 4936560,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0150.npz",
+      "sha256": "28ceeb40eab0c6437faf5b94d24fc277dc466c1cb35cd562f774e71023ba7ecf"
+    },
+    {
+      "bytes": 8948,
+      "device": 16777240,
+      "inode": 4936564,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0175.json",
+      "sha256": "3c930262950202f50860aaae17f39a099ee1546007300a01a18a81aef4f476ec"
+    },
+    {
+      "bytes": 939299,
+      "device": 16777240,
+      "inode": 4936563,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0175.npz",
+      "sha256": "70e38b2dfef4ce79ad2d689897a89148891ecc37ca551a415d0d4379437fc8ba"
+    },
+    {
+      "bytes": 8948,
+      "device": 16777240,
+      "inode": 4936569,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0200.json",
+      "sha256": "c5175f66b6d283c829c6059e00c3cdd4b3125e932e89282903c809cde1dbf1e5"
+    },
+    {
+      "bytes": 977715,
+      "device": 16777240,
+      "inode": 4936568,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0200.npz",
+      "sha256": "620a8e66fc9a66f2492138e07d1a0983d52fecdf2e248681ab947749a6d5f772"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4936572,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0225.json",
+      "sha256": "f1dc881c75f3bc98d47a8a7c1f5070105c1684f2a0c28264f4c78c066f5c6beb"
+    },
+    {
+      "bytes": 1009647,
+      "device": 16777240,
+      "inode": 4936571,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0225.npz",
+      "sha256": "f4d6a8f84ca0c5771fcf3308e6728bceee89720f171127c22214c9666d1caa4f"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4936682,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0250.json",
+      "sha256": "0ebf20e2455ec8837bc404c7098b7237a9050580506ac33867e51d1235fc34af"
+    },
+    {
+      "bytes": 1041113,
+      "device": 16777240,
+      "inode": 4936681,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0250.npz",
+      "sha256": "8afa94cb40c7469a73dcf22625db72b45068f8ee7cddf89d8bb986038935755b"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4936689,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0275.json",
+      "sha256": "9022a5944e2ef62da13f8c4197b678a6ff4c6c39c078ff54ac2565138b31871d"
+    },
+    {
+      "bytes": 1072695,
+      "device": 16777240,
+      "inode": 4936688,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0275.npz",
+      "sha256": "0aa51ff6aa8176c4e6b73d31a8f720dbc976925fab175d9c61102ca75e4a3c9e"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4936775,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0300.json",
+      "sha256": "d6d8944be0be49ff5ab99615262df5f09fe815bfb0d9adb5899c1ef7092e8ca3"
+    },
+    {
+      "bytes": 1105635,
+      "device": 16777240,
+      "inode": 4936772,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0300.npz",
+      "sha256": "76ff71a566a57ea5154e4b44588b273a0393acb34f6fc79a3808909632e7e762"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4937129,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0325.json",
+      "sha256": "e9274965474cb3c19a9e1775b3f6b1340d2785468c735411b22017e60ccd74c1"
+    },
+    {
+      "bytes": 1138469,
+      "device": 16777240,
+      "inode": 4937126,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0325.npz",
+      "sha256": "fe356dc3a10599c7f19a660f6472a4ffc7d9d5dbcc49ace9b3a35e31f3feb62e"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4937376,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0350.json",
+      "sha256": "ee70f3270d45788e63c4576c9a4340fe808d5e3d2fec70e7f429caca8e514ec3"
+    },
+    {
+      "bytes": 1168010,
+      "device": 16777240,
+      "inode": 4937373,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0350.npz",
+      "sha256": "2f65f5306a50cc1d36a1bbc47cf43001e9afd7794c78dcd962ca8d79a3f039eb"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4937619,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0375.json",
+      "sha256": "4d6a4038a713b37383ee9366b70573a61d98a1f5f2c5bc5e78bc8503c3d4a696"
+    },
+    {
+      "bytes": 1194982,
+      "device": 16777240,
+      "inode": 4937616,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0375.npz",
+      "sha256": "3f9ba58e44fb6818375b8743726273c39c04c69dc7d78a924d1d5dc4a3d5b10e"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4937861,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0400.json",
+      "sha256": "42965afd1a5bc719a8619266c027e4ef18ea502fbc1ec709b1ae6bda8ea0d24c"
+    },
+    {
+      "bytes": 1224256,
+      "device": 16777240,
+      "inode": 4937858,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0400.npz",
+      "sha256": "b8606ea1f8f6a4161f07ac8857a06524ea27049f355cfa7f2d33f6b95d02ee65"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938046,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0425.json",
+      "sha256": "a08ba1f3f86c37f2e7ff5a373175ba0d62e81af0c6a47305afd9f4f3acb1aab0"
+    },
+    {
+      "bytes": 1254505,
+      "device": 16777240,
+      "inode": 4938045,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0425.npz",
+      "sha256": "60180000e9d83236261ec18b1b3a781f6255d51687277f05e9725c088d6e01fa"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938202,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0450.json",
+      "sha256": "407d8df16fb9eaeb60dbfccfd852c1688eb5a0bbff3fdba2a0f868a6a85294e7"
+    },
+    {
+      "bytes": 1288861,
+      "device": 16777240,
+      "inode": 4938201,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0450.npz",
+      "sha256": "0669cd84cea3c03e248e8dd0e4ed7e99216b19ecdc50955499f46e8e96b3a126"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938278,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0475.json",
+      "sha256": "2e0e91cfa912b0d033e25b896f881a45e6024de46fc7c16aacc2908bff15e612"
+    },
+    {
+      "bytes": 1335036,
+      "device": 16777240,
+      "inode": 4938277,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0475.npz",
+      "sha256": "3ea84ee46df50b50ca76897f4dbe9f604839ceba09c565a6510df993a1825777"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938288,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0500.json",
+      "sha256": "0f1871ce0ccc5cd4540ca8107560d40ac9076b9124fddbd1172cb1b1a64f7606"
+    },
+    {
+      "bytes": 1366995,
+      "device": 16777240,
+      "inode": 4938287,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0500.npz",
+      "sha256": "50329acacdee4d0b4e512c36e7de9e785cad178161f2b60e5cd9ddfb24556384"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938303,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0525.json",
+      "sha256": "0b5131267833333e3e6951fa3232e265ba138d39604ad0747ff0c1d4c07e6ab4"
+    },
+    {
+      "bytes": 1413774,
+      "device": 16777240,
+      "inode": 4938302,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0525.npz",
+      "sha256": "ef5a76846600d7b4165f2e1b4af4d97ecbd8e47a4f56c0f18cab502bc6b70ba8"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938312,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0550.json",
+      "sha256": "74754f8b29c969473cc6e24b510a15e9432339b52f1379b50461219fda9987c9"
+    },
+    {
+      "bytes": 1450473,
+      "device": 16777240,
+      "inode": 4938311,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0550.npz",
+      "sha256": "7c722d96f91c34874ba6832288db865a6190e486807e766c83bf85bf10b32417"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938321,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0575.json",
+      "sha256": "a08d7d2c00eee5219b8dbf289f7bd4db2f69ed2044c30ebe7a2707340c4b6bb2"
+    },
+    {
+      "bytes": 1487308,
+      "device": 16777240,
+      "inode": 4938320,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0575.npz",
+      "sha256": "7c8232e68c4409fb3b33d72aafdb80b195eac970d1aa70b8a176515ba904d54c"
+    },
+    {
+      "bytes": 8949,
+      "device": 16777240,
+      "inode": 4938330,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0600.json",
+      "sha256": "bd266700b9ca3e14e1fd5d28f2f4c305882984254aeee952449ce4ffd97c3ce4"
+    },
+    {
+      "bytes": 1526632,
+      "device": 16777240,
+      "inode": 4938329,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/frame_checkpoints/stage_0600.npz",
+      "sha256": "2cb50b9d05424938704e3f26dc23bc20510cd77f5c1aa6008672e377ddd3783f"
+    },
+    {
+      "bytes": 3709,
+      "device": 16777240,
+      "inode": 4938337,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+      "sha256": "9f77c16a05d79bc0537c0ab90f4f6c67b7cb648d60896bdb6b12abdc47f63c6a"
+    },
+    {
+      "bytes": 117964800,
+      "device": 16777240,
+      "inode": 4936443,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5"
+    },
+    {
+      "bytes": 3662409600,
+      "device": 16777240,
+      "inode": 4936445,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/0.raw",
+      "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+    },
+    {
+      "bytes": 3667,
+      "device": 16777240,
+      "inode": 4936501,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/README.md",
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    {
+      "bytes": 180021,
+      "device": 16777240,
+      "inode": 4936512,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/archive.zip",
+      "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+    },
+    {
+      "bytes": 183043,
+      "device": 16777240,
+      "inode": 4936502,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/compress.py",
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    {
+      "bytes": 7353,
+      "device": 16777240,
+      "inode": 4936511,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "bytes": 13389,
+      "device": 16777240,
+      "inode": 4936508,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    {
+      "bytes": 17471,
+      "device": 16777240,
+      "inode": 4936509,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "bytes": 8282,
+      "device": 16777240,
+      "inode": 4936510,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "bytes": 13810,
+      "device": 16777240,
+      "inode": 4936506,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "bytes": 5881,
+      "device": 16777240,
+      "inode": 4936505,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "bytes": 20916,
+      "device": 16777240,
+      "inode": 4936507,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 2728,
+      "device": 16777240,
+      "inode": 4936459,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/inflate.py",
+      "sha256": "6111fa0498beea592fd5b0fcda098faa928c0caaeee9ca50b22567647a7b9916"
+    },
+    {
+      "bytes": 3351,
+      "device": 16777240,
+      "inode": 4936503,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/inflate.sh",
+      "sha256": "e70f623130c62ed829d48526c4428143624fb980100b4df81373c3fa2e9eb1f7"
+    },
+    {
+      "bytes": 57,
+      "device": 16777240,
+      "inode": 4936480,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "bytes": 2058,
+      "device": 16777240,
+      "inode": 4936466,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "bytes": 1578,
+      "device": 16777240,
+      "inode": 4936461,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "bytes": 8206,
+      "device": 16777240,
+      "inode": 4936470,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "bytes": 7074,
+      "device": 16777240,
+      "inode": 4936488,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "bytes": 25232,
+      "device": 16777240,
+      "inode": 4936463,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "bytes": 12929,
+      "device": 16777240,
+      "inode": 4936492,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "bytes": 54,
+      "device": 16777240,
+      "inode": 4936474,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "bytes": 4230,
+      "device": 16777240,
+      "inode": 4936476,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "bytes": 4875,
+      "device": 16777240,
+      "inode": 4936472,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "bytes": 4027,
+      "device": 16777240,
+      "inode": 4936475,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "bytes": 2904,
+      "device": 16777240,
+      "inode": 4936473,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "bytes": 5638,
+      "device": 16777240,
+      "inode": 4936477,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "bytes": 9656,
+      "device": 16777240,
+      "inode": 4936478,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "bytes": 50299,
+      "device": 16777240,
+      "inode": 4936482,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "bytes": 40911,
+      "device": 16777240,
+      "inode": 4936469,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "bytes": 26781,
+      "device": 16777240,
+      "inode": 4936484,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "bytes": 29176,
+      "device": 16777240,
+      "inode": 4936495,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "bytes": 4964,
+      "device": 16777240,
+      "inode": 4936493,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "bytes": 14709,
+      "device": 16777240,
+      "inode": 4936489,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "bytes": 34979,
+      "device": 16777240,
+      "inode": 4936494,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "bytes": 31470,
+      "device": 16777240,
+      "inode": 4936498,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "bytes": 10952,
+      "device": 16777240,
+      "inode": 4936462,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "bytes": 13327,
+      "device": 16777240,
+      "inode": 4936497,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    {
+      "bytes": 10527,
+      "device": 16777240,
+      "inode": 4936486,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "bytes": 15952,
+      "device": 16777240,
+      "inode": 4936485,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "bytes": 20916,
+      "device": 16777240,
+      "inode": 4936479,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 31341,
+      "device": 16777240,
+      "inode": 4936499,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    {
+      "bytes": 8010,
+      "device": 16777240,
+      "inode": 4936464,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    {
+      "bytes": 34750,
+      "device": 16777240,
+      "inode": 4936467,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/residual_archive.py",
+      "sha256": "b7525c86a723ced468cacda23393cc8cb12101edb46a0ad34ce674beb638d807"
+    },
+    {
+      "bytes": 15421,
+      "device": 16777240,
+      "inode": 4936490,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "bytes": 20793,
+      "device": 16777240,
+      "inode": 4936500,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    {
+      "bytes": 9693,
+      "device": 16777240,
+      "inode": 4936481,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "bytes": 8753,
+      "device": 16777240,
+      "inode": 4936491,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    {
+      "bytes": 8590,
+      "device": 16777240,
+      "inode": 4936487,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 11908,
+      "device": 16777240,
+      "inode": 4936496,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/tc3_geometry.py",
+      "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+    },
+    {
+      "bytes": 5940,
+      "device": 16777240,
+      "inode": 4936483,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/tc3_mixer.py",
+      "sha256": "28b4aec3999066b6ddc6af88346f5e83827ad11f2d50857216d51299b527ef43"
+    },
+    {
+      "bytes": 4154,
+      "device": 16777240,
+      "inode": 4936468,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/tc4_fast.py",
+      "sha256": "98217c1e6865f71645c47e4a16e6035b244cc4a8991bb72fdcfd090f14287340"
+    },
+    {
+      "bytes": 7779,
+      "device": 16777240,
+      "inode": 4936465,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/runtime/tc4_maps.py",
+      "sha256": "85c12f953f9a96d413a602d3d0feeb1e5e5d96bbc01750ba22f8ef3767c44fe0"
+    },
+    {
+      "bytes": 1276,
+      "device": 16777240,
+      "inode": 4936530,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/scratch/xcrun_db",
+      "sha256": "04e66facf6dee8debb9f4ffc1b02ddb5627508c6540cae0390f661c23804aa3f"
+    },
+    {
+      "bytes": 1638,
+      "device": 16777240,
+      "inode": 4938697,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/BINDING.json",
+      "sha256": "83940ebe9acfd3038be0f01ed962dec4219fc29317f01d4e3c9e9806c7004bfc"
+    },
+    {
+      "bytes": 15003,
+      "device": 16777240,
+      "inode": 4938975,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/TIMING.json",
+      "sha256": "b7770106b1a4d204d22a33222fb08e0ab55c5d397252d899fedab682a3861898"
+    },
+    {
+      "bytes": 3154,
+      "device": 16777240,
+      "inode": 4938699,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/attempt_0000/LAUNCH.json",
+      "sha256": "a4d4d6a576c8290bfa69351058ac94376095dc30e7342b26bc2ab8986270af6d"
+    },
+    {
+      "bytes": 15003,
+      "device": 16777240,
+      "inode": 4938976,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/attempt_0000/RESULT.json",
+      "sha256": "b7770106b1a4d204d22a33222fb08e0ab55c5d397252d899fedab682a3861898"
+    },
+    {
+      "bytes": 6138,
+      "device": 16777240,
+      "inode": 4938700,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/attempt_0000/stdout.log",
+      "sha256": "b8818e72da173eac8719b0620b6d81515b2364ec9f588bf59ff69a0a8db91d02"
+    },
+    {
+      "bytes": 1249,
+      "device": 16777240,
+      "inode": 4938715,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/build/BUILD.json",
+      "sha256": "3eb360bc6e34a92dc6f14285e0a5f56ba4a0410fbebdf71d951632c028a28196"
+    },
+    {
+      "bytes": 2595,
+      "device": 16777240,
+      "inode": 4938701,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/build/BUILD_LAUNCH.json",
+      "sha256": "ccd8e0394eb4579c5b1d2c1f996945e82bc17e1631cc287a9b797b4820db6e6c"
+    },
+    {
+      "bytes": 34568,
+      "device": 16777240,
+      "inode": 4938714,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/build/f26_corrector_native.so",
+      "sha256": "77d7d01d9921667c534a826280deef6f7018ecda735e63d0aaa0fc107061f770"
+    },
+    {
+      "bytes": 33888,
+      "device": 16777240,
+      "inode": 4938711,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/build/rc64_backend.so",
+      "sha256": "a59fd740519c69a36601391f212df027934e1e21dfda0c6e5d90d4a65497cb82"
+    },
+    {
+      "bytes": 180133,
+      "device": 16777240,
+      "inode": 4938696,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/data/p",
+      "sha256": "2c1a121a46c43b111be0550f733d98a3da7e68be99f3659e3728fe7d57958abd"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938968,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/LATEST.json",
+      "sha256": "65a5ba7a9bf465ecc2bc8d4d28917e5acf5d1091044b8959b2a346266144e16a"
+    },
+    {
+      "bytes": 8407,
+      "device": 16777240,
+      "inode": 4938723,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0025.json",
+      "sha256": "7389e30e3f50baa80845f33a9555f9fc91086ec2203196ecd6b79f1c4eb9bcd2"
+    },
+    {
+      "bytes": 551449,
+      "device": 16777240,
+      "inode": 4938722,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0025.npz",
+      "sha256": "0d2da07b763ce24c70d505322ac62f46ce39eb6a65b6968e755fdd6bae795639"
+    },
+    {
+      "bytes": 8407,
+      "device": 16777240,
+      "inode": 4938735,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0050.json",
+      "sha256": "f588ff7cf87b3e77733ecfcce6c0915b7bd427785d10c1a3903f3061a31a7644"
+    },
+    {
+      "bytes": 627548,
+      "device": 16777240,
+      "inode": 4938734,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0050.npz",
+      "sha256": "5e3416c03211af5867851262cad1b281545e9dbbffa7a1555eb76bcf2fda324f"
+    },
+    {
+      "bytes": 8407,
+      "device": 16777240,
+      "inode": 4938744,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0075.json",
+      "sha256": "c7d3f2d95c8658369c97661a5255452975167e8509297c7b7340f83b625125ae"
+    },
+    {
+      "bytes": 705909,
+      "device": 16777240,
+      "inode": 4938743,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0075.npz",
+      "sha256": "12f9699b9b65d37f72242101be1ded0af147b918a8b1bd821b70f06b40d90246"
+    },
+    {
+      "bytes": 8408,
+      "device": 16777240,
+      "inode": 4938753,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0100.json",
+      "sha256": "db57711fe1fe4ae57e9962453aab9c49797e5a36ebeb273688e419beec5ae14b"
+    },
+    {
+      "bytes": 765741,
+      "device": 16777240,
+      "inode": 4938752,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0100.npz",
+      "sha256": "3dd17ccd886e6b805cbdc275ea33a4b4362e7210dfd7e6f8e4646a411a0f9667"
+    },
+    {
+      "bytes": 8408,
+      "device": 16777240,
+      "inode": 4938762,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0125.json",
+      "sha256": "0376a7f4eedd416a944bfa27acad45beb15ad52c884d3fff61e77a2c616d66f0"
+    },
+    {
+      "bytes": 819715,
+      "device": 16777240,
+      "inode": 4938761,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0125.npz",
+      "sha256": "9dec354cc2b8499b25da4eb677a17c6da89657408d83aea97341ad567a3ae213"
+    },
+    {
+      "bytes": 8408,
+      "device": 16777240,
+      "inode": 4938785,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0150.json",
+      "sha256": "ab02d36129e0e48b438120c2bc948e84a08c9b5908026d28e0b2ace7f9d8354d"
+    },
+    {
+      "bytes": 872686,
+      "device": 16777240,
+      "inode": 4938780,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0150.npz",
+      "sha256": "90b5f5c95216cea85465ec196d933c3b197c8e71bf7389c4ee2b917354731024"
+    },
+    {
+      "bytes": 8408,
+      "device": 16777240,
+      "inode": 4938792,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0175.json",
+      "sha256": "de0bddde55deb0ce5024c3ee407a6c51a6ab594c088e4691b9db7c4587f02084"
+    },
+    {
+      "bytes": 919269,
+      "device": 16777240,
+      "inode": 4938791,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0175.npz",
+      "sha256": "12649d82fe27460641f8c87faddfa159d76bce70d9c17aa1c19f3e723a86ca13"
+    },
+    {
+      "bytes": 8408,
+      "device": 16777240,
+      "inode": 4938795,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0200.json",
+      "sha256": "a6469288472f38babbdada82b039e9b742c47059ecde0e3c04de08ed6705d9c2"
+    },
+    {
+      "bytes": 957590,
+      "device": 16777240,
+      "inode": 4938794,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0200.npz",
+      "sha256": "a88209c28b49bdaedbd50b35a333c2c875c42497f8715c57a1593a05dc3b7ee9"
+    },
+    {
+      "bytes": 8408,
+      "device": 16777240,
+      "inode": 4938798,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0225.json",
+      "sha256": "f5d5e1a28e87f0885728a6b1c8bdeee0d2009cbaa7318a57a920eb2828de233c"
+    },
+    {
+      "bytes": 989371,
+      "device": 16777240,
+      "inode": 4938797,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0225.npz",
+      "sha256": "88e410d370798287ef0e82bc1c5769f155b31cbade00c9d028e8fcf02f6d26e8"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938801,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0250.json",
+      "sha256": "5db0def900099777d0f84fe7759478c41b7058891888fc2e01a37a9eb95a747f"
+    },
+    {
+      "bytes": 1020708,
+      "device": 16777240,
+      "inode": 4938800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0250.npz",
+      "sha256": "0a43e2a5ee51378aa7e64849116c219bca2a7bb23b4506942100c234e87b401b"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938804,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0275.json",
+      "sha256": "b9d8d63376b501bb2a65d03a0fdb08404a6164b2f2270f27d174c4afcd3b5a30"
+    },
+    {
+      "bytes": 1052193,
+      "device": 16777240,
+      "inode": 4938803,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0275.npz",
+      "sha256": "f5713b711c02eff270f600d86ad365f90b10f6a3a488a0a1a7122b5dd45bee9e"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938827,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0300.json",
+      "sha256": "5c1985f1787c0660ea34fbc33a71e5f0a877fb34a9843e8a2f3f3645bfc735a9"
+    },
+    {
+      "bytes": 1084974,
+      "device": 16777240,
+      "inode": 4938826,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0300.npz",
+      "sha256": "61dc6b990961453d9b20b022b69dd8a1ce94750bd0ff64aa5f4a5d58bc7c2850"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938830,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0325.json",
+      "sha256": "e62ea051d0e9a1d8f21760876bca21632ab1e4e61578db9df0fedb4a4d843cfc"
+    },
+    {
+      "bytes": 1117603,
+      "device": 16777240,
+      "inode": 4938829,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0325.npz",
+      "sha256": "db70270c176717f8cac90060263efc5c1c1ddcde994a0afdc02d0de9e783f3db"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938833,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0350.json",
+      "sha256": "e4b96e2779bacd5d211abb43f636da9fc59e940c2d32cb2df4561aca9c3a5714"
+    },
+    {
+      "bytes": 1146966,
+      "device": 16777240,
+      "inode": 4938832,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0350.npz",
+      "sha256": "2dd4bf9fab7be554708a332481ac32effc24f4e87e2fb54dd8ae9d927d40ce20"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938836,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0375.json",
+      "sha256": "c1405a9ee67d221bf9332744dbbc6b0fa4756e82190b63310d6924557d452ab1"
+    },
+    {
+      "bytes": 1173935,
+      "device": 16777240,
+      "inode": 4938835,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0375.npz",
+      "sha256": "53d358a431705b946dfb377656b90ca84ce7325aac928fea8dfa2cb3bfc0acc7"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938839,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0400.json",
+      "sha256": "86cf0c9ff735992c5005206b77d6b0188ba8fb314974c9b19dccc1f3c5ddb256"
+    },
+    {
+      "bytes": 1203128,
+      "device": 16777240,
+      "inode": 4938838,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0400.npz",
+      "sha256": "fd860cd5f0893a245f81ee8e67a53b808be626158cb0e2afff00dcb8ab3e16ad"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938842,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0425.json",
+      "sha256": "ff2764f31c9ab18957ca99760fd01f2d8355ad1ad80592923cfc263290534f86"
+    },
+    {
+      "bytes": 1233337,
+      "device": 16777240,
+      "inode": 4938841,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0425.npz",
+      "sha256": "f7871bfd030eda40c3f6954f2ee7079a8252762058ff83e0b0a199a2ddc93297"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938846,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0450.json",
+      "sha256": "3bc9cf85bb1f61a1753a7f0fb68c94313594ace4c4e9983208342f6ce214b3af"
+    },
+    {
+      "bytes": 1267573,
+      "device": 16777240,
+      "inode": 4938845,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0450.npz",
+      "sha256": "3cd32fb4d98c226cb8a1192d711b1d60f0066bc35c67b5cc2ffcffb13f8ab6c7"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938850,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0475.json",
+      "sha256": "7e81cc96cd736c207cb0f407fd3ed82d87a62c523e1dc2be006725a61752bd93"
+    },
+    {
+      "bytes": 1313304,
+      "device": 16777240,
+      "inode": 4938849,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0475.npz",
+      "sha256": "f2dbad5f942dd8634ce98454984b4756dd5d590d912c5eb2cbec4a9804c928b0"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938853,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0500.json",
+      "sha256": "3051803a4ba0bbb67ae851a74b351074d0ae5e9015ea0f1cc77b8f9054823685"
+    },
+    {
+      "bytes": 1345087,
+      "device": 16777240,
+      "inode": 4938852,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0500.npz",
+      "sha256": "b2dd22fa7a85f7f3e40bab8f76d59c908874a9d01b1af0c872fea5a358baa270"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938860,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0525.json",
+      "sha256": "4922ccf331bcadf1b46d76f83994ee95a52f6541340ead97d5ddd0b1911acb51"
+    },
+    {
+      "bytes": 1391569,
+      "device": 16777240,
+      "inode": 4938859,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0525.npz",
+      "sha256": "8730534a3d02a39dea77b076af1e2640955ed997e28bc824ca06afbb37e9d764"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938911,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0550.json",
+      "sha256": "96c00d5f96cf87e62a2c31736804147f2715f22b517c7f1c2ff7c50e4d51a743"
+    },
+    {
+      "bytes": 1428203,
+      "device": 16777240,
+      "inode": 4938910,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0550.npz",
+      "sha256": "2e5f9f2baf5086095d31d8a8e22b0ce32ae805cc3df2d22b0c08fcceb5f54e45"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938964,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0575.json",
+      "sha256": "948cc00ec9c953770c8d641a564e2535eb23c133dc9822459375001a6e6db810"
+    },
+    {
+      "bytes": 1464957,
+      "device": 16777240,
+      "inode": 4938963,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0575.npz",
+      "sha256": "75a0f3ad54178b6060ea6c01c841f672a6ceac69515acfaa7463464c682597b3"
+    },
+    {
+      "bytes": 8409,
+      "device": 16777240,
+      "inode": 4938967,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0600.json",
+      "sha256": "65a5ba7a9bf465ecc2bc8d4d28917e5acf5d1091044b8959b2a346266144e16a"
+    },
+    {
+      "bytes": 1504250,
+      "device": 16777240,
+      "inode": 4938966,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/frame_checkpoints/stage_0600.npz",
+      "sha256": "47a640e66940a148063637a598254001cd93353c0a37a3e8d1858bd65170afee"
+    },
+    {
+      "bytes": 3706,
+      "device": 16777240,
+      "inode": 4938971,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+      "sha256": "b979ce40f5769b9629045eb802e686838f67c34712dc6f859678e110d6f69c54"
+    },
+    {
+      "bytes": 117964800,
+      "device": 16777240,
+      "inode": 4936443,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5"
+    },
+    {
+      "bytes": 3662409600,
+      "device": 16777240,
+      "inode": 4936445,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/0.raw",
+      "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+    },
+    {
+      "bytes": 4301,
+      "device": 16777240,
+      "inode": 4938680,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/MANIFEST.sha256",
+      "sha256": "795469939275bbbd1cb624fff85f252b3a3c3b5a1bbd5dab592517b34c9ea3c9"
+    },
+    {
+      "bytes": 3667,
+      "device": 16777240,
+      "inode": 4938678,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/README.md",
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    {
+      "bytes": 180233,
+      "device": 16777240,
+      "inode": 4938690,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/archive.zip",
+      "sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+    },
+    {
+      "bytes": 183043,
+      "device": 16777240,
+      "inode": 4938679,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/compress.py",
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    {
+      "bytes": 7353,
+      "device": 16777240,
+      "inode": 4938689,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "bytes": 13389,
+      "device": 16777240,
+      "inode": 4938686,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    {
+      "bytes": 17471,
+      "device": 16777240,
+      "inode": 4938687,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "bytes": 8282,
+      "device": 16777240,
+      "inode": 4938688,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "bytes": 13810,
+      "device": 16777240,
+      "inode": 4938684,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "bytes": 5881,
+      "device": 16777240,
+      "inode": 4938683,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "bytes": 20916,
+      "device": 16777240,
+      "inode": 4938685,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 2475,
+      "device": 16777240,
+      "inode": 4938640,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/inflate.py",
+      "sha256": "a741f1df65bc23997d4aff24f5c989baa99b60df58f5dac41fcbfba00c480eda"
+    },
+    {
+      "bytes": 3219,
+      "device": 16777240,
+      "inode": 4938681,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/inflate.sh",
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+    },
+    {
+      "bytes": 57,
+      "device": 16777240,
+      "inode": 4938659,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "bytes": 2058,
+      "device": 16777240,
+      "inode": 4938646,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "bytes": 1578,
+      "device": 16777240,
+      "inode": 4938642,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "bytes": 8206,
+      "device": 16777240,
+      "inode": 4938649,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "bytes": 7074,
+      "device": 16777240,
+      "inode": 4938666,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "bytes": 25232,
+      "device": 16777240,
+      "inode": 4938644,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "bytes": 12929,
+      "device": 16777240,
+      "inode": 4938670,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "bytes": 54,
+      "device": 16777240,
+      "inode": 4938653,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "bytes": 4230,
+      "device": 16777240,
+      "inode": 4938655,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "bytes": 4875,
+      "device": 16777240,
+      "inode": 4938651,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "bytes": 4027,
+      "device": 16777240,
+      "inode": 4938654,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "bytes": 2904,
+      "device": 16777240,
+      "inode": 4938652,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "bytes": 5638,
+      "device": 16777240,
+      "inode": 4938656,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "bytes": 9656,
+      "device": 16777240,
+      "inode": 4938657,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "bytes": 50299,
+      "device": 16777240,
+      "inode": 4938661,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "bytes": 40911,
+      "device": 16777240,
+      "inode": 4938648,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "bytes": 26781,
+      "device": 16777240,
+      "inode": 4938662,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "bytes": 29176,
+      "device": 16777240,
+      "inode": 4938673,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "bytes": 4964,
+      "device": 16777240,
+      "inode": 4938671,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "bytes": 14709,
+      "device": 16777240,
+      "inode": 4938667,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "bytes": 34979,
+      "device": 16777240,
+      "inode": 4938672,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "bytes": 31470,
+      "device": 16777240,
+      "inode": 4938675,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "bytes": 10952,
+      "device": 16777240,
+      "inode": 4938643,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "bytes": 13327,
+      "device": 16777240,
+      "inode": 4938674,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    {
+      "bytes": 10527,
+      "device": 16777240,
+      "inode": 4938664,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "bytes": 15952,
+      "device": 16777240,
+      "inode": 4938663,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "bytes": 20916,
+      "device": 16777240,
+      "inode": 4938658,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 31341,
+      "device": 16777240,
+      "inode": 4938676,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    {
+      "bytes": 8010,
+      "device": 16777240,
+      "inode": 4938645,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    {
+      "bytes": 34053,
+      "device": 16777240,
+      "inode": 4938647,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/residual_archive.py",
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+    },
+    {
+      "bytes": 15421,
+      "device": 16777240,
+      "inode": 4938668,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "bytes": 20793,
+      "device": 16777240,
+      "inode": 4938677,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    {
+      "bytes": 9693,
+      "device": 16777240,
+      "inode": 4938660,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "bytes": 8753,
+      "device": 16777240,
+      "inode": 4938669,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    {
+      "bytes": 8590,
+      "device": 16777240,
+      "inode": 4938665,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/runtime/runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 1276,
+      "device": 16777240,
+      "inode": 4938708,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/scratch/xcrun_db",
+      "sha256": "04e66facf6dee8debb9f4ffc1b02ddb5627508c6540cae0390f661c23804aa3f"
+    },
+    {
+      "bytes": 5993,
+      "device": 16777240,
+      "inode": 4938428,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/BINDING.json",
+      "sha256": "938ac7c9bd52966255d0bce8b092e5e197babc00e21df57810d1f99e88b4961e"
+    },
+    {
+      "bytes": 283,
+      "device": 16777240,
+      "inode": 4938622,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/LATEST.json",
+      "sha256": "ee474ccae8f68799b007965fa0dbf5aa1fdc467af117bbd7a9dc280d4c893fa2"
+    },
+    {
+      "bytes": 10528,
+      "device": 16777240,
+      "inode": 4938623,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/RESULT.json",
+      "sha256": "a28faefcc943522fe6ece00cca0b85ced3f04eac337aec4a5793256ee9905460"
+    },
+    {
+      "bytes": 8590,
+      "device": 16777240,
+      "inode": 4938419,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc3/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 11908,
+      "device": 16777240,
+      "inode": 4938420,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc3/tc3_geometry.py",
+      "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+    },
+    {
+      "bytes": 5940,
+      "device": 16777240,
+      "inode": 4938421,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc3/tc3_mixer.py",
+      "sha256": "28b4aec3999066b6ddc6af88346f5e83827ad11f2d50857216d51299b527ef43"
+    },
+    {
+      "bytes": 8590,
+      "device": 16777240,
+      "inode": 4938423,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc4/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 11908,
+      "device": 16777240,
+      "inode": 4938424,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc4/tc3_geometry.py",
+      "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+    },
+    {
+      "bytes": 5940,
+      "device": 16777240,
+      "inode": 4938425,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc4/tc3_mixer.py",
+      "sha256": "28b4aec3999066b6ddc6af88346f5e83827ad11f2d50857216d51299b527ef43"
+    },
+    {
+      "bytes": 4154,
+      "device": 16777240,
+      "inode": 4938427,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc4/tc4_fast.py",
+      "sha256": "98217c1e6865f71645c47e4a16e6035b244cc4a8991bb72fdcfd090f14287340"
+    },
+    {
+      "bytes": 7779,
+      "device": 16777240,
+      "inode": 4938426,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/sources/tc4/tc4_maps.py",
+      "sha256": "85c12f953f9a96d413a602d3d0feeb1e5e5d96bbc01750ba22f8ef3767c44fe0"
+    },
+    {
+      "bytes": 1401,
+      "device": 16777240,
+      "inode": 4938431,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0005.json",
+      "sha256": "37c55aebdf9c75d9425cfeb679d7d9d9195f24228f6e44cee5f08ec07391a95e"
+    },
+    {
+      "bytes": 1923,
+      "device": 16777240,
+      "inode": 4938430,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0005.npz",
+      "sha256": "ab8dcb242f760fd9e1bde400d9430c62f70fcca54e6a2691c841fc6d70d51876"
+    },
+    {
+      "bytes": 1402,
+      "device": 16777240,
+      "inode": 4938438,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0019.json",
+      "sha256": "3bce93714de88e2bbc4e3f2dae5f81b5cb563133f51d9f89d89f526437e55b09"
+    },
+    {
+      "bytes": 1514,
+      "device": 16777240,
+      "inode": 4938437,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0019.npz",
+      "sha256": "dcc08b0817a6f88194827d1930c6e43a5522cb0b2f8d60f9a1c998c1e609498e"
+    },
+    {
+      "bytes": 1401,
+      "device": 16777240,
+      "inode": 4938444,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0052.json",
+      "sha256": "955e91eef5166f3e6e582f67aa6adc0f43c7ded07b73236f00b7e1e369d83a35"
+    },
+    {
+      "bytes": 1881,
+      "device": 16777240,
+      "inode": 4938443,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0052.npz",
+      "sha256": "ecfe0b22ca8657bb7f9403be25116bec37c077088d5d53046cc14dbaeffb0ca3"
+    },
+    {
+      "bytes": 1402,
+      "device": 16777240,
+      "inode": 4938450,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0074.json",
+      "sha256": "9b4534065c084daf4ea40e2a573226340c61521495b5de4775f1a2c333d7eb35"
+    },
+    {
+      "bytes": 1402,
+      "device": 16777240,
+      "inode": 4938449,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0074.npz",
+      "sha256": "39a6449bdf4134b82a9f62940352998b27295311b3aaf086260c473c11b9e023"
+    },
+    {
+      "bytes": 1402,
+      "device": 16777240,
+      "inode": 4938456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0085.json",
+      "sha256": "f9a11a4aff0ad97eb6266f215d9fc5831ca699275d15c9209876b3949df15c8d"
+    },
+    {
+      "bytes": 1622,
+      "device": 16777240,
+      "inode": 4938455,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0085.npz",
+      "sha256": "8d7c5e641ee3bbe7dd46d791919acd98d98f065465be02be849c9ec13af4cf16"
+    },
+    {
+      "bytes": 1403,
+      "device": 16777240,
+      "inode": 4938462,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0113.json",
+      "sha256": "adce94f2f4535253a72482a8380ce9c42d22e04bd30e1f730d5dee659c154dc3"
+    },
+    {
+      "bytes": 1476,
+      "device": 16777240,
+      "inode": 4938461,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0113.npz",
+      "sha256": "9a1d20488be56e4a45bc80a5ede4d0b60606436ad9a8343109cebeafae4ec84f"
+    },
+    {
+      "bytes": 1408,
+      "device": 16777240,
+      "inode": 4938468,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0115.json",
+      "sha256": "cad00d8938ff1d4f2c26c96c418eb9fc50b6ed419f06a4db17fe5348f12d4964"
+    },
+    {
+      "bytes": 1825,
+      "device": 16777240,
+      "inode": 4938467,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0115.npz",
+      "sha256": "00578ed360b8d760ba9869ea767076b83ad2dde81112d9726a45a2ae64596010"
+    },
+    {
+      "bytes": 1410,
+      "device": 16777240,
+      "inode": 4938474,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0147.json",
+      "sha256": "08cf93f3d065cb6559e135060b6b2a79c38a7e5f7e555645a329f30280bb42a0"
+    },
+    {
+      "bytes": 1808,
+      "device": 16777240,
+      "inode": 4938473,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0147.npz",
+      "sha256": "1501bd0a66bcfeb7ba3d4aef6c5f38e642242b2a39ad5d095b2d906bd14aba5f"
+    },
+    {
+      "bytes": 1410,
+      "device": 16777240,
+      "inode": 4938480,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0167.json",
+      "sha256": "2f8501464f2a11dc6328e0152fa992e44981b38d778c15605cb3b4d5bf2dbdf4"
+    },
+    {
+      "bytes": 1719,
+      "device": 16777240,
+      "inode": 4938479,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0167.npz",
+      "sha256": "610529fb64a76c21865176a7afaa1f8bf34a02d32f8998787b91a25a522ea197"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938486,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0171.json",
+      "sha256": "2f436e5314180b25159bb5ff45b4880fb260b8c0b37528aaaea5dd09ee18a86a"
+    },
+    {
+      "bytes": 1866,
+      "device": 16777240,
+      "inode": 4938485,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0171.npz",
+      "sha256": "d7941debed506f748708518a81a68d1ef5c8c67d204d02495292d157c75ffa19"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938492,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0192.json",
+      "sha256": "5e7b1abd674b49c36305144089657d693e4763e8da475c1c837af16a26b6ef27"
+    },
+    {
+      "bytes": 1622,
+      "device": 16777240,
+      "inode": 4938491,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0192.npz",
+      "sha256": "b035a3ecbf4dd62aaae5391b5cb4a59bc3af76c1c8649b1ff85a789f65d487f0"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938498,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0215.json",
+      "sha256": "a0763d0b89b480e2393004c4565595f1286eca487fb3278fbc2cb9cfdb725359"
+    },
+    {
+      "bytes": 1994,
+      "device": 16777240,
+      "inode": 4938497,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0215.npz",
+      "sha256": "a359b4912effbb575ea5b80db755c53d193a59d417cdd9db2100f322d79f79ee"
+    },
+    {
+      "bytes": 1410,
+      "device": 16777240,
+      "inode": 4938504,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0235.json",
+      "sha256": "4a996a59312996bab21cbb3da11656b487a570dc25616bbab3e75e72d2cda247"
+    },
+    {
+      "bytes": 1551,
+      "device": 16777240,
+      "inode": 4938503,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0235.npz",
+      "sha256": "27721a996f9271c09fb2ce306f12d3b7ef7b865049b11799efe74528dfed402b"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938510,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0255.json",
+      "sha256": "b9016a2d19b90044c3cbb52b89a9b7445b8f8b7706c71559cdf689c677be07fe"
+    },
+    {
+      "bytes": 1237,
+      "device": 16777240,
+      "inode": 4938509,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0255.npz",
+      "sha256": "9b1e5caca6109a83ea4c2a6cae0be7dfc037381c8fd3bb1b7f6aad9d53844b73"
+    },
+    {
+      "bytes": 1410,
+      "device": 16777240,
+      "inode": 4938516,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0269.json",
+      "sha256": "728afe1a69e2c0ea7bdc7e6b8b1219bde7253503ae58a9b6955db4e3605faf17"
+    },
+    {
+      "bytes": 1641,
+      "device": 16777240,
+      "inode": 4938515,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0269.npz",
+      "sha256": "1b35306b21cd85af5478e9d4678d1b2d3933a54865013c9e0d3ab2623c5016d2"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938522,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0302.json",
+      "sha256": "3faa14d20933bd0cb5a5959526011792f3dab090924a45a4de85b979ee79152b"
+    },
+    {
+      "bytes": 1617,
+      "device": 16777240,
+      "inode": 4938521,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0302.npz",
+      "sha256": "80d39937ea2f5365db3bc772eb7b553a987ab92f3fbf6c308e893c141b2f1852"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938528,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0313.json",
+      "sha256": "645dfaf4d8720ccfeca66cde371bf28aa1d4a68a695342d0b55fa2ebf5906a4a"
+    },
+    {
+      "bytes": 1393,
+      "device": 16777240,
+      "inode": 4938527,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0313.npz",
+      "sha256": "1798acf0b3e3a049ac128ead5c4f73a9e56f757e3e572cbb6b6d083271267ea2"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938534,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0330.json",
+      "sha256": "c51baa6c0189c16777812266c4faf8fe2fa0d4cc987dfdda419487e199e03276"
+    },
+    {
+      "bytes": 1648,
+      "device": 16777240,
+      "inode": 4938533,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0330.npz",
+      "sha256": "c086d207688763d3432f1a44d6354e06ed77155f7353db2319a2c709b7a6a98f"
+    },
+    {
+      "bytes": 1410,
+      "device": 16777240,
+      "inode": 4938540,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0351.json",
+      "sha256": "f6481f895fb86e6817f0ea7784b195ed523e9a98f7575e214ea5f3d9dd6f972f"
+    },
+    {
+      "bytes": 1644,
+      "device": 16777240,
+      "inode": 4938539,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0351.npz",
+      "sha256": "575c883de90f26033fbf7bceac699fbbb9ce97d7e43049382c4b9445b9d33db2"
+    },
+    {
+      "bytes": 1409,
+      "device": 16777240,
+      "inode": 4938546,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0369.json",
+      "sha256": "ad4f9bb1bfd1aac29d115e15def6c67e1953d118aa8b9d0374595d119c4fd6d5"
+    },
+    {
+      "bytes": 1499,
+      "device": 16777240,
+      "inode": 4938545,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0369.npz",
+      "sha256": "78efe88a41666ad3d6be42334d6fff4005b6c21949b644f1663586ee85bb040f"
+    },
+    {
+      "bytes": 1410,
+      "device": 16777240,
+      "inode": 4938552,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0395.json",
+      "sha256": "bf483dfdbdd3490cb7990a0badf69b3c47e0eb4a3281952a30eb8c5d09960ca0"
+    },
+    {
+      "bytes": 1837,
+      "device": 16777240,
+      "inode": 4938551,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0395.npz",
+      "sha256": "f7cd57d3238e19cb1b3c6bd2a22c84efbc3d19e9498c4dba7b5a9c6e0936cc41"
+    },
+    {
+      "bytes": 1411,
+      "device": 16777240,
+      "inode": 4938558,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0409.json",
+      "sha256": "63148e9cf1e6a3028bfa36f097977ebf07c61b5724f70ec0637df69ecf6fe334"
+    },
+    {
+      "bytes": 1818,
+      "device": 16777240,
+      "inode": 4938557,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0409.npz",
+      "sha256": "705f2e53e1bbe263c31789a2f0fb1f210f05303a2144fcfa5449beabee4c917a"
+    },
+    {
+      "bytes": 1412,
+      "device": 16777240,
+      "inode": 4938564,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0429.json",
+      "sha256": "0f674c55182a50f5d51cebf512148870a6804d8437b753bd703966c58ca5593a"
+    },
+    {
+      "bytes": 1333,
+      "device": 16777240,
+      "inode": 4938563,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0429.npz",
+      "sha256": "79214b14d506f53d2dbff51c53600b02b09f1f4587c7600e287b418939eef8f7"
+    },
+    {
+      "bytes": 1413,
+      "device": 16777240,
+      "inode": 4938570,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0449.json",
+      "sha256": "b813e9c5ede03f78c80ac2e1f91f313250ae7ff8f2c4dc797a22684b08ba4d3a"
+    },
+    {
+      "bytes": 1630,
+      "device": 16777240,
+      "inode": 4938569,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0449.npz",
+      "sha256": "27393a7d5a20840ab6ca319d5933ef66808b515119e166d8e8059a6458d98a00"
+    },
+    {
+      "bytes": 1414,
+      "device": 16777240,
+      "inode": 4938576,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0456.json",
+      "sha256": "1d4b419025f7f74071322f56234abb7ade9f19188a0958b6b359eae3ff6b9428"
+    },
+    {
+      "bytes": 2095,
+      "device": 16777240,
+      "inode": 4938575,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0456.npz",
+      "sha256": "fc2cd21b2abb1bae4a67327dd29d2838122b49bbceda1800ac9e492801ac6005"
+    },
+    {
+      "bytes": 1412,
+      "device": 16777240,
+      "inode": 4938582,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0490.json",
+      "sha256": "61aef31db41853c0a51f2b61473f355c583a0f8b9582b50a5f5e2a05d996f8a1"
+    },
+    {
+      "bytes": 1726,
+      "device": 16777240,
+      "inode": 4938581,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0490.npz",
+      "sha256": "b8e87f4ad37431871f1c8a333906a76e1f5bab98c8a4bd04610d63627d616d24"
+    },
+    {
+      "bytes": 1413,
+      "device": 16777240,
+      "inode": 4938588,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0506.json",
+      "sha256": "91f41003500ef0aec797affc6bd7999cb92d5f4523386c4c2d7a4ba12d7f506a"
+    },
+    {
+      "bytes": 1693,
+      "device": 16777240,
+      "inode": 4938587,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0506.npz",
+      "sha256": "42db37fb6d7db691abda91d7153bc30038dfaeb410edbc67ceecb6e38cecc9be"
+    },
+    {
+      "bytes": 1413,
+      "device": 16777240,
+      "inode": 4938594,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0513.json",
+      "sha256": "2b91ad4d277b8640495e6af5f929bc67b1097e40e63bd27c793e8b96c6e04870"
+    },
+    {
+      "bytes": 1672,
+      "device": 16777240,
+      "inode": 4938593,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0513.npz",
+      "sha256": "c428b45d3c691276cd5448f8fa97882fe7b5ddb33e16c076050b163196f7a285"
+    },
+    {
+      "bytes": 1412,
+      "device": 16777240,
+      "inode": 4938600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0529.json",
+      "sha256": "82693fd15f325c22eeb66350bd750ccb4ce782bb6913d2a2cc8f488811003b0d"
+    },
+    {
+      "bytes": 2012,
+      "device": 16777240,
+      "inode": 4938599,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0529.npz",
+      "sha256": "4c7ab24e0331a21f68fdc0bb406339b77537ff3c14333b6eafddace4c114fecd"
+    },
+    {
+      "bytes": 1414,
+      "device": 16777240,
+      "inode": 4938606,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0546.json",
+      "sha256": "00ff2bbd993df86392118be6667ad4d28ef2c9e7ee7233fda398dd7f440c75e3"
+    },
+    {
+      "bytes": 1465,
+      "device": 16777240,
+      "inode": 4938605,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0546.npz",
+      "sha256": "f3c4609f0fc8934fb54ff9764d004075cd73667a512534acc24552997b313173"
+    },
+    {
+      "bytes": 1413,
+      "device": 16777240,
+      "inode": 4938612,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0577.json",
+      "sha256": "bd5baee9c421a07f221c5e32b965de90ecfbb52da61083cdeecdd8a64cd20186"
+    },
+    {
+      "bytes": 1120,
+      "device": 16777240,
+      "inode": 4938611,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0577.npz",
+      "sha256": "cf207025387c35acb67698a4753059e7ae01fdea83b194e38da0a0f11604e95a"
+    },
+    {
+      "bytes": 1412,
+      "device": 16777240,
+      "inode": 4938618,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0586.json",
+      "sha256": "cb9259f78f96d0faf5339b4831690bbc95b99f21beeb3d21d4cd88276f1a1eb3"
+    },
+    {
+      "bytes": 1709,
+      "device": 16777240,
+      "inode": 4938617,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc3/frame_0586.npz",
+      "sha256": "84e5b2415028acc48c68819b48e1c43b7568ad2e758095a8c9d2245651263bbd"
+    },
+    {
+      "bytes": 1494,
+      "device": 16777240,
+      "inode": 4938435,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0005.json",
+      "sha256": "99f479cb2bf18d5316e0b2b57f19d2a3769c6f61c5dcbd50a777b437c6a7c1c7"
+    },
+    {
+      "bytes": 21921,
+      "device": 16777240,
+      "inode": 4938434,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0005.npz",
+      "sha256": "f8f1a6c4f079bd963932e649621f6b2bc9c379d46a58f9290d4db0305e76ee1f"
+    },
+    {
+      "bytes": 1494,
+      "device": 16777240,
+      "inode": 4938441,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0019.json",
+      "sha256": "5e575e0fd73c10c597fdc1e362f416d3274d5ffa1d9bd528399c9bc3bc4d74c5"
+    },
+    {
+      "bytes": 20843,
+      "device": 16777240,
+      "inode": 4938440,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0019.npz",
+      "sha256": "c61c371f275d5180c295a9a0257955bcb31f88481b25330855a416a9e205ec7f"
+    },
+    {
+      "bytes": 1497,
+      "device": 16777240,
+      "inode": 4938447,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0052.json",
+      "sha256": "8245594d623f61b6af41804c3492d39709a5e913766af11ff9c64a898f66f12e"
+    },
+    {
+      "bytes": 22044,
+      "device": 16777240,
+      "inode": 4938446,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0052.npz",
+      "sha256": "40d71aa6feb172704dcb99a48df4b89650cacac62f3f1e6b802b38cbb519237d"
+    },
+    {
+      "bytes": 1493,
+      "device": 16777240,
+      "inode": 4938453,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0074.json",
+      "sha256": "f24acb816318a0ab7eb26b33dc8c4d1fa03b9ad2b931b084e56b94ffbd499ce5"
+    },
+    {
+      "bytes": 20080,
+      "device": 16777240,
+      "inode": 4938452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0074.npz",
+      "sha256": "62a0ca9745ad24f432eebd928ce0cc699077e7e8241227880668d3fb5e08b603"
+    },
+    {
+      "bytes": 1496,
+      "device": 16777240,
+      "inode": 4938459,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0085.json",
+      "sha256": "0b4d9d60c6dd995441f16df1f29e4058a5732e6efeaff43b2d6f04cea3f77ffc"
+    },
+    {
+      "bytes": 20765,
+      "device": 16777240,
+      "inode": 4938458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0085.npz",
+      "sha256": "f4b1e4da3728bc4ffbecd3453e5ee11d1f7c68282e60a555eb16cebf3d646fcc"
+    },
+    {
+      "bytes": 1495,
+      "device": 16777240,
+      "inode": 4938465,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0113.json",
+      "sha256": "b8ea8b20bdc071b9d161cecdc643fccfaaed1e59a4df2e3334995c4d11d38427"
+    },
+    {
+      "bytes": 20592,
+      "device": 16777240,
+      "inode": 4938464,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0113.npz",
+      "sha256": "b4f13a83e70e5a294315d6a8126e466bf22168df80014fa81d085dac84808a26"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938471,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0115.json",
+      "sha256": "eff4952f27ea4f554e527da25051d2181edab575ead5385710b460197c9c6aea"
+    },
+    {
+      "bytes": 22092,
+      "device": 16777240,
+      "inode": 4938470,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0115.npz",
+      "sha256": "25e90ea433a3ab5fe0a6de03fbb7c715f834be9b6d872c2873f2f04ddb933e5d"
+    },
+    {
+      "bytes": 1504,
+      "device": 16777240,
+      "inode": 4938477,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0147.json",
+      "sha256": "3f56dd66941c1201e5d06175f232387861aeb9e0e0cab9dd128c5f35dcffc267"
+    },
+    {
+      "bytes": 22041,
+      "device": 16777240,
+      "inode": 4938476,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0147.npz",
+      "sha256": "6999d79ec1a687f439092609ecbe480db00af3d3a1d53206373664fffd647180"
+    },
+    {
+      "bytes": 1502,
+      "device": 16777240,
+      "inode": 4938483,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0167.json",
+      "sha256": "7b7c7e28589aeaf77c1b4cbc1f0cce097e6dbc6712fc16e6b876cb71718d3a3c"
+    },
+    {
+      "bytes": 20582,
+      "device": 16777240,
+      "inode": 4938482,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0167.npz",
+      "sha256": "9a9091e3beae95516bc10c0764935a249cc5c876dadbf15195b0c41325e46e00"
+    },
+    {
+      "bytes": 1506,
+      "device": 16777240,
+      "inode": 4938489,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0171.json",
+      "sha256": "f5dd7d09de393af482e5ff11556dde1ca39d7d2967454d1208ba54d09735da83"
+    },
+    {
+      "bytes": 21259,
+      "device": 16777240,
+      "inode": 4938488,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0171.npz",
+      "sha256": "d7a73ef74e279550237bdffe4b5e840036ac50e7b552b5ae7559feb5b4f6816b"
+    },
+    {
+      "bytes": 1506,
+      "device": 16777240,
+      "inode": 4938495,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0192.json",
+      "sha256": "4e1a7bafdabffd0c59b1fafeff0a23a6d4bd644d74e5b644fddbecf022dbd1c4"
+    },
+    {
+      "bytes": 22914,
+      "device": 16777240,
+      "inode": 4938494,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0192.npz",
+      "sha256": "f1a25717a8691cc28203dd854edabcf3ade5abde923a1584b2908e3b8eba2055"
+    },
+    {
+      "bytes": 1500,
+      "device": 16777240,
+      "inode": 4938501,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0215.json",
+      "sha256": "6f3a1f49d6769b740206e1a7e3cb9754cc346440509f4400f0931a0c404b46df"
+    },
+    {
+      "bytes": 22471,
+      "device": 16777240,
+      "inode": 4938500,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0215.npz",
+      "sha256": "87b8257843a4f090189cb3a00e5d2fb8b573f16451ffc0ef619d37457088cef9"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938507,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0235.json",
+      "sha256": "2cc4c06f94bf60546f3c91ab997e77ba68e996700e441a2ae6d8f67cb93d49de"
+    },
+    {
+      "bytes": 19703,
+      "device": 16777240,
+      "inode": 4938506,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0235.npz",
+      "sha256": "00f094ef19e4f8b09db3488600e61cb64f850e06677a7f5ca2d95050dbe797f4"
+    },
+    {
+      "bytes": 1500,
+      "device": 16777240,
+      "inode": 4938513,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0255.json",
+      "sha256": "c696cce03809485a7eed35329fadb1001eaca8defc83e32eaf42aae1bb351aa6"
+    },
+    {
+      "bytes": 18659,
+      "device": 16777240,
+      "inode": 4938512,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0255.npz",
+      "sha256": "1fce5f1e93ccdf2bf47fa27d6b8cb80d2bb8f7ca6c3bf4f8d2a98afe9dc07516"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938519,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0269.json",
+      "sha256": "a48ad442e7935b4114782927ad9ddefd50385503ce5a61ac4bbbe6015c103b4a"
+    },
+    {
+      "bytes": 20714,
+      "device": 16777240,
+      "inode": 4938518,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0269.npz",
+      "sha256": "3be250216ab90f16c1822d0c0bbf632a1c6667a9dc13c16f1067292e5a902e27"
+    },
+    {
+      "bytes": 1502,
+      "device": 16777240,
+      "inode": 4938525,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0302.json",
+      "sha256": "fde4a3aefa34cb3728139a5b73ae5e0703557e261a593776456050c5c17753f8"
+    },
+    {
+      "bytes": 21024,
+      "device": 16777240,
+      "inode": 4938524,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0302.npz",
+      "sha256": "6323718735f79409b5c758124ad611768395f46e7bcaa51fc6fcdd2a5330ec90"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938531,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0313.json",
+      "sha256": "496d71d0142db12b30772ade2c880475eb9d76c05b148fd6fca383379c0bafbd"
+    },
+    {
+      "bytes": 20723,
+      "device": 16777240,
+      "inode": 4938530,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0313.npz",
+      "sha256": "fb60335065151eccf1aa2827a7a3d4a4c1fab110264fff97ec6c1a5c3ef1c5b5"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938537,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0330.json",
+      "sha256": "648bdcf01d2e3557300872887ba2630bdf73c913cbd29d9fdcd5bf6e412ffbca"
+    },
+    {
+      "bytes": 22151,
+      "device": 16777240,
+      "inode": 4938536,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0330.npz",
+      "sha256": "276540f4379248e3133ae8672ea6250f8698cf7faf687c0120f7b9a04a75cfc8"
+    },
+    {
+      "bytes": 1506,
+      "device": 16777240,
+      "inode": 4938543,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0351.json",
+      "sha256": "dd7036c102b3c9c3cfcb48c7d810a70981c01518f8cc3d3fc662b6b8bb7e1f47"
+    },
+    {
+      "bytes": 20518,
+      "device": 16777240,
+      "inode": 4938542,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0351.npz",
+      "sha256": "6c59e3dfd0f033e070c0a96b83ca9a57f8790cc8747f485ca2acc26fb70722f3"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938549,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0369.json",
+      "sha256": "e9639b38cbe5d3f599cdaff963244dd24dbec8b85d702309bff1b96c8b7431c4"
+    },
+    {
+      "bytes": 20013,
+      "device": 16777240,
+      "inode": 4938548,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0369.npz",
+      "sha256": "345bda6313d6324aa36db501214fa56d225341d339afa2031833a2dfc212c8fd"
+    },
+    {
+      "bytes": 1501,
+      "device": 16777240,
+      "inode": 4938555,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0395.json",
+      "sha256": "a4d94d03503e57445a0d7c0d08eeb64f3585d1ea4094a730eb801f7c38e7a317"
+    },
+    {
+      "bytes": 21797,
+      "device": 16777240,
+      "inode": 4938554,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0395.npz",
+      "sha256": "08911795376173e2d8ae515c74b8994f12de28142b9d0425c3a0a487ba2a557a"
+    },
+    {
+      "bytes": 1501,
+      "device": 16777240,
+      "inode": 4938561,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0409.json",
+      "sha256": "6667aeabb50f2051e224f8b7c4384c2d4cd7d3fe25fe0caaa1c22d1624969952"
+    },
+    {
+      "bytes": 22277,
+      "device": 16777240,
+      "inode": 4938560,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0409.npz",
+      "sha256": "602b00408f5ac11331c551457491d55610ddff2e6d8f0b256bf5bb4e938be8c6"
+    },
+    {
+      "bytes": 1506,
+      "device": 16777240,
+      "inode": 4938567,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0429.json",
+      "sha256": "2d7969b1f529ffc165d858661e520d70c62a6abd519e5991dd0c27e20eb4d692"
+    },
+    {
+      "bytes": 18962,
+      "device": 16777240,
+      "inode": 4938566,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0429.npz",
+      "sha256": "4c70523b744f3b2f95967a3082e9604ec7620ff7e19fb66eb2ede82893c5943b"
+    },
+    {
+      "bytes": 1504,
+      "device": 16777240,
+      "inode": 4938573,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0449.json",
+      "sha256": "e0985487d85f9f4ef9c998fcd155a9c76b46ffeb330a0de5c05021fb25808dcd"
+    },
+    {
+      "bytes": 21632,
+      "device": 16777240,
+      "inode": 4938572,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0449.npz",
+      "sha256": "8c73bad13db879492688a5769de436d188e6334bfd2c92afd6625047187f93b3"
+    },
+    {
+      "bytes": 1504,
+      "device": 16777240,
+      "inode": 4938579,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0456.json",
+      "sha256": "a6549d3414264b9bdcf97fbf0e1295e221f005f5cc864a954631df4bfc0a0af3"
+    },
+    {
+      "bytes": 24239,
+      "device": 16777240,
+      "inode": 4938578,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0456.npz",
+      "sha256": "ea29a91db645ce5e14194f823b8eb4cd39fa2e19544ce05435d7f9bc73f47892"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938585,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0490.json",
+      "sha256": "c523e6a2abccf548d3564d165a8ea395586291661b670d07d5938406a9ee7d57"
+    },
+    {
+      "bytes": 23091,
+      "device": 16777240,
+      "inode": 4938584,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0490.npz",
+      "sha256": "ce828fde641083e8cc06bdce0c6a3d543488b9fb33e14f423fabeee774f10bd0"
+    },
+    {
+      "bytes": 1506,
+      "device": 16777240,
+      "inode": 4938591,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0506.json",
+      "sha256": "7ab8e11dbeff5148a7b84a3ce5144129e6e7732d226f92ddc2e996abaeacd70e"
+    },
+    {
+      "bytes": 23398,
+      "device": 16777240,
+      "inode": 4938590,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0506.npz",
+      "sha256": "7f293069e85fa7730fae6dde4f010f4da4289f845d751636d38ae2da9ac1aa9f"
+    },
+    {
+      "bytes": 1505,
+      "device": 16777240,
+      "inode": 4938597,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0513.json",
+      "sha256": "2a90f6c1b8c9db8208865a55d45f432270fea5c6a69bfb0c8021202bec787091"
+    },
+    {
+      "bytes": 22687,
+      "device": 16777240,
+      "inode": 4938596,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0513.npz",
+      "sha256": "5a2de69db15d08d2cc27803f6bafe2bf8843c1e483a1717cdb09743d6df497dd"
+    },
+    {
+      "bytes": 1507,
+      "device": 16777240,
+      "inode": 4938603,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0529.json",
+      "sha256": "5497aaf07e86674a78132a788d978bc0f84a69fa17379b1871301c65d4a3444c"
+    },
+    {
+      "bytes": 21966,
+      "device": 16777240,
+      "inode": 4938602,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0529.npz",
+      "sha256": "72a57c452d88d81c6b591c9e1f01d8acf42c6f00522afb822ce3fc434411b89a"
+    },
+    {
+      "bytes": 1505,
+      "device": 16777240,
+      "inode": 4938609,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0546.json",
+      "sha256": "d57b1b4ba1ad7f36612f5bcf6416bb6dc63dcc162b7fd6f65e10437d7a287614"
+    },
+    {
+      "bytes": 21850,
+      "device": 16777240,
+      "inode": 4938608,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0546.npz",
+      "sha256": "0a9f8aac2b2a1edac4c18f8e684f32fb0991c54ab416b4f92d5d3df1a4fe8edc"
+    },
+    {
+      "bytes": 1503,
+      "device": 16777240,
+      "inode": 4938615,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0577.json",
+      "sha256": "ff59f0d17317500047feb102e62544e7bab22005968670eaa84b8713ab07d6b3"
+    },
+    {
+      "bytes": 21281,
+      "device": 16777240,
+      "inode": 4938614,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0577.npz",
+      "sha256": "7d0985d116bbecf0947e673b761f0ac7727752367f214c8206679810d20315a0"
+    },
+    {
+      "bytes": 1507,
+      "device": 16777240,
+      "inode": 4938621,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0586.json",
+      "sha256": "bf6356cdea9ccb341fdb145fb0f88375549c5dd8cfe3168a4f0128a7f2dc75ac"
+    },
+    {
+      "bytes": 22502,
+      "device": 16777240,
+      "inode": 4938620,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tc4/frame_0586.npz",
+      "sha256": "e7eab5784fe7fa61cee9aaeec41387fc1f1cf362ad03b482fd23e7ac0400664a"
+    },
+    {
+      "bytes": 117964800,
+      "device": 16777240,
+      "inode": 4938410,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/tokens.u8",
+      "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5"
+    },
+    {
+      "bytes": 418,
+      "device": 16777240,
+      "inode": 4936450,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/producers/SOURCE1_RETENTION.json",
+      "sha256": "589a5828e6ab11fa4980d478e8b447dc1b74130744e6ef52a63410b88d310f63"
+    },
+    {
+      "bytes": 419,
+      "device": 16777240,
+      "inode": 4938625,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/producers/SOURCE2_RETENTION.json",
+      "sha256": "2c67f8ca2abbe4cfef2e74a617721050a6002c1d0f75df06c3d844bcac67679f"
+    },
+    {
+      "bytes": 8341,
+      "device": 16777240,
+      "inode": 4936449,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/producers/ddm_dwc1_timing_source1.py",
+      "sha256": "ba3661f69f48b1a42b6314222c86c5d7f3abbdef6c25f4d2a3ce751583696efc"
+    },
+    {
+      "bytes": 9317,
+      "device": 16777240,
+      "inode": 4938624,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/producers/ddm_dwc1_timing_source2.py",
+      "sha256": "a9da19b5767d5488e7da1af66ebd67903cca459337bc7afb6fd3d2f73d0c0f20"
+    },
+    {
+      "bytes": 1302,
+      "device": 16777240,
+      "inode": 4938978,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_calibration.json",
+      "sha256": "6b5031f7f4f1027ab21eba515b3943a8b37bd3ffcae3ab7b75e7e036b36ba392"
+    },
+    {
+      "bytes": 1235,
+      "device": 16777240,
+      "inode": 4938979,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_decode_wall_clock.json",
+      "sha256": "74683aefbbbe26797fefe209577eb852aa101563961836c0eeb9c005629378b4"
+    },
+    {
+      "bytes": 7831,
+      "device": 16777240,
+      "inode": 4938977,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_local.json",
+      "sha256": "02a4175b2ac4832bf3bf0943cf83f3a1a49673b3d47663a3232504393022e635"
+    },
+    {
+      "bytes": 1294,
+      "device": 16777240,
+      "inode": 4936541,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc3_calibration.json",
+      "sha256": "7b4f26da163c006ba7ce490e157dccf1767e6cc6f1cced07326930fbfa0f0e40"
+    },
+    {
+      "bytes": 1250,
+      "device": 16777240,
+      "inode": 4936545,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc3_decode_wall_clock.json",
+      "sha256": "b47d4cef7845530f6347842c75d812ef1b8989751205fc36727e9bee0332ec0c"
+    },
+    {
+      "bytes": 7787,
+      "device": 16777240,
+      "inode": 4936540,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc3_local.json",
+      "sha256": "9ffa91cd808f1942b03988e5529a7e2fb761c49fa31c693d50642e6482b3a5ef"
+    },
+    {
+      "bytes": 1258,
+      "device": 16777240,
+      "inode": 4938726,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc4_decode_wall_clock.json",
+      "sha256": "932eb213bc4d1153c5a61746d2eb9cb2417a1f82b42121675f9bce5f4e656abd"
+    },
+    {
+      "bytes": 7788,
+      "device": 16777240,
+      "inode": 4938725,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc4_local.json",
+      "sha256": "7df9acb344441d6abac81a54485970c74a2fc13a6a55ac31b4913da23e0359d8"
+    },
+    {
+      "bytes": 245,
+      "device": 16777240,
+      "inode": 4936229,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3/.launch_start_gate",
+      "sha256": "88be35a8f1f2b080b652b7a5452e3c88739b59faef4c4c0b976f1def308b418e"
+    },
+    {
+      "bytes": 3669,
+      "device": 16777240,
+      "inode": 4936292,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3/launch_manifest.json",
+      "sha256": "cd379a5301ea6c573fec6b9e916d8d486e988c32242b784134c3744102aca136"
+    },
+    {
+      "bytes": 1617,
+      "device": 16777240,
+      "inode": 4936225,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3/run.log",
+      "sha256": "2708a960715bb1040923871fcb697b23913da86df15f5bae3919aa087a8ea144"
+    },
+    {
+      "bytes": 6,
+      "device": 16777240,
+      "inode": 4936226,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3/run.pid",
+      "sha256": "c58534f1e1a3da5fc4bac86e2828df3552ff09b1a7788b97c1f84533ecb07bef"
+    },
+    {
+      "bytes": 248,
+      "device": 16777240,
+      "inode": 4936298,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3_r2/.launch_start_gate",
+      "sha256": "530b24c57a755aae321cca409c7e7b7a607c31b7a5e2a5d52952742804a81be2"
+    },
+    {
+      "bytes": 257,
+      "device": 16777240,
+      "inode": 4936308,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3_r2/.watchers_start_gate",
+      "sha256": "e041ff5ec3102456f89de655beecacd8831ca4a6c32fbfdf8465a55cd1072ba5"
+    },
+    {
+      "bytes": 3627,
+      "device": 16777240,
+      "inode": 4936297,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3_r2/launch_manifest.json",
+      "sha256": "5e41fcf69690233ed9ff108807cba746f613bbbe8e93ac96cc583a0f304105a0"
+    },
+    {
+      "bytes": 13201,
+      "device": 16777240,
+      "inode": 4936294,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3_r2/run.log",
+      "sha256": "ec789ca442b752f1294009054225c7776390afb77591041000551667f56ff94c"
+    },
+    {
+      "bytes": 6,
+      "device": 16777240,
+      "inode": 4936295,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc3_r2/run.pid",
+      "sha256": "32189894e613f2c179079ec52e3c148c4057a73449478bb492f390d7eab467cd"
+    },
+    {
+      "bytes": 244,
+      "device": 16777240,
+      "inode": 4936456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc4/.launch_start_gate",
+      "sha256": "9022803f4e37a0985593bfbe994617745ec9149c7088b82da9dbb163c76cda71"
+    },
+    {
+      "bytes": 253,
+      "device": 16777240,
+      "inode": 4936526,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc4/.watchers_start_gate",
+      "sha256": "0035f7dda8b11776953be5fe1189470b162d1a7bf88e17dc6a0e41b07bfe9627"
+    },
+    {
+      "bytes": 3608,
+      "device": 16777240,
+      "inode": 4936455,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc4/launch_manifest.json",
+      "sha256": "3542cff441001abb0e1b57a9ae4fd94aceea271ece42578539d9ec915388b847"
+    },
+    {
+      "bytes": 13506,
+      "device": 16777240,
+      "inode": 4936452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc4/run.log",
+      "sha256": "83eacdb0afc02418029d4e0a5d22e7d9fad49135d34c4ab8835ab136f2d0151a"
+    },
+    {
+      "bytes": 5,
+      "device": 16777240,
+      "inode": 4936453,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_tc4/run.pid",
+      "sha256": "bec3b9cd6feec0f64e2767733b1b813e94b65658d5c6e8610f474b2bb1ab1008"
+    },
+    {
+      "bytes": 252,
+      "device": 16777240,
+      "inode": 4938407,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_components/.launch_start_gate",
+      "sha256": "1ef52cc107243674dbc7698a54a88e71abb511fe3823b268f0c77840e52da67d"
+    },
+    {
+      "bytes": 261,
+      "device": 16777240,
+      "inode": 4938409,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_components/.watchers_start_gate",
+      "sha256": "8f673b7d328ef1b6a621f578bea19d0a7f36b876830ea5b4178b7f2c91edf534"
+    },
+    {
+      "bytes": 3672,
+      "device": 16777240,
+      "inode": 4938406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_components/launch_manifest.json",
+      "sha256": "a03ba0aa13da6e396c42fb7aefc0d4d90afbba54c025a55425858affd7ccc5c6"
+    },
+    {
+      "bytes": 30542,
+      "device": 16777240,
+      "inode": 4938403,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_components/run.log",
+      "sha256": "74f49ba75a540c7cb9da344eb6d15a66d772e0f90799d3a1d17f571c6b571244"
+    },
+    {
+      "bytes": 6,
+      "device": 16777240,
+      "inode": 4938404,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_components/run.pid",
+      "sha256": "9b0222c643cacb13300c06b6fa45fb92618bf5f70501cfbbe0ce3a23b928d4aa"
+    },
+    {
+      "bytes": 248,
+      "device": 16777240,
+      "inode": 4938637,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_move40/.launch_start_gate",
+      "sha256": "c6b8873c76cb64cb672cc94d7eb364226f7e342a5017a4b6a02cf78c7dcf96a9"
+    },
+    {
+      "bytes": 257,
+      "device": 16777240,
+      "inode": 4938706,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_move40/.watchers_start_gate",
+      "sha256": "061649f79901386a1ca23b0c55238b4894d9e31113d3f27914510ca9090baaa5"
+    },
+    {
+      "bytes": 3564,
+      "device": 16777240,
+      "inode": 4938636,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_move40/launch_manifest.json",
+      "sha256": "0a7e235520aa1cea6a3015426f62254c9004bf81d283b60292589414aab85604"
+    },
+    {
+      "bytes": 13833,
+      "device": 16777240,
+      "inode": 4938633,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_move40/run.log",
+      "sha256": "c8565bba6b41efe1a1ce6e051adf2e76f629627401b712e1de513e4511c7610e"
+    },
+    {
+      "bytes": 6,
+      "device": 16777240,
+      "inode": 4938634,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/launch_move40/run.pid",
+      "sha256": "b35d800c4b084b788bc939d0d49e40deebca3d1fd8c9ce316de4bb7612f1ccfd"
+    }
+  ],
+  "budget_bytes": 8589934592,
+  "path_logical_bytes": 11542981390,
+  "reproducibility": "Per-run BINDING.json and LAUNCH.json retain producer/config/seed/source/command/environment; every payload retained, immutable completed outputs hardlinked only after independent SHA verification.",
+  "schema": "ddm_dwc1.measurement_retention.v1",
+  "scope": "All measurement inputs, outputs, checkpoints, emitted maps, source snapshots, normalized timing receipts, and launch logs. Git custody is separately recorded in bundle verification.",
+  "score_claim": false,
+  "unique_inode_bytes": 3982232590,
+  "written_utc": "2026-09-10T08:35:35.458118+00:00"
+}

@@ -1,0 +1,17 @@
+{
+  "receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910/MODAL_REMOTE_RESULT.json",
+    "sha256": "cd6d5ef5243e26fa1868100a2bbb34efe0d6446b4a7fb9bd1eab7f309f5d3d00"
+  },
+  "runtime": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+  "receiver_sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf",
+  "remote_runtime_sha256": "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39",
+  "verified_runtime_sha256": "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39",
+  "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+  "inflate_elapsed_seconds": 990.053829427,
+  "evaluate_elapsed_seconds": 45.23132363599984,
+  "passed": true,
+  "returncode": 0,
+  "margin_limit_seconds": 1260,
+  "score_claim": false
+}

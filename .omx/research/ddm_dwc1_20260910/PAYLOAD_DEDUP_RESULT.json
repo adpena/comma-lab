@@ -1,0 +1,191 @@
+{
+  "schema": "ddm_dwc1.lossless_hardlink_custody.v1",
+  "reason": "Identical completed per-candidate payloads; retain both paths while reserving space for MAIN-directed move40 measurement",
+  "score_claim": false,
+  "status": "VERIFIED_LOSSLESS_HARDLINKS",
+  "policy": "Both completed output paths immutable. No payload bytes discarded. Future writes require fresh output inode.",
+  "rows": [
+    {
+      "role": "raw",
+      "kept": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output/0.raw",
+        "bytes": 3662409600,
+        "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+        "device": 16777240,
+        "inode": 4936445,
+        "nlink": 1
+      },
+      "alias_before": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/0.raw",
+        "bytes": 3662409600,
+        "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+        "device": 16777240,
+        "inode": 4938338,
+        "nlink": 1
+      },
+      "source_timings": [
+        "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/TIMING.json",
+        "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/TIMING.json"
+      ],
+      "source_bindings": [
+        {
+          "archive": {
+            "bytes": 180154,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/archive.zip",
+            "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936"
+          },
+          "head": "19caa43ea9838f844f5425e874438230c213228f",
+          "payload": {
+            "bytes": 180054,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/data/p",
+            "sha256": "f0291f979fdc2b1cfbddfb6b9c40df968fb6b5559f70f337c3fbf20ad6e8f75e"
+          },
+          "producer": {
+            "bytes": 8341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_dwc1_timing.py",
+            "sha256": "ba3661f69f48b1a42b6314222c86c5d7f3abbdef6c25f4d2a3ce751583696efc"
+          },
+          "runtime_sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+          "seed": 20260910,
+          "source_runtime": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime"
+        },
+        {
+          "archive": {
+            "bytes": 180021,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/archive.zip",
+            "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+          },
+          "head": "1368f3abb25ff83e439ae7ba181a9d199b1dd9b1",
+          "payload": {
+            "bytes": 179921,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/data/p",
+            "sha256": "e5771ab912ed4321ea5fcb95f5b6ea0aaa9374b262ab77325e87dfc8dc85bca8"
+          },
+          "producer": {
+            "bytes": 9317,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_dwc1_timing.py",
+            "sha256": "a9da19b5767d5488e7da1af66ebd67903cca459337bc7afb6fd3d2f73d0c0f20"
+          },
+          "runtime_sha256": "43763bb711a2beabc996b37b23fcd266ae04c7815022cc97b402c595447ae987",
+          "seed": 20260910,
+          "source_runtime": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime"
+        }
+      ],
+      "commands": [
+        [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/data",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/files.txt"
+        ],
+        [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/data",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/files.txt"
+        ]
+      ],
+      "alias_after": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/0.raw",
+        "bytes": 3662409600,
+        "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+        "device": 16777240,
+        "inode": 4936445,
+        "nlink": 2
+      }
+    },
+    {
+      "role": "tokens",
+      "kept": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+        "bytes": 117964800,
+        "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+        "device": 16777240,
+        "inode": 4936443,
+        "nlink": 1
+      },
+      "alias_before": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+        "bytes": 117964800,
+        "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+        "device": 16777240,
+        "inode": 4938333,
+        "nlink": 1
+      },
+      "source_timings": [
+        "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/TIMING.json",
+        "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/TIMING.json"
+      ],
+      "source_bindings": [
+        {
+          "archive": {
+            "bytes": 180154,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/archive.zip",
+            "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936"
+          },
+          "head": "19caa43ea9838f844f5425e874438230c213228f",
+          "payload": {
+            "bytes": 180054,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/data/p",
+            "sha256": "f0291f979fdc2b1cfbddfb6b9c40df968fb6b5559f70f337c3fbf20ad6e8f75e"
+          },
+          "producer": {
+            "bytes": 8341,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_dwc1_timing.py",
+            "sha256": "ba3661f69f48b1a42b6314222c86c5d7f3abbdef6c25f4d2a3ce751583696efc"
+          },
+          "runtime_sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+          "seed": 20260910,
+          "source_runtime": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime"
+        },
+        {
+          "archive": {
+            "bytes": 180021,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/archive.zip",
+            "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+          },
+          "head": "1368f3abb25ff83e439ae7ba181a9d199b1dd9b1",
+          "payload": {
+            "bytes": 179921,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/data/p",
+            "sha256": "e5771ab912ed4321ea5fcb95f5b6ea0aaa9374b262ab77325e87dfc8dc85bca8"
+          },
+          "producer": {
+            "bytes": 9317,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_dwc1_timing.py",
+            "sha256": "a9da19b5767d5488e7da1af66ebd67903cca459337bc7afb6fd3d2f73d0c0f20"
+          },
+          "runtime_sha256": "43763bb711a2beabc996b37b23fcd266ae04c7815022cc97b402c595447ae987",
+          "seed": 20260910,
+          "source_runtime": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime"
+        }
+      ],
+      "commands": [
+        [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/data",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/files.txt"
+        ],
+        [
+          "bash",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/runtime/inflate.sh",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/data",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output",
+          "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/files.txt"
+        ]
+      ],
+      "alias_after": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+        "bytes": 117964800,
+        "sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+        "device": 16777240,
+        "inode": 4936443,
+        "nlink": 2
+      }
+    }
+  ]
+}

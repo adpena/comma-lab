@@ -1,0 +1,11 @@
+{
+  "commit": "7cc51955bbb190fcb0168b8425038007126156f6",
+  "base_head": "19caa43ea9838f844f5425e874438230c213228f",
+  "heads": "7cc51955bbb190fcb0168b8425038007126156f6 HEAD\n",
+  "files_verified": 11,
+  "bundle_sha256": "d337aef17981d15dbfc7ed96b6858abf2ec5c8eb0540c7385245ad041bb1dfd0",
+  "bundle_bytes": 40393,
+  "source_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/source_serializer/20260910T073211.269679Z-93351/receipts.jsonl",
+  "verification": "/Users/adpena/Projects/pact/.omx/research/ddm_dwc1_20260910/source_landing.bundle is okay\n",
+  "shared_head_unchanged": true
+}

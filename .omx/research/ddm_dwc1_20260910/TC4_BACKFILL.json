@@ -1,0 +1,28 @@
+{
+  "leg": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc4_decode_wall_clock.json",
+    "sha256": "932eb213bc4d1153c5a61746d2eb9cb2417a1f82b42121675f9bce5f4e656abd"
+  },
+  "local": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc4_local.json",
+    "sha256": "7df9acb344441d6abac81a54485970c74a2fc13a6a55ac31b4913da23e0359d8"
+  },
+  "original_seal_unchanged": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_mask19.seal.json",
+    "sha256": "eb932e46a17ef09df720a82f62da9fa437230edc62d57b2c1b1a8215eaba341e"
+  },
+  "sidecar": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_mask19.seal.json.decode_wall_clock.json",
+    "sha256": "932eb213bc4d1153c5a61746d2eb9cb2417a1f82b42121675f9bce5f4e656abd"
+  },
+  "validation": {
+    "observed": {
+      "measured_t4_decode_seconds": 1800.0,
+      "measured_t4_kind": "timeout_lower_bound"
+    },
+    "problems": [
+      "decode_wall_clock: measured T4 timeout_lower_bound 1800.000000s exceeds 1260.0s"
+    ],
+    "verdict": "REFUSE"
+  }
+}

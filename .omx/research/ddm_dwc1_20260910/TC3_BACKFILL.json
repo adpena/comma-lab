@@ -1,0 +1,36 @@
+{
+  "calibration": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc3_calibration.json",
+    "sha256": "7b4f26da163c006ba7ce490e157dccf1767e6cc6f1cced07326930fbfa0f0e40"
+  },
+  "leg": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc3_decode_wall_clock.json",
+    "sha256": "b47d4cef7845530f6347842c75d812ef1b8989751205fc36727e9bee0332ec0c"
+  },
+  "local": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/tc3_local.json",
+    "sha256": "9ffa91cd808f1942b03988e5529a7e2fb761c49fa31c693d50642e6482b3a5ef"
+  },
+  "original_seal_unchanged": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_A.seal.json",
+    "sha256": "34df0c69d0adce50a5bdf373a1c669bdd4dee34ef512e3a965734d09391e1fcd"
+  },
+  "same_receiver_inheritance": {
+    "reason": "decode_wall_clock: decode_wall_clock: invalid inherited source: decode_wall_clock: measured T4 completed 1336.668978s exceeds 1260.0s",
+    "verdict": "REFUSE"
+  },
+  "sidecar": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_A.seal.json.decode_wall_clock.json",
+    "sha256": "b47d4cef7845530f6347842c75d812ef1b8989751205fc36727e9bee0332ec0c"
+  },
+  "validation": {
+    "observed": {
+      "measured_t4_decode_seconds": 1336.668977565,
+      "measured_t4_kind": "completed"
+    },
+    "problems": [
+      "decode_wall_clock: measured T4 completed 1336.668978s exceeds 1260.0s"
+    ],
+    "verdict": "REFUSE"
+  }
+}

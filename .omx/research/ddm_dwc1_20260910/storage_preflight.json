@@ -1,0 +1,165 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/ddm_dwc1_20260910/storage_preflight.json"
+    ],
+    "cleanup_plan_path": null,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": null,
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": ".omx/research/ddm_dwc1_20260910/storage_preflight.json",
+    "tracked_local_boundary": {
+      ".omx/research/ddm_dwc1_20260910/storage_preflight.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "blockers": [],
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "expected_workload_root": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "20260910T071727Z",
+  "gpu_launched": false,
+  "min_free_bytes": 0,
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "/Volumes/APDataStore/pact/cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": false,
+    "explicit_storage_tier_override": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": false,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "operator_policy"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "operator_policy"
+      }
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_bytes": 8589934592,
+  "schema": "comma_lab.experiment_storage_tier_plan.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_root": "/Volumes/VertigoDataTier/pact",
+  "selected_tier": "vertigo",
+  "selected_workload_root": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock",
+  "selected_workload_root_matches_expected": true,
+  "storage_required": true,
+  "tiers": [
+    {
+      "allow_local_disk": false,
+      "blockers": [],
+      "eligible": true,
+      "exists": true,
+      "free_bytes": 70922489856,
+      "name": "vertigo",
+      "parent_exists": true,
+      "priority": 0,
+      "requested_bytes": 8589934592,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/VertigoDataTier/pact",
+      "total_bytes": 2000189177856,
+      "usable_bytes": 27972816896,
+      "workload_root": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock",
+      "workload_root_exists": true,
+      "writable": true
+    },
+    {
+      "allow_local_disk": false,
+      "blockers": [
+        "workload_root_missing"
+      ],
+      "eligible": false,
+      "exists": true,
+      "free_bytes": 62486872064,
+      "name": "apdatastore",
+      "parent_exists": true,
+      "priority": 1,
+      "requested_bytes": 8589934592,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/APDataStore/pact",
+      "total_bytes": 2000333438976,
+      "usable_bytes": 19537199104,
+      "workload_root": "/Volumes/APDataStore/pact/ddm_dwc1_decode_wall_clock",
+      "workload_root_exists": false,
+      "writable": true
+    },
+    {
+      "allow_local_disk": false,
+      "blockers": [
+        "local_disk_tier_disabled",
+        "workload_root_missing"
+      ],
+      "eligible": false,
+      "exists": true,
+      "free_bytes": 247359168512,
+      "name": "local",
+      "parent_exists": true,
+      "priority": 2,
+      "requested_bytes": 8589934592,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Users/adpena/Projects/pact",
+      "total_bytes": 1995165736960,
+      "usable_bytes": 204409495552,
+      "workload_root": "/Users/adpena/Projects/pact/ddm_dwc1_decode_wall_clock",
+      "workload_root_exists": false,
+      "writable": true
+    }
+  ],
+  "workload_subdir": "ddm_dwc1_decode_wall_clock"
+}

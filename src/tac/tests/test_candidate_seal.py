@@ -169,6 +169,8 @@ def _seal(tmp_path: Path, runtime: Path, **overrides) -> Path:
         pointer_archive_sha256_at_seal=POINTER_SHA,
         pointer_tolerance_abs=overrides.pop("tolerance", 0.0),
     )
+    from tac.tests.test_decode_wall_clock import timing_fixture
+
     document = build_seal(
         candidate_id=overrides.pop("candidate_id", "sm3r_keep01"),
         runtime_dir=runtime,
@@ -177,6 +179,7 @@ def _seal(tmp_path: Path, runtime: Path, **overrides) -> Path:
         public_entrypoint_smoke=overrides.pop(
             "public_entrypoint_smoke", _public_smoke(runtime, runtime / "archive.zip")
         ),
+        decode_wall_clock=timing_fixture(runtime, tmp_path / "timing"),
         archive_member_name="0.bin",
         retained_payload_paths=(str(retained),),
         falsifiers=("net dS >= -3.5e-6 at n600 refutes the rate credit",),
@@ -478,7 +481,7 @@ def test_a_vanished_retained_payload_refuses(tmp_path: Path) -> None:
         ("receiver_pins", {"inflate.py": "abc"}),
         ("retained_payload_paths", "/a/single/path/not/a/list"),
         ("schema", None),
-        ("schema", "candidate_seal.v2"),
+        ("schema", "candidate_seal.v99"),
     ],
 )
 def test_a_wrongly_typed_field_refuses_instead_of_crashing(tmp_path: Path, field: str, value: object) -> None:
@@ -552,6 +555,7 @@ def test_successor_names_both_runtime_digests_without_mutating_original(tmp_path
     successor = build_seal(
         candidate_id=original["candidate_id"], runtime_dir=runtime,
         admit_bar=AdmitBar.from_dict(original["admit_bar"]), public_entrypoint_smoke=smoke,
+        decode_wall_clock=original["decode_wall_clock"],
     )
     successor["supersedes"] = original["seal_sha256"]
     successor["already_scored"] = {"call_id": "fixture-call", "score": POINTER_SCORE}
@@ -924,9 +928,13 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
     monkeypatch.setattr(
         make,
         "validate_seal",
-        lambda p, pointer_path=pointer: validate_seal(p, pointer_path=pointer_path),
+        lambda p, pointer_path=pointer, **kw: validate_seal(p, pointer_path=pointer_path, **kw),
     )
 
+    from tac.tests.test_decode_wall_clock import timing_fixture
+
+    timing_path = tmp_path / "DECODE_TIMING.json"
+    timing_path.write_text(json.dumps(timing_fixture(runtime, tmp_path / "timing")))
     out = tmp_path / "SEAL_produced.json"
     rc = make.main(
         [
@@ -936,6 +944,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
             "--admit-bar-net-ds", "-3.5e-6",
             "--archive-member", "0.bin",
             "--public-entrypoint-smoke", str(smoke_path),
+            "--decode-wall-clock", str(timing_path),
             "--out", str(out),
         ]
     )
@@ -958,6 +967,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
                 "--admit-bar-net-ds", "-3.5e-6",
                 "--verify-archive-sha", "b" * 64,
                 "--public-entrypoint-smoke", str(smoke_path),
+            "--decode-wall-clock", str(timing_path),
                 "--out", str(tmp_path / "SEAL_rejected.json"),
             ]
         )
@@ -1082,6 +1092,10 @@ def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Pa
         make, "read_pointer_state", lambda axis="contest_cuda": make_pointer_state(pointer, axis)
     )
 
+    from tac.tests.test_decode_wall_clock import timing_fixture
+
+    timing_path = tmp_path / "DECODE_TIMING.json"
+    timing_path.write_text(json.dumps(timing_fixture(runtime, tmp_path / "timing")))
     out = tmp_path / "SEAL_should_not_exist.json"
     rc = make.main(
         [
@@ -1091,6 +1105,7 @@ def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Pa
             "--admit-bar-net-ds", "-3.5e-6",
             "--archive-member", "0.bin",
             "--public-entrypoint-smoke", str(smoke_path),
+            "--decode-wall-clock", str(timing_path),
             "--out", str(out),
         ]
     )

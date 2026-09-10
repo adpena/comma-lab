@@ -1,0 +1,70 @@
+{
+  "axis": "macOS-CPU advisory",
+  "load_normalized": false,
+  "receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/components/RESULT.json",
+    "sha256": "a28faefcc943522fe6ece00cca0b85ced3f04eac337aec4a5793256ee9905460"
+  },
+  "rows": {
+    "tc3": {
+      "frames": 32,
+      "n600_projected_seconds": {
+        "lane_contexts_seconds": 57.51240127701749,
+        "lane_init_seconds": 0.624185962624324,
+        "lane_observe_seconds": 2.9606487357341393,
+        "tc3_predictor_seconds": 61.09723597537595,
+        "tc4_context_codes_seconds": 0.0,
+        "tc4_observe_inclusive_seconds": 0.0,
+        "tc4_observe_incremental_seconds": 0.0,
+        "tc4_old_observe_seconds": 0.0,
+        "tc4_previous_map_seconds": 0.0,
+        "tc4_state_setup_seconds": 0.0
+      },
+      "seconds_per_million_tokens": {
+        "lane_contexts_seconds": 0.4875386664243697,
+        "lane_init_seconds": 0.005291289966365594,
+        "lane_observe_seconds": 0.025097730303735855,
+        "tc3_predictor_seconds": 0.5179276866944712,
+        "tc4_context_codes_seconds": 0.0,
+        "tc4_observe_inclusive_seconds": 0.0,
+        "tc4_observe_incremental_seconds": 0.0,
+        "tc4_old_observe_seconds": 0.0,
+        "tc4_previous_map_seconds": 0.0,
+        "tc4_state_setup_seconds": 0.0
+      },
+      "token_visits": 6291456
+    },
+    "tc4": {
+      "frames": 32,
+      "n600_projected_seconds": {
+        "lane_contexts_seconds": 59.40842674153828,
+        "lane_init_seconds": 0.6128460566287686,
+        "lane_observe_seconds": 0.0,
+        "tc4_additional_maps_seconds": 31.925900217174785,
+        "tc4_context_codes_seconds": 17.594625747733517,
+        "tc4_observe_inclusive_seconds": 8.412628287533153,
+        "tc4_observe_incremental_seconds": 5.132435481209541,
+        "tc4_old_observe_seconds": 3.280192806323612,
+        "tc4_previous_map_seconds": 9.198838988231728,
+        "tc4_state_setup_seconds": 0.02298196868650848
+      },
+      "seconds_per_million_tokens": {
+        "lane_contexts_seconds": 0.5036114734356204,
+        "lane_init_seconds": 0.005195160392157394,
+        "lane_observe_seconds": 0.0,
+        "tc4_additional_maps_seconds": 0.2706392094690517,
+        "tc4_context_codes_seconds": 0.14915149051016505,
+        "tc4_observe_inclusive_seconds": 0.07131473361149387,
+        "tc4_observe_incremental_seconds": 0.04350819465814837,
+        "tc4_old_observe_seconds": 0.027806538953345505,
+        "tc4_previous_map_seconds": 0.07797952430073825,
+        "tc4_state_setup_seconds": 0.0001948205624602295
+      },
+      "token_visits": 6291456
+    }
+  },
+  "scope": "exact shipped geometry and map methods, real causal decoded fields; excludes probability calibration, mix_rows, learned-count updates, entropy decode and rendering",
+  "score_claim": false,
+  "seed": 20260910,
+  "selection": "one seeded random frame per equal temporal stratum"
+}

@@ -1,0 +1,36 @@
+{
+  "calibration": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_calibration.json",
+    "sha256": "6b5031f7f4f1027ab21eba515b3943a8b37bd3ffcae3ab7b75e7e036b36ba392"
+  },
+  "leg": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_decode_wall_clock.json",
+    "sha256": "74683aefbbbe26797fefe209577eb852aa101563961836c0eeb9c005629378b4"
+  },
+  "local": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_local.json",
+    "sha256": "02a4175b2ac4832bf3bf0943cf83f3a1a49673b3d47663a3232504393022e635"
+  },
+  "original_seal_unchanged": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json",
+    "sha256": "096e4e7414416b873684a1fb6ae498b0491fdf4c88e20a006f51ed3fe7c058c7"
+  },
+  "same_receiver_inheritance": {
+    "reason": "decode_wall_clock: decode_wall_clock: invalid inherited source: decode_wall_clock: competing process count absent",
+    "verdict": "REFUSE"
+  },
+  "sidecar": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+    "sha256": "74683aefbbbe26797fefe209577eb852aa101563961836c0eeb9c005629378b4"
+  },
+  "validation": {
+    "observed": {
+      "measured_t4_decode_seconds": 990.053829427,
+      "measured_t4_kind": "completed"
+    },
+    "problems": [
+      "decode_wall_clock: competing process count absent"
+    ],
+    "verdict": "REFUSE"
+  }
+}

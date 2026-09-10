@@ -1,0 +1,12 @@
+{
+  "candidate_t4_receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json",
+    "sha256": "566ac554e06b17f1f1f3f4adb02f151065438c2056d16f3feb4836c8effd0974"
+  },
+  "runtime": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime",
+  "measured_seconds": 1800.0,
+  "kind": "timeout_lower_bound",
+  "limit_seconds": 1260,
+  "over_margin": true,
+  "score_claim": false
+}

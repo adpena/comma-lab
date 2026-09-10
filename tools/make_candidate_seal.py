@@ -57,6 +57,9 @@ from tac.candidate_seal import (  # noqa: E402
     validate_seal,
     write_seal,
 )
+from tac.decode_wall_clock import (  # noqa: E402
+    inherit_decode_wall_clock,
+)
 
 DEFAULT_ADMIT_RULE = (
     "net dS = dS_rate + 100*(d_seg_new - d_seg_base) "
@@ -91,6 +94,14 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="JSON receipt block (or JSON document containing that block) with candidate/frontier "
         "public_path_probes and inflate_sh_smokes",
+    )
+    timing = ap.add_mutually_exclusive_group(required=True)
+    timing.add_argument(
+        "--decode-wall-clock", help="JSON containing the measured decode_wall_clock leg",
+    )
+    timing.add_argument(
+        "--inherit-decode-wall-clock",
+        help="pointer's measured leg; revalidates identical receiver code and timing before inheritance",
     )
     ap.add_argument("--retained-path", action="append", default=[], help="retained payload custody (repeatable)")
     ap.add_argument("--falsifier", action="append", default=[], help="pre-registered falsifier (repeatable)")
@@ -204,6 +215,20 @@ def main(argv: list[str] | None = None) -> int:
             return 4
 
         pointer = read_pointer_state(axis=args.pointer_axis)
+        if args.inherit_decode_wall_clock:
+            decode_wall_clock = inherit_decode_wall_clock(
+                source_leg_path=Path(args.inherit_decode_wall_clock),
+                runtime_dir=runtime_dir, archive_path=archive_path,
+                pointer_archive_sha256=str(pointer["pointer_archive_sha256"]),
+            )
+        else:
+            try:
+                timing_payload = json.loads(Path(args.decode_wall_clock).read_text())
+            except (OSError, ValueError) as exc:
+                raise SealContractError(f"cannot read --decode-wall-clock: {exc}") from exc
+            if not isinstance(timing_payload, dict):
+                raise SealContractError("--decode-wall-clock JSON must be an object")
+            decode_wall_clock = timing_payload.get("decode_wall_clock", timing_payload)
         bar = AdmitBar(
             rule=args.admit_bar_rule,
             net_dS_threshold=args.admit_bar_net_ds,
@@ -224,6 +249,7 @@ def main(argv: list[str] | None = None) -> int:
             axis=args.axis,
             admit_bar=bar,
             public_entrypoint_smoke=public_entrypoint_smoke,
+            decode_wall_clock=decode_wall_clock,
             receiver_relative_paths=receivers,
             archive_member_name=args.archive_member,
             retained_payload_paths=tuple(args.retained_path),
@@ -238,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
     write_seal(document, out_path)
 
     # The producer does not get to declare its own output good. It runs the CONSUMER's gate.
-    verdict = validate_seal(out_path)
+    verdict = validate_seal(out_path, require_decode_wall_clock=True)
     if not verdict.ok:
         out_path.unlink(missing_ok=True)
         print(f"FATAL: the seal just written does not pass its own validator: {verdict.summary()}", file=sys.stderr)
