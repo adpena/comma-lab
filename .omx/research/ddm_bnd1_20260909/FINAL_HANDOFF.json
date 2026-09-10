@@ -1,0 +1,170 @@
+{
+  "base_head": "e7e097e6040d941b7cbb8f47789205b71650e5cb",
+  "files": [
+    {
+      "base": "new",
+      "bytes": 11249,
+      "path": "experiments/ddm_bnd1_source_audit.py",
+      "sha256": "9a2f190de466c779763d4f864317aebd97f3bbeba8a7475be0a5274d5a29e307"
+    },
+    {
+      "base": "new",
+      "bytes": 21495,
+      "path": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+      "sha256": "4d24457116cf1c1c1b820d01244c777343e8453d8ef51a5be912febe3c5d2730"
+    },
+    {
+      "base": "new",
+      "bytes": 3825,
+      "path": ".omx/research/ddm_bnd1_20260909/census_counts.jsonl",
+      "sha256": "0ebbdfb4daeb70b5333a8eaf08803cb58461aca8996cdcdd5e82f22f938ca4a9"
+    },
+    {
+      "base": "new",
+      "bytes": 2635,
+      "path": ".omx/research/ddm_bnd1_20260909/draw_comparison.jsonl",
+      "sha256": "d53c52e3d2a790b2852a5ec7721bab0fcbdac588f565dbccade54cb58ac6413c"
+    },
+    {
+      "base": "new",
+      "bytes": 759,
+      "path": ".omx/research/ddm_bnd1_20260909/draw_selection.json",
+      "sha256": "cb87bbf2c36ca88b1a757adda4e9ce99f7e5803a6eba1852927629730beb5cc7"
+    },
+    {
+      "base": "new",
+      "bytes": 116442,
+      "path": ".omx/research/ddm_bnd1_20260909/equations_recall_selected.json",
+      "sha256": "8108b606971d516ae14c02c530a476fe772ed90be5fa3184c35ef7ebe88034f9"
+    },
+    {
+      "base": "new",
+      "bytes": 535,
+      "path": ".omx/research/ddm_bnd1_20260909/equations_spill_manifest.json",
+      "sha256": "0711fa12023a9fc85145386727eeb1fa905960b0eea61b88ab3e4e7b60d98dde"
+    },
+    {
+      "base": "new",
+      "bytes": 2047,
+      "path": ".omx/research/ddm_bnd1_20260909/generator_fold_note.json",
+      "sha256": "bfe3fa17eea1a39459f33e0fa2e876e8def7c8ffaa5d733d3158ac23c8b3441a"
+    },
+    {
+      "base": "new",
+      "bytes": 16350,
+      "path": ".omx/research/ddm_bnd1_20260909/graph_recall.json",
+      "sha256": "2763e7f8fd2825a26af03ffa3cda69c93d0e1c6d907a76bdf42e60802f2bf6c4"
+    },
+    {
+      "base": "new",
+      "bytes": 1486,
+      "path": ".omx/research/ddm_bnd1_20260909/landing_status.json",
+      "sha256": "4f8c81c842939177ebd03a08b764ea57a0678baa14c12c518715d8e27b2bf38d"
+    },
+    {
+      "base": "new",
+      "bytes": 918,
+      "path": ".omx/research/ddm_bnd1_20260909/lane_registration.json",
+      "sha256": "b1b9662769e868fb9791d1a26fc51c03f07ac3f5146ac38b147dbbef71f3ddec"
+    },
+    {
+      "base": "new",
+      "bytes": 603,
+      "path": ".omx/research/ddm_bnd1_20260909/reviews.json",
+      "sha256": "fc0b7ade8709c1da4aeae6578a1c61db804951e6bf68e2cb1576cdc678a343a7"
+    },
+    {
+      "base": "new",
+      "bytes": 7082,
+      "path": ".omx/research/ddm_bnd1_20260909/source_audit.json",
+      "sha256": "d039d4e657c9cdf274873fe393824d7dfa47dd9f980fdf062e7d95907e237c1d"
+    },
+    {
+      "base": "new",
+      "bytes": 10136,
+      "path": ".omx/research/ddm_bnd1_20260909/source_text_manifest.json",
+      "sha256": "91e86cd3108e378283c430f17c7478f62159ccce19ba1c91a5e1d91bdff8a0f3"
+    },
+    {
+      "base": "new",
+      "bytes": 1340,
+      "path": ".omx/research/ddm_bnd1_20260909/task_item1_blocked.json",
+      "sha256": "9aadc22de49ccf6e04b02017adb6fd9740a9799c9cf6eeb08b9f777b98f74e35"
+    },
+    {
+      "base": "new",
+      "bytes": 1303,
+      "path": ".omx/research/ddm_bnd1_20260909/task_item2_blocked.json",
+      "sha256": "2598a0ab15ffaaf92826f037591b07de8b225e816fb37c2345dbd2f839927450"
+    },
+    {
+      "base": "new",
+      "bytes": 1330,
+      "path": ".omx/research/ddm_bnd1_20260909/task_item3_blocked.json",
+      "sha256": "b5ca390f53eca98de3c86ed4c27e8a85b24ffc21016ef5859f0dd50f7fa69c54"
+    },
+    {
+      "base": "new",
+      "bytes": 1915,
+      "path": ".omx/research/ddm_bnd1_20260909/task_registration.json",
+      "sha256": "14ac9b6d0706711e499f1b1a9e1434c357f675cb3a123175dd69a5a14bd56ad2"
+    },
+    {
+      "base": "new",
+      "bytes": 3675,
+      "path": ".omx/research/ddm_bnd1_20260909/task_registration_final.json",
+      "sha256": "4b28a7ef1b51b7bc9f036f319b40a260c09d7e2915b6a0b28b9383dd1ca95d5b"
+    },
+    {
+      "base": "new",
+      "bytes": 1037,
+      "path": ".omx/research/ddm_bnd1_20260909/validation.json",
+      "sha256": "340d37db5491a6324978973187728e1a82fa3b88140b6a689cc561e33226361a"
+    }
+  ],
+  "patch": {
+    "bytes": 214534,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd1_20260909/landing.patch",
+    "sha256": "483c95a5d4f4bc07cc7febab206dabd3e0fe1e08607dd5508419c3965aa245a1"
+  },
+  "pointer": {
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "axis": "contest_cuda",
+    "custody": "local_anchor_record; inspect lane policy before submission",
+    "evidence_grade": "contest-CUDA",
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "measured_at_utc": null,
+    "role": "competitive_score_to_beat",
+    "score": 0.13791730003757818,
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "source": "our_local_frontier_contest_cuda",
+    "source_kind": "owned_or_banked_local_exact_anchor"
+  },
+  "research_only": true,
+  "schema": "ddm_bnd1_final_handoff.v1",
+  "score_claim": false,
+  "shared_state_changes": "Own lane registration, own tasks and note folded into existing gb1 task; snapshots included; shared dirty files excluded from patch",
+  "source_store": "/Volumes/APDataStore/pact/ddm_bnd1_boundary_representation",
+  "status": "UNLANDED_NO_BUNDLE",
+  "task_dispositions": [
+    {
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "ddm_bnd1",
+      "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_1"
+    },
+    {
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "ddm_bnd1",
+      "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_2"
+    },
+    {
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "ddm_bnd1",
+      "task_id": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_3"
+    }
+  ]
+}
