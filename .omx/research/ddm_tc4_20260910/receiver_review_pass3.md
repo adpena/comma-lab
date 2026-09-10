@@ -1,0 +1,7 @@
+# TC4 receiver independent review 3 — clean 2/2
+
+Reviewer: `/root/tc4_review`; 2026-09-10. Second consecutive clean review of unchanged receiver SHA-256 `5671759babebbe326ba9c797fe003dd1640037a06da0f4f38bee0f80d0cd0a6c`. Fast helper remains `6b2ecc39ae32590ef44a638197f6d7d4201316d88dd947b98b4b3787e5fd5197`; map implementation remains `669b852c6a350e8fd4b8b0befe06d5316ff38af2d55983c4b4ce4ad6603be8d7`.
+
+**CLEAN.** This pass followed archive bytes through selection, verified twins, staging, rider unpacking, TC4 dispatch, group observe, saved mixer state, and final field/raw checks. The five changed runtime paths are explicit; untargeted sections and the 96-byte tail prefix must remain identical. The free runtime export contains the generic fast algorithm with relative imports; video-derived weights remain inside the counted TC4 rider. Frame scratch is reset by `begin_frame`; adaptive counts and old receiver state survive the inherited checkpoint path.
+
+Recovery rechecks source/build identity, refuses changed or backward-boundary checkpoints, retains unreceipted raw rather than silently rerendering it, verifies completed process/log custody, and independently scopes each public run. No remaining actionable code-review finding was found in this bounded scope. No receiver run or scorer was launched for either clean review. Actual staged import/smoke and all-600 literal output identity remain execution gates owned by the parent; these reviews do not assert that those gates have passed.

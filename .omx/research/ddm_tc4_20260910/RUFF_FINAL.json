@@ -1,0 +1,41 @@
+{
+  "argv": [
+    ".venv/bin/ruff",
+    "check",
+    "experiments/ddm_tc4_fast.py",
+    "experiments/ddm_tc4_maps.py",
+    "experiments/ddm_tc4_price.py",
+    "experiments/ddm_tc4_receiver.py",
+    "experiments/ddm_tc4_validate_maps.py"
+  ],
+  "returncode": 0,
+  "stdout": "All checks passed!\n",
+  "stderr": "",
+  "source_facts": [
+    {
+      "path": "experiments/ddm_tc4_fast.py",
+      "bytes": 11290,
+      "sha256": "6b2ecc39ae32590ef44a638197f6d7d4201316d88dd947b98b4b3787e5fd5197"
+    },
+    {
+      "path": "experiments/ddm_tc4_maps.py",
+      "bytes": 7807,
+      "sha256": "669b852c6a350e8fd4b8b0befe06d5316ff38af2d55983c4b4ce4ad6603be8d7"
+    },
+    {
+      "path": "experiments/ddm_tc4_price.py",
+      "bytes": 23419,
+      "sha256": "0e9d0e377bb8492675540a8eda29223b1dee6963800f7821656612dfad113d0d"
+    },
+    {
+      "path": "experiments/ddm_tc4_receiver.py",
+      "bytes": 19643,
+      "sha256": "057e6deb8e600df9569b3acda8ae4f8cec9621ed09e98ec928e5e99b3493d73c"
+    },
+    {
+      "path": "experiments/ddm_tc4_validate_maps.py",
+      "bytes": 3824,
+      "sha256": "e832ebe688f7c0ce763e150c2d6da4f6c5e7f797b62b45da475dde5ee94f6851"
+    }
+  ]
+}

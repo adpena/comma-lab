@@ -1,0 +1,146 @@
+{
+  "anchor": {
+    "anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910_provenance_corrected",
+    "empirical_output": {
+      "composite_real_saved_bytes": 133,
+      "full_results_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+      "integer_to_real_gaps_bytes": [
+        5.527293249819195,
+        5.141915261148824,
+        4.918346150487196,
+        5.319775631607627,
+        5.537039683302282,
+        15.755482344975462
+      ],
+      "interaction_miss_bytes": 32,
+      "score_claim": false,
+      "standalone_real_saved_bytes": [
+        96,
+        42,
+        11,
+        10,
+        27
+      ],
+      "upper_bound_claim": false
+    },
+    "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    "inputs": {
+      "composite_added_weights": 15,
+      "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+      "fixed_old_weights": 40,
+      "provenance_correction": {
+        "append_only_registry_preserves_original": true,
+        "new_archive_fact": {
+          "bytes": 180021,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+          "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+        },
+        "old_provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-10T06:11:42.087050+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+          "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+        },
+        "reason": "Old provenance source_path named calibration JSON but source_sha256 named candidate archive. Withdraw that mismatched provenance tuple; scientific measurements are unchanged. Corrected provenance names the actual archive file, whose measured hash matches. The independent source_artifact remains calibration JSON with its separately retained hash.",
+        "superseded_anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910"
+      },
+      "scope": "Empirical fixed-base context-map ideal-to-real calibration. Existing numerical tangent evaluator is not re-executed here; no new upper bound is asserted. Five-weight standalone rows meet the equation dimension; 15-weight composite is separately labeled interaction evidence, outside its five-weight bound.",
+      "source_archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "standalone_added_weights": 5,
+      "symbols": 117964800
+    },
+    "measurement_method": "Continuous and integer full-symbol codelength totals; independent real RC64 twin encodes of each candidate, with all fitted weights and envelope counted. Residual is fractional distance from composite prior midpoint175B, not an equation-bound residual.",
+    "measurement_utc": "2026-09-10T06:18:37.109757+00:00",
+    "predicted_output": {
+      "composite_real_saved_bytes_range": [
+        100,
+        250
+      ],
+      "standalone_real_saved_bytes_ranges": [
+        [
+          40,
+          150
+        ],
+        [
+          20,
+          80
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          20,
+          60
+        ],
+        [
+          10,
+          40
+        ]
+      ]
+    },
+    "provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "captured_at_utc": "2026-09-10T06:18:37Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "macos_cpu_advisory",
+      "hardware_substrate": "macos_arm64",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+      "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+    },
+    "residual": 0.24,
+    "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json"
+  },
+  "calibration_artifact": {
+    "bytes": 26487,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+    "sha256": "93464dc62f4f86e948a5dfe96f9b0905511097c7bddf05e4e99e5fa5f3c7fa0b"
+  },
+  "equation_id": "lane_boundary_context_map_bound_v1",
+  "provenance_correction": {
+    "append_only_registry_preserves_original": true,
+    "new_archive_fact": {
+      "bytes": 180021,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+      "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+    },
+    "old_provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "captured_at_utc": "2026-09-10T06:11:42.087050+00:00",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "macos_cpu_advisory",
+      "hardware_substrate": "macos_arm64",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+      "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+    },
+    "reason": "Old provenance source_path named calibration JSON but source_sha256 named candidate archive. Withdraw that mismatched provenance tuple; scientific measurements are unchanged. Corrected provenance names the actual archive file, whose measured hash matches. The independent source_artifact remains calibration JSON with its separately retained hash.",
+    "superseded_anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910"
+  },
+  "registered": true,
+  "scope": "Empirical fixed-base context-map ideal-to-real calibration. Existing numerical tangent evaluator is not re-executed here; no new upper bound is asserted. Five-weight standalone rows meet the equation dimension; 15-weight composite is separately labeled interaction evidence, outside its five-weight bound.",
+  "score_claim": false
+}

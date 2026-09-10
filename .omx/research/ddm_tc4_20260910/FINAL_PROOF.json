@@ -1,0 +1,70 @@
+{
+  "schema": "ddm_tc4_final_proof_receipt.v1",
+  "seal_verdict": "SEAL_VALID",
+  "seal_summary": "SEAL VALID: ddm_tc4_mask19_context_slate_move41_20260910 [contest_cuda] \u2014 archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree",
+  "source_archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+  "selected_archive_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+  "selected_archive_bytes": 180021,
+  "saved_bytes": 133,
+  "interaction_miss_bytes": 32,
+  "source_field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+  "proofs": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/PUBLIC_IDENTITY.json",
+      "bytes": 22682,
+      "sha256": "767a51c700056ee438243c87e1f158376bb48dffae9e3cc1a21d5842ccd84441"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/PUBLIC_SMOKE.json",
+      "bytes": 10837,
+      "sha256": "7d3bbb654844a636fd11645c97cbb7e3855dac1d784ddd7c6734ec4c10e77d98"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/RESUME_CONTROL.json",
+      "bytes": 688,
+      "sha256": "0dc35696ffde96e1af38e0209e678210ed612b2254257e02f4b26f32b7181ce2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_mask19.seal.json",
+      "bytes": 16494,
+      "sha256": "eb932e46a17ef09df720a82f62da9fa437230edc62d57b2c1b1a8215eaba341e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/RETENTION_MANIFEST.json",
+      "bytes": 624726,
+      "sha256": "a9611ad6522a56bb2a42d088cdd077531bb7f224672205760441257f95c4546a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/PROVENANCE.json",
+      "bytes": 2309,
+      "sha256": "7f75d33ae45a6f148657dd7de4deb372343b13276c39e0b5d9ba26751845a1b8"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/SELECTION.json",
+      "bytes": 808,
+      "sha256": "00b8b9f56e2d5f46655adbb07ee6cbb9014407c93722082293722a9499130a37"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_REGISTRATION.json",
+      "bytes": 6995,
+      "sha256": "404a883969a472d30d904f3d66a61cc392a7323e631541b57726e06084a1d3a5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/launch_public600/child_status.json",
+      "bytes": 1443,
+      "sha256": "4ff4204f4d4f56069be386d1c15608025ce4306361cc80058da9689d0f2c8b6c"
+    }
+  ],
+  "all600_public_input_byte_identity": true,
+  "no_scorer_ran": true,
+  "score_claim": false,
+  "exact_frontier_unmoved": true,
+  "fired_work_completed": [
+    "five standalone n600 twin encodes",
+    "mandatory composite n600 twin encode",
+    "causality and fast receiver controls",
+    "structured public smoke and actual resume control",
+    "literal public n600 identity",
+    "candidate seal"
+  ]
+}

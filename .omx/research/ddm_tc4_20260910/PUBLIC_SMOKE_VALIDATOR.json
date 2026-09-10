@@ -1,0 +1,49 @@
+{
+  "observed": {
+    "inflate_sh_smokes.candidate.archive": {
+      "bytes": 180021,
+      "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip"
+    },
+    "inflate_sh_smokes.candidate.runtime": {
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 51,
+      "sha256": "43763bb711a2beabc996b37b23fcd266ae04c7815022cc97b402c595447ae987",
+      "total_bytes": 1020525
+    },
+    "inflate_sh_smokes.frontier.archive": {
+      "bytes": 180154,
+      "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip"
+    },
+    "inflate_sh_smokes.frontier.runtime": {
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 49,
+      "sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+      "total_bytes": 1008425
+    },
+    "public_path_probes.candidate.archive": {
+      "bytes": 180021,
+      "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip"
+    },
+    "public_path_probes.candidate.runtime": {
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 51,
+      "sha256": "43763bb711a2beabc996b37b23fcd266ae04c7815022cc97b402c595447ae987",
+      "total_bytes": 1020525
+    },
+    "public_path_probes.frontier.archive": {
+      "bytes": 180154,
+      "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip"
+    },
+    "public_path_probes.frontier.runtime": {
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 49,
+      "sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+      "total_bytes": 1008425
+    }
+  },
+  "problems": []
+}

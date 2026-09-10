@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_tc4_retention_census.v1",
+  "root": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate",
+  "payload_count": 2166,
+  "payload_bytes": 4592784866,
+  "whole_arm_census_bytes": 4606219033,
+  "arm_cap_bytes": 6442450944,
+  "volume_free_bytes": 63354601472,
+  "source_provenance": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/PROVENANCE.json",
+  "commands_and_resume_states": "Per-stage launch manifests and completed stage/frame receipts retained under move41 and parent historical-control directories.",
+  "retention_policy": "Keep every candidate and twin. No deletion or move performed. Storage guards refuse new writes at cap or free-space reserve. Public raw/field hashes reused from just-completed whole-file identity proof; all other listed files streamed.",
+  "score_claim": false,
+  "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/RETENTION_MANIFEST.json",
+  "manifest_sha256": "a9611ad6522a56bb2a42d088cdd077531bb7f224672205760441257f95c4546a"
+}

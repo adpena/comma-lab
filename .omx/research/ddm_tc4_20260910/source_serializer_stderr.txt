@@ -1,0 +1,5 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: .omx/research/ddm_tc4_20260910/review_pass1.md: failed to insert into database
+error: unable to index file '.omx/research/ddm_tc4_20260910/review_pass1.md'
+fatal: adding files failed

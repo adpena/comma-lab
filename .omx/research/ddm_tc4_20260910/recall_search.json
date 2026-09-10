@@ -1,0 +1,2385 @@
+{
+  "queries": "row.run|vertical.{0,30}transition|neighbou?rhood.majority|tail.mixer|causal.context|groupbin|context.mixing",
+  "scopes": {
+    "memos": {
+      "files_searched": 9943,
+      "matches": [
+        {
+          "path": ".omx/research/ddm_wr1_reverse_waterfill_20260729.md",
+          "line": 138,
+          "text": "- **QA08 (context mixing / o8+prev5 KT, CTW, CM) \u2014 a LOSSLESS coder swap, PARTIAL overlap.** It"
+        },
+        {
+          "path": ".omx/research/ddm_lv1_capstone_leverage_and_burn_20260728.md",
+          "line": 223,
+          "text": "     adaptive model; pp1 precedent); the context-MIXING upgrade (nncp-class logistic mixing over"
+        },
+        {
+          "path": ".omx/research/ddm_scm2_scmdl_gm_refit_trainer_20260903.md",
+          "line": 96,
+          "text": "(`experiments/ddm_gb1_groupbin8_conditioning.py:14-45`)."
+        },
+        {
+          "path": ".omx/research/lane12_geometry_gate_repair_atoms_20260503_codex.md",
+          "line": 15,
+          "text": "  disagreement and row-run cost estimates."
+        },
+        {
+          "path": ".omx/research/novel_symbolic_path_representation_research_20260503_worker.md",
+          "line": 45,
+          "text": "  path programs, row-run dictionaries, and renderer tensor micro-libraries."
+        },
+        {
+          "path": ".omx/research/novel_symbolic_path_representation_research_20260503_worker.md",
+          "line": 146,
+          "text": "### 2. Ladderpath/Re-Pair Row-Run Dictionary For Mask Programs"
+        },
+        {
+          "path": ".omx/research/novel_symbolic_path_representation_research_20260503_worker.md",
+          "line": 151,
+          "text": "Ladderpath/grammar compression to the existing CMG3 row-run work."
+        },
+        {
+          "path": ".omx/research/novel_symbolic_path_representation_research_20260503_worker.md",
+          "line": 155,
+          "text": "- Emit a deterministic policy JSON from row-run motifs."
+        },
+        {
+          "path": ".omx/research/novel_symbolic_path_representation_research_20260503_worker.md",
+          "line": 170,
+          "text": "priority without a geometry escape proof. A trust-region row-run dictionary"
+        },
+        {
+          "path": ".omx/research/novel_symbolic_path_representation_research_20260503_worker.md",
+          "line": 296,
+          "text": "2. `test_ladderpath_runs_trust_region`: mine row-run motifs from decoded masks,"
+        },
+        {
+          "path": ".omx/research/ddm_g8c_gen8_compress_vendoring_20260902.md",
+          "line": 41,
+          "text": "| `/Volumes/APDataStore/pact/ddm_ce1_afr1_compress_chain/work/run_1/gb1/runtime_groupbin8_surprise/runtime/fx2_model_axis_corrector.py` | `fx2_gb1_pointer.py` | 30,839 | `db39d22b9d4b5590d864d9c3676accaa5e45e23b6f3649698b7353b159b2a593` | exact pointer branch retained |"
+        },
+        {
+          "path": ".omx/research/ddm_g8c_gen8_compress_vendoring_20260902.md",
+          "line": 42,
+          "text": "| `/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_joint21/runtime/fx2_model_axis_corrector.py` | `fx2_gb1_joint.py` | 30,864 | `06cc74279e485e2d73558b2ea5ec9a5c68606e685231c10bbf5ef1bac5c2f296` | exact LB1 input branch retained |"
+        },
+        {
+          "path": ".omx/research/ddm_tb2_token_bit_attribution_20260823.md",
+          "line": 161,
+          "text": "2. **Zero-stored causal context allocation in a same-family refit.** MA1's top 100 cells carry"
+        },
+        {
+          "path": ".omx/research/ddm_ws0_worldsheet_grammar_price_20260821.md",
+          "line": 89,
+          "text": "The charter seeds were confirmed: g1's exact row-run prices were 59,481 B Movable, 180,701 B Lane, and 453,123 B boundary, with lower lossy knees that were candidate-set prices rather than a complete partition floor; pp1's complete direct partition was 173,616 B; sp1 explicit support was 421,366\u2013444,394 B; and m91/pc2 identified Road as the 87.8% hub and Road\u2194Lane as the 49.2% dominant edge. The m88/m96 prefix warning forced the verdict onto all 600 pairs."
+        },
+        {
+          "path": ".omx/research/ddm_xi1_carried_xi_inter_race_DAG_FEED_20260729.md",
+          "line": 30,
+          "text": "**FEED-xi1-f (routing):** QA06/#766 wr1 reverse-waterfill and QA08 context-mixing remain the live"
+        },
+        {
+          "path": ".omx/research/ddm_mc1_motion_compensated_previous_plane_20260904.md",
+          "line": 197,
+          "text": "  carries no aligned information the current-frame causal context does not already hold."
+        },
+        {
+          "path": ".omx/research/ddm_mc1_motion_compensated_previous_plane_20260904.md",
+          "line": 198,
+          "text": "- `ddm_gb1_groupbin8_verdict_20260824.md`: \u2212153 B lossless from decode-scan conditioning; the scale a"
+        },
+        {
+          "path": ".omx/research/ddm_directive_provenance_three_way_20260901.md",
+          "line": 16,
+          "text": "   move mechanisms (address-free tile48 \u00d7 groupbin8, the micro-edit/realized-acceptance"
+        },
+        {
+          "path": ".omx/research/submission_writeup_integration_20260502_codex.md",
+          "line": 76,
+          "text": "- [evidence:experiments/results/lightning_batch/exact_eval_pmg_hotspot_atomtop4068_l40sdiag_20260502T1445Z/contest_auth_eval.json] PMG atomtop4068 is L40S CUDA `A-negative scoped forensic`: archive `195762` bytes, SHA-256 `2567dc04185cf20775f1f6c088395aa8df9e4484daa8b25001e940d62a5d6497`, recomputed score `28.41411894150047`, PoseNet `62.34251404`, SegNet `0.03315286`, `600` samples, NVIDIA L40S. It cannot rank against C-067 or promote without T4/equivalent confirmation, and the measured PoseNet collapse is already decisive for stopping PMG row-run-only T4 promotion."
+        },
+        {
+          "path": ".omx/research/submission_writeup_integration_20260502_codex.md",
+          "line": 77,
+          "text": "- [evidence:experiments/results/pmg_hotspot_candidate_c067_atomtop4068_20260502/archive_byte_accounting.md] PMG atomtop4068 saved `80452` bytes versus C-067 but paid catastrophic component distortion. Retire only PMG row-span/row-run residual rescue at this atom scale; do not kill charged mask grammar, learned topology, atom planning, or pose-conditioned residuals."
+        },
+        {
+          "path": ".omx/research/ddm_or1_orthogonal_representation_regime_20260826.md",
+          "line": 35,
+          "text": "| token stream | 113,624 | GB1 `groupbin8_surprise`, not the DX2 control's 113,777 B |"
+        },
+        {
+          "path": ".omx/research/ddm_wa1_week_audit_gestalt_toy_orphan_synergy_20260825.md",
+          "line": 104,
+          "text": "- **cls_groupbin8 (\u2212100 B)**: owned by #1269 (joint 21-family re-encode)."
+        },
+        {
+          "path": ".omx/research/ddm_wa1_week_audit_gestalt_toy_orphan_synergy_20260825.md",
+          "line": 128,
+          "text": "**S2 \u2014 #1269 \u00d7 mi1's +211 B position row.** gb1's groupbin8 IS position conditioning; the joint"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 213,
+          "text": "- Mask charts: row-run depth, global row-run atom budget, connected"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 299,
+          "text": "### 1. CMG3A adaptive global row-run allocation"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 304,
+          "text": "easy rows and starves hard rows. CMG3A selects row-run atoms from a global"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 367,
+          "text": "pair/class/row-run corrections in a low-dimensional differentiable family."
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 372,
+          "text": "  build pair/frame/class/row-run atom ledgers."
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 401,
+          "text": "3. **CMG4 connected-component and boundary grammar.** Move from row-run"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_floor_grand_council_20260502.md",
+          "line": 553,
+          "text": "| 1 | CMG3A adaptive row-run grammar | `-0.005` to `-0.040` if geometry survives; high variance | local byte screen now; fast diagnostic if non-T4; T4 promotion only after top1/top2 trace branch | local + H100/L40S diag + T4 promotion | preferably `<250000`; strong if `<230000` with safe components | PoseNet cliff from hard-mask geometry | A++ T4 CUDA, decoded-mask SHA, component trace |"
+        },
+        {
+          "path": ".omx/research/trackC_compression_as_intelligence_20260616T232902Z.md",
+          "line": 20,
+          "text": "so a strong general-purpose / context-mixing compressor on the RIGHT representation could pay ZERO"
+        },
+        {
+          "path": ".omx/research/trackC_compression_as_intelligence_20260616T232902Z.md",
+          "line": 168,
+          "text": "### RANK 2 \u2014 Temporal context-mixing coder on the 600-frame mask SEQUENCE (gzip-LM / nncp angle)"
+        },
+        {
+          "path": ".omx/research/codex_findings_hfv_sidecar_frontier_decision_packet_20260521T201700Z_codex.md",
+          "line": 48,
+          "text": "3. hfv7_exp_golomb          178529 bytes  rate_minimal_profile_row_runtime_profile"
+        },
+        {
+          "path": ".omx/research/ddm_gc8_postreversal_convocation_20260729.md",
+          "line": 270,
+          "text": "| Bellard | (self) | context MIXING beats context replacement \u2014 the \u03be-expert enters the QA08 mixing race as one input | QA08/QA39 merge point |"
+        },
+        {
+          "path": ".omx/research/ddm_fb2_route_table_gb1_20260826.md",
+          "line": 270,
+          "text": "| `ddm_gb1_groupbin8_verdict_20260824.md` | `56866135b84f4e941df35b81dfa1bafbdf36e75a01ca50fe4530b6ba237f558a` | `884bb65f1ef9409cbeda1cb02ca2b268fe7ab3e6` | exact GB1 pointer, bytes, SHA, rate-only identity |"
+        },
+        {
+          "path": ".omx/research/ddm_fb2_route_table_gb1_20260826.md",
+          "line": 298,
+          "text": "Searched the full `.omx/research/` corpus by content with the queries `gb1`, `groupbin8`,"
+        },
+        {
+          "path": ".omx/research/frontier_orchestration_snapshot_20260504_codex.md",
+          "line": 132,
+          "text": "- `qma9_qrg1_row_run_grammar_screen` is now recorded as"
+        },
+        {
+          "path": ".omx/research/frontier_orchestration_snapshot_20260504_codex.md",
+          "line": 136,
+          "text": "- Do not dispatch QRG1 row-run grammars without a materially different"
+        },
+        {
+          "path": ".omx/research/frontier_orchestration_snapshot_20260504_codex.md",
+          "line": 333,
+          "text": "    runtime.  Prior row-run/table/mode screens are byte-negative or"
+        },
+        {
+          "path": ".omx/research/codex_findings_materializer_runtime_context_harvest_20260526T225005Z_codex.md",
+          "line": 8,
+          "text": "while still losing the work-row runtime binding during harvest. The affected"
+        },
+        {
+          "path": ".omx/research/ddm_a1_naive_verdict_audit_20260723_codex.md",
+          "line": 73,
+          "text": "| 8 | g1 Lane/Movable knees cited as grammar bounds [G1] | **PARTIAL**, not greedy-MDL global optimum: a hand-specified semantic candidate set, finite tolerance ladder, Hungarian continuation gate, row-run controls, and independent real-coder selection. The memo itself correctly says candidate-set optimum only. | `FORMULATION:G1_EMITTED_SEMANTIC_GRAMMAR_CANDIDATE_SET` | **PLAUSIBLE.** Joint induction, variable production topology, learned split/merge lineage, and receiver-aware MDL can move either knee. | Minimum-description grammar search over production additions/removals with semantic parseback; held-out MDL and through-R receiver validation. Falsifier: no candidate dominates 57,502 B / 616,795 clean-rest errors and receiver projection remains non-admissible. | `<=23.4049%` role ceiling |"
+        },
+        {
+          "path": ".omx/research/public_pr90_qrepro_intake_20260504_worker.md",
+          "line": 202,
+          "text": "   QMA9 tokens. Existing PR85 QMA9 row-run/alternate screens were negative, so"
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 17,
+          "text": "- **1/18 member family has fresh full-n600 exact-lb1 physical experiments:** zero-stored receiver-derived conditioning. It now contains three retained same-body candidate instances: shipped `patch192` (\u2212109 B), OC2 `miss_rank8` (\u22122 B), and AFC1 `tile48 \u00d7 groupbin8` (\u221281 B)."
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 47,
+          "text": "- Research memos and receipts: content queries for `address-free`, `ships parameters`, `bitmap`, `coordinate`, `implicit`, `born-small`, `merge`, `plane2`, `rank`, `precision`, `reorder`, `conditioning`, `groupbin8`, `tile48`, `unpriced`, and the pinned archive SHA; exact body receipts and runtime parser sources were inspected under both SSD tiers."
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 52,
+          "text": "Beyond the charter's seeds, MI1 explicitly left **`tile48 \u00d7 groupbin8` unpriced** and called it worth one row (`.omx/research/ddm_mi1_indicator_model_axis_20260824.md:451-458`); GB1 independently repeated that it remained unpriced and cheap (`.omx/research/ddm_gb1_groupbin8_conditioning_20260824.md:426-427,481-482`). Both marginal axes were already present on lb1, while the 384-cell interaction was absent. This changed the plan from a memo-only census to the retained exact physical experiment below. Recall also found that the charter inverted the primary #1264 side labels; that correction changes the law statement below."
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 74,
+          "text": "| 15 | Zero-stored receiver-derived conditioning over token coder | yes | yes | **YES** | Shipped `patch192` \u2212109 B; OC2 `miss_rank8` \u22122 B; AFC1 `tile48 \u00d7 groupbin8` **\u221281 B**, all exact-lb1, full n600, zero changed tokens. Family is drained except the admitted native-port/identity work below. |"
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 90,
+          "text": "`tile48=((y//64)*8+(x//64)); groupbin8=(((x%64)+2*(y%64))*8)//190; context=tile48*8+groupbin8`"
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 92,
+          "text": "after the exact shipped 22-member conditioning configuration. The decoder computes both axes from `(x,y)` and stores no new candidate parameter bytes. The run used the real RC64 path over all 600 frames and 117,964,800 decoded tokens, with 25-frame atomic checkpoints and all control/candidate/repeat streams, archives, ledgers, sources, builds, checkpoints, and receipts retained under `/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/`."
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 106,
+          "text": "Authority receipt: `/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/measurement_v1/ADJUDICATION.json`, 2026-08-31 SHA-256 `9bda316e278e6bf37e762c6c1308cc014db2f76703ce327eef0bad064b6ed841`. Full retained-store manifest: `measurement_v1/MANIFEST.json`, SHA-256 `1e8a111e8f5d010d67ac34e212a81370341743c4e9ab148c14b2ceb22425a425`, 45,807,018 retained bytes at capture."
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 118,
+          "text": "Under AFC1's stricter shipped-payload predicate, the exact-lb1 lossless surface now has **n=3 retained address-free candidate instances** (`patch192`, `miss_rank8`, `tile48 \u00d7 groupbin8`) within **one receiver-conditioning family**, each with unchanged decoded symbols. The old \u201cempty side\u201d premise is therefore refuted on the practical exact-body surface. The law is **still undefined, not supported or refuted as a trend**: three pure-rate, zero-damage points from one family cannot be spliced into a heterogeneous lossy damage/credit ladder without changing the ordinate. The defensible statement is narrower: at least one strict address-free family produces real same-body bytes, and AFC1 replicated that sign with a new composite interaction."
+        },
+        {
+          "path": ".omx/research/ddm_afc1_address_free_census_20260831.md",
+          "line": 131,
+          "text": "- **QUEUED_AFTER_APDATASTORE_IDENTITY_FLOOR** \u00b7 owner: `AFC1 receiver-closure successor` \u00b7 consumer store: `/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/receiver_identity_v1/` \u00b7 fire trigger: APDataStore free space is at least **8,142,450,560 B**; then port only `tile48_groupbin8` to the staged native C receiver, prove Python/C configuration parity, and run one retained full-n600 candidate receiver identity. No scorer."
+        },
+        {
+          "path": ".omx/research/ddm_tc1_tr1_lifecycle_spec_20260817.md",
+          "line": 416,
+          "text": "| **Rate / coder / carrier** \u2014 g4 boundary-gated width \u00b7 QA06 reverse-waterfill \u00b7 QA08 context-mixing coder \u00b7 QA62 pm1 rungs \u00b7 zb1 continuation-knee (\u00d72) \u00b7 gk2 L-levels sweep \u00b7 SMEVR base-rule \u00b7 #859 verify rung \u00b7 the rest of COMPOSITION | **~29** | **DOMINATED by \u00a71.2** \u2014 no rate lever can rescue TR1 |"
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 400,
+          "text": "  row-span/row-run residual rescue at this atom scale, not charged mask grammar,"
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 402,
+          "text": "- Do not queue another PMG row-run-only T4 promotion. The next mask-side work"
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 550,
+          "text": "    are dominated. The measured row-span/row-run PMG implementation is retired"
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 1024,
+          "text": "  nonzero CMG3A row-run classes only. This is now a permanent planner-side"
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 1026,
+          "text": "  `builder_incompatible_class_id_for_cmg3a_nonzero_row_run`."
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 1279,
+          "text": "  manifest SHA matches `_decode_cmg3_nonzero_row_runs()` output."
+        },
+        {
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "line": 2285,
+          "text": "Decision: do not dispatch PMG/CMG3 row-span or row-run variants from byte"
+        },
+        {
+          "path": ".omx/research/ddm_w96b_aligned_loss_implementation_20260826.md",
+          "line": 227,
+          "text": "**Own-vehicle frontier: S = 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600], GB1 groupbin8 archive SHA `ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4` \u2014 UNMOVED by ddm_w96b.**"
+        },
+        {
+          "path": ".omx/research/ddm_r7_token_coder_race_20260729.md",
+          "line": 139,
+          "text": "| KT O8+prev5 backoff production | 407,980 | 608,621 | 611,500 | larger causal context reraced and charged |"
+        },
+        {
+          "path": ".omx/research/ddm_pd1_pr_archive_decomposition_priors_20260818.md",
+          "line": 217,
+          "text": "classical causal context model measured (P_B2, 235,478 B lower bound vs ~110,511 B). That prices"
+        },
+        {
+          "path": ".omx/research/ddm_gt2_gt_tongue_induction_20260803.md",
+          "line": 103,
+          "text": "(0.691\u00d7), beats `g1`'s best lossless Lane row-runs (180,701 B) by **27.5%**, and beats buying Lane's"
+        },
+        {
+          "path": ".omx/research/ddm_gt2_gt_tongue_induction_20260803.md",
+          "line": 151,
+          "text": "**Independent cross-validation of both arms:** my lzma bitplane coder and `g1`'s row-run coder, on"
+        },
+        {
+          "path": ".omx/research/ddm_gd1_generic_default_census_20260731.md",
+          "line": 94,
+          "text": "| S4 | SMEVR scan order | CODER:602-628 | channel-major raster over (P,H,W); left/up causal context | **RACED-NOW (this unit)** | operator escalation \u2192 \u00a75 measured verdict (Hilbert/serpentine/raster, same coder same payload) | rate (bounded: QA08 ceiling \u22641.6KB slack) |"
+        },
+        {
+          "path": ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+          "line": 103,
+          "text": "| C-077 | CMG3 row-span grammar is now a closed charged archive/runtime path, but row-span-only byte candidates are too distorted to rank without exact eval. | `empirical_archive_candidate` | `experiments/build_cmg3_rowspan_candidate.py`; `src/tac/tests/test_build_cmg3_rowspan_candidate.py`; `submissions/robust_current/inflate_renderer.py`; `experiments/results/c067_cmg3_rowspan_stride1_candidate_20260502T105056Z/build_manifest.json`; `experiments/results/c067_cmg3_rowspan_stride4_candidate_20260502T105036Z/build_manifest.json`; `.omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md` | `cmg3_runtime_path`, `rowspan_byte_screen`, `no_score_claim` | The CMG3 runtime, packer, unpacker, auth-eval allowlist, and smoke allowlist now accept charged `masks.cmg3` payloads. Row-span archives saved real bytes versus C-067, e.g. stride1 `251500` bytes, SHA `83057ab28b8cd2c7d027390feeb149763a747ee20794644b1bcf455543a66a68`, disagreement `0.08720835`, and stride4 `127805` bytes, SHA `f208d09dacf3653bc3871027e44429588be7a9a86de66d86ada6709d38e51175`, disagreement `0.09031554`. These are development artifacts only; the first T4 spend moved to lower-disagreement nonzero-row-run"
+        },
+        {
+          "path": ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+          "line": 104,
+          "text": "| C-078 | CMG3 nonzero-row-run top1/top2 archives are queued/running for Lightning T4 exact eval against C-067. | `empirical_archive_candidate` + `queued_exact_eval` | `experiments/build_cmg3_nonzero_runs_candidate.py`; `src/tac/tests/test_build_cmg3_nonzero_runs_candidate.py`; `experiments/results/c067_cmg3_nonzero_runs_top1_candidate_20260502T105718Z/build_manifest.json`; `experiments/results/c067_cmg3_nonzero_runs_top2_candidate_20260502T105724Z/build_manifest.json`; `.omx/state/c067_cmg3_nonzero_top1_t4_batch_jobs_20260502T1100Z.json`; `.omx/state/c067_cmg3_nonzero_top2_t4_batch_jobs_20260502T1100Z.json`; `.omx/state/exact_eval_c067_cmg3_nonzero_top1_top2_t4_20260502T105935Z_manifest.json` | `cmg3_nonzero_runs`, `exact_eval_pending`, `no_score_claim_until_harvest`, `checksum_guard_added` | Top1 archive: `128028` bytes, SHA `7b23b8e7a7076ccc5814f6a31675e9071828cebfc57e8c73ac85e39c1139d397`, rate-only delta `-0.09867097482736209`, pixel disagreement `0.0354846445719401`, job `exact_eval_c067_cmg3_nonzero_top1_t4_20260502T1100Z`. Top2 archive: `229196` bytes, SHA `6ba74dc4ac94fd61e0188ae154b975e3b9890eec1c7827d8cdedfcd343b665fb`, rate-only delta `-0.03130735625789825`, disagreemen"
+        },
+        {
+          "path": ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+          "line": 105,
+          "text": "| C-079 | CMG3 nonzero-row-run top1/top2 exact T4 runs supersede C-078 queue wording: the byte wins are real, but row-run mask geometry catastrophically breaks PoseNet. | `A-negative scoped forensic` | `experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top1_t4_20260502T1100Z/contest_auth_eval.adjudicated.json`; `experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top2_t4_20260502T1100Z/contest_auth_eval.adjudicated.json`; `.omx/state/c067_cmg3_nonzero_top1_t4_batch_jobs_20260502T1100Z.json`; `.omx/state/c067_cmg3_nonzero_top2_t4_batch_jobs_20260502T1100Z.json` | `cmg3_nonzero_runs_negative`, `measured_implementation_retired`, `no_promotion`, `pose_geometry_failure` | Top1 exact T4 score `29.22356762140238`, bytes `128028`, SHA `7b23b8e7a7076ccc5814f6a31675e9071828cebfc57e8c73ac85e39c1139d397`, PoseNet `39.78416443`, SegNet `0.09192351`. Top2 exact T4 score `9.415026478717273`, bytes `229196`, SHA `6ba74dc4ac94fd61e0188ae154b975e3b9890eec1c7827d8cdedfcd343b665fb`, PoseNet `6.90528297`, SegNet `0.00952611`. This retires only these raw nonzero-row-run CMG3 configs; it does not retire learned/predictive mask grammars, geometry-preserving codecs, or QZS3/JFG "
+        },
+        {
+          "path": ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+          "line": 106,
+          "text": "| C-080 | CMG3A body200 adaptive row-run diagnostic exact CUDA harvested on L40S as scoped A-negative evidence; the archive saved bytes but failed the PoseNet component gate. | `A-negative scoped forensic` | `experiments/results/lightning_batch/exact_eval_c067_cmg3a_body200_l40s_20260502T114231Z/contest_auth_eval.adjudicated.json`; `experiments/results/lightning_batch/exact_eval_c067_cmg3a_body200_l40s_20260502T114231Z/adjudication_provenance.json`; `experiments/results/lightning_batch/exact_eval_c067_cmg3a_body200_l40s_20260502T114231Z/component_trace.json`; `.omx/state/c067_cmg3a_body200_l40s_batch_jobs_20260502T114231Z.json`; `.omx/research/yousfi_fridrich_field_equations_20260502_codex.md` | `cmg3a_body200_negative`, `diagnostic_only_l40s`, `no_t4_promotion`, `body_budget_hardening_input` | Exact L40S CUDA diagnostic, `600` samples, archive `257676` bytes, SHA `8c6569b00dc999abbbeedddfc3003ba769484fa34b3abe4555a5d56152fec594`, score `7.014092131069795`, PoseNet `4.2056942`, SegNet `0.00357384`, component trace cross-check `all_match=true`, `promotion_eligible=false`. The run had a nonterminal SDK status anomaly `Running -> Pending`, but terminal state-derived harvest validated "
+        },
+        {
+          "path": ".omx/research/ddm_jt21_joint_21family_reencode_verdict_20260825.md",
+          "line": 6,
+          "text": "(19 fx5 families + `groupbin8_surprise` + `cls_groupbin8` = 21 families)."
+        },
+        {
+          "path": ".omx/research/ddm_jt21_joint_21family_reencode_verdict_20260825.md",
+          "line": 10,
+          "text": "**Receipts:** `/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/` \u2014"
+        },
+        {
+          "path": ".omx/research/ddm_jt21_joint_21family_reencode_verdict_20260825.md",
+          "line": 13,
+          "text": "config, content = runtime_groupbin8_surprise + one tuple line adding `cls_groupbin8`)."
+        },
+        {
+          "path": ".omx/research/ddm_jt21_joint_21family_reencode_verdict_20260825.md",
+          "line": 29,
+          "text": "groupbin8_surprise \u2212153 B + cls_groupbin8 \u2212100 B = \u2212253 B naive; the joint re-encode"
+        },
+        {
+          "path": ".omx/research/ddm_jt21_joint_21family_reencode_verdict_20260825.md",
+          "line": 66,
+          "text": "Sisters: `ddm_gb1_groupbin8_verdict_20260824.md` (the twentieth move + the successor"
+        },
+        {
+          "path": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+          "line": 111,
+          "text": "its acausal boundary statistic from decoder-visible causal contexts."
+        },
+        {
+          "path": ".omx/research/ddm_bnd1_boundary_representation_closed_form_pricing_20260909.md",
+          "line": 200,
+          "text": "`v8_geometric_rate_decomposition_v1`, `token_tail_context_mixing_bound_v1`."
+        },
+        {
+          "path": ".omx/research/ddm_ft1_shipped_renderer_aligned_finetune_20260903.md",
+          "line": 362,
+          "text": "From the AFR1 receipt, `experiments/results/modal_auth_eval_mirror/contest_auth_eval_modal-ddm_afr1_tile48_groupbin8_cuda_n600_20260831.json`"
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1771,
+          "text": "VERDICT: do NOT pursue derive-by-warp. The already-built STORE-direct 6-scalar Quantizr sidecar DOMINATES (~200x better, ~1000x cheaper). Pose IS solved (operator memory was right): store 6 targets/pair + SUPERVISE the render (--w-pose>0) to hit them -> d_pose 3.4e-5. The decisive ROW run carries pose by SUPERVISING the texture in the SegNet-NULL space (frame_0 invisible + frame_1 sub-margin chroma) so seg is protected \u2014 NOT by warping. [macOS-CPU advisory] mechanism-probe, oracle-warp upper bound, NOT byte-closed."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1819,
+          "text": "DESCENT: tau_softplus@300 FIRED \u2014 GENTLE drop (ep275 0.0040 ce -> ep300 0.0035 tau -> ep350 0.0031), slightly noisy (ep325 0.0037), transition stable (no v3-style destabilization). Diagnostic: global tau-softening only gently helps because the residual IS the hard lane-class-1 orbit (matches order-exploit FEED-dd) -> the TARGETED levers (l7@900 in-run, lane-edge next-run) are the closers. d_seg 0.0031 @ep350, need ~2.8x for goal 0.00112. PLAN: watch l7@900 (does generic hard-pixel crack the lane orbit?); next n600 ROW run fires Yousfi-levers-ON (lane-edge + Nyquist-anti-alias + chroma). Pointer UNMOVED 0.19110."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1940,
+          "text": "The convergence to the row is GATED on review+seal \u2014 TWO layers, both required BEFORE the (GPU/expensive) row run (per \"Substrate MUST be at OPTIMAL FORM before paid dispatch\" + \"Recursive adversarial review protocol 3-clean-pass\"):"
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1953,
+          "text": "-> 3 consecutive clean passes -> SEAL -> ONLY THEN the row run (train -> byte-close -> contest-CPU exact)."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1955,
+          "text": "CONVERGENCE PATH (binding): each component deep-math+optimize+seal as it lands -> WIRE sealed components -> ONE integrated recursive adversarial review + deep-math + optimization -> SEAL -> train -> byte-close -> exact. Row run GATED on the integrated SEAL (like Yousfi levers gated on a3a6674228). The efficient form = ONE integrated review+seal over the wired codec (more rigorous than N separate reviews; integration is where the risk lives). QUEUED (safe limit: 2 CPU + GPU); launch when components built + slot frees. MEANS->ENDS: converge to the row, but THROUGH the seal gate, not around it. Pointer UNMOVED 0.19110."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 22244,
+          "text": "- **SDWL1 context fold TIES (0B):** selected syntax already causal-context-coded; the registered 89,161B gain belongs to a DIFFERENT innovation symbol stream \u2014 not subtractable from a complete SDWL1 object (m6 accounting clarified)."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 24365,
+          "text": "135/135 exact parse-backs; context/mixing coders carry ZERO model bytes (state derived from the"
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 25112,
+          "text": "no new savings); QA08 (context mixing) = lossless coder swap, composes only by re-encoding the"
+        },
+        {
+          "path": ".omx/research/track_1_recursive_adversarial_review_20260508.md",
+          "line": 85,
+          "text": "The MDL calculator at `tools/mdl_lower_bound_calculator.py` uses synthetic PR101 proxy (228,958 elements, 28 tensors, 175,916 B iid floor, 148-162 KB joint floor). Verify the joint-floor estimate isn't inflated. Recheck: `cross_tensor_mi_bits_per_element_lo=0.09, hi=0.22`. Memory `feedback_pr101_joint_entropy_floor_subagent_verdict_20260507.md` cites `I_total at 0.09-0.22 bpe`. Math checks: 0.22 \u00d7 228,958 = 50,371 bits = 6,296 B (sum-of-pairs); realistic 14-32 KB once context-mixing extracts non-Markov MI. The calculator multiplies bpe \u00d7 n_elements correctly."
+        },
+        {
+          "path": ".omx/research/ddm_deferral_queue_ledger_20260729.md",
+          "line": 41,
+          "text": "| QA08 | context-MIXING coder upgrade (nncp-class logistic mixing over {prev1, spatial}) at exporter race | lv1 \u00a7D pn1-folding row-2 (named next rung, owed: bounded session) | exporter coder race re-run on final tokens | OPEN ($0; r7 harness exists) | rate rung vs SMEVR/KT-prev1 (pools law: compete) \u2014 **uh1 07-29 CEILING RE-PRICE from the xi1 receipt**: ideal 3-way H(delta\\|base,prev_coloc,warp) = 554,219 B is only **1,617 B below SMEVR realized 555,836** \u2192 mixing ceiling \u22641.6 KB \u2248 0.001 S at THIS alphabet (token stream CODING-SATURATED) | $0 | r7 successor / exporter | **CEILING-PRICED-EFFECTIVELY-CLOSED (uh1 07-29)** \u2014 reopens only with the \u226548\u00d764 granularity re-race (QA24 rider); do not spend a session here at the current alphabet \u00b7 **gr1 07-30: the \u226548\u00d764 reopen rider is NOT met by a no-retrain win \u2014 a finer grid needs the QA24 re-burn (token values don't exist at 48\u00d764 without retraining) and the token(finer-than-cell) direction is MEASURED DOMINATED at the SMEVR alphabet (cell is the efficient unit). Coarser-not-finer is the live direction. STAYS CLOSED.** |"
+        },
+        {
+          "path": ".omx/research/ddm_ma2_merged_alphabet_lane_fold_20260824.md",
+          "line": 57,
+          "text": "| g1 row-run, Lane class | 180,701 | `ws0`:89 | 4.675\u00d7 | +142,051 B = 3.35\u00d7 demand |"
+        },
+        {
+          "path": ".omx/research/ddm_ma2_merged_alphabet_lane_fold_20260824.md",
+          "line": 235,
+          "text": "`g1`'s **180,701 B** row-run price (`ws0`:89) is a **Lane-only** object and is still **4.675\u00d7** the"
+        },
+        {
+          "path": ".omx/research/ddm_lm1_learned_model_falsifier_20260826.md",
+          "line": 151,
+          "text": "Every byte figure below is `-\u03a3 log2 p(token | causal context)` under an **explicit** probability"
+        },
+        {
+          "path": ".omx/research/ddm_lm1_learned_model_falsifier_20260826.md",
+          "line": 259,
+          "text": "An independently written adaptive context-mixing coder (6 count models, online logistic mixing,"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 32,
+          "text": "`\u2212log\u2082p`, `groupbin8` returns **63.00 B** against the ledger's **63.09 B** \u2014 a **0.14%**"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 48,
+          "text": "accounting estimate. `cls_groupbin8` (40 cells) \u2192 **180,268 B, \u2212100 B**. `groupbin8_surprise`"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 72,
+          "text": "`mi1` \u00a77 justifies building `groupbin8` first because \"the decode wall is the binding constraint"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 93,
+          "text": "**`mi1`'s build order is right and its reason is wrong.** Build `groupbin8` first because it is"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 134,
+          "text": "arithmetic.** Re-indexing the 51,200-cell rr4 head by `groupbin8` gives 409,600 cells and"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 155,
+          "text": "| `mi1` `groupbin8` | 64.20 | 4.274814e-05 | 4.27\u00d7 | 12.21\u00d7 | **6.4\u00d7 \u2718** |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 156,
+          "text": "| **this arm** `groupbin8` | **63.09** | **4.200638e-05** | **4.20\u00d7** | **12.00\u00d7** | \u2014 |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 159,
+          "text": "6.42`, so it reads as bytes-divided-by-ten rather than a ratio to anything. **`groupbin8` is"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 174,
+          "text": "`groupbin8` adds one `case` of pure int64 index arithmetic plus one row in each of three tables."
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 182,
+          "text": "for how much of its own causal context has been decoded yet.**"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 191,
+          "text": "groupbin8 = (g * 8) // 190                   in 0 .. 7"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 205,
+          "text": "**0 of 190** groups does `groupbin8` vary across the group's positions \u2014 it is constant by"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 207,
+          "text": "group from its own loop variable** (`groupbin8 = group_index * 8 / 190`), not once per position."
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 312,
+          "text": "| `cls_groupbin8` | +1 member | 20 | 40 | 113,677 | \u2212100 | 180,268 | **\u2212100** | **0** | \u22126.658590e-05 |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 313,
+          "text": "| **`groupbin8_surprise`** | +1 member | 20 | 2,560 | **113,624** | **\u2212153** | **180,215** | **\u2212153** | **0** | **\u22121.018764e-04** |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 315,
+          "text": "**The winner is `groupbin8_surprise` at \u2212153 B**, the member whose context is"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 316,
+          "text": "`class \u00d7 groupbin8 \u00d7 confidence-bin` \u2014 i.e. *\"the calibration of each confidence bin depends on"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 331,
+          "text": "tracks its physical stream to under half a byte \u2014 `cls_groupbin8` \u221299.212 B ledger against"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 332,
+          "text": "\u2212100 B real (ratio **1.008**), `groupbin8_surprise` \u2212153.472 B against \u2212153 B (ratio **0.997**)."
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 367,
+          "text": "`groupbin8` feature, the member rules, and one name added to the frozen member tuple. Verified"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 392,
+          "text": "| **decoder tables** | 61.4 KB (`groupbin8_surprise`) / 0.96 KB (`cls_groupbin8`) | `counts` + `hits` + `phat_q`, int64 \u00d7 cells. Runtime memory, never archive. |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 426,
+          "text": "- **`groupbin8` is one context on one binning.** `mi1` left `tile48 \u00d7 groupbin8` (384 cells)"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 450,
+          "text": "`cls_groupbin8` clears the bar by **5\u00d7**: **\u2212100 B of real archive** at `tokens_changed = 0`,"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 471,
+          "text": "   **hoist `groupbin8` to a scalar per group** (\u00a72: it is constant across every one of the 190"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 481,
+          "text": "5. **Unpriced and cheap:** `tile48 \u00d7 groupbin8` (384 cells). The two axes are independent, the"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 503,
+          "text": "**Outputs** at `/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/` (APDataStore had"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 511,
+          "text": "| `runtime_cls_groupbin8/`, `runtime_groupbin8_surprise/` | the candidate runtimes (one file changed from the shipped tree, verified by recursive diff) |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md",
+          "line": 520,
+          "text": "**Reproduce:** `.venv/bin/python experiments/ddm_gb1_groupbin8_conditioning.py --stage"
+        },
+        {
+          "path": ".omx/research/top_submission_reverse_engineering_refresh_20260502_codex.md",
+          "line": 329,
+          "text": "- Plain CRF grayscale, broad PMG row-span, PMG row-run residual rescue, and"
+        },
+        {
+          "path": ".omx/research/ddm_pn1_pantheon_of_pantheons_completion_DAG_FEED_20260728.md",
+          "line": 15,
+          "text": "- **FEED-pn1b (rule-118 sharpening for R7):** an ADAPTIVE context-mixing coder that learns its"
+        },
+        {
+          "path": ".omx/research/ddm_cmp1_t4_rc3_tc1_composed_20260909_pointer_move_36_20260909.md",
+          "line": 59,
+          "text": "Equations leg (`tac.canonical_equations`): tac.canonical_equations: model_section_adaptive_recode_ceiling_v1 (rc3 anchor: 24-weight shared mixer \u2212201 B) + token_tail_context_mixing_bound_v1 (tc1 anchor: \u2212548 B on the move-35 field; bound-then-mix)"
+        },
+        {
+          "path": ".omx/research/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md",
+          "line": 14,
+          "text": "Queries across `.omx/research/` memos/arm receipts: `SM3R|semantic.{0,35}(coder|recode|mixer)|shared.{0,8}mixer` and `SM3R|semantic.{0,45}(coder|mix|scale)|shared.{0,12}mixer|row.scale`; the same surface expression covered `CANONICAL_RESEARCH_INDEX*`, `sub015_DAG*` FEEDs, design/SPEC documents in docs/research and `.omx/state/canonical_task_status.jsonl`. The ledger query also included `ddm_(rc1|rc2|rc3|tc1|sm1)`. Registry recall used `.venv/bin/python tools/list_canonical_equations.py --json`, selecting `model_section_adaptive_recode_ceiling_v1`, `token_tail_context_mixing_bound_v1`, and `coder_strength_substitutes_for_capacity_v1`."
+        },
+        {
+          "path": ".omx/research/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md",
+          "line": 225,
+          "text": "- Built unique semantic causal context wiring because HPAC row geometry does not match embeddings, pruning or DW/PW relationships."
+        },
+        {
+          "path": ".omx/research/einstein_kolmogorov_crux_20260719T214408Z_codex.md",
+          "line": 234,
+          "text": "| lossy row-run topology (PDW1) | **MEASURED here** source-fill rung 2: 19,371 B, `d_seg=0.0078150431`; graft on optimized fills worsens the Seg-plus-component-rate partial ordering | Genuine rate--distortion control; joint disposition remains unresolved without Pose and total archive bytes |"
+        },
+        {
+          "path": ".omx/research/ddm_hv2_arm_final_harvest_20260816.md",
+          "line": 80,
+          "text": "| 5 | `g4` free per-pixel causal context, \"89,161 B, 18.17%, zero payload\" | MEASURED in **cell space only** | UNKNOWN \u2014 RGB receiver survival never established | build an RGB receiver | unowned; hypothesis only |"
+        },
+        {
+          "path": ".omx/research/ddm_js1_reseal_skeleton_20260811.md",
+          "line": 145,
+          "text": "The pinned packet copies are NOT edited \u2014 exact-row runtime-tree custody preserved."
+        },
+        {
+          "path": ".omx/research/precoarsening_entropy_coder_probe_pr101_pr106_20260508_codex.md",
+          "line": 149,
+          "text": "Next useful reruns: after lossy coarsening, after a context-mixing model, after"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_native_grammar_worker_20260504.md",
+          "line": 108,
+          "text": "- `qrg1_row_run_grammar`: `no_byte_positive_qrg1_row_run_candidate`"
+        },
+        {
+          "path": ".omx/research/ddm_pq3_packet_rebase_jg5_20260820.md",
+          "line": 71,
+          "text": "the pinned 33-row runtime manifest, so **any** edit moves the manifest-derived tree hash."
+        },
+        {
+          "path": ".omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+          "line": 51,
+          "text": "`HPAC|RC64|calibration|context.mixing|indicator.model`."
+        },
+        {
+          "path": ".omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+          "line": 348,
+          "text": "Registered law: `token_tail_context_mixing_bound_v1` (registration receipt `.omx/research/ddm_tc1_context_mixing_bound_registration_20260909.json`; registry rows appended through `register_canonical_equation`). Anchor: the shared-predictor bound table above and the measured 180,824 B archive (\u2212549 B vs 181,373 B; twin byte-identical; public-path n600 field identity). MEASURED, `score_claim=false` until the T4 row."
+        },
+        {
+          "path": ".omx/research/ddm_hc2_wrong_half_flip_location_decomposition_20260905.md",
+          "line": 166,
+          "text": "induces a conditional law over the indicator given the causal context, so the best member of this family at that context"
+        },
+        {
+          "path": ".omx/research/ddm_hc2_wrong_half_flip_location_decomposition_20260905.md",
+          "line": 214,
+          "text": "  this frame is decoded\" axis: mi1's `groupbin8` **+64.20 B** and `group190` **+51.25 B** \u2014 both ~90\u00d7 under the bar."
+        },
+        {
+          "path": ".omx/research/ddm_hc2_wrong_half_flip_location_decomposition_20260905.md",
+          "line": 258,
+          "text": "  oracle-mirage signature, and the two numbers that price \u00a75's next step (`groupbin8` +64.20 B, `boundary_d` +5.27 B)."
+        },
+        {
+          "path": ".omx/research/ddm_cmp1_compose_rc3_tc1_20260909.md",
+          "line": 28,
+          "text": "`token_tail_context_mixing_bound_v1`. The registry's existing empirical anchors were"
+        },
+        {
+          "path": ".omx/research/ddm_cmp1_compose_rc3_tc1_20260909.md",
+          "line": 243,
+          "text": "`token_tail_context_mixing_bound_v1`. Each anchors the **180,772 B** composition,"
+        },
+        {
+          "path": ".omx/research/ddm_recall5_cl1_closed_and_gestalt_seam_correction_20260831.md",
+          "line": 89,
+          "text": "already collected by afr1 today (tile48 \u00d7 groupbin8)     \u221281    B   (byte-closed, exact)"
+        },
+        {
+          "path": ".omx/research/ddm_gc9_from_here_convocation_20260730.md",
+          "line": 154,
+          "text": "| Marpe (CABAC) \u2014 lessons-only | context-mixing over token neighborhoods | already covered: SMEVR contexts + QA08 MIX pool (gc8 row 8); no new row |"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 1,
+          "text": "# AFR1: `tile48_groupbin8` native receiver identity"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 13,
+          "text": "The address-free `tile48_groupbin8` interaction is portable to the staged generation-23 native C receiver. The Python and C context functions agree at every image coordinate, and the native receiver decoded the exact 180,002-byte AFC1 candidate into the same 3,662,409,600 raw bytes as the retained Python-reference path over all 600 pairs. The prior-law prediction survived its falsifier."
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 21,
+          "text": "| `[macOS-CPU scorer-free retained physical byte control]` | LB1 control | `tile48_groupbin8` candidate | deterministic repeat | delta |"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 34,
+          "text": "The bounded recall queried `tile48_groupbin8`, `tile48`, `groupbin8`, `native C receiver`, `receiver identity`, `RC64`, and `address-free` across `.omx/research/`, `experiments/`, `runtime-rs/native/`, the research index and DAG, the hot state, and the task ledger. `tools/list_canonical_equations.py --json` was also consulted for governing score/identity relations."
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 41,
+          "text": "The bounded scopes did not contain another current `tile48_groupbin8` native port. AFR1 therefore derived generation 23 from LB1's exact C source (`ad8cc276\u2026`, 49,539 B), copied AFC1's exact Python authority (`6462ba51\u2026`, 31,470 B), and added only the named rule. The staged C source is `3e2705f5\u2026`, 50,299 B. Runtime pin consistency and the Python/native configuration gate both passed."
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 49,
+          "text": "groupbin8 = (((x % 64) + 2 * (y % 64)) * 8) // 190"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 50,
+          "text": "context   = tile48 * 8 + groupbin8"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 108,
+          "text": "4. Fire CUDA first, then CPU, through `tools/fire_modal_auth_eval.py` with distinct claims and pair group `ddm_afr1_tile48_groupbin8_dual_axis`."
+        },
+        {
+          "path": ".omx/research/ddm_ea1_eureka_audit_20260831.md",
+          "line": 37,
+          "text": "tile48\u00d7groupbin8 \u221281 B = afr1, subtile4/row384 overlap the collected tile48 factor \u2014 afc1:"
+        },
+        {
+          "path": ".omx/research/ddm_pq13_pr_body_refresh_verdict_20260901.md",
+          "line": 42,
+          "text": "| #138, `opal_v1`, ccastillo1043, opened 2026-08-17, closed 2026-08-31 | CLOSED by YassineYousfi; explicit policy-link comment | 182,040 B, exact reported `S=0.1591495384`; lossless online rank-one projector corrector over PR #135, with 55 causal-context families | It published the decode-time-corrector mechanism class first. The packet already carries no-priority, concurrent-development accounting plus the later design-check influence; no new technical fold is owed. The closure adds a live policy-enforcement receipt. | **CONSUMED-BY-PV1/PQ12; POLICY-FOLDED-HERE** |"
+        },
+        {
+          "path": ".omx/research/ddm_pq12_afr1_reswap_20260831.md",
+          "line": 127,
+          "text": "  `cbb8d928|tile48_groupbin8`, `RECORD-WITH-REASON|contest-CPU`,"
+        },
+        {
+          "path": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+          "line": 238,
+          "text": "- TC1's complete memo and `token_tail_context_mixing_bound_v1`, together with"
+        },
+        {
+          "path": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+          "line": 255,
+          "text": "geometry ceiling, and do not substitute its free values for a causal context."
+        },
+        {
+          "path": ".omx/research/ddm_me1_micro_edit_engine_20260817.md",
+          "line": 178,
+          "text": "Real context mixing does not average \u2014 it **sharpens**, combining models multiplicatively in"
+        },
+        {
+          "path": ".omx/research/compression_as_intelligence_lineage_crossref_20260702.md",
+          "line": 76,
+          "text": "**3.3 Mahoney Large Text Compression Benchmark (mattmahoney.net/dc/text.html) \u2014 the OSS neural frontier.** Top enwik9 (bytes / peak RAM): **nncp v3.2 106,632,363 / 7.6 GB** (SOTA, online Transformer) \u00b7 cmix v21 107,963,380 / 30.95 GB \u00b7 fx2-cmix 110,351,665 / 8.8 GB \u00b7 tensorflow-compress 113,542,413 / 45.4 GB. **All top slots are online-adaptive neural/context-mixing** \u2014 no pretraining, the model learns *during* the single pass, so nothing leaks outside the counted bytes. NNCP (Bellard, C/LibNC Transformer + arithmetic coder). cmix (byronknoll, PAQ8 + LSTM mixer, \u226532 GB RAM, days per run). \u2192 **Verdict: cmix/nncp NOT a lever** (GB-RAM, hours-days, built for 10\u2078-byte corpora); on our ~KB payload they buy ~nothing while risking the 30-min budget. See \u00a79."
+        },
+        {
+          "path": ".omx/research/compression_as_intelligence_lineage_crossref_20260702.md",
+          "line": 176,
+          "text": "| 6 | **cmix / nncp heavyweight context-mixing** | NOT-a-lever | GB-RAM, hours-days, built for 10\u2078-byte text; buys ~nothing on a KB payload + risks the 30-min budget. The adjusted-rate finding proves the optimal coder for a KB target is tiny+fast. |"
+        },
+        {
+          "path": ".omx/research/ddm_jt22_mixer_context_race_verdict_20260825.md",
+          "line": 20,
+          "text": "| V-A replace | `cls_boundary_agree_homog_groupbin8` (position REPLACES ubin8) | 4,000 | 114,096 | **+319** | S1_encode_gb1_jt22_ctxA.json |"
+        },
+        {
+          "path": ".omx/research/ddm_jt22_mixer_context_race_verdict_20260825.md",
+          "line": 21,
+          "text": "| V-B cross | `cls_boundary_agree_homog_ubin8_groupbin8` (position ADDED to ubin8) | 32,000 | 113,776 | **\u22121** | S1_encode_gb1_jt22_ctxB.json |"
+        },
+        {
+          "path": ".omx/research/ddm_jt22_mixer_context_race_verdict_20260825.md",
+          "line": 25,
+          "text": "Retained at `/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/retained/`."
+        },
+        {
+          "path": ".omx/research/ddm_jt22_mixer_context_race_verdict_20260825.md",
+          "line": 34,
+          "text": "   is ~zero \u2014 the gb1 groupbin8_surprise mixer FAMILY (\u2212153 B, the 20th move) already absorbed"
+        },
+        {
+          "path": ".omx/research/codex_findings_ddm_cc2_coder_races_20260725T035900Z_codex.md",
+          "line": 37,
+          "text": "3. G4 decoder-derived causal context;"
+        },
+        {
+          "path": ".omx/research/ddm_fs1_fullstack_submission_description_20260831.md",
+          "line": 15,
+          "text": "**receiver/assembly layer** applies container un-transforms (plane2, tile48\u00d7groupbin8),"
+        },
+        {
+          "path": ".omx/research/ddm_fs1_fullstack_submission_description_20260831.md",
+          "line": 30,
+          "text": "(gb1 native-identity, jt22/jt23, lb1 patch192\u00d7bank joint re-encode, afr1 tile48\u00d7groupbin8)."
+        },
+        {
+          "path": ".omx/research/ddm_nu1_signal_in_nuance_20260831.md",
+          "line": 27,
+          "text": "win\" (#1348) IS afr1 itself \u2014 tile48\u00d7groupbin8, already harvested as pointer move 23 (delta"
+        },
+        {
+          "path": ".omx/research/ddm_pq2_packet_polish_20260817.md",
+          "line": 177,
+          "text": "  over 55 causal context families. **Zero learned bytes added**; ~49.4 MB of state regenerated at"
+        },
+        {
+          "path": ".omx/research/ddm_ad2_addressing_cost_decomposition_20260822.md",
+          "line": 107,
+          "text": "| stream | symbols | memoryless plug-in | named causal context | context-model bound | incumbent coded | incumbent gap |"
+        },
+        {
+          "path": ".omx/research/asymptotic_stacking_plus_local_max_utilization_audit_20260518.md",
+          "line": 218,
+          "text": "| 30 | pyppmd (PPMd context model) | PPMd context-mixing model for non-numeric streams | Text/schema payloads | ZERO | CPU | `[-0.001, +0.002]` vs brotli on numeric | SATURATING | pyppmd >=1.3 (Catalog #203) |"
+        },
+        {
+          "path": ".omx/research/ddm_pr6_second_family_review_moves_38_40_20260910.md",
+          "line": 113,
+          "text": "| DIFFERENT-OBJECT | A19: the masked control proves the 83-KB attribution is not detachable \u201cin the strongest sense\u201d because later causal contexts make the stream larger (gs3:1091). | The masked intervention changes 235,044 field symbols and the later probability trajectory, producing 250,892 new coder misses (`ddm_bnd2...md:149-161`). BND3's different counterfactual keeps the original field/trajectory and supplies every miss location **and true symbol** free, reducing 119,784 B to 36,525 B (`ddm_bnd3...md:61-81`). Correct: the 83,259-B oracle displacement is not a legal payload, while the masked field intervention is not evidence that unchanged-field surprise is physically inseparable. |"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 35,
+          "text": "**the shipped model's confidence does not fully account for how much of its own causal context has"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 36,
+          "text": "been decoded yet.** Eight bins of the within-tile decode-group index (`groupbin8`) return"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 62,
+          "text": "campaign built and adopted. It costs **zero stored bytes**. **But build the 8-cell `groupbin8` rung"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 243,
+          "text": "| **`groupbin8` (SCAN POSITION in the tile)** | **input present** | 8 | **+64.20** | 65.77 | 0.11 |"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 299,
+          "text": "`groupbin8`, eight bins of the 190-group decode index within the tile."
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 304,
+          "text": "| **`groupbin8` (scan position)** | **8** | **64.20** | **8.03** | **0.112** |"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 311,
+          "text": "does not fully account for how much of its own causal context has been decoded yet."
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 323,
+          "text": "wall-clock and whose cost scales with cells, `groupbin8` returns **64.20 B from 8 cells** and"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 326,
+          "text": "**And they are the only well-conditioned rows.** `groupbin8`'s largest fitted offset is **0.112** in"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 332,
+          "text": "211.13 B are upper bounds on their shippable form in a way that `groupbin8`'s 64.20 B is not.**"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 371,
+          "text": "**Scope on the seed table:** `groupbin8` and `group190` were added *after* the three-seed sweep, once"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 375,
+          "text": "sweep before quoting `groupbin8`'s 64.20 B as a \u00b1number."
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 429,
+          "text": "**Build `groupbin8` FIRST, not `patch192`.** The decode wall is the binding constraint (`fx1`:"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 431,
+          "text": "cells. `groupbin8` is **8 cells for 64.20 B**, it is the best-conditioned row on the ladder"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 433,
+          "text": "`groupbin8` (8 cells) \u2192 `tile48` (48, different axis, so it should compose) \u2192 `patch192` (192), and"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 451,
+          "text": "**Fire order (queued, not fired):** add `groupbin8` as a `Fx2ModelAxisMixer` member context and race"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 454,
+          "text": "Verdict = physical RC64 stream bytes, not the model ledger. Falsifier = the `groupbin8` rung does not"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 457,
+          "text": "worth one row:** `tile48 \u00d7 groupbin8` (384 cells) \u2014 the two axes are independent, so their join is the"
+        },
+        {
+          "path": ".omx/research/ddm_mi1_indicator_model_axis_20260824.md",
+          "line": 552,
+          "text": "**FORMULATION \u2014 static per-cell log-odds offsets over enumerable causal contexts.** Absolute patch"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_pointer_move_and_no_toy_erratum_20260831.md",
+          "line": 9,
+          "text": "Call `fc-01M1C2ZZQEQWNE0FT06R3WZJCS` \u00b7 lane `ddm_afr1_tile48_groupbin8_cuda_n600_20260831` \u00b7"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 13,
+          "text": "be a row run, pair, frame, class, connected component, boundary band, pose"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 45,
+          "text": "row-run atoms:"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 125,
+          "text": "where `phi` spans pixel fields, row runs, connected components, pose manifold"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 185,
+          "text": "- unmatched field-policy row-run atoms;"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 186,
+          "text": "- duplicate selected row-run atoms;"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 247,
+          "text": "Default positive-energy row-run policy planning emits no candidates:"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 252,
+          "text": "positive_row_run_net_count: 0"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 264,
+          "text": "not be more raw row-run atoms. The likely next basis is larger connected"
+        },
+        {
+          "path": ".omx/research/yousfi_fridrich_field_equations_20260502_codex.md",
+          "line": 292,
+          "text": "measured CMG3A body200 row-run implementation. It does not kill predictive mask"
+        },
+        {
+          "path": ".omx/research/codex_findings_ddm_dr1_realization_race_coding_gain_20260723_codex.md",
+          "line": 86,
+          "text": "Exact decode, causal-context re-encode, and parse-back reproduce the selected"
+        },
+        {
+          "path": ".omx/research/ddm_d3b_lossless_lane_factorization_20260826.md",
+          "line": 110,
+          "text": "feature extraction, causal context construction, the fixed-point logit table, and the arithmetic"
+        },
+        {
+          "path": ".omx/research/ddm_d3b_lossless_lane_factorization_20260826.md",
+          "line": 180,
+          "text": "context mixing destroys calibration; q8 adds no raw information; and q1 contributes only 732 B of"
+        },
+        {
+          "path": ".omx/research/ddm_w96a_aligned_config_renderer_window_20260826.md",
+          "line": 173,
+          "text": "**Own-vehicle frontier: S = 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600], GB1 groupbin8 archive SHA `ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4` \u2014 UNMOVED by ddm_w96a.**"
+        },
+        {
+          "path": ".omx/research/direct_description_g1_grammar_induction_20260722_codex.md",
+          "line": 29,
+          "text": "| L0 | Movable | exact row runs | 59,481 | 0 | 0 | lossless winner |"
+        },
+        {
+          "path": ".omx/research/direct_description_g1_grammar_induction_20260722_codex.md",
+          "line": 30,
+          "text": "| L0 | Lane | exact row runs | 180,701 | 0 | 0 | lossless winner |"
+        },
+        {
+          "path": ".omx/research/direct_description_g1_grammar_induction_20260722_codex.md",
+          "line": 31,
+          "text": "| L0 | Boundary | exact transition row runs | 453,123 | 0 | 0 | lossless winner |"
+        },
+        {
+          "path": ".omx/research/direct_description_g1_grammar_induction_20260722_codex.md",
+          "line": 55,
+          "text": "The exact one-production row-run totals likewise include framing: Movable 59,476+5, Lane"
+        },
+        {
+          "path": ".omx/research/direct_description_g1_grammar_induction_20260722_codex.md",
+          "line": 112,
+          "text": "   production bytes. Exact row-run and Lane semantics were already parse-backed."
+        },
+        {
+          "path": ".omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md",
+          "line": 1348,
+          "text": "  `reconstructed_mask_u8_sha256` matches `_decode_cmg3_nonzero_row_runs()`."
+        },
+        {
+          "path": ".omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md",
+          "line": 1363,
+          "text": "row-run atoms into CMG3A policies even though the nonzero-row-run grammar"
+        },
+        {
+          "path": ".omx/research/ddm_wx1r_conditioning_family_recall_inventory_20260902.md",
+          "line": 130,
+          "text": "(08-14/22) \u2192 **gb1 groupbin8 conditioning = the 20th pointer move** (conditioning-class WIN on"
+        },
+        {
+          "path": ".omx/research/ddm_lbx1_lb1_exchange_curve_20260831.md",
+          "line": 25,
+          "text": "residual to withhold.** It is a *lossless* context-mixing coder over the exact token field"
+        },
+        {
+          "path": ".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
+          "line": 199,
+          "text": "Relevant recalled laws: `token_tail_context_mixing_bound_v1`, `context_model_reorder_savings_v1`,"
+        },
+        {
+          "path": ".omx/research/ddm_pq10_codex_packet_review_round_20260820.md",
+          "line": 11,
+          "text": "describes the jg5 archive `f3bce5d2\u2026` at 180,625 B and its 33-row runtime tree"
+        },
+        {
+          "path": ".omx/research/codex_findings_ddm_dr2_scc_outside_view_20260723_codex.md",
+          "line": 85,
+          "text": "on screen-content tools, codes a palette index map with causal contexts, and"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 1,
+          "text": "# ddm_gb1 \u2014 groupbin8_surprise decode-scan conditioning: LOSSLESS \u2212153 B on the dx2 body, decode identity PROVEN, C port staged"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 11,
+          "text": "**Receipts:** `/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/` \u2014"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 12,
+          "text": "`measurement_v1/{CANDIDATE_SEAL_gb1_groupbin8.json, VERIFY.json, PATCH_groupbin8_surprise.json}` \u00b7"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 13,
+          "text": "`retained/{candidate_gb1_groupbin8_surprise.zip, S1_encode_gb1_groupbin8_surprise.json}` \u00b7"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 20,
+          "text": "`groupbin8_surprise` is a **decode-scan conditioning family** added to the F26 corrector:"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 23,
+          "text": "groupbin8 = ((((flat % WIDTH) % 64) + 2 * ((flat // WIDTH) % 64)) * 8) // 190"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 24,
+          "text": "family index = (cls * GROUP_BINS + groupbin8) * U_BINS + ubin        # 2,560 cells"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 39,
+          "text": "| **groupbin8_surprise** | **180,215** | **\u2212153** | **0** | **\u22121.0187641982769222e-4** |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 40,
+          "text": "| cls_groupbin8 (banked) | 180,268 | \u2212100 | 0 | \u22126.66e-5 |"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 63,
+          "text": "enum + rule/size/limit/joint table rows \u00b7 `family_rule_index` groupbin8 argument + case \u00b7"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 64,
+          "text": "caller `int64_t groupbin8 = (((x % 64) + 2 * (y % 64)) * 8) / 190` (all operands non-negative"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 80,
+          "text": "Canonical seal `SEAL_fire_gb1_groupbin8.json` (seal sha `9a31811d71af3dcf\u2026`, receipt-"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 98,
+          "text": "0.1481179992, source our_local_frontier_contest_cuda, lane `ddm_gb1_groupbin8_20260825`,"
+        },
+        {
+          "path": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+          "line": 134,
+          "text": "groupbin8_surprise + cls_groupbin8** (the \u2212100 B banked rung is NOT additive until the"
+        },
+        {
+          "path": ".omx/research/rep_mine_solved_binary_DAG_FEED_20260721T045500Z.md",
+          "line": 93,
+          "text": "2. Decode by causal context plus constrained predict/project. Preserve integer resize numerators,"
+        },
+        {
+          "path": ".omx/research/checkpoint_discipline_backfill_20260825.md",
+          "line": 46,
+          "text": "- commit 884bb65f1ef9409cbeda1cb02ca2b268fe7ab3e6 (2026-08-25T04:52:38Z, ddm_gb1 verdict: groupbin8_surprise ADMITTED S 0.14811799921260607 [contest-CUDA) # CHECKPOINT_DISCIPLINE_BACKFILLED: single-shot MAIN serializer landing in the 2026-08 lapse window; no multi-step subagent resume state existed to checkpoint; evidence determinized at the serializer 2026-08-25"
+        },
+        {
+          "path": ".omx/research/checkpoint_discipline_backfill_20260825.md",
+          "line": 49,
+          "text": "- commit f00d7994a5f1a60af97768dfb0db53ff83dbe9f3 (2026-08-24T18:54:45Z, ddm_gb1: decode-scan (groupbin8) conditioning instrument + re-derivation; physic) # CHECKPOINT_DISCIPLINE_BACKFILLED: single-shot MAIN serializer landing in the 2026-08 lapse window; no multi-step subagent resume state existed to checkpoint; evidence determinized at the serializer 2026-08-25"
+        },
+        {
+          "path": ".omx/research/ddm_gr1_granularity_rerace_20260730.md",
+          "line": 33,
+          "text": "  nested {L16,L8,L4,base}), **QA08** (context-mixing coder, CEILING-PRICED-CLOSED, \"reopens only"
+        },
+        {
+          "path": ".omx/research/ddm_pn1_pantheon_of_pantheons_completion_20260728.md",
+          "line": 52,
+          "text": "| 2 | **R7-sharpening: the adaptive prior is FREE (rule-118)** \u2014 a decode-time adaptive context-mixing coder (CTW/KT/mixing, nncp-class structure) learns its model from the DECODED PREFIX; zero counted prior bytes. Race it on the null-snapped stream | DERIVED (legality from our own rules; pp1 context-arith = in-tree precedent) | $0, with R7's race on T2 dumps | if adaptive-ctx \u2248 generic \u2248 iid floor on tokens, the negative honestly RE-SCOPES onto the token object (rv1 R7 falsifier) | burn rate axis (tokens ~530\u2192\u2264130 KB) |"
+        },
+        {
+          "path": ".omx/research/exact_ready_terminal_evidence_audit_20260510_codex.md",
+          "line": 99,
+          "text": "    `ready_row_runtime_tree_sha_mismatch:84afb14b741a7250046e6956b00710be02615b8cc500551f77576546245dfaf2!=748b99d3bb63372eeff8f784cd0b9589a3b05c781e3517cd426810dfe48a5382`"
+        },
+        {
+          "path": ".omx/research/optimal_start_card_366_refoundation_20260725.md",
+          "line": 288,
+          "text": "- CONFLICTS DISSOLVED AS LAYERS: R5 context-mixing (probabilities) + R6 syndrome (channel"
+        },
+        {
+          "path": ".omx/research/ddm_tc3_t4_lane_predictor_tail_20260910_pointer_move_41_20260910.md",
+          "line": 1,
+          "text": "# FORTY-FIRST POINTER MOVE \u2014 S 0.13758600733559048 @ 180,154 B [contest-CUDA T4 n600]: tc3: a causal lane-boundary context map added to the shared tail mixer, predictor code in the receiver (rule 118), literal public-entrypoint output identity \u2014 S 0.13758600733559048 @ 180,154 B, \u0394 \u22125.26e-5 (2.63\u00d7 bar), projection exact (2026-09-10)"
+        },
+        {
+          "path": ".omx/research/ddm_tc3_t4_lane_predictor_tail_20260910_pointer_move_41_20260910.md",
+          "line": 31,
+          "text": "tc2/tc3: a SIXTH context map for tc1's 35-weight shared tail mixer \u2014 a causal lane-boundary predictor built at decode time from already-decoded tokens (per-row lane fit), with the predictor's CODE in the receiver (free under rule 118; no fitted table) and the mixer's new weights counted. Priced closed-form first on the move-37 field (tc2: GT-distance oracle map 5,480 B ideal; minimal causal predictor 82.77 B ideal / 78 B real), then carried through the receiver on move 40 (tc3): full n600 twin encodes, source-archive reconstruction, structured public-entrypoint smoke, and LITERAL public-entrypoint output identity on all 3,662,409,600 output bytes \u2014 distortion identical by construction. The better predictor (run tracking across rows + joint re-calibration of the mixer) saved only 37 B and tripped its pre-registered stop (formulation scope). Exact T4: seg 0.00010636, pose 4.89e-6, 180,154 B \u2192 S 0.13758600733559048, \u0394 \u22125.26e-5 vs move 40 (2.63\u00d7 bar); projection residual EXACTLY 0.0 \u2014 the first row of the wave whose projection was the exact value (the field, renders and printed components are unchanged; only 79 tail bytes moved)."
+        },
+        {
+          "path": ".omx/research/feedback_round3_new_minds_council_20260725.md",
+          "line": 142,
+          "text": "**Mahoney (PAQ/context-mixing).** Assumption: mixing many weak decoder-reproducible models"
+        },
+        {
+          "path": ".omx/research/ddm_sr1_implicit_edge_conditioning_20260811.md",
+          "line": 151,
+          "text": "  `Lane-over-Road`, `HPAC boundary predicted`, `causal context partition`,"
+        },
+        {
+          "path": ".omx/research/ddm_sx2_g2_gate_and_displacement_carrier_20260803.md",
+          "line": 206,
+          "text": "`experiments/ddm_sx2_conditional_mdl.py`. Order-4 causal context `(W, N, NW, NE)` over"
+        },
+        {
+          "path": ".omx/research/exact_dispatch_authority_runtime_edge_case_hardening_20260516_codex.md",
+          "line": 36,
+          "text": "  - allows a terminal-row runtime mismatch to disambiguate the terminal result"
+        },
+        {
+          "path": ".omx/research/ddm_gest1_decoupling_gestalt_20260831.md",
+          "line": 18,
+          "text": "| **decoder-derived conditioning** | patch192 \u2212109 B \u00b7 `tile48\u00d7groupbin8` \u221281 B \u00b7 `miss_rank8` \u22122 B (afc1's census: the ONE family with fresh full-n600 exact-lb1 experiments) | decoder computes context from `(x,y)` + already-decoded symbols; **stores nothing new** | **zero \u2014 decoded symbols unchanged** |"
+        },
+        {
+          "path": ".omx/research/ddm_rv17_wave_end_review_round20_SEAL_20260820.md",
+          "line": 70,
+          "text": "- The frozen gen6 packet: archive `df7fd266e\u2026` @ 180,456 B, its 36-row runtime tree, and the"
+        },
+        {
+          "path": ".omx/research/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+          "line": 22,
+          "text": "| jt21 `cls_groupbin8` collection | `a117480b2f79efff194ccf3c54520039579ea3f5efbc3f35cf881b9945d5ffe9` | \u221223 B vs gb1 | candidate **180,192 B**, sha `ec0dd68ff241070f1c76d5d0da4d8a89b33039bcf56528729a791ec9fd66aef3`; token stream 113,601 B; `tokens_changed=0`; source control byte-identical | **YES.** Retained exact archive and stream; source runtime pin `(sha,bytes)` is consistent. | **\u221223 B** already present in the joint base |"
+        },
+        {
+          "path": ".omx/research/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+          "line": 41,
+          "text": "| jt21 `cls_groupbin8`, \u221223 B exact | Retained 180,192 B archive; banked 7 B short of the ~30 B bar. | **CONSUMED** as the physical joint base. |"
+        },
+        {
+          "path": ".omx/research/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+          "line": 45,
+          "text": "| mi1 `groupbin8`, +64.1961 B held-out | Exact mechanism shipped as gb1 `groupbin8_surprise`; jt21 added `cls_groupbin8`. | **CONSUMED.** |"
+        },
+        {
+          "path": ".omx/research/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+          "line": 46,
+          "text": "| mi1 `group190`, +51.2466 B held-out | Dominated in mi1 by groupbin8; no independent nomination or physical receipt. | **DEAD / DOMINATED.** |"
+        },
+        {
+          "path": ".omx/research/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+          "line": 87,
+          "text": "C corrector was extended with the exact jt21 `cls_groupbin8` and lb1 `patch192_only` rules. The"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 77,
+          "text": "| shipped RC64 token payload `G(X|M)` | `/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/retained/afc1_control/tail_afc1_tile48_groupbin8.bin` | 113,411 | `5601d6fd792c60c176e7cb7478e6033c4ed9a7e87404582340ed3f50ed60cfe3` |"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 78,
+          "text": "| exact per-frame RC64 bit ledger | `\u2026/retained/afc1_control/bits_per_frame_afc1_tile48_groupbin8.npy` | 4,928 | `9954e90eb88fe5227f2899a569fe47105cf34473e12d0c018fcdc8b176722d1d` |"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 80,
+          "text": "| tile48/groupbin8 HPAC receiver | `\u2026/runtime_candidate_native/runtime/f26_hpac_native.py` | 26,781 | `f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba` |"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 107,
+          "text": "| `JT22` | `ddm_jt22_mixer_context_race_verdict_20260825.md`, `23125ea4\u2026c107` | replacement groupbin8 +319 B; added cross \u22121 B on its named object; context wins are joint-object specific |"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 137,
+          "text": "- `D3` \u2014 21/23-family corrector plus tile48/groupbin8 mixer contexts/experts."
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 202,
+          "text": "| 2 | retained-payload custody and post-measurement re-enumeration | 84 | 0 | AFR1 tile48/groupbin8, not older LB1, is the live distortion parent; the new 5,506-record set is a candidate within an existing cell, not a new component |"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 334,
+          "text": "`BR2`, `BLP1`, `QX`, `QBT2B`, `AFR1`, `LB1`, `IX2TOK01`, `RC64`, `HPAC`, `groupbin8`, `mixer`,"
+        },
+        {
+          "path": ".omx/research/ddm_xov1_crossover_pass_20260901.md",
+          "line": 349,
+          "text": "- AFR1's tile48/groupbin8 stream is 113,411 B and its exact field is `cc10\u2026`, not the older 113,588 B"
+        },
+        {
+          "path": ".omx/research/ddm_ef1_token_entropy_floor_20260822.md",
+          "line": 11,
+          "text": "turn well above 71,395 B, so the raw-symbol PPMd suffix-context and ZPAQ generic context-mixing routes"
+        },
+        {
+          "path": ".omx/research/ddm_ef1_token_entropy_floor_20260822.md",
+          "line": 82,
+          "text": "### General-purpose context mixing"
+        },
+        {
+          "path": ".omx/research/ddm_ef1_token_entropy_floor_20260822.md",
+          "line": 85,
+          "text": "the existing repository's named strong local context-mixing baseline. It transmits no learned"
+        },
+        {
+          "path": ".omx/research/ddm_ef1_token_entropy_floor_20260822.md",
+          "line": 160,
+          "text": "  and more generic context-mixing effort do not supply the 42,382 B demand."
+        },
+        {
+          "path": ".omx/research/ddm_ef1_token_entropy_floor_20260822.md",
+          "line": 190,
+          "text": "  context-mixing baseline and label it local-only without a bundled runtime. EF1 therefore measured"
+        },
+        {
+          "path": ".omx/research/ddm_ef1_token_entropy_floor_20260822.md",
+          "line": 238,
+          "text": "- ZPAQ v7.15 generic context mixing, methods 1\u20135: best 365,322 B; method 5's prefix-average and"
+        },
+        {
+          "path": ".omx/research/ddm_oc2_orthogonal_conditioning_charts_20260829.md",
+          "line": 44,
+          "text": "the query family `patch192|conditioning|groupbin8|scan.order|magnitude.rank|temporal.*class|causal.*class`,"
+        },
+        {
+          "path": ".omx/research/ddm_oc2_orthogonal_conditioning_charts_20260829.md",
+          "line": 51,
+          "text": "evidence in `ddm_or1`: the live body already ships `groupbin8_surprise`, so scan-order phase is"
+        },
+        {
+          "path": ".omx/research/ddm_oc2_orthogonal_conditioning_charts_20260829.md",
+          "line": 114,
+          "text": "and pre-mixer non-argmax mass rank, with scan phase already consumed by shipped groupbin8. It is"
+        },
+        {
+          "path": ".omx/research/ddm_oc2_orthogonal_conditioning_charts_20260829.md",
+          "line": 143,
+          "text": "- A new scan-phase relabel is closed as duplicate structure: the live body already ships the gb1 `groupbin8_surprise` scan-order chart."
+        },
+        {
+          "path": ".omx/research/ddm_wh1_wrong_half_decomposition_20260825.md",
+          "line": 52,
+          "text": "terms `token`, `wrong`, `indicator`, `which`, `margin`, `groupbin8`, `HPAC`, `F26`, `stationarity`,"
+        },
+        {
+          "path": ".omx/research/ddm_xi2_xi_context_full_scale_promotion_20260812.md",
+          "line": 51,
+          "text": "`causal_context_for_frame -> derive_xi_context -> XI1 warp_previous_partition -> tac.lie SE(3) class composite`"
+        },
+        {
+          "path": ".omx/research/ddm_hx1_pr_wave_harvest_20260817.md",
+          "line": 58,
+          "text": "2. **\"55 causal context families\" are NOT a taxonomy \u2014 they are 55 Cartesian index expressions**"
+        },
+        {
+          "path": ".omx/research/ddm_hx1_pr_wave_harvest_20260817.md",
+          "line": 332,
+          "text": "- **opal's \"55 causal context families\" are shallower than the phrase suggests** (relay item 2),"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_cpu_axis_timeout_verdict_20260902.md",
+          "line": 9,
+          "text": "the lineage or family \u2014 a lighter-decode receiver (e.g. generation 8 without the context-mixing"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_cpu_axis_timeout_verdict_20260902.md",
+          "line": 39,
+          "text": "attribution: the five post-rc2 lossless stages (fx5 integer log-odds context mixing \u00b7 dx2"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_cpu_axis_timeout_verdict_20260902.md",
+          "line": 40,
+          "text": "group-conditioned contexts \u00b7 gb1/afr1 tile48\u00d7groupbin8 conditioning \u00b7 lb1 joint collect) each"
+        },
+        {
+          "path": ".omx/research/ddm_afr1_cpu_axis_timeout_verdict_20260902.md",
+          "line": 42,
+          "text": "context mixing has no GPU to hide behind on the CPU axis."
+        },
+        {
+          "path": ".omx/research/ddm_xi1_carried_xi_inter_race_20260729.md",
+          "line": 15,
+          "text": "consumers: [ddm_deferral_queue_ledger_20260729, QA06_wr1_waterfill, QA08_context_mixing,"
+        },
+        {
+          "path": ".omx/research/ddm_xi1_carried_xi_inter_race_20260729.md",
+          "line": 173,
+          "text": "   and QA08 context-mixing (nncp-class logistic over {prev1, spatial} \u2014 note the carried-\u03be warp is"
+        },
+        {
+          "path": ".omx/research/ddm_xi1_carried_xi_inter_race_20260729.md",
+          "line": 201,
+          "text": "levers that remain (QA06 wr1 waterfill; QA08 context-mixing) rather than re-characterizing this"
+        },
+        {
+          "path": ".omx/research/ddm_gc17_from_here_gradient_not_coordinates_20260801.md",
+          "line": 268,
+          "text": "entropy model on causal context is the solved problem in learned compression, and we are on the"
+        },
+        {
+          "path": ".omx/research/four_hour_floor_push_stack_opportunity_review_20260504_codex.md",
+          "line": 178,
+          "text": "   atoms, not to dispatch raw CMG/row-run candidates."
+        },
+        {
+          "path": ".omx/research/ADVISORY_sdf_delayed_event_resume_artifact_costate_closure_20260710.md",
+          "line": 614,
+          "text": "   narrow run discovery and log liveness."
+        },
+        {
+          "path": ".omx/research/ac_bolt_on_post_coarsening_measured_config_retired_20260508_codex.md",
+          "line": 50,
+          "text": "3. The engine is FSE-tANS, rANS, constriction, or context-mixing AC with"
+        },
+        {
+          "path": ".omx/research/codex_findings_c0b_exact_residual_composition_20260726_codex.md",
+          "line": 126,
+          "text": "- 570,049 row runs, mean `950.0817` per pair-end field;"
+        },
+        {
+          "path": ".omx/research/ddm_oq1_orphan_queue_drain_20260817.md",
+          "line": 227,
+          "text": "| COMPOSITION | 12 | gk2 L-token-quant sweep through byte-close; QA08 context-MIXING coder; `--existence-hinge-weight` (#920, built in TR1, 6 config fields, default 0.0 = OFF, 31 tests); **`boundary_gated_token_code_width`** (see below) |"
+        },
+        {
+          "path": ".omx/research/ddm_hdp1_hidden_dynamics_gestalt_20260831.md",
+          "line": 47,
+          "text": "**Evidence:** wins \u2014 tile48\u00d7groupbin8 re-grids on free tile/group boundaries (afr1, #1353);"
+        },
+        {
+          "path": ".omx/research/ddm_bx1_basin_minimum_adjudication_verdict_20260901.md",
+          "line": 25,
+          "text": "> small receiver-causal context escapes remain, while no measured direction closes the 42,016 B"
+        },
+        {
+          "path": ".omx/research/ddm_bx1_basin_minimum_adjudication_verdict_20260901.md",
+          "line": 90,
+          "text": "| Address-free census | **23 families / 18 strict members / 17 built or sealed / 1 direct transform absent.** Fresh exact-body physical evidence exists for 1/18 member families, with three instances. AFC1's composite causal context lands 180,002 B, **\u221281 B**, unchanged encoded tokens, deterministic repeat. Source: `ddm_afc1_address_free_census_20260831.md:13-22,58-84,86-106`. | A narrow receiver-causal context escape exists inside the broad basin. | Independent native receiver identity was owed at measurement time; AFR1 later supplied the exact owned pointer row. The saving is 0.19% of the 42,016 B demand. |"
+        },
+        {
+          "path": ".omx/research/closure_reaudit_reopen_ledger_20260618T012325Z.md",
+          "line": 68,
+          "text": "| **R-7** | **Arithmetic/range/ANS bolt-on on HNeRV-class streams** (`feedback_ac_bolt_on_real_encoder_smoke_falsified`; `markov1_aac_falsified`) | retired: Brotli q11 dominates AC by 17.6% on the K-coarsened raw-int8 weight stream (Brotli\u2248Huffman-optimal there) | **REOPEN-IMPLEMENTATION (substrate-scoped).** SOUND-KILL for *raw-int8-weights at K-coarsening with a constant model* (the algebra: Brotli static-Huffman beats AC's modeling overhead on a 247-symbol skewed stream). But the self-flagged reactivation configs (#1 pre-coarsening 256-sym, #2 rms<0.04, #3 rANS/FSE-tANS/context-mix, #4 joint-header amortization) are UNTESTED, and PR#103 SILVER won with AC on HNeRV *quantized features* (a different distribution). bc20 latents/features \u2260 raw int8 weights. | **MED** (this is R-3's open lever for the latent stream specifically) | run constriction rANS/context-mix on the bc20 latent stream (full 256 alphabet, joint header) vs brotli, $0 | context-mixing / learned-PMF AC (prototype used a constant static model = worst case for AC) |"
+        },
+        {
+          "path": ".omx/research/einstein_kolmogorov_crux_DAG_FEED_20260719.md",
+          "line": 66,
+          "text": "                +--> lossy row-run topology 2/3/4               [distinct family]"
+        },
+        {
+          "path": ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md",
+          "line": 58,
+          "text": "- DDS1 measured that the born geometry carries only ~613 B of information the HPAC causal context"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_run_grammar_worker_20260504.md",
+          "line": 5,
+          "text": "Local-only PR85 QMA9 QRG1 row-run grammar byte screen. No scorer, GPU eval,"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_run_grammar_worker_20260504.md",
+          "line": 34,
+          "text": "The QRG1 row-run compiler screened seven deterministic local modes:"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_run_grammar_worker_20260504.md",
+          "line": 62,
+          "text": "- `no_byte_positive_qrg1_row_run_candidate`"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_run_grammar_worker_20260504.md",
+          "line": 63,
+          "text": "- `qma9_adaptive9bin_beats_screened_row_run_payloads`"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_run_grammar_worker_20260504.md",
+          "line": 69,
+          "text": "the planning-only `QRG1` row-run grammar. If a future QRG1 variant becomes"
+        },
+        {
+          "path": ".omx/research/pr85_qma9_run_grammar_worker_20260504.md",
+          "line": 72,
+          "text": "- add a reviewed QRG1 row-run decoder to the robust_current inflate path"
+        },
+        {
+          "path": ".omx/research/external_optimizer_research_metalagrangian_20260502_worker.md",
+          "line": 193,
+          "text": "# Practical field-policy planner over existing C067 row-run atom ledgers."
+        },
+        {
+          "path": ".omx/research/self_compression_full_pipeline_audit_20260502_codex.md",
+          "line": 261,
+          "text": "row_run_atoms=164948"
+        },
+        {
+          "path": ".omx/research/self_compression_full_pipeline_audit_20260502_codex.md",
+          "line": 342,
+          "text": "implementation family. The useful signal is that row-run atom repair preserves"
+        },
+        {
+          "path": ".omx/research/self_compression_full_pipeline_audit_20260502_codex.md",
+          "line": 348,
+          "text": "PMG row-run-only archive."
+        },
+        {
+          "path": ".omx/research/ddm_gc7r_queue_recall_and_convocation_20260729.md",
+          "line": 90,
+          "text": "(context-MIXING owed, QA08), Rissanen (the floor is H(tokens|context) via a real sequential coder"
+        },
+        {
+          "path": ".omx/research/ddm_gc7r_queue_recall_and_convocation_20260729.md",
+          "line": 158,
+          "text": "| 8 | **Exporter coder round 2: context-MIXING + Cl(2) probe + VQ-codebook + token-LOTTO matched-byte races (QA08/QA09/QA12/QA13)** | rate rungs beyond SMEVR; pools law \u2014 race, never sum | $0 | each row's pre-registered byte bar | DUE/HELD-RACE | r7 successor; exporter |"
+        },
+        {
+          "path": ".omx/research/ddm_ig1_implicit_carriage_gestalt_20260821.md",
+          "line": 121,
+          "text": "| L3 \u2014 decoder amortization | **SUPPORTED WITH A REAL-CODER CONDITION** | TO1 saves `105 B` with decoded fields unchanged; G4's causal context saves `89,161 B` (`18.166685%`) on its stream, while its boundary-distance proxy worsens the real coder. WS0 pays `36,553 B` for explicit topology/header/rank. | Generic context may be free code, but video-derived context parameters are counted and ideal entropy is non-authority. Only a same-object real re-encode establishes amortization. |"
+        },
+        {
+          "path": ".omx/research/ddm_ig1_implicit_carriage_gestalt_20260821.md",
+          "line": 227,
+          "text": "   token, causal context, and direct labels. This added the two genuine slogan counter-instances and"
+        },
+        {
+          "path": ".omx/research/codex_session_summary_20260726_c0b_exact_residual_composition_codex.md",
+          "line": 66,
+          "text": "- V9 target source geometry: 570,049 row runs and successive pair-end change"
+        },
+        {
+          "path": ".omx/research/ddm_cc1_coolchic_c3_lesson_harvest_DAG_FEED_20260724.md",
+          "line": 95,
+          "text": "`MAHONEY_CONTEXT_MIXING`, `WILLEMS_CTW`,"
+        },
+        {
+          "path": ".omx/research/codex_session_summary_20260524T120607Z_codex.md",
+          "line": 137,
+          "text": "  per-row runtime/utility, not a fixed `rows_per_root`."
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 22,
+          "text": "seed. Queries included `afr1|tile48_groupbin8|lb1|jt21|jt22|jt23|gb1`, every archive"
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 37,
+          "text": "  `groupbin8_surprise` at 180,215 B, while LB1 consumes the separately retained JT21"
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 39,
+          "text": "- The admitted JT21 runtime carries both `groupbin8_surprise` and `cls_groupbin8`."
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 40,
+          "text": "  Treating `cls_groupbin8` as a singleton stage was falsified during this arm and is not"
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 60,
+          "text": "| GB1 collection, pointer branch | `experiments/ddm_gb1_groupbin8_conditioning.py` + physical `ddm_jg2_tail_reencode.py` | `976f706d\u2026`, 180,368 B | `ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4`, 180,215 B | `.omx/research/ddm_gb1_groupbin8_conditioning_20260824.md`; `ddm_gb1_groupbin8_verdict_20260824.md` |"
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 63,
+          "text": "| AFR1 `tile48_groupbin8` | `experiments/ddm_afr1_tile48_receiver_identity.py` + physical `ddm_jg2_tail_reencode.py` | `5b856e66\u2026`, 180,083 B | `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`, 180,002 B | `.omx/research/ddm_afr1_pointer_move_and_no_toy_erratum_20260831.md` |"
+        },
+        {
+          "path": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 141,
+          "text": "- The first honest wiring used the standalone `cls_groupbin8` runtime as JT21. It"
+        },
+        {
+          "path": ".omx/research/ddm_bg1_bilinear_gate_pricing_20260814.md",
+          "line": 354,
+          "text": "- A bare \u201cadd semantic or latent context\u201d proposal is closed as fake novelty: CP135/F26 already has semantic tokens, causal context, and a learned 600x8 frame FiLM state."
+        },
+        {
+          "path": ".omx/research/ddm_rb1_born_small_renderer_build_20260826.md",
+          "line": 38,
+          "text": "The shipped GB1 runtime at `/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/runtime_fire_v1/` required a current-version patch: the historical WD3 patch targeted the older e480b source text and failed closed on GB1. The RB1 patch adds only a `WD3Q` semantic dispatch while retaining WANS1, SD1M, and SM3R branches. A context-managed patched copy of the shipped runtime parsed the retained D56 packet and produced a byte-identical frame to the local receiver on pair 0 of the exact BS3 parsed field:"
+        },
+        {
+          "path": ".omx/research/ddm_cl2_t4_lambda1_control_repack_20260905_pointer_move_26_20260905.md",
+          "line": 31,
+          "text": "The HPAC prior (the context-mixing arithmetic coder's learned model, 13,515 B IHS1-packed on the shipped fs2 mixer) was re-trained under"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 1339,
+          "text": "Nonzero row-run closed archive byte screen:"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 1392,
+          "text": "  `CMG3A` adaptive global nonzero-row-run selection. It should choose residual"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 1393,
+          "text": "  row-run atoms by foveal/ego-motion/hard-pair/class/boundary priors under a"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 1876,
+          "text": "  adds compact_row_run_residual_over_source_proxy"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 1902,
+          "text": "estimated row-run residual bytes:"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 1928,
+          "text": "under either practical fixed row-run coding or an optimistic arithmetic-coded"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 2432,
+          "text": "### Fine PMG row-run atom selector"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 2441,
+          "text": "row_run_atoms=164948"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 2497,
+          "text": "row-run-only rescue as a measured implementation, not charged mask grammar or"
+        },
+        {
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "line": 2498,
+          "text": "atom planning broadly. Do not queue another PMG row-run-only T4 promotion."
+        },
+        {
+          "path": ".omx/research/ddm_pr1_pose_resolve_on_renderer_change_20260904.md",
+          "line": 302,
+          "text": "The AFR1 row (`experiments/results/modal_auth_eval_mirror/contest_auth_eval_modal-ddm_afr1_tile48_groupbin8_cuda_n600_20260831.json`,"
+        },
+        {
+          "path": ".omx/research/ddm_qbw1_builder_first_rung_20260827.md",
+          "line": 193,
+          "text": "- `GB1|groupbin8|ba1f3830...|decoded_tokens_instrumented`;"
+        },
+        {
+          "path": ".omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+          "line": 87,
+          "text": "  causal context. It does not close the row-history mechanism tested here."
+        },
+        {
+          "path": ".omx/research/codex_findings_ddm_sy1_pantheon_synergy_20260725_codex.md",
+          "line": 40,
+          "text": "3. **Several apparent conflicts are layers.** R5 context mixing estimates"
+        },
+        {
+          "path": ".omx/research/rep_mine_solved_binary_20260721T045500Z.md",
+          "line": 180,
+          "text": "| 3 | causal context automaton \u00b7 arithmetic code \u00b7 labels\u2192symbols \u00b7 class \u00b7 probability/channel split | **255,288 exact partition** | partition and any fixed learned tables | arithmetic coder and decoded-history adaptation | #557 \u00b7 RGB/Pose receiver absent |"
+        },
+        {
+          "path": ".omx/research/ddm_bd1_bidirectional_pyramid_context_20260905.md",
+          "line": 153,
+          "text": "the HPAC integer context-mixing model over this GT SegNet argmax label field.* The closure covers every"
+        },
+        {
+          "path": ".omx/research/ddm_bd1_bidirectional_pyramid_context_20260905.md",
+          "line": 157,
+          "text": "What is **NOT** closed, and must not be read as closed: (a) *more causal context* \u2014 additional PAST planes at"
+        },
+        {
+          "path": ".omx/research/ddm_bf1_20260805/BF1_RECEIPT_20260805.md",
+          "line": 26,
+          "text": "| `lossless_row_runs` | `335401` | `693499` | `True` | `1.000000` | `1.000000` | `1.000000` | `1.000000` | `1.813221` | `False` |"
+        },
+        {
+          "path": ".omx/research/ddm_bf1_20260805/BF1_RECEIPT_20260805.md",
+          "line": 50,
+          "text": "- **FOLDED** `sp1-contour`: explicit contour support stays formulation-negative for this BF1 field race; do not rerun unless a new contour decoder beats row-run/Lane-crop bytes."
+        },
+        {
+          "path": ".omx/research/ddm_op1r_20260809/OP1R_PATH.md",
+          "line": 259,
+          "text": "| edge-conditioned causal context sizing only | CR1 selected-support ratio applied to CPR1 token bytes | `[PROJECTED, weak cross-object basis] 19.221% * 116,980 = 22,485 token B before added model/tag cost` | `[PROJECTED sizing] -0.0149717 S_rate before overhead` | NOT PROMOTED and not a byte credit; Step 3 must obtain the same-object full-archive price |"
+        },
+        {
+          "path": ".omx/research/ddm_op1r_20260809/OP1R_PATH.md",
+          "line": 567,
+          "text": "| CR1 edge support | `[MEASURED byte-only n600] 575,095 -> 464,557 B`, `-110,538 B` or `-19.221%`, but on a selected-support object larger than CPR1 | FOLDED as a byte credit; causal-context mechanism alone enters Step 3 |"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GPU_ROUTING_VARIANTS.md",
+          "line": 3,
+          "text": "> **LIVE AFR1 OVERRIDE.** Archive `cbb8d928\u2026`, 180,002 B, 38-row runtime tree"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_V2_PROVENANCE_ADDENDUM.md",
+          "line": 24,
+          "text": "groupbin8 \u00b7 micro-edit realized-acceptance engine \u00b7 in-compile Schur compensation \u00b7"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GENERATION_LOG.md",
+          "line": 18,
+          "text": "| 7 | `ddm_afr1_tile48_groupbin8` (five lossless coder/container moves after rc2; final move is tile48\u00d7groupbin8) | 180,002 | `cbb8d928a8ccdd3f\u2026` | **0.14797617125559104** | **ACTIVE, HOLD** |"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GENERATION_LOG.md",
+          "line": 180,
+          "text": "**The ck1 lineage does not contain either file.** The 32-row runtime manifest"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GENERATION_LOG.md",
+          "line": 254,
+          "text": "sidecars** that are not in the 33-row runtime manifest. None of them reached the"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_FINAL_DRAFT_TIGHT.md",
+          "line": 66,
+          "text": "  integer log-odds context mixing, group-conditioned token contexts, an"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/ADVERSARIAL_REVIEW_SCAFFOLD.md",
+          "line": 7,
+          "text": "> 38-row runtime `6cdfa27d\u2026`, `[contest-CUDA]` `0.14797617125559104`). The next"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/ADVERSARIAL_REVIEW_SCAFFOLD.md",
+          "line": 14,
+          "text": "> composed candidate (`df7fd266e1b7488c\u2026` / 180,456 B, 36-row runtime tree"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/SWAP_PROCEDURE.md",
+          "line": 269,
+          "text": "ck1 lineage does not contain either file \u2014 the 32-row runtime manifest does not"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/SWAP_PROCEDURE.md",
+          "line": 280,
+          "text": "archive `df7fd266e1b7488c\u2026`/180,456 B, 36-row runtime tree `fdd57749\u2026`,"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md",
+          "line": 165,
+          "text": "reconstruction is unchanged. Their implementation uses 55 causal context families and a per-slot"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md",
+          "line": 201,
+          "text": "| `fx1` | fixed-point integer log-odds mixer | `mechanism-adopt-with-attribution` | The **device-exact fixed-point formulation is ours** (radicals rather than lookup tables, because IEEE requires correctly-rounded `sqrt` but not `log`/`exp`). The **log-odds / context-mixing idea is not**: it is the PAQ lineage (Matt Mahoney), and in this contest it appears in PR #138 (\u00a73) and PR #136. Claim the formulation, cite the lineage. |"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md",
+          "line": 255,
+          "text": "context design are ours; the log-odds / context-mixing idea is the PAQ lineage (Matt Mahoney),"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md",
+          "line": 642,
+          "text": "| gb1 | groupbin8 causal conditioning | 180,215 | 0.14811799921260607 | `ours-original` lossless coder decision |"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md",
+          "line": 644,
+          "text": "| **AFR1** | **tile48\u00d7groupbin8 context interaction** | **180,002** | **0.14797617125559104** | **`ours-original` lossless coder/container decision** |"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md",
+          "line": 6,
+          "text": "> 180,002 B, member `p` 179,902 B, 38-row runtime tree"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md",
+          "line": 65,
+          "text": "> archive** (`f3bce5d2\u2026`, 180,625 B) under a **different 33-row runtime tree** \u2014 a"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GAP_REPORT.md",
+          "line": 4,
+          "text": "> 38-row runtime `6cdfa27d\u2026`, `[contest-CUDA]` T4 n600"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GAP_REPORT.md",
+          "line": 12,
+          "text": "> (`df7fd266e1b7488c\u2026` / 180,456 B, 36-row runtime tree `fdd57749\u2026`,"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/FREEZE_CHECKLIST.md",
+          "line": 29,
+          "text": "- AFR1 archive and 38-row runtime rehashed from disk."
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/README_PUBLIC.md",
+          "line": 4,
+          "text": "`ddm_afr1_tile48_groupbin8`."
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_FINAL_DRAFT.md",
+          "line": 85,
+          "text": "  log-odds context mixing, group-conditioned token contexts, an address-free"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/COMPLIANCE_RUNBOOK.md",
+          "line": 399,
+          "text": "at 180,456 B, member `p` 180,356 B stored; 36-row runtime tree"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/COMPLIANCE_RUNBOOK.md",
+          "line": 488,
+          "text": "at 180,002 B, member `p` 179,902 B, 38-row runtime tree"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/COMPLIANCE_RUNBOOK.md",
+          "line": 515,
+          "text": "  --expected-lane-id ddm_afr1_tile48_groupbin8_cuda_n600_20260831 \\"
+        },
+        {
+          "path": ".omx/research/ddm_pq1_submission_packet_prep_20260815/COMPLIANCE_RUNBOOK.md",
+          "line": 516,
+          "text": "  --expected-job-id modal:ddm_afr1_tile48_groupbin8_cuda_n600_20260831 \\"
+        },
+        {
+          "path": ".omx/research/ddm_wc2_20260808/WC2_FINDINGS.md",
+          "line": 34,
+          "text": "`concurrent-cpu-verdict` runs the real `torch-verdict` mode in a subprocess process group with CPU thread env capped at 4 while the guarded Metal train row runs. Its output is custody-recorded separately and folded into the row after the train subprocess exits."
+        },
+        {
+          "path": ".omx/research/ddm_rr1_20260809/RECALL_AUDIT.md",
+          "line": 46,
+          "text": "| 13 FOLDED | Exact causal context-partition codec; `src/tac/boundary_math/context_partition_codec.py@ae601fc8fde93f630bd871e1fb4970e13f3e79bd` | Historical full n600 CPC1 255,288 B; prototypes 669-873 B/frame. | A1 complete codec, but over 2x PR130 tokens. | Do not retry as replacement. Individual zero-parameter features may enter rank 7 only. |"
+        },
+        {
+          "path": ".omx/research/ddm_et2_20260806/RECEIPT.md",
+          "line": 84,
+          "text": "- `q31` is a Q3-first Road/Lane target solver on qo1, not the phase-field projected-static gate, so et2 needed a narrow runner rather than reusing q31 directly."
+        },
+        {
+          "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_selective_topology_acquisition_20260726.md",
+          "line": 79,
+          "text": "row-run programs are representable today, this landing adds no speculative"
+        },
+        {
+          "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_selective_topology_acquisition_20260726.md",
+          "line": 133,
+          "text": "- `SOURCE_TARGET_ROW_RUN_BOX_V1`: exact horizontal runs grouped by source and"
+        },
+        {
+          "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_selective_topology_acquisition_20260726.md",
+          "line": 135,
+          "text": "- `TARGET_BIRTH_SOURCE_DEATH_ROW_RUN_BOX_V1`: target births coalesced across"
+        },
+        {
+          "path": ".omx/research/ddm_bnd3_20260910/RECALL.md",
+          "line": 7,
+          "text": "- Canonical equations: executed `.venv/bin/python tools/list_canonical_equations.py --json`, then retained records matching `boundary_segment`, `address cost`, `joint assignment`, `token_tail_context_mixing`, `context_model_reorder`."
+        },
+        {
+          "path": ".omx/research/ddm_pq6_headroom_methods_sections_20260820/SECTIONS.md",
+          "line": 42,
+          "text": "fixed-point log-odds mixer measured \u2212560.07 B, a widened causal context \u2212710.84 B, and a"
+        },
+        {
+          "path": ".omx/research/ddm_pq6_headroom_methods_sections_20260820/SECTIONS.md",
+          "line": 123,
+          "text": "**6. Wider causal context.** The shipped wavefront assigns `group(x, y) = (x & 63) + 2\u00b7(y & 63)`;"
+        },
+        {
+          "path": ".omx/research/ddm_pq6_headroom_methods_sections_20260820/SECTIONS.md",
+          "line": 274,
+          "text": "Context mixing that works adds in the log-odds domain, so members that agree reinforce past the"
+        },
+        {
+          "path": ".omx/research/ddm_pq6_headroom_methods_sections_20260820/MERGE_PLAN.md",
+          "line": 32,
+          "text": "the 33-row runtime manifest, so editing them cannot move `runtime_tree_sha256`"
+        },
+        {
+          "path": ".omx/research/charters/ddm_scm2_scmdl_gm_refit_trainer_20260903.md",
+          "line": 29,
+          "text": "  decoder-derivable born context. M here is the HPAC integer context-mixing model family ONLY."
+        },
+        {
+          "path": ".omx/research/charters/ddm_scm2_scmdl_gm_refit_trainer_20260903.md",
+          "line": 50,
+          "text": "  training we already did: `experiments/ddm_gb1_groupbin8_conditioning.py` (f00d7994a5) \u2014 reference"
+        },
+        {
+          "path": ".omx/research/charters/ddm_scm2_scmdl_gm_refit_trainer_20260903.md",
+          "line": 94,
+          "text": "  exactly; only M is fitted, and its fit owes the one-line reason (a context-mixing model is a"
+        },
+        {
+          "path": ".omx/research/charters/ddm_scm2_scmdl_gm_refit_trainer_20260903.md",
+          "line": 120,
+          "text": "  `experiments/ddm_gb1_groupbin8_conditioning.py` (commit f00d7994a5), receipt: the GB1 stage pins in"
+        },
+        {
+          "path": ".omx/research/charters/ddm_pv1_provenance_lineage_citation_audit_20260817.md",
+          "line": 51,
+          "text": "  is OUR device-exact formulation, but the log-odds/context-mixing IDEA lineage is the PAQ"
+        },
+        {
+          "path": ".omx/research/charters/ddm_pv1_provenance_lineage_citation_audit_20260817.md",
+          "line": 68,
+          "text": "   PAQ/context-mixing (conditional) \u00b7 upstream repo/evaluate.py \u00b7 deps. Verify every PR"
+        },
+        {
+          "path": ".omx/research/charters/ddm_fs1_frame0_selector_reselection_byte_close_20260904.md",
+          "line": 23,
+          "text": "  (governed; closer armed at dispatch; MAIN fires), the afr1 receipt chain (`ddm_afr1_tile48_groupbin8_cuda_n600_20260831`,"
+        },
+        {
+          "path": ".omx/research/charters/ddm_tc2_lane_boundary_context_map_for_the_tail_mixer_closed_form_first_20260910.md",
+          "line": 1,
+          "text": "# ddm_tc2 \u2014 the corner's named actuator: a LANE-BOUNDARY context map for tc1's shared tail mixer \u2014 price it closed-form FIRST (conditional entropy of the Lane\u2194Road tokens given a decoder-side lane-geometry predictor built only from already-decoded tokens and free openpilot geometry), then by real n600 encode if the bound clears (charter, 2026-09-10)"
+        },
+        {
+          "path": ".omx/research/charters/ddm_tc2_lane_boundary_context_map_for_the_tail_mixer_closed_form_first_20260910.md",
+          "line": 3,
+          "text": "Tokens: `[no-triality] [p0-ledger-ok]` \u00b7 Owner: codex arm (gpt-6-astra, xhigh) \u00b7 Spawned by MAIN 2026-09-10. Sources: rp1's census (`.omx/research/ddm_rp1_rate_directed_token_predistortion_20260909.md` \u00a79; equation `rate_directed_predistortion_yield_v1`): of the 83,258.6 B attribution on 235,044 mispredicted tokens, Lane\u2192Road alone is 29,976.9 B (37.28 %), Lane carries 37.97 % of the bytes on 0.59 % of the area, 97.32 % sit on a GT edge, **87.64 % of the bits are on tokens that AGREE with GT** (unpredicted content, not noise), mass spread (top 10,000 tokens 15.9 %); bnd2 (`d9a99ea88`: addressing those tokens loses \u2014 do not address, PREDICT); tc1 (`.omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md`, `faac73963`: the 35-weight logistic mixer over FIVE generic context maps; envelope 119,784 B; `token_tail_context_mixing_bound_v1`); hc1 (`token-stream-is-one-binary-question`: 97.8 % of the stream is one binary question); CLAUDE.md rule 118 (generic geometry \u2014 openpilot lane polynomial/homography \u2014 is FREE in inflate.py; anything fitted to the video is counted); m131 (Lane = 0.59 % area, 33.56 % of bits). Axes: closed-form `[real counts on the shipped field]`; "
+        },
+        {
+          "path": ".omx/research/charters/ddm_or1_orthogonal_representation_regime_20260826.md",
+          "line": 78,
+          "text": "  (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`) \u00b7 d3's"
+        },
+        {
+          "path": ".omx/research/charters/ddm_fb2_route_table_gb1_20260826.md",
+          "line": 67,
+          "text": "  (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`) \u00b7 the jf2"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3c_class_pyramid_peel_order_20260826.md",
+          "line": 8,
+          "text": "plane coded with the ENTIRE already-decoded coarser field as NON-CAUSAL context. d3b tests"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3c_class_pyramid_peel_order_20260826.md",
+          "line": 32,
+          "text": "   conditional bound of plane_k given the decoded coarser field (non-causal context at"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3c_class_pyramid_peel_order_20260826.md",
+          "line": 75,
+          "text": "  verdict rigor (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, `884bb65f1e`)."
+        },
+        {
+          "path": ".omx/research/charters/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md",
+          "line": 3,
+          "text": "Tokens: `[no-triality] [p0-ledger-ok]` \u00b7 Owner: codex arm (astra xhigh) \u00b7 Spawned by MAIN 2026-09-09 under the operator's standing GO (\"rate representation mandatory\"; gs3 Addendum 17: the seg half is at a capability floor, the live demand is the rate corner). Sources: rc1 (`.omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md`: the adaptive per-group tree coder took \u2212610 B off the SM3R renderer body \u2014 packed integer codes of `unpack_semantic`'s int4 weights + fp16 scales \u2014 and \u22121,123 B off the hpac rows), rc2/rc3 (`35c631244`: counted shared logistic mixers converted 231 + 201 B of the hpac rows' order-1 gap where per-cell tables lost), tc1 (`token_tail_context_mixing_bound_v1`: the bound-then-mix instrument, 549 B on the tail). Axes: bytes exact, zero distortion; `score_claim=false`; MAIN fires."
+        },
+        {
+          "path": ".omx/research/charters/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md",
+          "line": 15,
+          "text": "5. Memo `.omx/research/ddm_sm1_semantic_section_shared_mixer_coder_priced_closed_form_20260909.md`; equations leg: anchor on `model_section_adaptive_recode_ceiling_v1` via `update_equation_with_empirical_anchor` (`tac.canonical_equations`) or register `semantic_section_context_mixing_bound_v1`."
+        },
+        {
+          "path": ".omx/research/charters/ddm_jf2_terminal_diagonal_harvest_20260826.md",
+          "line": 65,
+          "text": "  rigor (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`) \u00b7"
+        },
+        {
+          "path": ".omx/research/charters/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md",
+          "line": 15,
+          "text": "5. Memo `.omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md`; equations leg: register `token_tail_context_mixing_bound_v1` via `register_canonical_equation` (`tac.canonical_equations`) with the bound table as the first anchor (or anchor on hc1's law if it fits)."
+        },
+        {
+          "path": ".omx/research/charters/ddm_bs3_born_small_resolved_carrier_20260826.md",
+          "line": 72,
+          "text": "  (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`)."
+        },
+        {
+          "path": ".omx/research/charters/ddm_rc64p_native_cpu_decode_charter_20260810.md",
+          "line": 72,
+          "text": "   Rule-118: decoder CODE (the HPAC context-mixing algorithm) is FREE; its learned parameters"
+        },
+        {
+          "path": ".omx/research/charters/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 13,
+          "text": "groupbin8= (((x%64) + 2*(y%64)) * 8) // 190"
+        },
+        {
+          "path": ".omx/research/charters/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 14,
+          "text": "context  = tile48*8 + groupbin8          # decoder computes both from (x,y); ZERO stored parameters"
+        },
+        {
+          "path": ".omx/research/charters/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 27,
+          "text": "Authority receipt `/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/measurement_v1/ADJUDICATION.json`"
+        },
+        {
+          "path": ".omx/research/charters/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 32,
+          "text": "**AFC1's own typed fire order is this arm's whole scope**, verbatim: *\"port only `tile48_groupbin8`"
+        },
+        {
+          "path": ".omx/research/charters/ddm_afr1_tile48_receiver_identity_20260831.md",
+          "line": 55,
+          "text": "1. **PORT** `tile48_groupbin8` \u2014 and ONLY it \u2014 into the staged native C receiver. The Python"
+        },
+        {
+          "path": ".omx/research/charters/ddm_tc4_further_causal_context_maps_for_the_tail_mixer_priced_by_real_encode_20260910.md",
+          "line": 1,
+          "text": "# ddm_tc4 \u2014 the door that just paid has siblings: with a sixth causal context map worth 79 B exact (move 41), price a SLATE of further causal, receiver-computable context maps for tc1's shared tail mixer on move 41's field by real n600 twin encode, compose the winners, and seal the best composite; each map's code free under rule 118, its weights counted (charter, 2026-09-10)"
+        },
+        {
+          "path": ".omx/research/charters/ddm_tc4_further_causal_context_maps_for_the_tail_mixer_priced_by_real_encode_20260910.md",
+          "line": 6,
+          "text": "Price, one at a time on move 41's tail (each vs the 119,675 B envelope, twins, identity control first), a slate of \u2265 5 CAUSAL maps the receiver can compute from what it holds: (1) class-run persistence along the row (run length of the current class so far, quantized); (2) vertical class-transition history (the class-pair of the last transition in the column above, from decoded rows); (3) the previous decoded pair's token at the same cell AND its 3\u00d73 neighbourhood majority (bd1 measured temporal context saturated as a MODEL; here it is one more MAP into the mixer \u2014 a different object); (4) distance-to-the-lane-predictor's boundary in the previous ROW (temporal within-frame smoothing of tc3's predictor); (5) horizon-band indicator \u00d7 Movable-run state (the census's second class). For each: ideal codelength under the refit mixer, then a real twin encode with the new weights counted, then the composite of every map that pays \u2265 20 B alone (re-price the composite; interactions are not additive \u2014 say the miss). Seal the best composite through the receiver with the structured public smoke and literal output identity (tc3's proof chain), or report that none composes past the bar."
+        },
+        {
+          "path": ".omx/research/charters/ddm_tc4_further_causal_context_maps_for_the_tail_mixer_priced_by_real_encode_20260910.md",
+          "line": 30,
+          "text": "The pricing table (ideal / real / composite miss), the seal if any, memo `.omx/research/ddm_tc4_causal_context_map_slate_20260910.md`; anchor on `lane_boundary_context_map_bound_v1` or register `tail_mixer_context_map_slate_v1`. Commit via the serializer. End with the live frontier line."
+        },
+        {
+          "path": ".omx/research/charters/ddm_sp9_semantic_primary_corrected_race_20260903.md",
+          "line": 13,
+          "text": "  HPAC integer context-mixing model section 13,515 B (`602115b3\u2026f98f98`), RC64 token stream 113,411 B"
+        },
+        {
+          "path": ".omx/research/charters/ddm_sp9_semantic_primary_corrected_race_20260903.md",
+          "line": 90,
+          "text": "  law (gf1) predict that a direct multi-token schema WITHOUT a context-mixing model cannot beat the"
+        },
+        {
+          "path": ".omx/research/charters/ddm_fx2_probability_model_axis_all_sections_20260818.md",
+          "line": 45,
+          "text": "Reference family: full context-mixing stack at optimal form (PAQ lineage: rich learned contexts +"
+        },
+        {
+          "path": ".omx/research/charters/ddm_s1_trained_renderer_diagonal_20260825.md",
+          "line": 100,
+          "text": "  (`ddm_gb1_groupbin8_verdict_20260824.md`, commit 884bb65f1e)."
+        },
+        {
+          "path": ".omx/research/charters/ddm_fx1_fixed_point_logistic_mixer_20260817.md",
+          "line": 7,
+          "text": "+1,398 B); the only mixing that SHARPENS is LOGISTIC (log-odds domain \u2014 the PAQ/context-mixing"
+        },
+        {
+          "path": ".omx/research/charters/ddm_rp1_rate_directed_token_predistortion_seg_neutral_pose_resolved_20260909.md",
+          "line": 3,
+          "text": "Tokens: `[no-triality] [p0-ledger-ok]` \u00b7 Owner: Opus arm \u00b7 Spawned by MAIN 2026-09-09 under the operator's standing GO and the 08-21 binding (\"rate representation mandatory\"). Sources: gs3 Addendum 17 (the seg residual is at a capability floor on the shipped renderer; the live demand is the RATE corner, \u221228,041.6 B at held distortion), sj1 (`.omx/research/ddm_sj1_multipass_token_predistortion_20260905.md`, `dcb0b0b97`: the realized-acceptance instrument, the per-pair Lagrange admission, the carrier re-solve; passes 2a\u20134 = moves 31/32/35), tc1 (`token_tail_context_mixing_bound_v1`: the tail is within ~549 B of its context ceiling FOR THE FIELD AS IT IS), fs2/fs3 (\u2212log2 p direction-dependent; average \u2260 marginal 2.24\u00d7), the placement law (sj1 slide pricing: forced writes cost ~1.73\u00d7 greedy ones \u2014 the coder's price is a function of WHERE). Axes: d_seg `[macOS-CPU advisory, sj1 instrument, DALI lineage]` \u2014 must read ZERO change per admitted pair; d_pose `[cpu_torch fp32 authority, n600]`; bytes exact; `score_claim=false`; MAIN fires."
+        },
+        {
+          "path": ".omx/research/charters/ddm_pc2_pose_carrier_live_remainder_20260826.md",
+          "line": 77,
+          "text": "  (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`) \u00b7 pk4's"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3b_lossless_lane_factorization_20260826.md",
+          "line": 90,
+          "text": "  `.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`)."
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3b_lossless_lane_factorization_20260826.md",
+          "line": 96,
+          "text": "  non-causal-context advantage predict the conditional Lane plane + counted parameters"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3b_lossless_lane_factorization_20260826.md",
+          "line": 100,
+          "text": "  than HPAC's causal joint model even WITH non-causal context; report the per-context-design"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3b_lossless_lane_factorization_20260826.md",
+          "line": 144,
+          "text": "   gb1/jt-family conditioning collection (groupbin8-class decode-scan families, the mi1"
+        },
+        {
+          "path": ".omx/research/charters/ddm_bd1_bidirectional_pyramid_context_for_the_label_field_coder_20260905.md",
+          "line": 8,
+          "text": "label field (600 pairs \u00d7 512\u00d7384 \u00d7 5 classes) coded by the HPAC integer context-mixing model. hc1 decomposed it: 97.8% is the binary"
+        },
+        {
+          "path": ".omx/research/charters/ddm_w96a_aligned_config_renderer_window_20260826.md",
+          "line": 75,
+          "text": "  (`.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`)."
+        },
+        {
+          "path": ".omx/research/charters/ddm_ef1_token_entropy_floor_charter_20260822.md",
+          "line": 41,
+          "text": "   a strong general-purpose context-mixing compressor over the raw symbol array (real coder, real"
+        },
+        {
+          "path": ".omx/research/charters/ddm_lb1_banked_lossless_joint_collect_20260829.md",
+          "line": 68,
+          "text": "  and `ddm_gb1_groupbin8_verdict_20260824.md` (commit 884bb65f1e) is the reference for a"
+        },
+        {
+          "path": ".omx/research/charters/ddm_wh1_wrong_half_decomposition_20260825.md",
+          "line": 20,
+          "text": "   receipts in the gb1/jt21 verdict memos `ddm_gb1_groupbin8_verdict_20260824.md` +"
+        },
+        {
+          "path": ".omx/research/charters/ddm_wh1_wrong_half_decomposition_20260825.md",
+          "line": 70,
+          "text": "  rows \u2014 the groupbin8 decode-scan family that produced the gb1 pointer move, commit"
+        },
+        {
+          "path": ".omx/research/charters/ddm_wh1_wrong_half_decomposition_20260825.md",
+          "line": 71,
+          "text": "  884bb65f1e verdict memo `ddm_gb1_groupbin8_verdict_20260824.md`) \u2014 same shape: read the"
+        },
+        {
+          "path": ".omx/research/charters/ddm_hx1_pr_wave_harvest_20260817.md",
+          "line": 17,
+          "text": "   causal context families (what are they, exactly? cell/band/transition/neighborhood"
+        },
+        {
+          "path": ".omx/research/charters/ddm_ae1_anti_predicted_excess_charter_20260822.md",
+          "line": 130,
+          "text": "  charter raced general-purpose context-mixing compressors against this same domain-tuned model; the cure"
+        },
+        {
+          "path": ".omx/research/charters/ddm_mc1_motion_compensated_previous_plane_20260903.md",
+          "line": 94,
+          "text": "- `ddm_gb1_groupbin8_conditioning_*` \u2014 decode-scan conditioning members: \u2212153 B; no retrain."
+        },
+        {
+          "path": ".omx/research/charters/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 16,
+          "text": "stages (fx5 widened causal corrector \u00b7 dx2 CABAC coefficient fold \u00b7 gb1 groupbin8"
+        },
+        {
+          "path": ".omx/research/charters/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 17,
+          "text": "conditioning \u00b7 lb1 joint patch192-by-bank re-encode \u00b7 afr1 tile48\u00d7groupbin8 with native"
+        },
+        {
+          "path": ".omx/research/charters/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 33,
+          "text": "   `ddm_dx2_cabac_receiver_fold_20260821.md` \u00b7 `ddm_gb1_groupbin8_conditioning_20260824.md`"
+        },
+        {
+          "path": ".omx/research/charters/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 34,
+          "text": "   + `ddm_gb1_groupbin8_verdict_20260824.md` \u00b7"
+        },
+        {
+          "path": ".omx/research/charters/ddm_ce1_afr1_compress_chain_20260901.md",
+          "line": 45,
+          "text": "   `ddm_dx2_cabac_receiver_fold.py` / `ddm_gb1_groupbin8_conditioning.py` /"
+        },
+        {
+          "path": ".omx/research/charters/ddm_rx3_receiver_precompensation_charter_20260823.md",
+          "line": 87,
+          "text": "  it, so the two guards are jointly unsatisfiable. **Every scorer row runs at FULL n600; a strided"
+        },
+        {
+          "path": ".omx/research/charters/ddm_d3_alphabet_merge_20260826.md",
+          "line": 83,
+          "text": "  `.omx/research/ddm_gb1_groupbin8_verdict_20260824.md`, commit `884bb65f1e`); the carriage"
+        },
+        {
+          "path": ".omx/research/charters/ddm_cmp1_compose_rc3_model_section_and_tc1_tail_coder_onto_live_pointer_20260909.md",
+          "line": 15,
+          "text": "5. Memo `.omx/research/ddm_cmp1_compose_rc3_tc1_20260909.md`; equations leg: anchors on `model_section_adaptive_recode_ceiling_v1` and `token_tail_context_mixing_bound_v1` via `update_equation_with_empirical_anchor` (`tac.canonical_equations`) with the composed bytes."
+        },
+        {
+          "path": ".omx/research/t5_crucible/DRAFT_OPTIMAL_STACK_v4_20260707.md",
+          "line": 376,
+          "text": "win9 arm of \u00a70.2) \u00b7 F13 parity row runs at every stage boundary (rank-2 telemetry) \u00b7 \u03c4-confirm,"
+        },
+        {
+          "path": ".omx/research/t5_crucible/position_S6_pose_byteclose_20260707.md",
+          "line": 149,
+          "text": "  `[macOS-CPU advisory]` forever; the pointer row runs `upstream/evaluate.py --device cpu` on"
+        },
+        {
+          "path": ".omx/research/ddm_ty2_20260806/RECEIPT.md",
+          "line": 38,
+          "text": "- **KT context-arith x learned context-mixing:** routed as `TY2-H3`. TK1's KT stream is the exact `142,001 B` base; TY1's pure learned prior loses by `+539,728 B`, so the only admissible learned form is a counted residual probability/context mixer that beats KT after model bytes."
+        },
+        {
+          "path": ".omx/research/ddm_tm1_20260809/TM1_FINDINGS.md",
+          "line": 174,
+          "text": "position, coarse frame state, and the newly derived t\u22122 causal context. It also"
+        },
+        {
+          "path": ".omx/research/ddm_tc4_20260910/review_pass1.md",
+          "line": 57,
+          "text": "The row-run map resets every 64 columns; within a row block each earlier x has"
+        },
+        {
+          "path": ".omx/research/ddm_tc4_20260910/review_pass1.md",
+          "line": 58,
+          "text": "a lower group index. The complete-field vertical map excludes transition"
+        },
+        {
+          "path": ".omx/research/ddm_tc4_20260910/review_pass1.md",
+          "line": 64,
+          "text": "The Movable map uses the same causal row-run state. I did not find future-token"
+        },
+        {
+          "path": ".omx/research/ddm_tc4_20260910/review_pass1.md",
+          "line": 83,
+          "text": "all causal context models or prove a universal geometry bound. Different bins"
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_bnd2_boundary_segment_code_real_encode_gen2_20260910T011544Z.md",
+          "line": 31,
+          "text": "- The 83 KB attribution is not detachable: masking changes causal contexts and increases encoded size."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_bg1_bilinear_gate_pricing_20260814T153314Z.md",
+          "line": 32,
+          "text": "- \u201cAdd semantic or latent context\u201d is not novel: CP135 already contains semantic tokens, causal context, and 600\u00d78 frame FiLM."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_ce1_afr1_compress_chain_20260902T021455Z.md",
+          "line": 28,
+          "text": "- Standalone `cls_groupbin8` is not JT21: it produced 180,268 B / `bd1c663f\u2026`, first differing offset 14."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_xi2_xi_context_full_scale_promotion_20260812T174818Z.md",
+          "line": 9,
+          "text": "- Five CPU tests passed, including causal-context identity and real PR130 pack/unpack exact logits."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_yr1_yousfi_adversarial_pr_review_20260902T170323Z.md",
+          "line": 33,
+          "text": "- Dropping FX5 and reusing the old 38-row runtime identity: closed because that would be an unproved receiver-object substitution."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_afc1_address_free_census_20260831T132634Z.md",
+          "line": 4,
+          "text": "- New exact-lb1 measurement: `tile48 \u00d7 groupbin8` reduced both token stream and archive by **81 B**, from 180,083 B to **180,002 B**, with `tokens_changed=0` and a byte-identical repeat. `\u0394S_rate = \u22120.00005393457520289588`."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_afc1_address_free_census_20260831T132634Z.md",
+          "line": 5,
+          "text": "- [Adjudication receipt](/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/measurement_v1/ADJUDICATION.json:1) and all 45,807,018 retained bytes are on APDataStore."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_afc1_address_free_census_20260831T132634Z.md",
+          "line": 6,
+          "text": "- The independent native receiver identity was not run: [storage preflight](/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/measurement_v1/IDENTITY_PREFLIGHT.json:1) found a 1,760,161,664 B shortfall."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_afc1_address_free_census_20260831T132634Z.md",
+          "line": 14,
+          "text": "- **QUEUED_AFTER_APDATASTORE_IDENTITY_FLOOR** \u00b7 owner: AFC1 receiver-closure successor \u00b7 consumer store: `/Volumes/APDataStore/pact/ddm_afc1_address_free_census/tile48_groupbin8/receiver_identity_v1/` \u00b7 fire trigger: APDataStore free space reaches 8,142,450,560 B; port the interaction to native C and run retained full-n600 receiver identity."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_ef1_token_entropy_floor_20260822T181759Z.md",
+          "line": 28,
+          "text": "- ZPAQ context mixing methods 1\u20135: minimum 365,322 B, with the full-field convergence curve turning upward."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_jc1_afr_rc64_joint_redesign_20260901T044439Z.md",
+          "line": 3,
+          "text": "The surviving unmeasured class is `SCMDL`: jointly redesign the dense token field, causal context graph, and counted probability model, with realized Seg/Pose acceptance and exact RC64 pricing."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_oc2_orthogonal_conditioning_charts_20260829T225432Z.md",
+          "line": 40,
+          "text": "- A new scan-phase relabel is duplicate structure because gb1 already ships `groupbin8_surprise`."
+        },
+        {
+          "path": ".omx/research/arm_final_messages/ddm_rr1_v7v18_recall_20260809T193949Z.md",
+          "line": 31,
+          "text": "- Applying G4\u2019s 89,161 B number to PR130: it came from a different object, while PR130 already has rich causal context."
+        },
+        {
+          "path": ".omx/research/ddm_pq4_packet_completeness_20260820/MAIN_HANDOFF.md",
+          "line": 12,
+          "text": "pq3's finding #2 is that **any** edit to a file in the 33-row runtime manifest moves"
+        },
+        {
+          "path": ".omx/research/ddm_pq4_packet_completeness_20260820/CONTRIBUTIONS_INVENTORY.md",
+          "line": 72,
+          "text": "| A7 | **Log-odds context mixing (the idea under O10/A8)** | The formulation and the context design are ours (O10); the log-odds context-mixing IDEA is the **PAQ lineage (Matt Mahoney)**, published in this contest first by **PR #138** and in weaker form by **PR #136** | accounting \u00a77.1, \u00a74 | **YES** |"
+        },
+        {
+          "path": ".omx/research/ddm_tc3_20260910/native_trace_state_review.md",
+          "line": 73,
+          "text": "the tail mixer's `end_frame` before snapshotting. After a nonempty prefix,"
+        },
+        {
+          "path": ".omx/research/ddm_tc3_20260910/historical_move39/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+          "line": 57,
+          "text": "  causal context. It does not close the row-history mechanism tested here."
+        }
+      ]
+    },
+    "indexes": {
+      "files_searched": 12,
+      "matches": [
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1771,
+          "text": "VERDICT: do NOT pursue derive-by-warp. The already-built STORE-direct 6-scalar Quantizr sidecar DOMINATES (~200x better, ~1000x cheaper). Pose IS solved (operator memory was right): store 6 targets/pair + SUPERVISE the render (--w-pose>0) to hit them -> d_pose 3.4e-5. The decisive ROW run carries pose by SUPERVISING the texture in the SegNet-NULL space (frame_0 invisible + frame_1 sub-margin chroma) so seg is protected \u2014 NOT by warping. [macOS-CPU advisory] mechanism-probe, oracle-warp upper bound, NOT byte-closed."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1819,
+          "text": "DESCENT: tau_softplus@300 FIRED \u2014 GENTLE drop (ep275 0.0040 ce -> ep300 0.0035 tau -> ep350 0.0031), slightly noisy (ep325 0.0037), transition stable (no v3-style destabilization). Diagnostic: global tau-softening only gently helps because the residual IS the hard lane-class-1 orbit (matches order-exploit FEED-dd) -> the TARGETED levers (l7@900 in-run, lane-edge next-run) are the closers. d_seg 0.0031 @ep350, need ~2.8x for goal 0.00112. PLAN: watch l7@900 (does generic hard-pixel crack the lane orbit?); next n600 ROW run fires Yousfi-levers-ON (lane-edge + Nyquist-anti-alias + chroma). Pointer UNMOVED 0.19110."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1940,
+          "text": "The convergence to the row is GATED on review+seal \u2014 TWO layers, both required BEFORE the (GPU/expensive) row run (per \"Substrate MUST be at OPTIMAL FORM before paid dispatch\" + \"Recursive adversarial review protocol 3-clean-pass\"):"
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1953,
+          "text": "-> 3 consecutive clean passes -> SEAL -> ONLY THEN the row run (train -> byte-close -> contest-CPU exact)."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 1955,
+          "text": "CONVERGENCE PATH (binding): each component deep-math+optimize+seal as it lands -> WIRE sealed components -> ONE integrated recursive adversarial review + deep-math + optimization -> SEAL -> train -> byte-close -> exact. Row run GATED on the integrated SEAL (like Yousfi levers gated on a3a6674228). The efficient form = ONE integrated review+seal over the wired codec (more rigorous than N separate reviews; integration is where the risk lives). QUEUED (safe limit: 2 CPU + GPU); launch when components built + slot frees. MEANS->ENDS: converge to the row, but THROUGH the seal gate, not around it. Pointer UNMOVED 0.19110."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 22244,
+          "text": "- **SDWL1 context fold TIES (0B):** selected syntax already causal-context-coded; the registered 89,161B gain belongs to a DIFFERENT innovation symbol stream \u2014 not subtractable from a complete SDWL1 object (m6 accounting clarified)."
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 24365,
+          "text": "135/135 exact parse-backs; context/mixing coders carry ZERO model bytes (state derived from the"
+        },
+        {
+          "path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+          "line": 25112,
+          "text": "no new savings); QA08 (context mixing) = lossless coder swap, composes only by re-encoding the"
+        }
+      ]
+    },
+    "designs": {
+      "files_searched": 261,
+      "matches": [
+        {
+          "path": "docs/triality_dag_dsl_equations_deepmath.md",
+          "line": 273,
+          "text": "- Tasks: #216 (the automated instrument = the cycle engine), #219 (as-built triality sync), #189 (the DSL), #205 (the exact-row run it serves)."
+        },
+        {
+          "path": "docs/runbooks/contest_faithful_submission_next_tranche_20260502.md",
+          "line": 35,
+          "text": "  `62.34251404`, archive `195762` bytes. It blocks PMG row-run-only T4"
+        },
+        {
+          "path": "docs/runbooks/contest_faithful_submission_next_tranche_20260502.md",
+          "line": 60,
+          "text": "- PMG row-run-only rescue is blocked by the atomtop4068 PoseNet collapse; do"
+        },
+        {
+          "path": "docs/runbooks/contest_faithful_submission_next_tranche_20260502.md",
+          "line": 61,
+          "text": "  not dispatch another row-run-only PMG T4 job."
+        },
+        {
+          "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_selective_topology_acquisition_20260726.md",
+          "line": 79,
+          "text": "row-run programs are representable today, this landing adds no speculative"
+        },
+        {
+          "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_selective_topology_acquisition_20260726.md",
+          "line": 133,
+          "text": "- `SOURCE_TARGET_ROW_RUN_BOX_V1`: exact horizontal runs grouped by source and"
+        },
+        {
+          "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_selective_topology_acquisition_20260726.md",
+          "line": 135,
+          "text": "- `TARGET_BIRTH_SOURCE_DEATH_ROW_RUN_BOX_V1`: target births coalesced across"
+        }
+      ]
+    },
+    "ledger": {
+      "files_searched": 2,
+      "matches": [
+        {
+          "path": ".omx/state/canonical_task_status.jsonl",
+          "line": 586,
+          "text": "{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_gb1\",\"event_notes\":\"free lossless recode: zero stored bytes, zero symbol change, zero seg/pose by construction. C port to f26_corrector_native.c named as the shipping blocker.\",\"event_timestamp_utc\":\"2026-08-24T18:47:49.752251Z\",\"event_type\":\"registered\",\"owner\":\"ddm_gb1\",\"predicted_cost_usd\":0.0,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_gb1_20260824\",\"source_design_memo\":\".omx/research/ddm_gb1_groupbin8_conditioning_20260824.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_gb1_groupbin8_conditioning\",\"test_status\":\"pending\",\"title\":\"ddm_gb1: realize ddm_mi1 decode-scan (groupbin8) conditioning as a shipped mixer member; re-derive, price in real RC64 coder bits, byte-close through the physical re-encode\",\"written_at_utc\":\"2026-08-24T18:47:49.752251Z\",\"written_host\":\"Primary\",\"written_pid\":91119}"
+        },
+        {
+          "path": ".omx/state/canonical_task_status.jsonl",
+          "line": 678,
+          "text": "{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":\"2026-08-26T18:17:50.158400Z\",\"event_actor\":\"ddm_d3b\",\"event_notes\":\"Completed [verdict_scope: FORMULATION -- D3 four-class quotient plus lossless conditional Lane; HPAC base, q8/q1 counted D3A geometry, r2 whole-field/temporal/causal context, adaptive fixed-point log-odds mixer; macOS-CPU advisory scorer-free n600]. Best token subsystem is 127499 B, 207 B above 127292 B; q8 reference 155247 B (+27955), q1 reference 169807 B (+42515). All nine fields receiver-exact at source sha cc10a7b0. No seal, scorer, or remote fire order.\",\"event_timestamp_utc\":\"2026-08-26T18:17:50.158400Z\",\"event_type\":\"completion\",\"owner\":\"MAIN\",\"predicted_cost_usd\":0.0,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_d3b_20260826\",\"source_design_memo\":\".omx/research/ddm_d3b_lossless_lane_factorization_20260826.md\",\"started_at_utc\":\"2026-08-26T18:17:50.120346Z\",\"status\":\"completed\",\"task_id\":\"ddm_no1_row3_alphabet_merge::d3b_lossless_lane_factorization\",\"test_status\":\"green\",\"title\":\"D3B: lossless Lane factorization with conditional whole-field reference mixer\",\"written_at_utc\":\"2026-0"
+        },
+        {
+          "path": ".omx/state/lane_registry.json",
+          "line": 98393,
+          "text": "      \"name\": \"TC4 five causal tail mixer maps\","
+        }
+      ]
+    }
+  }
+}

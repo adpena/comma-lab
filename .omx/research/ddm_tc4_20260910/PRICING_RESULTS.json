@@ -1,0 +1,748 @@
+{
+  "schema": "ddm_tc4_retained_price_summary.v1",
+  "source_binding": {
+    "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+    "axis": "[exact bytes, scorer-free macOS-CPU, n600]",
+    "equation_anchor": "lane_boundary_context_map_bound_v1",
+    "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+    "old40": {
+      "bytes": 40,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/source/old40.bin",
+      "sha256": "ab242a8b37b83864bd25b9e4631e6fbe69294f385111bf84f210855597ba0d68"
+    },
+    "runtime_files": [
+      {
+        "bytes": 3667,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/README.md",
+        "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+      },
+      {
+        "bytes": 180154,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip",
+        "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936"
+      },
+      {
+        "bytes": 183043,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/compress.py",
+        "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+      },
+      {
+        "bytes": 7353,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/carrier_codec.py",
+        "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+      },
+      {
+        "bytes": 13389,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+      },
+      {
+        "bytes": 17471,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/hpac_integer.py",
+        "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+      },
+      {
+        "bytes": 8282,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/hpac_integer_sparse.py",
+        "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+      },
+      {
+        "bytes": 13810,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/inflate.py",
+        "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+      },
+      {
+        "bytes": 5881,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/integer_model_io.py",
+        "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+      },
+      {
+        "bytes": 20916,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/cpr1/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      },
+      {
+        "bytes": 2728,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/inflate.py",
+        "sha256": "e8ba07f75e4f3daf34b1378a1d0735c313207915e48ba7555fcd051bf4dc5e6e"
+      },
+      {
+        "bytes": 3351,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/inflate.sh",
+        "sha256": "e70f623130c62ed829d48526c4428143624fb980100b4df81373c3fa2e9eb1f7"
+      },
+      {
+        "bytes": 57,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/__init__.py",
+        "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+      },
+      {
+        "bytes": 2058,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/baseline.py",
+        "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+      },
+      {
+        "bytes": 1578,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/bits.py",
+        "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+      },
+      {
+        "bytes": 8206,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/carrier_repack.py",
+        "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+      },
+      {
+        "bytes": 7074,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/compensation_overlay.py",
+        "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+      },
+      {
+        "bytes": 25232,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/ddm_wc1_advisory_runtime.py",
+        "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+      },
+      {
+        "bytes": 12929,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/dx2_cabac_coefficients.py",
+        "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+      },
+      {
+        "bytes": 54,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/__init__.py",
+        "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+      },
+      {
+        "bytes": 4230,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/adaptive_ans.py",
+        "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+      },
+      {
+        "bytes": 4875,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/coefficient_ar1_codec.py",
+        "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+      },
+      {
+        "bytes": 4027,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/coefficient_predictor.py",
+        "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+      },
+      {
+        "bytes": 2904,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/rc64.py",
+        "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+      },
+      {
+        "bytes": 5638,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/rc64_backend.c",
+        "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+      },
+      {
+        "bytes": 9656,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/entropy/renderer_weight_codec.py",
+        "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+      },
+      {
+        "bytes": 50299,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/f26_corrector_native.c",
+        "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+      },
+      {
+        "bytes": 40911,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/f26_hpac_native.c",
+        "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+      },
+      {
+        "bytes": 26781,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/f26_hpac_native.py",
+        "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+      },
+      {
+        "bytes": 29176,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/f26_inflate.py",
+        "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+      },
+      {
+        "bytes": 4964,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/frame0_selector.py",
+        "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+      },
+      {
+        "bytes": 14709,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/free_corrector.py",
+        "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+      },
+      {
+        "bytes": 34979,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/fx1_logistic_mixer_corrector.py",
+        "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+      },
+      {
+        "bytes": 31470,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/fx2_model_axis_corrector.py",
+        "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+      },
+      {
+        "bytes": 10952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/hpac_inference.py",
+        "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+      },
+      {
+        "bytes": 13327,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/ihs2.py",
+        "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+      },
+      {
+        "bytes": 10527,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/ihs2_gate_a.py",
+        "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+      },
+      {
+        "bytes": 15952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/native_free_corrector.py",
+        "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+      },
+      {
+        "bytes": 20916,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      },
+      {
+        "bytes": 31341,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/rc2_hpac_semistatic_mixing.py",
+        "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+      },
+      {
+        "bytes": 8010,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/rc3_shared_mixer.py",
+        "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+      },
+      {
+        "bytes": 34450,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/residual_archive.py",
+        "sha256": "c27961db42380f0f70e70e60c09c103f7f0e9408dcf7b3d8c93c799345a95204"
+      },
+      {
+        "bytes": 15421,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/rr4_free_corrector.py",
+        "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+      },
+      {
+        "bytes": 20793,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/rr5_arith_basis.py",
+        "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+      },
+      {
+        "bytes": 9693,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/sm1_semantic_mixer.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      },
+      {
+        "bytes": 8753,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/tc1_receiver_checkpoint.py",
+        "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+      },
+      {
+        "bytes": 8590,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/tc1_shared_mixer.py",
+        "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+      },
+      {
+        "bytes": 11908,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/tc3_geometry.py",
+        "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+      },
+      {
+        "bytes": 5940,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/runtime/tc3_mixer.py",
+        "sha256": "28b4aec3999066b6ddc6af88346f5e83827ad11f2d50857216d51299b527ef43"
+      }
+    ],
+    "score_claim": false,
+    "seed": 20260910,
+    "source_files": [
+      {
+        "bytes": 59351,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+        "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
+      },
+      {
+        "bytes": 8590,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_mixer_codec.py",
+        "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+      },
+      {
+        "bytes": 5968,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc3_mixer.py",
+        "sha256": "fe5aa8b922711f1919935ea2a513eaa3dd449ddbbffdfe8b9213ffd1b3409f7d"
+      },
+      {
+        "bytes": 11908,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc3_geometry.py",
+        "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+      },
+      {
+        "bytes": 7807,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc4_maps.py",
+        "sha256": "669b852c6a350e8fd4b8b0befe06d5316ff38af2d55983c4b4ce4ad6603be8d7"
+      },
+      {
+        "bytes": 23419,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc4_price.py",
+        "sha256": "0e9d0e377bb8492675540a8eda29223b1dee6963800f7821656612dfad113d0d"
+      },
+      {
+        "bytes": 14138,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_rc64p_native_cpu_decode/route_b_rc64.py",
+        "sha256": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5"
+      },
+      {
+        "bytes": 1987,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_logistic_bound.c",
+        "sha256": "821ac4720452467fc280d005990eb6d1fd696d4c06f6ae6676f0bcb07991f13c"
+      }
+    ],
+    "source_manifests": [
+      {
+        "bytes": 5930,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/trace/RESULT.json",
+        "sha256": "2590a835e402afddc54e7ed6c26b6608a188b7350e5e11b5a08ab7d8fa3538b9"
+      },
+      {
+        "bytes": 6351,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/prepare_v2/RESULT.json",
+        "sha256": "0faa96cb79e4ea6886ecfb312ccfaa7b450771dac4ac86e312212f8e4daf67a3"
+      },
+      {
+        "bytes": 14294,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/INPUTS.json",
+        "sha256": "ecd2221e12e4be54bcfd1110663221761e0fea2b461546a76db7c89a2319ce8b"
+      }
+    ]
+  },
+  "selection": {
+    "selected_mask": 19,
+    "selected_saved_bytes": 133,
+    "selected_archive": {
+      "bytes": 180021,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/19/twin0.zip",
+      "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+    },
+    "selection_rule": "mandatory composite of all >=20B standalone maps, then best measured archive among it and admitted singleton composites",
+    "composite_mask": 19,
+    "standalone_sum_bytes": 165,
+    "composite_saved_bytes": 133,
+    "composite_interaction_miss_bytes": 32,
+    "score_claim": false,
+    "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+    "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+    "axis": "[exact bytes, scorer-free macOS-CPU, n600]"
+  },
+  "rows": [
+    {
+      "archive_bytes": 180058,
+      "archive_saved_bytes": 96,
+      "archives": [
+        {
+          "bytes": 180058,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/1/twin0.zip",
+          "sha256": "4ff276a5a1d48f01a8cf9beca3b69f4f2c6325eaabb606b7f32f08b2f22de562"
+        },
+        {
+          "bytes": 180058,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/1/twin1.zip",
+          "sha256": "4ff276a5a1d48f01a8cf9beca3b69f4f2c6325eaabb606b7f32f08b2f22de562"
+        }
+      ],
+      "continuous_gain_bytes": 101.62115032374277,
+      "fitted_weight_bytes": 45,
+      "frames": 600,
+      "integer_gain_bytes": 101.5272932498192,
+      "mask": 1,
+      "positions": 117964800,
+      "riders": [
+        {
+          "bytes": 119483,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/1/twin0.rider",
+          "sha256": "3007d3d7ffeb2a42de2a40c602173d1ba28820acde2dbf8ffea0735bffa61f0b"
+        },
+        {
+          "bytes": 119483,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/1/twin1.rider",
+          "sha256": "3007d3d7ffeb2a42de2a40c602173d1ba28820acde2dbf8ffea0735bffa61f0b"
+        }
+      ],
+      "score_claim": false,
+      "tail_bytes": 119579,
+      "tail_saved_bytes": 96,
+      "totals_bits": [
+        956270.0522750047,
+        955457.0830724147,
+        955457.8339290061
+      ],
+      "twin_identical": true
+    },
+    {
+      "archive_bytes": 180112,
+      "archive_saved_bytes": 42,
+      "archives": [
+        {
+          "bytes": 180112,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/2/twin0.zip",
+          "sha256": "0e2d7238cb187187a7e68a00ce45330f5795953b998fe6e20409e0692fceb710"
+        },
+        {
+          "bytes": 180112,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/2/twin1.zip",
+          "sha256": "0e2d7238cb187187a7e68a00ce45330f5795953b998fe6e20409e0692fceb710"
+        }
+      ],
+      "continuous_gain_bytes": 47.20836814327049,
+      "fitted_weight_bytes": 45,
+      "frames": 600,
+      "integer_gain_bytes": 47.141915261148824,
+      "mask": 2,
+      "positions": 117964800,
+      "riders": [
+        {
+          "bytes": 119537,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/2/twin0.rider",
+          "sha256": "7153c14882f8b7fce8af4fe0861fac564f16360079cc2e77baf0c1eef2dc4f7b"
+        },
+        {
+          "bytes": 119537,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/2/twin1.rider",
+          "sha256": "7153c14882f8b7fce8af4fe0861fac564f16360079cc2e77baf0c1eef2dc4f7b"
+        }
+      ],
+      "score_claim": false,
+      "tail_bytes": 119633,
+      "tail_saved_bytes": 42,
+      "totals_bits": [
+        956270.0522750047,
+        955892.3853298585,
+        955892.9169529155
+      ],
+      "twin_identical": true
+    },
+    {
+      "archive_bytes": 180143,
+      "archive_saved_bytes": 11,
+      "archives": [
+        {
+          "bytes": 180143,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/4/twin0.zip",
+          "sha256": "c423cafe6c88dba8a836004934baa131f26419a98857b6d3c2307d80821bf6b5"
+        },
+        {
+          "bytes": 180143,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/4/twin1.zip",
+          "sha256": "c423cafe6c88dba8a836004934baa131f26419a98857b6d3c2307d80821bf6b5"
+        }
+      ],
+      "continuous_gain_bytes": 16.03988984110765,
+      "fitted_weight_bytes": 45,
+      "frames": 600,
+      "integer_gain_bytes": 15.918346150487196,
+      "mask": 4,
+      "positions": 117964800,
+      "riders": [
+        {
+          "bytes": 119568,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/4/twin0.rider",
+          "sha256": "110b374101fc01a295501a86e205453b3b9c767453c9db17121ab8ae72bb1238"
+        },
+        {
+          "bytes": 119568,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/4/twin1.rider",
+          "sha256": "110b374101fc01a295501a86e205453b3b9c767453c9db17121ab8ae72bb1238"
+        }
+      ],
+      "score_claim": false,
+      "tail_bytes": 119664,
+      "tail_saved_bytes": 11,
+      "totals_bits": [
+        956270.0522750047,
+        956141.7331562758,
+        956142.7055058008
+      ],
+      "twin_identical": true
+    },
+    {
+      "archive_bytes": 180144,
+      "archive_saved_bytes": 10,
+      "archives": [
+        {
+          "bytes": 180144,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/8/twin0.zip",
+          "sha256": "6488bd6c55bc91951d3a53959fd5d47f789aeafdb5aad16c6dc434d1e21b07e6"
+        },
+        {
+          "bytes": 180144,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/8/twin1.zip",
+          "sha256": "6488bd6c55bc91951d3a53959fd5d47f789aeafdb5aad16c6dc434d1e21b07e6"
+        }
+      ],
+      "continuous_gain_bytes": 15.508666398774949,
+      "fitted_weight_bytes": 45,
+      "frames": 600,
+      "integer_gain_bytes": 15.319775631607627,
+      "mask": 8,
+      "positions": 117964800,
+      "riders": [
+        {
+          "bytes": 119569,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/8/twin0.rider",
+          "sha256": "ae8553bd1af4cc44c4eaffd9d21fbf15cd670898c54e21abe4a846ecaefba0b9"
+        },
+        {
+          "bytes": 119569,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/8/twin1.rider",
+          "sha256": "ae8553bd1af4cc44c4eaffd9d21fbf15cd670898c54e21abe4a846ecaefba0b9"
+        }
+      ],
+      "score_claim": false,
+      "tail_bytes": 119665,
+      "tail_saved_bytes": 10,
+      "totals_bits": [
+        956270.0522750047,
+        956145.9829438145,
+        956147.4940699518
+      ],
+      "twin_identical": true
+    },
+    {
+      "archive_bytes": 180127,
+      "archive_saved_bytes": 27,
+      "archives": [
+        {
+          "bytes": 180127,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/16/twin0.zip",
+          "sha256": "b3c14e733b47b3ebcea300fc5890d427f13242fed7e543491cde7bc4c01f4ad5"
+        },
+        {
+          "bytes": 180127,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/16/twin1.zip",
+          "sha256": "b3c14e733b47b3ebcea300fc5890d427f13242fed7e543491cde7bc4c01f4ad5"
+        }
+      ],
+      "continuous_gain_bytes": 32.72136331588263,
+      "fitted_weight_bytes": 45,
+      "frames": 600,
+      "integer_gain_bytes": 32.53703968330228,
+      "mask": 16,
+      "positions": 117964800,
+      "riders": [
+        {
+          "bytes": 119552,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/16/twin0.rider",
+          "sha256": "1af11cde276b334939449eef9862e282209ac304add65544c94b99b5bf8654f5"
+        },
+        {
+          "bytes": 119552,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/16/twin1.rider",
+          "sha256": "1af11cde276b334939449eef9862e282209ac304add65544c94b99b5bf8654f5"
+        }
+      ],
+      "score_claim": false,
+      "tail_bytes": 119648,
+      "tail_saved_bytes": 27,
+      "totals_bits": [
+        956270.0522750047,
+        956008.2813684776,
+        956009.7559575383
+      ],
+      "twin_identical": true
+    },
+    {
+      "archive_bytes": 180021,
+      "archive_saved_bytes": 133,
+      "archives": [
+        {
+          "bytes": 180021,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/19/twin0.zip",
+          "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+        },
+        {
+          "bytes": 180021,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/19/twin1.zip",
+          "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+        }
+      ],
+      "continuous_gain_bytes": 148.93100914864044,
+      "fitted_weight_bytes": 55,
+      "frames": 600,
+      "integer_gain_bytes": 148.75548234497546,
+      "mask": 19,
+      "positions": 117964800,
+      "riders": [
+        {
+          "bytes": 119446,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/19/twin0.rider",
+          "sha256": "53375532ae232bdd52844093390c1a6f4fb05a3fca6195f4f94b125fbe767128"
+        },
+        {
+          "bytes": 119446,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/encode/19/twin1.rider",
+          "sha256": "53375532ae232bdd52844093390c1a6f4fb05a3fca6195f4f94b125fbe767128"
+        }
+      ],
+      "score_claim": false,
+      "tail_bytes": 119542,
+      "tail_saved_bytes": 133,
+      "totals_bits": [
+        956270.0522750047,
+        955078.6042018156,
+        955080.0084162449
+      ],
+      "twin_identical": true
+    }
+  ],
+  "canonical_equation_anchor": {
+    "anchor": {
+      "anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910_provenance_corrected",
+      "empirical_output": {
+        "composite_real_saved_bytes": 133,
+        "full_results_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+        "integer_to_real_gaps_bytes": [
+          5.527293249819195,
+          5.141915261148824,
+          4.918346150487196,
+          5.319775631607627,
+          5.537039683302282,
+          15.755482344975462
+        ],
+        "interaction_miss_bytes": 32,
+        "score_claim": false,
+        "standalone_real_saved_bytes": [
+          96,
+          42,
+          11,
+          10,
+          27
+        ],
+        "upper_bound_claim": false
+      },
+      "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+      "inputs": {
+        "composite_added_weights": 15,
+        "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+        "fixed_old_weights": 40,
+        "provenance_correction": {
+          "append_only_registry_preserves_original": true,
+          "new_archive_fact": {
+            "bytes": 180021,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+            "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+          },
+          "old_provenance": {
+            "artifact_kind": "advisory_non_promotable",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+            "captured_at_utc": "2026-09-10T06:11:42.087050+00:00",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "macos_cpu_advisory",
+            "hardware_substrate": "macos_arm64",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+            "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+          },
+          "reason": "Old provenance source_path named calibration JSON but source_sha256 named candidate archive. Withdraw that mismatched provenance tuple; scientific measurements are unchanged. Corrected provenance names the actual archive file, whose measured hash matches. The independent source_artifact remains calibration JSON with its separately retained hash.",
+          "superseded_anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910"
+        },
+        "scope": "Empirical fixed-base context-map ideal-to-real calibration. Existing numerical tangent evaluator is not re-executed here; no new upper bound is asserted. Five-weight standalone rows meet the equation dimension; 15-weight composite is separately labeled interaction evidence, outside its five-weight bound.",
+        "source_archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+        "standalone_added_weights": 5,
+        "symbols": 117964800
+      },
+      "measurement_method": "Continuous and integer full-symbol codelength totals; independent real RC64 twin encodes of each candidate, with all fitted weights and envelope counted. Residual is fractional distance from composite prior midpoint175B, not an equation-bound residual.",
+      "measurement_utc": "2026-09-10T06:18:37.109757+00:00",
+      "predicted_output": {
+        "composite_real_saved_bytes_range": [
+          100,
+          250
+        ],
+        "standalone_real_saved_bytes_ranges": [
+          [
+            40,
+            150
+          ],
+          [
+            20,
+            80
+          ],
+          [
+            0,
+            60
+          ],
+          [
+            20,
+            60
+          ],
+          [
+            10,
+            40
+          ]
+        ]
+      },
+      "provenance": {
+        "artifact_kind": "advisory_non_promotable",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+        "captured_at_utc": "2026-09-10T06:18:37Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "macos_cpu_advisory",
+        "hardware_substrate": "macos_arm64",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+        "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+      },
+      "residual": 0.24,
+      "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json"
+    },
+    "calibration_artifact": {
+      "bytes": 26487,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+      "sha256": "93464dc62f4f86e948a5dfe96f9b0905511097c7bddf05e4e99e5fa5f3c7fa0b"
+    },
+    "equation_id": "lane_boundary_context_map_bound_v1",
+    "provenance_correction": {
+      "append_only_registry_preserves_original": true,
+      "new_archive_fact": {
+        "bytes": 180021,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+        "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+      },
+      "old_provenance": {
+        "artifact_kind": "advisory_non_promotable",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+        "captured_at_utc": "2026-09-10T06:11:42.087050+00:00",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "macos_cpu_advisory",
+        "hardware_substrate": "macos_arm64",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+        "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+      },
+      "reason": "Old provenance source_path named calibration JSON but source_sha256 named candidate archive. Withdraw that mismatched provenance tuple; scientific measurements are unchanged. Corrected provenance names the actual archive file, whose measured hash matches. The independent source_artifact remains calibration JSON with its separately retained hash.",
+      "superseded_anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910"
+    },
+    "registered": true,
+    "scope": "Empirical fixed-base context-map ideal-to-real calibration. Existing numerical tangent evaluator is not re-executed here; no new upper bound is asserted. Five-weight standalone rows meet the equation dimension; 15-weight composite is separately labeled interaction evidence, outside its five-weight bound.",
+    "score_claim": false
+  },
+  "axis": "[exact serialized bytes, scorer-free macOS-CPU, n600]",
+  "score_claim": false
+}

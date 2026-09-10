@@ -1,0 +1,18 @@
+{
+  "actual_public_entrypoint": true,
+  "arrays_identical": 114,
+  "field_prefix_equal": true,
+  "frames": 2,
+  "fresh": {
+    "bytes": 217942,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/public_fresh2/frame_checkpoints/stage_0002.npz",
+    "sha256": "7c523e5dcfcf4f9fa43bec48eec937873a6042be7bfc9584b4aabbdcc831a8bf"
+  },
+  "resumed": {
+    "bytes": 217942,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/public_identity/frame_checkpoints/stage_0002.npz",
+    "sha256": "7c523e5dcfcf4f9fa43bec48eec937873a6042be7bfc9584b4aabbdcc831a8bf"
+  },
+  "scope": "implementation control; no subset distortion estimate",
+  "score_claim": false
+}
