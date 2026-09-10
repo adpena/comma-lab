@@ -1,0 +1,339 @@
+{
+  "schema": "ddm_bnd3_bundle_verification.v2",
+  "fallback_commit": "16e27ea09c27831abb4b0787a02eed9d1ceb0366",
+  "base_head": "925672272eedc37a1b5a4158147ecbe93a626db5",
+  "verified_file_count": 22,
+  "verified_files": [
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/RECALL.md",
+      "bytes": 2860,
+      "sha256": "bfc6c1850f636e8d35e16a35a1d06967f8bd6c6bcbb03a7203399110dba190c2"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/RESULT.json",
+      "bytes": 156181,
+      "sha256": "0a833ffdd0f32eb6d61dd4dc961f4372a9311310d48787b8c3cbe95d190bff08"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/REVIEWS.json",
+      "bytes": 2753,
+      "sha256": "b2d02fa30fd31ba56c484baabc5badc3414e68d43a139e4ec7cfb0a8a189e499"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/draw_fire_order.json",
+      "bytes": 954,
+      "sha256": "50f3b75967f043836e7089d9b5b7af047295ea4a5b1d0fbca7c1ad9aeed1c50d"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/equation_anchor.json",
+      "bytes": 3337,
+      "sha256": "8abd921935c05cb3e743ac99a2a12663eaf8f7e45ffe525de724812936d66190"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/equation_events.jsonl",
+      "bytes": 39465,
+      "sha256": "d1863901b6f255712fb24b55e7427a31e4498db57a908aab9a1ddb08245772d5"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/equations_recall.json",
+      "bytes": 66030,
+      "sha256": "4177c6048ec3acec7a182be4a35eee2238a7182cc6878ceeca150c74794c0c78"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/finish_and_planar.sh",
+      "bytes": 813,
+      "sha256": "f76f8bac44b6aa22a9f89eecc5cc009d0ef54a7fa2ed5a1767f89b04727aa03f"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/geometry_table.json",
+      "bytes": 1865,
+      "sha256": "47832095df57ad5dd9eb7ccbbeb91c4c01e6817c325ded75f8e1837ffe9c624d"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/lane_event.json",
+      "bytes": 1193,
+      "sha256": "16c090347956bda8d5e85df3788fa49393eb908b04b708dd3774899ff5d80db1"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/price_table.json",
+      "bytes": 137020,
+      "sha256": "639dcbf7eda5c5a70c38ffd127492c046eebc5c24bafaab1cd4eabd4c64f9ab6"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/recall_queries.json",
+      "bytes": 27668,
+      "sha256": "9690903fdf5bd0943d439c2bd5e58ac38689ede113cdea4793c1af3db80a0dbe"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/retained_manifest.json",
+      "bytes": 316,
+      "sha256": "198615218c70c01a33efe3d96dd023595140527df919302d92559896fd4c16c9"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/run_planar.sh",
+      "bytes": 388,
+      "sha256": "85eaba033065ba4b3cc0699c005013b7eda273b9f77ebfa836459aec72a2a5b3"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/run_variants.sh",
+      "bytes": 583,
+      "sha256": "d236cc00d10d80ca39f96d294887d89eed866521cc4a219e05dd35c2a7bc1920"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_20260910/task_events.jsonl",
+      "bytes": 10000,
+      "sha256": "6344c7a28e039801e4ac86b7d43712eec3664c4f809cf414a6127750ea8bf9ad"
+    },
+    {
+      "path": ".omx/research/ddm_bnd3_address_term_decomposition_20260910.md",
+      "bytes": 15754,
+      "sha256": "fc2f602a9ec3495cb1ffbba6db5bb58addc9e8c888eccfad3497e353b32e9ab3"
+    },
+    {
+      "path": "experiments/ddm_bnd3_address_term.py",
+      "bytes": 22212,
+      "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+    },
+    {
+      "path": "experiments/ddm_bnd3_columnar.py",
+      "bytes": 6514,
+      "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+    },
+    {
+      "path": "experiments/ddm_bnd3_frozen_field.py",
+      "bytes": 3292,
+      "sha256": "22c44f51741495d508948f98fe8a8812faf41de49453a0c25811539d8d22fff5"
+    },
+    {
+      "path": "experiments/ddm_bnd3_joint_address.py",
+      "bytes": 7867,
+      "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+    },
+    {
+      "path": "experiments/test_ddm_bnd3_address_term.py",
+      "bytes": 4352,
+      "sha256": "9952d22255f7d7d26c01b10095da95c0741a2a567ca1cd5bf65ed8800fcdbf2a"
+    }
+  ],
+  "exact_changed_path_set": true,
+  "all_json_and_jsonl_parse": true,
+  "single_expected_parent": true,
+  "no_attribution_trailer": true,
+  "bundle_hash_verified": true,
+  "format_patch_hash_verified": true,
+  "commands": [
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "bundle",
+      "verify",
+      "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.bundle"
+    ],
+    [
+      "git",
+      "bundle",
+      "list-heads",
+      "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.bundle"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "fetch",
+      "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.bundle",
+      "refs/heads/serializer-fallback"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/RECALL.md"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/RESULT.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/REVIEWS.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/draw_fire_order.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/equation_anchor.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/equation_events.jsonl"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/equations_recall.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/finish_and_planar.sh"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/geometry_table.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/lane_event.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/price_table.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/recall_queries.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/retained_manifest.json"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/run_planar.sh"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/run_variants.sh"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_20260910/task_events.jsonl"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:.omx/research/ddm_bnd3_address_term_decomposition_20260910.md"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:experiments/ddm_bnd3_address_term.py"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:experiments/ddm_bnd3_columnar.py"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:experiments/ddm_bnd3_frozen_field.py"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:experiments/ddm_bnd3_joint_address.py"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "cat-file",
+      "blob",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366:experiments/test_ddm_bnd3_address_term.py"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "diff-tree",
+      "--no-commit-id",
+      "--name-only",
+      "-r",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "show",
+      "-s",
+      "--format=%B",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366"
+    ],
+    [
+      "git",
+      "--git-dir=/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+      "rev-list",
+      "--parents",
+      "-n",
+      "1",
+      "16e27ea09c27831abb4b0787a02eed9d1ceb0366"
+    ],
+    [
+      "git",
+      "diff",
+      "--cached",
+      "--name-only"
+    ]
+  ],
+  "retained_verification_object_store": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/bundle_verification.git",
+  "main_landing_verified": false,
+  "main_commit_hooks_ran": false,
+  "blocker_phase": "git_apply_cached before hooks",
+  "shared_staged_paths_after": [],
+  "superseded_bad_patch_commit": "4b6fea7fbce10122ce1c66bd488e29fbd5d48111",
+  "notes": "Only16e27ea09c27831abb4b0787a02eed9d1ceb0366 is the selected verified unit. No reset or shared index restore attempted."
+}

@@ -1,0 +1,121 @@
+{
+  "schema": "ddm_bnd3_final_handoff.v1",
+  "captured_at_utc": "2026-09-10T02:12:20.564186+00:00",
+  "measurement_complete": true,
+  "charter_complete": false,
+  "status": "MEASUREMENT_COMPLETE_VERIFIED_FALLBACK_MAIN_MUST_LAND",
+  "verdict_scope": "FORMULATION",
+  "score_claim": false,
+  "study_archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+  "study_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "rows": 48,
+  "best_new_envelope_bytes": 121689,
+  "oracle_displaceable_bytes": 83259,
+  "main_landing_verified": false,
+  "main_commit_hooks_ran": false,
+  "serializer_returncode": 17,
+  "failed_phase": "git_apply_cached before hooks",
+  "fallback_commit": "16e27ea09c27831abb4b0787a02eed9d1ceb0366",
+  "fallback_base_head": "925672272eedc37a1b5a4158147ecbe93a626db5",
+  "bundle": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.bundle",
+    "bytes": 68747,
+    "sha256": "41269e7fe9f1553a4941c9caccbe8f71bedacf06e50a2bdcb43e74067f34f712"
+  },
+  "format_patch": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.format-patch",
+    "bytes": 530275,
+    "sha256": "1eb1248534699d377913824a2ba4345ab959421f4a75b13291e7731b209374ff"
+  },
+  "landing_patch": {
+    "path": ".omx/research/ddm_bnd3_20260910/landing.patch",
+    "bytes": 526250,
+    "sha256": "77dd988f449a652e745b37b81d586db48bcc1882b0e9ccd45445f88416dcfe23"
+  },
+  "intent": {
+    "path": ".omx/research/ddm_bnd3_20260910/serializer_intent.json",
+    "bytes": 4494,
+    "sha256": "79d109a99f1257e8e4d01a45a17f1b36dd2b4e9d7a10a931b5e7a625e8736396"
+  },
+  "bundle_verification": {
+    "path": ".omx/research/ddm_bnd3_20260910/bundle_verification.json",
+    "bytes": 11976,
+    "sha256": "efbee61e167175ff02862d3e19c850c97c400e913bbc2c0c46a8454c907bae02"
+  },
+  "retention_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/RETAINED_MANIFEST.json",
+    "bytes": 10464138,
+    "sha256": "1e5393a7ece9010b1e76e8182cb2528e383b3a713a39b22b629bca129231b76d"
+  },
+  "selected_file_count": 22,
+  "superseded_commit": "4b6fea7fbce10122ce1c66bd488e29fbd5d48111",
+  "superseded_reason": "two recall JSON blobs changed by missing-newline patch defect; never land it",
+  "live_frontier_at_harvest": {
+    "archive_sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180186,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_rp1_t4_rate_directed_predistortion_20260910",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "5e1e6dac4b0391d77596883e4d9b4b1988b22ccc8ad0b07e544e7ad76ad38927",
+      "source_receipt_sha256": "41d24304787b7c17505550bb17e516c981e985d8822c0b74e329e1e6c67c7b5f"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_rp1_t4_rate_directed_predistortion_20260910",
+    "measured_at_utc": null,
+    "score": 0.13766931482209038,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_rp1_t4_rate_directed_predistortion_20260910.json"
+  },
+  "moved_by_this_arm": false,
+  "follow_ons": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_stores": [
+        "owned source/memo/receipts",
+        ".omx/state/canonical_task_status.jsonl",
+        ".omx/state/canonical_equations_registry.jsonl",
+        ".omx/state/lane_registry.json"
+      ],
+      "fire_trigger": "harvest this verified fallback in a Git-writable context",
+      "action": "Land selected16e27ea09c27831abb4b0787a02eed9d1ceb0366 only, replay absent narrow API events, verify exact content and required commit checks",
+      "main_landing_complete": false,
+      "serializer_rc": 17,
+      "blocker": "GIT_OBJECT_WRITE_DENIED",
+      "fallback_commit": "16e27ea09c27831abb4b0787a02eed9d1ceb0366",
+      "bundle": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.bundle",
+        "bytes": 68747,
+        "sha256": "41269e7fe9f1553a4941c9caccbe8f71bedacf06e50a2bdcb43e74067f34f712"
+      },
+      "format_patch": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/intended-commit.format-patch",
+        "bytes": 530275,
+        "sha256": "1eb1248534699d377913824a2ba4345ab959421f4a75b13291e7731b209374ff"
+      }
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "action": "Execute linked bnd1 ITEM_2 draw only after a new receiver-verified twin lossless candidate passes the same-field5000B-saving gate and explicit scorer allocation. If field changes, rederive gate and field-bind first.",
+      "fire_trigger": "all of: new candidate envelope <=114784B on move37 or equivalent rederived5000B cut on explicitly selected field; receiver identity; explicit scorer allocation",
+      "predecessor": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_2",
+      "charter_falsifier": "min achieved selective address2559B < half whole-population displacement41629.5B; supports differ and this is not evidence of a cheap complete code",
+      "scorer_dispatched": false,
+      "live_hypotheses_disposition": "FOLDED into this existing admission gate; no unconditional research or draw launch"
+    }
+  ],
+  "landing_task_event": {
+    "path": ".omx/research/ddm_bnd3_20260910/landing_task_event.json",
+    "bytes": 2082,
+    "sha256": "31d48072fcaf6f5f74d4676eaeab1c0d67f3bd2900188ffecaca0e69afce0aab"
+  }
+}

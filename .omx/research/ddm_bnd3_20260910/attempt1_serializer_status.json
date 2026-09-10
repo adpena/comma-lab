@@ -1,0 +1,7 @@
+{
+  "returncode": 17,
+  "stdout": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer.stdout.log",
+  "stderr": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer.stderr.log",
+  "head_after": "5f3059780c52cb8257b8b7119fe3319e0db38deb",
+  "index_after_sha256": "59c183420f99393dd5cc5b7a013866126c9927ede411b9d94b91ba730496ca18"
+}

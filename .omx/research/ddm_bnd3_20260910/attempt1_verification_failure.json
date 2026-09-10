@@ -1,0 +1,11 @@
+{
+  "status": "SUPERSEDED_PATCH_FORMAT_ERROR",
+  "commit": "4b6fea7fbce10122ce1c66bd488e29fbd5d48111",
+  "verified_files": 20,
+  "mismatched_files": [
+    ".omx/research/ddm_bnd3_20260910/equations_recall.json",
+    ".omx/research/ddm_bnd3_20260910/recall_queries.json"
+  ],
+  "reason": "Diff construction did not terminate source files lacking final newline; following diff header entered the JSON blob",
+  "fix": "Canonical final newline in all owned text; require trailing newline; preapply exact patch to isolated index and hash every staged blob before serializer"
+}
