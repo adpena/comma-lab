@@ -656,6 +656,43 @@ def retained_revalidation(row: dict[str, Any]) -> dict[str, Any]:
     return current
 
 
+def _active_moved_redirect_blockers(path: Path, descriptor: dict[str, Any] | None) -> list[str]:
+    """A retained reproducer does not retire a live MOVED payload obligation.
+
+    This applies to every descriptor family, independently of reference-scan
+    observation exclusions. Rebinding a redirect requires fresh admission; a
+    historical/retired status label alone never authorizes target deletion.
+    """
+    if descriptor is None or "moved_manifest" not in descriptor:
+        return []
+    try:
+        pin = descriptor["moved_manifest"]
+        if not isinstance(pin, dict):
+            raise CertifyError("INVALID_MOVED_MANIFEST_PIN")
+        manifest = verify_pin(pin)
+        payload = manifest.read_bytes()
+        if hashlib.sha256(payload).hexdigest() != pin["sha256"]:
+            raise CertifyError("MOVED_MANIFEST_CHANGED_DURING_READ")
+        def unique(pairs):
+            row = {}
+            for key, value in pairs:
+                if key in row:
+                    raise CertifyError(f"DUPLICATE_MOVED_MANIFEST_KEY:{key}")
+                row[key] = value
+            return row
+        moved = json.loads(payload, object_pairs_hook=unique)
+        if (not isinstance(moved, dict) or not isinstance(moved.get("moved_to"), str)
+                or not Path(moved["moved_to"]).is_absolute()
+                or type(moved.get("bytes")) is not int or moved["bytes"] < 0
+                or not isinstance(moved.get("sha256"), str) or not valid_sha256(moved["sha256"])):
+            raise CertifyError("INVALID_MOVED_MANIFEST")
+        if Path(moved["moved_to"]).resolve() == path.resolve():
+            return [f"ACTIVE_MOVED_REDIRECT_TARGET:{manifest}"]
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError, CertifyError) as exc:
+        return [f"MOVED_REDIRECT_REVALIDATION_REFUSED:{type(exc).__name__}:{exc}"]
+    return []
+
+
 def observation_exclusions(pins: list[dict[str, str]], repo_root: Path) -> list[str]:
     result = []
     for pin in pins:
@@ -1006,11 +1043,14 @@ def apply(args: argparse.Namespace) -> int:
         forbidden = _forbidden_target_reason(path, descriptor)
         if forbidden:
             blockers.append(forbidden)
-        try:
-            refreshed = retained_revalidation(row) if generalized else certify_selected(path, str(row["sha256"]))
-        except (OSError, ValueError, KeyError, json.JSONDecodeError, CertifyError) as exc:
-            blockers.append(f"CERTIFICATE_REVALIDATION_REFUSED:{type(exc).__name__}:{exc}")
-            refreshed = None
+        redirect_blockers = _active_moved_redirect_blockers(path, descriptor)
+        blockers.extend(redirect_blockers)
+        refreshed = None
+        if not redirect_blockers:
+            try:
+                refreshed = retained_revalidation(row) if generalized else certify_selected(path, str(row["sha256"]))
+            except (OSError, ValueError, KeyError, json.JSONDecodeError, CertifyError) as exc:
+                blockers.append(f"CERTIFICATE_REVALIDATION_REFUSED:{type(exc).__name__}:{exc}")
         aliases = [str(path), str(path.parent)] if refreshed is None else list(refreshed.pop("reference_aliases"))
         exclusions = observation_exclusions(row_observation_pins(row), args.repo_root)
         if generalized:

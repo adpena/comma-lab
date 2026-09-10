@@ -136,8 +136,8 @@ def test_tc3_protected_targets_never_admit(tmp_path, monkeypatch, relative):
     assert p.read_bytes() == b'keep'
 
 
-@pytest.mark.parametrize('drift_archive', [False, True])
-def test_native_plan_and_apply_revalidate_descriptor(tmp_path, monkeypatch, drift_archive):
+@pytest.mark.parametrize('fault', ['none', 'archive_drift', 'observation_exclusion'])
+def test_native_plan_and_apply_revalidate_descriptor(tmp_path, monkeypatch, fault):
     raw, descriptor, source, rehash, closure = chain(tmp_path, monkeypatch)
     monkeypatch.setattr(vr3, 'repo_reference_hits', lambda aliases, *a, **k: {p: [] for p in aliases})
     monkeypatch.setattr(vr3, 'process_gate', lambda family: {'visible': True})
@@ -145,27 +145,31 @@ def test_native_plan_and_apply_revalidate_descriptor(tmp_path, monkeypatch, drif
     src, hashes, closures = [tmp_path / n for n in ('source.jsonl', 'hashes.jsonl', 'closures.json')]
     vr3.atomic_jsonl(src, [source])
     vr3.atomic_jsonl(hashes, [rehash])
-    write(closures, {'observation_files': [], 'closures': {'ddm_sj1': closure}})
+    observations = [descriptor['moved_manifest']] if fault == 'observation_exclusion' else []
+    write(closures, {'observation_files': observations, 'closures': {'ddm_sj1': closure}})
     ledger = tmp_path / 'plan.jsonl'
     vr3.plan_retained(argparse.Namespace(source_ledger=src, rehash_ledger=hashes, closures=closures,
                                         repo_root=tmp_path, output_ledger=ledger))
     row = json.loads(ledger.read_text())
     assert row['planned_verdict'] == 'DELETABLE'
-    # A new archive after planning must refuse apply and leave the target bytes.
-    if drift_archive:
+    # A still-active redirect must refuse even before expensive archive revalidation.
+    if fault == 'archive_drift':
         Path(descriptor['archive']['path']).write_bytes(b'drifted archive')
+    def expensive_revalidation_must_not_run(row):
+        raise AssertionError('active redirect must block before expensive revalidation')
+    monkeypatch.setattr(vr3, 'retained_revalidation', expensive_revalidation_must_not_run)
     vr3.apply(argparse.Namespace(ledger=ledger, target_bytes=raw.stat().st_size,
                                 expected_ledger_sha256=vr3.sha256_file(ledger),
                                 journal=tmp_path / 'journal.jsonl', repo_root=tmp_path))
-    if drift_archive:
-        assert raw.exists()
-        assert 'CERTIFICATE_REVALIDATION_REFUSED' in json.loads(ledger.read_text())['verdict']
-    else:
-        assert not raw.exists()
-        assert json.loads(ledger.read_text())['verdict'] == 'DELETED'
-        assert Path(descriptor['archive']['path']).exists()
-        assert Path(descriptor['seal']['path']).exists()
-        assert Path(descriptor['moved_manifest']['path']).exists()
+    assert raw.exists()
+    assert 'ACTIVE_MOVED_REDIRECT_TARGET' in json.loads(ledger.read_text())['verdict']
+    assert Path(descriptor['archive']['path']).exists()
+    assert Path(descriptor['seal']['path']).exists()
+    assert Path(descriptor['moved_manifest']['path']).exists()
+    predelete = next(json.loads(line) for line in (tmp_path / 'journal.jsonl').read_text().splitlines()
+                     if json.loads(line)['phase'] == 'PRE_DELETE')
+    assert predelete['raw_sha256_verified_current'] is False
+    assert predelete['refreshed_reproducer'] is None
 
 
 def test_descriptor_status_is_not_a_fake_legacy_certificate(tmp_path, monkeypatch):
@@ -305,3 +309,64 @@ def test_worker_resumes_partially_completed_certified_cleanup(tmp_path, monkeypa
     assert worker.run(config_path) == 0
     assert not extra.exists()
     assert original.exists()
+
+
+@pytest.mark.parametrize('kind', ['sj1_parseback', 'sj1_overlay', 'tc3_trace', 'future_family'])
+def test_active_redirect_guard_is_family_independent(tmp_path, kind):
+    raw = tmp_path / 'payload.raw'
+    raw.write_bytes(b'keep live destination')
+    pin = write(tmp_path / 'MOVED.json', {'moved_to': str(raw),
+                'bytes': raw.stat().st_size, 'sha256': vr3.sha256_file(raw),
+                'status': 'HISTORICAL_OBSERVATION'})
+    assert 'ACTIVE_MOVED_REDIRECT_TARGET' in vr3._active_moved_redirect_blockers(
+        raw, {'kind': kind, 'moved_manifest': pin})[0]
+    assert raw.exists()
+
+
+@pytest.mark.parametrize('fault', ['missing', 'drift', 'malformed', 'non_object', 'relative',
+                                  'bad_sha', 'duplicate_key', 'bad_pin'])
+def test_unverifiable_redirect_guard_fails_closed(tmp_path, fault):
+    raw = tmp_path / 'payload.raw'
+    raw.write_bytes(b'keep live destination')
+    manifest = tmp_path / 'MOVED.json'
+    value = {'moved_to': str(raw), 'bytes': raw.stat().st_size, 'sha256': vr3.sha256_file(raw)}
+    pin = write(manifest, value)
+    if fault == 'missing':
+        manifest.unlink()
+    elif fault == 'drift':
+        manifest.write_text('{}')
+    elif fault == 'bad_pin':
+        pin = None
+    else:
+        text = {'malformed': '{', 'non_object': '[]',
+                'relative': json.dumps(dict(value, moved_to='payload.raw')),
+                'bad_sha': json.dumps(dict(value, sha256='bad')),
+                'duplicate_key': '{"moved_to":"/first","moved_to":"/second"}'}[fault]
+        manifest.write_text(text)
+        pin = vr3.pinned_file(manifest)
+    assert 'MOVED_REDIRECT_REVALIDATION_REFUSED' in vr3._active_moved_redirect_blockers(
+        raw, {'moved_manifest': pin})[0]
+    assert raw.exists()
+
+
+def test_active_redirect_guard_preserves_normalized_alias(tmp_path):
+    raw = tmp_path / 'payload.raw'
+    raw.write_bytes(b'keep')
+    child = tmp_path / 'child'
+    child.mkdir()
+    alias = str(child / '..' / raw.name)
+    pin = write(tmp_path / 'MOVED.json', {'moved_to': alias, 'bytes': 4,
+                                        'sha256': vr3.sha256_file(raw)})
+    assert vr3._active_moved_redirect_blockers(raw, {'moved_manifest': pin})
+    assert vr3._active_moved_redirect_blockers(raw, None) == []
+    assert vr3._active_moved_redirect_blockers(raw, {'kind': 'unrelated'}) == []
+
+
+def test_rebound_redirect_does_not_alone_block_old_target(tmp_path):
+    raw = tmp_path / 'old.raw'
+    raw.write_bytes(b'old')
+    pin = write(tmp_path / 'MOVED.json', {'moved_to': str(tmp_path / 'new.raw'),
+                                        'bytes': 3, 'sha256': vr3.sha256_file(raw)})
+    assert vr3._active_moved_redirect_blockers(raw, {'moved_manifest': pin}) == []
+    # Passing this guard still requires all existing reproducer/admission checks.
+    assert raw.exists()
