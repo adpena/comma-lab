@@ -507,7 +507,25 @@ the NEW pointer's coefficients over the union of edited pairs (282), re-price by
 encode against the new tail, and re-seal. Everything else in this candidate is untouched by
 sj1's change.
 
-## 15. State on hand-off, and what it would cost to finish
+## 15. Why the 197 dropped pairs were dropped — and what the frame-0 selector could recover
+
+The admission dropped 197 of 450 edited pairs (365 tokens). Decomposing each drop into its
+two marginal terms at the base operating point:
+
+| drop reason | pairs | note |
+|---|---|---|
+| rate went the wrong way AND pose did | 88 | genuinely dead |
+| rate-only (pose fine, bytes cost) | 65 | the adaptive claw-back |
+| **pose-only (rate already helps, pose kills it)** | **44** | **81 tokens, −27.71 B of rate credit stranded** |
+
+Those 44 pairs are the ones the seg-free frame-0 selector (fs1's encoder) is aimed at: their
+token change already SAVES bytes and the carrier re-solve simply could not give the pose
+back. If a per-pair frame-0 re-selection recovers their pose, they re-enter the admission and
+carry **−27.71 B (ΔS −1.845e-05)** with them — just under the 2e-5 bar on its own, so it is a
+follow-on rather than a candidate, but it is a measured, addressed, 81-token target rather
+than a guess.
+
+## 16. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -535,6 +553,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 16. Frontier line
+## 17. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
