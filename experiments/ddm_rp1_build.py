@@ -98,12 +98,13 @@ def build_member(parts: dict[str, bytes], weights: bytes, stream: bytes) -> byte
 
 def cmd_stage(args: argparse.Namespace) -> int:
     pointer = Path(args.pointer_runtime)
-    live = rp1.verify_pointer(expect_sha=rp1pose.POINTER_ARCHIVE_SHA256)
+    expect = args.expect_pointer_sha or rp1pose.POINTER_ARCHIVE_SHA256
+    live = rp1.verify_pointer(expect_sha=expect)
     if not live["matches_expected"]:
         raise rp1.Rp1Error(f"pointer moved to {live['archive_sha256']}; re-base first")
     pointer_bytes = (pointer / "archive.zip").read_bytes()
     pointer_sha = sha256_bytes(pointer_bytes)
-    if pointer_sha != rp1pose.POINTER_ARCHIVE_SHA256:
+    if pointer_sha != expect:
         raise rp1.Rp1Error(f"pointer tree sha {pointer_sha} is not the live row's")
 
     parts, weights, shipped_stream = pointer_parts(pointer)
@@ -291,6 +292,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage.add_argument("--candidate-envelope", required=True)
     stage.add_argument("--candidate-body", required=True)
     stage.add_argument("--out-dir", required=True)
+    stage.add_argument("--expect-pointer-sha", default=None)
     stage.set_defaults(func=cmd_stage)
 
     close = sub.add_parser("close")

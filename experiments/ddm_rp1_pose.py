@@ -84,18 +84,35 @@ def _sha256_file(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+#: Overridable at the CLI so a pointer move is a flag, not a source edit.
+_ACTIVE: dict[str, Any] = {"tree": POINTER_TREE, "sha": POINTER_ARCHIVE_SHA256,
+                           "carrier_bytes": CARRIER_BYTES}
+
+
+def set_active_pointer(tree: str | None, sha: str | None, carrier: int | None) -> None:
+    if tree:
+        _ACTIVE["tree"] = Path(tree)
+    if sha:
+        _ACTIVE["sha"] = sha
+    if carrier:
+        _ACTIVE["carrier_bytes"] = int(carrier)
+
+
 def assert_pointer_and_carrier() -> dict[str, Any]:
     """Refuse unless the live pointer is the tree this module solves against."""
-    live = rp1.verify_pointer(expect_sha=POINTER_ARCHIVE_SHA256)
+    live = rp1.verify_pointer(expect_sha=_ACTIVE["sha"])
     if not live["matches_expected"]:
         raise rp1.Rp1Error(
-            f"pointer moved: file says {live['archive_sha256']}, this module is pinned to "
-            f"{POINTER_ARCHIVE_SHA256}; re-base before solving a carrier"
+            f"pointer moved: file says {live['archive_sha256']}, this run is pinned to "
+            f"{_ACTIVE['sha']}; re-base before solving a carrier"
         )
-    sections = jg2.split_member(jg2.read_archive_member(POINTER_TREE / "archive.zip"))
-    if len(sections["carrier"]) != CARRIER_BYTES:
+    sections = jg2.split_member(
+        jg2.read_archive_member(_ACTIVE["tree"] / "archive.zip")
+    )
+    if len(sections["carrier"]) != _ACTIVE["carrier_bytes"]:
         raise rp1.Rp1Error(
-            f"pointer carrier is {len(sections['carrier'])} B, expected {CARRIER_BYTES}; "
+            f"pointer carrier is {len(sections['carrier'])} B, expected "
+            f"{_ACTIVE['carrier_bytes']}; "
             "the coefficients this arm re-solves from are not the ones it ships"
         )
     return {
@@ -108,7 +125,7 @@ def assert_pointer_and_carrier() -> dict[str, Any]:
 
 def load_instrument(overlay_dir: Path | None):
     """br1's pose instrument on the LIVE pointer's carrier, reading the asked-for decode."""
-    state = up2.load_carrier_state(POINTER_TREE, verify_archive=False)
+    state = up2.load_carrier_state(_ACTIVE["tree"], verify_archive=False)
     targets, lineage = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
     if lineage != up2.LINEAGE_DALI:
         raise rp1.Rp1Error(f"GT pose lineage is {lineage}, not {up2.LINEAGE_DALI}")
@@ -306,7 +323,7 @@ def cmd_refine(args: argparse.Namespace) -> int:
 def cmd_codes(args: argparse.Namespace) -> int:
     """Merge refine shards into a (600, 12) code table; untouched pairs keep pointer codes."""
     receipts = assert_pointer_and_carrier()
-    state = up2.load_carrier_state(POINTER_TREE, verify_archive=False)
+    state = up2.load_carrier_state(_ACTIVE["tree"], verify_archive=False)
     codes = np.asarray(state.codes, dtype=np.int32).copy()
     merged = 0
     kept = 0
@@ -359,6 +376,9 @@ def build_parser() -> argparse.ArgumentParser:
     pose.add_argument("--batch-size", type=int, default=8)
     pose.add_argument("--threads", type=int, default=4)
     add_pose_gate_argument(pose)
+    pose.add_argument("--pointer-tree", default=None)
+    pose.add_argument("--expect-pointer-sha", default=None)
+    pose.add_argument("--carrier-bytes", type=int, default=None)
     pose.set_defaults(func=cmd_pose)
 
     refine = sub.add_parser("refine", help="carrier re-solve on the changed pairs")
@@ -372,17 +392,28 @@ def build_parser() -> argparse.ArgumentParser:
     refine.add_argument("--max-gn-iterations", type=int, default=400)
     refine.add_argument("--threads", type=int, default=2)
     refine.add_argument("--resume", action="store_true")
+    refine.add_argument("--pointer-tree", default=None)
+    refine.add_argument("--expect-pointer-sha", default=None)
+    refine.add_argument("--carrier-bytes", type=int, default=None)
     refine.set_defaults(func=cmd_refine)
 
     codes = sub.add_parser("codes", help="merge refine shards into a (600,12) table")
     codes.add_argument("--rows", nargs="+", required=True)
     codes.add_argument("--out", required=True)
+    codes.add_argument("--pointer-tree", default=None)
+    codes.add_argument("--expect-pointer-sha", default=None)
+    codes.add_argument("--carrier-bytes", type=int, default=None)
     codes.set_defaults(func=cmd_codes)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    set_active_pointer(
+        getattr(args, "pointer_tree", None),
+        getattr(args, "expect_pointer_sha", None),
+        getattr(args, "carrier_bytes", None),
+    )
     return int(args.func(args))
 
 

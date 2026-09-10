@@ -527,6 +527,11 @@ def build_parser() -> argparse.ArgumentParser:
     mixer.add_argument("--min-saving-bits", type=float, default=DEFAULT_MIN_SAVING_BITS)
     mixer.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
     mixer.add_argument("--frames", type=int, default=N_PAIRS)
+    mixer.add_argument("--source-runtime", default=None)
+    mixer.add_argument("--weights", default=None)
+    mixer.add_argument("--live-field-u8", default=None)
+    mixer.add_argument("--control-envelope", default=None)
+    mixer.add_argument("--expect-pointer-sha", default=None)
     mixer.add_argument(
         "--field",
         default=None,
@@ -579,9 +584,18 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
 
     import torch
 
+    # RE-BASE SURFACE.  These four objects are the only things a pointer move changes for
+    # this loop, and they are FLAGS rather than edits: a pointer move that forces a source
+    # edit is the shape that goes half-applied ([[binding-instruction-numbers-expire]]).
+    source_runtime = Path(args.source_runtime or CMP1_SOURCE_RUNTIME)
+    weights_path = Path(args.weights or CMP1_WEIGHTS)
+    field_u8 = Path(args.live_field_u8 or CMP1_FIELD_U8)
+    control_envelope = Path(args.control_envelope or CMP1_MIXED_STREAM)
+    expect_pointer = args.expect_pointer_sha or CMP1_POINTER_ARCHIVE_SHA256
+
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    pointer = verify_pointer(expect_sha=CMP1_POINTER_ARCHIVE_SHA256)
+    pointer = verify_pointer(expect_sha=expect_pointer)
 
     # cmp1's determinism contract, matched exactly: a different thread count is a
     # different reduction order, and the identity control is a byte comparison.
@@ -598,11 +612,11 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
 
     import ddm_tc1_mixer_codec as tc1
 
-    field_sha = sha256_file(CMP1_FIELD_U8)
-    if field_sha != CMP1_FIELD_SHA256:
+    field_sha = sha256_file(field_u8)
+    if args.live_field_u8 is None and field_sha != CMP1_FIELD_SHA256:
         raise Rp1Error(f"cmp1 field sha {field_sha} != {CMP1_FIELD_SHA256}")
     live = np.memmap(
-        CMP1_FIELD_U8, dtype=np.uint8, mode="r", shape=(N_PAIRS, EVAL_H, EVAL_W)
+        field_u8, dtype=np.uint8, mode="r", shape=(N_PAIRS, EVAL_H, EVAL_W)
     )
     if args.field:
         # PRICING MODE.  The edited field must carry ALL 600 planes: a pair merely absent
@@ -629,20 +643,20 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
 
     route_b = jg2.load_route_b()
     library, build = jg2.compile_rc64(out / "work", route_b, "rp1_mixer")
-    residual, renderer, renderer_dir = jg2.load_runtime(CMP1_SOURCE_RUNTIME)
+    residual, renderer, renderer_dir = jg2.load_runtime(source_runtime)
     from runtime.free_corrector import FreeCorrector  # type: ignore[import-not-found]
     from runtime.hpac_inference import (  # type: ignore[import-not-found]
         optimize_sparse_evaluator,
     )
 
-    parts = residual.read_residual_archive(CMP1_SOURCE_RUNTIME / "archive.zip")
+    parts = residual.read_residual_archive(source_runtime / "archive.zip")
     device = torch.device("cpu")
     model = renderer.load_hpac(
         residual.materialize_ihs1(parts.hpac_blob, renderer), device
     )
     sparse = residual._sparse_class(renderer_dir)(model, EVAL_H, EVAL_W)
     corrector = FreeCorrector(EVAL_H * EVAL_W)
-    mixer = tc1.SharedMixer(CMP1_WEIGHTS.read_bytes())
+    mixer = tc1.SharedMixer(weights_path.read_bytes())
     groups = [
         np.flatnonzero(mask.cpu().numpy().reshape(-1))
         for mask in renderer.group_masks(device)
@@ -796,7 +810,7 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     rider_body = _ctypes.string_at(_ptr, _size)
     body_path = out / "tail_rp1_mixer_rider_body.bin"
     body_path.write_bytes(rider_body)
-    live_stream = CMP1_MIXED_STREAM.read_bytes()
+    live_stream = control_envelope.read_bytes()
     identity = {
         "frames_encoded": args.frames,
         "field": str(args.field) if args.field else "the live pointer's own field",
