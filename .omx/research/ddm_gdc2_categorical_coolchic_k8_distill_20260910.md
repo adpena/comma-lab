@@ -147,12 +147,12 @@ measured residual, `packet + R(M)` is **monotone increasing in K** across the wh
 |---:|---:|---:|---:|---:|
 | **4** | 133,426 | 174,680 | **308,106** | 3.277 |
 | 6 | 223,494 | 105,628 | 329,122 | 3.501 |
-| 8 | 88,304 mismatches | 60,520 | 366,562 | 3.899 |
+| 8 | 306,042 | 60,520 | 366,562 | 3.899 |
 | 12 | 421,886 | 11,772 | 433,658 | 4.613 |
 | 16 | 459,394 | 1,238 | 460,632 | 4.900 |
 | 24 | 475,002 | 0 | 475,002 | 5.053 |
 
-(the K=8 row's packet is 306,042 B.) The family's best point is **K=4 at 308,106 B**, not K=6 at
+The family's best point is **K=4 at 308,106 B**, not K=6 at
 329,122 B, and there is no interior minimum: every byte the program spends buying accuracy costs more
 than the residual it saves, all the way to exact. GDC1's NO-GO stands and is *stronger* than it was
 stated — the family floor is 3.28x the gate — but the winner it recorded was an artefact of the
