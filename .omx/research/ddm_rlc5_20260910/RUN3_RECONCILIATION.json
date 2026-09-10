@@ -1,0 +1,117 @@
+{
+ "schema": "first_measurement_run_reconciliation.v1",
+ "run": "run3",
+ "call_id": "fc-01M26G7JYMY39TVN1ET3JJV2YD",
+ "lane_id": "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+ "instance_job_id": "ddm_rlc5_first_measurement_t4_run3_20260910",
+ "outcome": "TERMINAL_FAILED_REMOTE_RUNTIME_TREE_HASH_MISMATCH",
+ "remote_returncode": 1,
+ "remote_elapsed_seconds": 5.701878945,
+ "remote_error": "inflate runtime tree hash mismatch: expected=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 actual=baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af",
+ "measured_cause": "path-coupled tree digest under the first-measurement volume root; runtime_content_tree_sha256 e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf and runtime_files_sha256 fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4 identical on both sides",
+ "nonce_state": "RESERVED_THEN_CONSUMED (authorization v6 sha 59bb0b6a5089593af1f6da57394ea88c9fad198594345223cc286152e08777c5); non-replayable",
+ "canonical_ledger_events": [
+  {
+   "event_type": "dispatched",
+   "status": "dispatched",
+   "written_at_utc": "2026-09-10T20:41:00.845096Z",
+   "recorded_at_utc": null,
+   "harvested_at_utc": null
+  },
+  {
+   "event_type": "failed",
+   "status": "failed",
+   "written_at_utc": "2026-09-10T20:41:00.846700Z",
+   "recorded_at_utc": null,
+   "harvested_at_utc": "2026-09-10T20:41:00.846694Z"
+  }
+ ],
+ "snapshot_ledger_row": {
+  "path": ".omx/tmp/modal_fire_snapshots/20260910T202017Z_ddm_rlc5_first_measurement_t4_run3_20260910/.omx/state/modal_call_id_ledger.jsonl",
+  "bytes": 1504,
+  "sha256": "f80d5fdc147715014b2e39e63b03fe64edd75bdf0bccc5d9d630a5ca4d7cbb50"
+ },
+ "retained_artifacts": {
+  "FIRE_MANIFEST.json": {
+   "bytes": 4211,
+   "sha256": "c977344c9b2f25684953b02aa322da0ca8beb436bcd805972bbc08285e2df8df"
+  },
+  "FIRST_MEASUREMENT_CONSUMPTION.json": {
+   "bytes": 1018,
+   "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+  },
+  "FIRST_MEASUREMENT_CONTEXT.json": {
+   "bytes": 4011,
+   "sha256": "41c9b0c8692346f033646023f466350a65e3b61037f060c7594d6b23ff7abc05"
+  },
+  "FIRST_MEASUREMENT_RETENTION.json": {
+   "bytes": 20506,
+   "sha256": "0ee7d745cc3611676f54ce3ea93146470a5aa30844f4f811b851290b8b2b6336"
+  },
+  "MODAL_REMOTE_RESULT.json": {
+   "bytes": 80671,
+   "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+  },
+  "PREFIRE_REFUSAL_6b523667981d4cf89a91cf2fbf8232d2.json": {
+   "bytes": 279,
+   "sha256": "375403d658f2150f4c6e03f72d6fd4701d22cced964f2ee872be18531ee099e8"
+  },
+  "PREFIRE_REFUSAL_edb1d0f428884b7aaad45eca49a038aa.json": {
+   "bytes": 253,
+   "sha256": "aa2b0dfa4a44eae4b9edaa33d35f9e24e26dbb387f6be8e3d4ca9dff2df53d1a"
+  },
+  "contest_auth_eval.stderr.log": {
+   "bytes": 654,
+   "sha256": "69b70b8b1b7e8fcc09ae9643f5501497798a43b82a45d714939dc31e2b74ae2a"
+  },
+  "contest_auth_eval.stdout.log": {
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "dispatch_stderr.log": {
+   "bytes": 183,
+   "sha256": "087a332d3f73cdb7e24962e4b9c885e7fa5feefa5fc924b3389a57d25d0e479f"
+  },
+  "dispatch_stdout.log": {
+   "bytes": 8451,
+   "sha256": "217d02df5403ca26e5bcee823fa8428b6690f01b89e8376ed87d50a397ee0e54"
+  },
+  "modal_auth_eval_recover_summary.json": {
+   "bytes": 897,
+   "sha256": "0bbde0b98cd6d81e23217c21f3a5a844918f3f7ccfbd14c131bdd5bf73f78e4e"
+  },
+  "modal_auth_eval_spawn.json": {
+   "bytes": 8834,
+   "sha256": "e07653995a4d2496b867e312eb011e61e030a20eb6bb30b62014403573877e94"
+  },
+  "modal_call_id.txt": {
+   "bytes": 30,
+   "sha256": "903e64291baf8252c3ef53c734dc147b364f2a2c7ceddf39f10806ef3982b1d1"
+  },
+  "modal_cuda_auth_eval_local_request.json": {
+   "bytes": 6489,
+   "sha256": "8b9627b2f41f73041e46b0a8ff526a26df0925d7e37ffb0cf8a4a3ba44e9fbef"
+  },
+  "modal_cuda_auth_eval_result.json": {
+   "bytes": 7308,
+   "sha256": "36e3cc64e547640af1195e9427cb85b127093e695430c879434153fa91f1f18b"
+  },
+  "modal_cuda_auth_eval_validation.json": {
+   "bytes": 2905,
+   "sha256": "cde2b53ef16a8b9f85ef60e827940d4e9d180e4dde2022cc67fb005ab501a2c6"
+  },
+  "modal_cuda_preflight.json": {
+   "bytes": 1793,
+   "sha256": "c12136bd0f93ae8dd826ee785ff7fbd8a644b2ae5d789f93f30bdf25f80e30f1"
+  },
+  "provenance.json": {
+   "bytes": 42595,
+   "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+  }
+ },
+ "score_claim": false,
+ "promotion_eligible": false,
+ "existing_records_edited": false,
+ "reconciled_at_utc": "2026-09-10T21:37:14.484518+00:00",
+ "git_head": "74c284865937a7e852ab6ba7550e2517786d345a"
+}
