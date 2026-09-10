@@ -26,6 +26,7 @@ import json
 import os
 import shlex
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -64,10 +65,22 @@ def cmd_run(args: argparse.Namespace) -> int:
     for item in args.env:
         key, _, value = item.partition("=")
         env[key] = value
-    code, summary = run_producer(command, cwd=Path(args.cwd).resolve(), env=env,
-                                 stdout_path=out / "producer.stdout.log", rule=rule,
-                                 settle_seconds=args.settle_seconds, paused_pids=args.pause_pid,
-                                 timeout_seconds=args.timeout_seconds, monitor_command=list(sys.argv))
+    activity = None
+    if args.assert_user_activity:
+        # macOS runs idle-time maintenance (dasd -> syspolicyd, mds, ...) about five minutes after the
+        # host goes quiet, which is exactly the window a timing needs. caffeinate -u asserts user
+        # activity so that maintenance is not scheduled; it runs inside the monitor's own tree (0 % CPU)
+        # and is recorded in the receipt. It changes no system setting and dies with the window.
+        activity = subprocess.Popen(["caffeinate", "-u", "-i", "-t", str(int(args.settle_seconds + args.timeout_seconds + 60))])
+    try:
+        code, summary = run_producer(command, cwd=Path(args.cwd).resolve(), env=env,
+                                     stdout_path=out / "producer.stdout.log", rule=rule,
+                                     settle_seconds=args.settle_seconds, paused_pids=args.pause_pid,
+                                     timeout_seconds=args.timeout_seconds, monitor_command=list(sys.argv))
+    finally:
+        if activity is not None:
+            activity.terminate()
+    summary["user_activity_asserted"] = {"caffeinate_u": bool(activity), "pid": activity.pid if activity else None}
     summary["producer_command"] = command
     summary["producer_returncode"] = code
     _save(out / "CONCURRENCY.json", summary)
@@ -140,6 +153,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--visible-pcpu", type=float, default=5.0)
     run.add_argument("--ancestor-cap-pcpu", type=float, default=25.0)
     run.add_argument("--aggregate-cap-pcpu", type=float, default=None, help="default 100*(P-cores-4)")
+    run.add_argument("--assert-user-activity", action="store_true",
+                     help="run `caffeinate -u -i` for the window so macOS idle-time maintenance (dasd) is not scheduled")
     run.set_defaults(func=cmd_run)
 
     assemble = sub.add_parser("assemble", help="producer receipt + CONCURRENCY.json -> local.v1 receipt (frozen rule)")
