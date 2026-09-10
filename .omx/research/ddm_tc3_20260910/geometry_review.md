@@ -142,3 +142,5 @@ Live pointer read after controls: own-vehicle frontier remains
 S 0.13766931482209038 @ 180,186 B `[contest-CUDA T4 n600]`, move39 archive
 `8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4`.
 No geometry subarm measurement moved it.
+
+verdict_scope: formulation — tc3's tested predictor variants (A: per-row causal lane fit; B: run-tracked + jointly re-calibrated) on the move-40 field; family (lane-geometry context maps) and paradigm NOT closed by these measurements.

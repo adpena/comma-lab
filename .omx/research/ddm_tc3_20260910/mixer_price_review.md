@@ -107,3 +107,5 @@ the new feature. Neither gain nor full-n600 receiver identity was measured here.
 DEAD-ENDS: the source omissions described above are fixed and must not recur;
 do not reuse a retained-subset convergence gap as a full-population certificate.
 No scientific geometry path was closed by this review.
+
+verdict_scope: formulation — tc3's tested predictor variants (A: per-row causal lane fit; B: run-tracked + jointly re-calibrated) on the move-40 field; family (lane-geometry context maps) and paradigm NOT closed by these measurements.

@@ -171,3 +171,5 @@ DEAD-ENDS: the tested B run-track plus joint-refit recipe fails the declared
 claim that all lane predictors are closed is rejected because the experiment
 and numerical tangent cover only fixed tested formulations. Historical
 move37 oracle fractions cannot be presented as current-field oracle recovery.
+
+verdict_scope: formulation — tc3's tested predictor variants (A: per-row causal lane fit; B: run-tracked + jointly re-calibrated) on the move-40 field; family (lane-geometry context maps) and paradigm NOT closed by these measurements.
