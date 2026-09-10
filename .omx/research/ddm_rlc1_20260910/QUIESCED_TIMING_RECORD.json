@@ -1,0 +1,45 @@
+{
+  "schema": "ddm_rlc1.quiesced_timing_record.v1",
+  "owner": "MAIN",
+  "purpose": "pr9 condition 2: a cold public-entrypoint timing of the cured receiver with trusted concurrency custody, projected to contest T4 through move 40's calibration (ratio 1.2419981475836523 = 990.054 s / 797.146 s)",
+  "receiver": {
+    "candidate_runtime": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+    "runtime_digest_after_manifest_refresh": "191086a8868aad54",
+    "archive_sha256": "8c2eaefa944ca8acba3db80829a5cd7a3d06a17b1fdb7ed5f39ce5a6fd9a124d",
+    "archive_bytes": 180173
+  },
+  "runs": [
+    {
+      "generation": "g2 (rlc1 arm, under rp1's shards)",
+      "wall_seconds": 1518.1966355839977,
+      "verdict": "refused by dwc1 (no count); 1.83x the quiet pace",
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+    },
+    {
+      "generation": "g3",
+      "wall_seconds": 829.0324737499905,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "stage_median_seconds": 22.79,
+      "projected_t4_seconds": 1029.7,
+      "verdict": "REFUSED by the measured-impact rule: total excess 16.5 s = 1.99 % of wall (> 1 %) over five stages; culprits sampled beside them: MAIN's own mv1-landing git+python at 100 %, the pr10 sandbox scanner `bfs` at 215 %, venv pythons at 92-101 %",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/rlc1_g3_threads4_local.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/g3_threads4/CONCURRENCY.json"
+    },
+    {
+      "generation": "g4",
+      "wall_seconds": 831.502915124991,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "stage_median_seconds": 22.41,
+      "projected_t4_seconds": 1032.7,
+      "verdict": "REFUSED by the measured-impact rule: total excess 12.8 s = 1.54 % of wall over three stages, plus one-to-four venv pythons at 100 % through the render phase (pr10's sandbox heredoc scripts, pid parent 4512) outside the instrumented stages",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/rlc1_g4_threads4_local.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/g4_threads4/CONCURRENCY.json"
+    }
+  ],
+  "reading": "g3 and g4 agree within 0.3 % (829.0 / 831.5 s) and the stage pace within 1.7 % (22.79 / 22.41 s); both project ~1,030 s on T4, 230 s under the 1,260 s limit and 770 s under the 1,800 s budget. The rule still refuses both because contamination exceeded 1 % of wall; the quiet-host number is bounded above by 829.0 - 16.5 = 812.5 s and below by the stage pace x 600/25 + uncovered phases. A g5 runs once pr10 finishes, with rp1 gated and MAIN off the shell.",
+  "cure_saves_bytes_vs_move40": 60,
+  "cure_costs_decode_seconds_vs_move40_quiet": "829.0 - 797.1 = +31.9 s local (+4.0 %), i.e. ~+40 s on T4 (the counted geometry maps)",
+  "score_claim": false
+}

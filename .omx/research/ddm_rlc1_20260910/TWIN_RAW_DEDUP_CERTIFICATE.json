@@ -11,5 +11,17 @@
     "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/0.raw",
     "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced/output/0.raw",
     "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced2/output/0.raw"
+  ],
+  "additional_links": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g3/output/0.raw",
+      "sha256_verified": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "reason": "g3 quiesced-timing raw, byte-identical; hardlinked so g4 fits the store cap"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g4/output/0.raw",
+      "sha256_verified": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "reason": "g4 timing raw, byte-identical; hardlinked so g5 fits the store cap"
+    }
   ]
 }
