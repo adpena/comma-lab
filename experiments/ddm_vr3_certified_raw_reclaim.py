@@ -20,6 +20,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from experiments import ddm_vr7_reproducer_descriptor as vr7
+
 SCHEMA = "ddm_vr3.reclaim_ledger.v1"
 JOURNAL_SCHEMA = "ddm_vr3.reclaim_apply_journal.v1"
 VERTIGO_ROOT = Path("/Volumes/VertigoDataTier/pact")
@@ -169,7 +174,9 @@ def storage_root(path: Path) -> Path:
     raise CertifyError(f"outside SSD roots: {path}")
 
 
-def _forbidden_target_reason(path: Path) -> str | None:
+def _forbidden_target_reason(path: Path, descriptor: dict[str, Any] | None = None) -> str | None:
+    if descriptor is not None:
+        return vr7.target_reason(path, descriptor, sys.modules[__name__])
     if any(part.startswith(LIVE_PREFIXES) for part in path.parts):
         return "LIVE_POINTER_TREE_PROTECTED"
     try:
@@ -421,6 +428,13 @@ def repo_reference_hits(
         if completed.returncode not in (0, 1):
             raise CertifyError(f"reference scan failed rc={completed.returncode}: {completed.stderr}")
         lines.extend(completed.stdout.splitlines())
+    # External retained receipts need exact, hash-pinned exclusions too. rg's
+    # glob semantics differ for absolute scan roots, so compare reported paths.
+    observed_paths = {
+        str((repo_root / name).resolve()) for name in observation_files or []
+    }
+    lines = [line for line in lines
+             if str((repo_root / line.split(":", 1)[0]).resolve()) not in observed_paths]
     return {
         path: sorted({line for line in lines if any(alias in line for alias in aliases)})
         for path, aliases in aliases_by_path.items()
@@ -580,10 +594,13 @@ def unique_rows(path: Path) -> dict[str, dict[str, Any]]:
 
 def certify_retained(source: dict[str, Any], rehash: dict[str, Any], closure: dict[str, Any]) -> dict[str, Any]:
     """Join VR4, MAIN's current hash, the terminal memo, and the current reproducer."""
-    if source.get("certificate_status") != RETAINED_STATUS or not source.get("reproducer"):
+    if not source.get("reproducer_descriptor") and (
+        source.get("certificate_status") != RETAINED_STATUS or not source.get("reproducer")
+    ):
         raise CertifyError("MISSING_RETAINED_REPRODUCER")
     path = Path(source["path"])
-    forbidden = _forbidden_target_reason(path)
+    descriptor = vr7.descriptor_for(source, sys.modules[__name__])
+    forbidden = _forbidden_target_reason(path, descriptor)
     if forbidden:
         raise CertifyError(forbidden)
     blockers = _stat_identity_blockers(path, source)
@@ -600,14 +617,18 @@ def certify_retained(source: dict[str, Any], rehash: dict[str, Any], closure: di
     if source.get("historical_sha256") and source["historical_sha256"] != raw_sha:
         raise CertifyError("HISTORICAL_RAW_SHA256_DRIFT")
     family = owner_family(source)
-    if closure.get("family") != family or closure.get("disposition") != "CLOSED_ADVISORY_INSTANCE":
+    disposition = "REBUILDABLE_FINISHED_BULK" if descriptor is not None else "CLOSED_ADVISORY_INSTANCE"
+    if closure.get("family") != family or closure.get("disposition") != disposition:
         raise CertifyError("OWNING_ARM_CLOSURE_MISSING")
     memo = verify_pin(closure["memo"])
     quote = closure.get("verdict_quote")
     if not isinstance(quote, str) or not quote.strip() or quote not in memo.read_text():
         raise CertifyError("CLOSURE_VERDICT_QUOTE_MISSING")
-    current = certify_selected(path, str(raw_sha))
-    if current != source["reproducer"]:
+    current = (
+        certify_selected(path, str(raw_sha)) if descriptor is None else
+        vr7.certify(source["reproducer_descriptor"], path, str(raw_sha), sys.modules[__name__])
+    )
+    if source.get("reproducer") is not None and current != source["reproducer"]:
         raise CertifyError("RETAINED_REPRODUCER_DRIFT")
     return current
 
@@ -636,16 +657,31 @@ def observation_exclusions(pins: list[dict[str, str]], repo_root: Path) -> list[
     result = []
     for pin in pins:
         path = verify_pin(pin)
-        relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+        try:
+            relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
+        except ValueError:
+            root = storage_root(path)
+            path.resolve().relative_to(root.resolve())
+            if path.suffix not in {".json", ".jsonl", ".md", ".log", ".txt"}:
+                raise CertifyError("external observation must be a retained text receipt") from None
+            relative = str(path.resolve())
         if any(c in relative for c in "*?[]!"):
             raise CertifyError("observation exclusion must be an exact file")
         result.append(relative)
     return result
 
 
+def row_observation_pins(row: dict[str, Any]) -> list[dict[str, str]]:
+    policy = row.get("observation_policy")
+    if policy is not None:
+        return load_json(verify_pin(policy))["observation_files"]
+    return row.get("observation_files", [])
+
+
 def plan_retained(args: argparse.Namespace) -> int:
     sources = unique_rows(args.source_ledger)
-    selected = [row for row in sources.values() if row.get("certificate_status") == RETAINED_STATUS]
+    selected = [row for row in sources.values() if row.get("certificate_status") == RETAINED_STATUS
+                or row.get("reproducer_descriptor")]
     hashes = unique_rows(args.rehash_ledger)
     if set(hashes) != {row["path"] for row in selected}:
         raise CertifyError(f"MAIN_REHASH_INCOMPLETE:expected={len(selected)} actual={len(hashes)}")
@@ -668,16 +704,17 @@ def plan_retained(args: argparse.Namespace) -> int:
             current = certify_retained(source, hashes[path], closure)
         except (OSError, ValueError, KeyError, CertifyError) as exc:
             blockers.append(f"CERTIFICATE_REFUSED:{exc}")
-        aliases[path] = source["reproducer"]["reference_aliases"]
+        aliases[path] = (source.get("reproducer") or {}).get(
+            "reference_aliases", source.get("reference_aliases", [path]))
         row.update(
             schema=SCHEMA,
-            arm="ddm_vr5",
+            arm="ddm_vr7" if source.get("reproducer_descriptor") else "ddm_vr5",
             family=family,
             inventory_rank=rank,
             sha256=hashes[path].get("sha256"),
             hash_status="HASHED_STABLE" if current else "BLOCKED",
-            hash_completed_utc=None,
-            hash_timestamp_note="MAIN receipt contains no timestamp",
+            hash_completed_utc=hashes[path].get("hash_completed_utc"),
+            hash_timestamp_note=None if hashes[path].get("hash_completed_utc") else "MAIN receipt contains no timestamp",
             blockers=blockers,
             reproducer=None if current is None else {k: v for k, v in current.items() if k != "reference_aliases"},
             df_before=before,
@@ -693,11 +730,13 @@ def plan_retained(args: argparse.Namespace) -> int:
                 "rehash_ledger": pinned_file(args.rehash_ledger),
                 "closure": closure,
             },
-            observation_files=policy["observation_files"],
+            observation_files=[] if source.get("reproducer_descriptor") else policy["observation_files"],
             process_plan=policy.get("main_process_receipt", {"status": "LIVE_CHECK_REQUIRED_AT_APPLY"}),
             consumer_store=str(args.output_ledger),
             fire_trigger="MAIN harvest; outside sandbox with live process/reference/certificate gates",
         )
+        if source.get("reproducer_descriptor"):
+            row["observation_policy"] = pinned_file(args.closures)
         rows.append(row)
     hits = repo_reference_hits(aliases, args.repo_root, observation_files=exclusions)
     for row in rows:
@@ -705,7 +744,8 @@ def plan_retained(args: argparse.Namespace) -> int:
             "hits": hits[row["path"]],
             "aliases": aliases[row["path"]],
             "checked_at_utc": utc_now(),
-            "observation_exclusions": exclusions,
+            "observation_exclusions": exclusions if not row.get("observation_policy") else None,
+            "observation_policy": row.get("observation_policy"),
         }
         if hits[row["path"]]:
             row["blockers"].append("REPOSITORY_REFERENCE_HIT")
@@ -932,7 +972,8 @@ def apply(args: argparse.Namespace) -> int:
         blockers = _stat_identity_blockers(path, row)
         if not generalized and _selected_family(path) is None:
             blockers.append("TARGET_NOT_IN_EXACT_APPLY_ALLOWLIST")
-        forbidden = _forbidden_target_reason(path)
+        descriptor = vr7.descriptor_for(row, sys.modules[__name__]) if generalized else None
+        forbidden = _forbidden_target_reason(path, descriptor)
         if forbidden:
             blockers.append(forbidden)
         try:
@@ -941,7 +982,7 @@ def apply(args: argparse.Namespace) -> int:
             blockers.append(f"CERTIFICATE_REVALIDATION_REFUSED:{type(exc).__name__}:{exc}")
             refreshed = None
         aliases = [str(path), str(path.parent)] if refreshed is None else list(refreshed.pop("reference_aliases"))
-        exclusions = observation_exclusions(row.get("observation_files", []), args.repo_root)
+        exclusions = observation_exclusions(row_observation_pins(row), args.repo_root)
         if generalized:
             exclusions.extend(
                 [

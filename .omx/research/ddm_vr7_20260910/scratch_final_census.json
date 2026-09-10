@@ -1,0 +1,701 @@
+{
+  "axis": "[filesystem bytes measured; scorer-free]",
+  "bytes": 367116,
+  "files": [
+    {
+      "bytes": 53,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/write_preflight.txt",
+      "sha256": "eb1ef504a464f340163f693e3adb1d02d9d4d68e0aa0ba69cc30834030681852"
+    },
+    {
+      "bytes": 381,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/run.log",
+      "sha256": "ed4295826d66454723e137706d1d3651dcb5f0944b20f14177dab306bb122d83"
+    },
+    {
+      "bytes": 253,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/.watchers_start_gate",
+      "sha256": "7cae12bf616b92f33b5ba533e541a1ba390796cb3375835db6f68c6ead00946b"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/safe_run.json.child.pid",
+      "sha256": "bf06c41092ef9b1507d940e7ab775c1323d51bee10c1a843cf27b8840cfce6d1"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/run.pid",
+      "sha256": "9107f9b79a160f0349d0e8f9e301058cfea19fad7a6dcb5cd055316b3e5b2e62"
+    },
+    {
+      "bytes": 4736,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/launch_manifest.json",
+      "sha256": "c5dbac0b2340920aa1ae4cc73042ed4072db79f4c3b9b0687c26531d5be56b86"
+    },
+    {
+      "bytes": 244,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/.launch_start_gate",
+      "sha256": "a56ddce0fff88cc25cf24f7cae14957bc8cac0284d6f091d0ef079cdccd09747"
+    },
+    {
+      "bytes": 1436,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/safe_run.json",
+      "sha256": "5c70711e0181beee16e19fe1086df59d3dfff21c924634f2973fafb92bd9feec"
+    },
+    {
+      "bytes": 2167,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/run.log",
+      "sha256": "3d77d25ec057d1c3bfaeeb876d5f70899bf802c70e427885cdd77877760a9c3c"
+    },
+    {
+      "bytes": 249,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/.watchers_start_gate",
+      "sha256": "25730ff4765afcea7f40b83d0d2f6029d908bec7c52861bf63b8b76b55d7f38f"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json.child.pid",
+      "sha256": "f5779ba7427c6d39eca0dd2af610b9fa60306795d45017cf5f0527b8c755cdcd"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/run.pid",
+      "sha256": "62f1168ca8765b2d1e1a6639e5b717c4b18ccd609ee1bef6d9d419cb8269cd22"
+    },
+    {
+      "bytes": 4444,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/launch_manifest.json",
+      "sha256": "f98e47ef7ce74919f23dfcf4f75474122e000dfbb55bedf4d9f56fd6598b390c"
+    },
+    {
+      "bytes": 240,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/.launch_start_gate",
+      "sha256": "427d09977693f5e0887b0d34b5529da1c9684fe620af5e0d1f5ec847bf19c515"
+    },
+    {
+      "bytes": 1368,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json",
+      "sha256": "e9da332fc7ffc7bb76578f62bdc20709e39482ce532b3b5ca3e50abcf30cf15e"
+    },
+    {
+      "bytes": 654,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/run.log",
+      "sha256": "a3b29aac1165834397ad5d3c82cfc46babd1f44f46c4fc845c9680b458389d98"
+    },
+    {
+      "bytes": 257,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/.watchers_start_gate",
+      "sha256": "529985524f94691a8f8002f2baa2f649df11f928687956847ae1a3d5eec32c1a"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/safe_run.json.child.pid",
+      "sha256": "a42ced5f149da20fe9fc397122e51563dd7c4a97afef172e597d8ce1fbfd00b8"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/run.pid",
+      "sha256": "d0e6f046369b3f5e817bc6eb4907414992325844d00be398fcbef1b10b81fec3"
+    },
+    {
+      "bytes": 4722,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/launch_manifest.json",
+      "sha256": "b491cee23161dc0514fd823fd58fbb08be39c95059ce939298f036b4942b6cdb"
+    },
+    {
+      "bytes": 248,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/.launch_start_gate",
+      "sha256": "f398f3cd8c3b126636474e7edaa26cb6c617bf466cbe07c7349924f47f481636"
+    },
+    {
+      "bytes": 1427,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/safe_run.json",
+      "sha256": "33f2ed3ac62f75a863e5f0ce7166e1ff160da0953e4454fe49aa81fab9edaddc"
+    },
+    {
+      "bytes": 4280,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/run.log",
+      "sha256": "98b76353cb225492b09d1d1ae98b3192edaee5b8c293976a48e99391a420d72e"
+    },
+    {
+      "bytes": 244,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/.watchers_start_gate",
+      "sha256": "445342aca258fa47aaf54e839fed9abf3e8878b50a28b7cbd61ff7f45f1a6a61"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/safe_run.json.child.pid",
+      "sha256": "4d93a65a13d474494886b5a08d6f1353eb7d097199c1edd94e1c0063f1452043"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/run.pid",
+      "sha256": "0137a8042440107972615765de710f5180fbda1e8ff91d1aa4d04b7e0b031e16"
+    },
+    {
+      "bytes": 15146,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/launch_manifest.json",
+      "sha256": "0c8b3080525cfa01c055a4970f51137a0740fc6b2375bd79b167ab792ad1b7b4"
+    },
+    {
+      "bytes": 235,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/.launch_start_gate",
+      "sha256": "e4c61b5318b8a46fc19f3099801c989a857a31eb5e4a44c6234edf664b219c4a"
+    },
+    {
+      "bytes": 4047,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/safe_run.json",
+      "sha256": "c3394c061c313d13f5f811c6620b9d18fcca85e95338ff1cc29f9449b719ddf6"
+    },
+    {
+      "bytes": 196,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39_overlay/BINDING.json",
+      "sha256": "faccba0ea6130b8a9d9d0e5e54dcb766a42bc7f38b02fae03468cc3301306b98"
+    },
+    {
+      "bytes": 69128,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39_overlay/PROGRESS.json",
+      "sha256": "5eb71f5f1dfbcdb89b9dab225e1c596635684d52a5786963a7efddcefe126153"
+    },
+    {
+      "bytes": 1727,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39_overlay/REBUILD_CERTIFICATE.json",
+      "sha256": "0392d3e317485dbff6fe753334392df81b55d6f21ba8b8cb184e9347de21c874"
+    },
+    {
+      "bytes": 196,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass_overlay/BINDING.json",
+      "sha256": "90b5fa1e2e22769f5d3470a140ee8bcac06eaf41a9e1b8bcc1bbea117f237664"
+    },
+    {
+      "bytes": 69128,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass_overlay/PROGRESS.json",
+      "sha256": "05a1a7896daf34dd5ef1cf22b364efaa00e1cf681ecc22dc615a794bc681de75"
+    },
+    {
+      "bytes": 1763,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass_overlay/REBUILD_CERTIFICATE.json",
+      "sha256": "754ba614d02e73bd2666c021d057ba5467553725fa27414a8be08b112c7befdd"
+    },
+    {
+      "bytes": 368,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/run.log",
+      "sha256": "53056c393cdfeff10b16f6374382d14117911a11a3f3c1137898d3b4c40dba5e"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json.child.pid",
+      "sha256": "5b98ab784241a92de347017e6acbb387a51949d6a867910aaec8913a6a35f1f2"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/run.pid",
+      "sha256": "32d233a8b2f7f8e56ef55f1bb12010e76a5a00bfd3895ab0957a6efeae4c7aa7"
+    },
+    {
+      "bytes": 4711,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/launch_manifest.json",
+      "sha256": "9ec0223bb23c6c8cf065972504477984638ed98703bd79919d22b07ec24a15be"
+    },
+    {
+      "bytes": 244,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/.launch_start_gate",
+      "sha256": "b3f1da84ffed8648c127c7f1d9ee1b6fc53bed28e18a9b4cf7254022568d50bd"
+    },
+    {
+      "bytes": 1390,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json",
+      "sha256": "f37f1ea3a742bfabf5fd24db1fa91f15b6727637a726b5dad76dd13586a1faa8"
+    },
+    {
+      "bytes": 196,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass/BINDING.json",
+      "sha256": "73cf02bb67bae2a4d930caacc9e71c50e1360a3ac30e49919f286e2f3596aecb"
+    },
+    {
+      "bytes": 832,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass/START.json",
+      "sha256": "841480f785992fdd7fb096396717721cae08c0c30c4bf0142bf0f3f5df1220b4"
+    },
+    {
+      "bytes": 2978,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass/REBUILD_CERTIFICATE.json",
+      "sha256": "7d8460d56492e8d39954d1e521477df5e994fad54cf672d8335a7ff8e10ac276"
+    },
+    {
+      "bytes": 2111,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/run.log",
+      "sha256": "b1690775be126a49425bf6c6bbce36bc7e40acc30062a34bf61fe9373b230f15"
+    },
+    {
+      "bytes": 245,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/.watchers_start_gate",
+      "sha256": "565eeb6e802e4a88da38806f1a4b818a3b03728018bbf5f6d0c9421f336fdae9"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/safe_run.json.child.pid",
+      "sha256": "83b732f5c89a446aa48dce0218eafd825150797d377f2f5722aa1b2904dd5e10"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/run.pid",
+      "sha256": "aafe5c701c8e8ca8998e8326b0f7288af1335dc15e125b3e9f34103b69deb402"
+    },
+    {
+      "bytes": 4368,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/launch_manifest.json",
+      "sha256": "1f24d55ae12bb8367d956e7fbbea3fa6379f5f4c17ef8b9853a41d8634ff2541"
+    },
+    {
+      "bytes": 236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/.launch_start_gate",
+      "sha256": "9dec5b4c461884f98f50236eec80acf77742a86711c868d221fbd1e210e51a9b"
+    },
+    {
+      "bytes": 1352,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/safe_run.json",
+      "sha256": "4ae9b8358bffa35a8bc0c3c007fceeb31d59f713a1056de3ea5853d81afe7b21"
+    },
+    {
+      "bytes": 19135,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/REPLAY_CERTIFICATE.json",
+      "sha256": "249edaf7be4ffb9b32196ce332245f17918eadc0bc74a9beba40eec0f0e2891f"
+    },
+    {
+      "bytes": 195,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/BINDING.json",
+      "sha256": "5c9a1deaaee5c1bc619fec78da0da0fd735cd7350b08d102a7f6940c94e02ee9"
+    },
+    {
+      "bytes": 192,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5_overlay/BINDING.json",
+      "sha256": "878dd66d02574ad6ba1602d3a70a80c2da6cdd3e60f414468d9446ea181df78c"
+    },
+    {
+      "bytes": 69124,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5_overlay/PROGRESS.json",
+      "sha256": "d1303518eea5c91dc9df84d0c03bedc6d83439abec0b59d4fdaa3324f7614132"
+    },
+    {
+      "bytes": 1728,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5_overlay/REBUILD_CERTIFICATE.json",
+      "sha256": "518c5d34b8811d671c0c1fd22c899417f99ecb93dc2d5dbaa5d6f42225ad3664"
+    },
+    {
+      "bytes": 192,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/BINDING.json",
+      "sha256": "1c30111241e55e45b5304a635cb34899205137974e4ec0e9e9080deb5e499db6"
+    },
+    {
+      "bytes": 802,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/START.json",
+      "sha256": "d35c7261f4db645cfab35368eb5f82f63d1a173ac50be1636362254e58321cb1"
+    },
+    {
+      "bytes": 2886,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/REBUILD_CERTIFICATE.json",
+      "sha256": "62372690523c1a053d984ace34faf4ad7e24df9039693415f336fee036b82a37"
+    },
+    {
+      "bytes": 649,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/run.log",
+      "sha256": "22974f87027ad04779b50df70b642d1f9dd895df1e022f05d8bcb50247ace6c9"
+    },
+    {
+      "bytes": 256,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/.watchers_start_gate",
+      "sha256": "de21d87f7735f9d766bf05e2820b58f89c5be678511ed94737d3b0bff5e93bf6"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/safe_run.json.child.pid",
+      "sha256": "45233d363854789b4de0cf3a74236a37331d720ba577c0d0d75cf9820bfbf580"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/run.pid",
+      "sha256": "3b0543ba9ace7898e9729e2fb3ad9d20936a33b77dd6c4cbc078f0a3d181ad22"
+    },
+    {
+      "bytes": 4660,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/launch_manifest.json",
+      "sha256": "f8cfd6d10ca0aa5a16a536f078296b94f5336e31c20aa758b295e44213b3e26a"
+    },
+    {
+      "bytes": 247,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/.launch_start_gate",
+      "sha256": "1e1bac58007110731fd48a23a92ad038787a5ec2e9889edc2898182b0d9aefa2"
+    },
+    {
+      "bytes": 1420,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/safe_run.json",
+      "sha256": "43a73c2b249f7b28ec5f014f1cdb548fe251046792026bf59dbf3835770d33d7"
+    },
+    {
+      "bytes": 383,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/run.log",
+      "sha256": "c7e8f83ff633f3bd9ea1163100cf8945780da8d79d7332dd5ec94b6c44a749bb"
+    },
+    {
+      "bytes": 258,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/.watchers_start_gate",
+      "sha256": "69f4d23d085b420645767c73805ce3e8681b27312691dc1ebbf148592bdd1b51"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/safe_run.json.child.pid",
+      "sha256": "35a532d15b0029b9b8291a40f5fa65a6f3955ebaba236c31ceda85bbb9b656ec"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/run.pid",
+      "sha256": "b6b441473fae32177ec0d5afaea1c4dab28abf9b0657003b75b633fd59707f6c"
+    },
+    {
+      "bytes": 4780,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/launch_manifest.json",
+      "sha256": "9540656333dd6431a632ffff404d2c57d382906eadbe132317d34fe7431f059e"
+    },
+    {
+      "bytes": 249,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/.launch_start_gate",
+      "sha256": "36f2b19863764fd8071ead9785d814bf96085dbb63873454fe21a5e7147d6f57"
+    },
+    {
+      "bytes": 1452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/safe_run.json",
+      "sha256": "78114223bdad10229333ea9b598b7aaed0d6ec08c939866a84c99353b9bfae4c"
+    },
+    {
+      "bytes": 654,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/run.log",
+      "sha256": "475f0f4af6dc1b317780e04fccb7ac71b4afc7e3ddde98da9bc9fb283d012df3"
+    },
+    {
+      "bytes": 256,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/.watchers_start_gate",
+      "sha256": "bad42be9de571d74539dfa5e9cf716b9bd19f8972da93bf3cdddcb590fd63829"
+    },
+    {
+      "bytes": 5,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/safe_run.json.child.pid",
+      "sha256": "9e750f686bfef38a8177c7a4799527b2af5167563edda1ed1f67538fbea511b8"
+    },
+    {
+      "bytes": 5,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/run.pid",
+      "sha256": "42d7267cf6298508c184bfaf5a60cf2fcc3e5d5ac0cce3c9f4ecdcdd4e505073"
+    },
+    {
+      "bytes": 4707,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/launch_manifest.json",
+      "sha256": "13c64c86a47d843a2674bbdb9e7f288b4251580f85166c541203dbc585ef3d20"
+    },
+    {
+      "bytes": 247,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/.launch_start_gate",
+      "sha256": "0b61d7b2daf450c27961d16490455e4b0a8b7039e6e5c3a1767d50d4993d4b49"
+    },
+    {
+      "bytes": 1424,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/safe_run.json",
+      "sha256": "5fc181fb1d5fd670aa5ccf44f1192315ef5911f77c1a1d3face2fd5bf3d9064d"
+    },
+    {
+      "bytes": 2127,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/run.log",
+      "sha256": "dcd71de319b55e88b32cb750f14b0cdf93eb273eb2772d10215ef3fbafd3331a"
+    },
+    {
+      "bytes": 249,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/.watchers_start_gate",
+      "sha256": "a91754e401be821146e74d38a07c40545177da57a2b734c9d7b7c168743e36ad"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/safe_run.json.child.pid",
+      "sha256": "bfdaa20ce0eb2ed8be5ceef212522eb6d172117fda8bdb548c4347d1c9e2977b"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/run.pid",
+      "sha256": "280025ee7a1b2177e6805228500e91831343242e4852bb08d1850d4aba1fb06e"
+    },
+    {
+      "bytes": 4434,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/launch_manifest.json",
+      "sha256": "63491a522847421e5506edae280b45ca1bf829c74907e44c0eeecf6b83f5dd14"
+    },
+    {
+      "bytes": 240,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/.launch_start_gate",
+      "sha256": "fedae728d3500f9b570afc28febd153b4d11b3bffd7c11417bf8569acb50df2c"
+    },
+    {
+      "bytes": 1368,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/safe_run.json",
+      "sha256": "931aa3157363823ae4d1fe117b8cf3e1ddb42eeaf2f0f535765bba988080a159"
+    },
+    {
+      "bytes": 1569,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/run.log",
+      "sha256": "c1d28b1d3b44038ae2dd1a12aba90dfbd99ba546f90858d0931edf1b1e63881c"
+    },
+    {
+      "bytes": 250,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/.watchers_start_gate",
+      "sha256": "3a9f9c403c5c78d372884df1ed164b339322e2145f24a25eb5e6e174cc08f7b3"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/safe_run.json.child.pid",
+      "sha256": "e964efe012c473e4753f053d15ca61296de71b639263ebf64187aad17fa5a7f2"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/run.pid",
+      "sha256": "17d8b45f85890099521c597e63de47691a9719ad1a435bf972afd5a27be4a659"
+    },
+    {
+      "bytes": 4716,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/launch_manifest.json",
+      "sha256": "01d1c638208700c9455d1d8c1b5eeefac6ee7ee7d7bb6a0eacb78c0626c76362"
+    },
+    {
+      "bytes": 241,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/.launch_start_gate",
+      "sha256": "ad1b145758d4d24d9e974482851617cc4d95dff30b33b95c0dae2345fbfa6781"
+    },
+    {
+      "bytes": 1425,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/safe_run.json",
+      "sha256": "cb177ed56c5c4b655b56f39bf5f9c0ac226650343ebbb20783af406f52adb70a"
+    },
+    {
+      "bytes": 196,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39/BINDING.json",
+      "sha256": "de8a6fd071d4aaf41ba0a701ab925a89bd59642a4cab4b6d3cf4a8972e9c7507"
+    },
+    {
+      "bytes": 812,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39/START.json",
+      "sha256": "01b2bb29b61c1a33d01a7d47a232846c91efe55b716973e3fb5edff227f6e5e5"
+    },
+    {
+      "bytes": 2928,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39/REBUILD_CERTIFICATE.json",
+      "sha256": "d0a92f4a8faa02fb56e9a59fd4a2d7ca9c29c9f971dc5f6abf03ad44da17e6bc"
+    },
+    {
+      "bytes": 19498,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_current/REPLAY_CERTIFICATE.json",
+      "sha256": "89ad8daf80788e8f9104f4e54b60f6f0dea280195d66a74fd428bad6814464d1"
+    },
+    {
+      "bytes": 203,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_current/BINDING.json",
+      "sha256": "3ee40bc0c246bbbf685a76a931af7e83c4de4a78ff150206f5ee892ce576cc0b"
+    },
+    {
+      "bytes": 195,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/BINDING.json",
+      "sha256": "8aacd7d9e64154dd302ecd1c42a11565891c88d379b8dce8d334a59d26574f6e"
+    },
+    {
+      "bytes": 809,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/STAGE_0001.json",
+      "sha256": "3df95710f7be2a2c2e76b68e0a4dd3d980583c1325e775485413183ac13dfbee"
+    },
+    {
+      "bytes": 809,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/LATEST.json",
+      "sha256": "3df95710f7be2a2c2e76b68e0a4dd3d980583c1325e775485413183ac13dfbee"
+    },
+    {
+      "bytes": 1021,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/frames/frame_0000.json",
+      "sha256": "77bf2834b6d68af991136b2a29fbb2dfef799bc39b4172313e42b92542f2ec3a"
+    }
+  ],
+  "inventory_deleted_bytes": 0,
+  "launches": [
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/run.log",
+      "receipts": [
+        {
+          "bytes": 4434,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/launch_manifest.json",
+          "sha256": "63491a522847421e5506edae280b45ca1bf829c74907e44c0eeecf6b83f5dd14"
+        },
+        {
+          "bytes": 1368,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39/safe_run.json",
+          "sha256": "931aa3157363823ae4d1fe117b8cf3e1ddb42eeaf2f0f535765bba988080a159"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_compose39"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/run.log",
+      "receipts": [
+        {
+          "bytes": 15146,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/launch_manifest.json",
+          "sha256": "0c8b3080525cfa01c055a4970f51137a0740fc6b2375bd79b167ab792ad1b7b4"
+        },
+        {
+          "bytes": 4047,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash/safe_run.json",
+          "sha256": "c3394c061c313d13f5f811c6620b9d18fcca85e95338ff1cc29f9449b719ddf6"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_hash"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/run.log",
+      "receipts": [
+        {
+          "bytes": 4444,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/launch_manifest.json",
+          "sha256": "f98e47ef7ce74919f23dfcf4f75474122e000dfbb55bedf4d9f56fd6598b390c"
+        },
+        {
+          "bytes": 1368,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json",
+          "sha256": "e9da332fc7ffc7bb76578f62bdc20709e39482ce532b3b5ca3e50abcf30cf15e"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/run.log",
+      "receipts": [
+        {
+          "bytes": 4722,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/launch_manifest.json",
+          "sha256": "b491cee23161dc0514fd823fd58fbb08be39c95059ce939298f036b4942b6cdb"
+        },
+        {
+          "bytes": 1427,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39/safe_run.json",
+          "sha256": "33f2ed3ac62f75a863e5f0ce7166e1ff160da0953e4454fe49aa81fab9edaddc"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_compose39"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/run.log",
+      "receipts": [
+        {
+          "bytes": 4707,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/launch_manifest.json",
+          "sha256": "13c64c86a47d843a2674bbdb9e7f288b4251580f85166c541203dbc585ef3d20"
+        },
+        {
+          "bytes": 1424,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass/safe_run.json",
+          "sha256": "5fc181fb1d5fd670aa5ccf44f1192315ef5911f77c1a1d3face2fd5bf3d9064d"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_multipass"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/run.log",
+      "receipts": [
+        {
+          "bytes": 4711,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/launch_manifest.json",
+          "sha256": "9ec0223bb23c6c8cf065972504477984638ed98703bd79919d22b07ec24a15be"
+        },
+        {
+          "bytes": 1390,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json",
+          "sha256": "f37f1ea3a742bfabf5fd24db1fa91f15b6727637a726b5dad76dd13586a1faa8"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/run.log",
+      "receipts": [
+        {
+          "bytes": 4660,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/launch_manifest.json",
+          "sha256": "f8cfd6d10ca0aa5a16a536f078296b94f5336e31c20aa758b295e44213b3e26a"
+        },
+        {
+          "bytes": 1420,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2/safe_run.json",
+          "sha256": "43a73c2b249f7b28ec5f014f1cdb548fe251046792026bf59dbf3835770d33d7"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5_v2"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/run.log",
+      "receipts": [
+        {
+          "bytes": 4368,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/launch_manifest.json",
+          "sha256": "1f24d55ae12bb8367d956e7fbbea3fa6379f5f4c17ef8b9853a41d8634ff2541"
+        },
+        {
+          "bytes": 1352,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5/safe_run.json",
+          "sha256": "4ae9b8358bffa35a8bc0c3c007fceeb31d59f713a1056de3ea5853d81afe7b21"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_pass5"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/run.log",
+      "receipts": [
+        {
+          "bytes": 4716,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/launch_manifest.json",
+          "sha256": "01d1c638208700c9455d1d8c1b5eeefac6ee7ee7d7bb6a0eacb78c0626c76362"
+        },
+        {
+          "bytes": 1425,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay/safe_run.json",
+          "sha256": "cb177ed56c5c4b655b56f39bf5f9c0ac226650343ebbb20783af406f52adb70a"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/run.log",
+      "receipts": [
+        {
+          "bytes": 4780,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/launch_manifest.json",
+          "sha256": "9540656333dd6431a632ffff404d2c57d382906eadbe132317d34fe7431f059e"
+        },
+        {
+          "bytes": 1452,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current/safe_run.json",
+          "sha256": "78114223bdad10229333ea9b598b7aaed0d6ec08c939866a84c99353b9bfae4c"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_current"
+    },
+    {
+      "log": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/run.log",
+      "receipts": [
+        {
+          "bytes": 4736,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/launch_manifest.json",
+          "sha256": "c5dbac0b2340920aa1ae4cc73042ed4072db79f4c3b9b0687c26531d5be56b86"
+        },
+        {
+          "bytes": 1436,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2/safe_run.json",
+          "sha256": "5c70711e0181beee16e19fe1086df59d3dfff21c924634f2973fafb92bd9feec"
+        }
+      ],
+      "root": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_tc3_replay_v2"
+    }
+  ],
+  "score_claim": false
+}

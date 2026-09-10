@@ -1,0 +1,857 @@
+{
+  "cleanup_complete": true,
+  "config": {
+    "bytes": 3957,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/tc3_replay_config.json",
+    "sha256": "fc326cbdb81079cb62c004c6f97698eed6472038625749ca34b3489b368e4ff6"
+  },
+  "inventory_deletion": false,
+  "replay_certificate": {
+    "bytes": 19135,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/REPLAY_CERTIFICATE.json",
+    "sha256": "249edaf7be4ffb9b32196ce332245f17918eadc0bc74a9beba40eec0f0e2891f"
+  },
+  "rows": [
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 13622,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/INPUTS.json",
+        "sha256": "a37790a2fdaa39292ab2f8b34f51e018f38bd6f49b9c55935b5cbe821289cf0c"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 13622,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/INPUTS.json",
+        "sha256": "a37790a2fdaa39292ab2f8b34f51e018f38bd6f49b9c55935b5cbe821289cf0c"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 117964800,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/field.u8",
+        "sha256": "4aa519a25e4b02afb564498025b366cb9007ea663093c60bf8ce90d079dc8791"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 117964800,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/field.u8",
+        "sha256": "4aa519a25e4b02afb564498025b366cb9007ea663093c60bf8ce90d079dc8791"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 3667,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/README.md",
+        "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 3667,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/README.md",
+        "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 180186,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/archive.zip",
+        "sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 180186,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/archive.zip",
+        "sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 183043,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/compress.py",
+        "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 183043,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/compress.py",
+        "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 7353,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/carrier_codec.py",
+        "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 7353,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/carrier_codec.py",
+        "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 13389,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 13389,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+        "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 17471,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/hpac_integer.py",
+        "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 17471,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/hpac_integer.py",
+        "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 8282,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/hpac_integer_sparse.py",
+        "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 8282,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/hpac_integer_sparse.py",
+        "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 13810,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/inflate.py",
+        "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 13810,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/inflate.py",
+        "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 5881,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/integer_model_io.py",
+        "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 5881,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/integer_model_io.py",
+        "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 20916,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/cpr1/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 20916,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/cpr1/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 2475,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/inflate.py",
+        "sha256": "140c6b56f510776e84cdb87d0d7055c0362196872b651868d7eb4a98b9e44251"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 2475,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/inflate.py",
+        "sha256": "140c6b56f510776e84cdb87d0d7055c0362196872b651868d7eb4a98b9e44251"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 3219,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/inflate.sh",
+        "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 3219,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/inflate.sh",
+        "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 57,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/__init__.py",
+        "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 57,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/__init__.py",
+        "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 2058,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/baseline.py",
+        "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 2058,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/baseline.py",
+        "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 1578,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/bits.py",
+        "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 1578,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/bits.py",
+        "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 8206,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/carrier_repack.py",
+        "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 8206,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/carrier_repack.py",
+        "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 7074,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/compensation_overlay.py",
+        "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 7074,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/compensation_overlay.py",
+        "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 25232,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/ddm_wc1_advisory_runtime.py",
+        "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 25232,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/ddm_wc1_advisory_runtime.py",
+        "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 12929,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/dx2_cabac_coefficients.py",
+        "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 12929,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/dx2_cabac_coefficients.py",
+        "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 54,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/__init__.py",
+        "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 54,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/__init__.py",
+        "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 4230,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/adaptive_ans.py",
+        "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 4230,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/adaptive_ans.py",
+        "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 4875,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/coefficient_ar1_codec.py",
+        "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 4875,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/coefficient_ar1_codec.py",
+        "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 4027,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/coefficient_predictor.py",
+        "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 4027,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/coefficient_predictor.py",
+        "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 2904,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/rc64.py",
+        "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 2904,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/rc64.py",
+        "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 5638,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/rc64_backend.c",
+        "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 5638,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/rc64_backend.c",
+        "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 9656,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/entropy/renderer_weight_codec.py",
+        "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 9656,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/entropy/renderer_weight_codec.py",
+        "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 50299,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/f26_corrector_native.c",
+        "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 50299,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/f26_corrector_native.c",
+        "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 40911,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/f26_hpac_native.c",
+        "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 40911,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/f26_hpac_native.c",
+        "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 26781,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/f26_hpac_native.py",
+        "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 26781,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/f26_hpac_native.py",
+        "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 29176,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/f26_inflate.py",
+        "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 29176,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/f26_inflate.py",
+        "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 4964,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/frame0_selector.py",
+        "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 4964,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/frame0_selector.py",
+        "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 14709,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/free_corrector.py",
+        "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 14709,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/free_corrector.py",
+        "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 34979,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/fx1_logistic_mixer_corrector.py",
+        "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 34979,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/fx1_logistic_mixer_corrector.py",
+        "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 31470,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/fx2_model_axis_corrector.py",
+        "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 31470,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/fx2_model_axis_corrector.py",
+        "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 10952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/hpac_inference.py",
+        "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 10952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/hpac_inference.py",
+        "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 13327,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/ihs2.py",
+        "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 13327,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/ihs2.py",
+        "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 10527,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/ihs2_gate_a.py",
+        "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 10527,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/ihs2_gate_a.py",
+        "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 15952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/native_free_corrector.py",
+        "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 15952,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/native_free_corrector.py",
+        "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 20916,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 20916,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/rc1_adaptive_model_sections.py",
+        "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 31341,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/rc2_hpac_semistatic_mixing.py",
+        "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 31341,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/rc2_hpac_semistatic_mixing.py",
+        "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 8010,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/rc3_shared_mixer.py",
+        "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 8010,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/rc3_shared_mixer.py",
+        "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 34053,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/residual_archive.py",
+        "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 34053,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/residual_archive.py",
+        "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 15421,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/rr4_free_corrector.py",
+        "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 15421,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/rr4_free_corrector.py",
+        "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 20793,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/rr5_arith_basis.py",
+        "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 20793,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/rr5_arith_basis.py",
+        "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 9693,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/sm1_semantic_mixer.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 9693,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/sm1_semantic_mixer.py",
+        "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 8753,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/tc1_receiver_checkpoint.py",
+        "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 8753,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/tc1_receiver_checkpoint.py",
+        "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 8590,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/source_runtime/runtime/tc1_shared_mixer.py",
+        "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 8590,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/source_runtime/runtime/tc1_shared_mixer.py",
+        "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 1123,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/BUILD.json",
+        "sha256": "b433d83e6db6e0aa0a51f4759e389cf0acf80bed0386f88e3aaadbd9e7e32880"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 1123,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/BUILD.json",
+        "sha256": "b433d83e6db6e0aa0a51f4759e389cf0acf80bed0386f88e3aaadbd9e7e32880"
+      }
+    },
+    {
+      "disposition": "RETAIN_SMALL_FAILURE_METADATA",
+      "file": {
+        "bytes": 809,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/LATEST.json",
+        "sha256": "3df95710f7be2a2c2e76b68e0a4dd3d980583c1325e775485413183ac13dfbee"
+      },
+      "reason": "path-dependent diagnostic or incomplete stage metadata",
+      "verified_rebuild_fact": {
+        "bytes": 812,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/LATEST.json",
+        "sha256": "4dab379a4aa56df09b95c5275918d3566345cca93f29a0c0de9ab2a31e1786b3"
+      }
+    },
+    {
+      "disposition": "RETAIN_SMALL_FAILURE_METADATA",
+      "file": {
+        "bytes": 809,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/STAGE_0001.json",
+        "sha256": "3df95710f7be2a2c2e76b68e0a4dd3d980583c1325e775485413183ac13dfbee"
+      },
+      "reason": "path-dependent diagnostic or incomplete stage metadata",
+      "verified_rebuild_fact": {
+        "bytes": 812,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/STAGE_0001.json",
+        "sha256": "4dab379a4aa56df09b95c5275918d3566345cca93f29a0c0de9ab2a31e1786b3"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 131198,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/checkpoints/stage_0001.npz",
+        "sha256": "565dfa0d97d6aa9e2d2239cab9588c0e2166dcee7760e84e370c26e9e47d2351"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 131198,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/checkpoints/stage_0001.npz",
+        "sha256": "565dfa0d97d6aa9e2d2239cab9588c0e2166dcee7760e84e370c26e9e47d2351"
+      }
+    },
+    {
+      "disposition": "RETAIN_SMALL_FAILURE_METADATA",
+      "file": {
+        "bytes": 1021,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/frames/frame_0000.json",
+        "sha256": "77bf2834b6d68af991136b2a29fbb2dfef799bc39b4172313e42b92542f2ec3a"
+      },
+      "reason": "path-dependent diagnostic or incomplete stage metadata",
+      "verified_rebuild_fact": {
+        "bytes": 1024,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/frames/frame_0000.json",
+        "sha256": "fab470efcd190eaf311c6d3a416e48879b3f1236034da5330a0d461a438b954f"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 2968410,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/frames/frame_0000.npz",
+        "sha256": "992b7ed04c912e0db9d7cfadb86e470dac3612911f39851ba40867059b24995d"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 2968410,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/frames/frame_0000.npz",
+        "sha256": "992b7ed04c912e0db9d7cfadb86e470dac3612911f39851ba40867059b24995d"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 786432,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/group_order.i32",
+        "sha256": "19e5ddc5152b852f86888d2c9d354cf53705885c02fd74c0a8690d417f138f06"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 786432,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/group_order.i32",
+        "sha256": "19e5ddc5152b852f86888d2c9d354cf53705885c02fd74c0a8690d417f138f06"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 356,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/primary_0001.envelope",
+        "sha256": "6dcc8a3885aec4036999a95e26afbc4732f8fd5a6f1e1982ef126a003f0ff85d"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 356,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/primary_0001.envelope",
+        "sha256": "6dcc8a3885aec4036999a95e26afbc4732f8fd5a6f1e1982ef126a003f0ff85d"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 356,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/move39/trace/repeat_0001.envelope",
+        "sha256": "6dcc8a3885aec4036999a95e26afbc4732f8fd5a6f1e1982ef126a003f0ff85d"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 356,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/move39/trace/repeat_0001.envelope",
+        "sha256": "6dcc8a3885aec4036999a95e26afbc4732f8fd5a6f1e1982ef126a003f0ff85d"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 119568,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/retained/shipped_token_stream.rc64",
+        "sha256": "26e9eba5209495a04a815dbdf553b62f764197a39b9da405f8085a5fa6c92346"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 119568,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/retained/shipped_token_stream.rc64",
+        "sha256": "26e9eba5209495a04a815dbdf553b62f764197a39b9da405f8085a5fa6c92346"
+      }
+    },
+    {
+      "disposition": "CERTIFIED_OWN_SCRATCH_DELETE",
+      "file": {
+        "bytes": 35,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay/payload/retained/tc1_weights.bin",
+        "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+      },
+      "reason": "same bytes recreated by successful pinned TC3 replay",
+      "verified_rebuild_fact": {
+        "bytes": 35,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay_v2/payload/retained/tc1_weights.bin",
+        "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+      }
+    }
+  ],
+  "score_claim": false
+}

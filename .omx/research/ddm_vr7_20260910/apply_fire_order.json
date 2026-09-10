@@ -1,0 +1,53 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "apply",
+    "--ledger",
+    ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "--expected-ledger-sha256",
+    "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+    "--journal",
+    ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+    "--target-bytes",
+    "35034879550"
+  ],
+  "command": ".venv/bin/python -B experiments/ddm_vr3_certified_raw_reclaim.py apply --ledger .omx/research/ddm_vr7_reclaim_plan_20260910.jsonl --expected-ledger-sha256 fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394 --journal .omx/research/ddm_vr7_apply_journal_20260910.jsonl --target-bytes 35034879550",
+  "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+  "cwd": "/Users/adpena/Projects/pact",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "executed": false,
+  "fire_trigger": "Harvest this plan and land reviewed code, then execute with full process/cwd/lsof visibility; all current gates must pass. Never weaken a refused gate.",
+  "groups": {
+    "sj1_overlay": {
+      "bytes": 12818433600,
+      "gib": 11.938096582889557,
+      "rows": 7
+    },
+    "sj1_parseback": {
+      "bytes": 14649638400,
+      "gib": 13.64353895187378,
+      "rows": 4
+    },
+    "tc3_prepare": {
+      "bytes": 1729724545,
+      "gib": 1.6109315166249871,
+      "rows": 600
+    },
+    "tc3_public_raw": {
+      "bytes": 3662409600,
+      "gib": 3.410884737968445,
+      "rows": 1
+    },
+    "tc3_trace": {
+      "bytes": 2174673405,
+      "gib": 2.0253224344924092,
+      "rows": 600
+    }
+  },
+  "inventory_deleted_bytes": 0,
+  "journal": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+  "owner": "MAIN",
+  "score_claim": false
+}

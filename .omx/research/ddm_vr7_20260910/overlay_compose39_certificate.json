@@ -1,0 +1,45 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_overlay_rebuild.py",
+    "--resume-from",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_compose39.json"
+  ],
+  "cleanup_complete": true,
+  "cleanup_reason": "own successful rebuild; original, seal, field and renderer retained",
+  "complete": true,
+  "config": {
+    "bytes": 14326,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_compose39.json",
+    "sha256": "21ba9bc66427c9ce451f1854c5dea3f888b65c204d9106e574ac69c08244bab6"
+  },
+  "created_files": [
+    {
+      "bytes": 1831204800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39_overlay/odd_frames.u8",
+      "sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653"
+    }
+  ],
+  "cwd": "/Users/adpena/Projects/pact",
+  "kind": "sj1_overlay",
+  "original": {
+    "bytes": 1831204800,
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+    "sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653"
+  },
+  "original_hash_measured_current": true,
+  "rebuilt": {
+    "bytes": 1831204800,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/compose39_overlay/odd_frames.u8",
+    "sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653"
+  },
+  "schema": "ddm_vr7.rebuild.v1",
+  "score_claim": false,
+  "supplemental_field": {
+    "bytes": 852999,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/compose39/field_composed.npz",
+    "sha256": "a935929cd44de1df8218f7df11ed8383a89e93b4a888e0827f362bce9c576dce"
+  },
+  "twin_hash_equal": true
+}

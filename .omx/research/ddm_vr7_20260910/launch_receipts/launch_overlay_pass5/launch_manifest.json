@@ -1,0 +1,138 @@
+{
+  "actual_nice": null,
+  "adjudicated_at_launch": true,
+  "argv": [
+    ".venv/bin/python",
+    "tools/safe_run.py",
+    "--timeout",
+    "1800",
+    "--label",
+    "ddm_vr7_overlay_pass5",
+    "--status-receipt",
+    "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json",
+    "--",
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_overlay_rebuild.py",
+    "--resume-from",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_pass5.json"
+  ],
+  "authority": "User VR7 charter; keep inventory; clean own scratch only after twin hash",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_vr7_overlay_pass5.done.done",
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    "tools/safe_run.py",
+    "--timeout",
+    "1800",
+    "--label",
+    "ddm_vr7_overlay_pass5",
+    "--status-receipt",
+    "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json",
+    "--",
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_overlay_rebuild.py",
+    "--resume-from",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_pass5.json"
+  ],
+  "fleet_reaper_guard": {
+    "exemption_hits": [],
+    "matched_tokens": [],
+    "matching_argv_parts": [],
+    "refused": false,
+    "requested_argv": [
+      ".venv/bin/python",
+      "tools/safe_run.py",
+      "--timeout",
+      "1800",
+      "--label",
+      "ddm_vr7_overlay_pass5",
+      "--status-receipt",
+      "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json",
+      "--",
+      ".venv/bin/python",
+      "-B",
+      "experiments/ddm_vr7_overlay_rebuild.py",
+      "--resume-from",
+      "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_pass5.json"
+    ],
+    "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+    "stable_argv": [
+      ".venv/bin/python",
+      "tools/safe_run.py",
+      "--timeout",
+      "1800",
+      "--label",
+      "ddm_vr7_overlay_pass5",
+      "--status-receipt",
+      "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/safe_run.json",
+      "--",
+      ".venv/bin/python",
+      "-B",
+      "experiments/ddm_vr7_overlay_rebuild.py",
+      "--resume-from",
+      "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_pass5.json"
+    ]
+  },
+  "fresh_roots": [],
+  "generated_utc": "2026-09-10T05:40:42Z",
+  "git_sha": "0aaf0c87bf9243a7e35b43c5119519230cb9e823",
+  "launch_id": {
+    "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/launch_manifest.json",
+    "monotonic_launch_counter": 1341,
+    "pid": 81165
+  },
+  "log_path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/run.log",
+  "metal_occupancy": {
+    "evidence": [],
+    "metal_footprint_gib": null,
+    "metal_occupant": false
+  },
+  "nice_status": "unapplied:best_effort (requested 10, actual None)",
+  "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5",
+  "pid": 81165,
+  "pid_path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5/run.pid",
+  "purpose": "VR7: scorer-free overlay rebuild from pass5 sealed renderer and retained pre-admission field",
+  "reaper_name_match_allow_requested": false,
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": 10,
+  "resource_budget": {
+    "metal_footprint_gib": null,
+    "metal_occupancy_evidence": [],
+    "metal_occupant": false,
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "storage_waterfall": {
+    "artifact_budget_gib": 2.0,
+    "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+    "boot_data_volume_free_gib": 232.1,
+    "boot_min_free_gib": 40.0,
+    "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+    "on_boot_volume": false,
+    "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_overlay_pass5",
+    "ssd_tiers": [
+      {
+        "free_gib": 63.23,
+        "path": "/Volumes/VertigoDataTier/pact"
+      },
+      {
+        "free_gib": 32.65,
+        "path": "/Volumes/APDataStore/pact"
+      }
+    ],
+    "target_free_gib": 63.23,
+    "verdict": "PASS"
+  },
+  "verify_alive_rc": 1,
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}

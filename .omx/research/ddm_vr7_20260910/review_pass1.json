@@ -1,0 +1,136 @@
+{
+  "checks": [
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr3_certified_raw_reclaim.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 51164,
+        "path": "experiments/ddm_vr3_certified_raw_reclaim.py",
+        "sha256": "e1c63eb661298a296e343165cd03aae98e62bdd0998c0d2df8f6cd78b1cb77c0"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_vr3_certified_raw_reclaim.py' current entity census 34 (last stored census 33)\nMarked 34 entities in 'experiments/ddm_vr3_certified_raw_reclaim.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr7_build_plan_inputs.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 11366,
+        "path": "experiments/ddm_vr7_build_plan_inputs.py",
+        "sha256": "57f07a12a27813ee8d1b34fce262e3986d9a9120cd50e146044bda4b2210979d"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_vr7_build_plan_inputs.py' current entity census 4 (last stored census 0)\nMarked 4 entities in 'experiments/ddm_vr7_build_plan_inputs.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 6804,
+        "path": "experiments/ddm_vr7_overlay_rebuild.py",
+        "sha256": "26ae1f7bc5f091c2099bf8fb1ce4d079b04140ef69f08274c9bf3d8c4c908989"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_vr7_overlay_rebuild.py' current entity census 2 (last stored census 0)\nMarked 2 entities in 'experiments/ddm_vr7_overlay_rebuild.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr7_rebuild.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 8313,
+        "path": "experiments/ddm_vr7_rebuild.py",
+        "sha256": "f5b79aff3d25c495a494433edb4703323fee85d5828d0830f99e8062ccca382b"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_vr7_rebuild.py' current entity census 7 (last stored census 0)\nMarked 7 entities in 'experiments/ddm_vr7_rebuild.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr7_reproducer_descriptor.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 16429,
+        "path": "experiments/ddm_vr7_reproducer_descriptor.py",
+        "sha256": "71064420bf5bd55fc0d9796c79a4876fe2229052b8f9025eb9b9029e19f2eb17"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_vr7_reproducer_descriptor.py' current entity census 8 (last stored census 0)\nMarked 8 entities in 'experiments/ddm_vr7_reproducer_descriptor.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/ddm_vr7_tc3_replay.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 6385,
+        "path": "experiments/ddm_vr7_tc3_replay.py",
+        "sha256": "8d6d825cf2ae7da28e629bcf0b9edd96e7f9a40fb490648f8242c44b8ff5ce73"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/ddm_vr7_tc3_replay.py' current entity census 4 (last stored census 0)\nMarked 4 entities in 'experiments/ddm_vr7_tc3_replay.py' as 'reviewed'\n"
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "tools/review_tracker.py",
+        "mark-file",
+        "experiments/tests/test_ddm_vr7_reproducer_descriptor.py",
+        "--status",
+        "reviewed"
+      ],
+      "content": {
+        "bytes": 15545,
+        "path": "experiments/tests/test_ddm_vr7_reproducer_descriptor.py",
+        "sha256": "75666d10422f139665402962ee83a5981a1639e2e5f71f7e24116008becd66cc"
+      },
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "RESCAN: 'experiments/tests/test_ddm_vr7_reproducer_descriptor.py' current entity census 17 (last stored census 0)\nMarked 17 entities in 'experiments/tests/test_ddm_vr7_reproducer_descriptor.py' as 'reviewed'\n"
+    }
+  ],
+  "pass": 1,
+  "scope": "All seven Python files; descriptor admission, preserved legacy gates, restore dependency pins, own scratch cleanup, input builder, meaningful drift/refusal tests. Fixed missing config-dependency checks and bound TC3 replay proof to restore config; fixed test assertion placement.",
+  "validation_files": [
+    "validation_0.json",
+    "validation_1.json"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_build_plan_inputs.py",
+    "--evidence-root",
+    ".omx/research/ddm_vr7_20260910"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "{\"sources\": 1212, \"descriptors\": \"/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json\", \"descriptor_bytes\": 1288716, \"score_claim\": false}\n"
+}

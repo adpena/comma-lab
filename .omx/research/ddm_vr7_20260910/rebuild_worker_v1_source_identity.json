@@ -1,0 +1,12 @@
+{
+  "original": {
+    "bytes": 6088,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_vr7_rebuild.py",
+    "sha256": "50add8045104d5fcf253bfaf2a8613427098e804b9e399122813027f6a716d08"
+  },
+  "retained": {
+    "bytes": 6088,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/rebuild_worker_v1_source.txt",
+    "sha256": "50add8045104d5fcf253bfaf2a8613427098e804b9e399122813027f6a716d08"
+  }
+}

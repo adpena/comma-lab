@@ -1,0 +1,144 @@
+"""Resume a pinned SJ1 parse-back and certify its own disposable scratch.
+
+Inventory payloads are read-only. Only files produced inside this worker's
+dedicated scratch directory may be removed, after a successful twin hash.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+SCRATCH = Path('/Volumes/VertigoDataTier/pact/ddm_vr7_certify')
+
+
+def sha(path: Path) -> str:
+    with path.open('rb') as handle:
+        return hashlib.file_digest(handle, 'sha256').hexdigest()
+
+
+def fact(path: Path) -> dict:
+    if not path.is_file() or path.is_symlink():
+        raise ValueError(f'not a regular retained file: {path}')
+    before = path.stat()
+    digest = sha(path)
+    after = path.stat()
+    if (before.st_size, before.st_mtime_ns, before.st_ino) != (
+        after.st_size, after.st_mtime_ns, after.st_ino
+    ):
+        raise ValueError(f'file changed during hash: {path}')
+    return {'path': str(path), 'bytes': after.st_size, 'sha256': digest}
+
+
+def atomic(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(path.suffix + '.tmp')
+    with temp.open('w') as handle:
+        json.dump(value, handle, indent=2, sort_keys=True)
+        handle.write('\n')
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp, path)
+
+
+def verify(config: dict) -> None:
+    for expected in config['pins']:
+        if fact(Path(expected['path'])) != expected:
+            raise ValueError(f'input pin drift: {expected["path"]}')
+    runtime = Path(config['runtime'])
+    expected_paths = {p['path'] for p in config['runtime_files']}
+    actual_paths = {str(p) for p in runtime.rglob('*') if p.is_file() and '__pycache__' not in p.parts}
+    if actual_paths != expected_paths:
+        raise ValueError('runtime file set drift')
+    for expected in config['runtime_files']:
+        if fact(Path(expected['path'])) != expected:
+            raise ValueError(f'runtime pin drift: {expected["path"]}')
+
+
+def run(config_path: Path) -> int:
+    config = json.loads(config_path.read_text())
+    root = Path(config['scratch'])
+    if root.parent != SCRATCH or root.is_symlink() or SCRATCH.is_symlink():
+        raise ValueError('scratch must be an immediate private child of VR7 SSD root')
+    root.mkdir(exist_ok=True)
+    output = root / 'output'
+    if output.is_symlink():
+        raise ValueError('symlink output refused')
+    binding = fact(config_path)
+    checkpoint = root / 'BINDING.json'
+    if checkpoint.exists() and json.loads(checkpoint.read_text()) != binding:
+        raise ValueError('resume configuration drift')
+    if not checkpoint.exists() and output.exists():
+        raise ValueError('unowned output exists')
+    atomic(checkpoint, binding)
+    receipt = root / 'REBUILD_CERTIFICATE.json'
+    if receipt.exists():
+        saved = json.loads(receipt.read_text())
+        if saved.get('complete') and saved.get('cleanup_complete'):
+            verify(config)
+            print(json.dumps({'already_complete': str(receipt)}), flush=True)
+            return 0
+    verify(config)
+    free = os.statvfs(SCRATCH)
+    if free.f_bavail * free.f_frsize < 8 * (1 << 30):
+        raise ValueError('SSD rebuild reserve below 8 GiB')
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', PYTHONHASHSEED='20260910')
+    command = config['argv']
+    if command != [sys.executable, '-B', 'experiments/ddm_sj1_joint_admission.py',
+                   'parseback', '--runtime', config['runtime'], '--out-dir',
+                   str(output), '--threads', '4']:
+        raise ValueError('only pinned parseback command admitted')
+    atomic(root / 'START.json', {'config': binding, 'argv': command, 'env': {
+        'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONHASHSEED': '20260910'},
+        'cwd': config['cwd'], 'resume_from': str(output), 'score_claim': False})
+    completed = subprocess.run(command, cwd=config['cwd'], env=env, check=False)
+    if completed.returncode:
+        atomic(root / 'FAILED.json', {'returncode': completed.returncode,
+                                    'scratch_retained': True, 'config': binding})
+        return completed.returncode
+    verify(config)
+    original = fact(Path(config['original']))
+    rebuilt = fact(output / '0.raw')
+    matches = (original['bytes'], original['sha256']) == (
+        config['expected_bytes'], config['expected_sha256']) == (
+        rebuilt['bytes'], rebuilt['sha256'])
+    created = [fact(p) for p in sorted(output.rglob('*')) if p.is_file()]
+    if any(p.is_symlink() for p in output.rglob('*')):
+        raise ValueError('scratch symlink refused')
+    result = {'schema': 'ddm_vr7.rebuild.v1', 'kind': 'sj1_parseback',
+              'config': binding, 'argv': command, 'cwd': config['cwd'],
+              'original': original, 'rebuilt': rebuilt, 'twin_hash_equal': matches,
+              'complete': matches, 'cleanup_complete': False, 'score_claim': False,
+              'created_files': created,
+              'cleanup_reason': 'own successful rebuild; original and pinned reproducer retained'}
+    atomic(receipt, result)
+    if not matches:
+        return 3
+    # The certificate and original are durable before removing any owned scratch.
+    # Rehash at unlink time; a drift blocks cleanup and leaves the remaining bytes.
+    for expected in created:
+        path = Path(expected['path'])
+        if output not in path.parents or fact(path) != expected:
+            raise ValueError('scratch cleanup identity drift')
+        path.unlink()
+    result['cleanup_complete'] = True
+    atomic(receipt, result)
+    print(json.dumps({'certificate': str(receipt), 'twin_hash_equal': True}), flush=True)
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--resume-from', type=Path, required=True,
+                        help='immutable rebuild configuration JSON')
+    args = parser.parse_args()
+    return run(args.resume_from.resolve())
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -1,0 +1,19 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "plan-retained",
+    "--source-ledger",
+    ".omx/research/ddm_vr7_20260910/sources.jsonl",
+    "--rehash-ledger",
+    ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+    "--closures",
+    ".omx/research/ddm_vr7_20260910/closures.json",
+    "--output-ledger",
+    ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "{\"rows\": 1212, \"deletable_rows\": 1212, \"deletable_bytes\": 35034879550, \"ledger_sha256\": \"fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394\", \"score_claim\": false}\n"
+}

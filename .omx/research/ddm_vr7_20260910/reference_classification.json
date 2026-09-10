@@ -1,0 +1,430 @@
+{
+  "rows": [
+    {
+      "pin": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_eb2_20260910/MOVED_RESOLUTION.json",
+        "sha256": "eb4998ba454b6b2bc4ee9f7d84fabb7f3b45bbd02f9dbaaec60373e682dd9061"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed cached-partition result and MOVED resolution receipt; memo explicitly says no video decode or raw consumption in the measurement."
+    },
+    {
+      "pin": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_eb2_conditional_partition_bound_20260910.md",
+        "sha256": "794c10eb20c59346dbd56c1078e3319a9ada99ccdc008ea85e205c0b4c07c3eb"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed cached-partition result and MOVED resolution receipt; memo explicitly says no video decode or raw consumption in the measurement."
+    },
+    {
+      "pin": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_main_storage_20260910/sj1_bulk_move_log_20260910.jsonl",
+        "sha256": "f3c592efca99702debdcf277fd3489e32408b95371134719c32a19d5610082ee"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/parseback/run.log",
+        "sha256": "200d66761e49b60365ca09a6762ff3d2c5f16e94e75314e4703ad426ff221894"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed historical decode stdout, not an executable command or active reader."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw.MOVED.json",
+        "sha256": "71c310818fce7ca27f028dcbe4193ed13144c85a2aa743f42750f293346a8855"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/PARSEBACK_RESULT.json",
+        "sha256": "82e16070b62d7aed08ba13f921d9112405b6a308254c6847e37ce25d689a929c"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/OVERLAY.json",
+        "sha256": "a3539016dab3b24dacf7ce646c1d6351f0112de645a95f729ed1167349a8a459"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+        "sha256": "44298d0f5c682e38e06031ca63ea4237169a091c88630fadd6be8465e5532540"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/OVERLAY.json",
+        "sha256": "d391936e4e8f5848a90874808d03aa6e7195318e8b9a8e4ac7463ada00d09796"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+        "sha256": "1df87a538fd371403e1c92e31f4781f80650a1120b5dafc9efaf48b805877ff7"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_0.json",
+        "sha256": "62833c2946b6c9eab49e275dc2e7777b3fc5da78942c06b65ac0b613f9cb909b"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_1.json",
+        "sha256": "ef7ed7e22316fdc167a33a3cd89a396aa49c584b7298190523aa735b529f458f"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_2.json",
+        "sha256": "dd9cd0cd85a5468a721fe703c2c64d2aa1fbc41b576b91293b49fede655ec8eb"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_3.json",
+        "sha256": "890252da7689082c2a71b8976a137f2aacff21527923d3a6b3dc2566a099dc15"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_4.json",
+        "sha256": "74fb9188a03bb8cc6c0c0890ca64d3812dba37298937e2fd6f2b382a139277f2"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/seg_final/step0_shard_5.json",
+        "sha256": "9006716bfc30e0eb6a00af10f1eeffcaaf6a53a9cabfe665d8cca2af9b3a23be"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw.MOVED.json",
+        "sha256": "14fa78a682668192328c484fc784fd2dcb11c2012abfb860c40c4a067af9c4d2"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/PARSEBACK_RESULT.json",
+        "sha256": "610f9b9dca367cabaea10a0d5020ef6c35310d947676058d12cb9dfe304fae51"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw.MOVED.json",
+        "sha256": "38e71648aff3ae2ce59dd460a3283fbbab0cbd5db5c06ccba6a1ce25011826b6"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/PARSEBACK_RESULT.json",
+        "sha256": "d167360264cd5f6990959e17464aca61045015a303e06e08d0cb13b45dd2ed9c"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/launch/parseback/run.log",
+        "sha256": "90029962b6f0daab0b46b6b56601d45e6ea680a00ccbd0975669b4e53f63e6fe"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed historical decode stdout, not an executable command or active reader."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/launch/parseback_pass3/run.log",
+        "sha256": "f0d5bc7a77f9b3b91778467cbedf359316ae1bbd645af8bfb52dfdd23bd306ac"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed historical decode stdout, not an executable command or active reader."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/OVERLAY.json",
+        "sha256": "009fcac086a357238f3ed5d5319cb407f83af8104658ebeb6e15c894e3bba04b"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8.MOVED.json",
+        "sha256": "9ce2a2f257ec7737971d1e643eecb41c38eb3d9b9619f0a001774650816cf057"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/OVERLAY.json",
+        "sha256": "7d14eb28513e5ceaca02f483dbf8a1da1c57f3cd660635fa808cf8c0242e7547"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8.MOVED.json",
+        "sha256": "c180ea407b5a806d1d6ac9fe1ff1377d4fc85797f9700c6fec59ce4dae8f8fa9"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/OVERLAY.json",
+        "sha256": "dae1ebe5a218f6298cda00a470b143b6c2885dde253c3312866f5994c5a1b0a9"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8.MOVED.json",
+        "sha256": "5fca430026ff96ccb5d68c4a043d1cb5721a75ad20d1f53ba205510488051d09"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final/step0_shard_0.json",
+        "sha256": "9c62d3ff59b714636725a89b1a2f02742387cd567c51c7f537d02e25fabc97bf"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final/step0_shard_1.json",
+        "sha256": "5ffeeba637e005a52db277150ebab5716bbc829f0efd637f729557925d393478"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final/step0_shard_2.json",
+        "sha256": "21934d7ac8e4e46e769b008b8887918e196a8079062bcb7bf4e61888871728f7"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final/step0_shard_3.json",
+        "sha256": "4f423d8ec074125634bb9f95f10bd531857aa8b9d613ab45f3c70f491cfb73b5"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final/step0_shard_4.json",
+        "sha256": "6c2dc84fe18b7bec95367d4417f112f4d7cb114cca758f69a2c8ded029379666"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final/step0_shard_5.json",
+        "sha256": "ed77d922481c6917b5e5b2871bf125478878844fec2ccd03ed3fe1fc3ba3f101"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final_pass3/step0_shard_0.json",
+        "sha256": "c3c0c7c5996c186593475c5b8dadd0afc387f08ecdf69ce79038f51076181a31"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final_pass3/step0_shard_1.json",
+        "sha256": "31b547ff7fa3ec1470bdc26da88f26a30e3e21afbe983c5805531697c731955f"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final_pass3/step0_shard_2.json",
+        "sha256": "1690b796983f93f617b831502d422ae22a2d3b05888ba93b4b200e167c4e7063"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final_pass3/step0_shard_3.json",
+        "sha256": "056cb64f89e029882203e804de2860d0b27a926c758dd7e2293d01337f6480e3"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final_pass3/step0_shard_4.json",
+        "sha256": "ccf93b77c0ba447cae1768c701eeef255fe7eb9a4652572578692f12ef069bd9"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/seg_final_pass3/step0_shard_5.json",
+        "sha256": "cdb0f06874788225f17036ba87e2e77bbb8265ba58fb90a730d734fe4103da84"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/run.log",
+        "sha256": "e7e5dd1a744616d1d49817096c640ceefd7b4a350159859179c498ae428a3d93"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed historical decode stdout, not an executable command or active reader."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw.MOVED.json",
+        "sha256": "da9de9dc46bc0943435bc4cc94664082abdea40d05cf82f91c6f50b23c3e93c2"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json",
+        "sha256": "ef6eac30d94dc82b83e594c267edb6d6cf26c9b66a64716a7d52ed5da70015e9"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/OVERLAY.json",
+        "sha256": "e545845a5561826f6facd04223af96f56e3778a1241cfc96e13ed58cfe9f313e"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+        "sha256": "15e3b41cbbf091022e54e385c6eaf6b164778b9c20c83f59f99dc672e0ced7ca"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/OVERLAY.json",
+        "sha256": "7bcfbb166b9c7d92c100478178422d3b93a91c9cae448d744d27388200c57bde"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+        "sha256": "aae45c029a3e7b99889357724f132fcb5ebabe71f062569165027276e422fa35"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Custody record of the certified move, not an active raw consumer."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_0.json",
+        "sha256": "2748ad40250f4c6d935961ecb82022ae36e298d493cda03ee4788315c74b2ebd"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_1.json",
+        "sha256": "fc2783b9fca609d300392a85576f07f824ad10a656356676afa21ce91817cae1"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_2.json",
+        "sha256": "44e0f05dc280da5e717209bf38df1461aa38511975adcdc8be6e17d9d0b86b27"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_3.json",
+        "sha256": "86f8442e0f20929106556c604e9e7f1e7bd037f7919832893a55a199ffa874ce"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_4.json",
+        "sha256": "23226f2c6608814f73f8cae25ac552275f7886b1ed181ce5100a8dd1b7bbb976"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    },
+    {
+      "pin": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_5.json",
+        "sha256": "31000f4add6d4bf7f3e87346ecc79728067bc924c6b3eac73a606ca540daab5c"
+      },
+      "classification": "PINNED_HISTORICAL_OBSERVATION",
+      "reason": "Completed output/overlay/seg-shard measurement receipt; naming its input is historical provenance."
+    }
+  ],
+  "scope": "53 exact files returned by initial full configured scan; no executable consumer excluded",
+  "live_gate": "MAIN must still run current process/cwd/lsof checks at apply"
+}

@@ -1,0 +1,37 @@
+{
+  "axis": "[filesystem bytes measured; scorer-free]",
+  "bytes": 3662409600,
+  "candidate_archive_sha256": "2ee6e292255a63d48391f852cde26b573fe3e8de378fabfa056632c24e7c6c13",
+  "candidate_raw_current": {
+    "axis": "[filesystem bytes measured; scorer-free]",
+    "bytes": 3662409600,
+    "device": 16777240,
+    "hash_completed_utc": "2026-09-10T06:02:30.430789+00:00",
+    "hash_status": "HASHED_STABLE",
+    "inode": 4862582,
+    "inventory": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/selected_inventory.json",
+      "sha256": "41053325913cd9bfd7d38e790eb0287dd0c59e4f25ebd79f20e27c97f9340322"
+    },
+    "matches_original_receipt": true,
+    "mtime_ns": 1789011014602803301,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/public_identity/output/0.raw",
+    "present": true,
+    "score_claim": false,
+    "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8"
+  },
+  "reproducer_archive_sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4",
+  "same_host_full_raw_equal": true,
+  "schema": "ddm_vr7.tc3_raw_identity.v1",
+  "score_claim": false,
+  "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8",
+  "source_moved_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/source_raw_custody/0.raw.MOVED.json",
+    "sha256": "5728d89eff30a555f91ef298b81ecab88aa11dad7987b21af7c940dc05c0e3ac"
+  },
+  "source_raw_current": {
+    "bytes": 3662409600,
+    "path": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+    "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-B",
+    "experiments/ddm_sj1_joint_admission.py",
+    "parseback",
+    "--runtime",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output",
+    "--threads",
+    "4"
+  ],
+  "cleanup_complete": true,
+  "cleanup_reason": "own successful rebuild; original and pinned reproducer retained",
+  "complete": true,
+  "config": {
+    "bytes": 13680,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/rebuild_pass5.json",
+    "sha256": "b9c396fecc9a8751359294f468276495760193d42c8a24922ed501965251ad3f"
+  },
+  "created_files": [
+    {
+      "bytes": 3694,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+      "sha256": "1f6a6ed49847c5ed98a96dbf68d7d2b175a683f82622d213ca9656c112a43614"
+    },
+    {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "sha256": "ecf8570be3e9711e2a40055ffcb421d57ad64eed4f08851e77286f4f6a7724ed"
+    },
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/0.raw",
+      "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12"
+    },
+    {
+      "bytes": 3322,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/PARSEBACK_RESULT.json",
+      "sha256": "cb924819da9e9761f465da9d57391266dfeb8d573dea0768c4e80b3ee68b3b4d"
+    },
+    {
+      "bytes": 34568,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/build/f26_corrector_native.so",
+      "sha256": "54c5bd32e3cd1cb213b7ee857e749e8c3e1ad6ffc3007d95eb45d3069ca4c0e9"
+    },
+    {
+      "bytes": 33888,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/build/rc64_backend.so",
+      "sha256": "a266beae2924d94f5e19c21356c2ba07c2f0c6276912afaf896e1bce1a851634"
+    },
+    {
+      "bytes": 180336,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/data/p",
+      "sha256": "0f771807deec2eb064904b438acb09351ce76d268662a4a83d41ebecfed4ffe0"
+    }
+  ],
+  "cwd": "/Users/adpena/Projects/pact",
+  "kind": "sj1_parseback",
+  "original": {
+    "bytes": 3662409600,
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+    "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12"
+  },
+  "rebuilt": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/pass5/output/0.raw",
+    "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12"
+  },
+  "schema": "ddm_vr7.rebuild.v1",
+  "score_claim": false,
+  "twin_hash_equal": true
+}

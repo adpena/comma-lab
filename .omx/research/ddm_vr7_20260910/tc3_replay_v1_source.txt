@@ -1,0 +1,140 @@
+"""Replay the superseded TC3 trace using pinned historical inputs, never the live pointer.
+
+The numerical trace and preparation routines are unchanged. Their input loader
+is replaced by a validated retained INPUTS.json, and all writes go to VR7 scratch.
+Receipts and native libraries in the original tree remain read-only dependencies.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from experiments.ddm_vr7_rebuild import SCRATCH, atomic, fact
+
+
+def verify_inputs(config: dict) -> dict:
+    for expected in config['pins']:
+        if fact(Path(expected['path'])) != expected:
+            raise ValueError('historical TC3 pin drift: ' + expected['path'])
+    inputs = json.loads(Path(config['inputs']).read_text())
+    if inputs['archive_sha256'] != config['archive_sha256']:
+        raise ValueError('historical archive binding drift')
+    if fact(Path(inputs['field']['path'])) != inputs['field']:
+        raise ValueError('historical field drift')
+    for value in inputs['sources'].values():
+        if fact(Path(value['path'])) != value:
+            raise ValueError('historical runtime drift: ' + value['path'])
+    return inputs
+
+
+def copy_retained(source: Path, destination: Path) -> None:
+    expected = fact(source)
+    if destination.exists():
+        actual = fact(destination)
+        if (actual['sha256'], actual['bytes']) != (expected['sha256'], expected['bytes']):
+            raise ValueError('replay copy drift')
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + '.copying')
+    shutil.copyfile(source, temporary)
+    actual = fact(temporary)
+    if (actual['sha256'], actual['bytes']) != (expected['sha256'], expected['bytes']):
+        raise ValueError('replay copy failed')
+    os.replace(temporary, destination)
+
+
+def run(config_path: Path, stop: int, retain_output: bool) -> int:
+    config = json.loads(config_path.read_text())
+    verify_inputs(config)
+    original = Path(config['original_root'])
+    root = Path(config['scratch'])
+    if root.parent != SCRATCH or root.is_symlink() or SCRATCH.is_symlink():
+        raise ValueError('TC3 scratch outside private VR7 child')
+    if not 1 <= stop <= 600:
+        raise ValueError('invalid replay frame count')
+    root.mkdir(exist_ok=True)
+    binding = fact(config_path)
+    binding_path = root / 'BINDING.json'
+    if binding_path.exists() and json.loads(binding_path.read_text()) != binding:
+        raise ValueError('TC3 replay resume binding drift')
+    atomic(binding_path, binding)
+    if os.statvfs(root).f_bavail * os.statvfs(root).f_frsize < 8 * (1 << 30):
+        raise ValueError('TC3 replay reserve below 8 GiB')
+    work = root / 'payload'
+    for path in (original / 'move39/source_runtime').rglob('*'):
+        if path.is_file() and '__pycache__' not in path.parts:
+            copy_retained(path, work / path.relative_to(original))
+    for rel in ['move39/INPUTS.json', 'move39/field.u8', 'move39/trace/BUILD.json',
+                'retained/tc1_weights.bin', 'retained/shipped_token_stream.rc64']:
+        copy_retained(original / rel, work / rel)
+    from experiments import ddm_tc3_price as price
+    from experiments import ddm_tc3_trace as trace
+
+    def historical_inputs() -> dict:
+        return verify_inputs(config)
+
+    # Routing only: run() and prepare() execute the original numerical routines.
+    trace.ROOT = work
+    trace.prepare = historical_inputs
+    price.ROOT = work / 'move39'
+    trace.run('trace', stop)
+    price.prepare(stop)
+    verify_inputs(config)
+    comparisons = []
+    for stage in ['trace', 'prepare_v2']:
+        for frame in range(stop):
+            rel = f'move39/{stage}/frames/frame_{frame:04d}.npz'
+            recorded = json.loads((original / rel).with_suffix('.json').read_text())
+            if stage == 'trace':
+                recorded = recorded['payload']
+            rebuilt = fact(work / rel)
+            current = fact(original / rel) if (original / rel).exists() else None
+            if any((value['bytes'], value['sha256']) != (recorded['bytes'], recorded['sha256'])
+                   for value in [rebuilt, *([current] if current else [])]):
+                atomic(root / 'MISMATCH.json', {'recorded': recorded, 'rebuilt': rebuilt,
+                                              'original_current': current})
+                return 3
+            comparisons.append({'recorded': recorded, 'rebuilt': rebuilt,
+                                'original_current': current})
+    if any(p.is_symlink() for p in work.rglob('*')):
+        raise ValueError('symlink in replay scratch')
+    created = [fact(p) for p in sorted(work.rglob('*')) if p.is_file()]
+    result = {'schema': 'ddm_vr7.tc3_replay.v1', 'config': binding,
+              'frames_per_stage': stop, 'comparisons': comparisons,
+              'complete': True, 'same_bytes_as_retained_receipts': True,
+              'originals_twin_hashed': all(c['original_current'] for c in comparisons),
+              'created_files': created, 'score_claim': False, 'cleanup_complete': False,
+              'cleanup_reason': 'own replay scratch; historical inputs and all receipts retained'}
+    certificate = root / 'REPLAY_CERTIFICATE.json'
+    atomic(certificate, result)
+    if not retain_output:
+        for expected in created:
+            p = Path(expected['path'])
+            if work not in p.parents or fact(p) != expected:
+                raise ValueError('replay scratch cleanup drift')
+            p.unlink()
+        result['cleanup_complete'] = True
+        atomic(certificate, result)
+    print(json.dumps({'certificate': str(certificate), 'frames_per_stage': stop}), flush=True)
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--resume-from', type=Path, required=True)
+    parser.add_argument('--stop-after', type=int, default=600)
+    parser.add_argument('--retain-output', action='store_true')
+    args = parser.parse_args()
+    return run(args.resume_from.resolve(), args.stop_after, args.retain_output)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

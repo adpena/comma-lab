@@ -1,0 +1,15 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-B",
+    "-m",
+    "pytest",
+    "-q",
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr7_reproducer_descriptor.py"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "................................................................ss...... [ 74%]\n.........................                                                [100%]\n95 passed, 2 skipped in 0.86s\n"
+}

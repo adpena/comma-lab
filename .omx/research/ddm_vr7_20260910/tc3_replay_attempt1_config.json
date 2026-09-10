@@ -1,0 +1,88 @@
+{
+  "archive_sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4",
+  "inputs": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/INPUTS.json",
+  "original_root": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal",
+  "pins": [
+    {
+      "bytes": 15992,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc3_trace.py",
+      "sha256": "1602a28c700ee1901b1ef2586d27fd00012b17191c66d98bfc3203684d567293"
+    },
+    {
+      "bytes": 5968,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc3_mixer.py",
+      "sha256": "fe5aa8b922711f1919935ea2a513eaa3dd449ddbbffdfe8b9213ffd1b3409f7d"
+    },
+    {
+      "bytes": 8590,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_mixer_codec.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 11908,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc3_geometry.py",
+      "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+    },
+    {
+      "bytes": 59351,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+      "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
+    },
+    {
+      "bytes": 20173,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc3_price.py",
+      "sha256": "0613a39c1d7ac87d94f1d34c4791819c74d672aad6af7a3ce1201658923090a8"
+    },
+    {
+      "bytes": 14138,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rc64p_native_cpu_decode/route_b_rc64.py",
+      "sha256": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5"
+    },
+    {
+      "bytes": 13622,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/INPUTS.json",
+      "sha256": "a37790a2fdaa39292ab2f8b34f51e018f38bd6f49b9c55935b5cbe821289cf0c"
+    },
+    {
+      "bytes": 1123,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/trace/BUILD.json",
+      "sha256": "b433d83e6db6e0aa0a51f4759e389cf0acf80bed0386f88e3aaadbd9e7e32880"
+    },
+    {
+      "bytes": 12222,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/trace/build/rc64_tc3_trace/rc64_base.c",
+      "sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6"
+    },
+    {
+      "bytes": 14825,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/trace/build/rc64_tc3_trace/rc64_backend_jg2.c",
+      "sha256": "1941923a94e4e0a191a43ab2330349195fcb0942756bb03e71e887375bd53eb2"
+    },
+    {
+      "bytes": 34688,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/trace/build/rc64_tc3_trace/librc64_jg2.dylib",
+      "sha256": "94562a0bb88c89ca81e92dc2abe320e5db29a34f3d7aeab8b3da62b10c4e67d8"
+    },
+    {
+      "bytes": 35,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/retained/tc1_weights.bin",
+      "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+    },
+    {
+      "bytes": 119568,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/retained/shipped_token_stream.rc64",
+      "sha256": "26e9eba5209495a04a815dbdf553b62f764197a39b9da405f8085a5fa6c92346"
+    },
+    {
+      "bytes": 6335,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_vr7_tc3_replay.py",
+      "sha256": "1879bd9f64897bd8b299181aa78424c9f9a5ccfc959c3d53ccb4c02be39c5ad7"
+    },
+    {
+      "bytes": 6088,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_vr7_rebuild.py",
+      "sha256": "50add8045104d5fcf253bfaf2a8613427098e804b9e399122813027f6a716d08"
+    }
+  ],
+  "scratch": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/tc3_replay"
+}

@@ -1,0 +1,16 @@
+{
+  "argv": [
+    ".venv/bin/ruff",
+    "check",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "experiments/ddm_vr7_build_plan_inputs.py",
+    "experiments/ddm_vr7_overlay_rebuild.py",
+    "experiments/ddm_vr7_rebuild.py",
+    "experiments/ddm_vr7_reproducer_descriptor.py",
+    "experiments/ddm_vr7_tc3_replay.py",
+    "experiments/tests/test_ddm_vr7_reproducer_descriptor.py"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "All checks passed!\n"
+}

@@ -1,0 +1,136 @@
+{
+  "actual_nice": null,
+  "argv": [
+    ".venv/bin/python",
+    "tools/safe_run.py",
+    "--timeout",
+    "3600",
+    "--label",
+    "ddm_vr7_multipass",
+    "--status-receipt",
+    "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json",
+    "--",
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_rebuild.py",
+    "--resume-from",
+    ".omx/research/ddm_vr7_20260910/rebuild_multipass.json"
+  ],
+  "authority": "User VR7 charter scorer-free plan only",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_vr7_multipass.done.done",
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    "tools/safe_run.py",
+    "--timeout",
+    "3600",
+    "--label",
+    "ddm_vr7_multipass",
+    "--status-receipt",
+    "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json",
+    "--",
+    ".venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_rebuild.py",
+    "--resume-from",
+    ".omx/research/ddm_vr7_20260910/rebuild_multipass.json"
+  ],
+  "fleet_reaper_guard": {
+    "exemption_hits": [],
+    "matched_tokens": [],
+    "matching_argv_parts": [],
+    "refused": false,
+    "requested_argv": [
+      ".venv/bin/python",
+      "tools/safe_run.py",
+      "--timeout",
+      "3600",
+      "--label",
+      "ddm_vr7_multipass",
+      "--status-receipt",
+      "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json",
+      "--",
+      ".venv/bin/python",
+      "-B",
+      "experiments/ddm_vr7_rebuild.py",
+      "--resume-from",
+      ".omx/research/ddm_vr7_20260910/rebuild_multipass.json"
+    ],
+    "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+    "stable_argv": [
+      ".venv/bin/python",
+      "tools/safe_run.py",
+      "--timeout",
+      "3600",
+      "--label",
+      "ddm_vr7_multipass",
+      "--status-receipt",
+      "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/safe_run.json",
+      "--",
+      ".venv/bin/python",
+      "-B",
+      "experiments/ddm_vr7_rebuild.py",
+      "--resume-from",
+      ".omx/research/ddm_vr7_20260910/rebuild_multipass.json"
+    ]
+  },
+  "fresh_roots": [],
+  "generated_utc": "2026-09-10T05:16:18Z",
+  "git_sha": "20f11b6ea3fdcc0906578f6ba1ed3ee0633ce252",
+  "launch_id": {
+    "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/launch_manifest.json",
+    "monotonic_launch_counter": 1334,
+    "pid": 49342
+  },
+  "log_path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/run.log",
+  "metal_occupancy": {
+    "evidence": [],
+    "metal_footprint_gib": null,
+    "metal_occupant": false
+  },
+  "nice_status": "unapplied:best_effort (requested 10, actual None)",
+  "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass",
+  "pid": 49342,
+  "pid_path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass/run.pid",
+  "purpose": "VR7 charter: representative SJ1 multipass certified rebuild; own scratch auto-clean after twin hash",
+  "reaper_name_match_allow_requested": false,
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": 10,
+  "resource_budget": {
+    "metal_footprint_gib": null,
+    "metal_occupancy_evidence": [],
+    "metal_occupant": false,
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "storage_waterfall": {
+    "artifact_budget_gib": 4.0,
+    "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+    "boot_data_volume_free_gib": 232.23,
+    "boot_min_free_gib": 40.0,
+    "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+    "on_boot_volume": false,
+    "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/launch_multipass",
+    "ssd_tiers": [
+      {
+        "free_gib": 63.32,
+        "path": "/Volumes/VertigoDataTier/pact"
+      },
+      {
+        "free_gib": 32.93,
+        "path": "/Volumes/APDataStore/pact"
+      }
+    ],
+    "target_free_gib": 63.32,
+    "verdict": "PASS"
+  },
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}

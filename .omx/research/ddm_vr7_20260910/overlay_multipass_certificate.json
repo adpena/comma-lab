@@ -1,0 +1,45 @@
+{
+  "argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-B",
+    "experiments/ddm_vr7_overlay_rebuild.py",
+    "--resume-from",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_multipass.json"
+  ],
+  "cleanup_complete": true,
+  "cleanup_reason": "own successful rebuild; original, seal, field and renderer retained",
+  "complete": true,
+  "config": {
+    "bytes": 14113,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_multipass.json",
+    "sha256": "3b8029e11c0e2732b0c8d873b54d1af21624f0d381d0b7f2215c96d7439254e4"
+  },
+  "created_files": [
+    {
+      "bytes": 1831204800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass_overlay/odd_frames.u8",
+      "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859"
+    }
+  ],
+  "cwd": "/Users/adpena/Projects/pact",
+  "kind": "sj1_overlay",
+  "original": {
+    "bytes": 1831204800,
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+    "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859"
+  },
+  "original_hash_measured_current": true,
+  "rebuilt": {
+    "bytes": 1831204800,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/multipass_overlay/odd_frames.u8",
+    "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859"
+  },
+  "schema": "ddm_vr7.rebuild.v1",
+  "score_claim": false,
+  "supplemental_field": {
+    "bytes": 853224,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/passes/pass3_gt/field_after.npz",
+    "sha256": "17cf8596062d54d58f87f57478db7de69ae8b7d19fea4032b30c8c00b9c144df"
+  },
+  "twin_hash_equal": true
+}

@@ -1,0 +1,13 @@
+{
+  "query": [
+    "rg",
+    "-n",
+    "--hidden",
+    "ddm_vr7|ddm_vr6|certified.{0,20}reclaim",
+    ".omx/state/canonical_task_status.jsonl",
+    ".omx/state/lane_registry.json"
+  ],
+  "returncode": 0,
+  "stdout": ".omx/state/lane_registry.json:97733:      \"name\": \"VR3 certified raw reclaim September wave\",\n",
+  "stderr": ""
+}
