@@ -45,7 +45,7 @@ def test_module_frontier_equals_live_effective_pointer() -> None:
     pointer = load_canonical_frontier_pointer_strict(repo_root=REPO)
     expected = effective_frontier_score(pointer)
     assert expected is not None
-    assert trainer.FRONTIER == expected
+    assert expected == trainer.FRONTIER
 
 
 def test_loader_recomposes_minimum_and_ignores_stale_cached_winner(tmp_path: Path) -> None:
@@ -58,7 +58,12 @@ def test_loader_recomposes_minimum_and_ignores_stale_cached_winner(tmp_path: Pat
     payload["our_local_frontier_contest_cpu"]["score"] = 0.31
     payload["our_local_frontier_contest_cuda"]["score"] = 0.29
     payload["upstream_leaderboard_snapshot"]["best_entry"]["score"] = 0.17
-    payload["upstream_leaderboard_snapshot"]["entries"][0]["score"] = 0.17
+    # Control the entire ranked table: a new live runner-up must not silently
+    # become this fixture's minimum after only the first entry is changed.
+    payload["upstream_leaderboard_snapshot"]["entries"] = [
+        {"rank": 1, "name": "fixture_first", "score": 0.17},
+        {"rank": 2, "name": "fixture_second", "score": 0.18},
+    ]
     payload["effective_frontier"]["score"] = 0.99
     _write_pointer(tmp_path, payload)
 
