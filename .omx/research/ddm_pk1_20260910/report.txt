@@ -1,0 +1,12 @@
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00000489
+  Average SegNet Distortion: 0.00010636
+  Submission file size: 180,233 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00480039
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.14
+
+Archive SHA-256: 986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857
+Archive size bytes: 180233
+Recomputed score from report components and exact archive bytes: 0.13763861019288715
+Measurement axis: [contest-CUDA T4 n600]; deployment target: linux-nvidia-t4

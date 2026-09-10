@@ -1,0 +1,177 @@
+{
+  "files": [
+    {
+      "path": ".omx/research/ddm_pk1_pr140_swap_packet_staging_20260910.md",
+      "bytes": 10990,
+      "sha256": "e9b010c76d93d23173877dc0ed7bef77719353797cc66344b89cb9e757265023"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/PR_BODY.md",
+      "bytes": 3210,
+      "sha256": "aaf8727828c3f44d66d82da4adee2cc9e1c0f283c5dc19b4d8a1ce3e8c76d682"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/SWAP_COMMANDS.md",
+      "bytes": 6827,
+      "sha256": "6b6d21078ff2f4c6fabefbf603b5faf3e87b1af99556b8f29a303b5f4fb8cd38"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/COMPETITIVE_STATEMENT.md",
+      "bytes": 621,
+      "sha256": "16a58b3861bf231c300af02103b05bee0afd6630994b49c08b784cc309bd484a"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/DISCLOSURE_CHANGE.json",
+      "bytes": 423,
+      "sha256": "848ad0232f2213d3f0e9ebe7ee4f46c8d69482cad556d4143a09c16f4b702dc4"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/FIRE_ORDERS.json",
+      "bytes": 897,
+      "sha256": "f63934a727addbdc499fd5aead65152460e0880eb1738124044b3329c76a0853"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/STAGING_MANIFEST.json",
+      "bytes": 10988,
+      "sha256": "b989a28fafac41921d73d83e2390c3e9f7f597041958af5e2ab1766a55ca6a81"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/SCORE_RECOMPUTATION.json",
+      "bytes": 1541,
+      "sha256": "06ff6eaa2cb11748cbe690e01f01dbe738187cb71d45148f905087c618893200"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/VERIFICATION.json",
+      "bytes": 15773,
+      "sha256": "6ff5d8f6290d2fb0ded4bed25dd68616089c5ed1a27b5faecde3d5bd0d9bedaa"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/BOUNDARY_BASELINE.json",
+      "bytes": 16508,
+      "sha256": "19624df43d8d5ba9fe463388562e1531e04569fc1efa05a9ff72ebb0dae42ddf"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/BOUNDARY_VERIFICATION.json",
+      "bytes": 259,
+      "sha256": "b69394012afd993a486ecb017f8ef95a6dd8e13d4a514b6b540ad5626302e6db"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/RECALL_SEARCHES.json",
+      "bytes": 119745,
+      "sha256": "5f00ba76a0eb62976611d67c096e389a91b41ef87b1659ca9f23fae7783ad989"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/RETRACTED_CODE_SCAN.txt",
+      "bytes": 190,
+      "sha256": "4153a7661d5f3a982c1dc7ae70a3641ff2c19c541273a309f13122d8772a54a9"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/report.txt",
+      "bytes": 584,
+      "sha256": "a7ac17c9f5bea1e31fbcb65efda25ffea1f257cfcb85b35631cb46c7754974f8"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/COMPLIANCE.json",
+      "bytes": 77852,
+      "sha256": "15ebd9535d44cee712725b12cc8fba244798d1cbc51608fc076a1ad45911128f"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/COMPLIANCE_COMMAND.json",
+      "bytes": 1212,
+      "sha256": "9c9900dab3408ae702b3188e67274eab39b64e4868fa292e62c3bd14eeead20d"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/COMPLIANCE_STATUS.json",
+      "bytes": 22,
+      "sha256": "b9f87d4ceb14f54a8787da14c5985aa499e13197fe39c8f0f4ecf87e7a01957e"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/COMPLIANCE.stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/COMPLIANCE.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r1_COMPLIANCE.json",
+      "bytes": 77870,
+      "sha256": "2b9755f920924e3dce974f0d65f88afb11776ab7e4a24de317bd706e421955e9"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r1_COMPLIANCE_COMMAND.json",
+      "bytes": 1198,
+      "sha256": "cd6313557d22de96a05175916b1516e0bc23562be5af826bed3eadc5aa0e23fb"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r1_COMPLIANCE_STATUS.json",
+      "bytes": 22,
+      "sha256": "b9f87d4ceb14f54a8787da14c5985aa499e13197fe39c8f0f4ecf87e7a01957e"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r1_COMPLIANCE.stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r1_COMPLIANCE.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r2_COMPLIANCE.json",
+      "bytes": 77854,
+      "sha256": "feb91a71ef92ecf366ef9520322d3108e53a58ec574486a1c26bb273680adac5"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r2_COMPLIANCE_COMMAND.json",
+      "bytes": 1212,
+      "sha256": "9c9900dab3408ae702b3188e67274eab39b64e4868fa292e62c3bd14eeead20d"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r2_COMPLIANCE_STATUS.json",
+      "bytes": 22,
+      "sha256": "b9f87d4ceb14f54a8787da14c5985aa499e13197fe39c8f0f4ecf87e7a01957e"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r2_COMPLIANCE.stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_pk1_20260910/r2_COMPLIANCE.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "retained_uncommitted": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260910/contest_auth_eval.json",
+      "bytes": 54748,
+      "sha256": "6e6ceaba8458b23c97016795a7612f856ac5841fdfb2af0c8877fb7661d8c762"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260910/recall_0.txt",
+      "bytes": 29031,
+      "sha256": "d7f6740236894d574f6779280bea1125b02350d6f1aafb8b6ae6eb97a6797f25"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260910/recall_1.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260910/recall_3.txt",
+      "bytes": 4862,
+      "sha256": "1a07c444211332a459de182db3cb2af51764ed707a26ab49b693f93036a8e27d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260910/recall_2.txt",
+      "bytes": 25042,
+      "sha256": "e3aaf08c53ec815191d1481d1828356f652fc861bf2560d899ce295d4e6d9ef3"
+    }
+  ],
+  "staging_source_and_archive_commit": false
+}

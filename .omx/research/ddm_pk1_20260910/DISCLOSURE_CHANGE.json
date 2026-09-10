@@ -1,0 +1,6 @@
+{
+  "source": "experiments/results/ddm_fr2_final_review_20260903/pr_body_FINAL_POSTED.md",
+  "before": "I used coding agents (Claude as orchestrator of Codex subagents) extensively as research and engineering tools for the work behind this submission.",
+  "after": "I used automated research and engineering tools extensively for the work behind this submission.",
+  "status": "DRAFT_FOR_OPERATOR_APPROVAL_NOT_PUBLISHED"
+}

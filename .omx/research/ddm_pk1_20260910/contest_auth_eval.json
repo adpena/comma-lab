@@ -1,0 +1,1292 @@
+{
+  "schema_version": 1,
+  "final_score": 0.14,
+  "avg_posenet_dist": 4.89e-06,
+  "avg_segnet_dist": 0.00010636,
+  "avg_posenet_dist_report_8dp_derived": 4.89e-06,
+  "avg_segnet_dist_report_8dp_derived": 0.00010636,
+  "rate_unscaled": 0.0048003902679227325,
+  "rate_unscaled_reported_rounded": 0.00480039,
+  "rate_unscaled_report_8dp_derived": 0.00480039,
+  "original_uncompressed_size_bytes": 37545489,
+  "score_pose_contribution": 0.0069928534948188355,
+  "score_seg_contribution": 0.010636,
+  "score_rate_contribution": 0.1200097566980683,
+  "score_recomputed_from_components": 0.13763861019288715,
+  "canonical_score": 0.13763861019288715,
+  "canonical_score_source": "report_8dp_components_plus_exact_archive_bytes",
+  "legacy_canonical_score_source_alias": "score_recomputed_from_components",
+  "reported_final_score_display_rounded": 0.14,
+  "reported_final_score_display_2dp": 0.14,
+  "report_component_decimal_places": 8,
+  "report_component_rounding_abs_bound": 5e-09,
+  "report_8dp_score_worst_case_abs_error_bound": 4.07599281621511e-06,
+  "report_8dp_pose_score_worst_case_abs_error_bound": 3.5759928162151094e-06,
+  "report_8dp_seg_score_worst_case_abs_error_bound": 5e-07,
+  "report_8dp_printed_rate_score_worst_case_abs_error_bound": 1.25e-07,
+  "score_rounding_abs_delta": 0.002361389807112868,
+  "score_reported_rounded_differs_from_canonical": true,
+  "archive_size_bytes": 180233,
+  "n_samples": 600,
+  "report_path": "/root/modal_auth_eval_work/eval_work/report.txt",
+  "evaluate_elapsed_seconds": 45.23132363599984,
+  "inflate_elapsed_seconds": 990.053829427,
+  "contest_auth_eval_elapsed_seconds": 1045.702840878,
+  "provenance": {
+    "schema_version": 1,
+    "started_at_utc": "2026-09-10T03:03:35Z",
+    "tool": "experiments/contest_auth_eval.py",
+    "archive_path": "/tmp/modal_auth_eval/archive.zip",
+    "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+    "archive_size_bytes": 180233,
+    "inflate_script": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+    "inflate_script_sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+    "inflate_runtime_manifest": {
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "runtime_root": "/tmp/modal_auth_eval/submission_dir",
+      "runtime_file_count": 45,
+      "runtime_tree_sha256": "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39",
+      "runtime_content_tree_sha256": "a513161cf789dfecece5b7e381b61be97f9a41d0ab30bee25d47b8faed9f0c62",
+      "runtime_files_sha256": "70f3782ccc18737295776e5b9c62e8e4618a837c560332fa7839a7ce7b3a9796",
+      "files": [
+        {
+          "relative_path": "compress.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/compress.py",
+          "bytes": 183043,
+          "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+        },
+        {
+          "relative_path": "cpr1/carrier_codec.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/carrier_codec.py",
+          "bytes": 7353,
+          "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+        },
+        {
+          "relative_path": "cpr1/ddm_mp2_semantic_receiver.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/ddm_mp2_semantic_receiver.py",
+          "bytes": 13389,
+          "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+        },
+        {
+          "relative_path": "cpr1/hpac_integer.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/hpac_integer.py",
+          "bytes": 17471,
+          "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+        },
+        {
+          "relative_path": "cpr1/hpac_integer_sparse.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/hpac_integer_sparse.py",
+          "bytes": 8282,
+          "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+        },
+        {
+          "relative_path": "cpr1/inflate.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/inflate.py",
+          "bytes": 13810,
+          "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+        },
+        {
+          "relative_path": "cpr1/integer_model_io.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/integer_model_io.py",
+          "bytes": 5881,
+          "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+        },
+        {
+          "relative_path": "cpr1/rc1_adaptive_model_sections.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/cpr1/rc1_adaptive_model_sections.py",
+          "bytes": 20916,
+          "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+        },
+        {
+          "relative_path": "inflate.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+          "bytes": 2475,
+          "sha256": "a741f1df65bc23997d4aff24f5c989baa99b60df58f5dac41fcbfba00c480eda"
+        },
+        {
+          "relative_path": "inflate.sh",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+          "bytes": 3219,
+          "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+        },
+        {
+          "relative_path": "runtime/__init__.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/__init__.py",
+          "bytes": 57,
+          "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+        },
+        {
+          "relative_path": "runtime/baseline.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/baseline.py",
+          "bytes": 2058,
+          "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+        },
+        {
+          "relative_path": "runtime/bits.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/bits.py",
+          "bytes": 1578,
+          "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+        },
+        {
+          "relative_path": "runtime/carrier_repack.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/carrier_repack.py",
+          "bytes": 8206,
+          "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+        },
+        {
+          "relative_path": "runtime/compensation_overlay.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/compensation_overlay.py",
+          "bytes": 7074,
+          "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+        },
+        {
+          "relative_path": "runtime/ddm_wc1_advisory_runtime.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/ddm_wc1_advisory_runtime.py",
+          "bytes": 25232,
+          "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+        },
+        {
+          "relative_path": "runtime/dx2_cabac_coefficients.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/dx2_cabac_coefficients.py",
+          "bytes": 12929,
+          "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+        },
+        {
+          "relative_path": "runtime/entropy/__init__.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/__init__.py",
+          "bytes": 54,
+          "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+        },
+        {
+          "relative_path": "runtime/entropy/adaptive_ans.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/adaptive_ans.py",
+          "bytes": 4230,
+          "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+        },
+        {
+          "relative_path": "runtime/entropy/coefficient_ar1_codec.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/coefficient_ar1_codec.py",
+          "bytes": 4875,
+          "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+        },
+        {
+          "relative_path": "runtime/entropy/coefficient_predictor.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/coefficient_predictor.py",
+          "bytes": 4027,
+          "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+        },
+        {
+          "relative_path": "runtime/entropy/rc64.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/rc64.py",
+          "bytes": 2904,
+          "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+        },
+        {
+          "relative_path": "runtime/entropy/rc64_backend.c",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/rc64_backend.c",
+          "bytes": 5638,
+          "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+        },
+        {
+          "relative_path": "runtime/entropy/renderer_weight_codec.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/renderer_weight_codec.py",
+          "bytes": 9656,
+          "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+        },
+        {
+          "relative_path": "runtime/f26_corrector_native.c",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_corrector_native.c",
+          "bytes": 50299,
+          "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+        },
+        {
+          "relative_path": "runtime/f26_hpac_native.c",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_hpac_native.c",
+          "bytes": 40911,
+          "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+        },
+        {
+          "relative_path": "runtime/f26_hpac_native.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_hpac_native.py",
+          "bytes": 26781,
+          "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+        },
+        {
+          "relative_path": "runtime/f26_inflate.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_inflate.py",
+          "bytes": 29176,
+          "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+        },
+        {
+          "relative_path": "runtime/frame0_selector.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/frame0_selector.py",
+          "bytes": 4964,
+          "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+        },
+        {
+          "relative_path": "runtime/free_corrector.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/free_corrector.py",
+          "bytes": 14709,
+          "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+        },
+        {
+          "relative_path": "runtime/fx1_logistic_mixer_corrector.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/fx1_logistic_mixer_corrector.py",
+          "bytes": 34979,
+          "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+        },
+        {
+          "relative_path": "runtime/fx2_model_axis_corrector.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/fx2_model_axis_corrector.py",
+          "bytes": 31470,
+          "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+        },
+        {
+          "relative_path": "runtime/hpac_inference.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/hpac_inference.py",
+          "bytes": 10952,
+          "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+        },
+        {
+          "relative_path": "runtime/ihs2.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/ihs2.py",
+          "bytes": 13327,
+          "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+        },
+        {
+          "relative_path": "runtime/ihs2_gate_a.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/ihs2_gate_a.py",
+          "bytes": 10527,
+          "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+        },
+        {
+          "relative_path": "runtime/native_free_corrector.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/native_free_corrector.py",
+          "bytes": 15952,
+          "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+        },
+        {
+          "relative_path": "runtime/rc1_adaptive_model_sections.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rc1_adaptive_model_sections.py",
+          "bytes": 20916,
+          "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+        },
+        {
+          "relative_path": "runtime/rc2_hpac_semistatic_mixing.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rc2_hpac_semistatic_mixing.py",
+          "bytes": 31341,
+          "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+        },
+        {
+          "relative_path": "runtime/rc3_shared_mixer.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rc3_shared_mixer.py",
+          "bytes": 8010,
+          "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+        },
+        {
+          "relative_path": "runtime/residual_archive.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/residual_archive.py",
+          "bytes": 34053,
+          "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581"
+        },
+        {
+          "relative_path": "runtime/rr4_free_corrector.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rr4_free_corrector.py",
+          "bytes": 15421,
+          "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+        },
+        {
+          "relative_path": "runtime/rr5_arith_basis.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/rr5_arith_basis.py",
+          "bytes": 20793,
+          "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+        },
+        {
+          "relative_path": "runtime/sm1_semantic_mixer.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/sm1_semantic_mixer.py",
+          "bytes": 9693,
+          "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+        },
+        {
+          "relative_path": "runtime/tc1_receiver_checkpoint.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/tc1_receiver_checkpoint.py",
+          "bytes": 8753,
+          "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+        },
+        {
+          "relative_path": "runtime/tc1_shared_mixer.py",
+          "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/runtime/tc1_shared_mixer.py",
+          "bytes": 8590,
+          "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+        }
+      ],
+      "external_dependency_roots": [],
+      "repo_local_tac_import_manifest": {
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "discovery": "static_ast_recursive_import_closure",
+        "runtime_root_name": "submission_dir",
+        "tac_root_relative_path": "src/tac",
+        "root_import_modules": [],
+        "unresolved_modules": [],
+        "parse_errors": [],
+        "module_count": 0,
+        "file_count": 0,
+        "files": []
+      },
+      "decode_runtime_forbidden_reference_guard": {
+        "schema": "contest_auth_eval_decode_runtime_forbidden_reference_guard_v1",
+        "selection": "actual_inflate_root_plus_declared_roots_plus_recursive_tac_imports",
+        "scanned_file_count": 45,
+        "scanned_files": [
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/compress.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/carrier_codec.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/ddm_mp2_semantic_receiver.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/hpac_integer.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/hpac_integer_sparse.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/inflate.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/integer_model_io.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/cpr1/rc1_adaptive_model_sections.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/__init__.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/baseline.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/bits.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/carrier_repack.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/compensation_overlay.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/ddm_wc1_advisory_runtime.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/dx2_cabac_coefficients.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/__init__.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/adaptive_ans.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/coefficient_ar1_codec.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/coefficient_predictor.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/rc64.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/rc64_backend.c",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/entropy/renderer_weight_codec.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_corrector_native.c",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_hpac_native.c",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_hpac_native.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/f26_inflate.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/frame0_selector.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/free_corrector.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/fx1_logistic_mixer_corrector.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/fx2_model_axis_corrector.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/hpac_inference.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/ihs2.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/ihs2_gate_a.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/native_free_corrector.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/rc1_adaptive_model_sections.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/rc2_hpac_semistatic_mixing.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/rc3_shared_mixer.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/residual_archive.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/rr4_free_corrector.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/rr5_arith_basis.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/sm1_semantic_mixer.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/tc1_receiver_checkpoint.py",
+            "role": "inflate_runtime_root"
+          },
+          {
+            "path": "/tmp/modal_auth_eval/submission_dir/runtime/tc1_shared_mixer.py",
+            "role": "inflate_runtime_root"
+          }
+        ],
+        "direct_forbidden_artifact_count": 0,
+        "forbidden_reference_kinds": [
+          "contest_source_video",
+          "upstream_scorer_weights"
+        ],
+        "violations": [],
+        "passed": true
+      },
+      "upstream_evaluate_py": {
+        "relative_path": "evaluate.py",
+        "bytes": 6005,
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "auth_eval_environment": {
+      "schema": "contest_auth_eval_python_environment_v1",
+      "packages_recorded": [
+        "torch",
+        "torchvision",
+        "timm",
+        "numpy"
+      ],
+      "evaluation_python_source": "cli_upstream_python",
+      "evaluation": {
+        "packages": {
+          "numpy": "2.3.4",
+          "timm": "1.0.22",
+          "torch": "2.9.0+cu128",
+          "torchvision": "0.24.0+cu128"
+        },
+        "python_executable": "/opt/upstream-locked-venv/bin/python",
+        "python_version": "3.11.12"
+      },
+      "wrapper": {
+        "python_executable": "/usr/local/bin/python",
+        "python_version": "3.11.12",
+        "packages": {
+          "torch": "2.5.1",
+          "torchvision": "0.20.1",
+          "timm": "1.0.28",
+          "numpy": "1.26.4"
+        }
+      },
+      "upstream_reference": {
+        "schema": "contest_auth_eval_uv_lock_reference_v1",
+        "reference_source": "uv_export_frozen_declared_group",
+        "python_version_reference_kind": "requires_python_range",
+        "reference_identity": "/workspace/pact/upstream/uv.lock#group=cu128",
+        "python_executable": "/opt/upstream-locked-venv/bin/python",
+        "uv_group": "cu128",
+        "uv_lock_path": "/workspace/pact/upstream/uv.lock",
+        "packages": {
+          "numpy": "2.3.4",
+          "timm": "1.0.22",
+          "torch": "2.9.0+cu128",
+          "torchvision": "0.24.0+cu128"
+        },
+        "uv_lock_sha256_before": "eca4542ad8d21354fd1f2bada74e8659329c0176b17f1ae808e04e023674231f",
+        "requires_python": ">=3.11, <4",
+        "uv_executable": "/usr/local/bin/uv",
+        "uv_export_argv": [
+          "/usr/local/bin/uv",
+          "export",
+          "--frozen",
+          "--no-emit-project",
+          "--no-hashes",
+          "--format",
+          "requirements-txt",
+          "--directory",
+          "/workspace/pact/upstream",
+          "--group",
+          "cu128"
+        ],
+        "uv_version": "uv 0.12.3 (x86_64-unknown-linux-gnu)",
+        "uv_export_returncode": 0,
+        "uv_export_sha256": "1ce2f8b9ac2baf8595a69a3b7bcae913951e49f8fb154f0de95a0bf3731fbff9",
+        "marker_resolution": {
+          "marker_environment": {
+            "implementation_name": "cpython",
+            "implementation_version": "3.11.12",
+            "os_name": "posix",
+            "platform_machine": "x86_64",
+            "platform_python_implementation": "CPython",
+            "platform_release": "4.19.0-gvisor",
+            "platform_system": "Linux",
+            "platform_version": "#1 SMP Sun Jan 10 15:06:54 PST 2016",
+            "python_full_version": "3.11.12",
+            "python_version": "3.11",
+            "sys_platform": "linux"
+          },
+          "ok": true,
+          "packages": {
+            "numpy": "2.3.4",
+            "timm": "1.0.22",
+            "torch": "2.9.0+cu128",
+            "torchvision": "0.24.0+cu128"
+          },
+          "selected_rows": {
+            "numpy": {
+              "line_number": 63,
+              "row": "numpy==2.3.4",
+              "specifier": "==2.3.4"
+            },
+            "timm": {
+              "line_number": 155,
+              "row": "timm==1.0.22",
+              "specifier": "==1.0.22"
+            },
+            "torch": {
+              "line_number": 159,
+              "row": "torch==2.9.0+cu128",
+              "specifier": "==2.9.0+cu128"
+            },
+            "torchvision": {
+              "line_number": 168,
+              "row": "torchvision==0.24.0+cu128 ; python_full_version >= '3.15' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'",
+              "specifier": "==0.24.0+cu128"
+            }
+          }
+        },
+        "uv_lock_sha256_after": "eca4542ad8d21354fd1f2bada74e8659329c0176b17f1ae808e04e023674231f",
+        "python_version": "3.11.12",
+        "selected_requirement_rows": {
+          "numpy": {
+            "line_number": 63,
+            "row": "numpy==2.3.4",
+            "specifier": "==2.3.4"
+          },
+          "timm": {
+            "line_number": 155,
+            "row": "timm==1.0.22",
+            "specifier": "==1.0.22"
+          },
+          "torch": {
+            "line_number": 159,
+            "row": "torch==2.9.0+cu128",
+            "specifier": "==2.9.0+cu128"
+          },
+          "torchvision": {
+            "line_number": 168,
+            "row": "torchvision==0.24.0+cu128 ; python_full_version >= '3.15' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'",
+            "specifier": "==0.24.0+cu128"
+          }
+        },
+        "marker_environment": {
+          "implementation_name": "cpython",
+          "implementation_version": "3.11.12",
+          "os_name": "posix",
+          "platform_machine": "x86_64",
+          "platform_python_implementation": "CPython",
+          "platform_release": "4.19.0-gvisor",
+          "platform_system": "Linux",
+          "platform_version": "#1 SMP Sun Jan 10 15:06:54 PST 2016",
+          "python_full_version": "3.11.12",
+          "python_version": "3.11",
+          "sys_platform": "linux"
+        }
+      }
+    },
+    "upstream_dir": "/workspace/pact/upstream",
+    "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+    "device": "cuda",
+    "platform_system": "Linux",
+    "platform_machine": "x86_64",
+    "platform_processor": "",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+    "sys_argv": [
+      "/workspace/pact/experiments/contest_auth_eval.py",
+      "--archive",
+      "/tmp/modal_auth_eval/archive.zip",
+      "--inflate-sh",
+      "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "/workspace/pact/upstream",
+      "--upstream-python",
+      "/opt/upstream-locked-venv/bin/python",
+      "--upstream-uv-group",
+      "cu128",
+      "--video-names-file",
+      "/workspace/pact/upstream/public_test_video_names.txt",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/root/modal_auth_eval_work/eval_work",
+      "--inflate-timeout",
+      "1800",
+      "--evaluate-timeout",
+      "1800",
+      "--inflate-device",
+      "auto",
+      "--expected-runtime-tree-sha256",
+      "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39"
+    ],
+    "effective_inflate_python": "/usr/local/bin/python",
+    "modal_auth_eval_advisory_only": false,
+    "env_vars": {
+      "PYTHONPATH": "/root:/workspace/pact/src:/workspace/pact/upstream:/workspace/pact",
+      "CUDA_VISIBLE_DEVICES": null,
+      "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+      "PYTHONHASHSEED": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": null,
+      "LD_LIBRARY_PATH": null,
+      "CONFIG_ENV_PATH": null,
+      "PYTHON_INFLATE": null,
+      "LANE_MM_SIGMA": null,
+      "INFLATE_BROTLI_SPEC": null,
+      "INFLATE_AV_SPEC": null,
+      "INFLATE_TORCH_SPEC": null,
+      "INFLATE_TORCHVISION_SPEC": null,
+      "INFLATE_NUMPY_SPEC": null,
+      "MODAL_AUTH_EVAL_ADVISORY_ONLY": null,
+      "UV_BIN": "/usr/local/bin/uv",
+      "UV_PROJECT_ENVIRONMENT": "/tmp/modal_auth_eval/uv_project_env",
+      "PYTHON": null
+    },
+    "auth_eval_python": "/opt/upstream-locked-venv/bin/python",
+    "package_versions": {
+      "numpy": "2.3.4",
+      "timm": "1.0.22",
+      "torch": "2.9.0+cu128",
+      "torchvision": "0.24.0+cu128"
+    },
+    "gpu_model": "Tesla T4",
+    "gpu_driver": "580.95.05",
+    "gpu_t4_match": true,
+    "torch_version": "2.5.1+cu124",
+    "cuda_version": "12.4",
+    "cuda_available": true,
+    "mps_available": false,
+    "cuda_device_count": 1,
+    "ffmpeg_version": "ffmpeg version 5.1.9-0+deb12u1 Copyright (c) 2000-2026 the FFmpeg developers",
+    "libsvtav1_version": "configuration: --prefix=/usr --extra-version=0+deb12u1 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --arch=amd64 --enable-gpl --disable-stripping --enable-gnutls --enable-ladspa --enable-libaom --enable-libass --enable-libbluray --enable-libbs2b --enable-libcaca --enable-libcdio --enable-libcodec2 --enable-libdav1d --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgme --enable-libgsm --enable-libjack --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libpulse --enable-librabbitmq --enable-librist --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzimg --enable-libzmq --enable-libzvbi --enable-lv2 --enable-omx --enable-openal --enable-opencl --enable-opengl --enable-sdl2 --disable-sndio --enable-libjxl --enable-pocketsphinx --enable-librsvg --enable-libmfx --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-libx264 --enable-libplacebo --enable-librav1e --enable-shared",
+    "pact_commit": "f7d294661942e475a2a2ebebbd20dd9e157e468b",
+    "pact_commit_source": "PACT_SOURCE_COMMIT",
+    "inflate_device_policy": "auto",
+    "instrument_tuple": {
+      "schema": "contest_auth_eval_instrument_tuple_v1",
+      "law": "ddm_et4: forward VALUES move with (code, weights, threads, batch, device). Two receipts are comparable only when this whole tuple matches; a delta across a mismatched tuple is an instrument artifact, not a finding.",
+      "code": {
+        "pact_commit": "f7d294661942e475a2a2ebebbd20dd9e157e468b",
+        "pact_commit_source": "PACT_SOURCE_COMMIT",
+        "upstream_commit": null,
+        "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+        "inflate_script_sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+        "runtime_files_sha256": "70f3782ccc18737295776e5b9c62e8e4618a837c560332fa7839a7ce7b3a9796",
+        "upstream_evaluate_py": {
+          "relative_path": "evaluate.py",
+          "bytes": 6005,
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "weights": [
+        {
+          "name": "posenet.safetensors",
+          "path": "/workspace/pact/upstream/models/posenet.safetensors",
+          "exists": true,
+          "bytes": 55835560,
+          "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+        },
+        {
+          "name": "segnet.safetensors",
+          "path": "/workspace/pact/upstream/models/segnet.safetensors",
+          "exists": true,
+          "bytes": 38502892,
+          "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+        }
+      ],
+      "threads": {
+        "os_cpu_count": 17,
+        "env": {
+          "OMP_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "torch_get_num_threads": 1,
+        "torch_get_num_interop_threads": 17
+      },
+      "batch": {
+        "schema": "upstream_scorer_batch_shape_v1",
+        "harness_pins_batch_shape": false,
+        "harness_pin_note": "contest_auth_eval passes no --batch-size/--num-threads/--prefetch-queue-depth/--seed, so upstream's own defaults are in force; these are read from source",
+        "source": "upstream/evaluate.py argparse defaults + upstream/frame_utils.py seq_len",
+        "batch_size": 16,
+        "num_threads": 2,
+        "prefetch_queue_depth": 4,
+        "seed": 1234,
+        "seq_len": 2
+      },
+      "device": {
+        "eval_device_requested": "cuda",
+        "inflate_device_policy": "auto",
+        "gpu_model": "Tesla T4",
+        "gpu_driver": "580.95.05",
+        "gpu_t4_match": true,
+        "cuda_available": true,
+        "cuda_version": "12.4",
+        "torch_version": "2.5.1+cu124",
+        "platform_system": "Linux",
+        "platform_machine": "x86_64"
+      },
+      "decode_path": null,
+      "decode_path_reported": false,
+      "decode_path_source": "not reported by this runtime generation"
+    },
+    "gt_lineage": {
+      "schema": "contest_auth_eval_gt_lineage_v1",
+      "runtime_decoder": "DaliVideoDataset",
+      "eval_device": "cuda",
+      "vocabulary_source": "tac.gt_lineage.RUNTIME_DECODE_LINEAGE (ddm_gl1/ddm_dg1)",
+      "fork_source": "upstream/evaluate.py:31-42 (DefaultDatasetClass on device.type == 'cuda')",
+      "authority_lineage": "DALI_NVDEC",
+      "lineage": "DALI_NVDEC",
+      "is_authority_lineage": true,
+      "evidence": "PRODUCER_DECLARED_BY_UPSTREAM_DEVICE_FORK",
+      "lineage_is_axis_native": true,
+      "lineage_is_axis_native_note": "derived from upstream's own device fork, so it is by construction the lineage the contest runner for this device uses; is_authority_lineage compares it against the contest-CUDA row's lineage and is a COMPARABILITY flag, not a defect",
+      "gt_video_inputs": [
+        {
+          "video_name": "0.mkv",
+          "path": "/workspace/pact/upstream/videos/0.mkv",
+          "exists": true,
+          "bytes": 37545489,
+          "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+        }
+      ]
+    },
+    "inflated_output_manifest": {
+      "path": "/root/modal_auth_eval_work/eval_work/inflated_outputs_manifest.json",
+      "sha256": "7b3a9b5192b017b81eba39ebc4f1b52f5317629193da87eae79f80dee1ce77e5",
+      "payload": {
+        "schema": "contest_auth_eval_inflated_output_manifest_v1",
+        "inflated_dir": "/root/modal_auth_eval_work/eval_work/inflated",
+        "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600,
+        "files": [
+          {
+            "video_name": "0.mkv",
+            "relative_path": "0.raw",
+            "exists": true,
+            "bytes": 3662409600,
+            "sha256": "db6ad16bab2bbaf9b6883a3a90e129a79fbb4cf6de4e2d195e5eafd504c02c15"
+          }
+        ],
+        "aggregate_sha256": "601f2b6165e870905ae11dd53b3db89adbdc04f077b9cea03c8e7bf80f0a38c1"
+      }
+    }
+  },
+  "auth_eval_environment": {
+    "schema": "contest_auth_eval_python_environment_v1",
+    "packages_recorded": [
+      "torch",
+      "torchvision",
+      "timm",
+      "numpy"
+    ],
+    "evaluation_python_source": "cli_upstream_python",
+    "evaluation": {
+      "packages": {
+        "numpy": "2.3.4",
+        "timm": "1.0.22",
+        "torch": "2.9.0+cu128",
+        "torchvision": "0.24.0+cu128"
+      },
+      "python_executable": "/opt/upstream-locked-venv/bin/python",
+      "python_version": "3.11.12"
+    },
+    "wrapper": {
+      "python_executable": "/usr/local/bin/python",
+      "python_version": "3.11.12",
+      "packages": {
+        "torch": "2.5.1",
+        "torchvision": "0.20.1",
+        "timm": "1.0.28",
+        "numpy": "1.26.4"
+      }
+    },
+    "upstream_reference": {
+      "schema": "contest_auth_eval_uv_lock_reference_v1",
+      "reference_source": "uv_export_frozen_declared_group",
+      "python_version_reference_kind": "requires_python_range",
+      "reference_identity": "/workspace/pact/upstream/uv.lock#group=cu128",
+      "python_executable": "/opt/upstream-locked-venv/bin/python",
+      "uv_group": "cu128",
+      "uv_lock_path": "/workspace/pact/upstream/uv.lock",
+      "packages": {
+        "numpy": "2.3.4",
+        "timm": "1.0.22",
+        "torch": "2.9.0+cu128",
+        "torchvision": "0.24.0+cu128"
+      },
+      "uv_lock_sha256_before": "eca4542ad8d21354fd1f2bada74e8659329c0176b17f1ae808e04e023674231f",
+      "requires_python": ">=3.11, <4",
+      "uv_executable": "/usr/local/bin/uv",
+      "uv_export_argv": [
+        "/usr/local/bin/uv",
+        "export",
+        "--frozen",
+        "--no-emit-project",
+        "--no-hashes",
+        "--format",
+        "requirements-txt",
+        "--directory",
+        "/workspace/pact/upstream",
+        "--group",
+        "cu128"
+      ],
+      "uv_version": "uv 0.12.3 (x86_64-unknown-linux-gnu)",
+      "uv_export_returncode": 0,
+      "uv_export_sha256": "1ce2f8b9ac2baf8595a69a3b7bcae913951e49f8fb154f0de95a0bf3731fbff9",
+      "marker_resolution": {
+        "marker_environment": {
+          "implementation_name": "cpython",
+          "implementation_version": "3.11.12",
+          "os_name": "posix",
+          "platform_machine": "x86_64",
+          "platform_python_implementation": "CPython",
+          "platform_release": "4.19.0-gvisor",
+          "platform_system": "Linux",
+          "platform_version": "#1 SMP Sun Jan 10 15:06:54 PST 2016",
+          "python_full_version": "3.11.12",
+          "python_version": "3.11",
+          "sys_platform": "linux"
+        },
+        "ok": true,
+        "packages": {
+          "numpy": "2.3.4",
+          "timm": "1.0.22",
+          "torch": "2.9.0+cu128",
+          "torchvision": "0.24.0+cu128"
+        },
+        "selected_rows": {
+          "numpy": {
+            "line_number": 63,
+            "row": "numpy==2.3.4",
+            "specifier": "==2.3.4"
+          },
+          "timm": {
+            "line_number": 155,
+            "row": "timm==1.0.22",
+            "specifier": "==1.0.22"
+          },
+          "torch": {
+            "line_number": 159,
+            "row": "torch==2.9.0+cu128",
+            "specifier": "==2.9.0+cu128"
+          },
+          "torchvision": {
+            "line_number": 168,
+            "row": "torchvision==0.24.0+cu128 ; python_full_version >= '3.15' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'",
+            "specifier": "==0.24.0+cu128"
+          }
+        }
+      },
+      "uv_lock_sha256_after": "eca4542ad8d21354fd1f2bada74e8659329c0176b17f1ae808e04e023674231f",
+      "python_version": "3.11.12",
+      "selected_requirement_rows": {
+        "numpy": {
+          "line_number": 63,
+          "row": "numpy==2.3.4",
+          "specifier": "==2.3.4"
+        },
+        "timm": {
+          "line_number": 155,
+          "row": "timm==1.0.22",
+          "specifier": "==1.0.22"
+        },
+        "torch": {
+          "line_number": 159,
+          "row": "torch==2.9.0+cu128",
+          "specifier": "==2.9.0+cu128"
+        },
+        "torchvision": {
+          "line_number": 168,
+          "row": "torchvision==0.24.0+cu128 ; python_full_version >= '3.15' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'",
+          "specifier": "==0.24.0+cu128"
+        }
+      },
+      "marker_environment": {
+        "implementation_name": "cpython",
+        "implementation_version": "3.11.12",
+        "os_name": "posix",
+        "platform_machine": "x86_64",
+        "platform_python_implementation": "CPython",
+        "platform_release": "4.19.0-gvisor",
+        "platform_system": "Linux",
+        "platform_version": "#1 SMP Sun Jan 10 15:06:54 PST 2016",
+        "python_full_version": "3.11.12",
+        "python_version": "3.11",
+        "sys_platform": "linux"
+      }
+    }
+  },
+  "package_versions": {
+    "numpy": "2.3.4",
+    "timm": "1.0.22",
+    "torch": "2.9.0+cu128",
+    "torchvision": "0.24.0+cu128"
+  },
+  "evidence_grade": "contest-CUDA",
+  "lane_tag": "[contest-CUDA]",
+  "score_axis": "contest_cuda",
+  "evidence_semantics": "contest_cuda_exact_auth_eval",
+  "exact_cuda_eval_complete": true,
+  "score_claim": true,
+  "promotion_eligible": false,
+  "score_claim_valid": true,
+  "rank_or_kill_eligible": false,
+  "score_claim_eligible": true,
+  "promotable": false,
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_attempted": false,
+  "gpu_launched": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "exact_cuda_auth_eval": true,
+  "contest_cuda_auth_eval": true,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "promotion_blockers": [
+    "raw_auth_eval_does_not_verify_submission_policy_gates",
+    "cpu_leaderboard_reproduction_not_adjudicated",
+    "pre_submission_compliance_check_not_recorded"
+  ],
+  "rank_or_kill_blockers": [
+    "raw_auth_eval_not_rank_or_kill_authority",
+    "requires_adjudicated_cuda_cpu_policy_review"
+  ],
+  "allowed_uses": [
+    "internal_cuda_frontier_ranking",
+    "promotion_review_input",
+    "paper_empirical_score_when_custody_complete"
+  ],
+  "contest_budget_verdict": {
+    "schema": "contest_budget_verdict_v1",
+    "verdict": "WARN",
+    "axis": "contest-CUDA",
+    "axis_label": "[contest-CUDA]",
+    "grade": "PROJECTION",
+    "inflate_seconds": 990.053829427,
+    "evaluate_seconds": 45.23132363599984,
+    "charged_seconds": 1035.2851530629998,
+    "charge_is_lower_bound": false,
+    "margin_vs_narrow_end_seconds": -213.28515306299983,
+    "margin_vs_wide_end_seconds": 266.7148469370002,
+    "decode_path": null,
+    "decode_path_class": "unreported",
+    "margin_depends_on_unverified_fast_path": false,
+    "rationale": "1035.285 s charged is above the 822 s cold-cache ceiling and at or below the 1302 s warm-cache ceiling on contest-CUDA: it fits ONLY if the runner's uv cache is warm. A cu128 cache miss puts 3.19 GB inside the same 30-minute wall.",
+    "notes": [
+      "The residual already netted out an ESTIMATED evaluate term, so charging the measured evaluate against it double-counts by that estimate. That is deliberate: it errs toward WARN/REFUSE and never toward a false PASS. The margin it buys is ua2's estimated evaluate term, 120-180 s on this axis. inflate alone is 990.054 s.",
+      "decode_path was not reported by this runtime generation, so which rung of the dispatch ladder produced these seconds is unknown. A python-fallback decode is exactly the WARN/REFUSE case this predicate exists to surface, and it is invisible here."
+    ],
+    "residual_window": {
+      "schema": "contest_budget_residual_window_v1",
+      "axis": "contest-CUDA",
+      "job_wall_seconds": 1800,
+      "job_wall_source": "upstream/.github/workflows/eval.yml:30 (timeout-minutes: 30, job-scoped)",
+      "narrow_end_seconds": 822,
+      "narrow_end_assumes": "COLD uv cache (the binding corner)",
+      "wide_end_seconds": 1302,
+      "wide_end_assumes": "WARM uv cache",
+      "grade": "PROJECTION",
+      "provenance": [
+        ".omx/research/ddm_ua2_upstream_defenses_and_budget_surface_20260731.md:189 (the level set)",
+        ".omx/research/ddm_wc2_wall_clock_pass_20260820.md \u00a71.1 (budget identity) / \u00a75 (per-axis verdict) / \u00a77.1 (this spec)",
+        "/Volumes/APDataStore/pact/ddm_wc2/receipts/br1_t4_shipping_stage_split.json (sha256 2eac38af90b0a67304ee400f5842273e2852f8062f934ba83d1f9a4bef5e643a)",
+        "upstream/.github/workflows/eval.yml:30 + upstream/README.md:114"
+      ],
+      "published_residual_minutes": [
+        13.7,
+        21.7
+      ],
+      "ci_step_sum_seconds": {
+        "typical": 497.0,
+        "worst": 977.0
+      },
+      "step_table_narrow_end_seconds": 823.0,
+      "step_table_wide_end_seconds": 1303.0,
+      "reconciliation_delta_seconds": [
+        -1.0,
+        -1.0
+      ],
+      "inputs": [
+        {
+          "name": "job_wall_seconds",
+          "value": 1800,
+          "unit": "s",
+          "grade": "MEASURED",
+          "source": "upstream/.github/workflows/eval.yml:30 (timeout-minutes: 30, job-scoped)"
+        },
+        {
+          "name": "checkout_payload_bytes",
+          "value": 31600000,
+          "unit": "B",
+          "grade": "MEASURED",
+          "source": ".omx/research/ddm_ua2_upstream_defenses_and_budget_surface_20260731.md (31.6 MB)"
+        },
+        {
+          "name": "git_lfs_pull_payload_bytes",
+          "value": 132856531,
+          "unit": "B",
+          "grade": "MEASURED",
+          "source": ".omx/research/ddm_ua2_upstream_defenses_and_budget_surface_20260731.md"
+        },
+        {
+          "name": "uv_sync_group_cu128_payload_bytes",
+          "value": 3190398780,
+          "unit": "B",
+          "grade": "MEASURED",
+          "source": "ddm_ua2 \u00a73, read out of uv.lock size fields (3.19 GB; ~40x the cpu group)"
+        },
+        {
+          "name": "evaluate_py_600_pairs_t4_seconds",
+          "value": "120-180",
+          "unit": "s",
+          "grade": "ESTIMATED",
+          "source": "ddm_ua2 \u00a73 -- explicitly labelled UNMEASURED BY US"
+        }
+      ],
+      "ci_steps": [
+        {
+          "step": "checkout_fetch_curl_apt_lfs_nvidia_smi",
+          "typical_seconds": 60,
+          "worst_seconds": 90,
+          "grade": "ESTIMATED",
+          "source": "eval.yml:36-54 (CPU steps 1-5 plus nvidia-smi at :54)"
+        },
+        {
+          "step": "setup_uv_cache_restore_multi_gb",
+          "typical_seconds": 120,
+          "worst_seconds": 180,
+          "grade": "ESTIMATED",
+          "source": "eval.yml:73-77"
+        },
+        {
+          "step": "uv_sync_group_cu128",
+          "typical_seconds": 120,
+          "worst_seconds": 420,
+          "grade": "ESTIMATED",
+          "source": "eval.yml:79-81 -- 3.19 GB MEASURED payload; 120 s hit / 420 s miss. THE single largest mover between the two window ends"
+        },
+        {
+          "step": "apt_update_ffmpeg",
+          "typical_seconds": 65,
+          "worst_seconds": 90,
+          "grade": "ESTIMATED",
+          "source": "eval.yml:83-85"
+        },
+        {
+          "step": "unzip_existence_upload",
+          "typical_seconds": 12,
+          "worst_seconds": 17,
+          "grade": "ESTIMATED",
+          "source": "evaluate.sh:44/50-62 + eval.yml:91-98 (ua2 groups these three)"
+        },
+        {
+          "step": "evaluate_py_600_pairs_t4",
+          "typical_seconds": 120,
+          "worst_seconds": 180,
+          "grade": "ESTIMATED",
+          "source": "evaluate.sh:69 -- DALI decode + GPU forward; ua2 labels this UNMEASURED BY US"
+        }
+      ],
+      "notes": [
+        "The two ends are the WARM and COLD uv-cache corners; the spread is dominated by the uv sync install payload (3.19 GB on cu128 vs ~78 MB on cpu, a ~40x asymmetry mitigated only by enable-cache: true at eval.yml:77).",
+        "The window is a ceiling on OUR decode: the residual has ALREADY netted out an ESTIMATED T_evaluate, so charging a measured evaluate against it again is deliberately conservative -- see BudgetVerdict.charged_seconds.",
+        "ua2 published this level set in rounded minutes; reconciliation_delta_seconds reports the gap against a fresh sum of the step table rather than hiding it."
+      ],
+      "false_authority_warning": "PROJECTION. Only the job wall and the install/checkout PAYLOAD SIZES are MEASURED; every per-step SECOND is ua2's estimate and has never been timed on a real contest runner. Quoting this window as MEASURED is a false-authority claim."
+    },
+    "is_score_claim": false
+  },
+  "gt_lineage": {
+    "schema": "contest_auth_eval_gt_lineage_v1",
+    "runtime_decoder": "DaliVideoDataset",
+    "eval_device": "cuda",
+    "vocabulary_source": "tac.gt_lineage.RUNTIME_DECODE_LINEAGE (ddm_gl1/ddm_dg1)",
+    "fork_source": "upstream/evaluate.py:31-42 (DefaultDatasetClass on device.type == 'cuda')",
+    "authority_lineage": "DALI_NVDEC",
+    "lineage": "DALI_NVDEC",
+    "is_authority_lineage": true,
+    "evidence": "PRODUCER_DECLARED_BY_UPSTREAM_DEVICE_FORK",
+    "lineage_is_axis_native": true,
+    "lineage_is_axis_native_note": "derived from upstream's own device fork, so it is by construction the lineage the contest runner for this device uses; is_authority_lineage compares it against the contest-CUDA row's lineage and is a COMPARABILITY flag, not a defect",
+    "gt_video_inputs": [
+      {
+        "video_name": "0.mkv",
+        "path": "/workspace/pact/upstream/videos/0.mkv",
+        "exists": true,
+        "bytes": 37545489,
+        "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+      }
+    ]
+  },
+  "instrument_tuple": {
+    "schema": "contest_auth_eval_instrument_tuple_v1",
+    "law": "ddm_et4: forward VALUES move with (code, weights, threads, batch, device). Two receipts are comparable only when this whole tuple matches; a delta across a mismatched tuple is an instrument artifact, not a finding.",
+    "code": {
+      "pact_commit": "f7d294661942e475a2a2ebebbd20dd9e157e468b",
+      "pact_commit_source": "PACT_SOURCE_COMMIT",
+      "upstream_commit": null,
+      "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+      "inflate_script_sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "runtime_files_sha256": "70f3782ccc18737295776e5b9c62e8e4618a837c560332fa7839a7ce7b3a9796",
+      "upstream_evaluate_py": {
+        "relative_path": "evaluate.py",
+        "bytes": 6005,
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "weights": [
+      {
+        "name": "posenet.safetensors",
+        "path": "/workspace/pact/upstream/models/posenet.safetensors",
+        "exists": true,
+        "bytes": 55835560,
+        "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+      },
+      {
+        "name": "segnet.safetensors",
+        "path": "/workspace/pact/upstream/models/segnet.safetensors",
+        "exists": true,
+        "bytes": 38502892,
+        "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+      }
+    ],
+    "threads": {
+      "os_cpu_count": 17,
+      "env": {
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": null,
+        "VECLIB_MAXIMUM_THREADS": null
+      },
+      "torch_get_num_threads": 1,
+      "torch_get_num_interop_threads": 17
+    },
+    "batch": {
+      "schema": "upstream_scorer_batch_shape_v1",
+      "harness_pins_batch_shape": false,
+      "harness_pin_note": "contest_auth_eval passes no --batch-size/--num-threads/--prefetch-queue-depth/--seed, so upstream's own defaults are in force; these are read from source",
+      "source": "upstream/evaluate.py argparse defaults + upstream/frame_utils.py seq_len",
+      "batch_size": 16,
+      "num_threads": 2,
+      "prefetch_queue_depth": 4,
+      "seed": 1234,
+      "seq_len": 2
+    },
+    "device": {
+      "eval_device_requested": "cuda",
+      "inflate_device_policy": "auto",
+      "gpu_model": "Tesla T4",
+      "gpu_driver": "580.95.05",
+      "gpu_t4_match": true,
+      "cuda_available": true,
+      "cuda_version": "12.4",
+      "torch_version": "2.5.1+cu124",
+      "platform_system": "Linux",
+      "platform_machine": "x86_64"
+    },
+    "decode_path": null,
+    "decode_path_reported": false,
+    "decode_path_source": "not reported by this runtime generation"
+  },
+  "work_dir": "/root/modal_auth_eval_work/eval_work"
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "ddm_pk1_fire_orders.v1",
+  "orders": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_pk1_20260910/",
+      "fire_trigger": "harvest this staging receipt",
+      "action": "Resolve six strict failures and stale source README/MANIFEST in a separately reviewed release packet; preserve byte-exact ddm_pk1 staging and sealed sources."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "operator + MAIN",
+      "consumer_store": ".omx/research/ddm_pk1_20260910/SWAP_COMMANDS.md",
+      "fire_trigger": "non-hosting blockers resolved, final packet reviewed, and operator one-line publication confirm",
+      "action": "Host new move40 asset, retain and verify fetchback, obtain fresh strict PASS, then copy/serialize/push and update PR140 with approved neutral disclosure."
+    }
+  ]
+}

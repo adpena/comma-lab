@@ -1,0 +1,37 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "scripts/pre_submission_compliance_check.py",
+    "--submission-dir",
+    "submissions/_staging_move40_pr140_swap",
+    "--archive",
+    "submissions/_staging_move40_pr140_swap/archive.zip",
+    "--auth-eval-json",
+    ".omx/research/ddm_pk1_20260910/contest_auth_eval.json",
+    "--contest-final",
+    "--strict",
+    "--submission-score-axis",
+    "contest_cuda",
+    "--expected-archive-sha256",
+    "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+    "--expected-archive-size-bytes",
+    "180233",
+    "--expected-runtime-tree-sha256",
+    "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39",
+    "--expected-lane-id",
+    "ddm_sj1_t4_compose39_rp1_union_20260910",
+    "--expected-job-id",
+    "ddm_sj1_t4_compose39_rp1_union_20260910",
+    "--dispatch-claims-md",
+    ".omx/state/active_lane_dispatch_claims.md",
+    "--competitive-or-innovative-statement-file",
+    ".omx/research/ddm_pk1_20260910/COMPETITIVE_STATEMENT.md",
+    "--public-scan-path",
+    ".omx/research/ddm_pk1_20260910/PR_BODY.md",
+    "--json-out",
+    ".omx/research/ddm_pk1_20260910/COMPLIANCE.json"
+  ],
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}

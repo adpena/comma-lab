@@ -1,0 +1,2121 @@
+[
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|p0_swap_procedure_no_push_without_confirm|hosted_bytes_identical",
+      ".omx/research",
+      "-g",
+      "*.md"
+    ],
+    "rc": 0,
+    "lines": 123,
+    "output": ".omx/research/ddm_pk1_20260910/recall_0.txt"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|p0_swap_procedure|hosted.archive",
+      ".omx/research",
+      "-g",
+      "CANONICAL_RESEARCH_INDEX*",
+      "-g",
+      "sub015_DAG_*"
+    ],
+    "rc": 1,
+    "lines": 0,
+    "output": ".omx/research/ddm_pk1_20260910/recall_1.txt"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|p0_swap_procedure|submission.packet",
+      "docs",
+      "-g",
+      "*.md"
+    ],
+    "rc": 0,
+    "lines": 45,
+    "output": ".omx/research/ddm_pk1_20260910/recall_2.txt"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "PR #140|PR140|ddm_pk1|p0_swap_procedure",
+      ".omx/state/canonical_task_status.jsonl"
+    ],
+    "rc": 0,
+    "lines": 3,
+    "output": ".omx/research/ddm_pk1_20260910/recall_3.txt"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "rows_searched": 483,
+    "raw_sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+    "selected": [
+      {
+        "canonical_consumers": [
+          "reports/latest.md",
+          "CLAUDE.md",
+          "tools/cathedral_autopilot_autonomous_loop.py"
+        ],
+        "canonical_producers": [
+          "tac.canonical_frontier_pointer",
+          "tools/scan_best_anchor_per_axis.py"
+        ],
+        "equation_id": "canonical_frontier_pointer_v1",
+        "name": "Frontier scores are pointer-only; hardcoded literals drift",
+        "one_line_summary": "F = argmax_anchor score(anchor) over qualifying hardware x qualifying axis; consult tac.canonical_frontier_pointer instead of hardcoded literals."
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tac.findings_lagrangian",
+          "tac.canonical_equations.bayesian_posterior_update"
+        ],
+        "canonical_producers": [
+          "tac.substrates.c6_e4_mdl_ibps.path_b2_dreamerv3_rssm_categorical_posterior_trainer",
+          "tac.canonical_equations.bayesian_posterior_update"
+        ],
+        "equation_id": "categorical_posterior_capacity_vs_continuous_gaussian_v1",
+        "name": "DreamerV3 RSSM categorical posterior capacity vs continuous Gaussian",
+        "one_line_summary": "Shannon R(D) lower bound for product-of-G-categoricals posterior H(T)=G*log2(K); necessary condition for any RSSM categorical code"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.procedural_codebook_generator_consumer",
+          "tac.cathedral_consumers.null_byte_codebook_candidate_consumer",
+          "per_substrate_procedural_replacement_smokes_nscs06_v8_atw_v2_tt5l_dp1_sister"
+        ],
+        "canonical_producers": [
+          "tac.procedural_codebook_generator.derive_codebook_from_seed"
+        ],
+        "equation_id": "procedural_codebook_from_seed_compression_savings_v1",
+        "name": "Procedural-codebook from-seed compression savings",
+        "one_line_summary": "Predicted \u0394S = -25 * (N_codebook - K_seed) / 37_545_489 per substrate when replacing N codebook bytes with K seed bytes via deterministic procedural derivation per tac.procedural_codebook_generator."
+      },
+      {
+        "canonical_consumers": [
+          "tools/cathedral_autopilot_autonomous_loop.py",
+          "tools/predict_triple_substrate_composition_alpha_smoke.py",
+          "future_triple_substrate_modal_dispatch_consumers"
+        ],
+        "canonical_producers": [
+          "tac.optimization.substrate_composition_matrix",
+          "tools/audit_substrate_composition_matrix.py"
+        ],
+        "equation_id": "triple_substrate_composition_alpha_v1",
+        "name": "Triple-substrate composition alpha (3-way Pearson + 3-way Jaccard generalization)",
+        "one_line_summary": "alpha_ABC = w_p * mean(rho_AB, rho_BC, rho_AC) + w_j * J(top_K(A), top_K(B), top_K(C)); extends pairwise predictors (#22 + #23) to triples."
+      },
+      {
+        "canonical_consumers": [
+          "tools/cathedral_autopilot_autonomous_loop.py",
+          "tools/predict_theoretical_floor_smoke.py",
+          "future_pareto_polytope_lower_boundary_consumers"
+        ],
+        "canonical_producers": [
+          "tac.symposium_impls.tao_boyd_blahut_arimoto_theoretical_floor_v2",
+          "tac.findings_lagrangian.compute_findings_lagrangian"
+        ],
+        "equation_id": "scorer_conditional_joint_rate_distortion_floor_v1",
+        "name": "Scorer-conditional joint rate-distortion theoretical floor",
+        "one_line_summary": "S_floor = 25 * R_joint(D_seg=0, D_pose=0) / 37545489; Shannon-canonical lower bound for ANY contest archive."
+      },
+      {
+        "canonical_consumers": [
+          "tools/cathedral_autopilot_autonomous_loop.py",
+          "tools/audit_sidecar_rate_hurdle.py",
+          "future_foveation_la_pose_raft_sidecar_dispatch_consumers"
+        ],
+        "canonical_producers": [
+          "tac.cathedral_consumers.foveation_rate_hurdle_consumer",
+          "tools/predict_sidecar_rate_hurdle_smoke.py"
+        ],
+        "equation_id": "foveation_sidecar_bolt_on_rate_hurdle_v1",
+        "name": "Foveation / sidecar bolt-on rate-hurdle (component-gain offset must exceed +25*N/D)",
+        "one_line_summary": "Sidecar of N bytes pays +25*N/37545489 rate cost; must produce component savings > that hurdle to improve total score. OVERNIGHT-K empirical floor."
+      },
+      {
+        "canonical_consumers": [
+          "submissions/*/inflate.py (Catalog #146 canonical 3-arg inflate runtime)",
+          "tac.local_acceleration.pr95_hnerv_mlx.parse_pr95_public_archive_zip (round-trip verification)",
+          "experiments/contest_auth_eval.py (paired CPU+CUDA auth eval consumer)"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip",
+          "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py"
+        ],
+        "equation_id": "pr95_mlx_pytorch_to_byte_closed_contest_archive_pipeline_v1",
+        "name": "PR95 MLX-trained PyTorch state_dict to byte-closed contest archive round-trip",
+        "one_line_summary": "archive.zip equals write_pr95_public_archive_zip(parse_pr95_public_archive_zip(archive.zip)) is byte-stable"
+      },
+      {
+        "canonical_consumers": [
+          "tools.gate_mlx_candidate_contest_equivalence_z6",
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer"
+        ],
+        "canonical_producers": [
+          "experiments.train_substrate_z6_predictive_coding_mlx_l2",
+          "tools.register_z6_drift_vs_depth_equation"
+        ],
+        "equation_id": "mlx_pytorch_drift_vs_training_depth_z6_v1",
+        "name": "MLX/PyTorch decoder parity drift vs training-depth for D=Z6",
+        "one_line_summary": "For D=Z6 substrate (Z6PCWM1 grammar), MLX\u2194PyTorch decoder-parity drift grows as drift = 1.81e-5 * epochs^0.47 (sigmoid [0,1] space); Sister #1265 gate threshold 0.001 crosses at ~4973 epochs."
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools.cathedral_autopilot_autonomous_loop:invoke_meta_lagrangian_on_candidates"
+        ],
+        "canonical_producers": [
+          "submissions.hnerv_fec6_fixed_huffman_k16.encoder.build_pr101_frame_exploit_selector_packet_markov"
+        ],
+        "equation_id": "markov_context_selector_stream_compression_savings_v1",
+        "name": "Markov-context selector-stream compression savings (FEC8)",
+        "one_line_summary": "Predicts wire-byte savings vs fixed-Huffman when encoding K-symbol selector index stream with 1st-order Markov context arithmetic coder (static hard-coded transition table; zero transmit)"
+      },
+      {
+        "canonical_consumers": [
+          "build_pr101_frame_exploit_selector_packet_fec10_hybrid.decode_fec10_hybrid_selector",
+          "tac.substrates.pr101_lc_v2_clone.archive.parse_archive"
+        ],
+        "canonical_producers": [
+          "build_pr101_frame_exploit_selector_packet_fec10_hybrid",
+          "submissions.hnerv_fec6_fixed_huffman_k16.src.fec10_hybrid_decoder"
+        ],
+        "equation_id": "cascade_a_fec10_hybrid_adaptive_blend_savings_v1",
+        "name": "Cascade A FEC10 hybrid adaptive-blend Markov context coder savings",
+        "one_line_summary": "Adaptive-blend between FEC8 2nd-order Markov + 1st-order Markov priors weighted by sparse-context row sum saves ~1.3 bits/stream vs pure 2nd-order at 600-symbol selector scale"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools.cathedral_autopilot_autonomous_loop:invoke_meta_lagrangian_on_candidates"
+        ],
+        "canonical_producers": [
+          "submissions.hnerv_fec6_fixed_huffman_k16.encoder.build_pr101_frame_exploit_selector_packet_markov"
+        ],
+        "equation_id": "fec8_1st_order_markov_static_variant_b_savings_v1",
+        "name": "FEC8 1st-order static Markov selector wire-byte savings (Variant B)",
+        "one_line_summary": "Adaptive arithmetic coder over 16 per-context Laplace-smoothed models (16 contexts indexed by previous symbol); static transition table"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools.cathedral_autopilot_autonomous_loop:invoke_meta_lagrangian_on_candidates"
+        ],
+        "canonical_producers": [
+          "submissions.hnerv_fec6_fixed_huffman_k16.encoder.build_pr101_frame_exploit_selector_packet_markov"
+        ],
+        "equation_id": "fec8_2nd_order_true_markov_variant_a_savings_v1",
+        "name": "FEC8 2nd-order TRUE Markov selector wire-byte savings (Variant A)",
+        "one_line_summary": "Per-context Huffman over true 2nd-order Markov (X_t | X_{t-1}, X_{t-2}); 130-context shared-prior table baked in source; PR111 candidate path"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.meta_resurrection_audit_v2_consumer"
+        ],
+        "canonical_producers": [
+          "tac.cathedral_consumers.meta_resurrection_audit_v2_consumer"
+        ],
+        "equation_id": "wrong_baseline_substitution_score_amplification_v1",
+        "name": "Wrong-baseline substitution score amplification (META-bug M1)",
+        "one_line_summary": "amplification = score_change_at_canonical_frontier_baseline / score_change_at_wrong_baseline (M1; FORMALIZATION_PENDING)"
+      },
+      {
+        "canonical_consumers": [
+          "src.tac.optimization.pair_frame_scorer_geometry_lattice_5d_canvas_populator",
+          "tac.master_gradient",
+          "tools.canvas_multiop_composition_closed_form_prediction_sweep",
+          "tac.cathedral_consumers.mlx_per_pair_master_gradient_consumer",
+          "tac.canonical_frontier_pointer"
+        ],
+        "canonical_producers": [
+          "tools/extract_master_gradient_mlx.py",
+          "tac.master_gradient_mlx_extractor",
+          "tac.master_gradient_mlx_pipeline"
+        ],
+        "equation_id": "mlx_per_pair_master_gradient_per_byte_fd_v1",
+        "name": "MLX-local per-pair per-byte master gradient (per-tensor FD, projected)",
+        "one_line_summary": "d(seg/pose distortion_p)/d(archive_byte) via per-decoder-tensor central FD through the MLX scorer oracle, projected per-byte by the fec6 int8+fp16 Jacobian. macOS-MLX research-signal; NON-PROMOTABLE."
+      },
+      {
+        "canonical_consumers": [
+          "tools.cathedral_autopilot_autonomous_loop.invoke_cathedral_consumers_on_candidates",
+          "tac.cathedral_consumers.pr_submission_compliance_consumer",
+          "tac.optimization.substrate_composition_matrix"
+        ],
+        "canonical_producers": [
+          "tac.substrates.pact_nerv_selector_v2.archive.pack_archive",
+          "tac.substrates.pact_nerv_selector_v3.archive.pack_archive",
+          "tac.substrates.pact_nerv_selector_v4.archive.pack_archive"
+        ],
+        "equation_id": "pact_nerv_decoder_state_dict_saturation_at_parity_floor_v1",
+        "name": "PACT-NeRV cluster decoder_state_dict saturation at in-training parity floor",
+        "one_line_summary": "For PACT-NeRV cluster at in-training parity floor, per-substrate canonical-codec contribution is <0.3% of 0.bin while decoder_state_dict consumes ~77%; cascade saturation confirmed."
+      },
+      {
+        "canonical_consumers": [
+          "tools/cathedral_autopilot_autonomous_loop.py:invoke_dykstra_pareto_solver_on_candidates",
+          "tac.cathedral_consumers.dykstra_pareto_solver_consumer.consume_candidate",
+          "tac.cathedral_consumers.dykstra_pareto_solver_consumer.update_from_anchor"
+        ],
+        "canonical_producers": [
+          "tac.dykstra_pareto_solver.solve_pareto_polytope_intersection",
+          "tac.dykstra_pareto_solver.DykstraParetoSolver.solve",
+          "tac.findings_lagrangian.dual_solver_phase_2.compute_per_axis_dual_variables",
+          "tac.findings_lagrangian.dual_solver_phase_2.dykstra_alternating_projections_3_axis"
+        ],
+        "equation_id": "dykstra_pareto_polytope_intersection_compounding_v1",
+        "name": "Dykstra Pareto Polytope Intersection Compounding",
+        "one_line_summary": "Per-axis polytope intersection via Dykstra 1983 alternating projections theorem; per-axis Lagrangian dual variables identify tight constraints (next-cycle attack direction)."
+      },
+      {
+        "canonical_consumers": [
+          "tools.cathedral_autopilot_autonomous_loop:invoke_dykstra_pareto_solver_on_candidates",
+          "tac.optimization.substrate_composition_matrix:predicted_composite_delta"
+        ],
+        "canonical_producers": [
+          "experiments.results.compound_f_empirical_orthogonal_composition_test_20260528.measure_compound_f_alpha_v2_apples_to_apples"
+        ],
+        "equation_id": "cross_paradigm_plus_decoder_compression_compound_alpha_v1",
+        "name": "Cross-paradigm + decoder-compression compound alpha (first-order Volterra)",
+        "one_line_summary": "Composite \u0394S for cross-paradigm + decoder-compression compound under first-order Volterra at \u03b1=0.85 STACKABLE_SERIAL per Daubechies prior."
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer"
+        ],
+        "canonical_producers": [
+          "src/tac/substrates/z6_v2_cargo_cult_unwind/score_aware_loss.py",
+          "experiments/train_substrate_z6_v2_cargo_cult_unwind_mlx_local.py",
+          ".omx/research/z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_orthogonal_pose_axis_candidate_b_landed_20260528.md"
+        ],
+        "equation_id": "z6_v2_predictive_coding_pose_axis_savings_v1",
+        "name": "Z6-v2 cooperative-receiver pose-axis temporal prediction savings (encoder-side)",
+        "one_line_summary": "Z6-v2 encoder-side per-pair pose-axis temporal prediction (orthogonal to Wyner-Ziv decoder-side FALSIFIED 2026-05-28)."
+      },
+      {
+        "canonical_consumers": [
+          "tools/cathedral_autopilot_autonomous_loop.py",
+          "experiments.results.triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528.measure_triple_alpha_canonical_volterra"
+        ],
+        "canonical_producers": [
+          "experiments.results.triple_z6_v2_plus_nscs06_v8_plus_compound_c_wave_n6_20260528.measure_triple_alpha_canonical_volterra"
+        ],
+        "equation_id": "triple_substrate_composition_orthogonal_pose_axis_savings_v1",
+        "name": "Triple-substrate composition with orthogonal pose-axis lever (first-order Volterra extension to N=3)",
+        "one_line_summary": "Triple composite \u0394S via first-order Volterra: alpha_triple=mean(alpha_AB,alpha_BC,alpha_AC); orthogonal pose-axis lever (Z6-v2) + cross-paradigm + decoder-compression \u2192 predicted alpha~0.95."
+      },
+      {
+        "canonical_consumers": [
+          "tools/cathedral_autopilot_autonomous_loop.py",
+          "src/tac/cathedral_consumers/wyner_ziv_pipeline_stage_codec/",
+          "src/tac/canonical_anti_patterns/builtins.py:build_wyner_ziv_cross_substrate_composition_y_density_decoder_state_dict_surface_v1"
+        ],
+        "canonical_producers": [
+          "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py:_measure_cross_substrate_composition_y_density_fec6_for_pr101",
+          "src/tac/substrates/wyner_ziv_pipeline_stage_codec/trainer.py:_derive_cross_substrate_composition_y_fec6_for_pr101"
+        ],
+        "equation_id": "wyner_ziv_cross_substrate_composition_y_pose_axis_savings_v1",
+        "name": "Wyner-Ziv cross-substrate composition Y pose-axis savings (FEC6 as Y for PR101)",
+        "one_line_summary": "R(D|Y) achievable rate when Y is sister substrate's compressed ZIP-member payload bytes (Wave N+9 Slot 3 op-routable; Catalog #311 + #343)"
+      },
+      {
+        "canonical_consumers": [
+          "experiments.modal_auth_eval",
+          "experiments.modal_auth_eval_cpu",
+          "experiments.contest_auth_eval",
+          "tools.dispatch_modal_paired_auth_eval"
+        ],
+        "canonical_producers": [
+          "experiments/contest_auth_eval.py",
+          "src/tac/deploy/modal/auth_eval.py",
+          "tools/dispatch_modal_paired_auth_eval.py"
+        ],
+        "equation_id": "modal_dispatch_runtime_tree_hash_local_vs_worker_parity_v1",
+        "name": "Modal dispatch runtime-tree-hash LOCAL projector vs worker parity invariant",
+        "one_line_summary": "LOCAL projector runtime_tree_sha256 MUST equal Modal worker actual runtime_tree_sha256 for paired dispatch pre-validation to pass."
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools.cathedral_autopilot_autonomous_loop:invoke_meta_lagrangian_on_candidates"
+        ],
+        "canonical_producers": [
+          "submissions.hnerv_fec6_fixed_huffman_k16.encoder.build_pr101_frame_exploit_selector_packet_fec8_3rd_order_markov"
+        ],
+        "equation_id": "fec8_3rd_order_markov_static_variant_c_savings_v1",
+        "name": "FEC8 3rd-order Markov static-prior arithmetic-coder selector codec savings",
+        "one_line_summary": "FEC8 3rd-order Markov arithmetic-coder selector codec savings vs FEC6 baseline (4096-context shared prior + Laplace smoothing)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/audit_predicted_band_provenance.py",
+          "tac.optimization.tier_c_density_post_training_validator"
+        ],
+        "canonical_producers": [
+          "tools/mdl_scorer_conditional_ablation.py",
+          "tac.analysis.scorer_conditional_mdl"
+        ],
+        "equation_id": "c6_ibps_post_training_tier_c_within_class_density_v1",
+        "name": "C6 IBPS post-training Tier-C density empirically within-class",
+        "one_line_summary": "C6 IBPS post-training Tier-C density=0.9711 WITHIN_CLASS supersedes random-init across_class claim (2.67e-5); 36,400x amplification per Catalog #324."
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l18_pixelshuffle_bilinear_skip_sin_v1",
+        "name": "L18: PixelShuffle + bilinear-skip + sin activation decoder architecture",
+        "one_line_summary": "PR95-family decoder: Conv(out*4) + PixelShuffle(2) + bilinear-skip + sin per stage; 6 stages 6x8 -> 384x512; taper [1,1,1,0.75,0.58,0.5,0.5]"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l20_monolithic_4_section_archive_grammar_v1",
+        "name": "L20: Monolithic single-file 0.bin archive grammar with 4 length-prefixed sections",
+        "one_line_summary": "PR100/PR101 archive = single 0.bin with 4 length-prefixed (u32) sections: dec_blob + sca_blob + lat_blob + wrp_blob"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l21_per_tensor_byte_maps_v1",
+        "name": "L21: Per-tensor byte-maps (negzig/twos/off/zig) for entropy-friendly coding",
+        "one_line_summary": "PR101 DECODER_BYTE_MAPS per-tensor (negzig/twos/off/zig) selected by weight distribution to minimize brotli output"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l22_conv4_storage_perms_v1",
+        "name": "L22: CONV4_STORAGE_PERMS per-tensor permutation for entropy-friendly storage",
+        "one_line_summary": "PR101 reorders Conv2d axes per-tensor before brotli (13 specific tensors); inverse-perm at decode; saves ~hundreds of bytes vs no-perm baseline"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l23_split_brotli_streams_v1",
+        "name": "L23: Split brotli streams with explicit DECODER_STREAM_ENDS partition",
+        "one_line_summary": "PR101 splits decoder weights into 7 separate brotli streams (ENDS = 1/2/22/23/26/27/28); per-stream decode; saves ~bytes vs single big stream"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l24_raw_lzma_latent_coding_v1",
+        "name": "L24: Raw LZMA (FORMAT_RAW + FILTER_LZMA1) for latent encoding",
+        "one_line_summary": "PR101 latents: lzma.FORMAT_RAW + FILTER_LZMA1 (dict=4096, lc=3, lp=0, pb=0); strips .xz headers; compresses temporal-delta uint8 well"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l25_temporal_delta_uint8_latent_v1",
+        "name": "L25: Temporal-delta uint8 latent coding with prefix-sum decode",
+        "one_line_summary": "PR100/PR101 latent coding: q[i] = q[i-1] + delta[i] centered uint8; prefix-sum decode; exploits dashcam temporal smoothness vs raw fp16"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l26_canonical_huffman_length_ranked_sidecar_v1",
+        "name": "L26: Canonical Huffman length-vector ranked sidecar (Wang-Rudin discipline)",
+        "one_line_summary": "PR101 canonical Huffman with length-vector RANK encoding (Wang-Rudin discipline) saves ~bytes vs explicit Huffman tree encoding"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l27_per_pair_single_dim_correction_sidecar_v1",
+        "name": "L27: Per-pair single-dim latent correction sidecar (255-sentinel no-op)",
+        "one_line_summary": "PR100/PR101 sidecar: per-pair (u8 dim_idx, i8 delta_q*0.01); dim_idx=255 = no-op; ~1.2KB encodes scorer-minimizing per-pair corrections"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l28_decode_side_channel_postprocess_v1",
+        "name": "L28: PR98 decode-side channel postprocess (subtract 1.0 from specific RGB channels)",
+        "one_line_summary": "PR101 decode-side: subtract 1.0 from frame_0_R, frame_0_B, frame_1_G (scorer-bias cancellation learned at training)"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l29_fp16_per_tensor_scales_int8_v1",
+        "name": "L29: fp16 scales per tensor for INT8 dequant",
+        "one_line_summary": "PR100/PR101 fp16 per-tensor scales (28 tensors = 56 bytes); dequant = int8_code.astype(fp32) * fp16_scale; preserves per-tensor magnitude"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l30_range_arithmetic_coding_categorical_v1",
+        "name": "L30: Range/arithmetic coding via constriction.Categorical for specific tensors (PR103 silver)",
+        "one_line_summary": "PR103 silver: constriction range-coder + Categorical histogram on 8 large tensors (AC_INDICES); other 20 stay brotli; merged_ac_len=153856 bytes"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l31_combinatorial_colex_rank_noop_v1",
+        "name": "L31: Combinatorial colex rank encoding for no-op positions (Wang-Rudin SLIM-flavor)",
+        "one_line_summary": "PR101 sidecar no-op positions via combinatorial colex rank (Wang-Rudin SLIM-flavor); stores rank in C(N_PAIRS, noop_count) vs position bitmap"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l32_brotli_quality_11_max_v1",
+        "name": "L32: brotli quality=11 max compression for sidecar",
+        "one_line_summary": "PR100/PR101 brotli quality=11 (max) for all sidecar encoding; ~10x compression time vs q=6 but saves ~5-10% bytes on small payloads"
+      },
+      {
+        "canonical_consumers": [
+          "tools.cathedral_autopilot_autonomous_loop",
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer"
+        ],
+        "canonical_producers": [
+          "tools.subagent_checkpoint",
+          "tac.council_continual_learning",
+          "tools.harvest_modal_calls"
+        ],
+        "equation_id": "stand_down_optimality_loss_per_hour_stale_canonical_state_currency_v1",
+        "name": "STAND_DOWN optimality loss per hour of stale canonical state currency",
+        "one_line_summary": "P(sub-optimal | dh_stale) = min(1.0, 0.10 * dh_stale); binding when reasoning_chain assumes canonical state without 15min refresh"
+      },
+      {
+        "canonical_consumers": [
+          "tools.schedule_canonical_modal_harvest_cron",
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tac.deploy.modal.call_id_ledger.update_call_id_outcome"
+        ],
+        "canonical_producers": [
+          "tools.harvest_modal_calls.harvest_modal_calls",
+          "tac.deploy.modal.harvest_outcomes.append_terminal_call_id_ledger_event"
+        ],
+        "equation_id": "recurring_harvest_cron_predicts_silent_orphan_harvest_extinction_v1",
+        "name": "Recurring harvest cron predicts silent-orphan-harvest extinction",
+        "one_line_summary": "P(silent_orphan | recurring_cron_active) -> 0; P(silent_orphan | no_cron) >= 0.5 per RECOVERY-AUDIT-V2 empirical anchor"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l33_multi_format_sidecar_adaptive_dispatch_v1",
+        "name": "L33: Multi-format sidecar adaptive dispatch (6-format dispatch table)",
+        "one_line_summary": "PR101 apply_latent_sidecar accepts 6 distinct encodings by exact byte length; encoder picks min-byte format per archive"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l34_lru_cache_kraft_validity_memoization_v1",
+        "name": "L34: lru_cache memoization for Kraft-validity combinatorial counting",
+        "one_line_summary": "PR101 huff_length_vector_count + decode_huff_length_rank use @lru_cache(None) reducing decode O(16x256^2) to O(16x256) per rank query; runtime independent of rank value"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l35_bidirectional_zigzag_lo_hi_split_v1",
+        "name": "L35: Bidirectional 16-bit zigzag delta latent coding via lo/hi byte split",
+        "one_line_summary": "PR100/PR103 split int16 zigzag delta into separate lo/hi uint8 streams; lo brotli-friendly, hi sparse + AC-coded; ~500-1500 bytes saved vs naive int16 brotli"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l36_decode_side_channel_shift_rplus1_v1",
+        "name": "L36: Decode-side per-channel scale095 +1.0 shift (PR102 BRONZE)",
+        "one_line_summary": "PR102 BRONZE adds +1.0 to RED channel of frame_0 post-decode (3 LOC diff vs PR100); 0 archive bytes; -0.001 to -0.003 score"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l37_byte_incremental_brotli_streaming_v1",
+        "name": "L37: Byte-incremental brotli streaming decompression",
+        "one_line_summary": "PR101 splits decoder weights into 7 brotli streams sharing one byte sequence; per-stream length prefix avoided; 28 bytes saved"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l38_nibble_plus_3bit_huffman_length_packing_v1",
+        "name": "L38: Nibble packing + 3-bit Huffman-length packing for sub-byte sidecars",
+        "one_line_summary": "PR101 packs Huffman length vectors as 4-bit nibbles (8B vs 16B) and 3-bit fields (6B vs 16B) for [2,8] range; 8-10 bytes saved"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l39_per_tensor_categorical_ac_histograms_v1",
+        "name": "L39: Per-tensor Categorical histograms for AC-coded large tensors (PR103 SILVER)",
+        "one_line_summary": "PR103 SILVER codes 8 specific large tensors via constriction RangeDecoder with per-tensor 256-bin Categorical histograms; saves ~3000-5000 bytes vs brotli sister"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l40_fixed_28_tensor_schema_list_v1",
+        "name": "L40: Fixed 28-tensor SCHEMA list with explicit (name, shape) tuples",
+        "one_line_summary": "PR100 hard-codes 28 decoder tensor (name, shape) tuples in schema.py; avoids state_dict probing at inflate time; saves ~600-1500 bytes vs per-archive schema dump"
+      },
+      {
+        "canonical_consumers": [
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer",
+          "tools/list_canonical_equations.py"
+        ],
+        "canonical_producers": [
+          "tools/audit_pr95_family_canonical_techniques.py (planned)",
+          "experiments/results/public_pr95_intake_20260504_codex/",
+          "experiments/results/public_pr100_intake_20260504_codex/",
+          "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/",
+          "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/",
+          "experiments/results/public_pr103_intake_20260504_codex/"
+        ],
+        "equation_id": "pr95_family_l42_lazy_brotli_auto_install_bootstrap_v1",
+        "name": "L42: Lazy auto-install bootstrap for brotli dependency on CPU runner",
+        "one_line_summary": "PR100 inflate.py wraps brotli import with subprocess pip-install fallback; closes one HNeRV parity L9 runtime closure sub-class"
+      },
+      {
+        "canonical_consumers": [
+          "tac.submission_packet.archive_grammar.build_archive_grammar_from_compression_pipeline_result",
+          "tools.operator_pr_submission_full_lifecycle._run_phase_9_lifecycle"
+        ],
+        "canonical_producers": [
+          "tac.submission_packet.archive_grammar.discover_section_specs_from_archive",
+          "tac.submission_packet.archive_grammar.ArchiveGrammarManifest"
+        ],
+        "equation_id": "pr101_lc_v2_clone_single_x_member_zip_monolithic_grammar_recognition_v1",
+        "name": "PR101/DQS1 single-x-member ZIP monolithic archive grammar recognition (HNeRV parity L3 member-name-agnostic)",
+        "one_line_summary": "is_monolithic(archive) := |members(archive.zip)| == 1 (member-name-agnostic per HNeRV parity L3)"
+      },
+      {
+        "canonical_consumers": [
+          "tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.trainer.run_mlx_first_compress_pass",
+          "tac.cathedral_consumers.canonical_equation_lookup_consumer.consume_candidate"
+        ],
+        "canonical_producers": [
+          "tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.architecture.compute_per_pair_lagrangian_dual_routing",
+          "tac.substrates.cascade_c_prime_frame_1_segnet_waterfill.trainer._enumerate_mlx_perturbations"
+        ],
+        "equation_id": "atick_redlich_asymmetric_scorer_channel_lagrangian_routing_savings_v1",
+        "name": "Atick-Redlich asymmetric scorer channel Lagrangian routing savings",
+        "one_line_summary": "Per-pair Lagrangian dual routing decision between frame_0 and frame_1 modes under Atick-Redlich asymmetric channel where SegNet sees only frame_1 (frame_0 has zero SegNet cost)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.unified_action",
+          "tac.contest_score"
+        ],
+        "canonical_producers": [
+          "tac.contest_score"
+        ],
+        "equation_id": "vcm_task_rd_headroom_above_floor_v1",
+        "name": "VCM task-RD headroom: practical codecs sit 1-3 OoM above the task-RD floor (target equation)",
+        "one_line_summary": "Practical coding-for-machines codecs sit ~1-3 orders of magnitude above the task-RD floor; our S (pointer 0.19110) vs the measured S_floor~0.118 quantifies the headroom and the sub-0.15 target gap."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments.train_levelset_witness_realized_through_R_mlx"
+        ],
+        "canonical_producers": [
+          "tools/levelset_gate_discriminators_n600.py"
+        ],
+        "equation_id": "oracle_r_dseg_floor_by_render_grid_v1",
+        "name": "Oracle-R d_seg floor by render grid (representation-achievable lower bound)",
+        "one_line_summary": "FEED-ly: ideal->R->SegNet d_seg floor 0.00091@384 / 0.00247@192 / ~0@camera; witness ~0.003 above => TRAINING headroom (NOT a score)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "maslov_dequantization_bound_v1",
+        "name": "Maslov dequantization bound: softmax_tau -> argmax free-energy error <= tau*ln K",
+        "one_line_summary": "softmax_tau->argmax contributes at most tau*ln K (K=5) to the free energy; the tau:1.0->0.05 curriculum IS the (+,x)->(max,+) semiring (Maslov) limit, hbar=tau"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge",
+          "tools/precompute_sR_reachability.py"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
+        "name": "Fisher curvature = categorical Fisher trace = caustic (the exact 0.978 margin identity)",
+        "one_line_summary": "1-sum p^2 = tr[diag(p)-p p^T]; annulus tr F = 1/2 sech^2(m/2) monotone in the margin -> the measured curvature<->(-margin) Pearson 0.978 caustic is an EXACT identity"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "ce_softmax_mirror_descent_natural_gradient_v1",
+        "name": "CE + softmax = mirror descent = natural gradient (categorical entropy Bregman)",
+        "one_line_summary": "CE is the Bregman divergence of the categorical entropy potential (= KL); Raskutti-Mukherjee 2015 -> mirror descent == natural gradient in dual coordinates"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge",
+          "tac.canonical_equations.store_nothing_pose_carrier_rate_dpose_20260702"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py",
+          "src/tac/boundary_math/lever_b_generator.py"
+        ],
+        "equation_id": "shearlet_nterm_upper_bounds_task_rate_v1",
+        "name": "Shearlet N-term upper-bounds the task-space rate R_X(D_Y) (tightness conjectured)",
+        "one_line_summary": "d_seg is a boundary-displacement functional -> the cartoon-optimal shearlet N-term count O(N^-2 (log N)^3) is a PROVEN UPPER BOUND on R_X(D_Y); tightness conjectured"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "tau_eps_hbar_one_dequantization_two_scales_v1",
+        "name": "tau = eps = hbar: one dequantization at two scales",
+        "one_line_summary": "the single scalar tau is at once the Maslov/tropical Planck constant, the Modica-Mortola interface width, and the MD temperature; eikonal-on-margin -> half-width tau/2"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "multiphase_modica_mortola_perimeter_gamma_limit_v1",
+        "name": "Multi-phase Modica-Mortola Gamma-limit = weighted perimeter of the argmax partition",
+        "one_line_summary": "softmax(phi/tau) of K=5 SDFs (coarea length + entropy double-well) Gamma-converges to the weighted perimeter of the argmax partition (Baldo/Sternberg; Herring 120-deg junctions)"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "mcf_minority_erasure_inevitability_v1",
+        "name": "MCF minority-erasure inevitability (thin-Lane erasure = motion by mean curvature)",
+        "one_line_summary": "the perimeter-gradient flow is (sharp limit) motion by mean curvature -> high-curvature thin Lanes erase FIRST and inevitably; MBO probe attributes 95.7% smoothing cost to Lane"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge",
+          "src/tac/boundary_math/lever_b_generator.py"
+        ],
+        "canonical_producers": [
+          "tools/register_deepmath_amortizing_argmax_laws_20260704.py"
+        ],
+        "equation_id": "annulus_anisotropy_magnitude_disputed_v1",
+        "name": "Annulus anisotropy magnitude DISPUTED (NO-FAKE correction: 9.56 / 37.8, not 198)",
+        "one_line_summary": "annulus codim-1 anisotropy re-measures to 9.56:1 (gradient projection) / 37.8:1 (structure-tensor); the on-the-fly 198:1 is DISPUTED/uncached -> not a settled headline"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.gauge"
+        ],
+        "canonical_producers": [
+          "src/tac/boundary_math/margin_conditional_residual.py",
+          "tools/levelset_byte_close_and_eval.py"
+        ],
+        "equation_id": "leverd_flicker_residual_reactivation_economics_v1",
+        "name": "Lever-D flicker-residual reactivation economics: net \u0394S = -r*0.4964 + 25*bytes/N, GO iff coder min(b)<0.65 B/flip AND subset net \u0394S<0",
+        "one_line_summary": "Lever-D = ONE Stage-0 byte-measurement: GO iff min(b)<0.65 B/flip AND subset net \u0394S<0 (band -0.35/-0.048/+0.117); else d_seg stays IN-TRAINING (keep #274 down-weight)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_control.shadow_controller",
+          "tools/costate_digest.py"
+        ],
+        "canonical_producers": [
+          "tools/costate_shadow_report.py",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "equation_id": "costate_lambda_marginal_ds_v1",
+        "name": "Costate \u03bb = \u2202S/\u2202x: (100, 5/sqrt(10\u00b7d_pose), 25/37545489) + chained dS/dep = \u03bb\u00b7dx/dep \u00b1 sqrt(\u03a3(\u03bb_i\u00b7se_i)\u00b2) \u2014 the triality's fourth object",
+        "one_line_summary": "The marginal-\u0394S shadow price: exact score-law partials + measured windowed trajectory chain; BACKTESTED on #205 (WATCH@325, EROSION@350, rollback +0.17 S)."
+      },
+      {
+        "canonical_consumers": [
+          "tools/costate_digest.py",
+          "tac.witness_dsl.curriculum_dsl"
+        ],
+        "canonical_producers": [
+          ".omx/research/t5_crucible/position_S6_pose_byteclose_20260707.md"
+        ],
+        "equation_id": "pose_second_wall_t1_feasibility_bound_v1",
+        "name": "Pose second-wall T_1 feasibility bound (d_pose <= 1.51e-4 at the measured working point)",
+        "one_line_summary": "T_1-feasible d_pose <= 1.51e-4 (T_3 <= 3.2e-5) at d_seg 0.00092/rate 0.0602; R1 floor 0.0011 -> term 0.105 = 7x miss; pose-blind term ~35.5 unsubmittable -> pose is the SECOND wall"
+      },
+      {
+        "canonical_consumers": [
+          "tac.boundary_math.stratified_depth_warp"
+        ],
+        "canonical_producers": [
+          "tools/pose_frame0_inverse_solve_probe.py",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "equation_id": "morse_smale_stratified_parallax_dpose_v1",
+        "name": "Morse-Smale stratified parallax warp: cheap task-space pose carrier floors d_pose ~1.2-1.7 (A0 0-DOF 1.685 -> A2 6-DOF 1.486 -> A2+ 12-DOF-oracle 1.223), orders above the 0.019 target; off-plane parallax mass ~0.5% is NOT the wall",
+        "one_line_summary": "cheap warp pose carrier d_pose floors ~1.2 (even 12-DOF oracle-depth solve); depth-stratification + 6-DOF solve BOTH refuted; wall = cartoon-pair consistency, not off-plane parallax"
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.dseg_aware_fourier_taper"
+        ],
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "name": "#121 d_seg-aware Fourier-feature amplitude taper: reweight each fixed Fourier/curvelet column's amplitude by GT d_seg (margin) saliency \u2014 w_k = 1 + strength*(r_k/mean_r - 1), r_k = <S,feats_k^2>/<1,feats_k^2>; byte-neutral spectral reallocation",
+        "one_line_summary": "Reweight per-Fourier-column amplitude toward the boundary annulus (r_k>1); byte-neutral (mean w=1, 0 params); OFF/uniform-S \u21d2 flat; d_seg effect re-validate at convergence (#121)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.horizon_weighted_margin"
+        ],
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "name": "#169 horizon-weighted margin: one-sided satisficing hinge w_h\u00b7mean_{mask} relu(m_target \u2212 m_wit) on the SHARED realized through-R witness GT-class margin, STRATIFIED to (horizon rows) AND (GT margin \u2208 [lo,hi)); 0-byte shared-structure d_seg lever",
+        "one_line_summary": "Satisficing relu(target\u2212m_wit) hinge on the reducible horizon band (GT margin\u2208[0.3,0.5), rows~96-288); 0 bytes; OFF/empty/satisficed\u21d20; \u0394S ceiling 0.012\u20130.024 owed n600 A/B (#169)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.chroma_boundary_match"
+        ],
+        "equation_id": "chroma_boundary_annulus_match_hinge_v1",
+        "name": "LEVER-4c annulus-directed chroma-boundary match: additive w\u00b7mean_{ann} \u2016chroma(f1) \u2212 chroma(GT)\u2016\u00b2 on the SHARED realized-through-R render over the fragile annulus 1[GT margin < band]; chroma := rgb \u2212 BT.601-luma (LUMA-INVARIANT); 0-byte shared-structure d_seg lever",
+        "one_line_summary": "Luma-invariant chroma-match hinge on the fragile annulus (GT margin<1, 93.4% of chroma-flips); 0 bytes; OFF/empty/perfect-match\u21d20; DOF-measured removal 7.54%/4.38%, add-back \u0394S owed n600 A/B."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py",
+          "experiments/probe_laguerre_logit_offset_sweep.py"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.laguerre_logit_offset"
+        ],
+        "equation_id": "laguerre_ot_head_offset_v1",
+        "name": "#288 damped-Newton semi-discrete OT per-class head-bias offset: solve the zero-sum b* whose Laguerre-reweighted soft cell masses equal the GT class frequencies (Kitagawa-Merigot-Thibert 2019); byte-free out_sdf.bias fold",
+        "one_line_summary": "Semi-discrete OT solves the byte-free per-class argmax-cell offset to match GT masses; solver EXACT but mass-matching MEASURED-worse than no-offset for realized d_seg (ep650)."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+          ".omx/research/v8_increment1_design_draft_20260709.md",
+          "task_359_v8_perclass_decomposition"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.analytic_lane_render_band",
+          "tac.boundary_math.lane_sdf_component"
+        ],
+        "equation_id": "v8_geometric_rate_decomposition_v1",
+        "name": "v8 geometric rate decomposition: whole-scene partition rate S_rate = sum_edges [S_gen(dominant ~k coeffs) + S_resid(uncovered px)]; MEASURED n600 bitmap 0.339 -> geometric-dominant 0.061 (5.5x < bitmap, 1.9x < the 0.118 frontier) -> lossless-complete 0.140 (residual-coder-bound)",
+        "one_line_summary": "Per-edge rate = parametric generator (dominant) + residual sidecar; MEASURED bitmap 0.339 -> dominant 0.061 (1.9x < frontier) -> complete 0.140 (residual-bound); pointer UNMOVED."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+          ".omx/research/v8_increment1_design_draft_20260709.md",
+          "v8_chart_selection_decision"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.ego_xi_trajectory",
+          "tac.boundary_math.analytic_lane_render_band"
+        ],
+        "equation_id": "lane_groundframe_xi_transport_no_collapse_v1",
+        "name": "lane ground-frame xi-transport no-collapse: ego-freeze does NOT transfer to a chart that already absorbed the ego DOF; MEASURED ||innov_xi||_1 >= ||Delta Q||_1 for all xi (n600, isolated payload: identity 41,085 B / 7.58M beats best xi 42,017 B / 8.25M); the horizon's 14.6x does NOT transfer to the ground-canonicalized lane chart",
+        "one_line_summary": "Ego-advected predictive coding LOSES to the identity temporal delta on a ground-frame lane chart (IPM already quotiented the ego DOF); MEASURED NO-GO, pointer UNMOVED."
+      },
+      {
+        "canonical_consumers": [
+          "tac.through_r.harness",
+          ".omx/research/resize_exploit_flip_solver_20260709.md",
+          "witness_signal_allocation_decision",
+          "tools/levelset_byte_close_and_eval.py"
+        ],
+        "canonical_producers": [
+          "tac.through_r.flip_inverse",
+          "tac.through_r.resolution_chain"
+        ],
+        "equation_id": "resize_exploit_flip_fix_frontier_v1",
+        "name": "resize-exploit flip-fix frontier: the R composite is an EXACT linear kernel (+adjoint lever map) with a uint8 dead-zone; each fixed flip is worth a UNIFORM \u0394S so 'what needs to flip for optimal' = cheapest-first; MEASURED n600 -- resize flips are 98.98% annulus (#333), 91.2% resize-cheap, verify pred-vs-realized 0.594 (real SegNet); interior-texture is the #149 unreachable wall",
+        "one_line_summary": "R resize is an exact adjoint lever map + uint8 dead-zone; flips are uniform-\u0394S so fix cheapest-first; n600: 91.2% resize-cheap, verify 0.594, interior=#149 wall. Pointer UNMOVED."
+      },
+      {
+        "canonical_consumers": [
+          "tac.through_r.palette_realization",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "canonical_producers": [
+          "tac.through_r.palette_realization"
+        ],
+        "equation_id": "palette_realization_ceiling_context_dominated_v1",
+        "name": "Palette-realization ceiling is CONTEXT-DOMINATED: realizing a partition as a flat per-class palette through R -> SegNet floors at ~0.042 d_seg (palette-irreducible); R mixing is only 14%; SegNet argmax is texture/context-dominated (constant colour -> Undrivable 195/216)",
+        "one_line_summary": "F(palette realization) n600 = 0.048; zero-mix floor 0.042 (R mixing only 14%); no palette rescues it (abstract MR 0.504); SegNet context-dominated -> direct-partition->palette SHUT."
+      },
+      {
+        "canonical_consumers": [
+          "experiments/train_levelset_witness_realized_through_R_mlx.py",
+          "src/tac/boundary_math/texture_trunk.py"
+        ],
+        "canonical_producers": [
+          "tac.canonical_equations.posenet_luma_chroma_asymmetry_20260710"
+        ],
+        "equation_id": "posenet_luma_chroma_sensitivity_asymmetry_v1",
+        "name": "Scorer-dimension asymmetry: PoseNet luma is 11.1x more sensitive per plane than chroma (chroma-high-freq exactly pose-null via 2x2 box-average); SegNet sees ONLY frame_1 (frame_0 seg-free) at raw full-res RGB -> two pose-free seg DOFs unpriced in witness/v8",
+        "one_line_summary": "luma/chroma pose sensitivity = 11.1x/plane; chroma-high-freq pose-null (box-avg); frame_0 seg-free (x[:,-1]) -> frame-0 pose-only carrier + chroma-high-freq seg-texture carrier."
+      },
+      {
+        "canonical_consumers": [
+          "tac.through_r.roadlane_texture_generator",
+          "tac.boundary_math.movable_site_coder"
+        ],
+        "canonical_producers": [
+          "experiments.measure_v8_geocoder_close"
+        ],
+        "equation_id": "roadlane_grating_composition_refuted_v1",
+        "name": "Road/Lane grating-in-composition REFUTED: the context-free whole-frame period-4 grating that wins Road/Lane in ISOLATION (price list) DESTROYS them when placed in the real region shapes within scene composition (n600 through-R); SegNet context dominates \u21d2 scene-flat wins",
+        "one_line_summary": "n600 through-R: scene-flat 0.071 vs grating 0.299 (Road 0.017->0.999, Lane 0.120->1.0, +0.228 antagonistic) \u2014 price-list texture win is a context-free artifact; pin Road/Lane to flat."
+      },
+      {
+        "canonical_consumers": [
+          "tac.click_polish",
+          "tools/click_polish_exact_search.py"
+        ],
+        "canonical_producers": [
+          "experiments/results/clickpolish_pr110_20260710/n8_validation/harvest_result.json"
+        ],
+        "equation_id": "clickpolish_exact_gated_discrete_latent_ratchet_v1",
+        "name": "Click-polish RD law: exact-score-gated discrete latent ratchet at constant archive bytes (pure-d_seg descent; borrowed PR128 mechanism on OURS PR110-lineage substrate)",
+        "one_line_summary": "At fixed |archive|, exact-eval-gated +/-1 latent clicks ratchet S monotonically via pure d_seg: dS = 100*d_seg (rate term unchanged); accept iff dS<0."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_control.shadow_controller",
+          "tools/click_polish_exact_search.py"
+        ],
+        "canonical_producers": [
+          ".omx/research/einstein_pass_models_equations_20260710.md"
+        ],
+        "equation_id": "score_atomic_flip_byte_exchange_v1",
+        "name": "Score atomic units: one pixel-pair flip = 1.27311 archive bytes (exact flip/byte exchange rate)",
+        "one_line_summary": "S is atomic: DS_flip=100/(600*196608)=8.477e-7, DS_byte=25/37545489=6.659e-7; 1 flip=1.27311 B => store B bytes fixing f flips iff B<1.273*f."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_control.shadow_controller",
+          "tac.witness_autoconfig",
+          "tac.witness_dsl.lawref"
+        ],
+        "canonical_producers": [
+          ".omx/research/cgauge_master_action_and_parametrization_20260711.md"
+        ],
+        "equation_id": "cgauge_master_action_v1",
+        "name": "V9\u00b7CGauge master action: one covariant Lagrangian (6 axioms) whose Legendre/costate closure + derivation tree yields every registered witness law",
+        "one_line_summary": "S = 100 D_seg + sqrt(10 D_pose) + (25/N) L_MDL on the Fisher base, covariant under (xi,R); laws = tree edges; costate lambda = dS/dstate closes the loop."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/whole_step_megakernel_356_20260711.md",
+          "v9_cgauge_432_speed_lever_selection",
+          "cuda_port_438_compile_policy"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.mlx_compile_step",
+          "tac.local_acceleration.metal_fused_r_operator",
+          "tac.mlx_safe_compile"
+        ],
+        "equation_id": "witness_fp_reorder_transform_bit_identity_wall_v1",
+        "name": "fp-reorder-transform bit-identity wall: framework transforms that permit fp reorder/contraction (mx.compile fusion, batched reductions) are deterministic-but-DIFFERENT (delta 1e-7..1e-3) on the witness graph -> non-adoptable as in-lineage speed levers; explicit-order custom kernels + gradient-free caches are the surviving family (fused-R, grouped-backward, cache-gt-skeleton)",
+        "one_line_summary": "Speed levers must preserve fp op order EXACTLY: compile-fusion/batching fail (3 anchors), explicit-order kernels + const caches pass; whole-step megakernel NO-GO on both legs."
+      },
+      {
+        "canonical_consumers": [
+          "tools/witness_apply_pass.py",
+          "tools/blind_coordinate_proof.py",
+          "tools/levelset_byte_close_and_eval.py",
+          ".omx/research/blind_coordinate_401_20260711T221447Z.md"
+        ],
+        "canonical_producers": [
+          "tac.through_r.blind_coordinate",
+          "tac.through_r.flip_inverse",
+          "tac.through_r.resolution_chain"
+        ],
+        "equation_id": "blind_coordinate_rate_lever_v1",
+        "name": "blind-coordinate rate lever: camera pixels read by NO scorer resize (230,904/frame = 22.70%; retained = a regular 768x1024 sub-grid) filled by a rule-118 generic decode-time rule -> encoder stores only the retained sub-grid; PROVEN n600 bit-identical through R (max|\u0394pose|=max|\u0394seg|=0.0) at a real brotli byte delta of 20.55%",
+        "one_line_summary": "230,904 camera px/frame are blind to BOTH scorers (bilinear-resize zero-weight set); fill them generically -> PROVEN zero \u0394d_seg/\u0394d_pose n600, 20.55% real byte delta. Pointer UNMOVED."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/click_polish_399_20260711T2200Z.md",
+          "staged_exact_eval_queue_MODAL_HOLD",
+          "click_polish_rounds_2plus_pairs48_599"
+        ],
+        "canonical_producers": [
+          "tac.click_polish",
+          "tools/click_polish_local.py"
+        ],
+        "equation_id": "pr110_lineage_click_polish_byte_neutral_slack_v1",
+        "name": "PR110-lineage byte-neutral click slack: \u00b11 latent clicks with IDENTICAL archive bytes lower full-n600 advisory S (round-1 pairs 0-47: dS -7.93e-05, 37 clicks); the frontier itself is only n8-polished -> 592 pairs of unmeasured headroom",
+        "one_line_summary": "Byte-neutral \u00b11 click slack exists in the frontier latent table: dS_advisory -7.93e-05 at zero rate cost (pairs 0-47); frontier only n8-polished, 592 pairs open."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/frontier_overhead_stack_20260711T232000Z.md",
+          "click_polish_rounds_2plus_on_folded_table",
+          "pr110_lineage_click_polish_byte_neutral_slack_v1"
+        ],
+        "canonical_producers": [
+          "tac.click_polish",
+          "experiments/results/frontier_overhead_stack_run1"
+        ],
+        "equation_id": "pr110_lineage_sidecar_fold_integer_grid_boundary_v1",
+        "name": "PR110-lineage sidecar-fold integer-grid boundary: the 607-B PR101 sidecar is break-even-efficient (sub-grid d_seg value 4.16e-4 S vs rate 4.04e-4 S); deterministic fold RED by +2.75e-5 at per-pair exact optimal form; fold pays only composed with a post-fold click search (> 2.75e-5 recovery threshold)",
+        "one_line_summary": "Fold of the 607-B latent sidecar loses +2.75e-5 at exact per-pair integer optimum; the sidecar's sub-grid precision ~ its rate cost; fold+re-search is the winning combo."
+      },
+      {
+        "canonical_consumers": [
+          "tools/witness_apply_pass.py",
+          ".omx/research/tropnnc_311_20260712T010936Z.md"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.tropnnc_witness_reduction",
+          "tools/witness_apply_pass.py"
+        ],
+        "equation_id": "tropnnc_dense_trunk_exact_dseg_reduction_empty_v1",
+        "name": "TropNNC dense-trunk exact-\u0394d_seg reduction is EMPTY: the fully-soft (\u03b2=1/\u03c4=1) 96-wide v752 witness trunk admits NO exactly-d_seg-invariant structured neuron prune \u2014 every k\u22651 flips the SegNet argmax on 100% of screened pairs (0/24, 0/96, 0/600 n600-COMPLETE); bytes_saved_at_exact_\u0394d_seg=0 = 0",
+        "one_line_summary": "dense \u03c4=1 witness trunk: 0 bytes at exact \u0394d_seg=0 (0/24, 0/96, 0/600 argmax-equal). FORMULATION-scoped; reactivate on low-\u03c4. Pointer UNMOVED."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/pr128_click_forensics_20260712T021554Z.md",
+          "experiments/results/pr128_click_import_forensics_20260712/click_search_priors_pr128.json",
+          "tools/click_polish_local.py",
+          "staged_exact_eval_queue_MODAL_HOLD"
+        ],
+        "canonical_producers": [
+          "tac.click_polish",
+          ".omx/research/pr128_click_forensics_20260712T021554Z.md"
+        ],
+        "equation_id": "pr128_latent_click_structure_isotropic_geometric_v1",
+        "name": "PR128 latent-click structure: base-equality (0/16800 cells) + dim-isotropy (CoV 0.238, 21/28 dims for 80%) + geometric magnitude (86/11/3/0.3/0.08 %) + temporal-incoherence (1.05x); PR128 table imports onto our substrate at advisory S 0.188070 (dS -0.00304)",
+        "one_line_summary": "Exact-gated latent slack is ISOTROPIC over 28 dims (no shortcut), geometric in |delta|, temporally incoherent; base-identical => PR128 clicks transfer (import adv S 0.18807)."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_sfess_cached_replay",
+          "tac.sfess_cached_replay.SFESSFixedKSearch"
+        ],
+        "canonical_producers": [
+          "tac.sfess_cached_replay.sfess_leave_one_out_gradient",
+          "tools.probe_sfess_cached_replay"
+        ],
+        "equation_id": "sfess_fixed_k_cached_replay_ranking_v1",
+        "name": "Fixed-k SFESS does not change the cached six-bit same-budget ranking",
+        "one_line_summary": "At B=64, k=5 SFESS returned S=0.19080429731336374, which is 7.052840218513268e-7 above exact enumeration and (1+1)-ES; k=6 is degenerate."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_defect_network_rate_code"
+        ],
+        "canonical_producers": [
+          "tac.boundary_math.defect_network_rate_code"
+        ],
+        "equation_id": "defect_network_component_delta_rate_v1",
+        "name": "Lossless defect-component section-rate attribution law",
+        "one_line_summary": "On gt_n600, the exact standalone candidate section is 6,382 bytes smaller only because its header removes redundant counts; its component streams are 2,349 bytes larger."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_segnet_exact_forward"
+        ],
+        "canonical_producers": [
+          "tools.probe_segnet_exact_forward"
+        ],
+        "equation_id": "segnet_exact_forward_cpu_thread_control_v1",
+        "name": "Frozen-SegNet exact-forward CPU thread admission law",
+        "one_line_summary": "Choose the fastest finite CPU-thread arm only when a full paired receiver-realized argmax gate is exact and its timing gain exceeds the composed run-local floor."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.scorer_gradient_policy",
+          "tools.probe_instant_projected_adjoint"
+        ],
+        "canonical_producers": [
+          "tools.probe_instant_projected_adjoint"
+        ],
+        "equation_id": "instant_projected_input_adjoint_v1",
+        "name": "INSTANT adaptive-axis frozen pointwise-Conv2d input adjoint",
+        "one_line_summary": "Project each saved pointwise-convolution output cotangent on its smaller calibrated channel or spatial axis, then apply the frozen weight in that subspace."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl.MarginBandSatisficing",
+          "tac.witness_dsl.lawref.resolve"
+        ],
+        "canonical_producers": [
+          "tools.measure_delta_R_noise_floor"
+        ],
+        "equation_id": "margin_band_satisficing_threshold_v1",
+        "name": "Margin-band satisficing R-survival threshold",
+        "one_line_summary": "m_safe=headroom*delta_R; default headroom is the smallest integer covering the measured full-R annulus p95 (currently 2), while delta_R comes from the measured noise-floor artifact."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.jrd_priors",
+          ".omx.research.sub015_DAG_jrd_reusable_priors_20260713",
+          "task#110",
+          "task#242",
+          "task#311",
+          "task#336_route_only"
+        ],
+        "canonical_producers": [
+          "tools.probe_jrd_pr110_coefficient_prefix",
+          "tac.packet_compiler.jrd_pr110_coefficient_prefix",
+          ".omx/research/jrd_reusable_priors_harvest_20260713.json"
+        ],
+        "equation_id": "jrd_component_safe_entropy_edge_stop_v1",
+        "name": "JRD component-safe post-hoc entropy-edge stop and training-time rate route",
+        "one_line_summary": "PR110 post-hoc uniform/Laplace gain is exactly 0 B; keep n=1 ranks dormant and route rate pressure into training-time structure."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.costate_trust_region_policy.DirectFullCostatePolicy",
+          "tools.probe_jacobian_drift_certificate"
+        ],
+        "canonical_producers": [
+          "tools.probe_jacobian_drift_certificate"
+        ],
+        "equation_id": "jacobian_drift_full_costate_v1",
+        "name": "Direct full-costate Jacobian-drift certificate",
+        "one_line_summary": "Reuse a first-order corrected full input costate only inside the strict self-adjusting ball controlled by Jacobian, adjoint, correction, and geometry bounds."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_grokking_ridge_round2",
+          "round3_surrogate_feature_admission_guard"
+        ],
+        "canonical_producers": [
+          "tools.probe_grokking_ridge_round2"
+        ],
+        "equation_id": "grokking_ridge_undertraining_disambiguation_v1",
+        "name": "Fixed-quadratic undertraining versus feature-ceiling disambiguation",
+        "one_line_summary": "Zero null initialization removes the ridge-grokking slow mode; terminal gradient and exact ridge-ladder optima separate optimizer delay from fixed linear feature poverty."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/vrghal_theorem_deepen_DAG_FEED_20260713.md",
+          "tac.canonical_equations.registry"
+        ],
+        "canonical_producers": [
+          ".omx/research/vrghal_theorem_deepen_20260713.md",
+          "https://arxiv.org/pdf/2607.09097"
+        ],
+        "equation_id": "vrghal_high_probability_fixed_operator_law_v2",
+        "name": "VR-GHAL high-probability fixed-operator law and Pact admission gate",
+        "one_line_summary": "VR-GHAL has an anytime beta^k-polynomial residual envelope only for one fixed nonexpansive/contractive operator with a qualified unbiased stochastic oracle."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_throughput_frontier_math",
+          "tools.probe_pythagorean_exact_arithmetic_bitident"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.throughput_frontier_math",
+          "tools.probe_throughput_frontier_math"
+        ],
+        "equation_id": "exact_commutative_reduction_reorder_invariance_v1",
+        "name": "Exact commutative reduction is invariant to execution reordering",
+        "one_line_summary": "A reduction is reorder-invariant when every reachable partial sum is represented exactly in a commutative monoid and one deterministic finalization follows."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_throughput_frontier_math",
+          "tac.bit_allocator"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.throughput_frontier_math",
+          "tools.probe_throughput_frontier_math"
+        ],
+        "equation_id": "interval_argmax_enclosure_certificate_v1",
+        "name": "Interval enclosure certificate for argmax preservation",
+        "one_line_summary": "The reference winner is certified only when its lower logit bound is strictly above every competitor upper bound; with uniform error epsilon, margin must exceed 2 epsilon."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_throughput_frontier_math",
+          "tac.bit_allocator",
+          "tac.cathedral_autopilot"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.throughput_frontier_math",
+          "tools.probe_throughput_frontier_math"
+        ],
+        "equation_id": "certified_layer_precision_waterfill_v1",
+        "name": "Certified layer-precision error-budget waterfill",
+        "one_line_summary": "Choose one measured precision option per layer to minimize charged cost under a sound additive logit-error budget; the KKT bit formula is only a continuous initializer."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_throughput_frontier_math",
+          "tac.cathedral_autopilot"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.tile_halo_exactness",
+          "tools.probe_tile_halo_exactness_n600"
+        ],
+        "equation_id": "segnet_exact_dependency_closure_flop_ceiling_v1",
+        "name": "Frozen-SegNet exact dependency closure fixes the forward FLOP ceiling",
+        "one_line_summary": "Charge FLOPs on dependency-closed support, not the requested output mask; 23 global-SE blocks close this frozen SegNet to the full frame, so exact spatial speedup is at most 1x."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_control.exact_costate_reuse",
+          "tac.witness_dsl.exact_costate_reuse_policy",
+          "tac.through_r.terminal_costate_skip"
+        ],
+        "canonical_producers": [
+          "tools.probe_p0_costate_reuse_k2",
+          "tools.adjudicate_p0_costate_reuse_k2"
+        ],
+        "equation_id": "exact_costate_reuse_k2_guarded_v1",
+        "name": "Guarded K2 exact-costate reuse with terminal gradient-free handoff",
+        "one_line_summary": "Corrected n600 K=2 economics are favorable diagnostically, but the direct raw-ZOH policy is NOT_ADMITTED on accepted-row d_seg regret."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.scorer_gradient_policy",
+          "tac.bit_allocator",
+          "tac.cathedral_autopilot"
+        ],
+        "canonical_producers": [
+          "tools.probe_sparse_adjoint_costate_vjp"
+        ],
+        "equation_id": "sparse_adjoint_mask_error_and_se_support_closure_v1",
+        "name": "Masked-adjoint error, global-SE support, and low-rank closure",
+        "one_line_summary": "Masking is exact iff the omitted logit adjoint lies in the VJP nullspace; global SE generically destroys spatial support, and SVD tail energy fixes rank error."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.scorer_gradient_policy",
+          "tools.probe_sparse_adjoint_costate_vjp"
+        ],
+        "canonical_producers": [
+          "tools.probe_sparse_adjoint_costate_vjp"
+        ],
+        "equation_id": "segnet_state_local_bcr_adjoint_v1",
+        "name": "State-local wavelet-BCR frozen-SegNet input adjoint",
+        "one_line_summary": "Uniformly bounded wavelet off-diagonal ranks imply a linear-work approximate input-costate apply, but state drift, build cost, and exact-descent validation remain charged."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_ordinal_perclass_convergence",
+          "tac.witness_control.perclass_verdict"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.throughput_frontier_math",
+          "tools.probe_ordinal_perclass_convergence"
+        ],
+        "equation_id": "top1_ordinal_margin_minimality_v1",
+        "name": "Top-1 ordinal margin is the minimal argmax order constraint",
+        "one_line_summary": "Full class-order concordance implies top-1 identity but is not necessary; the minimal loss debt is target versus strongest rival, with zero the decision boundary."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_sigma_ccprime_gamma_limit",
+          "tac.boundary_math.length_sigma"
+        ],
+        "canonical_producers": [
+          "tac.local_acceleration.throughput_frontier_math",
+          "tools.probe_sigma_ccprime_gamma_limit"
+        ],
+        "equation_id": "multiphase_sigma_metric_closure_gamma_admissibility_v1",
+        "name": "Multiphase pair tensions require metric closure for Gamma admissibility",
+        "one_line_summary": "A scalar pair-tension perimeter is lower-semicontinuous only under all triangle inequalities; violations relax by intermediate-phase wetting to shortest-path costs."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.optimal_basis_20260714",
+          "task500 metric provider via BasisMetricInterface"
+        ],
+        "canonical_producers": [
+          ".omx/research/owed16_verdict_20260710.json",
+          ".omx/research/owed16v2_verdict_20260710.json",
+          ".omx/research/optimal_basis_beyond_fourier_DAG_FEED_20260714.md"
+        ],
+        "equation_id": "optimal_basis_equal_budget_through_r_v1",
+        "name": "Equal-budget realized-through-R witness basis selection",
+        "one_line_summary": "Choose the lowest real-n600 through-R d_seg basis row under explicit parameter and archive-byte budgets; missing byte custody is ineligible for a byte-constrained verdict."
+      },
+      {
+        "canonical_consumers": [
+          "tac.canonical_equations.witness_measured_reverse_waterfill_20260713",
+          "tac.frontier_exact_bitalloc"
+        ],
+        "canonical_producers": [
+          "tools.apply_amc_saliency_tiered_bitalloc_witness"
+        ],
+        "equation_id": "amc_perrow_tiered_code_bitalloc_v1",
+        "name": "AMC per-row tiered code bit allocation",
+        "one_line_summary": "Exact pair-local SegNet mismatch composition for advisory per-row code allocation."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "canonical_producers": [
+          "tac.witness_control.adaptive_grad_clip"
+        ],
+        "equation_id": "autoclip_percentile_threshold_v1",
+        "name": "AutoClip percentile grad-clip threshold: clip_t = percentile_p(\u2016g\u2016 history, window w) with fixed-clip warmup \u2014 magnitude law for normalize-none lineage (inert under per-param normalize; trainer refuses that composition)",
+        "one_line_summary": "Percentile clip on the observed grad-norm history (AutoClip 2007.14469); magnitude mechanism binds on normalize-none lineage only (inert under per-param)."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.curriculum_dsl",
+          "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        ],
+        "canonical_producers": [
+          "tac.witness_control.compute_dtype_seam"
+        ],
+        "equation_id": "bf16_compute_seam_gradient_quality_v1",
+        "name": "bf16/fp16 compute-seam gradient-quality gate: admit iff median post-normalize update-direction cosine >= cos_min and median rel-norm in band, vs the same-master fp32 reference",
+        "one_line_summary": "Mixed-precision admission law: POST-normalize update-direction agreement (cosine + rel-norm medians) vs a same-master fp32 reference \u2014 the C0-aware --compute-dtype gate."
+      },
+      {
+        "canonical_consumers": [
+          "V9\u00b7CGauge archive builder (fold the static hood-tex seed; \u03b5*=0 for stored geometry)",
+          "p0_UNIFICATION_projection_preimage_SUPREME_20260715 (crown \u00a79 calibration)",
+          "realization_necessity_preimage_per_stratum_v1 (d_seg-verified sibling of the rate floor)"
+        ],
+        "canonical_producers": [
+          "tools/necessity_dseg_calibration.py",
+          "experiments/results/necessity_dseg_calibration_20260715/summary.json"
+        ],
+        "equation_id": "necessity_generator_seed_dseg_calibration_v1",
+        "name": "Necessity (generator, seed) \u2192 real d_seg calibration; min-S operating point",
+        "one_line_summary": "min-S knee = \u03b5=0-lossless + static hood-tex: S=1.613 (d_seg 0.0133, rate 0.158), 8.4x ABOVE 0.19108; palette CELL generator insufficient (photometric wall); \u03b5*=0; hood-tex -71%/1.76KB decisive carrier"
+      },
+      {
+        "canonical_consumers": [
+          "tools/measure_joint_seg_pose_rate.py (tau_pose sweep sizing)",
+          "SPEC_v10 carrier design (solve-near-source + residual-vs-predictor)",
+          ".omx/tmp/codex arm vjp_custody_positive_bands_20260719 (bindingness prediction)"
+        ],
+        "canonical_producers": [
+          ".omx/research/yhat_rd_ladder_20260719_codex.json",
+          ".omx/research/joint_seg_pose_inverse_solve_receipt_n24_20260719.json",
+          ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md#FEED-pose-falls-out"
+        ],
+        "equation_id": "pose_plane_proximity_corollary_v1",
+        "name": "pose is a corollary of plane proximity to source",
+        "one_line_summary": "d_pose tracks plane proximity to source, not compression: in-band solved planes 5e-10..1e-9 (~5.7 orders under the 2.5e-4 crossover); plane RMSE-25 off source gives 63 at any d_seg."
+      },
+      {
+        "canonical_consumers": [
+          "src.tac.optimization.r1b2_mdl_xi0_compile",
+          "tools.compile_r1b2_mdl_xi0"
+        ],
+        "canonical_producers": [
+          ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md#FEED-DAY-CONSOLIDATION-20260720B"
+        ],
+        "equation_id": "fixed_c1_pointer_crossing_cap_bytes_v1",
+        "name": "Fixed-C1 pointer-crossing archive cap (corrected 216,223 B)",
+        "one_line_summary": "Largest archive crossing the 0.19108 pointer at the spine's measured nonrate distortion; supersedes 216,300/264,320 approximations"
+      },
+      {
+        "canonical_consumers": [
+          "r2b sparse target-selection free-derivation",
+          "R1 d_B preimage-cell compiler",
+          "#401 blind-coordinate full affine fill"
+        ],
+        "canonical_producers": [
+          "tac.optimization.resize_full_kernel.FullResizeKernel",
+          "tac.optimization.uint8_lattice_feasibility.DisjointResizeOperator"
+        ],
+        "equation_id": "separable_resize_full_kernel_direct_sum_v1",
+        "name": "Separable shared-resize full-kernel direct sum",
+        "one_line_summary": "ker(A_h(.)A_w^T)=ker(A_h) tensor R^W direct-sum row(A_h) tensor ker(A_w), with an implicit exact-rational basis and a separately bounded uint8-lattice intersection."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_control.shadow_controller.build_shadow_report",
+          "tools/costate_digest.py section_shadow",
+          "tools/costate_shadow_report.py"
+        ],
+        "canonical_producers": [
+          "src/tac/witness_control/costate_organ_v2.py",
+          "tools/costate_organ_v2_backtest.py"
+        ],
+        "equation_id": "costate_organ_exact_anchor_product_v2",
+        "name": "Exact-gap times visibility times realizability times byte-price costate",
+        "one_line_summary": "lambda(pair,site)=exact_gap*visibility*realizability*byte_price, with apparatus-validity, exclusive-pool KKT, and explicit maturity readback."
+      },
+      {
+        "canonical_consumers": [
+          "task_381_modal_envelope_dispatch_decisions",
+          "ddm_c1_composed_candidate_spec.rate_term_anchor",
+          "ddm_menu1_realized_flip_menu_compiler"
+        ],
+        "canonical_producers": [
+          "tac.canonical_equations.ddm_m7_realization_transfer_20260723"
+        ],
+        "equation_id": "ddm_m7_solve_to_realized_transfer_receiver_closed_v1",
+        "name": "DDM m7 relaxed-receiver realized transfer (receiver-closed row + disposition)",
+        "one_line_summary": "177,169B relaxed-receiver member realized end-to-end: S 0.189647 advisory (-0.001436 vs pointer); byte-closed Modal candidate but DOMINATED by 0.18804 bank + PR110-lineage ban -> no dispatch"
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_pointfree_program.rate_row",
+          "menu1.c1.program_description"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_pf1_pointfree_program.py",
+          ".omx/research/ddm_pf1_pointfree_program_description_n600_20260723T235900Z/ddm_pf1_pointfree_program_description_n600_receipt.json"
+        ],
+        "equation_id": "ddm_pf1_identical_content_program_rate_delta_v1",
+        "name": "DDM PF1 identical-content program rate delta",
+        "one_line_summary": "PF1 replaces a flat description only when exact same-content replay has fewer counted real-coded program bytes, including its video-derived library."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_pointfree_program.rate_row",
+          "menu1.c1.program_description"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_pf1_pointfree_program.py",
+          ".omx/research/ddm_pf1_pointfree_program_description_n600_20260723T235900Z/ddm_pf1_pointfree_program_description_n600_scope_corrected_receipt.json"
+        ],
+        "equation_id": "ddm_pf1_two_typed_discrete_skeleton_rate_delta_v1",
+        "name": "DDM PF1 two-typed discrete-skeleton rate delta",
+        "one_line_summary": "PF1 replaces a flat skeleton only when exact replay has fewer total bytes after opaque native-coded continuous fibers are counted separately."
+      },
+      {
+        "canonical_consumers": [
+          "tools.measure_ddm_pf2_dimension_conditioned_two_type",
+          "tac.bit_allocator",
+          "tac.cathedral_autopilot"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_pf2_dimension_conditioned_two_type.py",
+          ".omx/research/ddm_pf2_dimension_conditioned_two_type_20260724T020205Z/ddm_pf2_dimension_conditioned_two_type_receipt.json"
+        ],
+        "equation_id": "ddm_pf2_metric_eligible_five_type_formulation_adjudication_v1",
+        "name": "DDM PF2 metric-eligible five-type formulation adjudication",
+        "one_line_summary": "A negative formulation delta is admissible only under measured scorer geometry or strict identical-content rate cancellation."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_typed_quotient_solve",
+          "tools.measure_ddm_ms2_typed_quotient_solve"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_ms2_typed_quotient_solve.py",
+          ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json"
+        ],
+        "equation_id": "ddm_ms2_visible_quotient_gauge_zero_v1",
+        "name": "DDM MS2 visible quotient and zero-byte gauge",
+        "one_line_summary": "Only scorer-visible quotient coordinates are solved; deterministic preimage/free fill realizes the dropped gauge at exactly zero payload bytes."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_typed_quotient_solve",
+          "tools.measure_ddm_ms2_typed_quotient_solve"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_ms2_typed_quotient_solve.py",
+          ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json"
+        ],
+        "equation_id": "ddm_ms2_scorer_metric_second_order_action_v1",
+        "name": "DDM MS2 scorer-metric second-order rate action",
+        "one_line_summary": "KKT, CVP, trust, ranking, and dictionary updates use the measured rank-4/Pose6 composite-R geometry; identity is control-only."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_typed_quotient_solve",
+          "tools.measure_ddm_ms2_typed_quotient_solve"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_ms2_typed_quotient_solve.py",
+          ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json"
+        ],
+        "equation_id": "ddm_ms2_typed_block_dual_exchange_v1",
+        "name": "DDM MS2 unpooled typed-block dual exchange",
+        "one_line_summary": "Each typed block emits its measured KKT dual and exact score gain per byte; missing values remain unavailable and are never pooled."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_typed_quotient_solve",
+          "tools.measure_ddm_ms2_typed_quotient_solve"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_ms2_typed_quotient_solve.py",
+          ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json"
+        ],
+        "equation_id": "ddm_ms2_effective_quantum_admission_v1",
+        "name": "DDM MS2 per-dimension effective quantum",
+        "one_line_summary": "Every visible dimension is admitted against its measured uint8-step times scorer sensitivity, with tolerance knees swept explicitly."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_typed_quotient_solve",
+          "tools.measure_ddm_ms2_typed_quotient_solve"
+        ],
+        "canonical_producers": [
+          "tools/measure_ddm_ms2_typed_quotient_solve.py",
+          ".omx/research/ddm_ms2_typed_quotient_solve_20260724_receipt.json"
+        ],
+        "equation_id": "ddm_ms2_skeleton_fiber_coder_race_v1",
+        "name": "DDM MS2 per-stratum skeleton-fiber coder race",
+        "one_line_summary": "A factor enters vocabulary only after exact semantic parse-back and a measured real-coder SKELETON-versus-FIBER byte race."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_score_quotient_functional_contract:build_ddm_event_continuation_v1_fit_request",
+          "DDMEventContinuationV1"
+        ],
+        "canonical_producers": [
+          "tac.optimization.ddm_score_quotient_functional_contract:compile_score_quotient_packet",
+          "tac.optimization.ddm_score_quotient_functional_contract:receive_score_quotient_packet",
+          "DM1.external_25_row_real_coder_price_records"
+        ],
+        "equation_id": "ddm_score_quotient_functional_v1",
+        "name": "DDM family-(d) score-quotient real-coder functional",
+        "one_line_summary": "Minimize exact contest S over scorer-plane function parameters, temporal latents, 25 external placements, and at-risk exceptions."
+      },
+      {
+        "canonical_consumers": [
+          "DDM family-(d) emitter admission",
+          "DDM family-(b) realization comparison",
+          "tac.bit_allocator",
+          "tac.cathedral_autopilot"
+        ],
+        "canonical_producers": [
+          "tac.optimization.ddm_dm2_l3_realization_race:materialize"
+        ],
+        "equation_id": "ddm_dm2_semantic_to_realized_rgb_exchange_v1",
+        "name": "DM2 semantic-to-realized RGB exchange with priced collateral",
+        "one_line_summary": "Exact semantic record bytes exchange for coded L3 RGB bytes plus only positive off-target Seg/Pose collateral at the contest rate dual."
+      },
+      {
+        "canonical_consumers": [
+          "tac.optimization.ddm_lp1_layer_pricing",
+          "future MAIN-reviewed R6 C1 waterfill"
+        ],
+        "canonical_producers": [
+          "tools.build_ddm_lp1_layer_pricing"
+        ],
+        "equation_id": "ddm_lp1_deepest_home_context_waterfill_v1",
+        "name": "DDM LP1 deepest-home context waterfill",
+        "one_line_summary": "Keep a decoder-derived context only on the same semantic object after charging video-derived parameters; allocate only measured receiver-closed negative joint-score marginals."
+      },
+      {
+        "canonical_consumers": [
+          "einstein_kolmogorov_ultra.U1",
+          "tac.witness_autoconfig"
+        ],
+        "canonical_producers": [
+          "segnet_head_rank4_linear_flipdist_v1",
+          "fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
+          ".omx/research/closed_scorer_variational_de_20260721T173654Z.json"
+        ],
+        "equation_id": "closed_scorer_taskspace_variational_functional_v1",
+        "name": "Closed frozen-scorer task-space variational functional",
+        "one_line_summary": "Rank-4 Laguerre/Bregman Seg cells + PoseNet xi quadratic + exact archive MDL, coupled only by realized decoder feasibility."
+      },
+      {
+        "canonical_consumers": [
+          "einstein_kolmogorov_ultra.U2",
+          "einstein_kolmogorov_ultra.U3"
+        ],
+        "canonical_producers": [
+          "closed_scorer_taskspace_variational_functional_v1",
+          "scorer_conditional_joint_rate_distortion_floor_v1"
+        ],
+        "equation_id": "closed_scorer_archive_reachability_bound_v1",
+        "name": "Archive-constrained lower-bound and sub-0.15 reachability certificate",
+        "one_line_summary": "Exact byte arithmetic is closed; the numeric constrained minimum remains unresolved until a legal byte-closed witness or valid lower-bound relaxation lands."
+      },
+      {
+        "canonical_consumers": [
+          "tools.costate_digest",
+          "tac.optimization.direct_description_minimizer"
+        ],
+        "canonical_producers": [
+          "tools.realize_ddm_m7_relaxed_receiver"
+        ],
+        "equation_id": "ddm_r6cal_solved_object_realized_rate_dominance_v1",
+        "name": "Solved-object realized-S rate dominance (r6cal evaluator row)",
+        "one_line_summary": "A value-materialized box solve is 99.73% rate through the real evaluator with d_seg in-box; its records are entropy-saturated so the only rate lever is the missing PREDICT/describe stage."
+      },
+      {
+        "canonical_consumers": [
+          "tools.costate_digest",
+          "tac.optimization.direct_description_minimizer"
+        ],
+        "canonical_producers": [
+          "experiments.ddm_pp1_band_lemma_curve"
+        ],
+        "equation_id": "ddm_pp1_correction_stream_position_band_v1",
+        "name": "Correction-stream position-cost band (ddm_pp1 R3)",
+        "one_line_summary": "Correction-stream per-error position cost <= log2(1/rho)/8; crosses the 1.2731 water at rho_c=5.0e-4 measured (8.6e-4 derived) -> corrections rational only for base error ~5e-4..1e-2."
+      },
+      {
+        "canonical_consumers": [
+          "tools.costate_digest",
+          "experiments.stage_v4b_realized_gate"
+        ],
+        "canonical_producers": [
+          "experiments.ddm_ck1_build_composed_archive"
+        ],
+        "equation_id": "ddm_v4b_composed_gate_instrument_fidelity_v1",
+        "name": "Composed-gate instrument fidelity (v4b evaluator row)",
+        "one_line_summary": "Per-pair realized composition predicts the real evaluator to 3e-6 (d_pose 5.1e-7) \u2014 gate-grade; the derived static horizon beat the GT-mask UB."
+      },
+      {
+        "canonical_consumers": [
+          "tac.witness_dsl.qa84_rowband_grammar_20260731.RowBandGrammar",
+          "tac.witness_dsl.spec_tr1_renderer_20260728.lever_token_rowband"
+        ],
+        "canonical_producers": [
+          "tools.ddm_b2b_segnet_field_pass"
+        ],
+        "equation_id": "rowband_flip_mass_foveation_band_v1",
+        "name": "Row-band flip-mass foveation constant",
+        "one_line_summary": "72.1-72.7%% of flip-prone mass lives in render rows 160-240 (op1 foveation gate >=50%% PASSED); the QA84 grammar makes that band FINE (D8) and the bulk COARSE (D16)."
+      },
+      {
+        "canonical_consumers": [
+          "tools.costate_digest",
+          "tac.optimization.direct_description_minimizer"
+        ],
+        "canonical_producers": [
+          "experiments.ddm_dc1_label_stream_price"
+        ],
+        "equation_id": "ddm_dc1_correction_stream_label_cost_v1",
+        "name": "Correction-stream label cost + the band edge it moves (ddm_dc1)",
+        "one_line_summary": "A correction stream's LABEL cost is 0.08-0.26 B/flip (0.52-0.88x the blind 5-ary bound); paying it moves the band's lower edge from rho_c=5.0e-4 (position-only) to 1.29e-3 -- 2.56x higher."
+      },
+      {
+        "canonical_consumers": [
+          "src/tac/optimization/lane_guard.py",
+          "experiments/ddm_v4d_resolve.py"
+        ],
+        "canonical_producers": [
+          "tools/pw1_pose_menu_saturation_ab.py",
+          "experiments/ddm_v4d_resolve.py"
+        ],
+        "equation_id": "ddm_pw1_menu_saturation_discriminator_v1",
+        "name": "Occupancy-saturation discriminator for discrete search menus (ddm_pw1)",
+        "one_line_summary": "Occupancy at a menu's bound => OUR menu clips the solution; strictly interior => honestly closed. Measured 8.27x spike vs an interior control; freeing two menus realized exact dS -0.0163787 at +85 B."
+      },
+      {
+        "canonical_consumers": [
+          "tools/mq1_joint_pose_refine_emit.py",
+          "experiments/ddm_v4d_resolve.py"
+        ],
+        "canonical_producers": [
+          "tools/mq1_pose_lattice_resolution_probe.py",
+          "tools/mq1_beta_overfine_reference.py",
+          "tools/mq1_joint_pose_refine_emit.py"
+        ],
+        "equation_id": "ddm_mq1_format_vs_search_attribution_v1",
+        "name": "Format-vs-search attribution and codebook admissibility",
+        "one_line_summary": "Recoverable distortion splits into gap_lattice (finer FORMAT) and gap_search (better SEARCH); their ratio routes effort, and a codebook is admissible only if rate binds AND the argmin is identified."
+      },
+      {
+        "canonical_consumers": [
+          "tools/os1_termination_census_report.py",
+          "src/tac/tests/test_ddm_os1_termination_census.py"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_pfs1_ep_warp_pose_solve.py",
+          "experiments/ddm_ps1_pose_stage.py"
+        ],
+        "equation_id": "ddm_os1_termination_census_from_cost_proxy_v1",
+        "name": "Retroactive termination census of a damped-GN solve from a recorded cost proxy (ddm_os1)",
+        "one_line_summary": "Damped-GN terminal state occupies a known interval in its forward count, so a census is recoverable from an old receipt at zero cost. Measured n600: converged 0/600 exact; bound >= 512/600."
+      },
+      {
+        "canonical_consumers": [
+          "experiments.ddm_sq1_stage_decomposition_and_solved_paint.solve_margin_optimal_paint",
+          "tac.optimization.terminal_pose_gn.solve_terminal_pose_gn",
+          "tools.replay_tj1_trajectory_stopping"
+        ],
+        "canonical_producers": [
+          "SQ1/CW1 solved-paint trajectory receipts",
+          "terminal_pose_gn step traces",
+          "NG1 cap-artifact sweep"
+        ],
+        "equation_id": "trajectory_derived_stopping_law_v1",
+        "name": "trajectory-derived stopping law",
+        "one_line_summary": "Fit recorded objective trajectories and stop only when projected tail gain in contest S-units falls below the caller's marginal bar; safety caps are reported as safety_bound_REPORTED, not convergence."
+      },
+      {
+        "canonical_consumers": [
+          "tools.probe_einstein_kolmogorov_crux",
+          "tac.optimization.einstein_kolmogorov_crux"
+        ],
+        "canonical_producers": [
+          ".omx/research/einstein_kolmogorov_crux_measurement_20260719.json",
+          ".omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json"
+        ],
+        "equation_id": "einstein_kolmogorov_crux_action_rate_contract_v1",
+        "name": "Einstein--Kolmogorov scoped action/rate contract",
+        "one_line_summary": "Exact contest action arithmetic with a hash-bound research-only n24 fixed-label wall plus matched exact-receiver frontier-magnitude anchor."
+      },
+      {
+        "canonical_consumers": [
+          "campaign_984_composition_route",
+          "et5_restricted_carriage_pricing",
+          "costate_sense_solver_reach_accounting"
+        ],
+        "canonical_producers": [
+          ".omx/research/ddm_et4_20260806/TWELFTH_MOVE_ADJUDICATION.md",
+          ".omx/research/ddm_et4_20260806/et4_solve_within_cvp_summary.json",
+          ".omx/research/ddm_et4_20260806/byteclose_archive_receipt.json"
+        ],
+        "equation_id": "ddm_et4_twelfth_move_solver_carriage_split_v1",
+        "name": "ET4 twelfth-move solver reach versus carriage split",
+        "one_line_summary": "Within-CVP solves reduced realized d_seg on tq1c, but the sparse i16 patch carriage spent far above W break-even, so the row is rate-dead."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/charters/ddm_cp135_rate_compose_charter_20260810.md",
+          ".omx/research/charters/ddm_ps135_pose_resolve_charter_20260810.md",
+          ".omx/research/charters/ddm_js1_global_joint_solve_charter_20260810.md",
+          "tools/main_hot_state.py POINTER_LINE"
+        ],
+        "canonical_producers": [
+          "tools/dispatch_modal_paired_auth_eval.py",
+          "src/tac/canonical_equations/gap_decomposition_against_floor_20260802.py"
+        ],
+        "equation_id": "gap_decomposition_against_demonstrated_floor_v1",
+        "name": "Gap decomposition against a demonstrated floor",
+        "one_line_summary": "Rank campaign axes by gap-to-a-demonstrated-floor, never by base term: per-axis gap, shares, and marginals from two MEASURED triples on one axis and rate denominator."
+      },
+      {
+        "canonical_consumers": [
+          "every pure-rate fire order and admission bar: call pure_rate_byte_bar_from_pointer() instead of copying a byte count, so the bar cannot go stale when the pointer moves on rate",
+          "tools/codex_arm_queue.py retraction reasons \u2014 the derivation a retracted stale-bar row should be re-filed against",
+          "rate-route rungs (mp2, rfo2, wd2 successors) that quote a required cut"
+        ],
+        "canonical_producers": [
+          ".omx/research/ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md",
+          ".omx/research/ddm_mc36_dual_axis_t4_verdict_20260814.md (the -37 flip seg leg that makes cp135 a distortion counter-example)",
+          ".omx/research/ddm_hv1_harvest_compose_ep508_20260815.md (the frozen distortion legs seg 0.029611 / pose 0.008294576541331089)"
+        ],
+        "equation_id": "sub015_pure_rate_archive_byte_bar_v1",
+        "name": "Sub-0.15 pure-rate archive byte bar, derived from the live pointer rather than copied from a snapshot",
+        "one_line_summary": "bar_bytes = (0.15 - (S_base - 25*B_base/D)) * D / 25. Stale-proof for PURE-RATE work; invalid the moment a candidate moves d_seg or d_pose."
+      },
+      {
+        "canonical_consumers": [
+          "any successor rung of the compensated-edit family: call project_at_mass() for its expected net before sealing, instead of assuming linear scaling",
+          "fire-order falsifier bands for semantic-quantization candidates (the pose bar is a fraction of the credit, not an absolute)",
+          "routing decisions between axes \u2014 family_cannot_close_alone() is why this family is composed rather than pursued to the gap",
+          "ddm_asym1's three-axis asymmetry: this is the worked case where concavity helps rather than hurts, because the damage is paid upward"
+        ],
+        "canonical_producers": [
+          ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+          "/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/MODAL_REMOTE_RESULT.json",
+          ".omx/research/ddm_asym1_three_axis_asymmetry_and_dynamics_20260818.md",
+          ".omx/research/ddm_sa1_uncompensated_semantic_edit_family_refused_20260818.md (the uncompensated control: 68-512x, 3/3 refused)"
+        ],
+        "equation_id": "compensated_semantic_edit_exchange_v1",
+        "name": "Compensated lossy-semantic-edit exchange rate: what a byte of rate credit costs in pose and seg, and why the family gets more efficient with mass",
+        "one_line_summary": "per S of rate credit: 0.508 back as pose, 0.388 as seg, 0.105 net; retention RISES with mass (concave pose leg); the gap alone needs 1.20x the whole semantic section \u2014 contributes, never routes"
+      },
+      {
+        "canonical_consumers": [
+          "any proposed re-coder / repack / byte-permutation on this lineage: call coding_candidate_admissible() before believing a byte delta",
+          "rate-route charters \u2014 the closure is why the route is representation, not coding (ddm_asym1 needs 11,584 B and none of it comes from the coder)",
+          "the NO-FAKE catalog: the lossy-compositor instance is a worked example of a metric improved by destroying information"
+        ],
+        "canonical_producers": [
+          ".omx/research/ddm_bp1_section_coding_axis_closed_20260818.md",
+          ".omx/research/ddm_xs1_cross_section_joint_coding_20260818.md",
+          "/Volumes/APDataStore/pact/ddm_bp1/ (all receipts + persisted payloads)"
+        ],
+        "equation_id": "section_coding_axis_closure_v1",
+        "name": "Section-coding axis closure, with the calibration / invertibility / uncensored-search preconditions that make a coding claim admissible",
+        "one_line_summary": "4 mechanisms x 4 sections leave -5 B = 3.3e-6 S; a coding candidate is admissible only if it beats its section's INSTRUMENT bar (hpac -39 B), ships a verified inverse, and searched past 8,284 B"
+      },
+      {
+        "canonical_consumers": [
+          "tac.win_families.container_optimizer.archive_delta_report",
+          "tac.win_families.container_optimizer.search_container_space",
+          "experiments.ddm_cw1_container_consumer_proof"
+        ],
+        "canonical_producers": [
+          "experiments.ddm_up3_carrier_splice",
+          "experiments.ddm_ck2_rate_ceiling_probe"
+        ],
+        "equation_id": "cw1_container_archive_vs_payload_delta_v1",
+        "name": "Container archive-vs-payload delta",
+        "one_line_summary": "archive dB minus the payload's whole-byte delta is a container term: up3 measured +7 payload bits costing +48 archive bytes, all recoverable"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          ".omx/research/ddm_rn1_n600_reopen_sweep_20260903.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_xr1_exchange_ratio_noise_floor.py"
+        ],
+        "equation_id": "exchange_ratio_noise_floor_v1",
+        "name": "Exchange-ratio noise floor -- the pair-bootstrap interval a byte<->distortion near-win margin must clear before it is admissible",
+        "one_line_summary": "sigma_B = 0 (deterministic coder), so the floor is the PAIR bootstrap: +/-200 B on a ~3,000 B rate credit, +/-0.00024 S on a realized dS; admit iff the 95% upper dS < 0"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_ft1_shipped_renderer_aligned_finetune_20260903.md",
+          ".omx/research/ddm_fb1_foldback_program_20260903.md"
+        ],
+        "canonical_producers": [
+          ".omx/research/ddm_rf1_renderer_film_rung_20260824.md",
+          ".omx/research/ddm_ft1_shipped_renderer_aligned_finetune_20260903.md"
+        ],
+        "equation_id": "renderer_seg_pose_coupling_shipped_object_v1",
+        "name": "Shipped-renderer seg->pose coupling -- the seg-only direction pays |Delta d_pose| = k |Delta d_seg| with k in [166.81, 217.30]",
+        "one_line_summary": "k = 166.81 (rf1 structural) and 217.30 (ft1 trained), 1.303x apart; at dB=0 a 25% seg cut funds d_pose 1.694e-05 but costs 8.4e-03 -- seg-only renderer is CLOSED"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_dr1_delta_R_noise_floor_n600_20260904.md",
+          ".omx/research/ddm_eq1_equations_leg_backfill_20260904.md"
+        ],
+        "canonical_producers": [
+          "tools/measure_delta_R_noise_floor.py",
+          ".omx/research/ddm_dr1_delta_R_noise_floor_n600_20260904.md"
+        ],
+        "equation_id": "annulus_restricted_prefix_bias_detector_v1",
+        "name": "Restricted-statistic prefix bias -- a global-pixel sanity check has no power against a boundary-restricted contiguous-prefix bias",
+        "one_line_summary": "dr1 n96->n600: annulus p95 +11.698%, all-pixel p95 +0.451% (25.94x amplification), prefix control bit-identical -- so global agreement never clears a restricted constant"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_md1_micro_to_macro_dynamics_20260904.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_md1_micro_to_macro.py",
+          ".omx/research/ddm_md1_micro_to_macro_dynamics_20260904.md"
+        ],
+        "equation_id": "checkpoint_trajectory_error_partition_v1",
+        "name": "Checkpoint-trajectory error partition and the optimizer-reachability floor",
+        "one_line_summary": "Five trajectory classes whose integer HT numerators sum to the distortion EXACTLY; the persistent share is a cadence-conditional CEILING on optimizer/schedule credit."
+      },
+      {
+        "canonical_consumers": [
+          "ddm_pc1 pose-carrier efficiency -- prices every basis variant before it is built, and refuses bit-depth-only framings",
+          "any future basis-precision or generated-basis arm: report the STEP and sweep it against Delta S, never a bit depth alone",
+          "carrier_rate_credit_pose_affordance_v1 -- this equation supplies the byte delta that that one's affordance bar consumes"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_pc1_pose_carrier_efficiency.py (modes probe, rate, coverage, solve, measure, price)"
+        ],
+        "equation_id": "pose_carrier_basis_rate_fidelity_exchange_v1",
+        "name": "Pose-carrier basis: the quantiser STEP is the rate-fidelity lever, not the bit depth; basis payload bytes reach archive.zip at ~1:1",
+        "one_line_summary": "The per-atom basis scale cancels, so the quantiser step is free: at a fixed 4-bit alphabet the step alone moves the payload 3,731 B. Payload bytes reach archive.zip at 1.03x (band 0.981-1.121)."
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_rc1_model_section_adaptive_recode.py",
+          "experiments/ddm_rc1_adaptive_section_codec.py"
+        ],
+        "equation_id": "model_section_adaptive_recode_ceiling_v1",
+        "name": "Adaptive-recode ceiling on packed integer MODEL sections, and its width-stability rule",
+        "one_line_summary": "An adaptive per-group tree coder over the MODEL sections' packed codes lands within 1% of their order-0 entropy for -1,733 container B; the credit tracks the packing's WIDTH STABILITY, not the raw win"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_cl3_rc1_rung_price.py",
+          ".omx/research/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md"
+        ],
+        "equation_id": "coder_strength_substitutes_for_capacity_v1",
+        "name": "model-coder strength substitutes for the capacity lever -- a stronger model coder returns less for the same weight shrink, so it makes capacity rungs worth less",
+        "one_line_summary": "one weight change, two containers: model -659 B on Brotli vs -457 B on rc1 (69.3%), stream +681 B in both; the rung is +22 B on the weak coder and +224 B on the shipped one"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_cl2_hpac_prior_capacity_ladder_on_shipped_object_20260905.md",
+          ".omx/research/charters/ddm_cl2_hpac_prior_capacity_ladder_on_shipped_object_20260905.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_cl2_hpac_prior_capacity_ladder.py",
+          ".omx/research/ddm_cl2_hpac_prior_capacity_ladder_on_shipped_object_20260905.md"
+        ],
+        "equation_id": "hpac_prior_capacity_slope_v1",
+        "name": "HPAC prior-capacity slope on the shipped mixer -- lowering the trainer's model-bit multiplier grows the packed model and does not lower the exact stream",
+        "one_line_summary": "cl2: control reproduces the shipped joint at -41 B (instrument PASS); lambda 1.0 -> 0.5 costs +350 B of model for +156 B of stream (slope +0.446 vs the -1 bar); prior law falsified, 0.25 not fired"
+      },
+      {
+        "canonical_consumers": [
+          ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md",
+          ".omx/research/charters/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_fe1_pose_price.py",
+          ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+        ],
+        "equation_id": "model_section_edit_container_break_fee_v1",
+        "name": "Container-break fee on an edited range-coded model section -- an edit costs a fixed ~58.6 B, not a per-code price, and an encoder-side container search pays most of it back",
+        "one_line_summary": "fe1: an edit costs 0.2134*N + 58.89 B at the shipped brotli/CK2 shape but only 0.1677*N - 1.92 B re-searched; 69.7 B recovered at N=1, 56.3 B at N=72"
+      },
+      {
+        "canonical_consumers": [
+          "experiments/ddm_rw1_renderer_edge_foldback.py",
+          ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_rw1_renderer_edge_foldback.py"
+        ],
+        "equation_id": "renderer_edge_layer_foldback_reach_v1",
+        "name": "Renderer edge-layer int4 code fold-back: minimum quantum of action",
+        "one_line_summary": "One int4 code step in head/blocks.3 already moves 240-455 argmax cells, so a renderer-weight fold-back is limited by the grid resolution, not by the search"
+      },
+      {
+        "canonical_consumers": [
+          "experiments/ddm_rp1_admit.py",
+          ".omx/research/ddm_rp1_rate_directed_token_predistortion_20260909.md"
+        ],
+        "canonical_producers": [
+          "experiments/ddm_rp1_rate_rank.py",
+          "experiments/ddm_rp1_sizing.py"
+        ],
+        "equation_id": "rate_directed_predistortion_yield_v1",
+        "name": "Rate-directed token pre-distortion yield under an adaptive coder",
+        "one_line_summary": "An adaptive coder pays out only a fraction of a first-order -log2 p saving when surprises are removed from the field: 0.1445 unselected, 0.2663 selected."
+      }
+    ]
+  }
+]

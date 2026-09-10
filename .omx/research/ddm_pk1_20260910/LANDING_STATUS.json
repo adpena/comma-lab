@@ -1,0 +1,19 @@
+{
+  "returncode": 17,
+  "main_commit_verified": false,
+  "fallback_commit": "25c30ae7dd53873b306bd2173996981846327585",
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_pk1_20260910/serializer_fallback/20260910T121047.969204Z-67329/intended-commit.bundle",
+  "bundle_sha256": "b6715dc3b281ff88fbb674a9697cabae31d3c151e631c377290b8272400c99aa",
+  "bundle_verified": true,
+  "commit_files_verified": 30,
+  "public_state_changed": false,
+  "shared_index_unchanged": true,
+  "refusal": {
+    "output": "phase=git_add\nerror: unable to create temporary file: Operation not permitted\nerror: .omx/research/ddm_pk1_20260910/BOUNDARY_BASELINE.json: failed to insert into database\nerror: unable to index file '.omx/research/ddm_pk1_20260910/BOUNDARY_BASELINE.json'\nfatal: adding files failed",
+    "serializer_rc": 128
+  },
+  "main_landing_disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": ".omx/research/ddm_pk1_20260910/SERIALIZER_ARGV.json",
+  "fire_trigger": "Git object writes permitted and MAIN harvests the packet"
+}

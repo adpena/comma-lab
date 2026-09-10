@@ -1,0 +1,473 @@
+{
+  "runtime_files": [
+    {
+      "path": "cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "retained_eval_sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3",
+      "match": true
+    },
+    {
+      "path": "cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+      "retained_eval_sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160",
+      "match": true
+    },
+    {
+      "path": "cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66",
+      "retained_eval_sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66",
+      "match": true
+    },
+    {
+      "path": "cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864",
+      "retained_eval_sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864",
+      "match": true
+    },
+    {
+      "path": "cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "retained_eval_sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+      "match": true
+    },
+    {
+      "path": "cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1",
+      "retained_eval_sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1",
+      "match": true
+    },
+    {
+      "path": "cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "retained_eval_sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "match": true
+    },
+    {
+      "path": "inflate.py",
+      "sha256": "a741f1df65bc23997d4aff24f5c989baa99b60df58f5dac41fcbfba00c480eda",
+      "retained_eval_sha256": "a741f1df65bc23997d4aff24f5c989baa99b60df58f5dac41fcbfba00c480eda",
+      "match": true
+    },
+    {
+      "path": "inflate.sh",
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "retained_eval_sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3",
+      "match": true
+    },
+    {
+      "path": "runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8",
+      "retained_eval_sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8",
+      "match": true
+    },
+    {
+      "path": "runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38",
+      "retained_eval_sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38",
+      "match": true
+    },
+    {
+      "path": "runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a",
+      "retained_eval_sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a",
+      "match": true
+    },
+    {
+      "path": "runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "retained_eval_sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337",
+      "match": true
+    },
+    {
+      "path": "runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "retained_eval_sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f",
+      "match": true
+    },
+    {
+      "path": "runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2",
+      "retained_eval_sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2",
+      "match": true
+    },
+    {
+      "path": "runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e",
+      "retained_eval_sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de",
+      "retained_eval_sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797",
+      "retained_eval_sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "retained_eval_sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "retained_eval_sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36",
+      "retained_eval_sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "retained_eval_sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "match": true
+    },
+    {
+      "path": "runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1",
+      "retained_eval_sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1",
+      "match": true
+    },
+    {
+      "path": "runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a",
+      "retained_eval_sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a",
+      "match": true
+    },
+    {
+      "path": "runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00",
+      "retained_eval_sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00",
+      "match": true
+    },
+    {
+      "path": "runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba",
+      "retained_eval_sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba",
+      "match": true
+    },
+    {
+      "path": "runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+      "retained_eval_sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99",
+      "match": true
+    },
+    {
+      "path": "runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "retained_eval_sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9",
+      "match": true
+    },
+    {
+      "path": "runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5",
+      "retained_eval_sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5",
+      "match": true
+    },
+    {
+      "path": "runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452",
+      "retained_eval_sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452",
+      "match": true
+    },
+    {
+      "path": "runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064",
+      "retained_eval_sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064",
+      "match": true
+    },
+    {
+      "path": "runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6",
+      "retained_eval_sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6",
+      "match": true
+    },
+    {
+      "path": "runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903",
+      "retained_eval_sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903",
+      "match": true
+    },
+    {
+      "path": "runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b",
+      "retained_eval_sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b",
+      "match": true
+    },
+    {
+      "path": "runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13",
+      "retained_eval_sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13",
+      "match": true
+    },
+    {
+      "path": "runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "retained_eval_sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2",
+      "match": true
+    },
+    {
+      "path": "runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589",
+      "retained_eval_sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589",
+      "match": true
+    },
+    {
+      "path": "runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "retained_eval_sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa",
+      "match": true
+    },
+    {
+      "path": "runtime/residual_archive.py",
+      "sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "retained_eval_sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+      "match": true
+    },
+    {
+      "path": "runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0",
+      "retained_eval_sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0",
+      "match": true
+    },
+    {
+      "path": "runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb",
+      "retained_eval_sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb",
+      "match": true
+    },
+    {
+      "path": "runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26",
+      "retained_eval_sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26",
+      "match": true
+    },
+    {
+      "path": "runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826",
+      "retained_eval_sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826",
+      "match": true
+    },
+    {
+      "path": "runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+      "retained_eval_sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+      "match": true
+    }
+  ],
+  "runtime_all_match": true,
+  "source_manifest_rows": [
+    {
+      "path": "README.md",
+      "status": "PASS"
+    },
+    {
+      "path": "compress.py",
+      "status": "MISSING"
+    },
+    {
+      "path": "cpr1/carrier_codec.py",
+      "status": "PASS"
+    },
+    {
+      "path": "cpr1/ddm_mp2_semantic_receiver.py",
+      "status": "PASS"
+    },
+    {
+      "path": "cpr1/hpac_integer.py",
+      "status": "PASS"
+    },
+    {
+      "path": "cpr1/hpac_integer_sparse.py",
+      "status": "PASS"
+    },
+    {
+      "path": "cpr1/inflate.py",
+      "status": "PASS"
+    },
+    {
+      "path": "cpr1/integer_model_io.py",
+      "status": "PASS"
+    },
+    {
+      "path": "cpr1/rc1_adaptive_model_sections.py",
+      "status": "PASS"
+    },
+    {
+      "path": "inflate.py",
+      "status": "HASH_MISMATCH"
+    },
+    {
+      "path": "inflate.sh",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/__init__.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/baseline.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/bits.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/carrier_repack.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/compensation_overlay.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/ddm_wc1_advisory_runtime.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/dx2_cabac_coefficients.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/__init__.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/adaptive_ans.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/coefficient_ar1_codec.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/coefficient_predictor.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/rc64.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/rc64_backend.c",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/entropy/renderer_weight_codec.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/f26_corrector_native.c",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/f26_hpac_native.c",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/f26_hpac_native.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/f26_inflate.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/frame0_selector.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/free_corrector.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/fx1_logistic_mixer_corrector.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/fx2_model_axis_corrector.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/hpac_inference.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/ihs2.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/ihs2_gate_a.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/native_free_corrector.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/rc1_adaptive_model_sections.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/rc2_hpac_semistatic_mixing.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/rc3_shared_mixer.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/residual_archive.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/rr4_free_corrector.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/rr5_arith_basis.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/sm1_semantic_mixer.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/tc1_receiver_checkpoint.py",
+      "status": "PASS"
+    },
+    {
+      "path": "runtime/tc1_shared_mixer.py",
+      "status": "PASS"
+    }
+  ],
+  "manifest_counts": {
+    "PASS": 44,
+    "MISSING": 1,
+    "HASH_MISMATCH": 1
+  },
+  "retracted_code_scan": {
+    "pattern": "tc3|tc4|lane.?predict|MomentPredictor|FastContextMixer|LANE_CLASS|ROW_START|ROW_STOP",
+    "text_files": 47,
+    "matches": 0,
+    "scope": "All staged text and file names; no semantic decompression or scorer execution"
+  },
+  "archive_members": [
+    {
+      "name": "p",
+      "bytes": 180133,
+      "sha256": "2c1a121a46c43b111be0550f733d98a3da7e68be99f3659e3728fe7d57958abd"
+    }
+  ]
+}
