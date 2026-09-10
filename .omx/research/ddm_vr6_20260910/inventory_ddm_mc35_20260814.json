@@ -1,0 +1,11 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_mc35_20260814",
+  "started": "2026-09-10T03:33:09.663072+00:00",
+  "completed": "2026-09-10T03:33:10.058048+00:00",
+  "bytes": 22942889173,
+  "allocated_bytes": 22966497280,
+  "files": 6903,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": []
+}

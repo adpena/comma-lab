@@ -1,0 +1,19 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term",
+  "bytes": 7094156607,
+  "large_files": [],
+  "metadata_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_final_tests/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_geometry_o1_k0_32/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_oracle32/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer/20260910T020559.892742Z-77305/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_oracle600/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_variants_o1/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_variants_o0/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_tests/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/serializer_v2/20260910T021017.088527Z-92158/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_decompose/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_finish_o1/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_finish_o0/launch_manifest.json"
+  ]
+}

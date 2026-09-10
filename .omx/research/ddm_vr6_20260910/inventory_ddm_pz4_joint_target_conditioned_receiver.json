@@ -1,0 +1,21 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver",
+  "started": "2026-09-10T03:33:09.507399+00:00",
+  "completed": "2026-09-10T03:33:09.662794+00:00",
+  "bytes": 25021882122,
+  "allocated_bytes": 25026936832,
+  "files": 1904,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1786636360747565879,
+      "device": 16777240,
+      "inode": 2656116,
+      "nlink": 1
+    }
+  ]
+}

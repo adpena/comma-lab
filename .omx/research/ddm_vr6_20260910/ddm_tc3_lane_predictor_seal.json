@@ -1,0 +1,19 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal",
+  "bytes": 8079992604,
+  "files": 6620,
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/public_identity/output/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1789011014602803301,
+      "device": 16777240,
+      "inode": 4862582,
+      "nlink": 1
+    }
+  ],
+  "errors": [],
+  "observation": "metadata only; protected live/lineage root; no payload hashes or mutations",
+  "time": "2026-09-10T03:36:44.132788+00:00"
+}

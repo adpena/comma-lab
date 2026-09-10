@@ -1,0 +1,80 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+    "historical_sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da",
+    "bytes": 1831204800,
+    "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/OVERLAY.json",
+    "receipt_sha256": "e545845a5561826f6facd04223af96f56e3778a1241cfc96e13ed58cfe9f313e",
+    "argv": [
+      ".venv/bin/python",
+      "experiments/ddm_sj1_joint_admission.py",
+      "render-edits",
+      "--field",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/admission_pass4/field_admitted.npz",
+      "--out-dir",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay",
+      "--threads",
+      "4",
+      "--progress"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "launch_git_sha": "a7eae1c2fc8e9dee5d91de85ce25e59d318a3918",
+    "launch_manifest_sha256": "b22b98423229a250e7a681432ae078a48a776375ebccde03f514f7fa70132634",
+    "field": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/admission_pass4/field_admitted.npz",
+    "field_expected_sha256": "813bf1e6770161b604348491433386661110001a5eefd8a4fdcd7d70bc25365c",
+    "field_current_sha256": "813bf1e6770161b604348491433386661110001a5eefd8a4fdcd7d70bc25365c",
+    "field_matches": true,
+    "seal_alone_sufficient": false,
+    "why": "Render consumes pre-subset edit field and ancestor body, not the final pass5 sealed field; transitive source/body closure not established.",
+    "body_receipts": {
+      "axis": "contest_cuda",
+      "body_archive": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime/archive.zip",
+      "body_archive_sha256": "08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e",
+      "body_raw": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/parseback/lambda_1p0/0.raw",
+      "body_tokens": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/decoded_tokens.u8",
+      "gt_lineage": "dali",
+      "gt_table_path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "gt_table_sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"
+    },
+    "score_claim": false
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+    "historical_sha256": "494484d210cc91ac33ff5107ea40616509b3a6536f541aa9845fc0c8164f80cc",
+    "bytes": 1831204800,
+    "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/OVERLAY.json",
+    "receipt_sha256": "7bcfbb166b9c7d92c100478178422d3b93a91c9cae448d744d27388200c57bde",
+    "argv": [
+      ".venv/bin/python",
+      "experiments/ddm_sj1_joint_admission.py",
+      "render-edits",
+      "--field",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/passes/pass5_gt/field_after.npz",
+      "--out-dir",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay",
+      "--threads",
+      "4",
+      "--progress"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "launch_git_sha": "a7eae1c2fc8e9dee5d91de85ce25e59d318a3918",
+    "launch_manifest_sha256": "c0f509e016f85bc0e4ee996f6163922f360ffd95469e1a2f76544998559fa515",
+    "field": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/passes/pass5_gt/field_after.npz",
+    "field_expected_sha256": "48b5852e3c3adc3482de66375e98bc1771c34bb47db8c6f234593e1be9d3b9bf",
+    "field_current_sha256": "48b5852e3c3adc3482de66375e98bc1771c34bb47db8c6f234593e1be9d3b9bf",
+    "field_matches": true,
+    "seal_alone_sufficient": false,
+    "why": "Render consumes pre-subset edit field and ancestor body, not the final pass5 sealed field; transitive source/body closure not established.",
+    "body_receipts": {
+      "axis": "contest_cuda",
+      "body_archive": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime/archive.zip",
+      "body_archive_sha256": "08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e",
+      "body_raw": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/parseback/lambda_1p0/0.raw",
+      "body_tokens": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/decoded_tokens.u8",
+      "gt_lineage": "dali",
+      "gt_table_path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "gt_table_sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"
+    },
+    "score_claim": false
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "candidate_bytes": 3662409600,
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "bytes": 3662409600,
+      "device": 16777240,
+      "inode": 4688229,
+      "match_reasons": [
+        "suffix:.raw",
+        "ancestor:parseback"
+      ],
+      "mtime_ns": 1789002535223613810,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw"
+    }
+  ],
+  "minimum_bytes_inclusive": 1073741824,
+  "root": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price",
+  "scan_completed_utc": "2026-09-10T03:30:44.063518+00:00",
+  "scan_errors": [],
+  "scan_started_utc": "2026-09-10T03:30:35.452444+00:00",
+  "schema": "ddm_vr3.large_blob_inventory.v1",
+  "selection": "regular files whose basename ends .raw or whose path has an exact inflated, parseback, or renders directory component"
+}

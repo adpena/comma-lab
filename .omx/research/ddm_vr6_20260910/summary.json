@@ -1,0 +1,32 @@
+{
+  "rows": 183,
+  "large_file_logical_bytes": 484074805746,
+  "top_ten_large_files": 171,
+  "classified_roots": 20,
+  "top_ten_roots": 10,
+  "top_ten_scan_errors": 0,
+  "du_returncode": 0,
+  "du_stderr": "",
+  "class_counts": {
+    "A_RETAIN_REPRODUCER_OR_SOURCE": 2,
+    "B_UNCERTIFIED_BULK": 169,
+    "C_POINTER_OR_ACTIVE_LINEAGE": 8,
+    "B_SEALED_RAW_ALTERNATE_LAYOUT": 1,
+    "B_PRE_SUBSET_OVERLAY": 2,
+    "C_LIVE_ARM": 1
+  },
+  "verdict_counts": {
+    "RETAIN": 2,
+    "BLOCKED": 181
+  },
+  "deletable_bytes": 0,
+  "reclaimed_bytes": 0,
+  "fresh_hash_files": 3,
+  "fresh_hash_bytes": 7324819200,
+  "rehash_ledger": "/Volumes/VertigoDataTier/pact/ddm_vr6_reclaim_20260910/rehash_ledger.jsonl",
+  "rehash_ledger_sha256": "f44e265de10ccbc7657e33535967bb4b506558ade859a8ecef4e97a58cf61ef4",
+  "target_bytes": 42949672960,
+  "target_met": false,
+  "full_rebuild_executed": false,
+  "score_claim": false
+}

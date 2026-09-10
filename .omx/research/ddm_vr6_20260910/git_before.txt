@@ -1,0 +1,105 @@
+ M .omx/state/active_lane_dispatch_claims.md
+ M .omx/state/canonical_task_status.jsonl
+ M .omx/state/current_focus.md
+ M .omx/state/lane_maturity_audit.log
+ M .omx/state/lane_registry.json
+ M .omx/state/modal_call_id_ledger.jsonl
+ M .omx/state/operator_p0_ledger.jsonl
+ M .omx/state/probe_outcomes.jsonl
+ M reports/latest.md
+?? .omx/research/ddm_bnd1_20260909/FINAL_HANDOFF.json
+?? .omx/research/ddm_bnd1_20260909/landing.patch
+?? .omx/research/ddm_bnd2_20260910/FINAL_HANDOFF.json
+?? .omx/research/ddm_bnd2_20260910/GENERATION2_FINAL_HANDOFF.json
+?? .omx/research/ddm_bnd2_20260910/generation2_bundle_verification.json
+?? .omx/research/ddm_bnd2_20260910/generation2_landing.patch
+?? .omx/research/ddm_bnd2_20260910/generation2_landing_task_event.json
+?? .omx/research/ddm_bnd2_20260910/generation2_resume_state.json
+?? .omx/research/ddm_bnd2_20260910/generation2_serializer_intent.json
+?? .omx/research/ddm_bnd2_20260910/generation2_serializer_status.json
+?? .omx/research/ddm_bnd2_20260910/landing.patch
+?? .omx/research/ddm_bnd2_20260910/landing_intent.json
+?? .omx/research/ddm_bnd2_20260910/serializer_argv.json
+?? .omx/research/ddm_bnd2_20260910/serializer_final_argv.json
+?? .omx/research/ddm_bnd2_20260910/serializer_final_intent.json
+?? .omx/research/ddm_bnd2_20260910/serializer_status.json
+?? .omx/research/ddm_bnd3_20260910/FINAL_HANDOFF.json
+?? .omx/research/ddm_bnd3_20260910/attempt1_landing.patch
+?? .omx/research/ddm_bnd3_20260910/attempt1_serializer_argv.json
+?? .omx/research/ddm_bnd3_20260910/attempt1_serializer_intent.json
+?? .omx/research/ddm_bnd3_20260910/attempt1_serializer_status.json
+?? .omx/research/ddm_bnd3_20260910/attempt1_verification_failure.json
+?? .omx/research/ddm_bnd3_20260910/bundle_verification.json
+?? .omx/research/ddm_bnd3_20260910/landing.patch
+?? .omx/research/ddm_bnd3_20260910/landing_task_event.json
+?? .omx/research/ddm_bnd3_20260910/serializer_argv.json
+?? .omx/research/ddm_bnd3_20260910/serializer_intent.json
+?? .omx/research/ddm_bnd3_20260910/serializer_status.json
+?? .omx/research/ddm_cd3_20260910/FINAL_HANDOFF.json
+?? .omx/research/ddm_cd3_20260910/bundle_verification.json
+?? .omx/research/ddm_cd3_20260910/landing.patch
+?? .omx/research/ddm_cd3_20260910/landing_manifest.json
+?? .omx/research/ddm_cd3_20260910/metadata_bundle_intents.json
+?? .omx/research/ddm_cd3_20260910/metadata_bundle_receipts.json
+?? .omx/research/ddm_cd3_20260910/serializer_fallback/
+?? .omx/research/ddm_cs1_20260909/LANDING_HANDOFF.json
+?? .omx/research/ddm_cs1_20260909/catalog344_initial.json
+?? .omx/research/ddm_cs1_20260909/equations_recall.json
+?? .omx/research/ddm_cs1_20260909/hash_resume.jsonl
+?? .omx/research/ddm_cs1_20260909/head_blob_paths.json
+?? .omx/research/ddm_cs1_20260909/lanes_before.json
+?? .omx/research/ddm_cs1_20260909/partial_owed.json
+?? .omx/research/ddm_cs1_20260909/partial_repin_matches.json
+?? .omx/research/ddm_cs1_20260909/reachable_blobs.json
+?? .omx/research/ddm_cs1_20260909/scan_after_launch/.launch_start_gate
+?? .omx/research/ddm_cs1_20260909/scan_after_launch/.watchers_start_gate
+?? .omx/research/ddm_cs1_20260909/scan_launch/.launch_start_gate
+?? .omx/research/ddm_cs1_20260909/scan_launch/.watchers_start_gate
+?? .omx/research/ddm_cs1_20260909/scan_resume.py
+?? .omx/research/ddm_cs1_20260909/serializer_code/
+?? .omx/research/ddm_cs1_20260909/serializer_code_argv.json
+?? .omx/research/ddm_cs1_20260909/serializer_code_status.json
+?? .omx/research/ddm_cs1_20260909/serializer_complete/
+?? .omx/research/ddm_cs1_20260909/serializer_complete_argv.json
+?? .omx/research/ddm_cs1_20260909/serializer_complete_status.json
+?? .omx/research/ddm_cs1_20260909/serializer_final/
+?? .omx/research/ddm_cs1_20260909/serializer_final_argv.json
+?? .omx/research/ddm_cs1_20260909/serializer_final_status.json
+?? .omx/research/ddm_sw1_20260910/blob_retry_fallback/
+?? .omx/research/ddm_sw1_20260910/retry_fallback/
+?? .omx/research/ddm_sw1_20260910/ssd_audit_after.json
+?? .omx/research/ddm_tc2_20260910/FINAL_HANDOFF.json
+?? .omx/research/ddm_tc2_20260910/POST_SERIALIZATION_MANIFEST.json
+?? .omx/research/ddm_tc2_20260910/attempt1_landing.patch
+?? .omx/research/ddm_tc2_20260910/attempt1_landing_manifest.json
+?? .omx/research/ddm_tc2_20260910/attempt1_serializer_argv.json
+?? .omx/research/ddm_tc2_20260910/attempt1_serializer_status.json
+?? .omx/research/ddm_tc2_20260910/attempt1_verification_failure.json
+?? .omx/research/ddm_tc2_20260910/bundle_verification.json
+?? .omx/research/ddm_tc2_20260910/final_landing_task_event.json
+?? .omx/research/ddm_tc2_20260910/landing.patch
+?? .omx/research/ddm_tc2_20260910/landing_manifest.json
+?? .omx/research/ddm_tc2_20260910/serializer_argv.json
+?? .omx/research/ddm_tc2_20260910/serializer_environment.json
+?? .omx/research/ddm_tc2_20260910/serializer_self_identity_refusal.json
+?? .omx/research/ddm_tc2_20260910/serializer_status.json
+?? .omx/research/ddm_tc2_20260910/source_landing.patch
+?? .omx/research/ddm_tc2_20260910/source_serializer/
+?? .omx/research/ddm_tc2_20260910/source_serializer_argv.json
+?? .omx/research/ddm_tc2_20260910/source_serializer_status.json
+?? .omx/research/ddm_tc2_20260910/task_loader_existing_warnings.json
+?? .omx/research/ddm_tc3_20260910/
+?? .omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md
+?? .omx/research/ddm_vr5_20260909/attempt1_serializer_invocation.json
+?? .omx/research/ddm_vr5_20260909/attempt1_serializer_status.json
+?? .omx/research/ddm_vr5_20260909/bundle_verification.json
+?? .omx/research/ddm_vr5_20260909/serializer/
+?? .omx/research/ddm_vr5_20260909/serializer_invocation.json
+?? .omx/research/ddm_vr5_20260909/serializer_status.json
+?? experiments/ddm_tc3_geometry.py
+?? experiments/ddm_tc3_mixer.py
+?? experiments/ddm_tc3_price.py
+?? experiments/ddm_tc3_receiver.py
+?? experiments/ddm_tc3_trace.py
+?? experiments/test_ddm_tc3_geometry.py
+?? experiments/tests/fixtures/

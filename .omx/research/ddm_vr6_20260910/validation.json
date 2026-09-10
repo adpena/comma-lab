@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "paths_unique": true,
+    "top_ten_covered": true,
+    "all_rows_ge_1_GiB": true,
+    "all_hashes_stable_and_receipt_matching": true,
+    "no_unhashed_admission": true,
+    "no_deletion_claim": true,
+    "all_owners_and_dispositions_present": true,
+    "rehash_pin_matches": true,
+    "apply_disabled": true,
+    "native_plan_refused": true,
+    "no_ap_large_files": true
+  },
+  "rows": 183,
+  "top_ten_large_files": 171,
+  "top_ten_legacy_raws": 81,
+  "top_ten_runtime_drift": 4,
+  "score_claim": false
+}

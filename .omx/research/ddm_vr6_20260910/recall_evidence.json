@@ -1,0 +1,34 @@
+{
+  "research_memos_and_arm_receipts": {
+    "query": "certif.{0,20}reclaim|superseded_binding|parse.back.{0,30}(reclaim|delet)",
+    "output": "research_recall.txt"
+  },
+  "index_DAG_design_task": {
+    "query": "certif.{0,20}reclaim|superseded_binding|parse.back.{0,30}(reclaim|delet)|rebuildable bulk",
+    "scopes": [
+      ".omx/research/CANONICAL_RESEARCH_INDEX*",
+      ".omx/research/sub015_DAG_*",
+      "docs",
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/operator_p0_ledger.jsonl"
+    ],
+    "output": "index_design_task_recall.txt"
+  },
+  "beyond_seeds": [
+    {
+      "source": ".omx/research/ddm_dk2_apdatastore_cold_store_sweep_20260904.md",
+      "finding": "Previous predicted generation bulk was too small; real bulk was inflated raw trees. Concurrent movers harmed active training.",
+      "change": "Measure named entire directories before accepting the size prediction; single hash stream and metadata-only traversal; no movers."
+    },
+    {
+      "source": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "finding": "Retained codec output is an active seal-intake handoff consumed by tc3.",
+      "change": "Preserve tc2 payload and handoff; terminal research label is not a consumer closure."
+    },
+    {
+      "source": ".omx/research/ddm_bnd3_address_term_decomposition_20260910.md",
+      "finding": "Forty-eight retained twin payloads and full-field cached-row parsebacks; stage/intermediate payloads remain active.",
+      "change": "Do not infer entire directory is disposable from a negative score verdict."
+    }
+  ]
+}

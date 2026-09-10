@@ -1,0 +1,4 @@
+BLOCKED — DO NOT FIRE. No valid deletion batch exists.
+Zero admitted bytes. Current native legacy apply rejects target 40 GiB below its 60 GiB minimum; generalized mode requires a positive admitted set. This command is pinned for review only, not a reclaim authorization. Replan and regenerate the command after actual admission.
+
+.venv/bin/python experiments/ddm_vr3_certified_raw_reclaim.py apply --ledger .omx/research/ddm_vr6_reclaim_plan_20260910.jsonl --expected-ledger-sha256 b0ace2373ffa2778e5d90b5057bcb8dcaf44591815719feab8a9a8f8d9aa6ce7 --journal /Volumes/VertigoDataTier/pact/ddm_vr6_reclaim_20260910/apply_journal.jsonl --target-bytes 42949672960

@@ -1,0 +1,20 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map",
+  "bytes": 5927073589,
+  "large_files": [],
+  "metadata_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022457.538754Z-40277/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022638.520227Z-45819/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_pin_fixed/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_decode_control/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_fit/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/retained_manifest_summary.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_fit_absolute/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_encode/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_prepare600/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_prepare_one/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_pin/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_decode_full/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/launch_totals/launch_manifest.json"
+  ]
+}

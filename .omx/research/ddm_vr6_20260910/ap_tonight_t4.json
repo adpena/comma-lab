@@ -1,0 +1,63 @@
+{
+  "scope": "ddm_*_t4_* directories ending 20260909 or 20260910, symlinks excluded",
+  "time": "2026-09-10T03:30:38.400309+00:00",
+  "directories": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_cmp1_t4_rc3_tc1_composed_20260909",
+      "bytes": 453415,
+      "files": 32,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_cmp2_t4_sm1_semantic_coder_20260909",
+      "bytes": 452428,
+      "files": 32,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pc2_t4_carrier_scales_resolve_20260909",
+      "bytes": 451381,
+      "files": 32,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_rc2_t4_hpac_semistatic_mixing_20260909",
+      "bytes": 449509,
+      "files": 32,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_rp1_t4_rate_directed_predistortion_20260910",
+      "bytes": 253232,
+      "files": 28,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910",
+      "bytes": 250872,
+      "files": 28,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass4_20260909",
+      "bytes": 450674,
+      "files": 32,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass5_20260909",
+      "bytes": 265383,
+      "files": 31,
+      "large_files": [],
+      "disposition": "RETAIN_EXACT_ROW_REPRODUCER"
+    }
+  ],
+  "errors": []
+}

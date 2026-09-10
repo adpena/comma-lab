@@ -1,0 +1,21 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/public_datasets",
+  "started": "2026-09-10T03:33:07.054961+00:00",
+  "completed": "2026-09-10T03:33:09.143686+00:00",
+  "bytes": 26764292251,
+  "allocated_bytes": 26819125248,
+  "files": 25087,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/public_datasets/comma10k/.git/objects/pack/pack-aaf2aafc387dc3de5548e7cf53a8191839447794.pack",
+      "bytes": 13355447607,
+      "allocated_bytes": 13355450368,
+      "mtime_ns": 1785888223699068844,
+      "device": 16777240,
+      "inode": 2079388,
+      "nlink": 1
+    }
+  ]
+}

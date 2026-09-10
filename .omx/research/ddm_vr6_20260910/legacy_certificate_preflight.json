@@ -1,0 +1,580 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/retained/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_up3/advisory/attempt_0001/work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_up3/advisory/attempt_0001/work/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_to1/advisory/attempt_0002/work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_to1/advisory/attempt_0002/work/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rr6/advisory_native_r1/work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rr6/advisory_native_r1/work/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rr6/advisory_ship_r2/work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rr6/advisory_ship_r2/work/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_w72_distortion_advisory/attempt_r1/work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_w72_distortion_advisory/attempt_r1/work/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rc2/composed_decode_r1/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rc2/composed_decode_r1/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rc2/composed_decode_r2/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rc2/composed_decode_r2/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_tile_brotli_probe_20260607Tcodex_v3_section_preserve/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_tile_brotli_probe_20260607Tcodex_v3_section_preserve/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/direct_inflate_survival/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/direct_inflate_survival/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc3_mixed_coder_receiver_integration_20260725T041134Z/control/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc3_mixed_coder_receiver_integration_20260725T041134Z/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc3_mixed_coder_receiver_integration_20260725T041134Z/runtime/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc3_mixed_coder_receiver_integration_20260725T041134Z/runtime/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/local_cpu_advisory_work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "historical_sha256": "172910ceee9082880445282844e4d0bfbecda48af4dbe0dcacd556ced6d02b10",
+    "certificate_status": "BLOCKED",
+    "error": "runtime path-set drift: missing=[] extra=['README.md', 'src/__pycache__/codec.cpython-312.pyc', 'src/__pycache__/codec_sidecar.cpython-312.pyc', 'src/__pycache__/frame_selector.cpython-312.pyc', 'src/__pycache__/model.cpython-312.pyc']"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/global_mutated/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/global_mutated/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/parent/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/parent/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/selective/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/selective/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/local_cpu_advisory_work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "historical_sha256": "2c0cc70b0d2f3e01848bfdc7d06d003183d41adbdec5f3964d82603cbacc40d8",
+    "certificate_status": "BLOCKED",
+    "error": "runtime path-set drift: missing=[] extra=['README.md', 'src/__pycache__/codec.cpython-312.pyc', 'src/__pycache__/codec_sidecar.cpython-312.pyc', 'src/__pycache__/frame_selector.cpython-312.pyc', 'src/__pycache__/model.cpython-312.pyc']"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/global_mutated/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/global_mutated/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/parent/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/parent/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/selective/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/selective/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/local_cpu_advisory_work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "historical_sha256": "b2276fad9f40cd90a03cb12e33d679031b2894e5246d47cdc869cb66a853a277",
+    "certificate_status": "BLOCKED",
+    "error": "runtime path-set drift: missing=[] extra=['README.md', 'src/__pycache__/codec.cpython-312.pyc', 'src/__pycache__/codec_sidecar.cpython-312.pyc', 'src/__pycache__/frame_selector.cpython-312.pyc', 'src/__pycache__/model.cpython-312.pyc']"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/global_mutated/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/global_mutated/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/parent/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/parent/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/selective/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/selective/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/local_cpu_advisory_work/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "historical_sha256": "98ba293fecb709cb30de1c8b1aac2ad4cd8bc55a789a021a63ea2448e7ebc4b3",
+    "certificate_status": "BLOCKED",
+    "error": "runtime path-set drift: missing=[] extra=['README.md', 'src/__pycache__/codec.cpython-312.pyc', 'src/__pycache__/codec_sidecar.cpython-312.pyc', 'src/__pycache__/frame_selector.cpython-312.pyc', 'src/__pycache__/model.cpython-312.pyc']"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/global_mutated/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/global_mutated/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/parent/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/parent/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/selective/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/selective/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_sh1_local_exact_20260727T2210Z/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/experiments/results/ddm_sh1_local_exact_20260727T2210Z/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/pz4r_candidate/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/raw/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/upstream_harness/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/upstream_harness/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/fresh/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/fresh/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic1_incumbent_compose_and_buy_row_20260724/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_ic1_incumbent_compose_and_buy_row_20260724/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/g52_fulln600_lossy_selected_plane_scoring_frontier46_layered_20260726/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic2_optimal_incumbent_pose_typed_20260724/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_ic2_optimal_incumbent_pose_typed_20260724/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/anchor_packet/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/anchor_packet/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/d2_requant_cheapest/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/d2_requant_cheapest/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/d2_jrd_fixture_transfer/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/d2_jrd_fixture_transfer/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e3_inflate_compose_and_depclose_20260723/upstream_harness/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e3_inflate_compose_and_depclose_20260723/upstream_harness/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_seg/brotli/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_seg/brotli/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/upstream_harness_brotli/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/upstream_harness_brotli/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/upstream_harness_lzma1_fallback/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/upstream_harness_lzma1_fallback/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_1/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_2/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v3_pre_recursive_schema/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v3_pre_recursive_schema/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v5_pre_review_hardening/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v5_pre_review_hardening/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v4_pre_version_stamps/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v4_pre_version_stamps/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/upstream_harness/submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/upstream_harness/submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v6_pre_nested_schema/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v6_pre_nested_schema/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v2_cuda_refuse/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v2_cuda_refuse/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_serial/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": null,
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_cr2_ep854/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_cr2_ep854/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4b_static_kneeA/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4b_static_kneeA/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_cx1_pj2ix2/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_cx1_pj2ix2/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/wr1_kneeA/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/wr1_kneeA/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_gd3_coarse12x16_pooled/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_gd3_coarse12x16_pooled/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_pw1/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_pw1/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_pj2/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_pj2/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4c_static_photo_celldrop50/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4c_static_photo_celldrop50/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_refine_celldrop50/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_refine_celldrop50/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_mq1_partial/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_mq1_partial/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/wr1_kneeB/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/wr1_kneeB/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_ms8/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_ms8/inflated_outputs_manifest.json'"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_dc1_fold/inflated/0.raw",
+    "bytes": 3662409600,
+    "forbidden_reason": "SUBMISSIONS_TREE_NEVER_TOUCH",
+    "certificate_status": "BLOCKED",
+    "error": "[Errno 2] No such file or directory: '/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_dc1_fold/inflated_outputs_manifest.json'"
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "scope": "stock repo_reference_hits including configured live-tree text scopes; current pointers explicit; VR custody files excluded",
+  "time": "2026-09-10T03:37:00.552125+00:00",
+  "hits": {
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw": [
+      "/Volumes/APDataStore/pact/ddm_sj1_pass5_price/SEAL_ddm_sj1_token_predistortion_pass5_contest_cuda.json:122:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/SEAL_ddm_sj1_token_predistortion_pass5_contest_cuda.json:122:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/launch_manifest.json:102:      \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/launch_manifest.json:10:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/launch_manifest.json:42:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/launch_manifest.json:74:      \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/resource_safe_run_status.json:10:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/run.log:33:    \"CPR1_RC64_LIBRARY\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/build/rc64_backend.so\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/run.log:34:    \"F26_CORRECTOR_NATIVE_LIBRARY\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/build/f26_corrector_native.so\"",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/run.log:39:    \"path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/.f26_decode_checkpoints/tokens_cpu_stage_complete.json:94:    \"path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json:13:    \"checkpoint_dir\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/.f26_decode_checkpoints\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json:66:    \"CPR1_RC64_LIBRARY\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/build/rc64_backend.so\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json:67:    \"F26_CORRECTOR_NATIVE_LIBRARY\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/build/f26_corrector_native.so\"",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json:72:    \"path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_0.json:117:    \"decode_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_1.json:117:    \"decode_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_2.json:117:    \"decode_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_3.json:117:    \"decode_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_4.json:117:    \"decode_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/seg_final/step0_shard_5.json:117:    \"decode_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw\","
+    ],
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8": [
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_base/launch_manifest.json:10:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_base/launch_manifest.json:41:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_base/launch_manifest.json:72:      \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_base/launch_manifest.json:99:      \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_base/resource_safe_run_status.json:10:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/POSE_base.json:7:  \"overlay_dir\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/OVERLAY.json:7:  \"odd_frames_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8\","
+    ],
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8": [
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_cand/launch_manifest.json:10:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_cand/launch_manifest.json:41:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_cand/launch_manifest.json:72:      \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_cand/launch_manifest.json:99:      \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_cand/resource_safe_run_status.json:10:    \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/POSE_resolved.json:7:  \"overlay_dir\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/POSE_stale.json:7:  \"overlay_dir\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay\",",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/OVERLAY.json:7:  \"odd_frames_path\": \"/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8\","
+    ]
+  }
+}

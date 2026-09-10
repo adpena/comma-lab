@@ -1,0 +1,20 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "plan-retained",
+    "--source-ledger",
+    ".omx/research/ddm_vr6_20260910/planner_source.jsonl",
+    "--rehash-ledger",
+    "/Volumes/VertigoDataTier/pact/ddm_vr6_reclaim_20260910/rehash_plan_input.jsonl",
+    "--closures",
+    ".omx/research/ddm_vr6_20260910/planner_closures.json",
+    "--output-ledger",
+    ".omx/research/ddm_vr6_20260910/native_plan_attempt.jsonl"
+  ],
+  "returncode": 2,
+  "stdout": "",
+  "stderr": "FATAL: CertifyError: MAIN_REHASH_INCOMPLETE:expected=0 actual=1\n",
+  "output_exists": false,
+  "reason": "Accurate alternate-layout source status is not an accepted VR4 retained chain. No status relabeling or allowlist bypass."
+}

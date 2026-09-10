@@ -1,0 +1,300 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/evidence",
+  "started": "2026-09-10T03:31:09.545018+00:00",
+  "completed": "2026-09-10T03:32:56.996707+00:00",
+  "bytes": 356469301260,
+  "allocated_bytes": 356760936448,
+  "files": 119633,
+  "symlinks_skipped": 19,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/archive.zip",
+      "bytes": 1717172741,
+      "allocated_bytes": 1717174272,
+      "mtime_ns": 1784561991834578047,
+      "device": 16777240,
+      "inode": 1266875,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784562134433471851,
+      "device": 16777240,
+      "inode": 1266877,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/upstream_harness/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784827585519444733,
+      "device": 16777240,
+      "inode": 1291460,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e2_pose_stream_and_doctrine_export_20260723/fresh/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784827354115846508,
+      "device": 16777240,
+      "inode": 1291367,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic1_incumbent_compose_and_buy_row_20260724/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784906328429067375,
+      "device": 16777240,
+      "inode": 1476400,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/g52_fulln600_lossy_selected_plane_scoring_frontier46_layered_20260726/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1785102581541491860,
+      "device": 16777240,
+      "inode": 1917400,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_ic2_optimal_incumbent_pose_typed_20260724/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784916753094596341,
+      "device": 16777240,
+      "inode": 1479003,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/anchor_packet/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784640382486120429,
+      "device": 16777240,
+      "inode": 1283629,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/d2_requant_cheapest/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784641383854365834,
+      "device": 16777240,
+      "inode": 1283756,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r5_waterfill_20260721/d2_jrd_fixture_transfer/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784641383221121362,
+      "device": 16777240,
+      "inode": 1283755,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e3_inflate_compose_and_depclose_20260723/upstream_harness/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784851694728045849,
+      "device": 16777240,
+      "inode": 1333177,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e3_inflate_compose_and_depclose_20260723/superseded_thread1_mismatch/upstream_harness/submission/inflated/0.raw.partial.47308",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784850939964685869,
+      "device": 16777240,
+      "inode": 1332942,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_band_manifest_20260720/radii_uint8_steps.npy",
+      "bytes": 2831155328,
+      "allocated_bytes": 2831159296,
+      "mtime_ns": 1784591498003475948,
+      "device": 16777240,
+      "inode": 1270100,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_seg/brotli/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784895666854264464,
+      "device": 16777240,
+      "inode": 1431239,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/W_joint/brotli/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784897599340191411,
+      "device": 16777240,
+      "inode": 1431358,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/upstream_harness_brotli/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784866161293103889,
+      "device": 16777240,
+      "inode": 1428224,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e4_brotli_declared_dep_20260724/upstream_harness_lzma1_fallback/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784867420207201380,
+      "device": 16777240,
+      "inode": 1428451,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_facet_observer_20260721/base_camera_pairs_panel_derived.npy",
+      "bytes": 2417190464,
+      "allocated_bytes": 2417192960,
+      "mtime_ns": 1784602018355041490,
+      "device": 16777240,
+      "inode": 1270913,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_1/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784599923202696099,
+      "device": 16777240,
+      "inode": 1270874,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_byteclose_20260721/decode_2/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784600700127233770,
+      "device": 16777240,
+      "inode": 1270892,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v3_pre_recursive_schema/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784818434593159183,
+      "device": 16777240,
+      "inode": 1290757,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v5_pre_review_hardening/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784820423158356619,
+      "device": 16777240,
+      "inode": 1290959,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v4_pre_version_stamps/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784819397825984839,
+      "device": 16777240,
+      "inode": 1290864,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/upstream_harness/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784820789314411188,
+      "device": 16777240,
+      "inode": 1291071,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784817285043291148,
+      "device": 16777240,
+      "inode": 1290550,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v6_pre_nested_schema/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784822445085479223,
+      "device": 16777240,
+      "inode": 1291164,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh_v2_cuda_refuse/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784817549609067367,
+      "device": 16777240,
+      "inode": 1290633,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e1_runtime_exporter_20260723/fresh/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784823934596273358,
+      "device": 16777240,
+      "inode": 1291265,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_serial/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784478769162257372,
+      "device": 16777240,
+      "inode": 1251210,
+      "nlink": 2
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par1/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784479103663183455,
+      "device": 16777240,
+      "inode": 1258577,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/out_par2/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784479405766223172,
+      "device": 16777240,
+      "inode": 1265943,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784478769162257372,
+      "device": 16777240,
+      "inode": 1251210,
+      "nlink": 2
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "attempts": 1,
+  "returncode": 13,
+  "started": "2026-09-10T03:42:16.313123+00:00",
+  "completed": "2026-09-10T03:42:16.417494+00:00",
+  "stdout_file": ".omx/research/ddm_vr6_20260910/serializer_stdout.txt",
+  "stderr_file": ".omx/research/ddm_vr6_20260910/serializer_stderr.txt",
+  "committed_to_main": false
+}

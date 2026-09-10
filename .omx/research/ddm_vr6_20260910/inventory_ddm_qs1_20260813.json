@@ -1,0 +1,21 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813",
+  "started": "2026-09-10T03:33:06.312070+00:00",
+  "completed": "2026-09-10T03:33:06.589305+00:00",
+  "bytes": 46256607124,
+  "allocated_bytes": 46274527232,
+  "files": 5781,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained_fields/ddm_qs1_dual_axis_20260813_r2/retained/raw/candidate/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1786665347279495791,
+      "device": 16777240,
+      "inode": 2691285,
+      "nlink": 1
+    }
+  ]
+}

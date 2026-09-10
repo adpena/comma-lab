@@ -1,0 +1,47 @@
+{
+  "reviewer": "ddm_vr6 self-review; no independent agent claimed",
+  "passes": [
+    {
+      "pass": 1,
+      "focus": "Custody, admission, protected paths, receipt definitions",
+      "findings": [
+        "No source status was mislabeled as a native retained admission; plan-retained rc2 is reported as refusal.",
+        "The three hash-matched files remain BLOCKED; receipt-matching is not host clearance or a new rebuild.",
+        "Current pointer and live rp1/tc3 trees cannot be admitted; no deletion target exists."
+      ],
+      "unresolved": [
+        "Supported sealed-layout admission and native sj1 protection reconciliation are owed to MAIN; no code changes in inventory scope."
+      ]
+    },
+    {
+      "pass": 2,
+      "focus": "Denominators, arithmetic, callable command and landing boundaries",
+      "findings": [
+        "171 top-ten large files and 183 final unique rows are distinct denominators; 82 native probes include twelve predecessor-ranked roots, 81 lie in current top ten.",
+        "Fresh hashes cover 3/183 files; unmeasured hashes remain null.",
+        "Whole-store logical bytes are not allocated reclaim; du allocation and logical totals explicitly separated.",
+        "40-GiB apply command is disabled and would refuse; no valid deletion batch is claimed.",
+        "No attributable reclaimed bytes or score movement."
+      ],
+      "unresolved": [
+        "Serializer outcome must be taken from its actual receipt."
+      ]
+    }
+  ],
+  "validated_checks": {
+    "paths_unique": true,
+    "top_ten_covered": true,
+    "all_rows_ge_1_GiB": true,
+    "all_hashes_stable_and_receipt_matching": true,
+    "no_unhashed_admission": true,
+    "no_deletion_claim": true,
+    "all_owners_and_dispositions_present": true,
+    "rehash_pin_matches": true,
+    "apply_disabled": true,
+    "native_plan_refused": true,
+    "no_ap_large_files": true
+  },
+  "planner_source_sha256": "2b094c9c8b05a0005ad773ee146640e3f67d79c42d88a304237f7fede185f1f8",
+  "time": "2026-09-10T03:42:06.409558+00:00",
+  "scientific_integration_hooks": "N/A storage-only observations"
+}

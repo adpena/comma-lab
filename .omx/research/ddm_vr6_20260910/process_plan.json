@@ -1,0 +1,68 @@
+{
+  "time": "2026-09-10T03:38:44.340337+00:00",
+  "observations": [
+    {
+      "argv": [
+        "pgrep",
+        "-alf",
+        "ddm_(sj1|rp1|tc3|bnd2|bnd3|tc2)|inflate|reclaim"
+      ],
+      "returncode": 3,
+      "stdout": "",
+      "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
+    },
+    {
+      "argv": [
+        "ps",
+        "-axo",
+        "pid=,ppid=,comm="
+      ],
+      "error": "PermissionError(1, 'Operation not permitted')"
+    },
+    {
+      "argv": [
+        "lsof",
+        "+D",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "clearance": false,
+  "earlier_receipt": {
+    "time": "2026-09-10T03:29:17.586844+00:00",
+    "observations": [
+      {
+        "argv": [
+          "pgrep",
+          "-alf",
+          "ddm_(sj1|rp1|tc3|bnd2|bnd3|tc2)|inflate|reclaim"
+        ],
+        "returncode": 3,
+        "stdout": "",
+        "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
+      },
+      {
+        "argv": [
+          "ps",
+          "-axo",
+          "pid=,ppid=,comm="
+        ],
+        "error": "PermissionError(1, 'Operation not permitted')"
+      },
+      {
+        "argv": [
+          "lsof",
+          "+d",
+          "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback"
+        ],
+        "returncode": 1,
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "clearance": false
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810",
+  "started": "2026-09-10T03:33:06.589607+00:00",
+  "completed": "2026-09-10T03:33:07.054634+00:00",
+  "bytes": 38434221920,
+  "allocated_bytes": 38462267392,
+  "files": 8052,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1786515956122519592,
+      "device": 16777240,
+      "inode": 2518318,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/retained/0.preselector.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1786515860064328861,
+      "device": 16777240,
+      "inode": 2518222,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/t1r1_c1_composed/scorer/logits_n600.float32.npy",
+      "bytes": 2359296128,
+      "allocated_bytes": 2359300096,
+      "mtime_ns": 1786516252389098276,
+      "device": 16777240,
+      "inode": 2518390,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/retained/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1786515315080845559,
+      "device": 16777240,
+      "inode": 2518133,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/retained/0.preselector.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1786515219214257442,
+      "device": 16777240,
+      "inode": 2518039,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/candidates/cp135_base/scorer/logits_n600.float32.npy",
+      "bytes": 2359296128,
+      "allocated_bytes": 2359300096,
+      "mtime_ns": 1786515622213059779,
+      "device": 16777240,
+      "inode": 2518206,
+      "nlink": 1
+    }
+  ]
+}

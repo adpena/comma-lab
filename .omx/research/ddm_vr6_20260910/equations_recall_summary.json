@@ -1,0 +1,11 @@
+{
+  "command": [
+    ".venv/bin/python",
+    "tools/list_canonical_equations.py",
+    "--json"
+  ],
+  "registry_rows": 482,
+  "query": "certif.{0,20}reclaim|certify.or.block|disk.hygiene|storage.waterfall",
+  "hits": [],
+  "snapshot_sha256": "f76218f0f4ab438a996e16212ee73dc88adc42496fb71a3da298176e4d884476"
+}

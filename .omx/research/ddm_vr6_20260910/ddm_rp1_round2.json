@@ -1,0 +1,9 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2",
+  "bytes": 310581,
+  "files": 12,
+  "large_files": [],
+  "errors": [],
+  "observation": "metadata only; protected live/lineage root; no payload hashes or mutations",
+  "time": "2026-09-10T03:35:21.998699+00:00"
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/evidence",
+    "du_allocated_bytes": 352688996352
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/experiments",
+    "du_allocated_bytes": 265498124288
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813",
+    "du_allocated_bytes": 116126879744
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/cold_store",
+    "du_allocated_bytes": 71374000128
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729",
+    "du_allocated_bytes": 51418251264
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813",
+    "du_allocated_bytes": 43957600256
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810",
+    "du_allocated_bytes": 33777188864
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/public_datasets",
+    "du_allocated_bytes": 26819125248
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs",
+    "du_allocated_bytes": 25513185280
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_js5_20260812",
+    "du_allocated_bytes": 25066627072
+  }
+]

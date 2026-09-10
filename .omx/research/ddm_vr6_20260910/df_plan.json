@@ -1,0 +1,13 @@
+{
+  "time": "2026-09-10T03:38:16.477298+00:00",
+  "drives": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact",
+      "available_bytes": 52292390912
+    },
+    {
+      "path": "/Volumes/APDataStore/pact",
+      "available_bytes": 75109892096
+    }
+  ]
+}

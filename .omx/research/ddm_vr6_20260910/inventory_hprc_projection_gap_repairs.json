@@ -1,0 +1,174 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs",
+  "started": "2026-09-10T03:33:09.144000+00:00",
+  "completed": "2026-09-10T03:33:09.243989+00:00",
+  "bytes": 25510642383,
+  "allocated_bytes": 25513185280,
+  "files": 1030,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/neutralize_decoder_qw/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780366725478797196,
+      "device": 16777240,
+      "inode": 537035,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/neutralize_decoder_qw/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780366725236257952,
+      "device": 16777240,
+      "inode": 537034,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/neutralize_codebooks_q/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780366896401343004,
+      "device": 16777240,
+      "inode": 537126,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/neutralize_codebooks_q/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780366896158436180,
+      "device": 16777240,
+      "inode": 537125,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/baseline/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780366553790348116,
+      "device": 16777240,
+      "inode": 536954,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/baseline/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780366553548393874,
+      "device": 16777240,
+      "inode": 536953,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/neutralize_selectors_rc/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780367099185646798,
+      "device": 16777240,
+      "inode": 537241,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z/mlx_caches/neutralize_selectors_rc/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780367098942913146,
+      "device": 16777240,
+      "inode": 537240,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/neutralize_decoder_qw/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368534852922971,
+      "device": 16777240,
+      "inode": 578355,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/neutralize_decoder_qw/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368534610379094,
+      "device": 16777240,
+      "inode": 578354,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/neutralize_codebooks_q/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368709666277901,
+      "device": 16777240,
+      "inode": 578550,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/neutralize_codebooks_q/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368709320386250,
+      "device": 16777240,
+      "inode": 578549,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/baseline/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368378443256517,
+      "device": 16777240,
+      "inode": 578237,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/baseline/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368362422205839,
+      "device": 16777240,
+      "inode": 578236,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/neutralize_selectors_rc/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368910607010270,
+      "device": 16777240,
+      "inode": 598832,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/full_video_section_value_profile_20260602T0242Z/mlx_caches/neutralize_selectors_rc/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780368910364787922,
+      "device": 16777240,
+      "inode": 598831,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/int2_mixed_full_video_baseline_replay_20260602T0318Z/mlx_caches/baseline/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780370254208801634,
+      "device": 16777240,
+      "inode": 640641,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_aa80443421cfbcb2/capacity_l16_e32_k64_ch48/int2_mixed_full_video_baseline_replay_20260602T0318Z/mlx_caches/baseline/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780370253966607883,
+      "device": 16777240,
+      "inode": 640640,
+      "nlink": 1
+    }
+  ]
+}

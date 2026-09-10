@@ -1,0 +1,768 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/experiments",
+  "started": "2026-09-10T03:32:56.997158+00:00",
+  "completed": "2026-09-10T03:33:04.315987+00:00",
+  "bytes": 268926781806,
+  "allocated_bytes": 265498124288,
+  "files": 59914,
+  "symlinks_skipped": 1,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch499_direct_mlx_cache_20260603T232747Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780529417516479973,
+      "device": 16777240,
+      "inode": 853548,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch499_direct_mlx_cache_20260603T232747Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780529417035121257,
+      "device": 16777240,
+      "inode": 853547,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_randomfill_epoch15999_full600_mlx_replay_20260604T031145Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780542870169141598,
+      "device": 16777240,
+      "inode": 856124,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_randomfill_epoch15999_full600_mlx_replay_20260604T031145Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780542773548214474,
+      "device": 16777240,
+      "inode": 856123,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_hardpair_top16_full600_mlx_replay_20260604T012304Z/cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780536311731404239,
+      "device": 16777240,
+      "inode": 854913,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_hardpair_top16_full600_mlx_replay_20260604T012304Z/cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780536300540196027,
+      "device": 16777240,
+      "inode": 854912,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_sparse_hardpair_epoch11749_full600_mlx_replay_20260604T015006Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780537890330904313,
+      "device": 16777240,
+      "inode": 855173,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_sparse_hardpair_epoch11749_full600_mlx_replay_20260604T015006Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780537889847279442,
+      "device": 16777240,
+      "inode": 855172,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v3_export_wall_normal_support/hi_nerv_mlx_training/target_region_action_inflate_replay/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780842678130193499,
+      "device": 16777240,
+      "inode": 962116,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_tile_brotli_probe_20260607Tcodex_v3_section_preserve/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780844226107242507,
+      "device": 16777240,
+      "inode": 962150,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_hardpair_fixed_epoch12749_full600_mlx_replay_20260604T022500Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780539988545039523,
+      "device": 16777240,
+      "inode": 855632,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_hardpair_fixed_epoch12749_full600_mlx_replay_20260604T022500Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780539987823836006,
+      "device": 16777240,
+      "inode": 855631,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_hardpair_fixed_epoch14499_full600_mlx_replay_20260604T024731Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780541654774925678,
+      "device": 16777240,
+      "inode": 855901,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_hardpair_fixed_epoch14499_full600_mlx_replay_20260604T024731Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780541643448784565,
+      "device": 16777240,
+      "inode": 855900,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/quotient_features.f32.npy",
+      "bytes": 1887436928,
+      "allocated_bytes": 613437440,
+      "mtime_ns": 1784379592083166848,
+      "device": 16777240,
+      "inode": 1234831,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_epoch18199_full600_mlx_replay_20260604T002246Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780532650725032790,
+      "device": 16777240,
+      "inode": 854285,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_epoch18199_full600_mlx_replay_20260604T002246Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780532650481711451,
+      "device": 16777240,
+      "inode": 854284,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/local_mlx_prefilter/scorer_input_caches/candidate_receiver_raw/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 268980224,
+      "mtime_ns": 1780584630387692552,
+      "device": 16777240,
+      "inode": 904055,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/local_mlx_prefilter/scorer_input_caches/candidate_receiver_raw/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 268980224,
+      "mtime_ns": 1780584630350310911,
+      "device": 16777240,
+      "inode": 904054,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/local_mlx_prefilter/scorer_input_caches/reference_source_video/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780584593829538688,
+      "device": 16777240,
+      "inode": 904046,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/local_mlx_prefilter/scorer_input_caches/reference_source_video/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780584593343467153,
+      "device": 16777240,
+      "inode": 904045,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_distribution_guard_20260604T144726Z_codex/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780584542692169685,
+      "device": 16777240,
+      "inode": 903838,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_pr95_pact_muon_seg16_resume_20260603T231916Z/epoch000999_ema_archive_export_20260603T233253Z/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780529742569430479,
+      "device": 16777240,
+      "inode": 853665,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_full600_corrected_p18p19_20260601T112753Z/hprc_mlx_prefilter_posthoc/mlx_caches/baseline/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780314506077567055,
+      "device": 16777240,
+      "inode": 221346,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hprc_compact_receiver_training_queue/hprc_full600_corrected_p18p19_20260601T112753Z/hprc_mlx_prefilter_posthoc/mlx_caches/baseline/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780314505836055956,
+      "device": 16777240,
+      "inode": 221345,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch999_direct_mlx_cache_20260603T233629Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780529999232736750,
+      "device": 16777240,
+      "inode": 853767,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch999_direct_mlx_cache_20260603T233629Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780529998990447850,
+      "device": 16777240,
+      "inode": 853766,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch2749_bytecap_v2_full600_mlx_replay_20260604T000913Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780531826051634456,
+      "device": 16777240,
+      "inode": 854129,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch2749_bytecap_v2_full600_mlx_replay_20260604T000913Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780531825566206390,
+      "device": 16777240,
+      "inode": 854128,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/mlx_full600/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780525168196055739,
+      "device": 16777240,
+      "inode": 852465,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/mlx_full600/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780525167714184756,
+      "device": 16777240,
+      "inode": 852464,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch021999_ema_archive_export_20260603T222320Z_portfolio_default_guarded/mlx_full600/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780525503791799010,
+      "device": 16777240,
+      "inode": 852525,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch021999_ema_archive_export_20260603T222320Z_portfolio_default_guarded/mlx_full600/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780525498497150812,
+      "device": 16777240,
+      "inode": 852524,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/mlx_full600/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780524565514710671,
+      "device": 16777240,
+      "inode": 852314,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/mlx_full600/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780524564781397704,
+      "device": 16777240,
+      "inode": 852313,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_hi_ac_prefilter_20260605Tcodex/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780621043948116039,
+      "device": 16777240,
+      "inode": 907649,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch11499_full600_mlx_replay_20260604T013738Z/cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780537140294580696,
+      "device": 16777240,
+      "inode": 855076,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch11499_full600_mlx_replay_20260604T013738Z/cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780537139813697919,
+      "device": 16777240,
+      "inode": 855075,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch7749_full600_mlx_replay_20260604T005700Z/cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780534726704260944,
+      "device": 16777240,
+      "inode": 854629,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch7749_full600_mlx_replay_20260604T005700Z/cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780534713961851057,
+      "device": 16777240,
+      "inode": 854628,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_bytecap_successor_final_epoch029999_ema_export_prefilter_20260604T1300_codex/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780578173395102069,
+      "device": 16777240,
+      "inode": 859834,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/direct_inflate_survival/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780827449251083845,
+      "device": 16777240,
+      "inode": 961413,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/full_video_mlx_replay/reference_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780827913418503411,
+      "device": 16777240,
+      "inode": 961429,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/full_video_mlx_replay/reference_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780827913176747325,
+      "device": 16777240,
+      "inode": 961428,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/full_video_mlx_replay/cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780827708900084222,
+      "device": 16777240,
+      "inode": 961423,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v43_sidecar_parseback_20260607Tcodex/hi_nerv_mlx_training/full_video_mlx_replay/cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780827708657690372,
+      "device": 16777240,
+      "inode": 961422,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_epoch22399_full600_mlx_replay_20260604T003900Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780533802649354518,
+      "device": 16777240,
+      "inode": 854482,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_epoch22399_full600_mlx_replay_20260604T003900Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780533802405940345,
+      "device": 16777240,
+      "inode": 854481,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_spectra_epoch7599_full600_mlx_replay_20260604T032441Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780543682968926664,
+      "device": 16777240,
+      "inode": 856291,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_spectra_epoch7599_full600_mlx_replay_20260604T032441Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780543682725510583,
+      "device": 16777240,
+      "inode": 856290,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/xray_error_anatomy_codex/regenerated_scorer_caches/candidate_receiver_raw/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780580414047172979,
+      "device": 16777240,
+      "inode": 859925,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/xray_error_anatomy_codex/regenerated_scorer_caches/candidate_receiver_raw/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780580413805014344,
+      "device": 16777240,
+      "inode": 859924,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/xray_error_anatomy_codex/regenerated_scorer_caches/reference_source_video/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780580516042199138,
+      "device": 16777240,
+      "inode": 859930,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/xray_error_anatomy_codex/regenerated_scorer_caches/reference_source_video/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780580515799858001,
+      "device": 16777240,
+      "inode": 859929,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_bytecap_feedback_successor_20260604T0831Z_codex/final_epoch029999_ema_archive_export_overcap_measure_20260604T125958Z_codex/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780578179127165638,
+      "device": 16777240,
+      "inode": 859865,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_full600_direct_mlx_prefilter_20260601T2228Z/reference_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780353010350222916,
+      "device": 16777240,
+      "inode": 433314,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_full600_direct_mlx_prefilter_20260601T2228Z/reference_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780353010107905396,
+      "device": 16777240,
+      "inode": 433313,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_full600_direct_mlx_prefilter_20260601T2228Z/candidate_cache/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780353104139578073,
+      "device": 16777240,
+      "inode": 433327,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/codex_hi_nerv_full600_direct_mlx_prefilter_20260601T2228Z/candidate_cache/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780353063976005099,
+      "device": 16777240,
+      "inode": 433326,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/local_mlx_prefilter/scorer_input_caches/candidate_receiver_raw/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780558613525156921,
+      "device": 16777240,
+      "inode": 858328,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/local_mlx_prefilter/scorer_input_caches/candidate_receiver_raw/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780558613280058491,
+      "device": 16777240,
+      "inode": 858327,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/local_mlx_prefilter/scorer_input_caches/reference_source_video/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780558523138447814,
+      "device": 16777240,
+      "inode": 858316,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/local_mlx_prefilter/scorer_input_caches/reference_source_video/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1780558522421232506,
+      "device": 16777240,
+      "inode": 858315,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch000999_ema_export_prefilter_overcap_measure_20260604T0733_codex/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780558454649375715,
+      "device": 16777240,
+      "inode": 858299,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc3_mixed_coder_receiver_integration_20260725T041134Z/control/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784955908479263879,
+      "device": 16777240,
+      "inode": 1910162,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_cc3_mixed_coder_receiver_integration_20260725T041134Z/runtime/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1784955436993905312,
+      "device": 16777240,
+      "inode": 1910117,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/local_cpu_advisory_work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779789562304816516,
+      "device": 16777240,
+      "inode": 106893,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/global_mutated/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779789285193038805,
+      "device": 16777240,
+      "inode": 106871,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/parent/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779789282017044636,
+      "device": 16777240,
+      "inode": 106872,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k016_h1759043cc6/locality_work/selective/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779789418292851039,
+      "device": 16777240,
+      "inode": 106878,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/local_cpu_advisory_work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779788616918595189,
+      "device": 16777240,
+      "inode": 106855,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/global_mutated/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779788327001275129,
+      "device": 16777240,
+      "inode": 106834,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/parent/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779788329964947483,
+      "device": 16777240,
+      "inode": 106833,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_hc4a6f54207/locality_work/selective/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779788468052026239,
+      "device": 16777240,
+      "inode": 106840,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/local_cpu_advisory_work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786936622823477,
+      "device": 16777240,
+      "inode": 106741,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/global_mutated/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779785466273222747,
+      "device": 16777240,
+      "inode": 106685,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/parent/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786215135258732,
+      "device": 16777240,
+      "inode": 106704,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k012_h1ecc99d178/locality_work/selective/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786225516505026,
+      "device": 16777240,
+      "inode": 106707,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/local_cpu_advisory_work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786937356667821,
+      "device": 16777240,
+      "inode": 106742,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/global_mutated/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786227249851774,
+      "device": 16777240,
+      "inode": 106706,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/parent/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786224088449459,
+      "device": 16777240,
+      "inode": 106705,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/frontier_rate_attack_feedback_20260526T083600Z_targeted_dqs1_followup_vertigo_observation_guard/dqs1_local_first_results/materialized/drop_many_k006_hd0960b13f2/locality_work/selective/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1779786417539943474,
+      "device": 16777240,
+      "inode": 106713,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_epoch003499_ema_export_prefilter_overcap_measure_20260604T0755_codex/receiver_proof/runtime_out/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1780559712708955482,
+      "device": 16777240,
+      "inode": 858457,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_sh1_local_exact_20260727T2210Z/submission/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1785190905078527153,
+      "device": 16777240,
+      "inode": 1978230,
+      "nlink": 1
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code",
+  "bytes": 1870568270,
+  "large_files": [],
+  "metadata_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/serializer/20260909T231858.485400Z-92372/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/serializer_final/20260909T232025.196886Z-97234/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_price_o0_min4/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_price_o0_min2/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/serializer/20260910T011059.291400Z-12424/receipts.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_trace32/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_price_o1_min2/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_decode600/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_price_o1_min4/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_validation_final/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_masked/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_decode32/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_price_o0_min1/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_price_o1_min1/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_validation/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_trace600/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/launch_census/launch_manifest.json"
+  ]
+}

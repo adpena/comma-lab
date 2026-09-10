@@ -1,0 +1,11 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813",
+  "started": "2026-09-10T03:33:04.316377+00:00",
+  "completed": "2026-09-10T03:33:05.597128+00:00",
+  "bytes": 116092193448,
+  "allocated_bytes": 116126879744,
+  "files": 12411,
+  "symlinks_skipped": 1,
+  "errors": [],
+  "large_files": []
+}

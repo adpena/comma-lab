@@ -1,0 +1,147 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/cold_store",
+  "started": "2026-09-10T03:33:05.597423+00:00",
+  "completed": "2026-09-10T03:33:06.293134+00:00",
+  "bytes": 71321654298,
+  "allocated_bytes": 71374000128,
+  "files": 22060,
+  "symlinks_skipped": 5,
+  "errors": [],
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_up3/advisory/attempt_0001/work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787125595600000000,
+      "device": 16777240,
+      "inode": 3728923,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_to1/advisory/attempt_0002/work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787110530740000000,
+      "device": 16777240,
+      "inode": 3728886,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rr6/advisory_native_r1/work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787221084600000000,
+      "device": 16777240,
+      "inode": 3726069,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rr6/advisory_ship_r2/work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787222213430000000,
+      "device": 16777240,
+      "inode": 3725725,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_w72_distortion_advisory/attempt_r1/work/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787533120870000000,
+      "device": 16777240,
+      "inode": 3728885,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rc2/composed_decode_r1/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787249695150000000,
+      "device": 16777240,
+      "inode": 3726070,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/pact/ddm_rc2/composed_decode_r2/inflated/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1787249464660000000,
+      "device": 16777240,
+      "inode": 3728598,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/modal_fec6_pr101_cpu_auth_tensors_20260522T060605Z/fec6_pr101_cpu_auth_tensors_20260522T060605Z/scorer_input_cache_tensors/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1779430468857097041,
+      "device": 16777240,
+      "inode": 183927,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/modal_fec6_pr101_cpu_auth_tensors_20260522T060605Z/fec6_pr101_cpu_auth_tensors_20260522T060605Z/scorer_input_cache_tensors/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1779430455366193984,
+      "device": 16777240,
+      "inode": 183930,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/.omx/tmp/codex_runs_archive_pre_20260821/consolidation_code_land_sot_dedup_20260714T204659Z.log",
+      "bytes": 1578754399,
+      "allocated_bytes": 1578758144,
+      "mtime_ns": 1784072707185485341,
+      "device": 16777240,
+      "inode": 3673951,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/modal_decoderq_d1f1e56e042692f2_cpu_tensors_20260522T110925Z_dir/scorer_input_cache_tensors/posenet_yuv6_pair.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1779449440782221517,
+      "device": 16777240,
+      "inode": 183935,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/modal_decoderq_d1f1e56e042692f2_cpu_tensors_20260522T110925Z_dir/scorer_input_cache_tensors/segnet_last_rgb.npy",
+      "bytes": 1415577728,
+      "allocated_bytes": 1415581696,
+      "mtime_ns": 1779449443736806030,
+      "device": 16777240,
+      "inode": 183938,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/masks.pt",
+      "bytes": 1887438299,
+      "allocated_bytes": 1887440896,
+      "mtime_ns": 1775948259420112985,
+      "device": 16777240,
+      "inode": 197479,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/gt_frames.pt",
+      "bytes": 3662411191,
+      "allocated_bytes": 3662413824,
+      "mtime_ns": 1775854146451363616,
+      "device": 16777240,
+      "inode": 197476,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/cold_store/externalized_ignored_large_artifacts/Users_adpena_Projects_pact/precomputed_local/comp_frames.pt",
+      "bytes": 3662411205,
+      "allocated_bytes": 3662413824,
+      "mtime_ns": 1775854144052793841,
+      "device": 16777240,
+      "inode": 197466,
+      "nlink": 1
+    }
+  ]
+}

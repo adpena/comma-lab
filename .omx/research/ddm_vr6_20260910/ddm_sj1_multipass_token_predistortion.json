@@ -1,0 +1,55 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion",
+  "bytes": 13997452025,
+  "files": 1145,
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1788659320447385044,
+      "device": 16777240,
+      "inode": 4304751,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+      "bytes": 3662409600,
+      "allocated_bytes": 3662409728,
+      "mtime_ns": 1788668309534943112,
+      "device": 16777240,
+      "inode": 4383999,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "allocated_bytes": 1831206912,
+      "mtime_ns": 1788650171094384147,
+      "device": 16777240,
+      "inode": 4125437,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "allocated_bytes": 1831206912,
+      "mtime_ns": 1788969481386698823,
+      "device": 16777240,
+      "inode": 4454419,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "allocated_bytes": 1831206912,
+      "mtime_ns": 1788664128361635957,
+      "device": 16777240,
+      "inode": 4366349,
+      "nlink": 1
+    }
+  ],
+  "errors": [],
+  "observation": "metadata only; protected live/lineage root; no payload hashes or mutations",
+  "time": "2026-09-10T03:35:44.713426+00:00"
+}

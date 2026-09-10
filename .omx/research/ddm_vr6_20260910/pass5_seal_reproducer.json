@@ -1,0 +1,60 @@
+{
+  "schema": "ddm_vr6.seal_reproducer_inspection.v1",
+  "time": "2026-09-10T03:32:06.334292+00:00",
+  "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw",
+  "seal": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/SEAL_ddm_sj1_token_predistortion_pass5_contest_cuda.json",
+    "file_sha256": "d330d3fb097418cb1404302c1d98b171ed7c3d25991f512114ae08d6dc45c57f"
+  },
+  "archive": {
+    "bytes": 180436,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/archive.zip",
+    "sha256": "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07"
+  },
+  "archive_current_sha256": "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07",
+  "archive_verified": true,
+  "runtime_expected": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 48,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime",
+    "sha256": "bfb233be8e0caa69dbb58700656501b6edb5d0f1168af50dece7e4ee4ee4fb30",
+    "total_bytes": 994378
+  },
+  "runtime_current": {
+    "sha256": "bfb233be8e0caa69dbb58700656501b6edb5d0f1168af50dece7e4ee4ee4fb30",
+    "file_count": 48,
+    "total_bytes": 994378
+  },
+  "runtime_verified": true,
+  "reproducer_argv": [
+    ".venv/bin/python",
+    "experiments/ddm_sj1_joint_admission.py",
+    "parseback",
+    "--runtime",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback",
+    "--expect-field",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/admission_pass5/field_admitted.npz",
+    "--threads",
+    "4"
+  ],
+  "reproducer_cwd": "/Users/adpena/Projects/pact",
+  "reproducer_launch_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/launch_manifest.json",
+    "sha256": "353eb9be1d408558cb1203f4332025dc289d969854d4099aafd76b161dcf32b4",
+    "git_sha": "aaef9ffd3e1a6037aaffb57a8a5007ad89c6a4fd"
+  },
+  "decode_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/PARSEBACK_RESULT.json",
+    "sha256": "ef6eac30d94dc82b83e594c267edb6d6cf26c9b66a64716a7d52ed5da70015e9"
+  },
+  "raw_historical_sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12",
+  "script_current_sha256": "0cae6576b64c724cb87c164cdb689692e2ef8ce8c3baad567e31ec9a2b2610fd",
+  "expected_field": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/admission_pass5/field_admitted.npz",
+    "sha256": "93b6fe1734ddd9691185ace4c86d15ee25ef14c08707a3662c1e922de644b3d4"
+  },
+  "full_rebuild_executed": false,
+  "score_claim": false
+}

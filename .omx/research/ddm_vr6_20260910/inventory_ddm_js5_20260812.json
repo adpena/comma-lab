@@ -1,0 +1,11 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_js5_20260812",
+  "started": "2026-09-10T03:33:09.244357+00:00",
+  "completed": "2026-09-10T03:33:09.507140+00:00",
+  "bytes": 25059878312,
+  "allocated_bytes": 25066627072,
+  "files": 2142,
+  "symlinks_skipped": 0,
+  "errors": [],
+  "large_files": []
+}

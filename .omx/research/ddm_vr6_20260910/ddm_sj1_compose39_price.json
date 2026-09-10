@@ -1,0 +1,48 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price",
+  "bytes": 8128729354,
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw",
+      "bytes": 3662409600,
+      "mtime_ns": 1789009224827823746,
+      "inode": 4844102,
+      "device": 16777240,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "mtime_ns": 1789006444884927151,
+      "inode": 4792086,
+      "device": 16777240,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "mtime_ns": 1789006447815052698,
+      "inode": 4792087,
+      "device": 16777240,
+      "nlink": 1
+    }
+  ],
+  "metadata_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/render_base/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc2_control_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc_candidate_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc_candidate_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/fire/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/parseback/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc2_candidate_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc2_control_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/render_cand/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc_control_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc_control_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/seg_final/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/enc2_candidate_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/carrier_chain/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/logs/public_smoke/launch_manifest.json"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price",
+  "bytes": 7931230728,
+  "large_files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw",
+      "bytes": 3662409600,
+      "mtime_ns": 1789002535223613810,
+      "inode": 4688229,
+      "device": 16777240,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "mtime_ns": 1788997945596023316,
+      "inode": 4638807,
+      "device": 16777240,
+      "nlink": 1
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+      "bytes": 1831204800,
+      "mtime_ns": 1788997933657050530,
+      "inode": 4638832,
+      "device": 16777240,
+      "nlink": 1
+    }
+  ],
+  "metadata_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/SEAL_ddm_sj1_token_predistortion_pass5_contest_cuda.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/SEAL_ddm_sj1_token_predistortion_pass5_contest_cuda.json.REFUSED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_base/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc2_control_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/frame0_sweep2/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc4_subset_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc4_control_verify/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc_candidate_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc3_control_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/frame0_sweep/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc_candidate_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc3_candidate_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc4_subset_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/fire/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/parseback/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc2_candidate_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc2_control_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc3_candidate_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/render_cand/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc5_subset_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc5_subset_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc_control_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc3_control_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/frame0_n600/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc_control_primary/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/seg_final/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/enc2_candidate_repeat/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/carrier_chain/launch_manifest.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/logs/public_smoke/launch_manifest.json"
+  ]
+}
