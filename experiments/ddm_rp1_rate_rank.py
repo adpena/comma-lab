@@ -780,6 +780,22 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     stream_path = out / "tail_rp1_mixer_control.bin"
     stream_path.write_bytes(body)
     stream_sha = hashlib.sha256(body).hexdigest()
+
+    # ALSO PERSIST THE ENCODER BODY, which is what the shipped TC1M rider carries.
+    # ``finish()`` returns ``TOKEN_MAGIC || body || zero-pad to a 4-byte boundary``
+    # (route_b NativeRc64Encoder.finish), so the envelope CANNOT determine the body's
+    # length -- four different sizes pad to the same envelope and the body's own last
+    # byte may itself be zero.  Deriving it by slicing is a guess; ``rc64_encoder_size``
+    # is the answer, and it is only available here, while the context is alive.
+    import ctypes as _ctypes
+
+    _size = int(encoder.library.rc64_encoder_size(encoder.context))
+    _ptr = encoder.library.rc64_encoder_data(encoder.context)
+    if not _size or not _ptr:
+        raise Rp1Error("RC64 encoder produced no payload body")
+    rider_body = _ctypes.string_at(_ptr, _size)
+    body_path = out / "tail_rp1_mixer_rider_body.bin"
+    body_path.write_bytes(rider_body)
     live_stream = CMP1_MIXED_STREAM.read_bytes()
     identity = {
         "frames_encoded": args.frames,
@@ -857,6 +873,12 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
             "top_k_per_frame": args.top_k,
         },
         "stream": {"path": str(stream_path), "bytes": len(body), "sha256": stream_sha},
+        "rider_body": {
+            "path": str(body_path),
+            "bytes": len(rider_body),
+            "sha256": hashlib.sha256(rider_body).hexdigest(),
+            "note": "the bytes the shipped TC1M rider carries; envelope = magic+body+pad",
+        },
         "elapsed_seconds": time.perf_counter() - started,
     }
     (out / "RANK.json").write_text(json.dumps(receipt, indent=2, sort_keys=True))

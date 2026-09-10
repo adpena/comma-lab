@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """ddm_rp1 build -- stage the re-encoded token stream into the move-37 member, then close.
 
-THE ONE THING THAT HAD TO BE MEASURED RATHER THAN ASSUMED
-----------------------------------------------------------
+THE THING THAT LOOKED DERIVABLE AND WAS NOT
+--------------------------------------------
 The RC64 encoder's ``finish()`` payload is NOT what the archive carries.  ``finish()``
-returns ``TOKEN_MAGIC || body || flush``; the shipped TC1M rider carries the BODY alone.
-MEASURED on cmp1's own artefacts: its ``mixed_0600.envelope`` is 119,784 B, the stream
-inside cmp2's shipped rider is 119,779 B, and
+returns ``TOKEN_MAGIC || body || zero-pad to a 4-byte boundary``, and the shipped TC1M
+rider carries the BODY alone.  On the control that difference is 5 bytes (envelope 119,784,
+shipped stream 119,779) and ``envelope[4:-1]`` reproduces it exactly -- which is precisely
+what makes the slice dangerous.  The padding is 0-3 bytes, so **four different body lengths
+pad to the same envelope**, and the body's own last byte may itself be zero.  The candidate
+envelope ends in 0xE8, the control's in 0x00; a rule fitted to one silently ships a stream
+1-3 bytes wrong on the other, and a wrong stream is both a mispricing and an archive no
+receiver parses.
 
-    shipped_stream == envelope[4:-1]
-
-holds byte for byte (4-byte ``R6D1`` magic off the front, one 0x00 flush byte off the end).
-Splicing the envelope directly would have produced a 5-B-larger tail that no receiver
-parses -- a mispricing AND a dead archive.  So the transform is applied, and it is proven
-by a NULL BUILD on every run: this arm's own control envelope, sliced and re-packed, must
-reproduce the pointer's archive to the byte.  If it does not, nothing downstream is a
-measurement.
+So the body is READ from ``rc64_encoder_size``/``rc64_encoder_data`` while the encoder
+context is alive, persisted next to its envelope, and checked here to pad back to that
+envelope.  Then a NULL BUILD proves the whole path on every run: this arm's own control
+body, re-packed into the pointer's member, must reproduce the pointer's member to the byte.
+If it does not, nothing downstream is a measurement.
 
 ``[macOS-CPU advisory / scorer-free EXACT byte measurement]``; ``score_claim=false``.
 """
@@ -52,16 +54,27 @@ def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def envelope_to_stream(envelope: bytes, route_magic: bytes) -> bytes:
-    """``finish()`` payload -> the bytes the rider carries.  Checked, not assumed."""
+def load_rider_body(path: Path, envelope_path: Path, route_magic: bytes) -> bytes:
+    """The bytes the shipped TC1M rider carries -- read, never derived from the envelope.
+
+    ``NativeRc64Encoder.finish`` returns ``TOKEN_MAGIC || body || zero-pad to 4 bytes``,
+    so FOUR different body lengths pad to the same envelope and the body's own final byte
+    may itself be zero.  Slicing the envelope is therefore a guess that happens to be
+    right when the body length is congruent -- it silently ships a stream 1-3 bytes wrong
+    otherwise.  ``rc64_encoder_size`` is the answer and the encoder persists it.
+    """
+    body = path.read_bytes()
+    envelope = envelope_path.read_bytes()
     if not envelope.startswith(route_magic):
         raise rp1.Rp1Error("envelope does not start with the RC64 token magic")
-    if envelope[-1] != 0:
+    rebuilt = route_magic + body
+    rebuilt = rebuilt + b"\0" * ((-len(rebuilt)) % 4)
+    if rebuilt != envelope:
         raise rp1.Rp1Error(
-            f"envelope's final byte is {envelope[-1]:#x}, not the 0x00 flush byte the "
-            "shipped rider drops; the transform is not the one that was measured"
+            f"rider body at {path} does not pad back to its envelope "
+            f"({len(body)} B -> {len(rebuilt)} B vs {len(envelope)} B)"
         )
-    return envelope[len(route_magic) : -1]
+    return body
 
 
 def pointer_parts(tree: Path) -> tuple[dict[str, bytes], bytes, bytes]:
@@ -99,8 +112,9 @@ def cmd_stage(args: argparse.Namespace) -> int:
     # NULL BUILD.  The control envelope, sliced and re-packed, must reproduce the pointer
     # archive byte for byte -- otherwise the candidate's byte delta is measured against a
     # baseline this code cannot even rebuild.
-    control = Path(args.control_envelope).read_bytes()
-    control_stream = envelope_to_stream(control, route_magic)
+    control_stream = load_rider_body(
+        Path(args.control_body), Path(args.control_envelope), route_magic
+    )
     if control_stream != shipped_stream:
         raise rp1.Rp1Error(
             f"control stream ({len(control_stream)} B) is not the stream the pointer "
@@ -112,8 +126,9 @@ def cmd_stage(args: argparse.Namespace) -> int:
     if null_member != jg2.read_archive_member(pointer / "archive.zip"):
         raise rp1.Rp1Error("NULL BUILD FAILED: re-packed member differs from the pointer's")
 
-    candidate = Path(args.candidate_envelope).read_bytes()
-    stream = envelope_to_stream(candidate, route_magic)
+    stream = load_rider_body(
+        Path(args.candidate_body), Path(args.candidate_envelope), route_magic
+    )
     member = build_member(parts, weights, stream)
 
     out = Path(args.out_dir)
@@ -153,12 +168,13 @@ def cmd_stage(args: argparse.Namespace) -> int:
             "member_sha256": null_sha,
             "reproduces_pointer_member": True,
             "control_envelope": str(args.control_envelope),
+            "control_body": str(args.control_body),
             "control_stream_bytes": len(control_stream),
         },
-        "envelope_transform": "stream = envelope[len(TOKEN_MAGIC):-1]  (MEASURED)",
+        "rider_body_source": "rc64_encoder_size/data, checked to pad back to its envelope",
         "candidate_stream": {
             "envelope": str(args.candidate_envelope),
-            "envelope_bytes": len(candidate),
+            "body": str(args.candidate_body),
             "stream_bytes": len(stream),
             "stream_sha256": sha256_bytes(stream),
             "delta_stream_bytes_vs_pointer": len(stream) - len(shipped_stream),
@@ -271,7 +287,9 @@ def build_parser() -> argparse.ArgumentParser:
     stage = sub.add_parser("stage-tail")
     stage.add_argument("--pointer-runtime", default=str(rp1pose.POINTER_TREE))
     stage.add_argument("--control-envelope", required=True)
+    stage.add_argument("--control-body", required=True)
     stage.add_argument("--candidate-envelope", required=True)
+    stage.add_argument("--candidate-body", required=True)
     stage.add_argument("--out-dir", required=True)
     stage.set_defaults(func=cmd_stage)
 
