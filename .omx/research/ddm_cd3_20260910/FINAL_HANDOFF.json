@@ -1,0 +1,56 @@
+{
+  "schema": "ddm_cd3.final_handoff.v1",
+  "status": "CHARTER_DISPOSITIONS_AND_PATCH_COMPLETE_TARGET_ZERO_NOT_ACHIEVED",
+  "score_claim": false,
+  "memo": ".omx/research/ddm_cd3_ssd_code_debt_final_20260910.md",
+  "memo_sha256": "642c99819ebe7a9edd4a8bc94a936b981be2f888ae789000bc9e1604f0798f8e",
+  "landing_patch": ".omx/research/ddm_cd3_20260910/landing.patch",
+  "landing_patch_sha256": "1490154c090598b1f06a2c02f525860e990468b2449aed04fdef3653363cbabd",
+  "landing_manifest": ".omx/research/ddm_cd3_20260910/landing_manifest.json",
+  "landing_manifest_sha256": "56b141fc1b1874810ba9508ae38a4b1fdf2a4774e951e4933d64c8203b4598c7",
+  "bundle_verification": ".omx/research/ddm_cd3_20260910/bundle_verification.json",
+  "after_owed": 33,
+  "after_certified": 96,
+  "source_blobs_bundle_ready": 11,
+  "remaining_with_owners": 22,
+  "original_owner_fire_rows": 20,
+  "tests_passed": 57,
+  "batch_sizes": [
+    24,
+    6,
+    25,
+    11
+  ],
+  "patch_files_verified": 66,
+  "shared_git_commit_attempts": 1,
+  "serializer_returncode": 17,
+  "no_ssd_deletions": true,
+  "no_production_process_gate_run": true,
+  "no_new_exact_eval": true,
+  "staged_paths_at_exit": [],
+  "consumer_stores": [
+    ".omx/research/ddm_cs1_ssd_code_certify_20260909.jsonl",
+    ".omx/state/ssd_authored_signal_debt.json",
+    ".omx/research/ddm_vr5_apply_journal_20260909.jsonl"
+  ],
+  "next_actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "main Git and cs1 ledger",
+      "fire_trigger": "Git-writable handoff harvest with all manifest hashes verified; land each batch through serializer and rerun audit"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "ddm_g8r, ddm_ps1, ddm_ps2, ddm_ql1, ddm_sj1, ddm_rp1, ddm_bnd3",
+      "consumer_store": ".omx/research/ddm_cs1_ssd_code_certify_20260909.jsonl",
+      "fire_trigger": "Exact per-source hash/reproducer or owner-harvest conditions in dispositions.jsonl and concurrent_dispositions.jsonl"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_vr5_apply_journal_20260909.jsonl",
+      "fire_trigger": "Reviewed gate landed, complete host visibility, and all existing bz2d certificate/reference/descriptor guards pass"
+    }
+  ]
+}

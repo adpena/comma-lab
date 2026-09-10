@@ -1,0 +1,335 @@
+{
+  "schema": "ddm_cd3.landing.v1",
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "score_claim": false,
+  "shared_repo_commit_attempts": 1,
+  "serializer_rc": 17,
+  "patch": ".omx/research/ddm_cd3_20260910/landing.patch",
+  "patch_sha256": "1490154c090598b1f06a2c02f525860e990468b2449aed04fdef3653363cbabd",
+  "patch_bytes": 6716614,
+  "batch_limit": 25,
+  "batches": [
+    {
+      "label": "ddm_cd3",
+      "base_head": "925672272eedc37a1b5a4158147ecbe93a626db5",
+      "fallback_commit": "7b36e1c6f5a36596e589371b77b8e6d80610c1d8",
+      "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021120.440351Z-95835/intended-commit.bundle",
+      "bundle_sha256": "aa2bef9aaf733eecae3dcf8b04a3e8ed53fad6c99cf2d85a283fc7854deb6137",
+      "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021120.440351Z-95835/intended-commit.format-patch",
+      "format_patch_sha256": "7dad72a800d6c825696ccc55aa52d340569e150d753745e706f763820318a7b1",
+      "intended_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021120.440351Z-95835/intended-tree.patch",
+      "intended_patch_sha256": "fb23baae08bf0a72bb84ffd4fa34dfef95395072b7ea074bb01a3d24c6b5c768",
+      "files": [
+        {
+          "content_sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob"
+        },
+        {
+          "content_sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c.blob"
+        },
+        {
+          "content_sha256": "69357d4baf39f0f94b5a8d2bb2b658012a3c2f47f3b307fada3ad707e06bad1d",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/4d792e6355b46e0a9cc1f383e428c9b26f002a02.blob"
+        },
+        {
+          "content_sha256": "6218e6156d671e8983ef84f433a0b570ed0a292e189c5dcff2b8da45f544fd04",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/51cd9cf15711a0042e588958b398c2f36e1ed417.blob"
+        },
+        {
+          "content_sha256": "b3a71141e2fe7350dd8a0cce4d4bdd5875f4f1d33496c0d21b8debd4c23426c8",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/58352890d2baee4b5e74046aa3a450adc3b2bcd0.blob"
+        },
+        {
+          "content_sha256": "00c3fd0069718018417f4f23a5782ad24ee1da2b7fab7623ed62e971c80185a8",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/60483fbf36b6882fc8d8aa06cf31758fa67ad125.blob"
+        },
+        {
+          "content_sha256": "535950d953f3da36333f97ed36909f8bd762e50637a0bd479d922240177a5581",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/70f13d70b5dac1462b32f101441d779ba8cca978.blob"
+        },
+        {
+          "content_sha256": "949db86148781991cf0f3d447469c78cb636e92537bd6c49e15d6d06d9b14650",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/831222d0f333e1d2c520d198496eadeee950fc6e.blob"
+        },
+        {
+          "content_sha256": "80e0a7d082bf5e5996a0d64fda0c87905804c23fdfcac9d97e27ed8cc9c433d2",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/d3033e0f0d40241a7ec752662c7b593cc52b647b.blob"
+        },
+        {
+          "content_sha256": "b85a76b4d8f70c6f6a1f98a0d85a4fbd606dc224188a02b8d3d3cda0da435453",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/dd87b66070bd20c502f3d7431fd0648603577d9f.blob"
+        },
+        {
+          "content_sha256": "109bb6052f4fdb1a72195f49979091776e71c5ffe261cc80add0b044fc0e7e34",
+          "path": ".omx/research/ddm_cd3_20260910/recovered_sources/de7fccff8c73dfe7ed58c9d341e594bddc534c93.blob"
+        },
+        {
+          "content_sha256": "2b512aa3f1131c8e079eb6d8c213cb523b2a464c7ba4a4855111f29dbc901d65",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/0ef12fc85eb047d0df3600cd9b476855765445f6.blob"
+        },
+        {
+          "content_sha256": "b931076347afdafe84e48ef5fd5b55a7dcaa88af5406363f45b2231070e1662f",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/15d2e243935a75f73eee654fec88e9f3ed0bce7c.blob"
+        },
+        {
+          "content_sha256": "140c6b56f510776e84cdb87d0d7055c0362196872b651868d7eb4a98b9e44251",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/1f202759e374bfc9470925fd2e5d466d1d22acb6.blob"
+        },
+        {
+          "content_sha256": "475fe6fea164be3de8b30ba8fdc16775d7b21d63052131c188e2413d9d70b4c1",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/34a2a07a1c9185a9a50280ac314755ca7fc453c6.blob"
+        },
+        {
+          "content_sha256": "334359b90efed75da5f0ada1d5e6b256f4a6bd0aee7eb39c0f90182a021ffc8b",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/4287ca8617970fa8fc025b75cb319c7032706910.blob"
+        },
+        {
+          "content_sha256": "1de585763ca08e15f7e384a599bf004e95764fa87fd1e0037146fb0ef4cac515",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55.blob"
+        },
+        {
+          "content_sha256": "1e14a68a8fe2f71228984361fbf7cbe42173e0aa1e3c5a94a753b6850190a87d",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/55697d7c9d664cb77b7108b7f244c00c76897d28.blob"
+        },
+        {
+          "content_sha256": "e9154997f7f45c105c6edf046205b65ef227d71b00131b8d3d4b1ff28c8eadca",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/69c0924434c095f009ddcd667e91de3e82df7248.blob"
+        },
+        {
+          "content_sha256": "7570bd6c2decabb4e6af538f150e58e48ead1515f4e9bcd47b062ce10254f9fe",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/b90809caf614d92a8a57f380bb2d2b0ebbf7c01d.blob"
+        },
+        {
+          "content_sha256": "b7252de2ed06bd5bef65b8a82c30460866121ef305bee47dd0f4f82372ec6aae",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/c390bec76e9d7690bc9d32c869584eadf945b911.blob"
+        },
+        {
+          "content_sha256": "0f7f44f3e199459d0a6ce73aec63e728bff0bcebcb7585e16b6b015113d3b48d",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/d3e25647af39bf136753df42f5279240b7e7452d.blob"
+        },
+        {
+          "content_sha256": "8975f96ea79ebde430202e0ad652901593d54263bb002333b169568baeb9ada0",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7.blob"
+        },
+        {
+          "content_sha256": "ae64aa4645cb0625f2278954a685972e14c558ae440e00c46a6e7baad55b93f8",
+          "path": ".omx/research/ddm_cd3_20260910/reproduced/f19f16ec0f5617c245aacd4c82e65f2381e5cca2.blob"
+        }
+      ]
+    },
+    {
+      "label": "ddm_cd3_patch_only_code",
+      "base_head": "8679549acd8ec9169b2cbe390a6f030c2ef2cdb7",
+      "fallback_commit": "d2a659920f4d79f77a51b67ccc4acd846daeb5e8",
+      "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/intended-commit.bundle",
+      "bundle_sha256": "79c720a85556aceb36e679ad63bc8f90a367409255b0d6f3cee4d6f11ebcad08",
+      "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/intended-commit.format-patch",
+      "format_patch_sha256": "886629d459a75903704085299d622a0072aa8be119fc584402b34c738ed89c9e",
+      "intended_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T021635.368677Z-14067/intended-tree.patch",
+      "intended_patch_sha256": "45ac7235d9697eea2296ce06007e63c3a4d943da0f4e35e6ea519c9199cf43cd",
+      "files": [
+        {
+          "content_sha256": "025fd7d07c931b509c4afef58a0173172392af02d7ba699bbdd269889e01f2bf",
+          "path": "experiments/ddm_vr3_certified_raw_reclaim.py"
+        },
+        {
+          "content_sha256": "f71bdd740a4a9b8ca18b7feef16c2805f4e402467945d0d708bfdd39eebbaaad",
+          "path": "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
+        },
+        {
+          "content_sha256": "e9ffcb04ae54e43dfb61bf85d0181910b07b387d7e6bee5787d24ec727006aab",
+          "path": "experiments/ddm_cd3_ssd_custody.py"
+        },
+        {
+          "content_sha256": "88604fbb48ba415952b4f28799fad51e3b9981a99ed0cf886b56fa6d08ca1052",
+          "path": ".omx/research/ddm_cd3_20260910/review_receipt.json"
+        },
+        {
+          "content_sha256": "c10b61b5ddc8a46ad807962930e0c6ac32d2c3ec9155ea4ccb7d812562162f27",
+          "path": ".omx/research/ddm_cd3_20260910/gate_tests.log"
+        },
+        {
+          "content_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+          "path": ".omx/research/ddm_cd3_20260910/gate_ruff.log"
+        }
+      ]
+    },
+    {
+      "label": "ddm_cd3_patch_only_metadata_1",
+      "base_head": "d6dabdf082a316374141fc0463c29edecbac7a48",
+      "fallback_commit": "4681ed08cb7efc3d6a91e15135bdbb4520c6c52c",
+      "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T022401.199765Z-37133/intended-commit.bundle",
+      "bundle_sha256": "82ccf01e87b17df00ce60ff6573c081c022438593216ea7923bb7b68d0845f77",
+      "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T022401.199765Z-37133/intended-commit.format-patch",
+      "format_patch_sha256": "ac1b9d3b1ffd9d4c0e4a01e6c04c556dc998452f3630a8b77f944de79afc6e1d",
+      "intended_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T022401.199765Z-37133/intended-tree.patch",
+      "intended_patch_sha256": "b0b6ef24fb152d9b6a528e82e7505b8d30db6c36d33ec9d12662aefbb3f41726",
+      "files": [
+        {
+          "content_sha256": "642c99819ebe7a9edd4a8bc94a936b981be2f888ae789000bc9e1604f0798f8e",
+          "path": ".omx/research/ddm_cd3_ssd_code_debt_final_20260910.md"
+        },
+        {
+          "content_sha256": "cf9dec00f23ece12bbe5ccdeb2cde509532a24b1f0b8e88e89b1c7cfd2653535",
+          "path": ".omx/research/ddm_cs1_ssd_code_certify_20260909.jsonl"
+        },
+        {
+          "content_sha256": "584d324546d83ab1b3264e13e08c1b2925d6db0be0d4b0de016ed86a3e195bbd",
+          "path": ".omx/research/ssd_authored_signal_certified.jsonl"
+        },
+        {
+          "content_sha256": "91df7d4e1b9a6e34480001319c93cdcd5b535d56ce6f0dd6fd09c45777380a0a",
+          "path": ".omx/research/ddm_cd3_20260910/audit_after.json"
+        },
+        {
+          "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "path": ".omx/research/ddm_cd3_20260910/audit_after_stderr.log"
+        },
+        {
+          "content_sha256": "d4f4238804ca0fa5e25e42317e9a508000442b84b7c39b683cef706e08db7247",
+          "path": ".omx/research/ddm_cd3_20260910/audit_after_stdout.json"
+        },
+        {
+          "content_sha256": "8edc8e4b600755190e3001292fb1cee4965c25dbd4a6e826e913f10c000295f3",
+          "path": ".omx/research/ddm_cd3_20260910/audit_before_corrected_policy.json"
+        },
+        {
+          "content_sha256": "f2aab4924f8dc11e7e8f7c8b8d43e78a250ba6471032c443f76427092ca9bd30",
+          "path": ".omx/research/ddm_cd3_20260910/audit_live_before.json"
+        },
+        {
+          "content_sha256": "93c74a964b58b19ab6cf5f047a0d2e6779358f95a3333d594f83d10302ecb79a",
+          "path": ".omx/research/ddm_cd3_20260910/audit_live_before_stdout.json"
+        },
+        {
+          "content_sha256": "bee60a270f417c693f311ef96d2876afaa4ce42f2fcf6205eaab6b99ec35ea80",
+          "path": ".omx/research/ddm_cd3_20260910/bz2d_reapply_fire_order.json"
+        },
+        {
+          "content_sha256": "a0a0385c67c5d2a40ffc3a29541ccab7e9caf97062e183daedc7e28b54e78271",
+          "path": ".omx/research/ddm_cd3_20260910/code_bundle_receipt.json"
+        },
+        {
+          "content_sha256": "a6605e0ae53485020b570ced7ff6aeb853b7343dfb36e467eb5ba8bf3a43d262",
+          "path": ".omx/research/ddm_cd3_20260910/concurrent_dispositions.jsonl"
+        },
+        {
+          "content_sha256": "1aea88a9c3ec31d703be6a36e3448416afd50065a385cee44558193b679900fd",
+          "path": ".omx/research/ddm_cd3_20260910/dispositions.jsonl"
+        },
+        {
+          "content_sha256": "9516acc484f8279fcba78035f54873c57bf8f6ed64af6998ffee7d966ea739a8",
+          "path": ".omx/research/ddm_cd3_20260910/eligible_source_review.json"
+        },
+        {
+          "content_sha256": "92f9382e49cc96145e4185bbae4cd697c0a096eeb0cc969955a7a23d61997ca6",
+          "path": ".omx/research/ddm_cd3_20260910/equations_recall.json"
+        },
+        {
+          "content_sha256": "e8be42ccb2d2e769ccaebd5f1d90b2f80dc17274e458840859446c75cb0e799b",
+          "path": ".omx/research/ddm_cd3_20260910/equations_recall_summary.json"
+        },
+        {
+          "content_sha256": "70cf757f952a849609104b03cab1b61888780c9c5e393b9635c96dd1307bb569",
+          "path": ".omx/research/ddm_cd3_20260910/frontier_readback.json"
+        },
+        {
+          "content_sha256": "b68cac3d2f828eea63a5d8d3ba02e4de60d73e31ce12d7bb9186fca46022d6ca",
+          "path": ".omx/research/ddm_cd3_20260910/owner_fire_orders.jsonl"
+        },
+        {
+          "content_sha256": "d1189f90019645cd65095e3cbec83b26a90f5545e2da45fd3e895ed092156e7f",
+          "path": ".omx/research/ddm_cd3_20260910/patch_only_code_intent.json"
+        },
+        {
+          "content_sha256": "11f7a0ff9c2c94370ccdbc18286dbf6a0b9c041a104af694d9c03e9c76aec160",
+          "path": ".omx/research/ddm_cd3_20260910/preexisting_0.blob"
+        },
+        {
+          "content_sha256": "600a0d3897f1b5ae634e0eb57d72e35a7c46a0b3aeaef32958f1d0600b18e82e",
+          "path": ".omx/research/ddm_cd3_20260910/preexisting_1.blob"
+        },
+        {
+          "content_sha256": "a8b8283e535aa4486d93979d823e0043aee33eadfd2c88fee5e10fed703191cb",
+          "path": ".omx/research/ddm_cd3_20260910/preexisting_2.blob"
+        },
+        {
+          "content_sha256": "5a8a6ddfa1746114fddc9d67e7a91e30e2e93684cd12b57673c94945186d4f9a",
+          "path": ".omx/research/ddm_cd3_20260910/preexisting_3.blob"
+        },
+        {
+          "content_sha256": "54194b8666aa43fdd0016eb62ebd397321b614b3a7cd317dd4e262d8b8f233c9",
+          "path": ".omx/research/ddm_cd3_20260910/preexisting_manifest.json"
+        },
+        {
+          "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "path": ".omx/research/ddm_cd3_20260910/prepare.log"
+        }
+      ]
+    },
+    {
+      "label": "ddm_cd3_patch_only_metadata_2",
+      "base_head": "d6dabdf082a316374141fc0463c29edecbac7a48",
+      "fallback_commit": "0134f8419b1facd6c8598b3ffa83239bc3475df4",
+      "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T022404.535897Z-37133/intended-commit.bundle",
+      "bundle_sha256": "fa26d2cf6632ddd1976ac2afbc21b599cfca5388505323b9edfd319e275f8887",
+      "format_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T022404.535897Z-37133/intended-commit.format-patch",
+      "format_patch_sha256": "70da28e7fc7e693147404966553af32b21dd6e77706a17ef9652569c1de0da3f",
+      "intended_patch_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cd3_20260910/serializer_fallback/20260910T022404.535897Z-37133/intended-tree.patch",
+      "intended_patch_sha256": "2b56608c4381456c160c16399563234e3cd3fdb1f04537c4685011ea33143e85",
+      "files": [
+        {
+          "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "path": ".omx/research/ddm_cd3_20260910/prepare_resume.log"
+        },
+        {
+          "content_sha256": "d100cf11b948e3fb44ae025145a65113f36fbdad4deefedba477f4c2464ceb1c",
+          "path": ".omx/research/ddm_cd3_20260910/recall_corpus_paths.txt"
+        },
+        {
+          "content_sha256": "07652bbde3f8b623aa129039dca120d7974c41384076c375520bfec633d1ec0e",
+          "path": ".omx/research/ddm_cd3_20260910/repin_proofs_plan.json"
+        },
+        {
+          "content_sha256": "9e9a0404f6ae57d0346eb773bdef37bff0449a1f548b10f37ea22076b676c9ab",
+          "path": ".omx/research/ddm_cd3_20260910/result_summary.json"
+        },
+        {
+          "content_sha256": "3a74e96e113863f25e8a494cac8b5ec77746e0c751952d5a40990268932f5fe3",
+          "path": ".omx/research/ddm_cd3_20260910/serializer_argv.json"
+        },
+        {
+          "content_sha256": "a5223ca83a97b9044a4c1cd186838a491c2a03c7a16607e7f9d099da874e8a78",
+          "path": ".omx/research/ddm_cd3_20260910/serializer_attempt.log"
+        },
+        {
+          "content_sha256": "2a91416d3e39ca27b03635dd86f80d6f971c6528f62b912caab4048470c80c95",
+          "path": ".omx/research/ddm_cd3_20260910/serializer_status.json"
+        },
+        {
+          "content_sha256": "ae20557cdc058177cdbfe14f9fe7642f9c2b7ef5787cc1d52df449c652d16e52",
+          "path": ".omx/research/ddm_cd3_20260910/source_bundle_rows.jsonl"
+        },
+        {
+          "content_sha256": "e04d1c023ee2a3a84b8415b51c0e2e4bbd8f6c86ae4cc9448f542855e9671aa2",
+          "path": ".omx/research/ddm_cd3_20260910/source_checks.json"
+        },
+        {
+          "content_sha256": "1552a8da6ab3b9fb95eccba3820257f0c6254b2b82657c5a4a3feecbbda97201",
+          "path": ".omx/research/ddm_cd3_20260910/verification.json"
+        },
+        {
+          "content_sha256": "040dbe17056df381eac1e78a8acb98889a95f35de038b8f6bfcf06ec20595309",
+          "path": ".omx/research/ddm_cd3_20260910/withdrawn_sw2_draft_certifications.json"
+        }
+      ]
+    }
+  ],
+  "packaging_note": "Only batch 1 attempted a shared-repo commit. Remaining batches use serializer isolated fallback authoring directly after the recorded denial; no live retry and no live commit claimed.",
+  "verification": ".omx/research/ddm_cd3_20260910/bundle_verification.json",
+  "main_fire_order": "At handoff harvest, verify all hashes and apply each <=25-file intended patch through the serializer with per-file post-edit expected-content-sha256, no attribution trailer, and normal Python review gate. Reconcile any subsequent shared-ledger changes before apply. Then verify source blob reachability and rerun the SSD audit.",
+  "current_measured_owed": 33,
+  "projected_owed_after_source_landing": 22,
+  "source_payloads_or_live_trees_mutated": false
+}

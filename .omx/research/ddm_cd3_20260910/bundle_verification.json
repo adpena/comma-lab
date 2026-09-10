@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "batches": 4,
+  "batch_file_counts": [
+    24,
+    6,
+    25,
+    11
+  ],
+  "verified_files": 66,
+  "combined_tree": "ce4ae73df12f82aabfba1824f0012eeed16fecfc",
+  "base_head": "925672272eedc37a1b5a4158147ecbe93a626db5",
+  "patch_sha256": "1490154c090598b1f06a2c02f525860e990468b2449aed04fdef3653363cbabd",
+  "patch_bytes": 6716614,
+  "method": "Applied complete landing.patch to a fresh isolated Git index based on first-batch HEAD, then rehashed all 66 resulting files and compared them to retained intent and working files.",
+  "live_git_changed": false,
+  "scratch_retained": false,
+  "scratch_rebuild_proof": "Verified input patch hash and base HEAD fully reproduce the discarded isolated scratch tree.",
+  "prior_verifier_refusal": "Initial preliminary verifier assumed expected_sha256; inspected serializer schema and used content_sha256. No false PASS emitted."
+}

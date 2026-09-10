@@ -1,0 +1,3976 @@
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob
+new file mode 100644
+index 000000000..39a0cf291
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/39a0cf291c28928131ce83d8a50d2dd8cdf6818f.blob
+@@ -0,0 +1,60 @@
++# COMMON ARM CONTRACT (every codex arm reads this)
++
++Repo /Users/adpena/Projects/pact. Read CLAUDE.md + AGENTS.md +
++docs/operating_manual_craft_handoff.md, then `.omx/state/main_hot_state.md` (live board).
++
++## Sandbox note — READ THIS FIRST
++You are spawned with `--add-dir /Volumes/VertigoDataTier/pact`, so the SSD cold-store tier IS
++writable. A predecessor arm (fz3) DIED on `PermissionError: Operation not permitted` writing there
++because that flag was missing. If you still hit a permission error on the SSD, STOP and report it —
++do not silently symlink around it (that is how fz3 produced a custody caveat instead of a clean row).
++
++## Binding constraints
++- Commit via `.venv/bin/python tools/subagent_commit_serializer.py` with POST-EDIT
++  `--expected-content-sha256` per file + `[no-triality] [p0-ledger-ok]`.
++- NO co-author / Claude / AI trailer — commits are the operator's alone.
++- `REVIEW_GATE_OVERRIDE=1` FORBIDDEN on `.py` (2 `tools/review_tracker.py` passes required; fine for .md/.sh).
++- NEVER edit: `.omx/research/ddm_cr1_composition_row_827_20260801.md`,
++  `.omx/research/ddm_pu2_pose_tail_floor_probe_20260803.md`,
++  `src/tac/optimization/direct_description_carrier_compose.py`.
++- Never touch the staged git index. No `git stash` on the shared worktree.
++- No `/tmp` in persisted evidence — SSD tier for bulk, certify-or-block (record path, bytes,
++  SHA-256, command/config before moving or deleting anything).
++- MPS is NEVER score authority. GT decode ONLY via `frame_utils.yuv420_to_rgb`.
++- `upstream/` is IMMUTABLE.
++- ONE full-n600 scorer job at a time across the whole fleet, chunk ≤120. Your charter says whether
++  you own the scorer slot. If you do NOT, do byte-only / scorer-free work and QUEUE the scorer step.
++- Every number MEASURED with an axis label (`[macOS-CPU advisory]` etc.). Recompute S from
++  components — evaluate.py's printed `Final score` is 2-decimal and LIES.
++- verdict-scope every negative (INSTANCE / FORMULATION / FAMILY). n=8 banks NOTHING: a prefix of a
++  skewed population is a different population, and the bias SIGN INVERTS between seg and pose axes.
++  Use stratified-random n≥32 before banking anything.
++- Follow-ons fire at harvest or they are orphan poison: every follow-on you name exits your run
++  FIRED, FOLDED, or QUEUED-WITH-A-FIRE-ORDER. "Noted" is not a disposition.
++
++## ORIGINAL RECALL — never charter-only (operator binding 2026-08-05)
++Your charter's seed/context lists are a FLOOR, not a ceiling: they are MAIN's working memory once
++removed and inherit MAIN's recall gaps. Before you adjudicate, price, compare, kill, or build
++anything, do YOUR OWN recall against the FULL corpus — not just the codebase:
++- `.omx/research/` memos + arm receipts (search by CONTENT for your surface, not only the names
++  your charter handed you);
++- the canonical equations registry (`.venv/bin/python tools/list_canonical_equations.py --json`);
++- the research index / graph-memory surfaces (`.omx/research/CANONICAL_RESEARCH_INDEX*`, DAG
++  `sub015_DAG_*` FEED blocks);
++- design docs/SPECs + the task ledger rows touching your surface.
++Your receipt MUST carry a `## RECALL EVIDENCE` section: sources searched (queries included), what
++you found BEYOND the charter's seeds, and what it CHANGED in your plan (or "nothing found beyond
++seeds in <scope>" — a scoped negative, never silence). "The charter didn't mention it" is never a
++defense: the bd1 incident (a naive dense-field price reported as "the honest price" while
++se3/rl1/sp1 already held cheaper measured representations of the same content) is the class this
++clause extincts.
++
++## Live frontier
++S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory] n600 (qo1 `sub_auto_pairbit`, sha
++d5e814d5…). Gap to the PR130 bar 0.1721413 is 0.5818394 = seg 0.401519 (69.0%) / pose 0.0692658 /
++rate 0.1110546 (uf1 re-derivation 08-05). Contest pointer 0.1910828242 is BORROWED and
++harvest-only — never ours to ship.
++
++## Final message
++State what you MEASURED, what you did NOT, and every boundary. End with the own-vehicle frontier
++line (S + bytes + axis; lead with a new number only if YOUR measurement moved it).
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c.blob
+new file mode 100644
+index 000000000..3ed24610a
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/3ed24610a4fe4d36a4f1f14b17ac6b73f5b1858c.blob
+@@ -0,0 +1,358 @@
++"""Renderer primitives used by the F26 archive decoder."""
++
++from __future__ import annotations
++
++import math
++import struct
++import time
++from pathlib import Path
++
++import numpy as np
++import torch
++from carrier_codec import MAGIC as COMPACT_CARRIER_MAGIC
++from carrier_codec import decode_compact_carrier
++from hpac_integer import IntegerHPAC
++from integer_model_io import deserialize_integer_model
++from ddm_mp2_semantic_receiver import unpack_variant_semantic_or_none
++from torch import nn
++from torch.nn import functional
++
++N = 600
++NUM_CLASSES = 5
++EVAL_H, EVAL_W = 384, 512
++CAMERA_H, CAMERA_W = 874, 1164
++SEMANTIC_WIDTH = 96
++SEMANTIC_WIDTH_BY_PAYLOAD_BYTES = {30_748: 80, 40_252: 96}
++SEMANTIC_BLOCKS = 4
++SEMANTIC_FRAME_DIM = 8
++CARRIER_DIM = 12
++CARRIER_H, CARRIER_W = 24, 32
++CARRIER_AMPLITUDE = 64.0
++CARRIER_COEFF_BITS = 12
++CARRIER_COEFF_DELTA_ZIGZAG = True
++HPAC_PATCH = 64
++HPAC_DELTA = 2
++HPAC_CHANNELS = 64
++HPAC_FILM_DIM = 8
++HPAC_LOGIT_PRECISION = 8
++
++
++def unpack_signed_int4(blob: memoryview, count: int):
++    byte_count = (count + 1) // 2
++    packed = np.frombuffer(blob[:byte_count], dtype=np.uint8)
++    values = np.empty(byte_count * 2, dtype=np.int8)
++    values[0::2] = packed & 0xF
++    values[1::2] = packed >> 4
++    values[values >= 8] -= 16
++    return torch.from_numpy(values[:count].copy()), blob[byte_count:]
++
++
++def unpack_signed_bits(blob: memoryview, count: int, bits: int):
++    if not 2 <= bits <= 8:
++        raise ValueError("signed bit unpacker supports 2 through 8 bits")
++    byte_count = (count * bits + 7) // 8
++    packed = np.frombuffer(blob[:byte_count], dtype=np.uint8)
++    bitstream = np.unpackbits(packed, bitorder="little")[: count * bits]
++    bitstream = bitstream.reshape(count, bits).astype(np.int16, copy=False)
++    shifts = (1 << np.arange(bits, dtype=np.int16))[None]
++    unsigned = (bitstream * shifts).sum(axis=1, dtype=np.int16)
++    sign = 1 << (bits - 1)
++    values = np.where(unsigned >= sign, unsigned - (1 << bits), unsigned)
++    return torch.from_numpy(values.astype(np.int8, copy=False)), blob[byte_count:]
++
++
++def unpack_signed_int12(blob: memoryview, count: int):
++    byte_count = ((count + 1) // 2) * 3
++    packed = np.frombuffer(blob[:byte_count], dtype=np.uint8).astype(np.uint16)
++    values = np.empty((byte_count // 3) * 2, dtype=np.int16)
++    values[0::2] = packed[0::3] | ((packed[1::3] & 0xF) << 8)
++    values[1::2] = (packed[1::3] >> 4) | (packed[2::3] << 4)
++    values[values >= 2048] -= 4096
++    return torch.from_numpy(values[:count].copy()), blob[byte_count:]
++
++
++class TokenBlock(nn.Module):
++    def __init__(self, width: int, frame_dim: int, dilation: int):
++        super().__init__()
++        self.dw = nn.Conv2d(
++            width, width, 3, padding=dilation, dilation=dilation, groups=width
++        )
++        self.pw = nn.Conv2d(width, width, 1)
++        self.norm = nn.GroupNorm(max(1, width // 8), width)
++        self.film = nn.Linear(frame_dim, 2 * width)
++
++    def forward(self, value: torch.Tensor, frame: torch.Tensor):
++        residual = self.norm(self.pw(self.dw(value)))
++        scale, shift = self.film(frame).chunk(2, dim=1)
++        residual = residual * (1.0 + scale[:, :, None, None])
++        residual = residual + shift[:, :, None, None]
++        return value + functional.gelu(residual)
++
++
++class SemanticTokenRenderer(nn.Module):
++    def __init__(self, width: int = SEMANTIC_WIDTH):
++        super().__init__()
++        self.token_embed = nn.Embedding(NUM_CLASSES, width)
++        self.frame_embed = nn.Embedding(N, SEMANTIC_FRAME_DIM)
++        self.coord_mix = nn.Conv2d(width + 4, width, 1)
++        self.blocks = nn.ModuleList(
++            [
++                TokenBlock(width, SEMANTIC_FRAME_DIM, dilation)
++                for dilation in (1, 1, 2, 4)
++            ]
++        )
++        self.head = nn.Conv2d(width, 3, 3, padding=1)
++
++    @staticmethod
++    def coordinates(batch: int, device: torch.device, dtype: torch.dtype):
++        yy, xx = torch.meshgrid(
++            torch.linspace(-1.0, 1.0, EVAL_H, device=device, dtype=dtype),
++            torch.linspace(-1.0, 1.0, EVAL_W, device=device, dtype=dtype),
++            indexing="ij",
++        )
++        coordinates = torch.stack([xx, yy, xx.square(), yy.square()], dim=0)
++        return coordinates.unsqueeze(0).expand(batch, -1, -1, -1)
++
++    def forward(self, tokens: torch.Tensor, pair_indices: torch.Tensor):
++        value = self.token_embed(tokens).permute(0, 3, 1, 2)
++        value = self.coord_mix(
++            torch.cat(
++                [
++                    value,
++                    self.coordinates(value.shape[0], value.device, value.dtype),
++                ],
++                dim=1,
++            )
++        )
++        frame = self.frame_embed(pair_indices)
++        for block in self.blocks:
++            value = block(value, frame)
++        return torch.sigmoid(self.head(functional.gelu(value))) * 255.0
++
++
++def unpack_semantic(blob: bytes, template: dict[str, torch.Tensor]):
++    remaining = memoryview(blob)
++    restored = {}
++    for name, value in template.items():
++        shape = tuple(value.shape)
++        count = value.numel()
++        if value.ndim < 2:
++            byte_count = count * 2
++            array = np.frombuffer(remaining[:byte_count], dtype="<f2").copy()
++            restored[name] = torch.from_numpy(array).reshape(shape).float()
++            remaining = remaining[byte_count:]
++            continue
++        is_embedding = name.endswith("embed.weight")
++        scale_count = shape[-1] if is_embedding else shape[0]
++        scale_bytes = scale_count * 2
++        scales = torch.from_numpy(
++            np.frombuffer(remaining[:scale_bytes], dtype="<f2").copy()
++        ).float()
++        remaining = remaining[scale_bytes:]
++        codes, remaining = unpack_signed_int4(remaining, count)
++        scale_shape = [1] * len(shape)
++        scale_shape[-1 if is_embedding else 0] = scale_count
++        restored[name] = codes.reshape(shape).float() * scales.reshape(scale_shape)
++    if remaining:
++        raise ValueError("semantic payload has trailing bytes")
++    return restored
++
++
++def unpack_semantic_pose(raw: bytes):
++    if len(raw) < 8:
++        raise ValueError("truncated semantic-pose payload")
++    semantic_bytes, carrier_bytes = struct.unpack_from("<II", raw)
++    if len(raw) != 8 + semantic_bytes + carrier_bytes:
++        raise ValueError("semantic-pose payload length mismatch")
++    semantic_blob = raw[8 : 8 + semantic_bytes]
++    carrier_blob = memoryview(raw[8 + semantic_bytes :])
++    tagged_state = None
++    if semantic_blob.startswith((b"SD1M", b"SM3R", b"RC1S", b"SM1S")):
++        semantic_width = SEMANTIC_WIDTH
++    else:
++        try:
++            semantic_width = SEMANTIC_WIDTH_BY_PAYLOAD_BYTES[semantic_bytes]
++        except KeyError as error:
++            raise ValueError(
++                f"unsupported semantic payload size: {semantic_bytes} bytes"
++            ) from error
++    semantic = SemanticTokenRenderer(semantic_width)
++    tagged_state = unpack_variant_semantic_or_none(
++        semantic_blob,
++        semantic.state_dict(),
++    )
++    if tagged_state is None:
++        tagged_state = unpack_semantic(semantic_blob, semantic.state_dict())
++    semantic.load_state_dict(tagged_state, strict=True)
++
++    scale_bytes = CARRIER_DIM * 4
++    basis_count = CARRIER_DIM * 3 * CARRIER_H * CARRIER_W
++    coefficient_count = N * CARRIER_DIM
++    if carrier_blob[:4] == COMPACT_CARRIER_MAGIC:
++        (
++            basis_scales_array,
++            basis_codes_array,
++            coefficient_scales_array,
++            encoded_coefficients,
++        ) = decode_compact_carrier(
++            carrier_blob,
++            basis_count=basis_count,
++            frames=N,
++            dimensions=CARRIER_DIM,
++        )
++        basis_scales = torch.from_numpy(basis_scales_array)
++        basis_codes = torch.from_numpy(basis_codes_array.astype(np.int8, copy=False))
++        coefficient_scales = torch.from_numpy(coefficient_scales_array)
++        coefficient_codes = torch.from_numpy(
++            encoded_coefficients.astype(np.int32, copy=False)
++        )
++    else:
++        basis_scales = torch.from_numpy(
++            np.frombuffer(carrier_blob[:scale_bytes], dtype="<f4").copy()
++        )
++        carrier_blob = carrier_blob[scale_bytes:]
++        coefficient_bytes = ((coefficient_count + 1) // 2) * 3
++        basis_bytes = carrier_bytes - 2 * scale_bytes - coefficient_bytes
++        if basis_bytes <= 0 or (basis_bytes * 8) % basis_count:
++            raise ValueError("carrier payload has an invalid packed basis length")
++        basis_bits = basis_bytes * 8 // basis_count
++        if not 4 <= basis_bits <= 8:
++            raise ValueError(f"unsupported carrier basis precision: {basis_bits}")
++        basis_codes, carrier_blob = unpack_signed_bits(
++            carrier_blob, basis_count, basis_bits
++        )
++        coefficient_scales = torch.from_numpy(
++            np.frombuffer(carrier_blob[:scale_bytes], dtype="<f4").copy()
++        )
++        carrier_blob = carrier_blob[scale_bytes:]
++        if CARRIER_COEFF_BITS != 12:
++            raise ValueError("submission payload expects signed int12 coefficients")
++        coefficient_codes, carrier_blob = unpack_signed_int12(
++            carrier_blob, coefficient_count
++        )
++        if carrier_blob:
++            raise ValueError("carrier payload has trailing bytes")
++        coefficient_codes = coefficient_codes.reshape(N, CARRIER_DIM).to(torch.int32)
++        coefficient_codes &= 0xFFF
++    if CARRIER_COEFF_DELTA_ZIGZAG:
++        delta = (coefficient_codes >> 1) ^ -(coefficient_codes & 1)
++        coefficient_codes = torch.cumsum(delta, dim=0) & 0xFFF
++        coefficient_codes = torch.where(
++            coefficient_codes >= 0x800,
++            coefficient_codes - 0x1000,
++            coefficient_codes,
++        )
++    basis = basis_codes.reshape(CARRIER_DIM, 3, CARRIER_H, CARRIER_W).float()
++    basis = basis * basis_scales[:, None, None, None]
++    coefficients = (
++        coefficient_codes.reshape(N, CARRIER_DIM).float() * coefficient_scales[None]
++    )
++    return semantic, basis, coefficients
++
++
++def load_hpac(raw: bytes, device: torch.device):
++    model = IntegerHPAC(
++        num_pairs=N,
++        num_classes=NUM_CLASSES,
++        patch=HPAC_PATCH,
++        delta=HPAC_DELTA,
++        channels=HPAC_CHANNELS,
++        frame_dim=HPAC_FILM_DIM,
++        norm_mode="none",
++        activation="relu",
++        use_frame_scale=True,
++        weight_bound=127,
++        activation_bound=127,
++        use_weight_scales=True,
++        weight_exponent_min=-6,
++        use_spm=True,
++        use_norm_gates=False,
++    ).eval()
++    deserialize_integer_model(model, raw)
++    return model.to(device)
++
++
++def group_masks(device: torch.device):
++    rows = torch.arange(HPAC_PATCH, device=device).view(HPAC_PATCH, 1)
++    columns = torch.arange(HPAC_PATCH, device=device).view(1, HPAC_PATCH)
++    grid = columns + HPAC_DELTA * rows
++    patch_rows, patch_columns = EVAL_H // HPAC_PATCH, EVAL_W // HPAC_PATCH
++    masks = []
++    for group in range((1 + HPAC_DELTA) * HPAC_PATCH - HPAC_DELTA):
++        local = grid == group
++        full = local[None, None].expand(
++            patch_rows, patch_columns, HPAC_PATCH, HPAC_PATCH
++        )
++        masks.append(full.permute(0, 2, 1, 3).reshape(EVAL_H, EVAL_W))
++    return masks
++
++
++def normalized_basis(raw_basis: torch.Tensor):
++    basis = functional.interpolate(
++        raw_basis, size=(EVAL_H, EVAL_W), mode="bicubic", align_corners=False
++    )
++    basis = basis - basis.mean(dim=(1, 2, 3), keepdim=True)
++    rms = basis.square().mean(dim=(1, 2, 3), keepdim=True).sqrt().clamp_min(1e-5)
++    return basis / rms
++
++
++@torch.no_grad()
++def render_video(semantic, basis, coefficients, tokens, destination: Path, device):
++    semantic = semantic.eval().to(device)
++    basis = normalized_basis(basis.to(device))
++    coefficients = coefficients.to(device)
++    destination.parent.mkdir(parents=True, exist_ok=True)
++    output = np.memmap(
++        destination,
++        mode="w+",
++        dtype=np.uint8,
++        shape=(N * 2, CAMERA_H, CAMERA_W, 3),
++    )
++    started = time.time()
++    semantic_batch = 8 if device.type == "cuda" else 1
++    for start in range(0, N, semantic_batch):
++        end = min(start + semantic_batch, N)
++        indices = torch.arange(start, end, device=device)
++        master = (
++            functional.interpolate(
++                semantic(tokens[start:end].long().to(device), indices),
++                size=(CAMERA_H, CAMERA_W),
++                mode="bilinear",
++                align_corners=False,
++            )
++            .clamp(0.0, 255.0)
++            .round()
++        )
++        master_np = master.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
++        for offset in range(end - start):
++            output[2 * (start + offset) + 1] = master_np[offset]
++        if end % 50 == 0 or end == N:
++            print(
++                f"rendered masters {end}/{N} in {time.time() - started:.1f}s",
++                flush=True,
++            )
++
++    pose_batch = 64 if device.type == "cuda" else 1
++    for start in range(0, N, pose_batch):
++        end = min(start + pose_batch, N)
++        carrier = torch.einsum("bk,kchw->bchw", coefficients[start:end], basis)
++        carrier = carrier / math.sqrt(CARRIER_DIM)
++        slave = (
++            functional.interpolate(
++                (127.5 + CARRIER_AMPLITUDE * carrier).clamp(0.0, 255.0).round(),
++                size=(CAMERA_H, CAMERA_W),
++                mode="bicubic",
++                align_corners=False,
++            )
++            .clamp(0.0, 255.0)
++            .round()
++        )
++        slave_np = slave.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
++        for offset in range(end - start):
++            output[2 * (start + offset)] = slave_np[offset]
++        if end % 64 == 0 or end == N:
++            print(
++                f"rendered carriers {end}/{N} in {time.time() - started:.1f}s",
++                flush=True,
++            )
++    output.flush()
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/4d792e6355b46e0a9cc1f383e428c9b26f002a02.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/4d792e6355b46e0a9cc1f383e428c9b26f002a02.blob
+new file mode 100644
+index 000000000..4d792e635
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/4d792e6355b46e0a9cc1f383e428c9b26f002a02.blob
+@@ -0,0 +1,275 @@
++#!/usr/bin/env python3
++"""Stage and certify the composed RC3/TC1 sections against the live base."""
++from __future__ import annotations
++
++import argparse
++from datetime import UTC, datetime
++import json
++from pathlib import Path
++import subprocess
++import sys
++import zipfile
++
++REPO = Path(__file__).resolve().parents[1]
++sys.path[:0] = [str(REPO), str(REPO / 'src')]
++sys.dont_write_bytecode = True
++from experiments import ddm_cmp1_compose as c
++
++
++def replace_once(text, before, after):
++    if text.count(before) != 1:
++        raise ValueError('reader patch is not unique: ' + before)
++    return text.replace(before, after)
++
++
++def prepare_runtime():
++    """Use exact predecessor reader bytes, after verifying their base is current."""
++    inputs = c.guard()
++    source, target = c.ROOT / 'source_runtime', c.ROOT / 'candidate_runtime'
++    for relative, fact in inputs['sources'].items():
++        if c.jg2.file_fact(source/relative) != fact:
++            raise RuntimeError('retained source runtime drift')
++        if (c.LIVE/relative).read_bytes() != (source/relative).read_bytes():
++            raise RuntimeError('live source runtime changed since pointer capture')
++    tc = c.TC1 / 'candidate_runtime'
++    for relative in ('runtime/residual_archive.py', 'runtime/ihs2.py', 'runtime/f26_inflate.py'):
++        if (source/relative).read_bytes() != (c.TC1/'source_runtime'/relative).read_bytes():
++            raise RuntimeError('TC1 reader base no longer matches current source')
++    residual = (tc/'runtime/residual_archive.py').read_text()
++    residual = replace_once(residual,
++        '        from .rc2_hpac_semistatic_mixing import MAGIC as RC2_HPAC_MAGIC',
++        '        from .rc2_hpac_semistatic_mixing import MAGIC as RC2_HPAC_MAGIC\n        from .rc3_shared_mixer import MAGIC as RC3_HPAC_MAGIC')
++    residual = replace_once(residual,'hpac.startswith((RC1_HPAC_MAGIC, RC2_HPAC_MAGIC))',
++                            'hpac.startswith((RC1_HPAC_MAGIC, RC2_HPAC_MAGIC, RC3_HPAC_MAGIC))')
++    changed = {
++        'runtime/residual_archive.py': residual.encode(),
++        'runtime/ihs2.py': (c.RC3/'runtime/ihs2.py').read_bytes(),
++        'runtime/rc3_shared_mixer.py': (c.RC3/'runtime/rc3_shared_mixer.py').read_bytes(),
++        'runtime/tc1_shared_mixer.py': (tc/'runtime/tc1_shared_mixer.py').read_bytes(),
++        'runtime/tc1_receiver_checkpoint.py': (tc/'runtime/tc1_receiver_checkpoint.py').read_bytes(),
++    }
++    for relative in inputs['sources']:
++        if relative not in ('archive.zip','MANIFEST.sha256','inflate.py'):
++            c.write(target/relative, changed.pop(relative, (source/relative).read_bytes()))
++    for relative, payload in changed.items():
++        c.write(target/relative, payload)
++    return target
++
++
++def model_proof(role):
++    """Public parser and IHS1 materializer on the retained current sections."""
++    c.guard()
++    root = c.ROOT / ('source_runtime' if role == 'source' else 'candidate_runtime')
++    if role == 'source':
++        section = c.ROOT/'retained/source/hpac.bin'
++    else:
++        section = c.ROOT/'retained/rc3_hpac.br'
++    sys.path[:0] = [str(root),str(root/'cpr1')]
++    from runtime.residual_archive import read_residual_archive
++    from runtime.ihs2 import materialize_ihs1
++    import importlib.util
++    spec = importlib.util.spec_from_file_location('cmp1_model_renderer',root/'cpr1/inflate.py')
++    renderer = importlib.util.module_from_spec(spec)
++    sys.modules[spec.name] = renderer
++    spec.loader.exec_module(renderer)
++    # Retain a model-only section swap for independent public-parser proof.
++    parts = c.jg2.split_member(c.jg2.read_archive_member(c.ROOT/'source_runtime/archive.zip'))
++    parts['hpac'] = section.read_bytes()
++    header = list(c.jg2.RX1_HEADER.unpack(parts['header'])); header[5] = len(parts['hpac'])
++    parts['header'] = c.jg2.RX1_HEADER.pack(*header)
++    archive = c.ROOT/'retained'/f'model_only_{role}.zip'
++    c.preflight(archive)
++    c.jg2.pack_archive(c.jg2.join_member(parts), archive)
++    restored = materialize_ihs1(read_residual_archive(archive).hpac_blob, renderer)
++    fact = c.write(c.ROOT/'retained'/f'{role}_model.ihs1',restored)
++    if role == 'candidate' and restored != (c.ROOT/'retained/source_model.ihs1').read_bytes():
++        raise RuntimeError('RC3 changed current decoded model rows')
++    return c.record(c.ROOT/f'MODEL_PROOF_{role}.json',dict(role=role,body=fact,archive=c.jg2.file_fact(archive),
++                    model_identity=role=='candidate',axis=c.AXIS,score_claim=False))
++
++
++def stage():
++    import brotli
++    inputs = c.guard()
++    proof = json.loads((c.ROOT/'MODEL_PROOF_candidate.json').read_text())
++    if not proof['model_identity']:
++        raise RuntimeError('model proof required')
++    primary, repeat = [json.loads((c.ROOT/'encode'/tag/'ENCODE_0600.json').read_text()) for tag in ('primary','repeat')]
++    for item in (primary,repeat):
++        if not item['control_identical'] or item['frames'] != 600:
++            raise RuntimeError('full current-field original-stream control required')
++        for key in ('mixed','control'):
++            if c.jg2.file_fact(Path(item[key]['path'])) != item[key]:
++                raise RuntimeError('encoder payload drift')
++    raw = Path(primary['mixed']['path']).read_bytes()
++    if raw != Path(repeat['mixed']['path']).read_bytes():
++        raise RuntimeError('independent twin encodes differ')
++    parts = c.jg2.split_member(c.jg2.read_archive_member(c.ROOT/'source_runtime/archive.zip'))
++    base_parts = dict(parts)
++    parts['hpac'] = (c.ROOT/'retained/rc3_hpac.br').read_bytes()
++    header = list(c.jg2.RX1_HEADER.unpack(parts['header']))
++    header[4] |= 0x80; header[5] = len(parts['hpac'])
++    parts['header'] = c.jg2.RX1_HEADER.pack(*header)
++    weights = Path(inputs['weights']['path']).read_bytes()
++    alternatives = [('plain',c.tc1.MAGIC+weights+raw)]
++    for q in (9,10,11):
++        for w in (22,23,24):
++            alternatives.append((f'brotli_q{q}_w{w}',c.tc1.MAGIC[:4]+b'\x11'+weights+brotli.compress(raw,quality=q,lgwin=w)))
++    rows = []
++    standalone_rows = []
++    for label,rider in alternatives:
++        fact = c.write(c.ROOT/'retained/containers'/(label+'.bin'),rider)
++        if c.tc1.unpack_rider(rider) != (weights,raw):
++            raise RuntimeError('rider parse-back changed stream')
++        parts['tail'] = base_parts['tail'][:96]+rider
++        member = c.jg2.join_member(parts)
++        c.write(c.ROOT/'retained/containers'/(label+'.rx1'),member)
++        for method,level in [('stored',None),('deflate',1),('deflate',6),('deflate',9)]:
++            path = c.ROOT/'retained/containers'/f'{label}_{method}_{level}.zip'
++            c.preflight(path)
++            if method == 'stored':
++                c.jg2.pack_archive(member,path)
++            else:
++                with zipfile.ZipFile(path,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=level) as z:
++                    info=zipfile.ZipInfo('p',date_time=c.jg2.SHIPPED_ZIP_DATE_TIME)
++                    info.compress_type=zipfile.ZIP_DEFLATED
++                    info.external_attr=c.jg2.SHIPPED_ZIP_EXTERNAL_ATTR
++                    info.create_system=c.jg2.SHIPPED_ZIP_CREATE_SYSTEM
++                    z.writestr(info,member,compresslevel=level)
++            if c.jg2.read_archive_member(path)!=member:
++                raise RuntimeError('archive parse-back differs')
++            rows.append(dict(label=label,method=method,level=level,archive=c.jg2.file_fact(path),rider=fact))
++            standalone=dict(parts)
++            standalone['hpac']=base_parts['hpac']
++            standalone_header=list(c.jg2.RX1_HEADER.unpack(standalone['header']))
++            standalone_header[5]=len(standalone['hpac'])
++            standalone['header']=c.jg2.RX1_HEADER.pack(*standalone_header)
++            standalone_member=c.jg2.join_member(standalone)
++            standalone_path=c.ROOT/'retained/standalone_tc1'/f'{label}_{method}_{level}.zip'
++            c.preflight(standalone_path)
++            if method=='stored':
++                c.jg2.pack_archive(standalone_member,standalone_path)
++            else:
++                with zipfile.ZipFile(standalone_path,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=level) as z:
++                    info=zipfile.ZipInfo('p',date_time=c.jg2.SHIPPED_ZIP_DATE_TIME)
++                    info.compress_type=zipfile.ZIP_DEFLATED
++                    info.external_attr=c.jg2.SHIPPED_ZIP_EXTERNAL_ATTR
++                    info.create_system=c.jg2.SHIPPED_ZIP_CREATE_SYSTEM
++                    z.writestr(info,standalone_member,compresslevel=level)
++            if c.jg2.read_archive_member(standalone_path)!=standalone_member:
++                raise RuntimeError('standalone archive parse-back differs')
++            standalone_rows.append(dict(label=label,method=method,level=level,archive=c.jg2.file_fact(standalone_path)))
++    winner=min(rows,key=lambda r:(r['archive']['bytes'],r['label']!='plain',r['method']!='stored',str(r['level'])))
++    target=prepare_runtime()
++    archive=Path(winner['archive']['path']).read_bytes()
++    c.write(target/'archive.zip',archive)
++    # Independently pack the second encoder's stream with the selected shape.
++    repeated_raw=Path(repeat['mixed']['path']).read_bytes()
++    if winner['label']=='plain':
++        repeated_rider=c.tc1.MAGIC+weights+repeated_raw
++    else:
++        _,qpart,wpart=winner['label'].split('_')
++        repeated_rider=c.tc1.MAGIC[:4]+b'\x11'+weights+brotli.compress(repeated_raw,quality=int(qpart[1:]),lgwin=int(wpart[1:]))
++    repeated_parts=dict(parts); repeated_parts['tail']=base_parts['tail'][:96]+repeated_rider
++    repeated_member=c.jg2.join_member(repeated_parts)
++    repeated_archive=c.ROOT/'retained/archive.repeat.zip'
++    c.preflight(repeated_archive)
++    if winner['method']=='stored':
++        c.jg2.pack_archive(repeated_member,repeated_archive)
++    else:
++        with zipfile.ZipFile(repeated_archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=winner['level']) as z:
++            info=zipfile.ZipInfo('p',date_time=c.jg2.SHIPPED_ZIP_DATE_TIME)
++            info.compress_type=zipfile.ZIP_DEFLATED
++            info.external_attr=c.jg2.SHIPPED_ZIP_EXTERNAL_ATTR
++            info.create_system=c.jg2.SHIPPED_ZIP_CREATE_SYSTEM
++            z.writestr(info,repeated_member,compresslevel=winner['level'])
++    if repeated_archive.read_bytes()!=archive:
++        raise RuntimeError('independent complete archive packs differ')
++    sha=c.jg2.sha256_bytes(archive)
++    entry=(c.ROOT/'source_runtime/inflate.py').read_text()
++    entry=replace_once(entry,inputs['archive']['sha256'],sha)
++    entry=replace_once(entry,f"ARCHIVE_BYTES = {inputs['archive']['bytes']}",f'ARCHIVE_BYTES = {len(archive)}')
++    c.write(target/'inflate.py',entry.encode())
++    manifest=''.join(f'{c.jg2.sha256_file(p)}  {p.relative_to(target)}\n' for p in sorted(target.rglob('*'))
++                     if p.is_file() and p.name!='MANIFEST.sha256' and '__pycache__' not in p.parts)
++    c.write(target/'MANIFEST.sha256',manifest.encode())
++    new=c.jg2.split_member(c.jg2.read_archive_member(target/'archive.zip'))
++    census={k:dict(base_bytes=len(v),candidate_bytes=len(new[k]),identical=v==new[k],
++                   base_sha=c.jg2.sha256_bytes(v),candidate_sha=c.jg2.sha256_bytes(new[k])) for k,v in base_parts.items()}
++    if not all(census[k]['identical'] for k in ('semantic','carrier')) or new['tail'][:96]!=base_parts['tail'][:96]:
++        raise RuntimeError('composition moved an unauthorized section')
++    changes=[]
++    for p in sorted(target.rglob('*')):
++        if p.is_file():
++            relative=p.relative_to(target); old=c.ROOT/'source_runtime'/relative
++            if not old.exists() or p.read_bytes()!=old.read_bytes(): changes.append(str(relative))
++    expected={'archive.zip','MANIFEST.sha256','inflate.py','runtime/residual_archive.py','runtime/ihs2.py',
++              'runtime/rc3_shared_mixer.py','runtime/tc1_shared_mixer.py','runtime/tc1_receiver_checkpoint.py'}
++    if set(changes)!=expected: raise RuntimeError('runtime census moved unexpected files: '+repr(changes))
++    saving=inputs['archive']['bytes']-len(archive)
++    standalone_winner=min(standalone_rows,key=lambda r:(r['archive']['bytes'],r['label']!='plain',r['method']!='stored',str(r['level'])))
++    standalone_model=c.jg2.file_fact(c.ROOT/'retained/model_only_candidate.zip')
++    separate_saving_sum=2*inputs['archive']['bytes']-standalone_model['bytes']-standalone_winner['archive']['bytes']
++    result=dict(axis=c.AXIS,score_claim=False,archive=c.jg2.file_fact(target/'archive.zip'),
++                base=inputs['archive'],saving=saving,model_saving=len(base_parts['hpac'])-len(new['hpac']),
++                tail_saving=len(base_parts['tail'])-len(new['tail']),prior_prediction_saving=750,
++                interaction_vs_prior_savings=saving-750,prior_falsifier_fired=saving<700,
++                projected_score=inputs['pointer']['our_local_frontier_contest_cuda']['score']-saving*25/37545489,
++                delta_score_rate_only=-saving*25/37545489,projection_only=True,
++                independent_twin_encode_identity=True,section_census=census,runtime_changed_files=changes,
++                container_rows=rows,winner=winner,model_proof=proof,weights=inputs['weights'])
++    result.update(standalone_tail_container_rows=standalone_rows,standalone_tail_winner=standalone_winner,
++                  standalone_model_archive=standalone_model,measured_standalone_saving_sum=separate_saving_sum,
++                  container_interaction_bytes=saving-separate_saving_sum)
++    c.guard()
++    c.record(c.ROOT/'RESULT.json',result)
++    if saving <= 0:
++        raise RuntimeError('retained composition does not beat the live archive; do not seal')
++    return result
++
++
++def equations():
++    from tac.canonical_equations import EmpiricalAnchor, get_equation_by_id, update_equation_with_empirical_anchor
++    from tac.provenance import build_provenance_for_macos_cpu_advisory
++    result=json.loads((c.ROOT/'RESULT.json').read_text()); c.guard()
++    identity=json.loads((c.ROOT/'public_identity/PUBLIC_FIELD_IDENTITY.json').read_text())
++    if not identity['exact_field_identity'] or identity['archive_sha256'] != result['archive']['sha256']:
++        raise RuntimeError('equation anchor requires full current-candidate public field identity')
++    if c.jg2.file_fact(Path(identity['retained_field']['path'])) != identity['retained_field']:
++        raise RuntimeError('public field payload drift')
++    path=c.ROOT/'RESULT.json'; stamp=datetime.now(UTC).isoformat()
++    provenance=build_provenance_for_macos_cpu_advisory(
++        archive_sha256=result['archive']['sha256'],source_path=result['archive']['path'],captured_at_utc=stamp)
++    events=[]
++    for equation in ('model_section_adaptive_recode_ceiling_v1','token_tail_context_mixing_bound_v1'):
++        anchor=EmpiricalAnchor(anchor_id='ddm_cmp1_rc3_tc1_live_sj1_composition_20260909',measurement_utc=stamp,
++            inputs=dict(base=result['base'],fixed_tc1_weights=result['weights'],pairs=600,symbols=117964800),
++            predicted_output=dict(composed_bytes=180771,saving_bytes=750),
++            empirical_output={k:result[k] for k in ('archive','saving','model_saving','tail_saving','interaction_vs_prior_savings','independent_twin_encode_identity')},
++            residual=float(result['saving']-750),source_artifact=str(path),
++            measurement_method='Full independent twin sparse encodes, original-stream control, public full-field decode, exact model restoration, container and source census; no scorer.',
++            provenance=provenance,empirical_verification_status='VERIFIED_VIA_EMPIRICAL_ANCHOR')
++        existing=get_equation_by_id(equation)
++        previous=next((a for a in existing.empirical_anchors if a.anchor_id==anchor.anchor_id),None)
++        if previous is None:
++            subprocess.run(['df','-h',str(REPO)],check=True)
++            update_equation_with_empirical_anchor(equation,anchor,agent='codex',subagent_id='ddm_cmp1',notes='Composed on live sj1 pass4; score_claim=false; MAIN fires.')
++        else:
++            if previous.empirical_output != anchor.empirical_output or previous.inputs != anchor.inputs:
++                raise RuntimeError('existing composition anchor describes different bytes')
++            anchor=previous
++        events.append(dict(equation_id=equation,anchor=anchor.to_dict()))
++    return c.record(c.ROOT/'EQUATION_ANCHORS.json',events)
++
++
++if __name__=='__main__':
++    p=argparse.ArgumentParser(description=__doc__)
++    p.add_argument('stage',choices=['prepare','model-source','model-candidate','stage','equations'])
++    p.add_argument('--resume-from',type=Path,required=True)
++    args=p.parse_args()
++    if args.resume_from.resolve()!=c.ROOT: raise ValueError('wrong resume root')
++    if args.stage=='prepare': result=str(prepare_runtime())
++    elif args.stage.startswith('model-'): result=model_proof(args.stage.split('-')[1])
++    elif args.stage=='stage': result=stage()
++    else: result=equations()
++    print(json.dumps(result,sort_keys=True))
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/51cd9cf15711a0042e588958b398c2f36e1ed417.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/51cd9cf15711a0042e588958b398c2f36e1ed417.blob
+new file mode 100644
+index 000000000..51cd9cf15
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/51cd9cf15711a0042e588958b398c2f36e1ed417.blob
+@@ -0,0 +1,34 @@
++import hashlib,json,os,sys
++from pathlib import Path
++root,work,mode=Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve(),sys.argv[3]
++sys.path.insert(0,str(root))
++from runtime.f26_inflate import inflate_archive
++def emit(path,data):
++ with path.open('xb') as f: f.write(data)
++ return {'path':str(path),'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
++def observe(frame,event,arg):
++ if event!='call': return
++ name=frame.f_code.co_name
++ file=Path(frame.f_code.co_filename).resolve()
++ if name in ('render_video','render_video_parallel') and root in file.parents:
++  emit(work/'FORBIDDEN_RENDER.json',json.dumps({'function':name,'filename':str(file)}).encode())
++  os._exit(81)
++ if name=='decode_production_tokens' and file==root/'runtime/residual_archive.py':
++  marker={'function':name,'filename':str(file),'runtime':str(root),'attempt':str(work)}
++  emit(work/'TOKEN_DECODE_ENTERED.json',json.dumps(marker).encode())
++  if mode=='proof':
++   caller=frame.f_back
++   if Path(caller.f_code.co_filename).resolve()!=root/'runtime/f26_inflate.py': raise RuntimeError('wrong public caller')
++   state=caller.f_locals['semantic'].state_dict()
++   if len(state)!=38 or 'frame_embed.weight' not in state: raise RuntimeError('incomplete semantic state')
++   facts=[]
++   for index,(key,tensor) in enumerate(state.items()):
++    array=tensor.detach().cpu().contiguous().numpy()
++    fact=emit(work/('%02d.tensor'%index),array.tobytes())
++    facts.append(dict(name=key,shape=list(array.shape),dtype=str(array.dtype),artifact=fact))
++   emit(work/'restored.sm3r',caller.f_locals['parts'].semantic_blob)
++   emit(work/'TENSORS.json',json.dumps(facts,sort_keys=True).encode())
++   os._exit(0)
++sys.setprofile(observe)
++inflate_archive(root/'archive.zip',work/'0.raw',renderer_dir=root/'cpr1',device_name='cpu',num_threads=4,checkpoint_dir=work/'.ckpt')
++raise RuntimeError('public probe returned without its stopping boundary')
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/58352890d2baee4b5e74046aa3a450adc3b2bcd0.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/58352890d2baee4b5e74046aa3a450adc3b2bcd0.blob
+new file mode 100644
+index 000000000..58352890d
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/58352890d2baee4b5e74046aa3a450adc3b2bcd0.blob
+@@ -0,0 +1,486 @@
++#!/usr/bin/env python3
++"""Retained SM1 staging, public receiver identity, bounded smoke, and seal.
++
++Research-only byte evidence; this tool never renders, loads scorers, or fires an
++evaluation. Each CLI stage resumes from RACE.json with immutable input bindings.
++"""
++from __future__ import annotations
++
++import argparse
++import copy
++import hashlib
++import io
++import json
++import os
++import re
++import shutil
++import signal
++import struct
++import subprocess
++import sys
++import time
++from datetime import UTC, datetime
++from pathlib import Path
++
++import brotli
++import numpy as np
++
++sys.dont_write_bytecode = True
++REPO = Path(__file__).resolve().parents[1]
++sys.path[:0] = [str(REPO), str(REPO / 'src')]
++from experiments import ddm_sm1_semantic_bound as base
++from experiments import ddm_sm1_semantic_mixer_codec as codec
++from tac.candidate_seal import _public_smoke_problems, measure_runtime_digest
++
++ROOT = base.ROOT
++SOURCE = ROOT / 'source_runtime'
++CANDIDATE = ROOT / 'candidate_runtime'
++HEADER = struct.Struct('<4sBBBBHHH')
++
++
++def checked(item):
++    path = Path(item['path'])
++    if base.fact(path) != item:
++        raise ValueError(f'artifact drift: {path}')
++    return path.read_bytes()
++
++
++def inputs():
++    """Never import, compile, or write the live tree; validate its retained copy."""
++    value = json.loads((ROOT / 'INPUTS.json').read_text())
++    for item in value['source_files']:
++        checked(item)
++    pin = value['source_archive']['sha256']
++    if base.fact(SOURCE / 'archive.zip')['sha256'] != pin:
++        raise ValueError('isolated source archive differs from INPUTS')
++    pointer = json.loads(base.POINTER.read_text())
++    if (pointer['effective_frontier']['archive_sha256'] != pin or
++            pointer['our_local_frontier_contest_cuda']['archive_sha256'] != pin):
++        raise ValueError('live pointer moved; rebase and re-encode before staging/sealing')
++    return value, pointer['our_local_frontier_contest_cuda']
++
++
++def binding():
++    value, _ = inputs()
++    race = json.loads((ROOT / 'RACE.json').read_text())
++    bound = json.loads(checked(race['bound']))
++    if bound['gate_pass'] is not True:
++        raise ValueError('closed-form gate failed; staged coder execution forbidden')
++    for key in ('input_binding', 'source_code', 'decoder_trace', 'body'):
++        checked(bound[key])
++    if bound['body'] != base.fact(ROOT / 'retained/source/body.sm3r'):
++        raise ValueError('bound and staging use different SM3R bodies')
++    winner = race['winner']
++    checked(winner['rider'])
++    checked(winner['semantic_container'])
++    return {'inputs': base.fact(ROOT / 'INPUTS.json'), 'race': base.fact(ROOT / 'RACE.json'),
++            'bound': race['bound'],
++            'codec': base.fact(Path(codec.__file__)), 'stage_code': base.fact(Path(__file__)),
++            'source_archive_sha256': value['source_archive']['sha256'],
++            'body': base.fact(ROOT / 'retained/source/body.sm3r')}
++
++
++def recover_tree(path):
++    """Certify and move an interrupted stage intact; never discard its bytes."""
++    if not path.exists():
++        return
++    dest = ROOT / 'retained/interrupted_stage' / datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')
++    facts = [base.fact(p) for p in sorted(path.rglob('*')) if p.is_file()]
++    base.save(dest / 'CUSTODY.json', {'original_path': str(path), 'destination': str(dest / 'runtime'),
++              'files': facts, 'command': sys.argv, 'reason': 'incomplete stage retained for restart',
++              'score_claim': False})
++    os.rename(path, dest / 'runtime')
++
++
++def replace_once(text, old, new):
++    if text.count(old) != 1:
++        raise ValueError(f'public reader seam is not unique: {old!r}')
++    return text.replace(old, new)
++
++
++def patched_files():
++    """Add SM1 only at the existing adaptive-semantic dispatch seams."""
++    paths = ('runtime/f26_inflate.py', 'runtime/residual_archive.py',
++             'cpr1/inflate.py', 'cpr1/ddm_mp2_semantic_receiver.py')
++    texts = {p: (SOURCE / p).read_text() for p in paths}
++    key = 'runtime/f26_inflate.py'
++    texts[key] = replace_once(texts[key],
++        'from .rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic',
++        'from .rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic\n'
++        'from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n'
++        'from .sm1_semantic_mixer import restore_semantic as restore_sm1_semantic')
++    texts[key] = replace_once(texts[key], '    if parts.semantic_blob.startswith(RC1_SEMANTIC_MAGIC):',
++        '    if parts.semantic_blob.startswith(SM1_SEMANTIC_MAGIC):\n'
++        '        parts = dataclasses.replace(parts, semantic_blob=restore_sm1_semantic(\n'
++        '            parts.semantic_blob, _load_renderer(renderer_dir).SemanticTokenRenderer(96).state_dict()))\n'
++        '    if parts.semantic_blob.startswith(RC1_SEMANTIC_MAGIC):')
++    key = 'runtime/residual_archive.py'
++    texts[key] = replace_once(texts[key],
++        '        if not semantic_body.startswith(RC1_SEMANTIC_MAGIC):',
++        '        from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n'
++        '        if not semantic_body.startswith((RC1_SEMANTIC_MAGIC, SM1_SEMANTIC_MAGIC)):')
++    texts[key] = replace_once(texts[key], '(b"SD1M", b"SM3R", b"RC1S")',
++                             '(b"SD1M", b"SM3R", b"RC1S", b"SM1S")')
++    key = 'cpr1/inflate.py'
++    texts[key] = replace_once(texts[key], '(b"SD1M", b"SM3R", b"RC1S")',
++                             '(b"SD1M", b"SM3R", b"RC1S", b"SM1S")')
++    key = 'cpr1/ddm_mp2_semantic_receiver.py'
++    texts[key] = replace_once(texts[key],
++        'from rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic',
++        'from rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic\n'
++        'from runtime.sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC\n'
++        'from runtime.sm1_semantic_mixer import restore_semantic as restore_sm1_semantic')
++    texts[key] = replace_once(texts[key], '    if blob.startswith(RC1_SEMANTIC_MAGIC):',
++        '    if blob.startswith(SM1_SEMANTIC_MAGIC):\n'
++        '        blob = restore_sm1_semantic(blob, template)\n'
++        '    if blob.startswith(RC1_SEMANTIC_MAGIC):')
++    return {k: v.encode() for k, v in texts.items()}
++
++
++def archive_bytes(member):
++    """Preserve the actual source ZIP metadata; prove identity on its source member."""
++    import zipfile
++    with zipfile.ZipFile(SOURCE / 'archive.zip') as z:
++        if z.namelist() != ['p'] or z.getinfo('p').compress_type != zipfile.ZIP_STORED:
++            raise ValueError('expected the exact single STORED member')
++        info, comment = copy.copy(z.getinfo('p')), z.comment
++    out = io.BytesIO()
++    with zipfile.ZipFile(out, 'w', compression=zipfile.ZIP_STORED) as z:
++        z.comment = comment
++        z.writestr(info, member)
++    return out.getvalue()
++
++
++def stage():
++    pins = binding()
++    target = ROOT / 'STAGED.json'
++    if target.exists():
++        result = json.loads(target.read_text())
++        if result['binding'] != pins or result['runtime_sha256'] != measure_runtime_digest(CANDIDATE).sha256:
++            raise ValueError('completed stage inputs/runtime drifted')
++        checked(result['archive'])
++        return result
++    value, pointer = inputs()
++    winner = json.loads((ROOT / 'RACE.json').read_text())['winner']
++    if winner['semantic_container']['bytes'] >= value['census']['semantic']['bytes']:
++        raise ValueError('no smaller semantic container admitted')
++    if winner['ck2'] is not True:
++        raise ValueError('SM1 stage preserves the shipped CK2 flag')
++    parts, header = base.sections(SOURCE / 'archive.zip')
++    source_member = b''.join(parts[k] for k in ('header', 'hpac', 'semantic', 'carrier', 'tail'))
++    base.retain(ROOT / 'retained/staged_controls/source_member.rx1', source_member)
++    source_control = archive_bytes(source_member)
++    base.retain(ROOT / 'retained/staged_controls/source_archive.zip', source_control)
++    if source_control != (SOURCE / 'archive.zip').read_bytes():
++        raise ValueError('source ZIP identity control failed')
++    patches = patched_files()
++    recover_tree(CANDIDATE)
++    for source in sorted(SOURCE.rglob('*')):
++        if source.is_file():
++            rel = source.relative_to(SOURCE).as_posix()
++            if rel not in ('archive.zip', 'inflate.py', 'MANIFEST.sha256'):
++                base.retain(CANDIDATE / rel, patches.get(rel, source.read_bytes()))
++    base.retain(CANDIDATE / 'runtime/sm1_semantic_mixer.py', Path(codec.__file__).read_bytes())
++    # Use the actual staged receiver module for both deterministic re-encodes.
++    sys.path.insert(0, str(CANDIDATE))
++    staged_codec = __import__('runtime.sm1_semantic_mixer', fromlist=['encode'])
++    if Path(staged_codec.__file__).resolve() != CANDIDATE / 'runtime/sm1_semantic_mixer.py':
++        raise ValueError('staged encoder import resolved outside candidate')
++    _, _, template = base.load_source(ROOT)
++    weights_raw = winner['weights']
++    if len(weights_raw) != codec.WEIGHT_COUNT or any(type(w) is not int or not -128 <= w <= 127 for w in weights_raw):
++        raise ValueError('winner requires 24 exact int8 weights')
++    weights = np.asarray(weights_raw, dtype=np.int8)
++    body = (ROOT / 'retained/source/body.sm3r').read_bytes()
++    twins = []
++    for trial in (1, 2):
++        rider, payload, metadata = staged_codec.encode(body, template, weights)
++        dest = ROOT / 'retained/staged_twins' / str(trial)
++        base.retain(dest / 'rider.sm1s', rider)
++        base.retain(dest / 'range.bin', payload)
++        base.retain(dest / 'metadata.bin', metadata)
++        base.retain(dest / 'weights.int8', weights.tobytes())
++        if rider != checked(winner['rider']):
++            raise ValueError('staged re-encode differs from retained winning rider')
++        outer = base.layout_tools.ck2_interleave(rider)
++        base.retain(dest / 'rider.ck2', outer)
++        container = brotli.compress(outer, quality=winner['q'], lgwin=winner['lgwin'])
++        base.retain(dest / 'semantic.br', container)
++        if container != checked(winner['semantic_container']) or brotli.decompress(container) != outer:
++            raise ValueError('winning container is not reproduced exactly')
++        decoded = staged_codec.restore_semantic(rider, template)
++        base.retain(dest / 'decoded.sm3r', decoded)
++        if decoded != body:
++            raise ValueError('staged decoder changed SM3R bytes')
++        new_header = list(header)
++        new_header[6] = len(container)
++        member = HEADER.pack(*new_header) + parts['hpac'] + container + parts['carrier'] + parts['tail']
++        base.retain(dest / 'member.rx1', member)
++        twins.append(base.retain(dest / 'archive.zip', archive_bytes(member)))
++    if checked(twins[0]) != checked(twins[1]):
++        raise ValueError('staged twin archives differ')
++    archive = checked(twins[0])
++    base.retain(CANDIDATE / 'archive.zip', archive)
++    receiver = (SOURCE / 'inflate.py').read_text()
++    receiver, count = re.subn(r'^ARCHIVE_SHA256 = "[0-9a-f]{64}"$',
++        'ARCHIVE_SHA256 = "' + hashlib.sha256(archive).hexdigest() + '"', receiver, flags=re.M)
++    if count != 1:
++        raise ValueError('receiver SHA pin seam differs')
++    receiver, count = re.subn(r'^ARCHIVE_BYTES = [0-9_]+$', f'ARCHIVE_BYTES = {len(archive)}', receiver, flags=re.M)
++    if count != 1:
++        raise ValueError('receiver byte pin seam differs')
++    base.retain(CANDIDATE / 'inflate.py', receiver.encode())
++    manifest = ''.join(f'{base.fact(p)["sha256"]}  {p.relative_to(CANDIDATE)}\n'
++                       for p in sorted(CANDIDATE.rglob('*')) if p.is_file() and p.name != 'archive.zip')
++    base.retain(CANDIDATE / 'MANIFEST.sha256', manifest.encode())
++    new, new_header = base.sections(CANDIDATE / 'archive.zip')
++    census = {}
++    for name in ('hpac', 'carrier', 'tail'):
++        if parts[name] != new[name]:
++            raise ValueError(f'nonsemantic section changed: {name}')
++        census[name] = {'identical': True, 'bytes': len(new[name]), 'sha256': hashlib.sha256(new[name]).hexdigest()}
++    if tuple(new_header[:6]) != tuple(header[:6]) or new_header[7] != header[7]:
++        raise ValueError('RX1 header changed beyond semantic section length')
++    changed = [p.relative_to(CANDIDATE).as_posix() for p in sorted(CANDIDATE.rglob('*')) if p.is_file()
++               and (not (SOURCE / p.relative_to(CANDIDATE)).is_file() or
++                    p.read_bytes() != (SOURCE / p.relative_to(CANDIDATE)).read_bytes())]
++    allowed = set(patches) | {'runtime/sm1_semantic_mixer.py', 'archive.zip', 'inflate.py', 'MANIFEST.sha256'}
++    if set(changed) != allowed:
++        raise ValueError(f'changed-file census differs: {changed}')
++    inputs()
++    result = {'axis': base.AXIS, 'score_claim': False, 'binding': pins, 'archive': base.fact(CANDIDATE / 'archive.zip'),
++              'runtime': str(CANDIDATE), 'runtime_sha256': measure_runtime_digest(CANDIDATE).sha256,
++              'winner': winner, 'twin_archives': twins, 'twin_identical': True, 'section_census': census,
++              'runtime_changed_files': changed, 'net_archive_bytes': len(archive) - value['source_archive']['bytes'],
++              'live_pointer': pointer, 'public_tensor_identity': 'owed: run proof stage',
++              'cleanup': 'all payloads retained on owned SSD; no renderer/scorer executed'}
++    base.save(target, result)
++    return result
++
++
++def bounded(argv, work, env, label):
++    """Each child has a new process group; timeout kills and reaps the group."""
++    started = time.monotonic()
++    stdout, stderr = work / f'{label}.stdout', work / f'{label}.stderr'
++    with stdout.open('xb') as out, stderr.open('xb') as err:
++        proc = subprocess.Popen(argv, cwd=REPO, env=env, stdout=out, stderr=err, start_new_session=True)
++        timed_out = False
++        try:
++            proc.wait(timeout=60)
++        except subprocess.TimeoutExpired:
++            timed_out = True
++            os.killpg(proc.pid, signal.SIGKILL)
++            proc.wait(timeout=10)
++    return {'argv': argv, 'seconds': time.monotonic() - started, 'returncode': proc.returncode,
++            'timed_out': timed_out, 'stdout': base.fact(stdout), 'stderr': base.fact(stderr),
++            'timeout_policy': '60s process-group SIGKILL and reap; no detached child'}
++
++
++def attempt(label):
++    work = ROOT / 'retained/probes' / label / datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')
++    (work / 'scratch').mkdir(parents=True)
++    env = {k: v for k, v in os.environ.items() if not k.startswith(('F26_', 'CPR1_'))}
++    env.update(PYTHONDONTWRITEBYTECODE='1', TMPDIR=str(work / 'scratch'),
++               PATH=str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH'], F26_TOKEN_DECODER='python')
++    for key in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS'):
++        env[key] = '4'  # The public receiver requires four threads; processes stay sequential.
++    return work, env
++
++
++PROBE = r'''import hashlib,json,os,sys
++from pathlib import Path
++root,work,mode=Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve(),sys.argv[3]
++sys.path.insert(0,str(root))
++from runtime.f26_inflate import inflate_archive
++def emit(path,data):
++ with path.open('xb') as f: f.write(data)
++ return {'path':str(path),'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
++def observe(frame,event,arg):
++ if event!='call': return
++ name=frame.f_code.co_name
++ file=Path(frame.f_code.co_filename).resolve()
++ if name in ('render_video','render_video_parallel') and root in file.parents:
++  emit(work/'FORBIDDEN_RENDER.json',json.dumps({'function':name,'filename':str(file)}).encode())
++  os._exit(81)
++ if name=='decode_production_tokens' and file==root/'runtime/residual_archive.py':
++  marker={'function':name,'filename':str(file),'runtime':str(root),'attempt':str(work)}
++  emit(work/'TOKEN_DECODE_ENTERED.json',json.dumps(marker).encode())
++  if mode=='proof':
++   caller=frame.f_back
++   if Path(caller.f_code.co_filename).resolve()!=root/'runtime/f26_inflate.py': raise RuntimeError('wrong public caller')
++   state=caller.f_locals['semantic'].state_dict()
++   if len(state)!=38 or 'frame_embed.weight' not in state: raise RuntimeError('incomplete semantic state')
++   facts=[]
++   for index,(key,tensor) in enumerate(state.items()):
++    array=tensor.detach().cpu().contiguous().numpy()
++    fact=emit(work/('%02d.tensor'%index),array.tobytes())
++    facts.append(dict(name=key,shape=list(array.shape),dtype=str(array.dtype),artifact=fact))
++   emit(work/'restored.sm3r',caller.f_locals['parts'].semantic_blob)
++   emit(work/'TENSORS.json',json.dumps(facts,sort_keys=True).encode())
++   os._exit(0)
++sys.setprofile(observe)
++inflate_archive(root/'archive.zip',work/'0.raw',renderer_dir=root/'cpr1',device_name='cpu',num_threads=4,checkpoint_dir=work/'.ckpt')
++raise RuntimeError('public probe returned without its stopping boundary')
++'''
++
++
++def public_probe(role, mode):
++    """Proof exits at actual token-function entry; smoke runs until group bound."""
++    inputs()
++    stage_record = stage()
++    root = SOURCE if role == 'frontier' else CANDIDATE
++    current = {'stage': base.fact(ROOT / 'STAGED.json'), 'runtime_sha256': measure_runtime_digest(root).sha256,
++               'archive': base.fact(root / 'archive.zip'), 'stage_binding': stage_record['binding']}
++    target = ROOT / f'{mode.upper()}_{role}.json'
++    if target.exists():
++        result = json.loads(target.read_text())
++        if result['binding'] != current:
++            raise ValueError('public probe binding drift')
++        for item in result['retained_files']:
++            checked(item)
++        return result
++    work, env = attempt(f'{mode}_{role}')
++    compiled = bounded(['cc', '-O3', '-std=c11', '-shared', '-fPIC',
++                        str(root / 'runtime/entropy/rc64_backend.c'), '-o', str(work / 'rc64_backend.so')], work, env, 'compile')
++    if compiled['returncode'] != 0:
++        raise RuntimeError(f'public probe compiler failed: {compiled}')
++    env['CPR1_RC64_LIBRARY'] = str(work / 'rc64_backend.so')
++    base.retain(work / 'probe.py', PROBE.encode())
++    direct = bounded([sys.executable, '-B', str(work / 'probe.py'), str(root), str(work), mode], work, env, 'direct')
++    marker = work / 'TOKEN_DECODE_ENTERED.json'
++    if not marker.is_file() or (work / 'FORBIDDEN_RENDER.json').exists():
++        raise RuntimeError(f'public token boundary absent or render guard fired: {direct}')
++    observed = json.loads(marker.read_text())
++    if observed['runtime'] != str(root) or observed['attempt'] != str(work):
++        raise ValueError('token marker came from a different probe')
++    if mode == 'proof' and (direct['returncode'] != 0 or direct['timed_out']):
++        raise RuntimeError(f'public tensor proof failed: {direct}')
++    if mode == 'smoke' and not direct['timed_out']:
++        raise RuntimeError(f'public smoke must reach token entry without exception until bound: {direct}')
++    identity = {'runtime_path': str(root), 'archive_path': str(root / 'archive.zip'),
++                'tree_sha256': current['runtime_sha256'], 'archive_sha256': current['archive']['sha256'],
++                'digest_definition': 'tac.candidate_seal.measure_runtime_digest'}
++    direct.update(identity, outcome='REACHED_TOKEN_DECODE', exception_class=None, exception_message='',
++                  marker=base.fact(marker), observation='actual function call from public f26; render guard armed')
++    result = {'axis': base.AXIS, 'score_claim': False, 'binding': current, 'compile': compiled, 'direct': direct,
++              'work': str(work), 'threads': 4, 'processes_at_a_time': 1, 'mode': mode}
++    if mode == 'smoke':
++        extracted = work / 'extracted'
++        with __import__('zipfile').ZipFile(root / 'archive.zip') as z:
++            base.retain(extracted / 'p', z.read('p'))
++        base.retain(work / 'file_list.txt', b'0.hevc\n')
++        shell = bounded(['bash', str(root / 'inflate.sh'), str(extracted), str(work / 'out'), str(work / 'file_list.txt')],
++                        work, env, 'shell')
++        stderr = checked(shell['stderr']).decode()
++        if shell['timed_out'] or shell['returncode'] == 0 or 'requires CUDA inflation' not in stderr:
++            raise RuntimeError(f'public shell did not reach CUDA gate: {shell}')
++        messages = [line.removeprefix('RuntimeError: ') for line in stderr.splitlines() if line.startswith('RuntimeError: ')]
++        if len(messages) != 1 or 'requires CUDA inflation' not in messages[0]:
++            raise RuntimeError('CUDA gate traceback is ambiguous')
++        shell.update(identity, outcome='REACHED_CUDA_GATE', exception_class='RuntimeError', exception_message=messages[0])
++        result['shell'] = shell
++    else:
++        result['tensors'] = json.loads((work / 'TENSORS.json').read_text())
++        result['restored_body'] = base.fact(work / 'restored.sm3r')
++        if checked(result['restored_body']) != (ROOT / 'retained/source/body.sm3r').read_bytes():
++            raise ValueError('public f26 semantic body differs from retained source')
++    if measure_runtime_digest(root).sha256 != current['runtime_sha256']:
++        raise ValueError('probe modified its runtime')
++    inputs()
++    result['retained_files'] = [base.fact(p) for p in sorted(work.rglob('*')) if p.is_file()]
++    base.save(target, result)
++    return result
++
++
++def proof():
++    rows = {role: public_probe(role, 'proof') for role in ('frontier', 'candidate')}
++    source, candidate = rows['frontier']['tensors'], rows['candidate']['tensors']
++    if len(source) != 38 or len(candidate) != 38:
++        raise ValueError('public proof must cover all 38 tensors')
++    for a, b in zip(source, candidate, strict=True):
++        if any(a[k] != b[k] for k in ('name', 'shape', 'dtype')) or checked(a['artifact']) != checked(b['artifact']):
++            raise ValueError(f'public decoded tensor differs: {a["name"]}')
++    result = {'axis': base.AXIS, 'score_claim': False, 'tensors_compared': 38, 'frame_embed_included': True,
++              'all_tensors_bit_identical': True, 'public_path': 'f26.inflate_archive actual token-function call boundary',
++              'rows': {role: base.fact(ROOT / f'PROOF_{role}.json') for role in rows},
++              'no_render_or_scorer_executed': True, 'output_identity': 'construction proof, not rendered-frame measurement'}
++    base.save(ROOT / 'PUBLIC_TENSOR_IDENTITY.json', result)
++    return result
++
++
++def combine():
++    inputs()
++    proof()
++    roles = {role: public_probe(role, 'smoke') for role in ('candidate', 'frontier')}
++    block = {'schema': 'candidate_public_entrypoint_smoke.v1', 'public_path_probe_seconds': 90,
++             'public_path_probes': {role: row['direct'] for role, row in roles.items()},
++             'inflate_sh_smokes': {role: row['shell'] for role, row in roles.items()}}
++    errors, _ = _public_smoke_problems(block, candidate_runtime_dir=CANDIDATE,
++        candidate_archive_path=CANDIDATE / 'archive.zip', pointer_archive_sha256=inputs()[0]['source_archive']['sha256'])
++    if errors:
++        raise ValueError(errors)
++    base.save(ROOT / 'PUBLIC_ENTRYPOINT_SMOKE.json', block)
++    return {'public_smoke_problems': errors, 'receipt': base.fact(ROOT / 'PUBLIC_ENTRYPOINT_SMOKE.json')}
++
++
++def seal():
++    combine()
++    _, pointer = inputs()
++    mirror_path = Path(pointer['source_path'])
++    if not mirror_path.is_absolute():
++        mirror_path = REPO / mirror_path
++    mirror = json.loads(mirror_path.read_text())
++    source_receipt = Path(mirror['source_receipt'])
++    if (base.fact(source_receipt)['sha256'] != mirror['source_receipt_sha256'] or
++            mirror['archive_sha256'] != pointer['archive_sha256'] or
++            mirror['source_receipt_sha256'] != pointer['extra']['source_receipt_sha256']):
++        raise ValueError('base auth receipt is not bound to the live source archive')
++    out = ROOT / 'SEAL_ddm_sm1_semantic_shared_mixer_contest_cuda.json'
++    argv = [sys.executable, '-B', str(REPO / 'tools/make_candidate_seal.py'),
++            '--candidate-id', 'ddm_sm1_semantic_shared_mixer', '--runtime-dir', str(CANDIDATE),
++            '--axis', 'contest_cuda', '--out', str(out), '--archive-member', 'p',
++            '--public-entrypoint-smoke', str(ROOT / 'PUBLIC_ENTRYPOINT_SMOKE.json'),
++            '--bound-base-receipt', str(source_receipt),
++            '--admit-bar-net-ds', '0', '--pointer-axis', 'contest_cuda', '--sealed-by', 'ddm_sm1',
++            '--verify-archive-sha', base.fact(CANDIDATE / 'archive.zip')['sha256'],
++            '--retained-path', str(ROOT / 'retained'), '--falsifier', 'No lower exact score on identical archive/runtime custody',
++            '--falsifier', 'Any decoded semantic tensor differs from the live source or any hpac/carrier/tail byte changes',
++            '--notes', 'Byte-only zero-distortion construction proof; all 38 public-decoded tensors identical; MAIN fires; no scorer run']
++    for rel in ('inflate.py', 'inflate.sh', 'runtime/f26_inflate.py', 'runtime/residual_archive.py',
++                'runtime/sm1_semantic_mixer.py', 'cpr1/inflate.py', 'cpr1/ddm_mp2_semantic_receiver.py'):
++        argv += ['--receiver', rel]
++    if out.exists():
++        from tac.candidate_seal import validate_seal
++        verdict = validate_seal(out)
++        if not verdict.ok:
++            raise ValueError(verdict.summary())
++        return {'status': 'SEAL READY', 'seal': base.fact(out)}
++    work, env = attempt('seal')
++    base.save(work / 'COMMAND.json', argv)
++    result = bounded(argv, work, env, 'seal')
++    if result['returncode'] != 0 or not out.is_file():
++        raise RuntimeError(f'candidate seal failed: {result}')
++    inputs()
++    base.save(ROOT / 'SEAL_RECEIPT.json', {'status': 'SEAL READY', 'seal': base.fact(out), 'process': result,
++                                         'score_claim': False, 'owner_of_exact_fire': 'MAIN'})
++    return json.loads((ROOT / 'SEAL_RECEIPT.json').read_text())
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--stage', required=True, choices=('stage', 'proof', 'smoke-candidate', 'smoke-frontier', 'combine', 'seal'))
++    parser.add_argument('--resume-from', type=Path, required=True)
++    args = parser.parse_args()
++    if args.resume_from.resolve() != (ROOT / 'RACE.json').resolve():
++        raise ValueError('resume-from must be the completed RACE.json')
++    if shutil.disk_usage(ROOT).free < 256 * 1024**2:
++        raise RuntimeError('SSD storage preflight requires 256 MiB')
++    if args.stage.startswith('smoke-'):
++        result = public_probe(args.stage.removeprefix('smoke-'), 'smoke')
++    else:
++        result = {'stage': stage, 'proof': proof, 'combine': combine, 'seal': seal}[args.stage]()
++    print(json.dumps(result, sort_keys=True))
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/60483fbf36b6882fc8d8aa06cf31758fa67ad125.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/60483fbf36b6882fc8d8aa06cf31758fa67ad125.blob
+new file mode 100644
+index 000000000..60483fbf3
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/60483fbf36b6882fc8d8aa06cf31758fa67ad125.blob
+@@ -0,0 +1,265 @@
++"""Disk-resumable SM1 feature fit and five retained lossless coding variants."""
++from __future__ import annotations
++
++import argparse
++import io
++import json
++import math
++import sys
++from pathlib import Path
++
++import brotli
++import numpy as np
++
++sys.dont_write_bytecode = True
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++from experiments import ddm_sm1_semantic_bound as b
++from experiments import ddm_sm1_semantic_mixer_codec as c
++
++
++def array_file(path, array):
++    buffer = io.BytesIO()
++    np.save(buffer, array, allow_pickle=False)
++    return b.retain(path, buffer.getvalue())
++
++
++def binding(root):
++    return dict(inputs=b.fact(root / 'INPUTS.json'), bound=b.fact(root / 'BOUND_SUPPORTED.json'),
++                codec=b.fact(c.__file__), base_codec=b.fact(c.rc1.__file__),
++                fixed_math=b.fact(c.fixed.__file__))
++
++
++def gate(root):
++    result = json.loads((root / 'BOUND_SUPPORTED.json').read_text())
++    if not result['gate_pass']:
++        raise RuntimeError('closed-form gate failed; coder construction forbidden')
++    inputs = json.loads((root / 'INPUTS.json').read_text())
++    for source in inputs['source_files']:
++        if b.fact(source['path']) != source:
++            raise RuntimeError('source-runtime drift')
++    if b.fact(root / 'retained/source/body.sm3r') != result['body']:
++        raise RuntimeError('source-body drift')
++    return result
++
++
++def prepare(root):
++    bound = gate(root)
++    target = root / 'FEATURES.json'
++    if target.exists():
++        result = json.loads(target.read_text())
++        if result['binding'] != binding(root):
++            raise RuntimeError('feature binding drift')
++        for key in ('x', 'truth'):
++            if b.fact(result[key]['path']) != result[key]:
++                raise RuntimeError('retained feature drift')
++        return result
++    _, shipped, template = b.load_source(root)
++    # The fallback helper copies must match the actual shipped decoder code.
++    if Path(shipped.__file__).read_bytes() != Path(c.rc1.__file__).read_bytes():
++        raise RuntimeError('RC1 fallback differs from shipped code')
++    if (root / 'source_runtime/runtime/rc2_hpac_semistatic_mixing.py').read_bytes() != Path(c.fixed.__file__).read_bytes():
++        raise RuntimeError('fixed-point fallback differs from shipped code')
++    body = (root / 'retained/source/body.sm3r').read_bytes()
++    metadata, groups = c.split_body(body, template)
++    b.retain(root / 'retained/fit/metadata.bin', metadata)
++    _, desc = c.plan_metadata(metadata, template)
++    initial = np.zeros(24, dtype=np.int8)
++    initial[0] = 32
++    _, decoded, events, truth = c.walk(desc, initial, source=groups, observe=True)
++    if any(not np.array_equal(a, z) for a, z in zip(groups, decoded, strict=True)):
++        raise RuntimeError('feature trace changed values')
++    x, y = np.asarray(events, dtype=np.int32), np.asarray(truth, dtype=np.uint8)
++    if len(y) != bound['coded_bits']:
++        raise RuntimeError('incomplete event matrix')
++    source = np.load(root / 'retained/decoder_events.npy', allow_pickle=False)
++    if not np.array_equal(y, source[:, 2]):
++        raise RuntimeError('truth differs from shipped observed decoder')
++    baseline_p = np.asarray([c.fixed.squash(int(v)) for v in x[:, 0]])
++    observed_p = np.where(source[:, 2], 4096 - source[:, 3], source[:, 3])
++    if not np.array_equal(baseline_p, observed_p):
++        raise RuntimeError('baseline expert differs from shipped predictor')
++    result = dict(binding=binding(root), x=array_file(root / 'retained/fit/x.npy', x),
++                  truth=array_file(root / 'retained/fit/truth.npy', y),
++                  events=len(y), all_source_probabilities_identical=True,
++                  weight_count=24, model_family='scale_geometry_history_shared',
++                  scope='one shared vector; six named context families plus adaptation timescale and count priors')
++    b.save(target, result)
++    return result
++
++
++def fixed_loss(x, y, weights):
++    score = np.einsum('ij,j->i', x, weights.astype(np.int64), optimize=False)
++    logits = np.where(score >= 0, (score + 16) // 32, -((-score + 16) // 32))
++    table = np.asarray(c.fixed.STRETCH, dtype=np.int64)
++    index = np.searchsorted(table, logits)
++    lo, hi = np.clip(index - 1, 0, 4094), np.clip(index, 0, 4094)
++    p = np.where(logits - table[lo] <= table[hi] - logits, lo + 1, hi + 1)
++    return float(-np.log2(np.where(y == 0, p, 4096 - p) / 4096).sum())
++
++
++def fit(root):
++    prepared = prepare(root)
++    inputs = dict(features=b.fact(root / 'FEATURES.json'), code=b.fact(__file__))
++    target = root / 'FIT.json'
++    if target.exists():
++        result = json.loads(target.read_text())
++        if result['binding'] != inputs:
++            raise RuntimeError('fit binding drift')
++        return result
++    b.save(root / 'FIT_INPUTS.json', inputs)
++    x = np.load(prepared['x']['path'], allow_pickle=False)
++    y = np.load(prepared['truth']['path'], allow_pickle=False)
++    design = x.astype(np.float64) * (math.log(2) / 4096)
++    zero = (y == 0).astype(np.float64)
++    current = np.zeros(24)
++    current[0] = 1
++    folder = root / 'retained/fit/iterations'
++    folder.mkdir(parents=True, exist_ok=True)
++    records = sorted(folder.glob('ITER_*.json'))
++    start = 0
++    if records:
++        record = json.loads(records[-1].read_text())
++        current = np.asarray(record['weights'])
++        start = record['iteration']
++
++    def objective(weights):
++        z = np.einsum('ij,j->i', design, weights, optimize=False)
++        return float(np.sum(np.logaddexp(0, z) - zero * z))
++
++    initial_loss = objective(np.eye(24)[0])
++    for iteration in range(start, 40):
++        z = np.einsum('ij,j->i', design, current, optimize=False)
++        p = 1 / (1 + np.exp(-z))
++        loss = objective(current)
++        grad = np.einsum('ij,i->j', design, p - zero, optimize=False)
++        hess = np.einsum('ij,ik,i->jk', design, design, p * (1 - p), optimize=False)
++        direction = np.linalg.solve(hess + 1e-6 * np.eye(24), -grad)
++        trials, accepted = [], False
++        for power in range(16):
++            trial = current + direction / (2 ** power)
++            # Stay strictly in the int8 representable interior. No hidden optimizer state.
++            if np.max(np.abs(trial)) > 3.95:
++                continue
++            value = objective(trial)
++            trials.append(dict(power=power, weights=trial.tolist(), loss_nats=value))
++            if value <= loss + 1e-4 * float(grad @ (trial - current)):
++                accepted = True
++                break
++        b.save(folder / f'TRIALS_{iteration + 1:03d}.json', trials)
++        if not accepted:
++            raise RuntimeError('fit did not descend within declared int8 box')
++        current = trial
++        b.save(folder / f'ITER_{iteration + 1:03d}.json',
++               dict(iteration=iteration + 1, weights=current.tolist(), loss_nats=value,
++                    max_gradient=float(np.max(np.abs(grad))), improvement_nats=loss - value))
++        if loss - value < 1e-7:
++            break
++    weights = np.rint(current * 32).astype(np.int8)
++    quantized_initial = weights.copy()
++    # Exact integer objective, two complete coordinate passes, own tuning optimum.
++    for cycle in range(2):
++        for j in range(24):
++            choices = []
++            for delta in (-1, 0, 1):
++                v = int(weights[j]) + delta
++                if -127 <= v <= 127:
++                    trial = weights.copy()
++                    trial[j] = v
++                    choices.append((fixed_loss(x, y, trial), abs(delta), delta, trial))
++            winner = min(choices, key=lambda t: t[:3])
++            weights = winner[3]
++            b.save(root / f'retained/fit/coordinate_{cycle}_{j:02d}.json',
++                   dict(weights=weights.tolist(), loss_bits=winner[0]))
++    result = dict(binding=inputs, continuous_weights=current.tolist(),
++                  initial_quantized_weights=quantized_initial.tolist(), weights=weights.tolist(),
++                  baseline_fixed_bits=fixed_loss(x, y, np.asarray([32] + [0] * 23, dtype=np.int8)),
++                  fitted_fixed_bits=fixed_loss(x, y, weights),
++                  continuous_gain_bytes=(initial_loss - objective(current)) / math.log(2) / 8,
++                  counted_parameters_bytes=24, header_increment_bytes=2,
++                  fixed_net_ideal_bytes=(initial_loss / math.log(2) - fixed_loss(x, y, weights)) / 8 - 26,
++                  limitation='fit and integer log-loss only; no realized container gain until RACE')
++    b.save(target, result)
++    return result
++
++
++def race(root):
++    fitted = fit(root)
++    renderer, shipped, template = b.load_source(root)
++    body = (root / 'retained/source/body.sm3r').read_bytes()
++    source_rider = (root / 'retained/source/rider.rc1s').read_bytes()
++    source_container = (root / 'retained/source/semantic.bin').read_bytes()
++    # Historical raw-body/container controls are materialized and retained.
++    controls = {}
++    for name, data in [('raw_body', body), ('rc1_rider', source_rider)]:
++        transformed = b.layout_tools.ck2_interleave(data)
++        b.retain(root / f'retained/controls/{name}.ck2', transformed)
++        coded = brotli.compress(transformed, quality=11, lgwin=24)
++        controls[name] = b.retain(root / f'retained/controls/{name}.br', coded)
++        if brotli.decompress(coded) != transformed:
++            raise RuntimeError('Brotli control failed')
++    if (root / 'retained/controls/rc1_rider.br').read_bytes() != source_container:
++        raise RuntimeError('current RC1 container control is not byte-identical')
++    rng = np.random.default_rng(b.SEED)
++    weights = np.asarray(fitted['weights'], dtype=np.int8)
++    variants = [weights]
++    for _ in range(4):
++        offset = np.zeros(24, dtype=np.int16)
++        chosen = rng.choice(24, size=4, replace=False)
++        offset[chosen] = rng.choice([-1, 1], size=4)
++        variants.append(np.clip(weights.astype(np.int16) + offset, -127, 127).astype(np.int8))
++    rows = []
++    for index, vector in enumerate(variants):
++        folder = root / f'retained/variants/sample_{index}'
++        bind = dict(fit=b.fact(root / 'FIT.json'), codecs=binding(root), weights=vector.tolist())
++        target = folder / 'RESULT.json'
++        if target.exists():
++            row = json.loads(target.read_text())
++            if row['binding'] != bind or any(b.fact(v['path']) != v for v in row['artifacts']):
++                raise RuntimeError('variant resume drift')
++            rows.append(row)
++            continue
++        artifacts = [b.retain(folder / 'weights.int8', vector.tobytes())]
++        rider, payload, metadata = c.encode(body, template, vector)
++        rider_fact = b.retain(folder / 'rider.sm1s', rider)
++        artifacts += [rider_fact, b.retain(folder / 'range.bin', payload), b.retain(folder / 'metadata.bin', metadata)]
++        twin, twin_payload, twin_metadata = c.encode(body, template, vector)
++        artifacts += [b.retain(folder / 'rider.repeat.sm1s', twin), b.retain(folder / 'range.repeat.bin', twin_payload),
++                      b.retain(folder / 'metadata.repeat.bin', twin_metadata)]
++        if twin != rider:
++            raise RuntimeError('twin encode differs')
++        decoded = c.restore_semantic(rider, template)
++        artifacts.append(b.retain(folder / 'decoded.sm3r', decoded))
++        if decoded != body:
++            raise RuntimeError('decoded body differs')
++        transformed = b.layout_tools.ck2_interleave(rider)
++        artifacts.append(b.retain(folder / 'container_input.ck2', transformed))
++        container = brotli.compress(transformed, quality=11, lgwin=24)
++        semantic_container = b.retain(folder / 'semantic.br', container)
++        artifacts.append(semantic_container)
++        if brotli.decompress(container) != transformed:
++            raise RuntimeError('container did not restore rider')
++        row = dict(binding=bind, sample=index, weights=vector.tolist(), rider=rider_fact,
++                   ck2=True, q=11, lgwin=24,
++                   semantic_container=semantic_container, artifacts=artifacts, payload_bytes=len(payload),
++                   parameter_bytes=24, header_increment_bytes=2, body_identity=True, twins_identical=True,
++                   net_container_bytes=len(container) - len(source_container))
++        b.save(target, row)
++        print(json.dumps(dict(sample=index, range_bytes=len(payload), semantic_bytes=len(container), delta=row['net_container_bytes'])), flush=True)
++        rows.append(row)
++    result = dict(axis=b.AXIS, score_claim=False, bound=b.fact(root / 'BOUND_SUPPORTED.json'),
++                  fit=b.fact(root / 'FIT.json'), rows=rows, controls=controls,
++                  winner=min(rows, key=lambda r: (r['semantic_container']['bytes'], r['sample'])),
++                  variant_design='one fitted vector and four seeded +/-1 perturbations of four shared coefficients; all lossless; q11/w24 fixed',
++                  seed=b.SEED, families_built=1)
++    b.save(root / 'RACE.json', result)
++    return result
++
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--stage', choices=('prepare', 'fit', 'race'), required=True)
++    parser.add_argument('--root', type=Path, default=b.ROOT)
++    parser.add_argument('--resume-from', type=Path)
++    args = parser.parse_args()
++    result = globals()[args.stage](args.resume_from or args.root)
++    print(json.dumps({k: result[k] for k in ('continuous_gain_bytes', 'fixed_net_ideal_bytes', 'weights', 'events') if k in result}))
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/70f13d70b5dac1462b32f101441d779ba8cca978.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/70f13d70b5dac1462b32f101441d779ba8cca978.blob
+new file mode 100644
+index 000000000..70f13d70b
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/70f13d70b5dac1462b32f101441d779ba8cca978.blob
+@@ -0,0 +1,812 @@
++"""Parse and decode the fixed F24S archive format used by F26."""
++
++from __future__ import annotations
++
++import hashlib
++import lzma
++import os
++import struct
++import subprocess
++import time
++import zipfile
++from dataclasses import dataclass
++from pathlib import Path
++
++import numpy as np
++
++try:
++    import brotli
++except ImportError:  # Local parse-back may select the pinned CLI instead.
++    brotli = None
++
++from .bits import BitPackingError, packed_length, unpack_signed
++from .carrier_repack import pack_frame0_selector_carrier
++from .compensation_overlay import (
++    MAGIC as COMPENSATION_MAGIC,
++    split_selector_compensation,
++)
++from .entropy.coefficient_ar1_codec import (
++    CAP1_MAGIC,
++    CoefficientAr1CodecError,
++    decode_cap1,
++)
++from .entropy.rc64 import NativeDecoder
++from .entropy.renderer_weight_codec import (
++    RendererWeightCodecError,
++    decode_f12_wans_body,
++    decode_wans1,
++)
++from .frame0_selector import decode_selector
++from .ihs2 import materialize_ihs1
++
++NUM_CLASSES = 5
++FIXED_SCHEMA = "fixed_boundary_int6"
++FIXED_MAGIC = b"RCF1"
++FIXED_STATES = 25
++FIXED_BITS = 6
++F24S_MAGIC = b"F24S"
++IHS2_HEADER = b"IHS2\x03\x31"
++IHS2_BYTES = 16_599
++IHS2_BODY_BYTES = IHS2_BYTES - len(IHS2_HEADER)
++WANS_BODY_BYTES = 36_040
++WANS_STREAM_ORDER = (1, 15, 4, 0, 11, 5, 2, 9, 3, 6, 10, 12, 14, 7, 8, 13)
++CAP1_PREFIX = CAP1_MAGIC + bytes((1, 0, 0, 0))
++SPARSE_SELECTOR_PREFIX = b"F0E1\x01"
++CAP_FIELDS = ("predictor", "scales", "lengths", "ks", "basis", "rice")
++STORED_CAP_FIELDS = ("scales", "predictor", "lengths", "ks", "basis", "rice")
++LZMA_FILTERS = [
++    {
++        "id": lzma.FILTER_LZMA2,
++        "dict_size": 1 << 16,
++        "lc": 0,
++        "lp": 1,
++        "pb": 0,
++        "mode": lzma.MODE_NORMAL,
++        "nice_len": 273,
++        "mf": lzma.MF_BT4,
++        "depth": 0,
++    }
++]
++SPLIT_MODEL_HEADER = struct.Struct("<HHH")
++HP4_MODEL_HEADER = struct.Struct("<4sBBBBHHHHH")
++HP4_MAGIC = b"HP4M"
++# DDM_RX1_IHS1_CONTAINER_V1
++RX1_MAGIC = b"RX1M"
++RX1_MODEL_HEADER = struct.Struct("<4sBBBBHHH")
++RX1_CODEC_XZ = 1
++RX1_CODEC_BROTLI = 2
++HP4_FRAME_OFFSET_BODY = 13_373
++HP4_FRAME_BYTES = 2_400
++SPLIT_MODEL_SECTION_BYTES = (16_593, 36_040)
++PACKED_CAP1_SECTION_BYTES = 22_183
++CANONICAL_CAP1_SECTION_BYTES = 22_223
++
++
++class ResidualArchiveError(ValueError):
++    """The promoted F26 archive is malformed or non-canonical."""
++
++
++def _decompress_brotli(stream: bytes) -> bytes:
++    if brotli is not None:
++        try:
++            return brotli.decompress(stream)
++        except brotli.error as error:
++            raise ResidualArchiveError("invalid split Brotli model stream") from error
++    binary = os.environ.get("CP135_BROTLI_CLI", "")
++    if not binary:
++        raise ResidualArchiveError(
++            "split Brotli model requires Brotli==1.2.0 or CP135_BROTLI_CLI"
++        )
++    completed = subprocess.run(
++        [binary, "-d", "-c"],
++        input=stream,
++        check=False,
++        capture_output=True,
++    )
++    if completed.returncode:
++        raise ResidualArchiveError("split Brotli CLI rejected a model stream")
++    return completed.stdout
++
++
++def _unpack_unsigned(raw: bytes, count: int, bits: int) -> np.ndarray:
++    if len(raw) != (count * bits + 7) // 8:
++        raise ResidualArchiveError("packed CAP1 field has the wrong length")
++    if count * bits % 8 and raw[-1] >> (count * bits % 8):
++        raise ResidualArchiveError("packed CAP1 field has nonzero padding")
++    output = np.empty(count, dtype=np.int16)
++    for index in range(count):
++        offset = index * bits
++        byte, shift = divmod(offset, 8)
++        word = raw[byte]
++        if byte + 1 < len(raw):
++            word |= raw[byte + 1] << 8
++        output[index] = (word >> shift) & ((1 << bits) - 1)
++    return output
++
++
++def _restore_packed_cap1_metadata(packed: bytes) -> bytes:
++    if len(packed) < 142:
++        raise ResidualArchiveError("packed CAP1 section is truncated")
++    factor_base = packed[102]
++    factors = factor_base + _unpack_unsigned(packed[103:114], 12, 7)
++    bias_codes = _unpack_unsigned(packed[114:123], 12, 6)
++    biases = np.where(bias_codes >= 32, bias_codes - 64, bias_codes).astype(np.int8)
++    lengths = _unpack_unsigned(packed[123:139], 32, 4).astype(np.uint8)
++    k_base = packed[139]
++    ks = (k_base + _unpack_unsigned(packed[140:142], 12, 1)).astype(np.uint8)
++    if (
++        np.any(factors > 512)
++        or np.any(biases < -16)
++        or np.any(biases > 16)
++        or np.any(ks >= 12)
++    ):
++        raise ResidualArchiveError("packed CAP1 metadata exceeds canonical domains")
++    result = (
++        packed[:102]
++        + factors.astype("<i2").tobytes()
++        + biases.tobytes()
++        + lengths.tobytes()
++        + ks.tobytes()
++        + packed[142:]
++    )
++    if len(result) != len(packed) + 40:
++        raise ResidualArchiveError("packed CAP1 inverse produced the wrong length")
++    return result
++
++
++def _decode_rx1_models(outer: bytes):
++    """Restore RX1's counted IHS1 probability object and frozen MC36 renderer."""
++    if len(outer) < RX1_MODEL_HEADER.size or not outer.startswith(RX1_MAGIC):
++        return None
++    magic, version, codec, table_mode, reserved, hpac_bytes, semantic_bytes, carrier_bytes = RX1_MODEL_HEADER.unpack_from(outer)
++    model_end = RX1_MODEL_HEADER.size + hpac_bytes + semantic_bytes + carrier_bytes
++    if magic != RX1_MAGIC or version != 1 or codec not in (RX1_CODEC_XZ, RX1_CODEC_BROTLI):
++        raise ResidualArchiveError("unsupported RX1 model")
++    # DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1: reserved bit 0 is the semantic split
++    # flag.  Unknown bits still refuse, so the check stays fail-closed and an
++    # archive with reserved == 0 takes exactly the path it takes today.
++    if table_mode not in (0, 1) or (reserved & ~SZ1_RESERVED_KNOWN_BITS) or min(hpac_bytes, semantic_bytes, carrier_bytes) <= 0:
++        raise ResidualArchiveError("invalid RX1 model metadata")
++    if model_end + 96 >= len(outer):
++        raise ResidualArchiveError("truncated RX1 model")
++    offset = RX1_MODEL_HEADER.size
++    hpac_stream = outer[offset : offset + hpac_bytes]
++    offset += hpac_bytes
++    semantic_stream = outer[offset : offset + semantic_bytes]
++    offset += semantic_bytes
++    carrier_stream = outer[offset : offset + carrier_bytes]
++    try:
++        hpac = lzma.decompress(hpac_stream, format=lzma.FORMAT_XZ) if codec == RX1_CODEC_XZ else _decompress_brotli(hpac_stream)
++    except lzma.LZMAError as error:
++        raise ResidualArchiveError("invalid RX1 IHS1 stream") from error
++    # DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: the RC1 hpac rider carries its own whole-body
++    # 2-plane de-interleave (the section has no ck2 reserved bit of its own), so the
++    # un-interleave runs FIRST and the magic check below sees the restored framing.
++    if reserved & RC1_RESERVED_HPAC_ADAPTIVE:
++        from .rc1_adaptive_model_sections import HPAC_MAGIC as RC1_HPAC_MAGIC
++        from .rc2_hpac_semistatic_mixing import MAGIC as RC2_HPAC_MAGIC
++        from .rc3_shared_mixer import MAGIC as RC3_HPAC_MAGIC
++
++        hpac = _ck2_uninterleave_planes(hpac)
++        if not hpac.startswith((RC1_HPAC_MAGIC, RC2_HPAC_MAGIC, RC3_HPAC_MAGIC)):
++            raise ResidualArchiveError("RX1 HPAC does not carry an admitted lossless rider")
++    elif not hpac.startswith(b"IHS1"):
++        raise ResidualArchiveError("RX1 HPAC is not canonical IHS1")
++    semantic_body = _decompress_brotli(semantic_stream)
++    carrier_body = _decompress_brotli(carrier_stream)
++    # DDM_CK2_WHOLE_SECTION_PLANE2_V1: restore the carrier body BEFORE the packed-CAP1
++    # framing arithmetic reads its u24 bit counts, so those offsets see today's bytes.
++    if reserved & CK2_RESERVED_CARRIER_PLANE2:
++        carrier_body = _ck2_uninterleave_planes(carrier_body)
++    # DDM_RR5_ARITH_BASIS_V1: restore the shipped Huffman basis stream from
++    # the rider's adaptive-arithmetic form BEFORE the packed-CAP1 framing
++    # arithmetic reads its u24 bit counts.  Pure entropy recode: the restored
++    # body is byte-identical to the pre-rider body, so every stage below is
++    # unchanged.  Generic algorithm, zero transmitted bytes.
++    if reserved & RR5_RESERVED_ARITH_BASIS:
++        from .rr5_arith_basis import restore_carrier_body as restore_rr5_carrier_body
++
++        carrier_body = restore_rr5_carrier_body(carrier_body)
++    # DDM_DX2_CABAC_COEFFICIENTS_V1: the coefficient rider is disjoint from
++    # RR5's basis rider. Restore it after RR5 and before packed-CAP1 framing
++    # reads the changed residual bit count. Integer-only, device-free decoder.
++    if reserved & DX2_RESERVED_CABAC_COEFFICIENTS:
++        from .dx2_cabac_coefficients import restore_carrier_body as restore_dx2_carrier_body
++
++        carrier_body = restore_dx2_carrier_body(carrier_body)
++    # DDM_RX1_HP4_CARRIER_INVERSE_V1
++    # DDM_SA2_VARIABLE_PACKED_CAP1_V1 - the packed CAP1 portion's length is
++    # DERIVED from its own u24 bit counts instead of matched against a pinned
++    # constant, so a re-solved carrier lattice (whose Rice residual stream has a
++    # different length) parses.  Pure framing arithmetic: no video-derived data.
++    _packed_portion = 102 + 40 + (
++        (int.from_bytes(carrier_body[0:3], "little") + 7) // 8
++    ) + ((int.from_bytes(carrier_body[3:6], "little") + 7) // 8)
++    if len(carrier_body) >= _packed_portion + 9:
++        carrier_body = (
++            _restore_packed_cap1_metadata(carrier_body[:_packed_portion])
++            + carrier_body[_packed_portion:]
++        )
++    elif len(carrier_body) != CANONICAL_CAP1_SECTION_BYTES:
++        raise ResidualArchiveError("RX1 carrier representation differs")
++    # DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1
++    # reserved bit 0: the fp16 metadata region is byte-split (high plane, then low
++    # plane).  Absent (reserved == 0) is byte-identity: the code path below is
++    # unchanged.  The un-split is an exact byte permutation over a frozen region and
++    # restores the F12 body byte-for-byte before any parsing, so WANS_BODY_BYTES and
++    # every downstream check see exactly the bytes they see today.
++    if reserved & SZ1_RESERVED_SEMANTIC_SPLIT:
++        semantic_body = _sz1_unsplit_semantic(semantic_body)
++    # DDM_CK2_WHOLE_SECTION_PLANE2_V1: whole-section un-split, no fitted constants.
++    if reserved & CK2_RESERVED_SEMANTIC_PLANE2:
++        semantic_body = _ck2_uninterleave_planes(semantic_body)
++    # DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: the RC1 semantic rider is restored by the
++    # semantic receiver, which is the only place that holds the renderer template the
++    # code geometry needs.  Here the body is only recognised as tagged so it reaches
++    # that receiver untouched instead of falling into the legacy WANS length check.
++    if reserved & RC1_RESERVED_SEMANTIC_ADAPTIVE:
++        from .rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC
++
++        from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC
++        if not semantic_body.startswith((RC1_SEMANTIC_MAGIC, SM1_SEMANTIC_MAGIC)):
++            raise ResidualArchiveError("RX1 semantic does not carry the RC1 rider")
++    tagged_semantic = semantic_body.startswith((b"SD1M", b"SM3R", b"RC1S", b"SM1S"))
++    if tagged_semantic:
++        semantic = semantic_body
++    else:
++        if len(semantic_body) != WANS_BODY_BYTES:
++            raise ResidualArchiveError("RX1 semantic section length differs")
++        try:
++            semantic = decode_f12_wans_body(semantic_body, WANS_STREAM_ORDER)
++            decode_wans1(semantic)
++        except RendererWeightCodecError as error:
++            raise ResidualArchiveError("invalid RX1 renderer weights") from error
++    cap1_bytes = _cap1_body_bytes(carrier_body)
++    if cap1_bytes >= len(carrier_body):
++        raise ResidualArchiveError("truncated RX1 carrier")
++    cap1 = _restore_cap1(carrier_body[:cap1_bytes])
++    selector_tail = SPARSE_SELECTOR_PREFIX + carrier_body[cap1_bytes:]
++    try:
++        selector, compensation = split_selector_compensation(selector_tail)
++        decode_cap1(cap1, frames=600, dimensions=12)
++        decode_selector(selector)
++        carrier = pack_frame0_selector_carrier(cap1, selector)
++    except (CoefficientAr1CodecError, ValueError) as error:
++        raise ResidualArchiveError("invalid RX1 carrier") from error
++    return semantic, carrier, hpac, compensation, outer[model_end:], outer[:model_end]
++
++
++def _decode_hp4_models(outer: bytes) -> tuple[bytes, bytes] | None:
++    """Restore the exact F24S body from HP4 order0+Brotli-q11 fields."""
++    if len(outer) < HP4_MODEL_HEADER.size or not outer.startswith(HP4_MAGIC):
++        return None
++    magic, version, predictor, codec, flags, *lengths = HP4_MODEL_HEADER.unpack_from(outer)
++    model_end = HP4_MODEL_HEADER.size + sum(lengths)
++    if (magic, version, predictor, codec, flags) != (HP4_MAGIC, 1, 0, 2, 0):
++        raise ResidualArchiveError("unsupported HP4 model")
++    if model_end + 96 >= len(outer):
++        raise ResidualArchiveError("truncated HP4 model")
++    fields = []
++    offset = HP4_MODEL_HEADER.size
++    for length in lengths:
++        fields.append(outer[offset : offset + length])
++        offset += length
++    remainder = _decompress_brotli(fields[0])
++    if fields[1]:
++        raise ResidualArchiveError("HP4 order0 predictor parameters must be empty")
++    embedding = _decompress_brotli(fields[2])
++    if len(embedding) != HP4_FRAME_BYTES:
++        raise ResidualArchiveError("HP4 embedding length differs")
++    hpac = remainder[:HP4_FRAME_OFFSET_BODY] + embedding + remainder[HP4_FRAME_OFFSET_BODY:]
++    semantic = _decompress_brotli(fields[3])
++    carrier = _decompress_brotli(fields[4])
++    if len(hpac) != IHS2_BODY_BYTES or len(semantic) != WANS_BODY_BYTES:
++        raise ResidualArchiveError("HP4 restored fixed section length differs")
++    if len(carrier) == PACKED_CAP1_SECTION_BYTES:
++        carrier = _restore_packed_cap1_metadata(carrier)
++    elif (
++        len(carrier) > PACKED_CAP1_SECTION_BYTES
++        and carrier[PACKED_CAP1_SECTION_BYTES:].startswith(COMPENSATION_MAGIC)
++    ):
++        carrier = (
++            _restore_packed_cap1_metadata(carrier[:PACKED_CAP1_SECTION_BYTES])
++            + carrier[PACKED_CAP1_SECTION_BYTES:]
++        )
++    elif len(carrier) != CANONICAL_CAP1_SECTION_BYTES:
++        raise ResidualArchiveError("HP4 restored carrier length differs")
++    return b"F24S" + hpac + semantic + carrier, outer[model_end:]
++
++
++def _decode_split_models(outer: bytes) -> tuple[bytes, bytes] | None:
++    """Decode CP135's three fixed F24S physical sections when selected."""
++    if len(outer) < SPLIT_MODEL_HEADER.size:
++        return None
++    lengths = SPLIT_MODEL_HEADER.unpack_from(outer)
++    model_end = SPLIT_MODEL_HEADER.size + sum(lengths)
++    if min(lengths) <= 0 or model_end + 96 >= len(outer):
++        return None
++    offset = SPLIT_MODEL_HEADER.size
++    streams = []
++    for length in lengths:
++        streams.append(outer[offset : offset + length])
++        offset += length
++    try:
++        sections = tuple(_decompress_brotli(stream) for stream in streams)
++    except ResidualArchiveError:
++        return None
++    if tuple(map(len, sections[:2])) != SPLIT_MODEL_SECTION_BYTES:
++        return None
++    carrier = sections[2]
++    if len(carrier) == PACKED_CAP1_SECTION_BYTES:
++        carrier = _restore_packed_cap1_metadata(carrier)
++    elif (
++        len(carrier) > PACKED_CAP1_SECTION_BYTES
++        and carrier[PACKED_CAP1_SECTION_BYTES:].startswith(COMPENSATION_MAGIC)
++    ):
++        carrier = (
++            _restore_packed_cap1_metadata(carrier[:PACKED_CAP1_SECTION_BYTES])
++            + carrier[PACKED_CAP1_SECTION_BYTES:]
++        )
++    elif len(carrier) != CANONICAL_CAP1_SECTION_BYTES:
++        return None
++    return b"F24S" + sections[0] + sections[1] + carrier, outer[model_end:]
++
++
++@dataclass(frozen=True)
++class QuantizedTable:
++    """The one fixed residual table carried by F26."""
++
++    name: str
++    bits: int
++    codes: np.ndarray
++    scale: float
++    values: np.ndarray
++
++
++@dataclass(frozen=True)
++class ResidualArchiveParts:
++    semantic_blob: bytes
++    carrier_blob: bytes
++    hpac_blob: bytes
++    token_stream: bytes
++    table: QuantizedTable
++    schema: str
++    residual_payload: bytes
++    compressed_models: bytes
++    compensation_blob: bytes | None = None
++    token_codec: str = "rc64"
++    tc1_weights: bytes | None = None
++
++
++def _cap1_body_bytes(raw: bytes) -> int:
++    if len(raw) < 6:
++        raise ResidualArchiveError("truncated CAP1 bit counts")
++    basis_bits = int.from_bytes(raw[:3], "little")
++    residual_bits = int.from_bytes(raw[3:6], "little")
++    if not basis_bits or not residual_bits:
++        raise ResidualArchiveError("invalid CAP1 bit counts")
++    return (
++        6
++        + 36
++        + 96
++        + 32
++        + 12
++        + (basis_bits + 7) // 8
++        + (residual_bits + 7) // 8
++    )
++
++
++def _restore_cap1(raw: bytes) -> bytes:
++    size = _cap1_body_bytes(raw)
++    if len(raw) != size:
++        raise ResidualArchiveError("invalid stored CAP1 body length")
++    basis_bits = int.from_bytes(raw[:3], "little")
++    residual_bits = int.from_bytes(raw[3:6], "little")
++    sizes = {
++        "predictor": 36,
++        "scales": 96,
++        "lengths": 32,
++        "ks": 12,
++        "basis": (basis_bits + 7) // 8,
++        "rice": (residual_bits + 7) // 8,
++    }
++    fields = {}
++    offset = 6
++    for name in STORED_CAP_FIELDS:
++        end = offset + sizes[name]
++        fields[name] = raw[offset:end]
++        offset = end
++    if offset != len(raw):
++        raise ResidualArchiveError("stored CAP1 field accounting mismatch")
++    return CAP1_PREFIX + raw[:6] + b"".join(fields[name] for name in CAP_FIELDS)
++
++
++def _decode_models(models: bytes) -> tuple[bytes, bytes, bytes]:
++    if not models.startswith(F24S_MAGIC):
++        raise ResidualArchiveError("F26 requires the fixed F24S model container")
++    minimum = 4 + IHS2_BODY_BYTES + WANS_BODY_BYTES + 7
++    if len(models) < minimum:
++        raise ResidualArchiveError("truncated F24S model payload")
++    offset = 4
++    hpac = IHS2_HEADER + models[offset : offset + IHS2_BODY_BYTES]
++    offset += IHS2_BODY_BYTES
++    semantic_end = offset + WANS_BODY_BYTES
++    try:
++        semantic = decode_f12_wans_body(
++            models[offset:semantic_end],
++            WANS_STREAM_ORDER,
++        )
++        decode_wans1(semantic)
++    except RendererWeightCodecError as error:
++        raise ResidualArchiveError(f"invalid F24S renderer weights: {error}") from error
++    offset = semantic_end
++    cap1_bytes = _cap1_body_bytes(models[offset:])
++    cap1_end = offset + cap1_bytes
++    if cap1_end >= len(models):
++        raise ResidualArchiveError("truncated F24S carrier or selector")
++    cap1 = _restore_cap1(models[offset:cap1_end])
++    selector_tail = SPARSE_SELECTOR_PREFIX + models[cap1_end:]
++    try:
++        selector, compensation = split_selector_compensation(selector_tail)
++        decode_cap1(cap1, frames=600, dimensions=12)
++        decode_selector(selector)
++        carrier = pack_frame0_selector_carrier(cap1, selector)
++    except (CoefficientAr1CodecError, ValueError) as error:
++        raise ResidualArchiveError(f"invalid F24S carrier: {error}") from error
++    return semantic, carrier, hpac, compensation
++
++
++def _decode_fixed_table(raw: bytes) -> QuantizedTable:
++    expected = len(FIXED_MAGIC) + 2 + packed_length(
++        FIXED_STATES * NUM_CLASSES,
++        FIXED_BITS,
++    )
++    if len(raw) != expected or not raw.startswith(FIXED_MAGIC):
++        raise ResidualArchiveError("invalid fixed residual table")
++    scale = float(np.frombuffer(raw[4:6], dtype="<f2")[0])
++    if not np.isfinite(scale) or scale <= 0.0:
++        raise ResidualArchiveError("invalid fixed residual scale")
++    try:
++        codes = np.asarray(
++            unpack_signed(raw[6:], FIXED_STATES * NUM_CLASSES, FIXED_BITS),
++            dtype=np.int8,
++        ).reshape(FIXED_STATES, NUM_CLASSES)
++    except BitPackingError as error:
++        raise ResidualArchiveError(f"invalid fixed residual codes: {error}") from error
++    return QuantizedTable(
++        name="boundary_predicted",
++        bits=FIXED_BITS,
++        codes=codes,
++        scale=scale,
++        values=codes.astype(np.float32) * scale,
++    )
++
++
++def read_residual_archive(archive_path: Path) -> ResidualArchiveParts:
++    """Strictly parse the single F24S representation accepted by F26."""
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ResidualArchiveError("archive must contain exactly member p")
++        outer = archive.read("p")
++    rx1 = _decode_rx1_models(outer)
++    if rx1 is not None:
++        semantic, carrier, hpac, compensation, section, compressed = rx1
++    else:
++        split = _decode_hp4_models(outer)
++        if split is None:
++            split = _decode_split_models(outer)
++        if split is not None:
++            models, section = split
++            compressed = outer[: len(outer) - len(section)]
++        else:
++            try:
++                decoder = lzma.LZMADecompressor(
++                    format=lzma.FORMAT_RAW,
++                    filters=LZMA_FILTERS,
++                )
++                models = decoder.decompress(outer)
++            except lzma.LZMAError as error:
++                raise ResidualArchiveError("invalid F24S model section") from error
++            section = decoder.unused_data
++            if not decoder.eof or not section:
++                raise ResidualArchiveError("truncated F24S model section")
++            compressed = outer[: len(outer) - len(section)]
++        semantic, carrier, hpac, compensation = _decode_models(models)
++
++    fixed_size = len(FIXED_MAGIC) + 2 + packed_length(
++        FIXED_STATES * NUM_CLASSES,
++        FIXED_BITS,
++    )
++    compact_size = fixed_size - len(FIXED_MAGIC)
++    if len(section) <= compact_size:
++        raise ResidualArchiveError("truncated F24S residual or token section")
++    residual = FIXED_MAGIC + section[:compact_size]
++    table = _decode_fixed_table(residual)
++    tokens = section[compact_size:]
++    tc1_weights = None
++    if rx1 is not None and outer[7] & 0x80:
++        from .tc1_shared_mixer import unpack_rider
++        tc1_weights, tokens = unpack_rider(tokens)
++    if not tokens:
++        raise ResidualArchiveError("empty F24S RC64 token stream")
++    return ResidualArchiveParts(
++        semantic_blob=semantic,
++        carrier_blob=carrier,
++        hpac_blob=hpac,
++        token_stream=tokens,
++        tc1_weights=tc1_weights,
++        table=table,
++        schema=FIXED_SCHEMA,
++        residual_payload=residual,
++        compressed_models=compressed,
++        compensation_blob=compensation,
++    )
++
++
++def _sparse_class(code_dir: Path):
++    import sys
++
++    sys.path.insert(0, str(code_dir))
++    try:
++        from hpac_integer_sparse import SparseIntegerHPAC
++
++        return SparseIntegerHPAC
++    finally:
++        sys.path.pop(0)
++
++
++def _boundary_buckets(previous: np.ndarray, max_distance: int = 4) -> np.ndarray:
++    if previous.ndim != 2:
++        raise ResidualArchiveError("boundary source must be one token frame")
++    edge = np.zeros(previous.shape, dtype=bool)
++    edge[1:] |= previous[1:] != previous[:-1]
++    edge[:-1] |= previous[:-1] != previous[1:]
++    edge[:, 1:] |= previous[:, 1:] != previous[:, :-1]
++    edge[:, :-1] |= previous[:, :-1] != previous[:, 1:]
++    result = np.full(previous.shape, max_distance, dtype=np.uint8)
++    active = edge.copy()
++    result[active] = 0
++    for distance in range(1, max_distance):
++        grown = active.copy()
++        grown[1:] |= active[:-1]
++        grown[:-1] |= active[1:]
++        grown[:, 1:] |= active[:, :-1]
++        grown[:, :-1] |= active[:, 1:]
++        active = grown
++        result[(result == max_distance) & active] = distance
++    return result
++
++
++def _probability_table(logits: np.ndarray, precision: int) -> np.ndarray:
++    quantized = np.clip(
++        np.rint(np.asarray(logits, dtype=np.float32) * precision),
++        -32768,
++        32767,
++    ).astype(np.int16)
++    values = quantized.astype(np.float32) / precision
++    values = values.astype(np.float64)
++    values -= values.max(axis=1, keepdims=True)
++    probabilities = np.exp(values)
++    probabilities /= probabilities.sum(axis=1, keepdims=True)
++    return probabilities.astype(np.float32)
++
++
++# --- ddm_rr8 NATIVE FREE CORRECTOR SELECTION --------------------------------------------
++# The corrector is 71.7% of the shipped token stage on a contest T4 (ddm_cd1, MEASURED), so
++# it is lowered to C.  The C reproduces the frozen SHIPPED_CONFIG only, and refuses to bind
++# if that config has drifted -- a refusal costs the speedup, a silent mismatch costs the
++# submission (ddm_rr2 scored S = 27.83 on a desynchronised decoder and it read as a model
++# failure rather than what it was).
++def _rr8_corrector_kind(corrector) -> str:
++    """Name the corrector that ACTUALLY ran, into the token report.
++
++    Without this the identity gate is VACUOUS.  If the native build fails, the selector
++    falls back to the shipped Python corrector -- correctly -- and a full-field identity run
++    then compares the shipped decoder against itself and PASSES, having proved nothing about
++    the port.  Absence of a fallback message on stderr is not evidence either.  This field is
++    what lets the gate fail, and it is what tells a paid T4 row whether it measured the port
++    or the fallback.
++    """
++    return type(corrector).__name__
++
++
++def _rr8_select_corrector(plane: int):
++    """The C corrector when the runtime built one; otherwise the shipped Python corrector.
++
++    No try/except: ``load_native_corrector`` returns None when no library was built (the
++    fail-closed path inflate.sh takes on a hostile toolchain) and RAISES when one was named
++    but is missing, has the wrong ABI, or was compiled against a different configuration.
++    Swallowing that second class would run a corrector nobody chose.
++    """
++    from .free_corrector import FreeCorrector
++    from .native_free_corrector import load_native_corrector
++
++    native = load_native_corrector(plane)
++    if native is not None:
++        return native
++    return FreeCorrector(plane)
++
++
++def decode_production_tokens(
++    parts: ResidualArchiveParts,
++    runtime,
++    code_dir: Path,
++    device,
++) -> tuple[object, dict[str, object]]:
++    """Decode the F26 RC64 stream with the fixed boundary residual model."""
++    import torch
++
++    from .hpac_inference import configure_cuda_reproducibility, optimize_sparse_evaluator
++    from .free_corrector import FreeCorrector
++
++    started = time.time()
++    if device.type == "cuda":
++        configure_cuda_reproducibility()
++    base_hpac = materialize_ihs1(parts.hpac_blob, runtime)
++    model = runtime.load_hpac(base_hpac, device)
++    masks = runtime.group_masks(device)
++    sparse = _sparse_class(code_dir)(model, runtime.EVAL_H, runtime.EVAL_W)
++    corrector = _rr8_select_corrector(runtime.EVAL_H * runtime.EVAL_W)
++    library = os.environ.get("CPR1_RC64_LIBRARY")
++    if not library:
++        raise ResidualArchiveError("RC64 decoding requires CPR1_RC64_LIBRARY")
++    decoder = NativeDecoder(Path(library), parts.token_stream)
++    from .tc1_shared_mixer import SharedMixer
++    mixer = None if parts.tc1_weights is None else SharedMixer(parts.tc1_weights)
++
++    group_plans = []
++    for mask in masks:
++        mask_array = mask.detach().cpu().numpy()
++        flat_positions = np.flatnonzero(mask_array.reshape(-1))
++        group_plans.append(
++            (
++                torch.from_numpy(flat_positions).to(device),
++                flat_positions,
++            )
++        )
++
++    corrected_digest = hashlib.sha256()
++    cdf_digest = hashlib.sha256()
++    with torch.inference_mode():
++        optimize_sparse_evaluator(sparse)
++        previous = torch.zeros(
++            (1, runtime.EVAL_H, runtime.EVAL_W),
++            dtype=torch.long,
++            device=device,
++        )
++        tokens = torch.empty(
++            (runtime.N, runtime.EVAL_H, runtime.EVAL_W),
++            dtype=torch.uint8,
++        )
++        checkpoint = None
++        resumed_from = 0
++        if mixer is not None and os.environ.get("TC1_RECEIVER_CHECKPOINT_DIR"):
++            from .tc1_receiver_checkpoint import ReceiverCheckpoint
++            checkpoint = ReceiverCheckpoint(parts, decoder, corrector, mixer, code_dir)
++            resumed_from = checkpoint.restore(tokens, previous)
++        for frame in range(resumed_from, runtime.N):
++            index = torch.tensor([frame], dtype=torch.long, device=device)
++            current = torch.zeros_like(previous)
++            context = model.prepare_frame_context(index, previous)
++            if frame:
++                previous_cpu = previous[0].to(
++                    device="cpu", dtype=torch.uint8
++                ).numpy()
++                boundary = _boundary_buckets(previous_cpu).reshape(-1)
++            else:
++                boundary = np.full(
++                    runtime.EVAL_H * runtime.EVAL_W,
++                    4,
++                    dtype=np.uint8,
++                )
++            corrector.begin_frame(boundary)
++            previous_field = None if not frame else previous[0].to(device="cpu", dtype=torch.uint8).numpy()
++            if mixer is not None:
++                mixer.begin_frame()
++            for group, (device_positions, flat_positions) in enumerate(group_plans):
++                selected = sparse.selected_logits(current, context, group)
++                base_logits = selected.cpu().numpy()
++                predicted = base_logits.argmax(axis=1).astype(np.int64)
++                feature = (
++                    boundary[flat_positions].astype(np.int64) * NUM_CLASSES
++                    + predicted
++                )
++                corrected = base_logits + parts.table.values[feature]
++                corrected_digest.update(
++                    np.ascontiguousarray(corrected, dtype="<f4").tobytes()
++                )
++                probability = _probability_table(
++                    corrected,
++                    runtime.HPAC_LOGIT_PRECISION,
++                )
++                cdf_digest.update(
++                    np.ascontiguousarray(probability, dtype="<f4").tobytes()
++                )
++                state = corrector.group_state(
++                    probability,
++                    predicted,
++                    flat_positions,
++                )
++                coding = corrector.coding_row(state)
++                if mixer is not None:
++                    partial = current[0].to(device="cpu", dtype=torch.uint8).numpy()
++                    coding = mixer.coding(coding, flat_positions, partial, previous_field)
++                symbols = decoder.decode(coding).astype(np.int64)
++                corrector.observe(state, symbols)
++                current.reshape(-1)[device_positions] = torch.from_numpy(symbols).to(
++                    device
++                )
++            tokens[frame] = current[0].to(device="cpu", dtype=torch.uint8)
++            corrector.end_frame(tokens[frame].numpy().reshape(-1))
++            if mixer is not None:
++                mixer.end_frame(tokens[frame].numpy(), previous_field)
++            previous = current
++            if checkpoint is not None and ((frame + 1) % 25 == 0 or frame + 1 == int(os.environ.get("TC1_RECEIVER_STOP_AFTER", "600"))):
++                checkpoint.save(frame + 1, tokens)
++    elapsed = time.time() - started
++    del model
++    return tokens, {
++        "corrected_quantized_logit_sha256": corrected_digest.hexdigest(),
++        "corrected_cdf_input_sha256": cdf_digest.hexdigest(),
++        "decoded_token_sha256": hashlib.sha256(tokens.numpy().tobytes()).hexdigest(),
++        "decode_runtime_seconds": elapsed,
++        "adapter_sha256": "",
++        "token_codec": "rc64",
++        "tail_mixer": "none" if mixer is None else "TC1M-35-int8",
++        "decoder_bit_position": decoder.bit_position,
++        "free_corrector": _rr8_corrector_kind(corrector),
++        "checkpoint_resumed_from_frame": resumed_from,
++        "logit_and_cdf_digest_scope": "suffix from checkpoint_resumed_from_frame; token digest is full n600",
++    }
++
++
++# DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1 -- free receiver code, zero transmitted bytes.
++SZ1_RESERVED_SEMANTIC_SPLIT = 0x01
++# DDM_CK2_WHOLE_SECTION_PLANE2_V1
++# Bits 1 and 2 mark a 2-plane byte de-interleave over the WHOLE decompressed section
++# body.  Unlike bit 0 this carries no fitted offset/length: the transform is a pure
++# permutation of the entire buffer, so it re-fits nothing when the body layout changes.
++CK2_RESERVED_SEMANTIC_PLANE2 = 0x02
++CK2_RESERVED_CARRIER_PLANE2 = 0x04
++# DDM_RR5_ARITH_BASIS_V1: the basis rider's reserved bit.
++RR5_RESERVED_ARITH_BASIS = 0x08
++# DDM_DX2_CABAC_COEFFICIENTS_V1: disjoint coefficient-stream rider.
++DX2_RESERVED_CABAC_COEFFICIENTS = 0x10
++# DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: the two MODEL sections' adaptive-recode bits.
++# Both are additive: an archive with either bit clear takes exactly the path it takes
++# today, and an unknown bit still refuses fail-closed through the mask below.
++RC1_RESERVED_SEMANTIC_ADAPTIVE = 0x20
++RC1_RESERVED_HPAC_ADAPTIVE = 0x40
++SZ1_RESERVED_KNOWN_BITS = 0xFF
++
++
++def _ck2_uninterleave_planes(body: bytes) -> bytes:
++    """Exact inverse of a whole-body 2-plane de-interleave.
++
++    The encoder emits ``body[0::2] + body[1::2]`` over the even-length prefix and leaves
++    any odd trailing byte in place.  Restoring is the same statement read backwards, so
++    the transform is total: it round-trips every input length, including 0 and 1.
++    """
++    span = len(body) & ~1
++    half = span // 2
++    restored = np.empty(span, dtype=np.uint8)
++    planes = np.frombuffer(body[:span], dtype=np.uint8)
++    restored[0::2] = planes[:half]
++    restored[1::2] = planes[half:]
++    return restored.tobytes() + body[span:]
++SZ1_SPLIT_OFFSET = 49
++SZ1_SPLIT_LENGTH = 8284
++
++
++def _sz1_unsplit_semantic(body: bytes) -> bytes:
++    """Restore interleaved fp16 metadata from its two byte planes (exact inverse)."""
++    start = SZ1_SPLIT_OFFSET
++    end = start + SZ1_SPLIT_LENGTH
++    if len(body) < end:
++        raise ResidualArchiveError("RX1 semantic body too short for the metadata split")
++    planes = np.frombuffer(body[start:end], dtype=np.uint8)
++    half = SZ1_SPLIT_LENGTH // 2
++    region = np.empty(SZ1_SPLIT_LENGTH, dtype=np.uint8)
++    region[1::2] = planes[:half]
++    region[0::2] = planes[half:]
++    return body[:start] + region.tobytes() + body[end:]
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/831222d0f333e1d2c520d198496eadeee950fc6e.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/831222d0f333e1d2c520d198496eadeee950fc6e.blob
+new file mode 100644
+index 000000000..831222d0f
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/831222d0f333e1d2c520d198496eadeee950fc6e.blob
+@@ -0,0 +1,35 @@
++import hashlib,json,os,sys
++from pathlib import Path
++root,work,mode=Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve(),sys.argv[3]
++sys.path.insert(0,str(root))
++from runtime.f26_inflate import inflate_archive
++def emit(path,data):
++ with path.open('xb') as f: f.write(data)
++ return {'path':str(path),'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
++def observe(frame,event,arg):
++ if event!='call': return
++ name=frame.f_code.co_name
++ if name not in ('render_video','render_video_parallel','decode_production_tokens'): return
++ file=Path(frame.f_code.co_filename).resolve()
++ if name in ('render_video','render_video_parallel') and root in file.parents:
++  emit(work/'FORBIDDEN_RENDER.json',json.dumps({'function':name,'filename':str(file)}).encode())
++  os._exit(81)
++ if name=='decode_production_tokens' and file==root/'runtime/residual_archive.py':
++  marker={'function':name,'filename':str(file),'runtime':str(root),'attempt':str(work)}
++  emit(work/'TOKEN_DECODE_ENTERED.json',json.dumps(marker).encode())
++  if mode=='proof':
++   caller=frame.f_back
++   if Path(caller.f_code.co_filename).resolve()!=root/'runtime/f26_inflate.py': raise RuntimeError('wrong public caller')
++   state=caller.f_locals['semantic'].state_dict()
++   if len(state)!=38 or 'frame_embed.weight' not in state: raise RuntimeError('incomplete semantic state')
++   facts=[]
++   for index,(key,tensor) in enumerate(state.items()):
++    array=tensor.detach().cpu().contiguous().numpy()
++    fact=emit(work/('%02d.tensor'%index),array.tobytes())
++    facts.append(dict(name=key,shape=list(array.shape),dtype=str(array.dtype),artifact=fact))
++   emit(work/'restored.sm3r',caller.f_locals['parts'].semantic_blob)
++   emit(work/'TENSORS.json',json.dumps(facts,sort_keys=True).encode())
++   os._exit(0)
++sys.setprofile(observe)
++inflate_archive(root/'archive.zip',work/'0.raw',renderer_dir=root/'cpr1',device_name='cpu',num_threads=4,checkpoint_dir=work/'.ckpt')
++raise RuntimeError('public probe returned without its stopping boundary')
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/d3033e0f0d40241a7ec752662c7b593cc52b647b.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/d3033e0f0d40241a7ec752662c7b593cc52b647b.blob
+new file mode 100644
+index 000000000..d3033e0f0
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/d3033e0f0d40241a7ec752662c7b593cc52b647b.blob
+@@ -0,0 +1,48 @@
++# MAIN HOT STATE — the orchestrator's retained-reasoning manifest
++<!-- managed by tools/main_hot_state.py; sections are typed; set via --set-section NAME (--content-file F | stdin) -->
++_updated: 2026-09-09T22:30:53+00:00_
++
++## POINTER_LINE
++- OWN-VEHICLE FRONTIER: S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]
++- archive sha 670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc
++- runtime tree 165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a
++- lane ddm_cmp2_t4_sm1_semantic_coder_20260909
++- move #37: -2.556898e-04 vs ddm_cmp1_t4_rc3_tc1_composed_20260909
++- sub-0.12 gap 0.01791730; rate corner -26,908.6 B at held distortion; distortion corner infx at held bytes
++- 37th move: the coder-level squeeze now covers every section; remainder of the rate demand is a field/representation question
++
++## LIVE_PROCESSES
++**~22:45Z 09-09 — gs3 ADDENDUM 18 landed (ae6a0b837) on the operator's "all negative signal … points to gestalt": the day's twelve closures placed against the months' walls; the gap restated as two numbers that are one object (12,377 knife-edge boundary cells the renderer misplaces at correct tokens ≈ 0.0105 S; 83 KB the tail pays on the 0.2 % mispredicted boundary tokens); §IV the research program. CHARTERED + SPAWNED the door it names: `ddm_bnd1` (codex gpt-6-astra xhigh, 4122552c7) — boundary-representation closed-form pricing, falsifier 78 KB.**
++
++**~22:30Z 09-09 — sj1 gen 2 ENDED without pricing pass 5 (the pass-5 field exists: 235 tokens, 237 cells, seg −2.01e-4, break-even 10.27 bits/token; no encode log after 14:01). sj1 gen 3 SPAWNED (Opus): price through tc1's mixer codec against cmp2's tree (successor_price.sh uses the OLD cl2 HPAC coder — forbidden for the number), Lagrange subset if needed, pose chain only if the net clears −2e-5, seal+fire as ddm_sj1_t4_token_predistortion_pass5_20260909 or write the pre-registered stop + the cell census for bnd1.**
++
++**rp1 n600 (4 shards on the move-37 field): s1 DONE rc=0 (2,308 s; 9,387 tokens changed vs pristine on its shard); s2/s3/s4 at pair ~490/600 — the Opus arm polls SIZING_ROWS; on completion it runs the Lagrange subset by REAL re-encode → pose re-solve → seg equal → seal.**
++
++## LIVE_ARMS
++- **ddm_sj1 gen 3 (Opus)** — pass-5 pricing through tc1's coder on cmp2's tree (control must reproduce the shipped tail byte-identically; twins); band 7.72–13.36 vs break-even 10.27 bits/token; Lagrange subset; pose chain only on a clearing net; seal+fire or the pre-registered STOP with the census. Told: bulk stays on Vertigo.
++- **ddm_rp1 (Opus)** — n600 DONE on all 4 shards (rc=0, ~3,000 s each); now: real-re-encode Lagrange subset → pose re-solve → seg equal → seal (projected −217 B); its mispredicted-token census feeds bnd1.
++- **codex keeper 4/4 (gpt-6-astra):** bnd1 xhigh (boundary-representation door, closed-form; falsifier 78 KB) · gb2 xhigh (gb1's owed unconditional lattice bound; falsifier 300 B under the stored basis) · pm2 high (four instrument laws as gates: pose-base magnitude, encoder==pointer coder, ledger-before-dump, screening-law lint) · vr4 medium (both-SSD certified reclaim; APDataStore 38 GiB / Vertigo 67 GiB; target ≥ 120 GiB).
++- **STORAGE IS BINDING:** APDataStore 38 GiB (98 %), Vertigo 67 GiB (97 %). Both Opus arms told to keep bulk on Vertigo; vr4 reclaims; route no new bulk to APDataStore until vr4 reports.
++- **RETAINED unfired:** cmp2 build B (+16 B, under bar). **CLOSED with handoffs:** rw1, fe1, gf3, gb1 (→ gb2), ane3.
++
++## OPEN_OPERATOR_DECISIONS
++- PR #140 (afr1 bytes, S 0.14797617) is NINE moves behind the live pointer (S 0.13900437796841966). Publishing an update needs the operator's one-line confirm (p0_swap_procedure). MAIN does not act without it.
++- CPU-axis adjudication of the shipping bytes (contest-CPU score on the live pointer) has never been bought; the old jg5-era plan is superseded by nine moves. Decide when the PR question is decided.
++- Codex keeper cap raised 4→5 for this wave (five apparatus/structural arms + one Opus frontier arm). Confirm the codex quota tolerates it.
++- Two runtime-digest DEFINITIONS coexist: `tac.candidate_seal.measure_runtime_digest` (pass-3 tree → 2435dab86725…) vs the Modal fire manifest's `expected_runtime_tree_sha256` (same tree → 6508d184e60a…). Self-consistent per tool (each re-measures with its own function), but a reader comparing them will call it drift. Route to the seal-contract follow-on (scg1 ITEM_7 owner) as "one digest definition, or name both in every receipt".
++
++## MONITOR_TASKS
++- Fleet watcher Monitor (persistent): `tools/codex_arm_watch.py` → ARM FINISHED/ALERT/RELAYED lines.
++- sj1 Opus agent: harness notification on completion; SendMessage to continue.
++- Corrections-index rebuild: receipt `.omx/tmp/au1_rebuild_20260908/au1_rebuild_20260908.done`.
++
++## NEXT_BOUNDARIES
++- sj1 gen 3 reports the pass-5 rate leg → admit (fire → packet move 38) or STOP (memo section + census → bnd1).
++- rp1 s2–s4 finish → Lagrange subset by real re-encode → pose → seal → fire → packet move 38/39.
++- bnd1 verdict → BUILD charter (n600 plan) or closure + generator successor (the-cross; gb1's owed bound construction).
++- PR #140 swap packet: prep only on the operator's one-line confirm (13 moves behind; CPU-axis row never measured on this lineage).
++
++## FRESHEST_RECEIPTS
++- 09-06 04:40Z move 32 harvest: `/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/MODAL_REMOTE_RESULT.json` (call fc-01M1TFD35EPY2YZHNV3VKJP6MG).
++- 09-08 sj1 gen-2 lineage row commit 0e25879c1 (projection error +4.162e-06 S bracketed with round one's +0.0038%).
++- 09-08 corrections index rebuilt: `.omx/tmp/au1_rebuild_20260908/` rc=0 in 16 s.
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/dd87b66070bd20c502f3d7431fd0648603577d9f.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/dd87b66070bd20c502f3d7431fd0648603577d9f.blob
+new file mode 100644
+index 000000000..dd87b6607
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/dd87b66070bd20c502f3d7431fd0648603577d9f.blob
+@@ -0,0 +1,49 @@
++# MAIN HOT STATE — the orchestrator's retained-reasoning manifest
++<!-- managed by tools/main_hot_state.py; sections are typed; set via --set-section NAME (--content-file F | stdin) -->
++_updated: 2026-09-09T22:35:46+00:00_
++
++## POINTER_LINE
++- OWN-VEHICLE FRONTIER: S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]
++- archive sha 670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc
++- runtime tree 165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a
++- lane ddm_cmp2_t4_sm1_semantic_coder_20260909
++- move #37: -2.556898e-04 vs ddm_cmp1_t4_rc3_tc1_composed_20260909
++- sub-0.12 gap 0.01791730; rate corner -26,908.6 B at held distortion; distortion corner infx at held bytes
++- 37th move: the coder-level squeeze now covers every section; remainder of the rate demand is a field/representation question
++
++## LIVE_PROCESSES
++**~22:45Z 09-09 — gs3 ADDENDUM 18 landed (ae6a0b837) on the operator's "all negative signal … points to gestalt": the day's twelve closures placed against the months' walls; the gap restated as two numbers that are one object (12,377 knife-edge boundary cells the renderer misplaces at correct tokens ≈ 0.0105 S; 83 KB the tail pays on the 0.2 % mispredicted boundary tokens); §IV the research program. CHARTERED + SPAWNED the door it names: `ddm_bnd1` (codex gpt-6-astra xhigh, 4122552c7) — boundary-representation closed-form pricing, falsifier 78 KB.**
++
++**~22:30Z 09-09 — sj1 gen 2 ENDED without pricing pass 5 (the pass-5 field exists: 235 tokens, 237 cells, seg −2.01e-4, break-even 10.27 bits/token; no encode log after 14:01). sj1 gen 3 SPAWNED (Opus): price through tc1's mixer codec against cmp2's tree (successor_price.sh uses the OLD cl2 HPAC coder — forbidden for the number), Lagrange subset if needed, pose chain only if the net clears −2e-5, seal+fire as ddm_sj1_t4_token_predistortion_pass5_20260909 or write the pre-registered stop + the cell census for bnd1.**
++
++**rp1 n600 (4 shards on the move-37 field): s1 DONE rc=0 (2,308 s; 9,387 tokens changed vs pristine on its shard); s2/s3/s4 at pair ~490/600 — the Opus arm polls SIZING_ROWS; on completion it runs the Lagrange subset by REAL re-encode → pose re-solve → seg equal → seal.**
++
++## LIVE_ARMS
++- **ddm_sj1 gen 3 (Opus)** — pass-5 pricing through tc1's coder on cmp2's tree (control must reproduce the shipped tail byte-identically; twins); band 7.72–13.36 vs break-even 10.27 bits/token; Lagrange subset; pose chain only on a clearing net; seal+fire or the pre-registered STOP with the census. Told: bulk stays on Vertigo.
++- **ddm_rp1 (Opus)** — n600 DONE on all 4 shards (rc=0, ~3,000 s each); now: real-re-encode Lagrange subset → pose re-solve → seg equal → seal (projected −217 B); its mispredicted-token census feeds bnd1.
++- **codex keeper 4/4 (gpt-6-astra):** bnd1 xhigh (boundary-representation door, closed-form; falsifier 78 KB) · gb2 xhigh (gb1's owed unconditional lattice bound; falsifier 300 B under the stored basis) · pm2 high (four instrument laws as gates: pose-base magnitude, encoder==pointer coder, ledger-before-dump, screening-law lint) · vr4 medium (both-SSD certified reclaim; APDataStore 38 GiB / Vertigo 67 GiB; target ≥ 120 GiB).
++- **STORAGE IS BINDING:** APDataStore 38 GiB (98 %), Vertigo 67 GiB (97 %). Both Opus arms told to keep bulk on Vertigo; vr4 reclaims; route no new bulk to APDataStore until vr4 reports.
++- **RETAINED unfired:** cmp2 build B (+16 B, under bar). **CLOSED with handoffs:** rw1, fe1, gf3, gb1 (→ gb2), ane3.
++
++## OPEN_OPERATOR_DECISIONS
++- PR #140 (afr1 bytes, S 0.14797617) is NINE moves behind the live pointer (S 0.13900437796841966). Publishing an update needs the operator's one-line confirm (p0_swap_procedure). MAIN does not act without it.
++- CPU-axis adjudication of the shipping bytes (contest-CPU score on the live pointer) has never been bought; the old jg5-era plan is superseded by nine moves. Decide when the PR question is decided.
++- Codex keeper cap raised 4→5 for this wave (five apparatus/structural arms + one Opus frontier arm). Confirm the codex quota tolerates it.
++- Two runtime-digest DEFINITIONS coexist: `tac.candidate_seal.measure_runtime_digest` (pass-3 tree → 2435dab86725…) vs the Modal fire manifest's `expected_runtime_tree_sha256` (same tree → 6508d184e60a…). Self-consistent per tool (each re-measures with its own function), but a reader comparing them will call it drift. Route to the seal-contract follow-on (scg1 ITEM_7 owner) as "one digest definition, or name both in every receipt".
++
++## MONITOR_TASKS
++- Fleet watcher Monitor (persistent): `tools/codex_arm_watch.py` → ARM FINISHED/ALERT/RELAYED lines.
++- sj1 Opus agent: harness notification on completion; SendMessage to continue.
++- Corrections-index rebuild: receipt `.omx/tmp/au1_rebuild_20260908/au1_rebuild_20260908.done`.
++
++## NEXT_BOUNDARIES
++- PENDING COMMIT (MAIN): per-arm `--model {gpt-6-astra,gpt-5.6-sol}` in tools/codex_arm_queue.py + 2 tests — in the working tree, tested (74 pass), refused by #340 while pm2 holds the file; directive written for pm2 to land it; MAIN re-verifies at pm2's harvest (if pm2 reverted, re-apply from this session's edit script).
++- sj1 gen 3 rate leg (~2 h from 23:00Z) → admit → fire (packet move 38) or STOP + census → bnd1.
++- rp1: subset by real re-encode → pose → seal → fire → packet.
++- bnd1 / gb2 verdicts → build charters or closures; vr4 → routing for tonight's bulk.
++- PR #140 swap packet: prep only on the operator's one-line confirm.
++
++## FRESHEST_RECEIPTS
++- 09-06 04:40Z move 32 harvest: `/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass3_20260906/MODAL_REMOTE_RESULT.json` (call fc-01M1TFD35EPY2YZHNV3VKJP6MG).
++- 09-08 sj1 gen-2 lineage row commit 0e25879c1 (projection error +4.162e-06 S bracketed with round one's +0.0038%).
++- 09-08 corrections index rebuilt: `.omx/tmp/au1_rebuild_20260908/` rc=0 in 16 s.
+diff --git a/.omx/research/ddm_cd3_20260910/recovered_sources/de7fccff8c73dfe7ed58c9d341e594bddc534c93.blob b/.omx/research/ddm_cd3_20260910/recovered_sources/de7fccff8c73dfe7ed58c9d341e594bddc534c93.blob
+new file mode 100644
+index 000000000..de7fccff8
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/recovered_sources/de7fccff8c73dfe7ed58c9d341e594bddc534c93.blob
+@@ -0,0 +1,785 @@
++"""Parse and decode the fixed F24S archive format used by F26."""
++
++from __future__ import annotations
++
++import hashlib
++import lzma
++import os
++import struct
++import subprocess
++import time
++import zipfile
++from dataclasses import dataclass
++from pathlib import Path
++
++import numpy as np
++
++try:
++    import brotli
++except ImportError:  # Local parse-back may select the pinned CLI instead.
++    brotli = None
++
++from .bits import BitPackingError, packed_length, unpack_signed
++from .carrier_repack import pack_frame0_selector_carrier
++from .compensation_overlay import (
++    MAGIC as COMPENSATION_MAGIC,
++    split_selector_compensation,
++)
++from .entropy.coefficient_ar1_codec import (
++    CAP1_MAGIC,
++    CoefficientAr1CodecError,
++    decode_cap1,
++)
++from .entropy.rc64 import NativeDecoder
++from .entropy.renderer_weight_codec import (
++    RendererWeightCodecError,
++    decode_f12_wans_body,
++    decode_wans1,
++)
++from .frame0_selector import decode_selector
++from .ihs2 import materialize_ihs1
++
++NUM_CLASSES = 5
++FIXED_SCHEMA = "fixed_boundary_int6"
++FIXED_MAGIC = b"RCF1"
++FIXED_STATES = 25
++FIXED_BITS = 6
++F24S_MAGIC = b"F24S"
++IHS2_HEADER = b"IHS2\x03\x31"
++IHS2_BYTES = 16_599
++IHS2_BODY_BYTES = IHS2_BYTES - len(IHS2_HEADER)
++WANS_BODY_BYTES = 36_040
++WANS_STREAM_ORDER = (1, 15, 4, 0, 11, 5, 2, 9, 3, 6, 10, 12, 14, 7, 8, 13)
++CAP1_PREFIX = CAP1_MAGIC + bytes((1, 0, 0, 0))
++SPARSE_SELECTOR_PREFIX = b"F0E1\x01"
++CAP_FIELDS = ("predictor", "scales", "lengths", "ks", "basis", "rice")
++STORED_CAP_FIELDS = ("scales", "predictor", "lengths", "ks", "basis", "rice")
++LZMA_FILTERS = [
++    {
++        "id": lzma.FILTER_LZMA2,
++        "dict_size": 1 << 16,
++        "lc": 0,
++        "lp": 1,
++        "pb": 0,
++        "mode": lzma.MODE_NORMAL,
++        "nice_len": 273,
++        "mf": lzma.MF_BT4,
++        "depth": 0,
++    }
++]
++SPLIT_MODEL_HEADER = struct.Struct("<HHH")
++HP4_MODEL_HEADER = struct.Struct("<4sBBBBHHHHH")
++HP4_MAGIC = b"HP4M"
++# DDM_RX1_IHS1_CONTAINER_V1
++RX1_MAGIC = b"RX1M"
++RX1_MODEL_HEADER = struct.Struct("<4sBBBBHHH")
++RX1_CODEC_XZ = 1
++RX1_CODEC_BROTLI = 2
++HP4_FRAME_OFFSET_BODY = 13_373
++HP4_FRAME_BYTES = 2_400
++SPLIT_MODEL_SECTION_BYTES = (16_593, 36_040)
++PACKED_CAP1_SECTION_BYTES = 22_183
++CANONICAL_CAP1_SECTION_BYTES = 22_223
++
++
++class ResidualArchiveError(ValueError):
++    """The promoted F26 archive is malformed or non-canonical."""
++
++
++def _decompress_brotli(stream: bytes) -> bytes:
++    if brotli is not None:
++        try:
++            return brotli.decompress(stream)
++        except brotli.error as error:
++            raise ResidualArchiveError("invalid split Brotli model stream") from error
++    binary = os.environ.get("CP135_BROTLI_CLI", "")
++    if not binary:
++        raise ResidualArchiveError(
++            "split Brotli model requires Brotli==1.2.0 or CP135_BROTLI_CLI"
++        )
++    completed = subprocess.run(
++        [binary, "-d", "-c"],
++        input=stream,
++        check=False,
++        capture_output=True,
++    )
++    if completed.returncode:
++        raise ResidualArchiveError("split Brotli CLI rejected a model stream")
++    return completed.stdout
++
++
++def _unpack_unsigned(raw: bytes, count: int, bits: int) -> np.ndarray:
++    if len(raw) != (count * bits + 7) // 8:
++        raise ResidualArchiveError("packed CAP1 field has the wrong length")
++    if count * bits % 8 and raw[-1] >> (count * bits % 8):
++        raise ResidualArchiveError("packed CAP1 field has nonzero padding")
++    output = np.empty(count, dtype=np.int16)
++    for index in range(count):
++        offset = index * bits
++        byte, shift = divmod(offset, 8)
++        word = raw[byte]
++        if byte + 1 < len(raw):
++            word |= raw[byte + 1] << 8
++        output[index] = (word >> shift) & ((1 << bits) - 1)
++    return output
++
++
++def _restore_packed_cap1_metadata(packed: bytes) -> bytes:
++    if len(packed) < 142:
++        raise ResidualArchiveError("packed CAP1 section is truncated")
++    factor_base = packed[102]
++    factors = factor_base + _unpack_unsigned(packed[103:114], 12, 7)
++    bias_codes = _unpack_unsigned(packed[114:123], 12, 6)
++    biases = np.where(bias_codes >= 32, bias_codes - 64, bias_codes).astype(np.int8)
++    lengths = _unpack_unsigned(packed[123:139], 32, 4).astype(np.uint8)
++    k_base = packed[139]
++    ks = (k_base + _unpack_unsigned(packed[140:142], 12, 1)).astype(np.uint8)
++    if (
++        np.any(factors > 512)
++        or np.any(biases < -16)
++        or np.any(biases > 16)
++        or np.any(ks >= 12)
++    ):
++        raise ResidualArchiveError("packed CAP1 metadata exceeds canonical domains")
++    result = (
++        packed[:102]
++        + factors.astype("<i2").tobytes()
++        + biases.tobytes()
++        + lengths.tobytes()
++        + ks.tobytes()
++        + packed[142:]
++    )
++    if len(result) != len(packed) + 40:
++        raise ResidualArchiveError("packed CAP1 inverse produced the wrong length")
++    return result
++
++
++def _decode_rx1_models(outer: bytes):
++    """Restore RX1's counted IHS1 probability object and frozen MC36 renderer."""
++    if len(outer) < RX1_MODEL_HEADER.size or not outer.startswith(RX1_MAGIC):
++        return None
++    magic, version, codec, table_mode, reserved, hpac_bytes, semantic_bytes, carrier_bytes = RX1_MODEL_HEADER.unpack_from(outer)
++    model_end = RX1_MODEL_HEADER.size + hpac_bytes + semantic_bytes + carrier_bytes
++    if magic != RX1_MAGIC or version != 1 or codec not in (RX1_CODEC_XZ, RX1_CODEC_BROTLI):
++        raise ResidualArchiveError("unsupported RX1 model")
++    # DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1: reserved bit 0 is the semantic split
++    # flag.  Unknown bits still refuse, so the check stays fail-closed and an
++    # archive with reserved == 0 takes exactly the path it takes today.
++    if table_mode not in (0, 1) or (reserved & ~SZ1_RESERVED_KNOWN_BITS) or min(hpac_bytes, semantic_bytes, carrier_bytes) <= 0:
++        raise ResidualArchiveError("invalid RX1 model metadata")
++    if model_end + 96 >= len(outer):
++        raise ResidualArchiveError("truncated RX1 model")
++    offset = RX1_MODEL_HEADER.size
++    hpac_stream = outer[offset : offset + hpac_bytes]
++    offset += hpac_bytes
++    semantic_stream = outer[offset : offset + semantic_bytes]
++    offset += semantic_bytes
++    carrier_stream = outer[offset : offset + carrier_bytes]
++    try:
++        hpac = lzma.decompress(hpac_stream, format=lzma.FORMAT_XZ) if codec == RX1_CODEC_XZ else _decompress_brotli(hpac_stream)
++    except lzma.LZMAError as error:
++        raise ResidualArchiveError("invalid RX1 IHS1 stream") from error
++    # DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: the RC1 hpac rider carries its own whole-body
++    # 2-plane de-interleave (the section has no ck2 reserved bit of its own), so the
++    # un-interleave runs FIRST and the magic check below sees the restored framing.
++    if reserved & RC1_RESERVED_HPAC_ADAPTIVE:
++        from .rc1_adaptive_model_sections import HPAC_MAGIC as RC1_HPAC_MAGIC
++        from .rc2_hpac_semistatic_mixing import MAGIC as RC2_HPAC_MAGIC
++
++        hpac = _ck2_uninterleave_planes(hpac)
++        if not hpac.startswith((RC1_HPAC_MAGIC, RC2_HPAC_MAGIC)):
++            raise ResidualArchiveError("RX1 HPAC does not carry an admitted lossless rider")
++    elif not hpac.startswith(b"IHS1"):
++        raise ResidualArchiveError("RX1 HPAC is not canonical IHS1")
++    semantic_body = _decompress_brotli(semantic_stream)
++    carrier_body = _decompress_brotli(carrier_stream)
++    # DDM_CK2_WHOLE_SECTION_PLANE2_V1: restore the carrier body BEFORE the packed-CAP1
++    # framing arithmetic reads its u24 bit counts, so those offsets see today's bytes.
++    if reserved & CK2_RESERVED_CARRIER_PLANE2:
++        carrier_body = _ck2_uninterleave_planes(carrier_body)
++    # DDM_RR5_ARITH_BASIS_V1: restore the shipped Huffman basis stream from
++    # the rider's adaptive-arithmetic form BEFORE the packed-CAP1 framing
++    # arithmetic reads its u24 bit counts.  Pure entropy recode: the restored
++    # body is byte-identical to the pre-rider body, so every stage below is
++    # unchanged.  Generic algorithm, zero transmitted bytes.
++    if reserved & RR5_RESERVED_ARITH_BASIS:
++        from .rr5_arith_basis import restore_carrier_body as restore_rr5_carrier_body
++
++        carrier_body = restore_rr5_carrier_body(carrier_body)
++    # DDM_DX2_CABAC_COEFFICIENTS_V1: the coefficient rider is disjoint from
++    # RR5's basis rider. Restore it after RR5 and before packed-CAP1 framing
++    # reads the changed residual bit count. Integer-only, device-free decoder.
++    if reserved & DX2_RESERVED_CABAC_COEFFICIENTS:
++        from .dx2_cabac_coefficients import restore_carrier_body as restore_dx2_carrier_body
++
++        carrier_body = restore_dx2_carrier_body(carrier_body)
++    # DDM_RX1_HP4_CARRIER_INVERSE_V1
++    # DDM_SA2_VARIABLE_PACKED_CAP1_V1 - the packed CAP1 portion's length is
++    # DERIVED from its own u24 bit counts instead of matched against a pinned
++    # constant, so a re-solved carrier lattice (whose Rice residual stream has a
++    # different length) parses.  Pure framing arithmetic: no video-derived data.
++    _packed_portion = 102 + 40 + (
++        (int.from_bytes(carrier_body[0:3], "little") + 7) // 8
++    ) + ((int.from_bytes(carrier_body[3:6], "little") + 7) // 8)
++    if len(carrier_body) >= _packed_portion + 9:
++        carrier_body = (
++            _restore_packed_cap1_metadata(carrier_body[:_packed_portion])
++            + carrier_body[_packed_portion:]
++        )
++    elif len(carrier_body) != CANONICAL_CAP1_SECTION_BYTES:
++        raise ResidualArchiveError("RX1 carrier representation differs")
++    # DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1
++    # reserved bit 0: the fp16 metadata region is byte-split (high plane, then low
++    # plane).  Absent (reserved == 0) is byte-identity: the code path below is
++    # unchanged.  The un-split is an exact byte permutation over a frozen region and
++    # restores the F12 body byte-for-byte before any parsing, so WANS_BODY_BYTES and
++    # every downstream check see exactly the bytes they see today.
++    if reserved & SZ1_RESERVED_SEMANTIC_SPLIT:
++        semantic_body = _sz1_unsplit_semantic(semantic_body)
++    # DDM_CK2_WHOLE_SECTION_PLANE2_V1: whole-section un-split, no fitted constants.
++    if reserved & CK2_RESERVED_SEMANTIC_PLANE2:
++        semantic_body = _ck2_uninterleave_planes(semantic_body)
++    # DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: the RC1 semantic rider is restored by the
++    # semantic receiver, which is the only place that holds the renderer template the
++    # code geometry needs.  Here the body is only recognised as tagged so it reaches
++    # that receiver untouched instead of falling into the legacy WANS length check.
++    if reserved & RC1_RESERVED_SEMANTIC_ADAPTIVE:
++        from .rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC
++
++        from .sm1_semantic_mixer import MAGIC as SM1_SEMANTIC_MAGIC
++        if not semantic_body.startswith((RC1_SEMANTIC_MAGIC, SM1_SEMANTIC_MAGIC)):
++            raise ResidualArchiveError("RX1 semantic does not carry the RC1 rider")
++    tagged_semantic = semantic_body.startswith((b"SD1M", b"SM3R", b"RC1S", b"SM1S"))
++    if tagged_semantic:
++        semantic = semantic_body
++    else:
++        if len(semantic_body) != WANS_BODY_BYTES:
++            raise ResidualArchiveError("RX1 semantic section length differs")
++        try:
++            semantic = decode_f12_wans_body(semantic_body, WANS_STREAM_ORDER)
++            decode_wans1(semantic)
++        except RendererWeightCodecError as error:
++            raise ResidualArchiveError("invalid RX1 renderer weights") from error
++    cap1_bytes = _cap1_body_bytes(carrier_body)
++    if cap1_bytes >= len(carrier_body):
++        raise ResidualArchiveError("truncated RX1 carrier")
++    cap1 = _restore_cap1(carrier_body[:cap1_bytes])
++    selector_tail = SPARSE_SELECTOR_PREFIX + carrier_body[cap1_bytes:]
++    try:
++        selector, compensation = split_selector_compensation(selector_tail)
++        decode_cap1(cap1, frames=600, dimensions=12)
++        decode_selector(selector)
++        carrier = pack_frame0_selector_carrier(cap1, selector)
++    except (CoefficientAr1CodecError, ValueError) as error:
++        raise ResidualArchiveError("invalid RX1 carrier") from error
++    return semantic, carrier, hpac, compensation, outer[model_end:], outer[:model_end]
++
++
++def _decode_hp4_models(outer: bytes) -> tuple[bytes, bytes] | None:
++    """Restore the exact F24S body from HP4 order0+Brotli-q11 fields."""
++    if len(outer) < HP4_MODEL_HEADER.size or not outer.startswith(HP4_MAGIC):
++        return None
++    magic, version, predictor, codec, flags, *lengths = HP4_MODEL_HEADER.unpack_from(outer)
++    model_end = HP4_MODEL_HEADER.size + sum(lengths)
++    if (magic, version, predictor, codec, flags) != (HP4_MAGIC, 1, 0, 2, 0):
++        raise ResidualArchiveError("unsupported HP4 model")
++    if model_end + 96 >= len(outer):
++        raise ResidualArchiveError("truncated HP4 model")
++    fields = []
++    offset = HP4_MODEL_HEADER.size
++    for length in lengths:
++        fields.append(outer[offset : offset + length])
++        offset += length
++    remainder = _decompress_brotli(fields[0])
++    if fields[1]:
++        raise ResidualArchiveError("HP4 order0 predictor parameters must be empty")
++    embedding = _decompress_brotli(fields[2])
++    if len(embedding) != HP4_FRAME_BYTES:
++        raise ResidualArchiveError("HP4 embedding length differs")
++    hpac = remainder[:HP4_FRAME_OFFSET_BODY] + embedding + remainder[HP4_FRAME_OFFSET_BODY:]
++    semantic = _decompress_brotli(fields[3])
++    carrier = _decompress_brotli(fields[4])
++    if len(hpac) != IHS2_BODY_BYTES or len(semantic) != WANS_BODY_BYTES:
++        raise ResidualArchiveError("HP4 restored fixed section length differs")
++    if len(carrier) == PACKED_CAP1_SECTION_BYTES:
++        carrier = _restore_packed_cap1_metadata(carrier)
++    elif (
++        len(carrier) > PACKED_CAP1_SECTION_BYTES
++        and carrier[PACKED_CAP1_SECTION_BYTES:].startswith(COMPENSATION_MAGIC)
++    ):
++        carrier = (
++            _restore_packed_cap1_metadata(carrier[:PACKED_CAP1_SECTION_BYTES])
++            + carrier[PACKED_CAP1_SECTION_BYTES:]
++        )
++    elif len(carrier) != CANONICAL_CAP1_SECTION_BYTES:
++        raise ResidualArchiveError("HP4 restored carrier length differs")
++    return b"F24S" + hpac + semantic + carrier, outer[model_end:]
++
++
++def _decode_split_models(outer: bytes) -> tuple[bytes, bytes] | None:
++    """Decode CP135's three fixed F24S physical sections when selected."""
++    if len(outer) < SPLIT_MODEL_HEADER.size:
++        return None
++    lengths = SPLIT_MODEL_HEADER.unpack_from(outer)
++    model_end = SPLIT_MODEL_HEADER.size + sum(lengths)
++    if min(lengths) <= 0 or model_end + 96 >= len(outer):
++        return None
++    offset = SPLIT_MODEL_HEADER.size
++    streams = []
++    for length in lengths:
++        streams.append(outer[offset : offset + length])
++        offset += length
++    try:
++        sections = tuple(_decompress_brotli(stream) for stream in streams)
++    except ResidualArchiveError:
++        return None
++    if tuple(map(len, sections[:2])) != SPLIT_MODEL_SECTION_BYTES:
++        return None
++    carrier = sections[2]
++    if len(carrier) == PACKED_CAP1_SECTION_BYTES:
++        carrier = _restore_packed_cap1_metadata(carrier)
++    elif (
++        len(carrier) > PACKED_CAP1_SECTION_BYTES
++        and carrier[PACKED_CAP1_SECTION_BYTES:].startswith(COMPENSATION_MAGIC)
++    ):
++        carrier = (
++            _restore_packed_cap1_metadata(carrier[:PACKED_CAP1_SECTION_BYTES])
++            + carrier[PACKED_CAP1_SECTION_BYTES:]
++        )
++    elif len(carrier) != CANONICAL_CAP1_SECTION_BYTES:
++        return None
++    return b"F24S" + sections[0] + sections[1] + carrier, outer[model_end:]
++
++
++@dataclass(frozen=True)
++class QuantizedTable:
++    """The one fixed residual table carried by F26."""
++
++    name: str
++    bits: int
++    codes: np.ndarray
++    scale: float
++    values: np.ndarray
++
++
++@dataclass(frozen=True)
++class ResidualArchiveParts:
++    semantic_blob: bytes
++    carrier_blob: bytes
++    hpac_blob: bytes
++    token_stream: bytes
++    table: QuantizedTable
++    schema: str
++    residual_payload: bytes
++    compressed_models: bytes
++    compensation_blob: bytes | None = None
++    token_codec: str = "rc64"
++
++
++def _cap1_body_bytes(raw: bytes) -> int:
++    if len(raw) < 6:
++        raise ResidualArchiveError("truncated CAP1 bit counts")
++    basis_bits = int.from_bytes(raw[:3], "little")
++    residual_bits = int.from_bytes(raw[3:6], "little")
++    if not basis_bits or not residual_bits:
++        raise ResidualArchiveError("invalid CAP1 bit counts")
++    return (
++        6
++        + 36
++        + 96
++        + 32
++        + 12
++        + (basis_bits + 7) // 8
++        + (residual_bits + 7) // 8
++    )
++
++
++def _restore_cap1(raw: bytes) -> bytes:
++    size = _cap1_body_bytes(raw)
++    if len(raw) != size:
++        raise ResidualArchiveError("invalid stored CAP1 body length")
++    basis_bits = int.from_bytes(raw[:3], "little")
++    residual_bits = int.from_bytes(raw[3:6], "little")
++    sizes = {
++        "predictor": 36,
++        "scales": 96,
++        "lengths": 32,
++        "ks": 12,
++        "basis": (basis_bits + 7) // 8,
++        "rice": (residual_bits + 7) // 8,
++    }
++    fields = {}
++    offset = 6
++    for name in STORED_CAP_FIELDS:
++        end = offset + sizes[name]
++        fields[name] = raw[offset:end]
++        offset = end
++    if offset != len(raw):
++        raise ResidualArchiveError("stored CAP1 field accounting mismatch")
++    return CAP1_PREFIX + raw[:6] + b"".join(fields[name] for name in CAP_FIELDS)
++
++
++def _decode_models(models: bytes) -> tuple[bytes, bytes, bytes]:
++    if not models.startswith(F24S_MAGIC):
++        raise ResidualArchiveError("F26 requires the fixed F24S model container")
++    minimum = 4 + IHS2_BODY_BYTES + WANS_BODY_BYTES + 7
++    if len(models) < minimum:
++        raise ResidualArchiveError("truncated F24S model payload")
++    offset = 4
++    hpac = IHS2_HEADER + models[offset : offset + IHS2_BODY_BYTES]
++    offset += IHS2_BODY_BYTES
++    semantic_end = offset + WANS_BODY_BYTES
++    try:
++        semantic = decode_f12_wans_body(
++            models[offset:semantic_end],
++            WANS_STREAM_ORDER,
++        )
++        decode_wans1(semantic)
++    except RendererWeightCodecError as error:
++        raise ResidualArchiveError(f"invalid F24S renderer weights: {error}") from error
++    offset = semantic_end
++    cap1_bytes = _cap1_body_bytes(models[offset:])
++    cap1_end = offset + cap1_bytes
++    if cap1_end >= len(models):
++        raise ResidualArchiveError("truncated F24S carrier or selector")
++    cap1 = _restore_cap1(models[offset:cap1_end])
++    selector_tail = SPARSE_SELECTOR_PREFIX + models[cap1_end:]
++    try:
++        selector, compensation = split_selector_compensation(selector_tail)
++        decode_cap1(cap1, frames=600, dimensions=12)
++        decode_selector(selector)
++        carrier = pack_frame0_selector_carrier(cap1, selector)
++    except (CoefficientAr1CodecError, ValueError) as error:
++        raise ResidualArchiveError(f"invalid F24S carrier: {error}") from error
++    return semantic, carrier, hpac, compensation
++
++
++def _decode_fixed_table(raw: bytes) -> QuantizedTable:
++    expected = len(FIXED_MAGIC) + 2 + packed_length(
++        FIXED_STATES * NUM_CLASSES,
++        FIXED_BITS,
++    )
++    if len(raw) != expected or not raw.startswith(FIXED_MAGIC):
++        raise ResidualArchiveError("invalid fixed residual table")
++    scale = float(np.frombuffer(raw[4:6], dtype="<f2")[0])
++    if not np.isfinite(scale) or scale <= 0.0:
++        raise ResidualArchiveError("invalid fixed residual scale")
++    try:
++        codes = np.asarray(
++            unpack_signed(raw[6:], FIXED_STATES * NUM_CLASSES, FIXED_BITS),
++            dtype=np.int8,
++        ).reshape(FIXED_STATES, NUM_CLASSES)
++    except BitPackingError as error:
++        raise ResidualArchiveError(f"invalid fixed residual codes: {error}") from error
++    return QuantizedTable(
++        name="boundary_predicted",
++        bits=FIXED_BITS,
++        codes=codes,
++        scale=scale,
++        values=codes.astype(np.float32) * scale,
++    )
++
++
++def read_residual_archive(archive_path: Path) -> ResidualArchiveParts:
++    """Strictly parse the single F24S representation accepted by F26."""
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ResidualArchiveError("archive must contain exactly member p")
++        outer = archive.read("p")
++    rx1 = _decode_rx1_models(outer)
++    if rx1 is not None:
++        semantic, carrier, hpac, compensation, section, compressed = rx1
++    else:
++        split = _decode_hp4_models(outer)
++        if split is None:
++            split = _decode_split_models(outer)
++        if split is not None:
++            models, section = split
++            compressed = outer[: len(outer) - len(section)]
++        else:
++            try:
++                decoder = lzma.LZMADecompressor(
++                    format=lzma.FORMAT_RAW,
++                    filters=LZMA_FILTERS,
++                )
++                models = decoder.decompress(outer)
++            except lzma.LZMAError as error:
++                raise ResidualArchiveError("invalid F24S model section") from error
++            section = decoder.unused_data
++            if not decoder.eof or not section:
++                raise ResidualArchiveError("truncated F24S model section")
++            compressed = outer[: len(outer) - len(section)]
++        semantic, carrier, hpac, compensation = _decode_models(models)
++
++    fixed_size = len(FIXED_MAGIC) + 2 + packed_length(
++        FIXED_STATES * NUM_CLASSES,
++        FIXED_BITS,
++    )
++    compact_size = fixed_size - len(FIXED_MAGIC)
++    if len(section) <= compact_size:
++        raise ResidualArchiveError("truncated F24S residual or token section")
++    residual = FIXED_MAGIC + section[:compact_size]
++    table = _decode_fixed_table(residual)
++    tokens = section[compact_size:]
++    if not tokens:
++        raise ResidualArchiveError("empty F24S RC64 token stream")
++    return ResidualArchiveParts(
++        semantic_blob=semantic,
++        carrier_blob=carrier,
++        hpac_blob=hpac,
++        token_stream=tokens,
++        table=table,
++        schema=FIXED_SCHEMA,
++        residual_payload=residual,
++        compressed_models=compressed,
++        compensation_blob=compensation,
++    )
++
++
++def _sparse_class(code_dir: Path):
++    import sys
++
++    sys.path.insert(0, str(code_dir))
++    try:
++        from hpac_integer_sparse import SparseIntegerHPAC
++
++        return SparseIntegerHPAC
++    finally:
++        sys.path.pop(0)
++
++
++def _boundary_buckets(previous: np.ndarray, max_distance: int = 4) -> np.ndarray:
++    if previous.ndim != 2:
++        raise ResidualArchiveError("boundary source must be one token frame")
++    edge = np.zeros(previous.shape, dtype=bool)
++    edge[1:] |= previous[1:] != previous[:-1]
++    edge[:-1] |= previous[:-1] != previous[1:]
++    edge[:, 1:] |= previous[:, 1:] != previous[:, :-1]
++    edge[:, :-1] |= previous[:, :-1] != previous[:, 1:]
++    result = np.full(previous.shape, max_distance, dtype=np.uint8)
++    active = edge.copy()
++    result[active] = 0
++    for distance in range(1, max_distance):
++        grown = active.copy()
++        grown[1:] |= active[:-1]
++        grown[:-1] |= active[1:]
++        grown[:, 1:] |= active[:, :-1]
++        grown[:, :-1] |= active[:, 1:]
++        active = grown
++        result[(result == max_distance) & active] = distance
++    return result
++
++
++def _probability_table(logits: np.ndarray, precision: int) -> np.ndarray:
++    quantized = np.clip(
++        np.rint(np.asarray(logits, dtype=np.float32) * precision),
++        -32768,
++        32767,
++    ).astype(np.int16)
++    values = quantized.astype(np.float32) / precision
++    values = values.astype(np.float64)
++    values -= values.max(axis=1, keepdims=True)
++    probabilities = np.exp(values)
++    probabilities /= probabilities.sum(axis=1, keepdims=True)
++    return probabilities.astype(np.float32)
++
++
++# --- ddm_rr8 NATIVE FREE CORRECTOR SELECTION --------------------------------------------
++# The corrector is 71.7% of the shipped token stage on a contest T4 (ddm_cd1, MEASURED), so
++# it is lowered to C.  The C reproduces the frozen SHIPPED_CONFIG only, and refuses to bind
++# if that config has drifted -- a refusal costs the speedup, a silent mismatch costs the
++# submission (ddm_rr2 scored S = 27.83 on a desynchronised decoder and it read as a model
++# failure rather than what it was).
++def _rr8_corrector_kind(corrector) -> str:
++    """Name the corrector that ACTUALLY ran, into the token report.
++
++    Without this the identity gate is VACUOUS.  If the native build fails, the selector
++    falls back to the shipped Python corrector -- correctly -- and a full-field identity run
++    then compares the shipped decoder against itself and PASSES, having proved nothing about
++    the port.  Absence of a fallback message on stderr is not evidence either.  This field is
++    what lets the gate fail, and it is what tells a paid T4 row whether it measured the port
++    or the fallback.
++    """
++    return type(corrector).__name__
++
++
++def _rr8_select_corrector(plane: int):
++    """The C corrector when the runtime built one; otherwise the shipped Python corrector.
++
++    No try/except: ``load_native_corrector`` returns None when no library was built (the
++    fail-closed path inflate.sh takes on a hostile toolchain) and RAISES when one was named
++    but is missing, has the wrong ABI, or was compiled against a different configuration.
++    Swallowing that second class would run a corrector nobody chose.
++    """
++    from .free_corrector import FreeCorrector
++    from .native_free_corrector import load_native_corrector
++
++    native = load_native_corrector(plane)
++    if native is not None:
++        return native
++    return FreeCorrector(plane)
++
++
++def decode_production_tokens(
++    parts: ResidualArchiveParts,
++    runtime,
++    code_dir: Path,
++    device,
++) -> tuple[object, dict[str, object]]:
++    """Decode the F26 RC64 stream with the fixed boundary residual model."""
++    import torch
++
++    from .hpac_inference import configure_cuda_reproducibility, optimize_sparse_evaluator
++    from .free_corrector import FreeCorrector
++
++    started = time.time()
++    if device.type == "cuda":
++        configure_cuda_reproducibility()
++    base_hpac = materialize_ihs1(parts.hpac_blob, runtime)
++    model = runtime.load_hpac(base_hpac, device)
++    masks = runtime.group_masks(device)
++    sparse = _sparse_class(code_dir)(model, runtime.EVAL_H, runtime.EVAL_W)
++    corrector = _rr8_select_corrector(runtime.EVAL_H * runtime.EVAL_W)
++    library = os.environ.get("CPR1_RC64_LIBRARY")
++    if not library:
++        raise ResidualArchiveError("RC64 decoding requires CPR1_RC64_LIBRARY")
++    decoder = NativeDecoder(Path(library), parts.token_stream)
++
++    group_plans = []
++    for mask in masks:
++        mask_array = mask.detach().cpu().numpy()
++        flat_positions = np.flatnonzero(mask_array.reshape(-1))
++        group_plans.append(
++            (
++                torch.from_numpy(flat_positions).to(device),
++                flat_positions,
++            )
++        )
++
++    corrected_digest = hashlib.sha256()
++    cdf_digest = hashlib.sha256()
++    with torch.inference_mode():
++        optimize_sparse_evaluator(sparse)
++        previous = torch.zeros(
++            (1, runtime.EVAL_H, runtime.EVAL_W),
++            dtype=torch.long,
++            device=device,
++        )
++        tokens = torch.empty(
++            (runtime.N, runtime.EVAL_H, runtime.EVAL_W),
++            dtype=torch.uint8,
++        )
++        for frame in range(runtime.N):
++            index = torch.tensor([frame], dtype=torch.long, device=device)
++            current = torch.zeros_like(previous)
++            context = model.prepare_frame_context(index, previous)
++            if frame:
++                previous_cpu = previous[0].to(
++                    device="cpu", dtype=torch.uint8
++                ).numpy()
++                boundary = _boundary_buckets(previous_cpu).reshape(-1)
++            else:
++                boundary = np.full(
++                    runtime.EVAL_H * runtime.EVAL_W,
++                    4,
++                    dtype=np.uint8,
++                )
++            corrector.begin_frame(boundary)
++            for group, (device_positions, flat_positions) in enumerate(group_plans):
++                selected = sparse.selected_logits(current, context, group)
++                base_logits = selected.cpu().numpy()
++                predicted = base_logits.argmax(axis=1).astype(np.int64)
++                feature = (
++                    boundary[flat_positions].astype(np.int64) * NUM_CLASSES
++                    + predicted
++                )
++                corrected = base_logits + parts.table.values[feature]
++                corrected_digest.update(
++                    np.ascontiguousarray(corrected, dtype="<f4").tobytes()
++                )
++                probability = _probability_table(
++                    corrected,
++                    runtime.HPAC_LOGIT_PRECISION,
++                )
++                cdf_digest.update(
++                    np.ascontiguousarray(probability, dtype="<f4").tobytes()
++                )
++                state = corrector.group_state(
++                    probability,
++                    predicted,
++                    flat_positions,
++                )
++                symbols = decoder.decode(
++                    corrector.coding_row(state)
++                ).astype(np.int64)
++                corrector.observe(state, symbols)
++                current.reshape(-1)[device_positions] = torch.from_numpy(symbols).to(
++                    device
++                )
++            tokens[frame] = current[0].to(device="cpu", dtype=torch.uint8)
++            corrector.end_frame(tokens[frame].numpy().reshape(-1))
++            previous = current
++    elapsed = time.time() - started
++    del model
++    return tokens, {
++        "corrected_quantized_logit_sha256": corrected_digest.hexdigest(),
++        "corrected_cdf_input_sha256": cdf_digest.hexdigest(),
++        "decoded_token_sha256": hashlib.sha256(tokens.numpy().tobytes()).hexdigest(),
++        "decode_runtime_seconds": elapsed,
++        "adapter_sha256": "",
++        "token_codec": "rc64",
++        "decoder_bit_position": decoder.bit_position,
++        "free_corrector": _rr8_corrector_kind(corrector),
++    }
++
++
++# DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1 -- free receiver code, zero transmitted bytes.
++SZ1_RESERVED_SEMANTIC_SPLIT = 0x01
++# DDM_CK2_WHOLE_SECTION_PLANE2_V1
++# Bits 1 and 2 mark a 2-plane byte de-interleave over the WHOLE decompressed section
++# body.  Unlike bit 0 this carries no fitted offset/length: the transform is a pure
++# permutation of the entire buffer, so it re-fits nothing when the body layout changes.
++CK2_RESERVED_SEMANTIC_PLANE2 = 0x02
++CK2_RESERVED_CARRIER_PLANE2 = 0x04
++# DDM_RR5_ARITH_BASIS_V1: the basis rider's reserved bit.
++RR5_RESERVED_ARITH_BASIS = 0x08
++# DDM_DX2_CABAC_COEFFICIENTS_V1: disjoint coefficient-stream rider.
++DX2_RESERVED_CABAC_COEFFICIENTS = 0x10
++# DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: the two MODEL sections' adaptive-recode bits.
++# Both are additive: an archive with either bit clear takes exactly the path it takes
++# today, and an unknown bit still refuses fail-closed through the mask below.
++RC1_RESERVED_SEMANTIC_ADAPTIVE = 0x20
++RC1_RESERVED_HPAC_ADAPTIVE = 0x40
++SZ1_RESERVED_KNOWN_BITS = 0x7F
++
++
++def _ck2_uninterleave_planes(body: bytes) -> bytes:
++    """Exact inverse of a whole-body 2-plane de-interleave.
++
++    The encoder emits ``body[0::2] + body[1::2]`` over the even-length prefix and leaves
++    any odd trailing byte in place.  Restoring is the same statement read backwards, so
++    the transform is total: it round-trips every input length, including 0 and 1.
++    """
++    span = len(body) & ~1
++    half = span // 2
++    restored = np.empty(span, dtype=np.uint8)
++    planes = np.frombuffer(body[:span], dtype=np.uint8)
++    restored[0::2] = planes[:half]
++    restored[1::2] = planes[half:]
++    return restored.tobytes() + body[span:]
++SZ1_SPLIT_OFFSET = 49
++SZ1_SPLIT_LENGTH = 8284
++
++
++def _sz1_unsplit_semantic(body: bytes) -> bytes:
++    """Restore interleaved fp16 metadata from its two byte planes (exact inverse)."""
++    start = SZ1_SPLIT_OFFSET
++    end = start + SZ1_SPLIT_LENGTH
++    if len(body) < end:
++        raise ResidualArchiveError("RX1 semantic body too short for the metadata split")
++    planes = np.frombuffer(body[start:end], dtype=np.uint8)
++    half = SZ1_SPLIT_LENGTH // 2
++    region = np.empty(SZ1_SPLIT_LENGTH, dtype=np.uint8)
++    region[1::2] = planes[:half]
++    region[0::2] = planes[half:]
++    return body[:start] + region.tobytes() + body[end:]
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/0ef12fc85eb047d0df3600cd9b476855765445f6.blob b/.omx/research/ddm_cd3_20260910/reproduced/0ef12fc85eb047d0df3600cd9b476855765445f6.blob
+new file mode 100644
+index 000000000..0ef12fc85
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/0ef12fc85eb047d0df3600cd9b476855765445f6.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "6e500244bf4dc4cc78e6afc7473cf44d95b73ff6977178d7299ece9a0e808fbf"
++ARCHIVE_BYTES = 180372
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/15d2e243935a75f73eee654fec88e9f3ed0bce7c.blob b/.omx/research/ddm_cd3_20260910/reproduced/15d2e243935a75f73eee654fec88e9f3ed0bce7c.blob
+new file mode 100644
+index 000000000..15d2e2439
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/15d2e243935a75f73eee654fec88e9f3ed0bce7c.blob
+@@ -0,0 +1,12 @@
++"""Deliberately red static fixture for the ddm_gt2 GT-lineage gate control."""
++
++from pathlib import Path
++
++import numpy as np
++
++GT_POSE = Path("retained/gt_first6_n600.npy")
++
++
++def load_gt_pose() -> np.ndarray:
++    """Consume the undeclared table if this intentionally invalid tool is run."""
++    return np.load(GT_POSE, allow_pickle=False)
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/1f202759e374bfc9470925fd2e5d466d1d22acb6.blob b/.omx/research/ddm_cd3_20260910/reproduced/1f202759e374bfc9470925fd2e5d466d1d22acb6.blob
+new file mode 100644
+index 000000000..1f202759e
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/1f202759e374bfc9470925fd2e5d466d1d22acb6.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4"
++ARCHIVE_BYTES = 180186
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/34a2a07a1c9185a9a50280ac314755ca7fc453c6.blob b/.omx/research/ddm_cd3_20260910/reproduced/34a2a07a1c9185a9a50280ac314755ca7fc453c6.blob
+new file mode 100644
+index 000000000..34a2a07a1
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/34a2a07a1c9185a9a50280ac314755ca7fc453c6.blob
+@@ -0,0 +1 @@
++raise AssertionError
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/4287ca8617970fa8fc025b75cb319c7032706910.blob b/.omx/research/ddm_cd3_20260910/reproduced/4287ca8617970fa8fc025b75cb319c7032706910.blob
+new file mode 100644
+index 000000000..4287ca861
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/4287ca8617970fa8fc025b75cb319c7032706910.blob
+@@ -0,0 +1 @@
++#
+\ No newline at end of file
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55.blob b/.omx/research/ddm_cd3_20260910/reproduced/51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55.blob
+new file mode 100644
+index 000000000..51fa5d94e
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/51fa5d94e1a1ee70ef71f330d8891cfa39ffbe55.blob
+@@ -0,0 +1 @@
++corrupt cached source
+\ No newline at end of file
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/55697d7c9d664cb77b7108b7f244c00c76897d28.blob b/.omx/research/ddm_cd3_20260910/reproduced/55697d7c9d664cb77b7108b7f244c00c76897d28.blob
+new file mode 100644
+index 000000000..55697d7c9
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/55697d7c9d664cb77b7108b7f244c00c76897d28.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
++ARCHIVE_BYTES = 180388
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/69c0924434c095f009ddcd667e91de3e82df7248.blob b/.omx/research/ddm_cd3_20260910/reproduced/69c0924434c095f009ddcd667e91de3e82df7248.blob
+new file mode 100644
+index 000000000..69c092443
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/69c0924434c095f009ddcd667e91de3e82df7248.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "35aee0b1e312056dbda8983336fb2761993e9e191ce563d3e117cd20db05a139"
++ARCHIVE_BYTES = 180177
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/b90809caf614d92a8a57f380bb2d2b0ebbf7c01d.blob b/.omx/research/ddm_cd3_20260910/reproduced/b90809caf614d92a8a57f380bb2d2b0ebbf7c01d.blob
+new file mode 100644
+index 000000000..b90809caf
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/b90809caf614d92a8a57f380bb2d2b0ebbf7c01d.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "93e4fda9e7892b3b8e0f9eda4d381ae8a6158d1ba8f39a076f9fc5a40d0f8813"
++ARCHIVE_BYTES = 180435
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/c390bec76e9d7690bc9d32c869584eadf945b911.blob b/.omx/research/ddm_cd3_20260910/reproduced/c390bec76e9d7690bc9d32c869584eadf945b911.blob
+new file mode 100644
+index 000000000..c390bec76
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/c390bec76e9d7690bc9d32c869584eadf945b911.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07"
++ARCHIVE_BYTES = 180436
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/d3e25647af39bf136753df42f5279240b7e7452d.blob b/.omx/research/ddm_cd3_20260910/reproduced/d3e25647af39bf136753df42f5279240b7e7452d.blob
+new file mode 100644
+index 000000000..d3e25647a
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/d3e25647af39bf136753df42f5279240b7e7452d.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "1afa1aa0f974162b81c8961b4412629fe837caff23d555452fde715d4e1871bb"
++ARCHIVE_BYTES = 181258
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7.blob b/.omx/research/ddm_cd3_20260910/reproduced/dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7.blob
+new file mode 100644
+index 000000000..dd0aaee4c
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/dd0aaee4ceaa1c374b4eb81c7115dd5ab4a0faf7.blob
+@@ -0,0 +1,16 @@
++import pytest
++
++
++@pytest.fixture
++def boom():
++    raise RuntimeError("setup blows up like a drifted-custody fixture")
++
++
++@pytest.mark.xfail(strict=True, reason="probe: does xfail cover a SETUP error?")
++def test_setup_error_is_covered_by_xfail(boom):
++    assert True
++
++
++@pytest.mark.xfail(strict=True, reason="probe: does strict xfail fail on XPASS?")
++def test_strict_xpass_is_reported_failed():
++    assert True
+diff --git a/.omx/research/ddm_cd3_20260910/reproduced/f19f16ec0f5617c245aacd4c82e65f2381e5cca2.blob b/.omx/research/ddm_cd3_20260910/reproduced/f19f16ec0f5617c245aacd4c82e65f2381e5cca2.blob
+new file mode 100644
+index 000000000..f19f16ec0
+--- /dev/null
++++ b/.omx/research/ddm_cd3_20260910/reproduced/f19f16ec0f5617c245aacd4c82e65f2381e5cca2.blob
+@@ -0,0 +1,74 @@
++#!/usr/bin/env python3
++"""Inflate the fixed F26 archive for the public challenge video."""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import zipfile
++from pathlib import Path
++
++for _name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS"):
++    os.environ[_name] = "4"
++
++from runtime.f26_inflate import inflate_archive
++
++ARCHIVE_SHA256 = "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
++ARCHIVE_BYTES = 180772
++
++
++def _sha256(path: Path) -> str:
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, "sha256").hexdigest()
++
++
++def _verify_input(data_dir: Path, archive_path: Path) -> None:
++    if _sha256(archive_path) != ARCHIVE_SHA256:
++        raise ValueError("archive.zip does not match the promoted F26 artifact")
++    if archive_path.stat().st_size != ARCHIVE_BYTES:
++        raise ValueError("archive.zip has an unexpected size")
++    payload_path = data_dir / "p"
++    if not payload_path.is_file():
++        raise FileNotFoundError(payload_path)
++    with zipfile.ZipFile(archive_path) as archive:
++        if archive.namelist() != ["p"]:
++            raise ValueError("archive.zip must contain exactly the payload file p")
++        if payload_path.read_bytes() != archive.read("p"):
++            raise ValueError("extracted payload does not match archive.zip")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser()
++    parser.add_argument("data_dir", type=Path)
++    parser.add_argument("base")
++    parser.add_argument("destination", type=Path)
++    args = parser.parse_args()
++
++    if args.base != "0":
++        raise ValueError(f"unsupported public video: {args.base}")
++    here = Path(__file__).resolve().parent
++    archive_path = here / "archive.zip"
++    _verify_input(args.data_dir, archive_path)
++    import torch
++
++    if not torch.cuda.is_available():
++        raise RuntimeError(
++            "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; "
++            "the measured CPU path exceeded the 1,800-second contest budget"
++        )
++    device_name = "cuda"
++    report = inflate_archive(
++        archive_path,
++        args.destination,
++        renderer_dir=here / "cpr1",
++        device_name=device_name,
++        num_threads=4,
++        checkpoint_dir=args.destination.parent / ".f26_decode_checkpoints",
++    )
++    print(json.dumps(report, sort_keys=True), flush=True)
++
++
++if __name__ == "__main__":
++    main()
