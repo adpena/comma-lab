@@ -681,7 +681,11 @@ def _first_measurement_main(argv: list[str]) -> int:
             single_axis_waiver_reason=auth["single_axis_waiver_reason"], claim_policy="require_active",
             first_measurement_context=context_path)
         context["exact_argv"] = cmd
-        _pf_require(not verify_dispatch_paths(REPO, cmd), "PREFIRE_CONTRACT_DRIFT_REFUSED", "dispatch path resolution failed")
+        # The context file is written by this tool AFTER the checks (``_pf_write_new`` below refuses
+        # a pre-existing file), so it is the one argv path that legitimately does not exist yet.
+        # Every other path in the argv and every known local spawn path must resolve.
+        _pf_require(not verify_dispatch_paths(REPO, [a for a in cmd if a != str(context_path)]),
+                    "PREFIRE_CONTRACT_DRIFT_REFUSED", "dispatch path resolution failed")
         if args.dry_run:
             print(json.dumps({"dry_run": True, "nonce_consumed": False, "argv": cmd, **context}, indent=2))
             return 0
