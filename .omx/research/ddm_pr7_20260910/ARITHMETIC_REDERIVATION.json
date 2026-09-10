@@ -1,0 +1,41 @@
+{
+  "axis": "review-only; inherited counts are [real n600 cached-label counts; scorer-free macOS-CPU]",
+  "score_claim": false,
+  "source": ".omx/research/ddm_eb1_20260910/SUMMARY.json",
+  "source_lines": "3-63,199-230",
+  "method": "Re-ran experiments.ddm_eb1_entropy_bound.partition_description_rate_distortion_lower_bound_v1 on the retained exact profile cardinality and counts; no scorer, encode, or geometry recount.",
+  "rows": [
+    {
+      "D": 6270,
+      "conservative_lower_bits": 19741,
+      "natural_raw_lower_bits": 40048,
+      "natural_minimax_lower_bits": 40048,
+      "tail_119784_over_conservative_bound": 48.54222177194671,
+      "tail_119784_over_natural_minimax_bound": 23.928086296444267
+    },
+    {
+      "D": 12540,
+      "conservative_lower_bits": 11236,
+      "natural_raw_lower_bits": 16802,
+      "natural_minimax_lower_bits": 16802,
+      "tail_119784_over_conservative_bound": 85.28586685653258,
+      "tail_119784_over_natural_minimax_bound": 57.03321033210332,
+      "attribution_83259_over_conservative_bound": 59.28017087931648,
+      "attribution_83259_over_natural_minimax_bound": 39.642423521009405
+    },
+    {
+      "D": 25080,
+      "conservative_lower_bits": 2042,
+      "natural_raw_lower_bits": 0,
+      "natural_minimax_lower_bits_via_conservative_subset": 2042,
+      "tail_119784_over_natural_minimax_bound": 469.281096963761
+    }
+  ],
+  "object_check": {
+    "D_charter_literal": 12540,
+    "D_charter_over_117964800": 0.00010630289713541667,
+    "printed_dseg_0_00010636_implied_cells": 12546.736128,
+    "move40_stored_token_gt_disagreements": 17631
+  },
+  "verdict": "ARITHMETIC_AND_BALL_UPPER_BOUND_DIRECTIONS_PASS_FOR_C_AND_N_ONLY; NO_TRANSFER_TO_A_PHYSICAL_SOURCE_POPULATION_OR_THE_SINGLE_TAIL"
+}

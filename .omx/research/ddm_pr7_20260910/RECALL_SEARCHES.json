@@ -1,0 +1,62 @@
+{
+  "scope": "original recall beyond charter seeds",
+  "queries": [
+    {
+      "surface": ".omx/research md/json/jsonl",
+      "query": "partition.*(lower bound|entropy|description)",
+      "matching_paths": 120
+    },
+    {
+      "surface": ".omx/research md/json/jsonl",
+      "query": "rate.distortion.*(bound|converse)",
+      "matching_paths": 133
+    },
+    {
+      "surface": ".omx/research md/json/jsonl",
+      "query": "(individual.object|pointwise).*(bound|entropy|description)",
+      "matching_paths": 28
+    },
+    {
+      "surface": ".omx/research md/json/jsonl",
+      "query": "(profile|orbit).*(population|partition)",
+      "matching_paths": 33
+    },
+    {
+      "surface": ".omx/research md/json/jsonl",
+      "query": "covering.*(Hamming|partition|message)",
+      "matching_paths": 8
+    },
+    {
+      "surface": "tools/list_canonical_equations.py --json",
+      "query": "exact equation id plus rate-distortion, entropy, and description",
+      "registry_entries": 483,
+      "target_entries": 1
+    },
+    {
+      "surface": "CANONICAL_RESEARCH_INDEX* and sub015_DAG_*",
+      "query": "ddm_eb1|entropy lower bound|conditional partition|partition_description_rate_distortion_lower_bound_v1",
+      "relevant_current_hits": 0,
+      "historical_entropy_hit": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:6494-6513"
+    },
+    {
+      "surface": "canonical task, P0, and lane stores",
+      "query": "ddm_eb1|partition_description_rate_distortion_lower_bound_v1|entropy lower bound|conditional partition",
+      "relevant_hits": 0
+    }
+  ],
+  "beyond_seed_findings": [
+    {
+      "source": ".omx/research/ddm_de1_description_efficiency_derivation_20260803.md:151-171,383-436,718-733",
+      "effect": "Kept fixed-object operational length separate from ensemble or finite-population converses and required video-derived receiver information to be charged."
+    },
+    {
+      "source": ".omx/research/codex_premise_falsification_mdl_ms_complex_k_lower_bound_20260718T063906Z_codex.md:13-25,38-43",
+      "effect": "Rejected any transfer from an achieved description length to an individual-object lower bound."
+    },
+    {
+      "source": ".omx/research/ddm_tc1_token_tail_bound_and_shared_mixer_pricing_20260909.md:95-135,156-166,319-335",
+      "effect": "Kept model-family bounds and oracle entropy estimates scoped; neither is a universal tail floor."
+    }
+  ],
+  "scoped_negative": "Did not find in the searched local corpus a proved physical conditional source population containing either EB1 orbit, or a pointwise lower bound for the move-40 partition/tail."
+}
