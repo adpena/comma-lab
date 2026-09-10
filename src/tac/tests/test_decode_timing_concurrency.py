@@ -369,3 +369,234 @@ def test_cli_assemble_calibrate_leg_round_trip(staged, capsys):
     assert json.loads((root / "SEAL.json.decode_wall_clock.json").read_text()) == json.loads((root / "leg.json").read_text())
     out = capsys.readouterr().out
     assert "margin_time_basis=quiesced" in out and "problems=none" in out
+
+
+@pytest.fixture
+def v3_rule(monkeypatch):
+    """Simulate the retained trace host; this is never a prospective freeze receipt."""
+    monkeypatch.setattr("tac.decode_timing_concurrency.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("tac.decode_timing_concurrency.platform.machine", lambda: "arm64")
+    monkeypatch.setattr("tac.decode_timing_concurrency.os.cpu_count", lambda: 18)
+    monkeypatch.setattr("tac.decode_timing_concurrency.p_core_count", lambda: 6)
+    return ConcurrencyRule()
+
+
+def _burst_samples(rule, values, *, step=20.0):
+    samples = []
+    for i, (dasd, syspolicyd) in enumerate(values):
+        table = QUIET + rows((501, 1, dasd, "/usr/libexec/dasd"), (502, 1, syspolicyd, "/usr/libexec/syspolicyd"))
+        sample = classify(table, rule=rule, monitor_pid=100, producer_pid=200, label=f"during_{i:04d}")
+        sample["monotonic"] = 1000.0 + i * step
+        samples.append(sample)
+    return samples
+
+
+def _burst_summary(rule, samples):
+    return summarize(samples, rule=rule, paused=[], monitor_command=["synthetic-test"],
+                     frozen_at_utc=FROZEN_AT, producer_started_at_utc=STARTED_AT)
+
+
+def test_v3_frozen_object_is_exact_pr11_json(v3_rule):
+    import re
+
+    memo = Path(__file__).resolve().parents[3] / ".omx/research/ddm_pr11_adjudicate_timing_admission_on_daemon_bursts_20260910.md"
+    expected = json.loads(re.search(r"```json\n(.*?)\n```", memo.read_text(), re.S)[1])
+    assert v3_rule.frozen() == expected
+    assert ConcurrencyRule.from_frozen(expected).sha256() == v3_rule.sha256()
+    changed = {**expected, "host_baseline_burst": {**expected["host_baseline_burst"], "max_bursts_in_window": 2}}
+    with pytest.raises(ConcurrencyError, match="exact v3 class"):
+        ConcurrencyRule.from_frozen(changed)
+    with pytest.raises(ConcurrencyError, match="all four"):
+        ConcurrencyRule.from_frozen({**expected, "host_constraints": {}})
+
+
+# Hash-bound retained evidence: read only. No assembly, mutation, or authority upgrade.
+RETAINED_TRACES = [
+    ("move40_quiesced/CONCURRENCY.json", "f19efa1a1233e477643d92dcb91d37ec09bbeca5878d936b2fdae1ce126a86bb", 3, "during_0014", 14, 280.416),
+    ("move40_quiesced2/CONCURRENCY.json", "040fe2c19399dfe7bd559a7683828273b7d362cba3cbd8e278e3a6af023fd611", 5, "during_0003", 14, 280.428),
+    ("move40_quiesced3/CONCURRENCY_attempt3_refused.json", "63d55d1d3b05783c5cdbc0b0ece7c0562b0fd04541d40704036dc3a594b74202", 0, None, 10, 200.292),
+    ("move40_quiesced4/CONCURRENCY.json", "f72baecc4d72fcf76aaf3807121f181824d5c4bc74a7f1a36c20510100b9728c", 0, None, 11, 220.320),
+]
+
+
+@pytest.mark.parametrize("suffix,digest,count,label,active,span", RETAINED_TRACES)
+def test_retained_traces_counterfactual_only(v3_rule, suffix, digest, count, label, active, span):
+    import hashlib
+
+    path = Path("/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts") / suffix
+    if not path.is_file():
+        pytest.skip(f"retained read-only trace not mounted: {path}")
+    raw = path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == digest
+    samples = json.loads(raw)["samples"]
+    untouched = json.dumps(samples, sort_keys=True)
+    result = _burst_summary(v3_rule, samples)
+    assert result["competing_process_count"] == count
+    assert result["host_baseline_allowance"]["valid"] is True
+    burst, = result["host_baseline_bursts"]
+    assert burst["active_samples"] == active
+    assert burst["inclusive_span_seconds"] == pytest.approx(span, abs=0.0005)
+    assert result["margin_time_basis"] == ("bounded_host_baseline" if count == 0 else "measured_concurrency_nonzero")
+    if label:
+        assert len(next(s for s in result["samples"] if s["label"] == label)["unwaived_competing"]) == count
+    assert json.dumps(samples, sort_keys=True) == untouched
+    assert path.read_bytes() == raw
+
+
+@pytest.mark.parametrize("key,value", [("platform_system", "Linux"), ("machine", "x86_64"),
+                                        ("logical_cpu_count", 16), ("performance_core_count", 8)])
+def test_host_constraint_mismatch_disables_allowance(v3_rule, key, value):
+    from dataclasses import replace
+
+    rule = replace(v3_rule, host_constraints={**v3_rule.host_constraints, key: value})
+    result = _burst_summary(rule, _burst_samples(rule, [(50.0, 0.0)]))
+    assert result["host_baseline_allowance"]["checks"]["host_" + key] is False
+    assert result["competing_process_count"] == 1
+    assert result["samples"][0]["unwaived_other_pcpu_sum"] == 50.0
+
+
+@pytest.mark.parametrize("comm,ppid", [("dasd", 1), ("/usr/libexec/dasd.extra", 1),
+                                       ("/usr/libexec/dasd", 2), ("/usr/libexec/dasd", 1.0)])
+def test_exact_member_identity_only(v3_rule, comm, ppid):
+    sample = classify(QUIET + rows((501, ppid, 50.0, comm)), rule=v3_rule,
+                      monitor_pid=100, producer_pid=200, label="before")
+    assert sample["visible"][0]["host_baseline_member_match"] is False
+    assert _burst_summary(v3_rule, [sample])["competing_process_count"] == 1
+
+
+@pytest.mark.parametrize("values,step,bound", [
+    ([(50.0, 0.0), (24.9, 0.0), (50.0, 0.0)], 20.0, "burst_count"),
+    ([(50.0, 0.0)] * 16, 1.0, "active_samples_per_burst"),
+    ([(50.0, 0.0)] * 2, 280.001, "inclusive_span"),
+    ([(100.001, 0.0)], 20.0, "member_caps"),
+    ([(0.0, 75.001)], 20.0, "member_caps"),
+])
+def test_global_bound_violation_waives_nothing(v3_rule, values, step, bound):
+    result = _burst_summary(v3_rule, _burst_samples(v3_rule, values, step=step))
+    assert result["host_baseline_allowance"]["checks"][bound] is False
+    assert result["host_baseline_allowance"]["valid"] is False
+    assert result["competing_process_count"] >= 1
+    assert result["margin_time_basis"] == "measured_concurrency_nonzero"
+    assert all(s["unwaived_other_pcpu_sum"] == s["other_pcpu_sum"] for s in result["samples"])
+
+
+def test_inclusive_boundaries_and_combined_cap(v3_rule):
+    # All member, combined, sample-count and span caps are met exactly.
+    result = _burst_summary(v3_rule, _burst_samples(v3_rule, [(100.0, 75.0)] * 15))
+    assert result["host_baseline_allowance"]["valid"] is True
+    assert result["competing_process_count"] == 0
+    assert result["host_baseline_bursts"][0]["inclusive_span_seconds"] == 300.0
+    # Multiple exact-member rows make combined cap independently reachable.
+    sample = classify(QUIET + rows((501, 1, 100.0, "/usr/libexec/dasd"),
+                                   (502, 1, 75.0, "/usr/libexec/syspolicyd"),
+                                   (503, 1, 0.1, "/usr/libexec/dasd")),
+                      rule=v3_rule, monitor_pid=100, producer_pid=200, label="before")
+    invalid = _burst_summary(v3_rule, [sample])
+    assert invalid["host_baseline_allowance"]["checks"]["member_caps"] is True
+    assert invalid["host_baseline_allowance"]["checks"]["combined_cap"] is False
+    assert invalid["competing_process_count"] == 2
+
+
+def test_activation_aggregate_and_subvisible_match(v3_rule):
+    for value, basis in [(24.9, "quiesced"), (25.0, "bounded_host_baseline")]:
+        result = _burst_summary(v3_rule, _burst_samples(v3_rule, [(value, 0.0)]))
+        assert result["margin_time_basis"] == basis and result["competing_process_count"] == 0
+    for ordinary, count in [(199.9, 0), (200.0, 1)]:
+        table = QUIET + rows((501, 1, 25.0, "/usr/libexec/dasd"), (502, 1, 4.0, "/usr/libexec/syspolicyd"))
+        table += rows(*[(600+i, 1, ordinary/20, "small") for i in range(20)])
+        sample = classify(table, rule=v3_rule, monitor_pid=100, producer_pid=200, label="before")
+        result = _burst_summary(v3_rule, [sample])
+        assert len(result["samples"][0]["host_baseline_matches"]) == 2
+        assert result["samples"][0]["unwaived_other_pcpu_sum"] == pytest.approx(ordinary)
+        assert result["competing_process_count"] == count
+
+
+def test_settle_uses_prefix_then_final_failure_refuses(v3_rule, monkeypatch):
+    from dataclasses import replace
+
+    rule = replace(v3_rule, interval_seconds=0.01)
+    table = QUIET + rows((501, 1, 50.0, "/usr/libexec/dasd"))
+    monkeypatch.setattr("tac.decode_timing_concurrency.read_process_table", lambda: table)
+    monitor = ConcurrencyMonitor(rule, monitor_pid=100)
+    assert len(wait_until_quiet(monitor, settle_seconds=0.1)) == 3
+    assert all(s["host_baseline_provisional_allowance"]["valid"] for s in monitor.samples)
+    assert all(s["unwaived_other_pcpu_sum"] == 0.0 for s in monitor.samples)
+    result = _burst_summary(rule, monitor.samples + _burst_samples(rule, [(50.0, 0.0)] * 16, step=0.01))
+    assert result["margin_time_basis"] == "measured_concurrency_nonzero"
+    table = QUIET + rows((501, 1, 100.1, "/usr/libexec/dasd"))
+    with pytest.raises(ConcurrencyError, match="did not quiesce"):
+        wait_until_quiet(ConcurrencyMonitor(rule, monitor_pid=100), settle_seconds=0.02)
+
+
+def test_assembled_bounded_receipt_passes_validator(staged, v3_rule):
+    runtime, archive, root, producer = staged
+    summary = _burst_summary(v3_rule, _burst_samples(v3_rule, [(100.0, 75.0)] * 15))
+    concurrency = root / "CONCURRENCY.json"
+    concurrency.write_text(json.dumps(summary))
+    local = assemble_local_receipt(json.loads(producer.read_text()), summary,
+                                   producer_receipt_path=producer, concurrency_receipt_path=concurrency)
+    assert local["margin_time_basis"] == "bounded_host_baseline"
+    assert local["concurrency"]["host_baseline_allowance"] == summary["host_baseline_allowance"]
+    assert local["concurrency"]["host_baseline_bursts"] == summary["host_baseline_bursts"]
+    local_path = root / "local.json"
+    local_path.write_text(json.dumps(local))
+    t4 = _t4_receipt(runtime, root / "t4.json", 900.0)
+    calibration = root / "calibration.json"
+    calibration.write_text(json.dumps(write_calibration(name="synthetic", local_receipt_path=local_path, t4_receipt_path=t4)))
+    leg = build_decode_wall_clock(local_receipt_path=local_path, calibration_receipt_path=calibration,
+                                  runtime_dir=runtime, archive_path=archive, candidate_t4_receipt_path=t4)
+    assert validate_decode_wall_clock(leg, runtime_dir=runtime, archive_path=archive)[0] == []
+    for key in ["host_baseline_allowance", "host_baseline_bursts"]:
+        forged = {**summary, key: {}}
+        with pytest.raises(ConcurrencyError, match="adjudication differs"):
+            assemble_local_receipt(json.loads(producer.read_text()), forged,
+                                   producer_receipt_path=producer, concurrency_receipt_path=concurrency)
+    summary["samples"][0]["unwaived_other_pcpu_sum"] = 7.0
+    with pytest.raises(ConcurrencyError, match="adjudication differs"):
+        assemble_local_receipt(json.loads(producer.read_text()), summary,
+                               producer_receipt_path=producer, concurrency_receipt_path=concurrency)
+
+
+def test_v2_frozen_rule_keeps_original_hash_and_daemon_refusal(v3_rule):
+    from dataclasses import replace
+
+    from tac.decode_timing_concurrency import ADMISSION_RULE_V2
+
+    old = replace(v3_rule, schema=ADMISSION_RULE_V2)
+    assert old.sha256() == "b94474c6167ef51bd1e721b1928ab2a627b1a1821a448d899dd2c362a4eacdf1"
+    assert ConcurrencyRule.from_frozen(old.frozen()).frozen() == old.frozen()
+    result = _burst_summary(old, _burst_samples(old, [(50.0, 0.0)]))
+    assert result["competing_process_count"] == 1
+    assert result["margin_time_basis"] == "measured_concurrency_nonzero"
+
+
+def test_allowed_burst_does_not_waive_ordinary_or_ancestor(v3_rule):
+    table = QUIET + rows((501, 1, 50.0, "/usr/libexec/dasd"), (600, 1, 25.0, "ordinary"),
+                         (50, 1, 25.0, "control-plane"))
+    table = [ProcessRow(r.pid, 50 if r.pid == 100 else r.ppid, r.pcpu, r.comm) for r in table]
+    sample = classify(table, rule=v3_rule, monitor_pid=100, producer_pid=200, label="before")
+    result = _burst_summary(v3_rule, [sample])
+    assert result["host_baseline_allowance"]["valid"] is True
+    assert result["competing_process_count"] == 2
+    assert {row["pid"] for row in result["samples"][0]["unwaived_competing"]} == {50, 600}
+
+
+def test_captured_host_mismatch_and_row_tamper_refuse(v3_rule):
+    samples = _burst_samples(v3_rule, [(50.0, 0.0)])
+    samples[0]["host_constraints_observed"]["performance_core_count"] = 8
+    result = _burst_summary(v3_rule, samples)
+    assert result["competing_process_count"] == 1
+    samples = _burst_samples(v3_rule, [(50.0, 0.0)])
+    samples[0]["host_baseline_matches"][0]["pcpu"] = 20.0
+    with pytest.raises(ConcurrencyError, match="differs from visible"):
+        _burst_summary(v3_rule, samples)
+
+
+def test_new_authority_requires_captured_host_and_matches(staged, v3_rule):
+    _, _, root, producer = staged
+    for key in ["host_constraints_observed", "host_baseline_matches"]:
+        summary = _burst_summary(v3_rule, _burst_samples(v3_rule, [(50.0, 0.0)]))
+        summary["samples"][0].pop(key)
+        with pytest.raises(ConcurrencyError, match="lacks captured"):
+            assemble_local_receipt(json.loads(producer.read_text()), summary,
+                                   producer_receipt_path=producer, concurrency_receipt_path=root / "CONCURRENCY.json")

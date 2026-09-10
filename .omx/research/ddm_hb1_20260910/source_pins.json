@@ -1,0 +1,13 @@
+{
+  "pr11": {
+    "path": ".omx/research/ddm_pr11_adjudicate_timing_admission_on_daemon_bursts_20260910.md",
+    "sha256": "7fd5ee3bcee7b4b001d53825547363e45a48e2f1e93501e56375ca9f98e493d1"
+  },
+  "v2_commit": "52c4962ccf57d94604fb29080e5f9eab21743640",
+  "validator_commit": "0524522f0",
+  "base_files": {
+    "src/tac/decode_timing_concurrency.py": "0cfae4b5ed5c70121a7e39b594617c15580420783d5697c2d74c75f0ed250d4c",
+    "src/tac/tests/test_decode_timing_concurrency.py": "80b86ed65c5299a2de1e62605dc0668fe8edea46f53328d7ef489f94c5c943bb",
+    "tools/quiesced_decode_timing.py": "94c16e6b8d3f40dc0fbff443444f2ca4f98ff2088b07127082fb6051c3a3e7c9"
+  }
+}

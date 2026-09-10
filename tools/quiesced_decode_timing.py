@@ -14,7 +14,7 @@ Subcommands (each writes one JSON and prints its path):
   leg        local + calibration (+ candidate T4 receipt) -> validated measured leg,
              optionally copied as the sidecar beside a seal
 
-The rule lives in tac.decode_timing_concurrency (ddm_pr10's replacement, 2026-09-10). Nothing
+The rule lives in tac.decode_timing_concurrency (ddm_pr11's v3 amendment, 2026-09-10). Nothing
 here retypes a timing number: wall seconds come from the producer, T4 seconds from the Modal
 receipt, digests from the runtime on disk.
 """
@@ -28,6 +28,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -59,7 +60,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                            ancestor_cap_pcpu=args.ancestor_cap_pcpu, interval_seconds=args.interval_seconds,
                            settle_quiet_samples=args.settle_quiet_samples, **extra)
     frozen = out / "ADMISSION_RULE.json"
-    _save(frozen, {**rule.frozen(), "sha256": rule.sha256()})
+    _save(frozen, {**rule.frozen(), "sha256": rule.sha256(), "utc": datetime.now(UTC).isoformat()})
     command = shlex.split(args.producer)
     env = dict(os.environ)
     for item in args.env:
@@ -69,7 +70,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.assert_user_activity:
         # macOS runs idle-time maintenance (dasd -> syspolicyd, mds, ...) about five minutes after the
         # host goes quiet, which is exactly the window a timing needs. caffeinate -u asserts user
-        # activity so that maintenance is not scheduled; it runs inside the monitor's own tree (0 % CPU)
+        # activity; A4 showed that this does NOT prevent the named daemon burst. It runs in the monitor tree
         # and is recorded in the receipt. It changes no system setting and dies with the window.
         activity = subprocess.Popen(["caffeinate", "-u", "-i", "-t", str(int(args.settle_seconds + args.timeout_seconds + 60))])
     try:
@@ -152,9 +153,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--threshold-pcpu", type=float, default=25.0, help="a quarter core; whole non-settle window")
     run.add_argument("--visible-pcpu", type=float, default=5.0)
     run.add_argument("--ancestor-cap-pcpu", type=float, default=25.0)
-    run.add_argument("--aggregate-cap-pcpu", type=float, default=None, help="default 100*(P-cores-4)")
+    run.add_argument("--aggregate-cap-pcpu", type=float, default=None, help="default 200.0, the frozen v3 aggregate cap")
     run.add_argument("--assert-user-activity", action="store_true",
-                     help="run `caffeinate -u -i` for the window so macOS idle-time maintenance (dasd) is not scheduled")
+                     help="record a `caffeinate -u -i` activity assertion; does not guarantee prevention of daemon bursts")
     run.set_defaults(func=cmd_run)
 
     assemble = sub.add_parser("assemble", help="producer receipt + CONCURRENCY.json -> local.v1 receipt (frozen rule)")

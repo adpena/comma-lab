@@ -1,47 +1,22 @@
 """Measured host concurrency for decode wall-clock timing receipts.
 
-`tac.decode_wall_clock` admits a margin basis only when the local timing ran quiesced:
-`concurrency.competing_process_count == 0` and `margin_time_basis == "quiesced"`.
-The dwc1 timing producers recorded either the TOTAL number of processes on the host
-(every `ps` row) or `null`; neither can ever meet that contract, so every leg they
-produced was refused with "competing process count absent" even when the actual T4
-decode of the same bytes completed with 270 s of margin.
-
-This module measures COMPETING processes by a rule that is FROZEN AND HASHED BEFORE the
-producer starts, samples the process table through the whole run, and assembles the local
-receipt from the producer's own document without retyping a single timing number. The
-assembler cannot override the rule: it copies the frozen rule from the sampling receipt and
-refuses on any hash mismatch (ddm_pr10, 2026-09-10: a rule fixed after the runs were on
-the table is the defect, whatever it says).
-
-Admission rule (ddm_pr10's replacement, conservative by design — false-negative-prone,
-never a claim that every counted process caused a measurable slowdown):
-  1. A process competes when its %CPU (the `ps` decaying average) is at least
-     `threshold_pcpu` (25.0 = a quarter core) and it is not the producer's tree, the
-     monitor's tree, or pid 0. Excluded ancestors (the control plane that launched the
-     measurement) compete at `ancestor_cap_pcpu` (25.0, same `>=`): ancestry is not
-     permission to consume a quarter core during a calibration.
-  2. An aggregate guard counts once more when the summed %CPU of every non-excluded
-     process reaches `aggregate_cap_pcpu` (100 x (P-cores - 4 decode threads) = 200 on
-     this 6-P-core host), closing the many-sub-threshold-process class.
-  3. The rules apply to EVERY non-settle sample (before, during, after) including the
-     checkpoint-instrumented stages; the count is the max over those samples; `quiesced`
-     iff it is zero. Stage-rate deviations (`stage_tolerance` 0.05) are DIAGNOSTICS only —
-     they never turn a counted competitor into zero.
-  4. The producer starts only after `settle_quiet_samples` (3) consecutive quiet samples at
-     the normal cadence. Settle samples are recorded but never counted.
-  5. Every process paused for the window (SIGSTOP) carries identity and transition custody
-     (pid, ppid, comm, start time, stop/resume requested + confirmed) in the receipt.
-Every process at or above `visible_pcpu` (5.0) is listed per sample so a reviewer can
-re-derive the count from the receipt alone.
+The prospective v3 rule implements ddm_pr11's exact host-baseline burst amendment.
+Quarter-core individual/ancestor and 200% aggregate tests cover every non-settle
+sample. Only the exact PID-1 dasd/syspolicyd pair can be waived, after global host,
+member, combined, burst-count, sample-count and inclusive-span checks pass.
+Stage rates are retained diagnostics and never decide admission. The assembler
+copies and verifies the producer's frozen rule and burst evidence, then recounts;
+old receipts keep their original rules and cannot be upgraded retroactively.
 """
 
 from __future__ import annotations
 
 import calendar
+import copy
 import hashlib
 import itertools
 import json
+import math
 import os
 import platform
 import signal
@@ -63,7 +38,8 @@ from tac.decode_wall_clock import (
 RAW_TIMING_SCHEMA = "ddm_dwc1.raw_timing.v1"
 CONCURRENCY_SCHEMA = "decode_wall_clock.measured_concurrency.v2"
 STAGE_RATES_SCHEMA = "decode_wall_clock.stage_rates.v1"
-ADMISSION_RULE_SCHEMA = "decode_wall_clock.admission_rule.v2"
+ADMISSION_RULE_SCHEMA = "decode_wall_clock.admission_rule.v3"
+ADMISSION_RULE_V2 = "decode_wall_clock.admission_rule.v2"
 T4_RUNTIME_DIGEST_DEFINITION = "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
 T4_SECONDS_FIELD = ["artifacts", "contest_auth_eval.json", "inflate_elapsed_seconds"]
 T4_ARCHIVE_FIELD = ["expected_archive_sha256"]
@@ -88,11 +64,40 @@ def p_core_count() -> int:
 
 
 def _default_aggregate_cap() -> float:
-    return 100.0 * max(1, p_core_count() - DECODE_THREADS)
+    """The pr11 frozen v3 cap (two cores); never derived from a failed host query."""
+    return 200.0
 
 
 def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+V3_DEFINITION = (
+    'ordinary competitor = pcpu >= threshold_pcpu for every process outside producer tree, monitor tree, '
+    'and pid 0; monitor ancestors compete at pcpu >= ancestor_cap_pcpu. The host-baseline allowance is '
+    'disabled unless platform.system(), platform.machine(), os.cpu_count(), and p_core_count() exactly '
+    'equal host_constraints. A host-baseline row matches only exact comm and ppid; a burst-active sample '
+    'has at least one matching row at pcpu >= activation_pcpu. The allowance is valid only when matching '
+    'rows stay pcpu <= their member caps, matching-row sum is <= combined cap in every sample, active '
+    'samples form at most one consecutive run, active-sample count is <= max_active_samples_per_burst, '
+    'and last.monotonic - first.monotonic + interval_seconds <= max_inclusive_span_seconds. If valid, '
+    'matching rows do not compete and are subtracted from the aggregate; if any condition fails, no '
+    'matching row is waived. Unwaived summed pcpu competes at >= aggregate_cap_pcpu. Apply to every '
+    'non-settle sample; count = max over samples; admitted iff count == 0. Start after '
+    'settle_quiet_samples consecutive samples with zero unwaived competitors; a later allowance failure '
+    'refuses the final receipt. Stage rates are diagnostic only.'
+)
+
+
+def host_constraints() -> dict:
+    """Exact running-host shape, captured when constructing the prospective rule."""
+    return {"platform_system": platform.system(), "machine": platform.machine(),
+            "logical_cpu_count": os.cpu_count(), "performance_core_count": p_core_count()}
+
+
+def _host_baseline_burst() -> dict:
+    """The exact pr11 envelope, with no vendor or basename exemptions."""
+    return {'schema': 'decode_wall_clock.host_baseline_burst.v1', 'activation_pcpu': 25.0, 'members': [{'comm': '/usr/libexec/dasd', 'ppid': 1, 'pcpu_max_inclusive': 100.0}, {'comm': '/usr/libexec/syspolicyd', 'ppid': 1, 'pcpu_max_inclusive': 75.0}], 'combined_pcpu_max_inclusive': 175.0, 'max_bursts_in_window': 1, 'max_active_samples_per_burst': 15, 'max_inclusive_span_seconds': 300.0}
 
 
 @dataclass(frozen=True)
@@ -104,10 +109,18 @@ class ConcurrencyRule:
     interval_seconds: float = 20.0
     settle_quiet_samples: int = 3
     stage_tolerance: float = 0.05
+    host_constraints: dict = field(default_factory=host_constraints)
+    host_baseline_burst: dict = field(default_factory=_host_baseline_burst)
+    schema: str = ADMISSION_RULE_SCHEMA
 
     def frozen(self) -> dict:
         """The rule as serialized into receipts; `sha256` covers exactly these fields."""
-        return {"schema": ADMISSION_RULE_SCHEMA, **asdict(self), "decode_threads": DECODE_THREADS,
+        body = asdict(self)
+        if self.schema == ADMISSION_RULE_SCHEMA:
+            return {**body, "decode_threads": DECODE_THREADS, "definition": V3_DEFINITION}
+        body.pop("host_constraints")
+        body.pop("host_baseline_burst")
+        return {**body, "decode_threads": DECODE_THREADS,
                 "definition": (
                     "competing = %CPU >= threshold_pcpu for every process outside the producer tree, "
                     "monitor tree, and pid 0; monitor ancestors compete at %CPU >= ancestor_cap_pcpu; the "
@@ -121,12 +134,22 @@ class ConcurrencyRule:
 
     @classmethod
     def from_frozen(cls, body: object) -> ConcurrencyRule:
-        if not isinstance(body, dict) or body.get("schema") != ADMISSION_RULE_SCHEMA:
+        if not isinstance(body, dict) or body.get("schema") not in {ADMISSION_RULE_SCHEMA, ADMISSION_RULE_V2}:
             raise ConcurrencyError("admission rule absent or of an unknown schema")
         keys = ("threshold_pcpu", "visible_pcpu", "ancestor_cap_pcpu", "aggregate_cap_pcpu", "interval_seconds",
                 "settle_quiet_samples", "stage_tolerance")
         try:
-            return cls(**{key: body[key] for key in keys})
+            if body["schema"] == ADMISSION_RULE_SCHEMA:
+                keys += ("host_constraints", "host_baseline_burst")
+            rule = cls(**copy.deepcopy({key: body[key] for key in keys}), schema=body["schema"])
+            if rule.schema == ADMISSION_RULE_SCHEMA:
+                if json.dumps(rule.host_baseline_burst, sort_keys=True) != json.dumps(_host_baseline_burst(), sort_keys=True):
+                    raise ConcurrencyError("host-baseline envelope differs from the exact v3 class")
+                expected = {"platform_system": str, "machine": str, "logical_cpu_count": int, "performance_core_count": int}
+                if set(rule.host_constraints) != set(expected) or any(
+                        type(rule.host_constraints[key]) is not kind for key, kind in expected.items()):
+                    raise ConcurrencyError("host constraints must specify all four exact fields")
+            return rule
         except KeyError as exc:
             raise ConcurrencyError(f"admission rule field missing: {exc}") from exc
 
@@ -182,10 +205,14 @@ def classify(rows: list[ProcessRow], *, rule: ConcurrencyRule, monitor_pid: int,
     monitor_tree = tree_of(monitor_pid, rows)
     ancestors = set(ancestors_of(monitor_pid, rows))
     competing, visible, excluded, other_sum = [], [], [], 0.0
+    matched = []
     for row in rows:
         if row.pid == 0 or row.pid in producer_tree or row.pid in monitor_tree:
             continue
         entry = {"pid": row.pid, "ppid": row.ppid, "pcpu": row.pcpu, "comm": row.comm}
+        entry["host_baseline_member_match"] = _member(entry, rule) is not None
+        if entry["host_baseline_member_match"]:
+            matched.append({**entry, "ancestor": row.pid in ancestors})
         if row.pid in ancestors:
             if row.pcpu >= rule.visible_pcpu:
                 excluded.append(entry)
@@ -201,19 +228,133 @@ def classify(rows: list[ProcessRow], *, rule: ConcurrencyRule, monitor_pid: int,
         competing.append({"reason": "aggregate at or above cap", "other_pcpu_sum": other_sum})
     return {"label": label, "time_utc": _utc_now(), "monotonic": time.monotonic(),
             "load_average": list(os.getloadavg()), "competing": competing, "visible": visible,
+            "host_constraints_observed": host_constraints(), "host_baseline_matches": matched,
             "excluded_ancestors_active": excluded, "other_pcpu_sum": other_sum,
             "producer_tree_size": len(producer_tree), "monitor_tree_size": len(monitor_tree),
             "process_rows": len(rows)}
 
 
-def sample_competitors(sample: dict, rule: ConcurrencyRule) -> list[dict]:
-    """Re-derive a sample's competitors under `rule` from its full `visible` list (>= 5 %)."""
-    named = [entry for entry in sample.get("visible", []) if entry["pcpu"] >= rule.threshold_pcpu]
+def _member(entry: dict, rule: ConcurrencyRule) -> dict | None:
+    """Identity only; host eligibility and all bounds are adjudicated over the window."""
+    if rule.schema != ADMISSION_RULE_SCHEMA:
+        return None
+    return next((member for member in rule.host_baseline_burst["members"]
+                 if entry.get("comm") == member["comm"] and type(entry.get("ppid")) is int
+                 and entry["ppid"] == member["ppid"]), None)
+
+
+def _matched_rows(sample: dict, rule: ConcurrencyRule) -> list[dict]:
+    # New samples also retain matching rows below visible_pcpu. Older traces can only
+    # reconstruct their visible rows; those are counterfactual tests, never new authority.
+    entries = [{**row, "ancestor": False} for row in sample.get("visible", [])]
+    entries += [{**row, "ancestor": True} for row in sample.get("excluded_ancestors_active", [])]
+    by_pid = {row["pid"]: row for row in entries if _member(row, rule) is not None}
+    for row in sample.get("host_baseline_matches", []):
+        if _member(row, rule) is None:
+            raise ConcurrencyError("stored host-baseline row is not an exact member")
+        if row["pid"] in by_pid:
+            visible = by_pid[row["pid"]]
+            if any(row.get(key) != visible.get(key) for key in ("comm", "ppid", "pcpu", "ancestor")):
+                raise ConcurrencyError("host-baseline row differs from visible process evidence")
+        by_pid[row["pid"]] = row
+    return list(by_pid.values())
+
+
+def adjudicate_host_baseline(samples: list[dict], rule: ConcurrencyRule) -> dict:
+    """Adjudicate an entire non-settle window (or an observed settle prefix), without mutation."""
+    envelope = rule.host_baseline_burst
+    observed_host = host_constraints()
+    checks = {"schema_v3": rule.schema == ADMISSION_RULE_SCHEMA}
+    for key, value in rule.host_constraints.items():
+        checks["host_" + key] = (type(observed_host.get(key)) is type(value)
+                                  and observed_host.get(key) == value
+                                  and all(type(s.get("host_constraints_observed", observed_host).get(key)) is type(value)
+                                          and s.get("host_constraints_observed", observed_host).get(key) == value
+                                          for s in samples))
+    records, bursts = [], []
+    previous_active = False
+    for index, sample in enumerate(samples):
+        matched = _matched_rows(sample, rule)
+        member_checks = []
+        for row in matched:
+            cap = _member(row, rule)["pcpu_max_inclusive"]
+            member_checks.append({"row": row, "pcpu_max_inclusive": cap,
+                                  "passed": math.isfinite(row["pcpu"]) and 0 <= row["pcpu"] <= cap})
+        total = sum(row["pcpu"] for row in matched)
+        active = any(row["pcpu"] >= envelope["activation_pcpu"] for row in matched)
+        record = {"label": sample["label"], "sample_index": index, "monotonic": sample["monotonic"],
+                  "matched_rows": matched, "member_bounds": member_checks, "burst_active": active,
+                  "matched_pcpu_sum": total,
+                  "matched_other_pcpu_sum": sum(row["pcpu"] for row in matched if not row.get("ancestor", False)),
+                  "combined_pcpu_max_inclusive": envelope["combined_pcpu_max_inclusive"],
+                  "combined_cap_passed": math.isfinite(total) and total <= envelope["combined_pcpu_max_inclusive"]}
+        records.append(record)
+        if active:
+            if not previous_active:
+                bursts.append({"sample_indices": [], "labels": [], "first_monotonic": sample["monotonic"]})
+            burst = bursts[-1]
+            burst["sample_indices"].append(index)
+            burst["labels"].append(sample["label"])
+            burst["last_monotonic"] = sample["monotonic"]
+        previous_active = active
+    for burst in bursts:
+        burst["active_samples"] = len(burst["sample_indices"])
+        burst["inclusive_span_seconds"] = burst["last_monotonic"] - burst["first_monotonic"] + rule.interval_seconds
+        burst["max_active_samples_per_burst"] = envelope["max_active_samples_per_burst"]
+        burst["max_inclusive_span_seconds"] = envelope["max_inclusive_span_seconds"]
+        burst["checks"] = {
+            "active_samples": burst["active_samples"] <= envelope["max_active_samples_per_burst"],
+            "inclusive_span": 0 < burst["inclusive_span_seconds"] <= envelope["max_inclusive_span_seconds"]}
+    checks.update({
+        "member_caps": all(bound["passed"] for record in records for bound in record["member_bounds"]),
+        "combined_cap": all(record["combined_cap_passed"] for record in records),
+        "burst_count": len(bursts) <= envelope["max_bursts_in_window"],
+        "active_samples_per_burst": all(burst["checks"]["active_samples"] for burst in bursts),
+        "inclusive_span": all(burst["checks"]["inclusive_span"] for burst in bursts),
+        "monotonic_order": all(math.isfinite(s["monotonic"]) for s in samples)
+                           and all(b["monotonic"] >= a["monotonic"] for a, b in itertools.pairwise(samples)),
+    })
+    return {"valid": all(checks.values()), "checks": checks, "bursts": bursts, "samples": records,
+            "observed_host": observed_host, "burst_count": len(bursts),
+            "max_bursts_in_window": envelope["max_bursts_in_window"]}
+
+
+def sample_competitors(sample: dict, rule: ConcurrencyRule, *, allowance_valid: bool = False) -> list[dict]:
+    """Recount with no waiver unless the complete window (or settle prefix) has passed."""
+    waived = {row["pid"] for row in _matched_rows(sample, rule)} if allowance_valid else set()
+    named = [entry for entry in sample.get("visible", [])
+             if entry["pcpu"] >= rule.threshold_pcpu and entry["pid"] not in waived]
     named += [{**entry, "reason": "ancestor at or above cap"} for entry in sample.get("excluded_ancestors_active", [])
-              if entry["pcpu"] >= rule.ancestor_cap_pcpu]
-    if sample.get("other_pcpu_sum", 0.0) >= rule.aggregate_cap_pcpu:
-        named.append({"reason": "aggregate at or above cap", "other_pcpu_sum": sample["other_pcpu_sum"]})
+              if entry["pcpu"] >= rule.ancestor_cap_pcpu and entry["pid"] not in waived]
+    other_sum = sample.get("other_pcpu_sum", 0.0)
+    if allowance_valid:
+        other_sum -= sum(row["pcpu"] for row in _matched_rows(sample, rule) if not row.get("ancestor", False))
+    if other_sum >= rule.aggregate_cap_pcpu:
+        named.append({"reason": "aggregate at or above cap", "other_pcpu_sum": other_sum})
     return named
+
+
+def _adjudicate_window(samples: list[dict], rule: ConcurrencyRule) -> tuple[list[dict], dict, list[int]]:
+    samples = copy.deepcopy(samples)
+    window = window_of(samples)
+    if not window:
+        raise ConcurrencyError("no concurrency samples inside the measurement window")
+    allowance = adjudicate_host_baseline(window, rule)
+    for sample, record in zip(window, allowance["samples"], strict=True):
+        sample["host_baseline_matches"] = record["matched_rows"]
+        sample["host_baseline_burst_active"] = record["burst_active"]
+        sample["unwaived_other_pcpu_sum"] = sample["other_pcpu_sum"] - (
+            record["matched_other_pcpu_sum"] if allowance["valid"] else 0.0)
+        sample["unwaived_competing"] = sample_competitors(sample, rule, allowance_valid=allowance["valid"])
+    return samples, allowance, [len(sample["unwaived_competing"]) for sample in window]
+
+
+def _margin_basis(count: int, allowance: dict) -> str:
+    if count:
+        return "measured_concurrency_nonzero"
+    if not allowance["bursts"]:
+        return "quiesced"
+    return "bounded_host_baseline" if allowance["valid"] else "measured_concurrency_nonzero"
 
 
 def window_of(samples: list[dict]) -> list[dict]:
@@ -223,15 +364,15 @@ def window_of(samples: list[dict]) -> list[dict]:
 def summarize(samples: list[dict], *, rule: ConcurrencyRule, paused: list[dict], monitor_command: list[str],
               frozen_at_utc: str, producer_started_at_utc: str | None) -> dict:
     """Settle samples are recorded but never counted; the count is the max over the window."""
+    samples, allowance, counts = _adjudicate_window(samples, rule)
     window = window_of(samples)
-    if not window:
-        raise ConcurrencyError("no concurrency samples inside the measurement window")
-    counts = [len(sample_competitors(sample, rule)) for sample in window]
     count = max(counts)
     nonzero = [sample["label"] for sample, n in zip(window, counts, strict=True) if n]
     return {"schema": CONCURRENCY_SCHEMA, "admission_rule": rule.frozen(), "admission_rule_sha256": rule.sha256(),
             "admission_rule_frozen_at_utc": frozen_at_utc, "producer_started_at_utc": producer_started_at_utc,
-            "competing_process_count": count, "quiesced": count == 0,
+            "competing_process_count": count, "quiesced": _margin_basis(count, allowance) == "quiesced",
+            "margin_time_basis": _margin_basis(count, allowance),
+            "host_baseline_allowance": allowance, "host_baseline_bursts": allowance["bursts"],
             "attribution": "frozen admission rule over every non-settle sample (max); competitors re-derived from "
                            "each sample's visible list",
             "load_average": window[0]["load_average"], "load_average_max": [
@@ -287,10 +428,18 @@ def wait_until_quiet(monitor: ConcurrencyMonitor, *, settle_seconds: float) -> l
     deadline = time.monotonic() + settle_seconds
     quiet: list[dict] = []
     attempt = 0
+    prefix = []
     while True:
         attempt += 1
         sample = monitor.sample(f"settle_{attempt:04d}")
-        quiet = [*quiet, sample] if not sample["competing"] else []
+        prefix.append(sample)
+        allowance = adjudicate_host_baseline(prefix, rule)
+        sample["host_baseline_provisional_allowance"] = allowance
+        competing = sample_competitors(sample, rule, allowance_valid=allowance["valid"])
+        sample["unwaived_competing"] = competing
+        sample["unwaived_other_pcpu_sum"] = sample["other_pcpu_sum"] - (
+            allowance["samples"][-1]["matched_other_pcpu_sum"] if allowance["valid"] else 0.0)
+        quiet = [*quiet, sample] if not competing else []
         if len(quiet) >= rule.settle_quiet_samples:
             return quiet
         if time.monotonic() >= deadline:
@@ -351,6 +500,7 @@ def run_producer(command: list[str], *, cwd: Path, env: dict[str, str], stdout_p
                  timeout_seconds: float, monitor_command: list[str]) -> tuple[int, dict]:
     """Run one timing producer under the sampler; returns (returncode, concurrency summary).
     The rule is frozen (hashed) here, before the settle wait and before the producer starts."""
+    rule = ConcurrencyRule.from_frozen(rule.frozen())
     frozen_at = _utc_now()
     monitor = ConcurrencyMonitor(rule)
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
@@ -469,14 +619,24 @@ def assemble_local_receipt(producer_doc: dict, concurrency: dict, *, producer_re
             raise ConcurrencyError(f"{key} absent: the rule must be frozen before the producer starts")
     if concurrency["admission_rule_frozen_at_utc"] > concurrency["producer_started_at_utc"]:
         raise ConcurrencyError("admission rule was frozen after the producer started")
-    window = window_of(concurrency["samples"])
-    if not window:
-        raise ConcurrencyError("no concurrency samples inside the measurement window")
-    counts = [len(sample_competitors(sample, rule)) for sample in window]
+    if rule.schema == ADMISSION_RULE_SCHEMA and any(
+            not isinstance(sample.get("host_constraints_observed"), dict)
+            or set(sample["host_constraints_observed"]) != set(rule.host_constraints)
+            or not isinstance(sample.get("host_baseline_matches"), list)
+            for sample in concurrency["samples"]):
+        raise ConcurrencyError("v3 sample lacks captured host or matched-row evidence")
+    samples, allowance, counts = _adjudicate_window(concurrency["samples"], rule)
+    window = window_of(samples)
+    if rule.schema == ADMISSION_RULE_SCHEMA and (
+            allowance != concurrency.get("host_baseline_allowance")
+            or allowance["bursts"] != concurrency.get("host_baseline_bursts")
+            or samples != concurrency["samples"]):
+        raise ConcurrencyError("re-derived host-baseline adjudication differs from the sampler")
     count = max(counts)
     if count != concurrency.get("competing_process_count"):
         raise ConcurrencyError("re-derived competitor count differs from the sampler's count")
-    quiesced = count == 0
+    basis = _margin_basis(count, allowance)
+    quiesced = basis == "quiesced"
     block = {"competing_process_count": count, "quiesced": quiesced,
              "attribution": concurrency["attribution"], "admission_rule": concurrency["admission_rule"],
              "admission_rule_sha256": concurrency["admission_rule_sha256"],
@@ -486,6 +646,9 @@ def assemble_local_receipt(producer_doc: dict, concurrency: dict, *, producer_re
              "load_average": concurrency["load_average"], "load_average_max": concurrency["load_average_max"],
              "sample_count": concurrency["sample_count"], "window_sample_count": len(window),
              "paused_processes": concurrency["paused_processes"], "receipt": _fact(concurrency_receipt_path)}
+    if rule.schema == ADMISSION_RULE_SCHEMA:
+        block["host_baseline_allowance"] = copy.deepcopy(concurrency["host_baseline_allowance"])
+        block["host_baseline_bursts"] = copy.deepcopy(concurrency["host_baseline_bursts"])
     schema = producer_doc.get("schema")
     if schema == RAW_TIMING_SCHEMA:
         binding = producer_doc["binding"]
@@ -529,7 +692,7 @@ def assemble_local_receipt(producer_doc: dict, concurrency: dict, *, producer_re
         rates = stage_rate_deviations(stage_checkpoint_dir, tolerance=rule.stage_tolerance)
         block["stage_diagnostics"] = stage_diagnostics(concurrency, rates, wall_seconds=float(doc["wall_seconds"]), rule=rule)
     doc["concurrency"] = block
-    doc["margin_time_basis"] = "quiesced" if quiesced else "measured_concurrency_nonzero"
+    doc["margin_time_basis"] = basis
     return doc
 
 
@@ -550,8 +713,12 @@ def write_calibration(*, name: str, local_receipt_path: Path, t4_receipt_path: P
     t4 = json.loads(Path(t4_receipt_path).read_text())
     if local.get("schema") != LOCAL_SCHEMA:
         raise ConcurrencyError("calibration needs a local.v1 receipt")
-    if local.get("margin_time_basis") != "quiesced":
-        raise ConcurrencyError("calibration needs a quiesced local receipt")
+    if local.get("margin_time_basis") == "bounded_host_baseline":
+        from tac.decode_wall_clock import _local
+
+        _local(_fact(local_receipt_path))
+    elif local.get("margin_time_basis") != "quiesced":
+        raise ConcurrencyError("calibration needs a quiesced or valid bounded-host-baseline local receipt")
     frames = local["frames"]
     local600 = float(local["wall_seconds"]) * 600 / len(frames)
     seconds = float(_field(t4, T4_SECONDS_FIELD))
@@ -577,6 +744,7 @@ __all__ = [
     "ConcurrencyRule",
     "PausedProcesses",
     "ProcessRow",
+    "adjudicate_host_baseline",
     "ancestors_of",
     "assemble_local_receipt",
     "classify",

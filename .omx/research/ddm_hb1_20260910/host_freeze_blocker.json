@@ -1,0 +1,22 @@
+{
+  "status": "BLOCKED",
+  "owner": "MAIN / ddm_dwc1",
+  "requested_receipt": ".omx/research/ddm_dwc1_20260910/ADMISSION_RULE_V3_FROZEN.json",
+  "command": [
+    "sysctl",
+    "-n",
+    "hw.perflevel0.physicalcpu"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "sysctl: sysctl fmt -1 1024 1: Operation not permitted\n",
+  "helper_result_not_measured_p_cores": {
+    "platform_system": "Darwin",
+    "machine": "arm64",
+    "logical_cpu_count": 18,
+    "performance_core_count": 18
+  },
+  "reason": "Sandbox denies P-core query; inherited p_core_count() fallback returns logical CPUs. Do not freeze this fallback as the actual P-core count.",
+  "action": "Run the existing ConcurrencyRule frozen()/sha256() receipt write on the real host with readable sysctl before any next timing launch.",
+  "score_claim": false
+}

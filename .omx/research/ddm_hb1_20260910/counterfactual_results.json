@@ -1,0 +1,258 @@
+{
+  "schema": "ddm_hb1.counterfactual_tests.v1",
+  "axis": "retained-trace counterfactual test; macOS-CPU advisory",
+  "score_claim": false,
+  "authority_upgrade": false,
+  "host_simulation": "p_core_count mocked to retained trace host 6; all four host fields exactly match pr11",
+  "rule": {
+    "threshold_pcpu": 25.0,
+    "visible_pcpu": 5.0,
+    "ancestor_cap_pcpu": 25.0,
+    "aggregate_cap_pcpu": 200.0,
+    "interval_seconds": 20.0,
+    "settle_quiet_samples": 3,
+    "stage_tolerance": 0.05,
+    "host_constraints": {
+      "platform_system": "Darwin",
+      "machine": "arm64",
+      "logical_cpu_count": 18,
+      "performance_core_count": 6
+    },
+    "host_baseline_burst": {
+      "schema": "decode_wall_clock.host_baseline_burst.v1",
+      "activation_pcpu": 25.0,
+      "members": [
+        {
+          "comm": "/usr/libexec/dasd",
+          "ppid": 1,
+          "pcpu_max_inclusive": 100.0
+        },
+        {
+          "comm": "/usr/libexec/syspolicyd",
+          "ppid": 1,
+          "pcpu_max_inclusive": 75.0
+        }
+      ],
+      "combined_pcpu_max_inclusive": 175.0,
+      "max_bursts_in_window": 1,
+      "max_active_samples_per_burst": 15,
+      "max_inclusive_span_seconds": 300.0
+    },
+    "schema": "decode_wall_clock.admission_rule.v3",
+    "decode_threads": 4,
+    "definition": "ordinary competitor = pcpu >= threshold_pcpu for every process outside producer tree, monitor tree, and pid 0; monitor ancestors compete at pcpu >= ancestor_cap_pcpu. The host-baseline allowance is disabled unless platform.system(), platform.machine(), os.cpu_count(), and p_core_count() exactly equal host_constraints. A host-baseline row matches only exact comm and ppid; a burst-active sample has at least one matching row at pcpu >= activation_pcpu. The allowance is valid only when matching rows stay pcpu <= their member caps, matching-row sum is <= combined cap in every sample, active samples form at most one consecutive run, active-sample count is <= max_active_samples_per_burst, and last.monotonic - first.monotonic + interval_seconds <= max_inclusive_span_seconds. If valid, matching rows do not compete and are subtracted from the aggregate; if any condition fails, no matching row is waived. Unwaived summed pcpu competes at >= aggregate_cap_pcpu. Apply to every non-settle sample; count = max over samples; admitted iff count == 0. Start after settle_quiet_samples consecutive samples with zero unwaived competitors; a later allowance failure refuses the final receipt. Stage rates are diagnostic only."
+  },
+  "rule_sha256": "25d0a778f0fd31a0f218bc129be0d1504b32c00cf58b082282430c14c198e50c",
+  "results": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced/CONCURRENCY.json",
+      "sha256": "f19efa1a1233e477643d92dcb91d37ec09bbeca5878d936b2fdae1ce126a86bb",
+      "bytes": 118995,
+      "sample_count": 78,
+      "competing_process_count": 3,
+      "verdict": "REFUSE",
+      "max_count_label": "during_0014",
+      "bursts": [
+        {
+          "sample_indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "labels": [
+            "during_0016",
+            "during_0017",
+            "during_0018",
+            "during_0019",
+            "during_0020",
+            "during_0021",
+            "during_0022",
+            "during_0023",
+            "during_0024",
+            "during_0025",
+            "during_0026",
+            "during_0027",
+            "during_0028",
+            "during_0029"
+          ],
+          "first_monotonic": 77844.596518625,
+          "last_monotonic": 78105.012750875,
+          "active_samples": 14,
+          "inclusive_span_seconds": 280.4162322500051,
+          "max_active_samples_per_burst": 15,
+          "max_inclusive_span_seconds": 300.0,
+          "checks": {
+            "active_samples": true,
+            "inclusive_span": true
+          }
+        }
+      ],
+      "unwaived_other_pcpu_sum_max": 220.70000000000002
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced2/CONCURRENCY.json",
+      "sha256": "040fe2c19399dfe7bd559a7683828273b7d362cba3cbd8e278e3a6af023fd611",
+      "bytes": 88685,
+      "sample_count": 64,
+      "competing_process_count": 5,
+      "verdict": "REFUSE",
+      "max_count_label": "during_0003",
+      "bursts": [
+        {
+          "sample_indices": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
+          "labels": [
+            "during_0016",
+            "during_0017",
+            "during_0018",
+            "during_0019",
+            "during_0020",
+            "during_0021",
+            "during_0022",
+            "during_0023",
+            "during_0024",
+            "during_0025",
+            "during_0026",
+            "during_0027",
+            "during_0028",
+            "during_0029"
+          ],
+          "first_monotonic": 79044.257554791,
+          "last_monotonic": 79304.685389333,
+          "active_samples": 14,
+          "inclusive_span_seconds": 280.42783454200253,
+          "max_active_samples_per_burst": 15,
+          "max_inclusive_span_seconds": 300.0,
+          "checks": {
+            "active_samples": true,
+            "inclusive_span": true
+          }
+        }
+      ],
+      "unwaived_other_pcpu_sum_max": 425.9
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced3/CONCURRENCY_attempt3_refused.json",
+      "sha256": "63d55d1d3b05783c5cdbc0b0ece7c0562b0fd04541d40704036dc3a594b74202",
+      "bytes": 69833,
+      "sample_count": 59,
+      "competing_process_count": 0,
+      "verdict": "ADMIT",
+      "max_count_label": null,
+      "bursts": [
+        {
+          "sample_indices": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "labels": [
+            "during_0018",
+            "during_0019",
+            "during_0020",
+            "during_0021",
+            "during_0022",
+            "during_0023",
+            "during_0024",
+            "during_0025",
+            "during_0026",
+            "during_0027"
+          ],
+          "first_monotonic": 85736.442300541,
+          "last_monotonic": 85916.734783083,
+          "active_samples": 10,
+          "inclusive_span_seconds": 200.29248254199047,
+          "max_active_samples_per_burst": 15,
+          "max_inclusive_span_seconds": 300.0,
+          "checks": {
+            "active_samples": true,
+            "inclusive_span": true
+          }
+        }
+      ],
+      "unwaived_other_pcpu_sum_max": 47.5
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced4/CONCURRENCY.json",
+      "sha256": "f72baecc4d72fcf76aaf3807121f181824d5c4bc74a7f1a36c20510100b9728c",
+      "bytes": 50430,
+      "sample_count": 47,
+      "competing_process_count": 0,
+      "verdict": "ADMIT",
+      "max_count_label": null,
+      "bursts": [
+        {
+          "sample_indices": [
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36
+          ],
+          "labels": [
+            "during_0026",
+            "during_0027",
+            "during_0028",
+            "during_0029",
+            "during_0030",
+            "during_0031",
+            "during_0032",
+            "during_0033",
+            "during_0034",
+            "during_0035",
+            "during_0036"
+          ],
+          "first_monotonic": 86903.719937041,
+          "last_monotonic": 87104.040121416,
+          "active_samples": 11,
+          "inclusive_span_seconds": 220.32018437499937,
+          "max_active_samples_per_burst": 15,
+          "max_inclusive_span_seconds": 300.0,
+          "checks": {
+            "active_samples": true,
+            "inclusive_span": true
+          }
+        }
+      ],
+      "unwaived_other_pcpu_sum_max": 62.699999999999974
+    }
+  ]
+}

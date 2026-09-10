@@ -1,0 +1,51 @@
+{
+  "schema": "decode_wall_clock.admission_rule_freeze.v1",
+  "rule": {
+    "threshold_pcpu": 25.0,
+    "visible_pcpu": 5.0,
+    "ancestor_cap_pcpu": 25.0,
+    "aggregate_cap_pcpu": 200.0,
+    "interval_seconds": 20.0,
+    "settle_quiet_samples": 3,
+    "stage_tolerance": 0.05,
+    "host_constraints": {
+      "platform_system": "Darwin",
+      "machine": "arm64",
+      "logical_cpu_count": 18,
+      "performance_core_count": 6
+    },
+    "host_baseline_burst": {
+      "schema": "decode_wall_clock.host_baseline_burst.v1",
+      "activation_pcpu": 25.0,
+      "members": [
+        {
+          "comm": "/usr/libexec/dasd",
+          "ppid": 1,
+          "pcpu_max_inclusive": 100.0
+        },
+        {
+          "comm": "/usr/libexec/syspolicyd",
+          "ppid": 1,
+          "pcpu_max_inclusive": 75.0
+        }
+      ],
+      "combined_pcpu_max_inclusive": 175.0,
+      "max_bursts_in_window": 1,
+      "max_active_samples_per_burst": 15,
+      "max_inclusive_span_seconds": 300.0
+    },
+    "schema": "decode_wall_clock.admission_rule.v3",
+    "decode_threads": 4,
+    "definition": "ordinary competitor = pcpu >= threshold_pcpu for every process outside producer tree, monitor tree, and pid 0; monitor ancestors compete at pcpu >= ancestor_cap_pcpu. The host-baseline allowance is disabled unless platform.system(), platform.machine(), os.cpu_count(), and p_core_count() exactly equal host_constraints. A host-baseline row matches only exact comm and ppid; a burst-active sample has at least one matching row at pcpu >= activation_pcpu. The allowance is valid only when matching rows stay pcpu <= their member caps, matching-row sum is <= combined cap in every sample, active samples form at most one consecutive run, active-sample count is <= max_active_samples_per_burst, and last.monotonic - first.monotonic + interval_seconds <= max_inclusive_span_seconds. If valid, matching rows do not compete and are subtracted from the aggregate; if any condition fails, no matching row is waived. Unwaived summed pcpu competes at >= aggregate_cap_pcpu. Apply to every non-settle sample; count = max over samples; admitted iff count == 0. Start after settle_quiet_samples consecutive samples with zero unwaived competitors; a later allowance failure refuses the final receipt. Stage rates are diagnostic only."
+  },
+  "sha256": "25d0a778f0fd31a0f218bc129be0d1504b32c00cf58b082282430c14c198e50c",
+  "host": {
+    "platform_system": "Darwin",
+    "machine": "arm64",
+    "logical_cpu_count": 18,
+    "performance_core_count": 6
+  },
+  "frozen_at_utc": "2026-09-10T12:58:53Z",
+  "owner": "MAIN",
+  "note": "genuine host freeze (sysctl readable): pr11 admission_rule.v3 for this 18-logical/6-P-core arm64 Darwin host; must be frozen before any local timing run"
+}
