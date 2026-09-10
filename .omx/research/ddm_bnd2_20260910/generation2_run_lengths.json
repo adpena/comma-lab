@@ -1,0 +1,129 @@
+{
+  "scope": "Full600 all assigned directed crack segments before minimum-run filtering; not globally optimal coherence or rendered residual components",
+  "rows": [
+    {
+      "orientation": 0,
+      "eligible_cells": 232843,
+      "all_miss_cells": 235044,
+      "eligible_share_percent": 99.06357958509896,
+      "assigned_segments": 216963,
+      "median_segment_length": 1.0,
+      "mean_segment_length": 1.0731922032789,
+      "max_segment_length": 14,
+      "bins": [
+        {
+          "run_length_inclusive": [
+            1,
+            1
+          ],
+          "segments": 203868,
+          "segment_share_percent": 93.96440867797735,
+          "token_cells": 203868,
+          "eligible_token_cell_share_percent": 87.55599266458515
+        },
+        {
+          "run_length_inclusive": [
+            2,
+            2
+          ],
+          "segments": 11110,
+          "segment_share_percent": 5.120688781036398,
+          "token_cells": 22220,
+          "eligible_token_cell_share_percent": 9.542910888452734
+        },
+        {
+          "run_length_inclusive": [
+            3,
+            3
+          ],
+          "segments": 1483,
+          "segment_share_percent": 0.6835266842733554,
+          "token_cells": 4449,
+          "eligible_token_cell_share_percent": 1.9107295473774173
+        },
+        {
+          "run_length_inclusive": [
+            4,
+            7
+          ],
+          "segments": 490,
+          "segment_share_percent": 0.2258449597396791,
+          "token_cells": 2191,
+          "eligible_token_cell_share_percent": 0.940977396786676
+        },
+        {
+          "run_length_inclusive": [
+            8,
+            14
+          ],
+          "segments": 12,
+          "segment_share_percent": 0.005530896973216632,
+          "token_cells": 115,
+          "eligible_token_cell_share_percent": 0.049389502798022705
+        }
+      ]
+    },
+    {
+      "orientation": 1,
+      "eligible_cells": 232608,
+      "all_miss_cells": 235044,
+      "eligible_share_percent": 98.96359830499821,
+      "assigned_segments": 219920,
+      "median_segment_length": 1.0,
+      "mean_segment_length": 1.0576937068024737,
+      "max_segment_length": 14,
+      "bins": [
+        {
+          "run_length_inclusive": [
+            1,
+            1
+          ],
+          "segments": 209691,
+          "segment_share_percent": 95.34876318661331,
+          "token_cells": 209691,
+          "eligible_token_cell_share_percent": 90.14780231118448
+        },
+        {
+          "run_length_inclusive": [
+            2,
+            2
+          ],
+          "segments": 8497,
+          "segment_share_percent": 3.8636777009821754,
+          "token_cells": 16994,
+          "eligible_token_cell_share_percent": 7.305853624982804
+        },
+        {
+          "run_length_inclusive": [
+            3,
+            3
+          ],
+          "segments": 1266,
+          "segment_share_percent": 0.575663877773736,
+          "token_cells": 3798,
+          "eligible_token_cell_share_percent": 1.6327899298390425
+        },
+        {
+          "run_length_inclusive": [
+            4,
+            7
+          ],
+          "segments": 454,
+          "segment_share_percent": 0.2064387049836304,
+          "token_cells": 2013,
+          "eligible_token_cell_share_percent": 0.8654044572843582
+        },
+        {
+          "run_length_inclusive": [
+            8,
+            14
+          ],
+          "segments": 12,
+          "segment_share_percent": 0.005456529647144416,
+          "token_cells": 112,
+          "eligible_token_cell_share_percent": 0.04814967670931352
+        }
+      ]
+    }
+  ]
+}

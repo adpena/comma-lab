@@ -1,0 +1,21 @@
+{
+  "schema": "ddm_bnd2_live_frontier_check.v1",
+  "captured_at_utc": "2026-09-10T00:54:20.778477+00:00",
+  "source_pointer": ".omx/state/canonical_frontier_pointer.json",
+  "source_pointer_sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a",
+  "source_mirror": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json",
+  "source_mirror_sha256": "f115fc2b1502b170ab209784a5c8de747fcdc09f22be223fb2146fe8b416d848",
+  "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+  "archive_bytes": 180388,
+  "d_seg": 0.00010698,
+  "d_pose": 5.05e-06,
+  "original_video_bytes": 37545489,
+  "score_recomputed_from_recorded_components": 0.13791730003757818,
+  "pointer_score": 0.13791730003757818,
+  "axis": "[contest-CUDA T4 n600]",
+  "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
+  "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+  "this_arm_score_claim": false,
+  "this_arm_pointer_move": false,
+  "interpretation": "live pointer and existing authority mirror checked; no new scorer evaluation by bnd2"
+}

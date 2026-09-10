@@ -1,0 +1,36 @@
+{
+  "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/RETAINED_MANIFEST.json",
+  "bytes": 2453296,
+  "sha256": "2316629320c947101a32f2d3678815600479f5d6ef6a760d8173caec8f3557bf",
+  "retained_file_count": 10487,
+  "retained_bytes": 1860773542,
+  "source_files": [
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_causal_trace.py",
+      "bytes": 15906,
+      "sha256": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_census.py",
+      "bytes": 13637,
+      "sha256": "24f3f7f6ba46e1fe4406e8627713d73570b206e2c713fddd246318b5fa664df4"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+      "bytes": 24269,
+      "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_decode.py",
+      "bytes": 11384,
+      "sha256": "5a32b20fc91369016fdeee4badc45cfeeed2ad4bbdaa61c0993da0f1030a157d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/test_ddm_bnd2_segment_code.py",
+      "bytes": 5590,
+      "sha256": "678a4a1bb0444f4f5d32a21b6c6ff9225f13fb89ed114cb46aa5bd70d211a682"
+    }
+  ],
+  "retention_policy": "KEEP: active byte proof inputs; no payload deleted/moved. All primary/repeat packets, arithmetic streams, ZIPs, decoded fields, source runtime, model inputs and stage checkpoints retained. Certified scratch cleanup only inside existing launcher/serializer tools.",
+  "self_exclusion": "this manifest and subsequent serializer artifacts indexed by final handoff; no recursive self-hash"
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "ddm_bnd2_final_scientific_review.v1",
+  "captured_at_utc": "2026-09-10T01:09:57.595879+00:00",
+  "memo": {
+    "path": ".omx/research/ddm_bnd2_boundary_segment_code_real_encode_20260910.md",
+    "sha256": "f0ce1557a9edc5fc083fa6e1cd9c15c30927e2604d4350d46ca6a1bbd693a184"
+  },
+  "reviewer": "recall_review",
+  "status": "CLEAN",
+  "checks": [
+    "n600 independent decoder proof and selected archive/field hashes",
+    "masked twin hashes and 129316-119784=9532 B",
+    "final result artifact hashes",
+    "exact event equals live registered equation",
+    "retained task events present with scoped statuses",
+    "no numerical posterior, score or family overclaim"
+  ],
+  "post_review_change": "Only append-only draw task note updated to replace historical running state with completed proof/control; scientific memo and source unchanged.",
+  "landing_boundary": "Main or fallback serializer outcome remains to be recorded in GENERATION2_FINAL_HANDOFF.json"
+}

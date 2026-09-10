@@ -1,0 +1,47 @@
+{
+  "operation": "set-field",
+  "lane_id": "lane_ddm_bnd2_segment_code_20260910",
+  "field": "notes",
+  "value": "MEASURED FORMULATION LOSS: all6 full600 charged crack variants lose; best121200B vs119784B, +1416B. Recovered235044 misses including21311. Selected archive181804B sha cab4b391...c506d4 passes full600 fresh causal decode and sourcefieldhash. Masked causal control129316B. Draw cancelled/FOLDED; broader bnd1 map request and obsolete gb1 proof demand folded into scoped gb2 successor context. L0 research-only, no public inflate/scorer score or promotion. Owner ddm_bnd2; results /Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/FINAL_RESULT.json. No active compute remains.",
+  "lane_snapshot": {
+    "id": "lane_ddm_bnd2_segment_code_20260910",
+    "name": "ddm_bnd2 shipped boundary segment real recode",
+    "phase": 2.0,
+    "level": 0,
+    "gates": {
+      "impl_complete": {
+        "status": false,
+        "evidence": ""
+      },
+      "real_archive_empirical": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cuda": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cpu": {
+        "status": false,
+        "evidence": ""
+      },
+      "strict_preflight": {
+        "status": false,
+        "evidence": ""
+      },
+      "three_clean_review": {
+        "status": false,
+        "evidence": ""
+      },
+      "memory_entry": {
+        "status": false,
+        "evidence": ""
+      },
+      "deploy_runbook": {
+        "status": false,
+        "evidence": ""
+      }
+    },
+    "notes": "MEASURED FORMULATION LOSS: all6 full600 charged crack variants lose; best121200B vs119784B, +1416B. Recovered235044 misses including21311. Selected archive181804B sha cab4b391...c506d4 passes full600 fresh causal decode and sourcefieldhash. Masked causal control129316B. Draw cancelled/FOLDED; broader bnd1 map request and obsolete gb1 proof demand folded into scoped gb2 successor context. L0 research-only, no public inflate/scorer score or promotion. Owner ddm_bnd2; results /Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/FINAL_RESULT.json. No active compute remains."
+  }
+}

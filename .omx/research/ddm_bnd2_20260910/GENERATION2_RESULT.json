@@ -1,0 +1,108 @@
+{
+  "schema": "ddm_bnd2_generation2_result.v1",
+  "captured_at_utc": "2026-09-10T00:59:28.924100+00:00",
+  "measurement_complete": true,
+  "landing_complete": false,
+  "landing_status_source": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd2_20260910/GENERATION2_FINAL_HANDOFF.json",
+  "axis": "[exact bytes, scorer-free macOS-CPU]",
+  "score_claim": false,
+  "scorer_pairs": 0,
+  "lossy_draw_pairs": 0,
+  "frames": 600,
+  "token_cells": 117964800,
+  "located_misses": 235044,
+  "newly_recovered_misses": 21311,
+  "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "tested_variants": 6,
+  "baseline_envelope_bytes": 119784,
+  "best_total_envelope_bytes": 121200,
+  "best_delta_bytes": 1416,
+  "draw_gate_bytes": 114784,
+  "draw_gate_pass": false,
+  "best_archive": {
+    "bytes": 181804,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/archive.zip",
+    "sha256": "cab4b3914b2d761daa096cb4203898b73db20ca1763c7db329943d7273c506d4"
+  },
+  "causal_proof": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/causal_decode/RESULT.json",
+    "bytes": 1611,
+    "sha256": "3a015a6b54f12561b881826648118acebe7fdc47a33292fdf16d2fed89dae595"
+  },
+  "price_table": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/PRICE_TABLE.json",
+    "bytes": 14033,
+    "sha256": "0ea1fb36e86ae152731688d4be449d86ef50b5b206ead9167bc3e5a8c80306b6"
+  },
+  "census": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/census/RESULT.json",
+    "bytes": 1941640,
+    "sha256": "4ed86159e6d37fb287ee4866ce1e172e14d5492be648459296a529517334c504"
+  },
+  "run_lengths": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/RUN_LENGTHS.json",
+    "bytes": 3615,
+    "sha256": "32826ef07c11dce495315855bb07d410bbbe6b7512915651a01789c07e6b800b"
+  },
+  "masked_control": {
+    "schema": "ddm_bnd2_masked_control_audit.v1",
+    "axis": "[exact bytes, scorer-free macOS-CPU]",
+    "score_claim": false,
+    "frames": 600,
+    "token_cells": 117964800,
+    "original_miss_cells_replaced": 235044,
+    "new_causal_coder_misses": 250892,
+    "field_sha256": "3dc7e60020b388ccfe97716b1ede0336a94ed5b1fad8be20e8bfec1a659f123d",
+    "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "payloads": [
+      {
+        "bytes": 129316,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/masked/primary_0600.envelope",
+        "sha256": "db12361512eafa1564c8b4030a1b452b889ab659b89f6d525237b52e8e21e7e3"
+      },
+      {
+        "bytes": 129316,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/masked/repeat_0600.envelope",
+        "sha256": "db12361512eafa1564c8b4030a1b452b889ab659b89f6d525237b52e8e21e7e3"
+      }
+    ],
+    "envelope_bytes": 129316,
+    "delta_vs_original_envelope_bytes": 9532,
+    "control_result": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/masked/RESULT.json",
+      "bytes": 2791,
+      "sha256": "c58fdaffd2b860b6918453f96c0199ea100c7b991154a9e028e800d34dd8bd51"
+    },
+    "interpretation": "original misses replaced by original integer-frequency best; full changed causal trajectory recomputed. Not an isolated substream or public-score measurement. Native R6D1 envelope includes its alignment padding, as the baseline native control does."
+  },
+  "verdict": "MEASURED_BYTE_LOSS; DRAW_STOPPED",
+  "verdict_scope": "six declared greedy crack assignment/orientation/minrun variants; no universal floor or richer-family kill",
+  "not_measured": [
+    "new Seg/Pose or contest score",
+    "new full rendered video",
+    "hash-bound12614-cell rendered-residual joint census",
+    "GT distance and adjacent-class-pair histograms from broader inherited ITEM1"
+  ],
+  "reproducibility": "source trace and selected causal decoder both restarted from full frame32 disk state; all payload twins exact; all stage states retained",
+  "live_frontier": {
+    "schema": "ddm_bnd2_live_frontier_check.v1",
+    "captured_at_utc": "2026-09-10T00:54:20.778477+00:00",
+    "source_pointer": ".omx/state/canonical_frontier_pointer.json",
+    "source_pointer_sha256": "347e9bc64c567feed506ca3a378f4616f1d3a0cc93a4393afab21f66a6b5f50a",
+    "source_mirror": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_cmp2_t4_20260909.json",
+    "source_mirror_sha256": "f115fc2b1502b170ab209784a5c8de747fcdc09f22be223fb2146fe8b416d848",
+    "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "archive_bytes": 180388,
+    "d_seg": 0.00010698,
+    "d_pose": 5.05e-06,
+    "original_video_bytes": 37545489,
+    "score_recomputed_from_recorded_components": 0.13791730003757818,
+    "pointer_score": 0.13791730003757818,
+    "axis": "[contest-CUDA T4 n600]",
+    "runtime_tree_sha256": "165df8de74e584e2a5692471f2a7d5b81db1537a232f4ee0ecaf604b5347c27a",
+    "lane_id": "ddm_cmp2_t4_sm1_semantic_coder_20260909",
+    "this_arm_score_claim": false,
+    "this_arm_pointer_move": false,
+    "interpretation": "live pointer and existing authority mirror checked; no new scorer evaluation by bnd2"
+  }
+}

@@ -1,0 +1,318 @@
+{
+  "schema": "ddm_bnd2_six_actual_prices.v1",
+  "axis": "[exact bytes, scorer-free macOS-CPU]",
+  "score_claim": false,
+  "rows": [
+    {
+      "archive": {
+        "bytes": 464188,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min1/archive.zip",
+        "sha256": "0ddff2f9b8c3cfa0b13020898f38d74aec142591f448bbc898522d8fd8afba7a"
+      },
+      "axis": "[exact bytes, scorer-free macOS-CPU]",
+      "baseline_envelope_bytes": 119784,
+      "binding": {
+        "minimum": 1,
+        "orientation": 0,
+        "producer": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+        "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+        "source": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+        "trace_helper": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+      },
+      "cached_rows_parseback_exact": true,
+      "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "delta_bytes": 283800,
+      "draw_gate_bytes_pass": false,
+      "frames": 600,
+      "independent_causal_decoder": "not yet run",
+      "repeat_archive": {
+        "bytes": 464188,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min1/archive.repeat.zip",
+        "sha256": "0ddff2f9b8c3cfa0b13020898f38d74aec142591f448bbc898522d8fd8afba7a"
+      },
+      "replacement": {
+        "bytes": 403584,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min1/primary.replacement.envelope",
+        "sha256": "9b2f9dc4d9ed4637f4685902fa9b904197c849d20279eaa44000b30c274bfaf9"
+      },
+      "residual_envelope_bytes": 36973,
+      "residual_tokens": 117731957,
+      "schema": "boundary_segment_recode_price_v1",
+      "score_claim": false,
+      "segment_bytes_including_length": 366611,
+      "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "supplied_tokens": 232843,
+      "symbols": 117964800,
+      "total_envelope_bytes": 403584,
+      "twin_byte_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 205659,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min2/archive.zip",
+        "sha256": "fcbb062614be8451a85715485bd1dc232c742ef8931674e8f46da404f80cec1a"
+      },
+      "axis": "[exact bytes, scorer-free macOS-CPU]",
+      "baseline_envelope_bytes": 119784,
+      "binding": {
+        "minimum": 2,
+        "orientation": 0,
+        "producer": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+        "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+        "source": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+        "trace_helper": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+      },
+      "cached_rows_parseback_exact": true,
+      "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "delta_bytes": 25271,
+      "draw_gate_bytes_pass": false,
+      "frames": 600,
+      "independent_causal_decoder": "not yet run",
+      "repeat_archive": {
+        "bytes": 205659,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min2/archive.repeat.zip",
+        "sha256": "fcbb062614be8451a85715485bd1dc232c742ef8931674e8f46da404f80cec1a"
+      },
+      "replacement": {
+        "bytes": 145055,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min2/primary.replacement.envelope",
+        "sha256": "ac39291b78b3caff0ea1f9bba01ab6fdc92dc58e99ef1239d90c1dffae76efb0"
+      },
+      "residual_envelope_bytes": 110028,
+      "residual_tokens": 117935825,
+      "schema": "boundary_segment_recode_price_v1",
+      "score_claim": false,
+      "segment_bytes_including_length": 35027,
+      "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "supplied_tokens": 28975,
+      "symbols": 117964800,
+      "total_envelope_bytes": 145055,
+      "twin_byte_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 181900,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min4/archive.zip",
+        "sha256": "7b19ff0042a2a4bd4a734e9dfd638b099447414bc2308614157a6d4aba05177b"
+      },
+      "axis": "[exact bytes, scorer-free macOS-CPU]",
+      "baseline_envelope_bytes": 119784,
+      "binding": {
+        "minimum": 4,
+        "orientation": 0,
+        "producer": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+        "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+        "source": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+        "trace_helper": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+      },
+      "cached_rows_parseback_exact": true,
+      "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "delta_bytes": 1512,
+      "draw_gate_bytes_pass": false,
+      "frames": 600,
+      "independent_causal_decoder": "not yet run",
+      "repeat_archive": {
+        "bytes": 181900,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min4/archive.repeat.zip",
+        "sha256": "7b19ff0042a2a4bd4a734e9dfd638b099447414bc2308614157a6d4aba05177b"
+      },
+      "replacement": {
+        "bytes": 121296,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o0_min4/primary.replacement.envelope",
+        "sha256": "e5677fca538289e1f4d7441e0890344a4cd4a5fca039fd58930d6566dfef1553"
+      },
+      "residual_envelope_bytes": 119152,
+      "residual_tokens": 117962494,
+      "schema": "boundary_segment_recode_price_v1",
+      "score_claim": false,
+      "segment_bytes_including_length": 2144,
+      "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "supplied_tokens": 2306,
+      "symbols": 117964800,
+      "total_envelope_bytes": 121296,
+      "twin_byte_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 441046,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min1/archive.zip",
+        "sha256": "fbc562d13b0bd2ebe4930a749889f91efd39ec6216ccd9ed6504d6b087a9963a"
+      },
+      "axis": "[exact bytes, scorer-free macOS-CPU]",
+      "baseline_envelope_bytes": 119784,
+      "binding": {
+        "minimum": 1,
+        "orientation": 1,
+        "producer": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+        "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+        "source": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+        "trace_helper": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+      },
+      "cached_rows_parseback_exact": true,
+      "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "delta_bytes": 260658,
+      "draw_gate_bytes_pass": false,
+      "frames": 600,
+      "independent_causal_decoder": "not yet run",
+      "repeat_archive": {
+        "bytes": 441046,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min1/archive.repeat.zip",
+        "sha256": "fbc562d13b0bd2ebe4930a749889f91efd39ec6216ccd9ed6504d6b087a9963a"
+      },
+      "replacement": {
+        "bytes": 380442,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min1/primary.replacement.envelope",
+        "sha256": "bc8327cabcaa90244a6207eb34eeab0347a717c224df107b801c7d3130dc994d"
+      },
+      "residual_envelope_bytes": 37017,
+      "residual_tokens": 117732192,
+      "schema": "boundary_segment_recode_price_v1",
+      "score_claim": false,
+      "segment_bytes_including_length": 343425,
+      "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "supplied_tokens": 232608,
+      "symbols": 117964800,
+      "total_envelope_bytes": 380442,
+      "twin_byte_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 201878,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min2/archive.zip",
+        "sha256": "84b4cf94d5bae1a01ed17df05c53ac794996afc64a20bdaab1899809792058a3"
+      },
+      "axis": "[exact bytes, scorer-free macOS-CPU]",
+      "baseline_envelope_bytes": 119784,
+      "binding": {
+        "minimum": 2,
+        "orientation": 1,
+        "producer": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+        "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+        "source": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+        "trace_helper": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+      },
+      "cached_rows_parseback_exact": true,
+      "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "delta_bytes": 21490,
+      "draw_gate_bytes_pass": false,
+      "frames": 600,
+      "independent_causal_decoder": "not yet run",
+      "repeat_archive": {
+        "bytes": 201878,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min2/archive.repeat.zip",
+        "sha256": "84b4cf94d5bae1a01ed17df05c53ac794996afc64a20bdaab1899809792058a3"
+      },
+      "replacement": {
+        "bytes": 141274,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min2/primary.replacement.envelope",
+        "sha256": "050e0d199452d5115ca81c3b2e89ed47fb9d577c92473f1ea4fac8594cb7dede"
+      },
+      "residual_envelope_bytes": 112472,
+      "residual_tokens": 117941883,
+      "schema": "boundary_segment_recode_price_v1",
+      "score_claim": false,
+      "segment_bytes_including_length": 28802,
+      "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "supplied_tokens": 22917,
+      "symbols": 117964800,
+      "total_envelope_bytes": 141274,
+      "twin_byte_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 181804,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/archive.zip",
+        "sha256": "cab4b3914b2d761daa096cb4203898b73db20ca1763c7db329943d7273c506d4"
+      },
+      "axis": "[exact bytes, scorer-free macOS-CPU]",
+      "baseline_envelope_bytes": 119784,
+      "binding": {
+        "minimum": 4,
+        "orientation": 1,
+        "producer": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+        "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+        "source": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+        "trace_helper": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+      },
+      "cached_rows_parseback_exact": true,
+      "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "delta_bytes": 1416,
+      "draw_gate_bytes_pass": false,
+      "frames": 600,
+      "independent_causal_decoder": "not yet run",
+      "repeat_archive": {
+        "bytes": 181804,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/archive.repeat.zip",
+        "sha256": "cab4b3914b2d761daa096cb4203898b73db20ca1763c7db329943d7273c506d4"
+      },
+      "replacement": {
+        "bytes": 121200,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/primary.replacement.envelope",
+        "sha256": "71a2213f6058bd63be6b25d2173290ce4e8e9b071d4fe04e6324e095ecf92b42"
+      },
+      "residual_envelope_bytes": 119187,
+      "residual_tokens": 117962675,
+      "schema": "boundary_segment_recode_price_v1",
+      "score_claim": false,
+      "segment_bytes_including_length": 2013,
+      "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "supplied_tokens": 2125,
+      "symbols": 117964800,
+      "total_envelope_bytes": 121200,
+      "twin_byte_identical": true
+    }
+  ],
+  "selected_best_archive": {
+    "bytes": 181804,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/archive.zip",
+    "sha256": "cab4b3914b2d761daa096cb4203898b73db20ca1763c7db329943d7273c506d4"
+  },
+  "selected_best_price_result": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/RESULT.json",
+  "selected_best_total_envelope_bytes": 121200,
+  "draw_byte_gate_pass": false,
+  "independent_causal_proof": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/causal_decode/RESULT.json",
+    "bytes": 1611,
+    "sha256": "3a015a6b54f12561b881826648118acebe7fdc47a33292fdf16d2fed89dae595"
+  },
+  "rate_term_per_byte": 6.658589531221714e-07,
+  "rate_term_deltas": [
+    {
+      "orientation": 0,
+      "minimum": 1,
+      "delta_bytes": 283800,
+      "delta_rate_term": 0.18897077089607223
+    },
+    {
+      "orientation": 0,
+      "minimum": 2,
+      "delta_bytes": 25271,
+      "delta_rate_term": 0.01682692160435039
+    },
+    {
+      "orientation": 0,
+      "minimum": 4,
+      "delta_bytes": 1512,
+      "delta_rate_term": 0.001006778737120723
+    },
+    {
+      "orientation": 1,
+      "minimum": 1,
+      "delta_bytes": 260658,
+      "delta_rate_term": 0.17356146300291894
+    },
+    {
+      "orientation": 1,
+      "minimum": 2,
+      "delta_bytes": 21490,
+      "delta_rate_term": 0.014309308902595462
+    },
+    {
+      "orientation": 1,
+      "minimum": 4,
+      "delta_bytes": 1416,
+      "delta_rate_term": 0.0009428562776209946
+    }
+  ],
+  "independent_causal_proof_scope": "selected orientation1 minimumrun4 only; full600 fresh causal reconstruction and crack-side validation. Individual price RESULTs retain their earlier emission-time status."
+}

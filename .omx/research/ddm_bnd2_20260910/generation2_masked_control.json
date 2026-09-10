@@ -1,0 +1,31 @@
+{
+  "schema": "ddm_bnd2_masked_control_audit.v1",
+  "axis": "[exact bytes, scorer-free macOS-CPU]",
+  "score_claim": false,
+  "frames": 600,
+  "token_cells": 117964800,
+  "original_miss_cells_replaced": 235044,
+  "new_causal_coder_misses": 250892,
+  "field_sha256": "3dc7e60020b388ccfe97716b1ede0336a94ed5b1fad8be20e8bfec1a659f123d",
+  "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "payloads": [
+    {
+      "bytes": 129316,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/masked/primary_0600.envelope",
+      "sha256": "db12361512eafa1564c8b4030a1b452b889ab659b89f6d525237b52e8e21e7e3"
+    },
+    {
+      "bytes": 129316,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/masked/repeat_0600.envelope",
+      "sha256": "db12361512eafa1564c8b4030a1b452b889ab659b89f6d525237b52e8e21e7e3"
+    }
+  ],
+  "envelope_bytes": 129316,
+  "delta_vs_original_envelope_bytes": 9532,
+  "control_result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/masked/RESULT.json",
+    "bytes": 2791,
+    "sha256": "c58fdaffd2b860b6918453f96c0199ea100c7b991154a9e028e800d34dd8bd51"
+  },
+  "interpretation": "original misses replaced by original integer-frequency best; full changed causal trajectory recomputed. Not an isolated substream or public-score measurement. Native R6D1 envelope includes its alignment padding, as the baseline native control does."
+}

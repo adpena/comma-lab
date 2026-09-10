@@ -1,0 +1,519 @@
+{
+  "schema": "ddm_bnd2_complete_miss_census.v1",
+  "axis": "[macOS-CPU scorer-free census; retained DALI target lineage]",
+  "frames": 600,
+  "token_cells": 117964800,
+  "source_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "full_population": {
+    "cells": 235044,
+    "coder_best_equals_gt": {
+      "denominator": 235044,
+      "level": "cell",
+      "numerator": 12446,
+      "percentage": 5.295178775037865
+    },
+    "gt_label_to_coder_best": [
+      [
+        5826,
+        54812,
+        17989,
+        9529,
+        6296
+      ],
+      [
+        72655,
+        2140,
+        86,
+        189,
+        241
+      ],
+      [
+        17895,
+        67,
+        2477,
+        9442,
+        0
+      ],
+      [
+        9479,
+        128,
+        12989,
+        1641,
+        29
+      ],
+      [
+        10539,
+        222,
+        0,
+        11,
+        362
+      ]
+    ],
+    "matrix_denominator_cells": 235044,
+    "matrix_semantics": "row label to column coder argmax; not a boundary class-pair census",
+    "on_gt_edge": {
+      "denominator": 235044,
+      "level": "cell",
+      "numerator": 229752,
+      "percentage": 97.74850666258233
+    },
+    "on_shipped_token_edge": {
+      "denominator": 235044,
+      "level": "cell",
+      "numerator": 232217,
+      "percentage": 98.7972464730008
+    },
+    "row_bands": [
+      {
+        "denominator": 235044,
+        "level": "cell",
+        "numerator": 0,
+        "percentage": 0.0,
+        "rows_half_open": [
+          0,
+          128
+        ]
+      },
+      {
+        "denominator": 235044,
+        "level": "cell",
+        "numerator": 73822,
+        "percentage": 31.40773642381852,
+        "rows_half_open": [
+          128,
+          192
+        ]
+      },
+      {
+        "denominator": 235044,
+        "level": "cell",
+        "numerator": 127558,
+        "percentage": 54.26983883868552,
+        "rows_half_open": [
+          192,
+          256
+        ]
+      },
+      {
+        "denominator": 235044,
+        "level": "cell",
+        "numerator": 33663,
+        "percentage": 14.32199928524021,
+        "rows_half_open": [
+          256,
+          320
+        ]
+      },
+      {
+        "denominator": 235044,
+        "level": "cell",
+        "numerator": 1,
+        "percentage": 0.00042545225574786,
+        "rows_half_open": [
+          320,
+          384
+        ]
+      }
+    ],
+    "share_of_all_token_cells": {
+      "denominator": 117964800,
+      "level": "cell",
+      "numerator": 235044,
+      "percentage": 0.199249267578125
+    },
+    "stored_token_equals_gt": {
+      "denominator": 235044,
+      "level": "cell",
+      "numerator": 221995,
+      "percentage": 94.44827351474618
+    },
+    "stored_token_to_coder_best": [
+      [
+        0,
+        56801,
+        19371,
+        10178,
+        6603
+      ],
+      [
+        76080,
+        0,
+        168,
+        293,
+        282
+      ],
+      [
+        19294,
+        116,
+        0,
+        10324,
+        5
+      ],
+      [
+        10113,
+        168,
+        13994,
+        0,
+        38
+      ],
+      [
+        10907,
+        284,
+        8,
+        17,
+        0
+      ]
+    ]
+  },
+  "filtered_population": {
+    "cells": 213733,
+    "coder_best_equals_gt": {
+      "denominator": 213733,
+      "level": "cell",
+      "numerator": 12185,
+      "percentage": 5.701038211226156
+    },
+    "gt_label_to_coder_best": [
+      [
+        5723,
+        47062,
+        16212,
+        8692,
+        6122
+      ],
+      [
+        66225,
+        2074,
+        74,
+        179,
+        214
+      ],
+      [
+        16299,
+        59,
+        2413,
+        8959,
+        0
+      ],
+      [
+        8860,
+        114,
+        11925,
+        1616,
+        29
+      ],
+      [
+        10312,
+        203,
+        0,
+        8,
+        359
+      ]
+    ],
+    "matrix_denominator_cells": 213733,
+    "matrix_semantics": "row label to column coder argmax; not a boundary class-pair census",
+    "on_gt_edge": {
+      "denominator": 213733,
+      "level": "cell",
+      "numerator": 209179,
+      "percentage": 97.8693042253653
+    },
+    "on_shipped_token_edge": {
+      "denominator": 213733,
+      "level": "cell",
+      "numerator": 211510,
+      "percentage": 98.95991727997081
+    },
+    "row_bands": [
+      {
+        "denominator": 213733,
+        "level": "cell",
+        "numerator": 0,
+        "percentage": 0.0,
+        "rows_half_open": [
+          0,
+          128
+        ]
+      },
+      {
+        "denominator": 213733,
+        "level": "cell",
+        "numerator": 67601,
+        "percentage": 31.62871433049646,
+        "rows_half_open": [
+          128,
+          192
+        ]
+      },
+      {
+        "denominator": 213733,
+        "level": "cell",
+        "numerator": 114695,
+        "percentage": 53.662747446580546,
+        "rows_half_open": [
+          192,
+          256
+        ]
+      },
+      {
+        "denominator": 213733,
+        "level": "cell",
+        "numerator": 31436,
+        "percentage": 14.708070349454694,
+        "rows_half_open": [
+          256,
+          320
+        ]
+      },
+      {
+        "denominator": 213733,
+        "level": "cell",
+        "numerator": 1,
+        "percentage": 0.00046787346829923316,
+        "rows_half_open": [
+          320,
+          384
+        ]
+      }
+    ],
+    "share_of_all_token_cells": {
+      "denominator": 117964800,
+      "level": "cell",
+      "numerator": 213733,
+      "percentage": 0.18118370903862846
+    },
+    "stored_token_equals_gt": {
+      "denominator": 213733,
+      "level": "cell",
+      "numerator": 200947,
+      "percentage": 94.017769834326
+    },
+    "stored_token_to_coder_best": [
+      [
+        0,
+        48987,
+        17553,
+        9328,
+        6426
+      ],
+      [
+        69584,
+        0,
+        156,
+        282,
+        255
+      ],
+      [
+        17669,
+        108,
+        0,
+        9831,
+        5
+      ],
+      [
+        9489,
+        154,
+        12907,
+        0,
+        38
+      ],
+      [
+        10677,
+        263,
+        8,
+        13,
+        0
+      ]
+    ]
+  },
+  "recovered_population": {
+    "cells": 21311,
+    "coder_best_equals_gt": {
+      "denominator": 21311,
+      "level": "cell",
+      "numerator": 261,
+      "percentage": 1.2247196283609403
+    },
+    "gt_label_to_coder_best": [
+      [
+        103,
+        7750,
+        1777,
+        837,
+        174
+      ],
+      [
+        6430,
+        66,
+        12,
+        10,
+        27
+      ],
+      [
+        1596,
+        8,
+        64,
+        483,
+        0
+      ],
+      [
+        619,
+        14,
+        1064,
+        25,
+        0
+      ],
+      [
+        227,
+        19,
+        0,
+        3,
+        3
+      ]
+    ],
+    "matrix_denominator_cells": 21311,
+    "matrix_semantics": "row label to column coder argmax; not a boundary class-pair census",
+    "on_gt_edge": {
+      "denominator": 21311,
+      "level": "cell",
+      "numerator": 20573,
+      "percentage": 96.53699967153113
+    },
+    "on_shipped_token_edge": {
+      "denominator": 21311,
+      "level": "cell",
+      "numerator": 20707,
+      "percentage": 97.1657829290038
+    },
+    "row_bands": [
+      {
+        "denominator": 21311,
+        "level": "cell",
+        "numerator": 0,
+        "percentage": 0.0,
+        "rows_half_open": [
+          0,
+          128
+        ]
+      },
+      {
+        "denominator": 21311,
+        "level": "cell",
+        "numerator": 6221,
+        "percentage": 29.19149734878701,
+        "rows_half_open": [
+          128,
+          192
+        ]
+      },
+      {
+        "denominator": 21311,
+        "level": "cell",
+        "numerator": 12863,
+        "percentage": 60.35850030500681,
+        "rows_half_open": [
+          192,
+          256
+        ]
+      },
+      {
+        "denominator": 21311,
+        "level": "cell",
+        "numerator": 2227,
+        "percentage": 10.450002346206185,
+        "rows_half_open": [
+          256,
+          320
+        ]
+      },
+      {
+        "denominator": 21311,
+        "level": "cell",
+        "numerator": 0,
+        "percentage": 0.0,
+        "rows_half_open": [
+          320,
+          384
+        ]
+      }
+    ],
+    "share_of_all_token_cells": {
+      "denominator": 117964800,
+      "level": "cell",
+      "numerator": 21311,
+      "percentage": 0.018065558539496526
+    },
+    "stored_token_equals_gt": {
+      "denominator": 21311,
+      "level": "cell",
+      "numerator": 21048,
+      "percentage": 98.76589554690067
+    },
+    "stored_token_to_coder_best": [
+      [
+        0,
+        7814,
+        1818,
+        850,
+        177
+      ],
+      [
+        6496,
+        0,
+        12,
+        11,
+        27
+      ],
+      [
+        1625,
+        8,
+        0,
+        493,
+        0
+      ],
+      [
+        624,
+        14,
+        1087,
+        0,
+        0
+      ],
+      [
+        230,
+        21,
+        0,
+        4,
+        0
+      ]
+    ]
+  },
+  "gt_edge_population": {
+    "denominator": 117964800,
+    "level": "cell",
+    "numerator": 2551338,
+    "percentage": 2.1627960205078125
+  },
+  "shipped_edge_population": {
+    "denominator": 117964800,
+    "level": "cell",
+    "numerator": 2564996,
+    "percentage": 2.174374050564236
+  },
+  "payloads": {
+    "complete_locations": {
+      "bytes": 686800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/census/complete_locations.npz",
+      "sha256": "054e8719fcfed8a6a40b9ff1f795e322e310b0e2fe7625bc9da26340c685240e"
+    },
+    "previously_missing_locations": {
+      "bytes": 74711,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/census/previously_missing_locations.npz",
+      "sha256": "18139c1b892320407add7a27114326c016c2aac51212c0441643e73630d0c432"
+    }
+  },
+  "rendered_residual_join": {
+    "measured": false,
+    "reason": "No hash-bound rendered residual map is an input to this producer; no pass-5 join or new 12614-cell census.",
+    "recalled_shipped_residual_cells": 12614
+  }
+}

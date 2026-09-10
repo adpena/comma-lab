@@ -1,0 +1,30 @@
+{
+  "all_causal_rows_recomputed_identical": true,
+  "axis": "[exact bytes, scorer-free macOS-CPU]",
+  "binding": {
+    "candidate": {
+      "bytes": 181804,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/price_o1_min4/archive.zip",
+      "sha256": "cab4b3914b2d761daa096cb4203898b73db20ca1763c7db329943d7273c506d4"
+    },
+    "jg2": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2",
+    "library": {
+      "bytes": 34688,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+      "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+    },
+    "producer": "5a32b20fc91369016fdeee4badc45cfeeed2ad4bbdaa61c0993da0f1030a157d",
+    "route": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5",
+    "runtime_inputs": "6a095d4253c289a9327f193ba8a596ba454cbac5d07b6586da70ade32b98094d",
+    "segment_code": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f",
+    "source_trace": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd",
+    "tc1": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb",
+    "trace_code": "ebd1e833999d31e90c76b1ba14e3f556a1777f02a02c1210d8ca8223c30a9ed3"
+  },
+  "decoder_input": "candidate archive only; source rows/labels used exclusively as post-computation comparisons",
+  "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "frames": 600,
+  "resumed_from_frame": 32,
+  "schema": "ddm_bnd2_independent_causal_decode.v1",
+  "score_claim": false
+}
