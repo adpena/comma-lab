@@ -249,6 +249,48 @@ committed before it ran.
 10. The admission consumes the RESOLVED pose; stale is printed beside it and is never an input.
 11. The shipped archive's bytes come from a REAL encode of the selected subset; the ledger-sum prediction is reported beside it with its gap (sj1 measured +19.6 B / +0.0108 % on its own subset — the sum ranks, it under-charges).
 
+## 8c. THE REBASE, MEASURED (2026-09-10 ~12:00Z) — the control group came back exactly 1.0
+
+`rebase/REBASE.json`, field `aae528e6…`, no pair hit the verify cap.
+
+| group | pairs | tokens proposed | tokens kept | transfer |
+|---|---|---|---|---|
+| base plane IDENTICAL (**the control**) | 307 | 2,401 | 2,401 | **1.000000** |
+| base plane DIFFERS (exposed) | 281 | 2,102 | 1,741 | 0.828259 |
+| all | 588 | 4,503 | 4,142 | **0.919831** |
+
+**The control group is the whole verdict.** 2,401 of 2,401 — every token on a pair whose two
+base planes agree transferred, so the instrument did not move between the acceptance and the
+rebase. The pre-registered STOP is not triggered, and the 361 lost tokens are attributable to
+the base and to nothing else. The exposed/control split (281 / 307 among pairs that carry
+edits) matches the 282 / 318 predicted from receipts alone in §8b.
+
+**The cost of the defect, priced:** 361 tokens = 1,499.5 first-order bits = **187.4 B**, i.e.
+17.2 % of the exposed group and 9.6 % of the pass. Kept: 4,142 tokens =
+14,052.737 bits = **1,756.6 B first-order**, well above §8b's 700 B continue threshold.
+422 of 588 pairs transferred whole.
+
+**Two cross-arm controls passed on the way.**
+
+1. `verify-field`: `field_move40.u8` and sj1's `field_composed.npz` are identical on all 600
+   planes, **0 differing cells**.
+2. This arm's re-render of move 40's odd frames reproduces sj1's recorded overlay sha
+   **`37ea3842…` exactly** — two arms, two runs, byte-identical renders.
+
+**A P0 custody finding, not this arm's:** control 2 was forced, not chosen. sj1's move-40
+overlays were cold-stored at 04:56Z to
+`/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/…/{base,cand}_overlay/odd_frames.u8`
+and **those files do not exist** — the destination directories contain only ExFAT `._`
+stubs, while `MOVE_LOG.jsonl` records the moves as `MOVED` with their shas. The same pattern
+covers `parseback/0.raw` and three `ddm_sj1_multipass_token_predistortion` overlays
+(1.83 GB each). Certify-or-block says a manifest without the bytes is a blocker, not a
+cleanup. Here it cost 5 minutes because the render is deterministic and cheap; on an artifact
+that is not reproducible it would have been unrecoverable.
+
+**Pose base, measured on this arm's own instrument** over move 40's own carrier codes and
+renders: **4.88709198352764e-06** (pose leg 0.006990774), against sj1's 4.886599506e-06 —
++0.010 %, comfortably inside pm2's [1/3, 3]× gate. Measured, never inherited.
+
 ## 9. Frontier line
 
 `ddm_sj1 compose39+rp1 union S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40)
