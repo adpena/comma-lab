@@ -1850,6 +1850,52 @@ or not.
 
 ---
 
+## 29. Move 38 — pass 5 PROMOTED, and the projection has zero modelling error
+
+**S 0.13789029376306361 @ 180,436 B [contest-CUDA T4 n600]**, sha `eae99e00…`, lane
+`ddm_sj1_t4_token_predistortion_pass5_20260909`, call `fc-01M24EG4R59D365KWRT7538XA8`,
+runtime tree `376de794…`, packet `566338ef5`. **Δ −2.700627e-05 vs move 37 — 1.35× the bar.**
+
+Verified at source, not from a relay: the lane's own `MODAL_REMOTE_RESULT.json` carries
+`score_recomputed_from_components = 0.1378902937630636`, `avg_segnet_dist = 0.00010632`,
+`avg_posenet_dist = 5.06e-06`, `n_samples = 600`, `archive_size_bytes = 180436`,
+`expected_archive_sha256 = eae99e00…` (the seal's), `score_axis = contest_cuda`. The
+receipt's own rounded `final_score` field reads `0.14` and is, as always, not the number.
+
+Lineage: **0.14784474 → 0.13789029 = −9.954448e-03 over 12 rows.**
+
+### 29a. The residual is print granularity — ALL of it
+
+| | value |
+|---|---:|
+| projected | 0.13788255886142803 |
+| **MEASURED** | **0.13789029376306361** |
+| residual | **+7.734902e-06** (optimistic) |
+| seg leg, printed 0.00010632 vs projected 0.00010630151577612176 | +1.848422e-06 |
+| pose leg, printed 5.06e-06 vs projected 5.051628926797214e-06 | +5.886479e-06 |
+| **sum of the two print gaps** | **+7.734902e-06** |
+
+**The residual equals the sum of the two print gaps to the last digit.** There is no
+modelling error in this projection at all: the seg leg was verified at zero-cell
+disagreement before the fire (§27d) and the pose leg was the resolved composition, so what
+remains is entirely the receipt printing `avg_segnet_dist` and `avg_posenet_dist` to eight
+decimals. §23 read this arm's residuals as "order 1e-06 to 5e-06 with EITHER sign"; the
+fourth point is +7.73e-06, larger and again positive, and it is now EXPLAINED rather than
+bounded — a projection whose legs are pre-verified on the shipped bytes lands inside the
+8-dp print bound, and that bound is what a successor should pre-register instead of a
+one-signed band.
+
+### 29b. Where the singles family stands, on the promoted row
+
+The convergence rule fires: **80 of 12,614 = 0.634%**, below §20d's 1% bar. Four passes of
+single-cell token pre-distortion have repaired 12,544 of the 23,749 base flips (52.8%) and
+the fifth returned 0.63%. §24 closed the two-cell slide family on both clauses. §25b says
+what the grid has been eating — near-field isolated Lane specks — and that the corner is
+nearly gone. **Pass 6 does not fire.** The live levers on this object are the frame-0
+round (§28) and the representation-level boundary door.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
@@ -1857,6 +1903,6 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ## Frontier line
 
-`sj1 S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]` (live pointer, sha `06c44dc464038649…`)
+`sj1 S 0.13789029376306361 @ 180,436 B [contest-CUDA T4 n600]` (move 38, sha `eae99e0083129a91…`; the live pointer may have moved past this — the canonical pointer file is the SoT)
 
 Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 ×4 0.1451981569076111 @ 176,448 B → pc1 ×8 0.1445177913121716 @ 175,576 B → pc1 ×16 0.14411787458634504 @ 174,786 B → sj1 pass 2a 0.1398140172839628 @ 180,904 B → sj1 pass 3 (above).
