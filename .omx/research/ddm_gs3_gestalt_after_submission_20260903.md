@@ -1212,3 +1212,16 @@ The gestalt reading: every construction so far (gb2, bnd2/3, tc2/3, eb2, bd1, mc
 remove by ADDRESSING it; the only object that has ever held the rate is the born generator, whose distortion is data-anchored at
 Lane edges (md1–md4). The next design (gdc3) is chosen against the measured geometry law: it must generate contiguous, Lane-aware
 structure whose errors cluster where the residual coder is cheapest — or state, with a $0 falsifier, why it cannot.
+
+## Addendum 27 (MAIN, 2026-09-10 ~23:45Z) — gdc3: the residual-geometry table, one more closure, and the first design point under the gate
+
+gdc3 (`.omx/research/ddm_gdc3_next_construction_against_the_geometry_law_20260910.md`, sha db4510fdae22e343…) measured what Addendum 26 asked for: the exact-residual price BY GEOMETRY, on both retained fields with the
+real coder. Long boundary-adjacent runs are the cheapest class in both (0.495 and 0.246 B/mismatch), isolated cells the dearest
+(1.84 / 1.55), and the same class differs 2.01× between generators — so R(M) is generator-local even within a geometry class, and the
+only honest screen is a candidate's own residual coded at its own errors. The fixed anisotropic key-row hold put 100 % of its
+634,370 errors next to boundaries and still lost by 4.8× because its packet alone is 2.42× the door: geometry-cheap errors do not
+rescue an expensive description. What survives is the first construction whose design point sits under the gate on measured rates:
+a learned run-native endpoint generator (runs as the native representation, endpoints not cells), K ≤ 60,000 B, M ≤ 65,000,
+≥ 90 % of errors long-and-boundary-adjacent → 92,174 B projected. The margin is 2 %, and every projection this week missed by 3× or
+more; so gdc4 burns under the standing GO with those three numbers as early-stop gates, not as hopes. The gestalt has narrowed to one
+sentence: the token field must be described by its runs, with a generator whose mistakes are runs too.
