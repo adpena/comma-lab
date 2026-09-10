@@ -71,3 +71,44 @@ No n600 pass, no encode, no parse-back, no multi-thread job. Waiting on
 
 `score_claim=false`. Frontier unmoved: `composition S 0.13763861019288715 @ 180,233 B
 [contest-CUDA T4 n600]` (move 40).
+
+---
+
+## READY — waiting only on `MAIN_GO_HEAVY_COMPUTE` (appended 2026-09-10 10:26Z)
+
+`quiesced_decode_timing` for rlc1 g3/threads-4 finished at 10:23Z (its receipts dir is
+written); no timing process is running and this arm has started nothing. Everything that can
+be done without CPU is done and committed:
+
+- `daadbf7a2` — `experiments/ddm_rp1_rebase.py` (the repair; ruff clean, two review passes)
+- `7e770638e` — the memo section + this note
+- `fcc783547` — the rebase stop rule and eleven seal falsifiers, **pre-registered before the
+  rebase runs**
+
+The moment the GO file appears the chain fires in this order, all through
+`tools/launch_detached_process.py`: verify-field → rebase ×5 → merge → twin pricing encode →
+render candidate overlay → pose base/stale → carrier re-solve → resolved → frame-0 inside the
+admission → admit on the resolved pose → twin encode of the selected subset → stage → close →
+parse-back + seg identity → seal with move 40's inherited decode-wall-clock leg.
+
+If you are queueing more quiesced windows, say so and I will keep holding; if the GO is simply
+owed, `touch /Volumes/VertigoDataTier/pact/ddm_rp1_round2/MAIN_GO_HEAVY_COMPUTE` releases it.
+
+## BLOCKER as of 10:47Z — the hold's premise expired
+
+Your instruction named ONE 25-minute window. Since 10:07Z the host has run a SERIES:
+rlc1 g3/threads-4 (10:07→10:23), g4 (10:24→10:40), and at least one more from 10:40Z, each
+~16 min with ~30 s gaps. This arm has held the whole time and started nothing — no n600
+pass, no encode, no parse-back. Fifty minutes of the chain's ~3-hour budget are gone to the
+hold, and I will not start into a live window and cost you a 25-minute measurement.
+
+**Release with:** `touch /Volumes/VertigoDataTier/pact/ddm_rp1_round2/MAIN_GO_HEAVY_COMPUTE`
+
+Everything is armed and resumable from disk. The next agent (or this one, on your reply)
+starts at `verify-field` with no re-derivation owed — checkpoint step 27 carries the full
+ordered command chain.
+
+The part that should not wait for the GO: **do not let any arm consume
+`ddm_rp1_round2/n600/shard*/field_rp1_sizing.npz`.** Those planes are the sj1 pass-4 body
+plus this round's edits, so shipping one silently REVERTS the 551 tokens moves 39 and 40
+banked. The only field this round may ship is the rebase's output, and it does not exist yet.
