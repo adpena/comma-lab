@@ -1960,6 +1960,95 @@ clear the bar alone, because §30a measures that it cannot.
 
 ---
 
+## 31. Composition onto move 39 — token-additive, seg SUB-additive, rate mildly anti-synergic
+
+rp1's move 39 (S 0.1376693148220904 @ 180,186 B, sha `8877f75d…`, 473 argmax-NEUTRAL token
+changes over 253 pairs) superseded this arm's move 38. The pass-5 subset re-bases onto it
+by re-verification. Store `ddm_sj1_compose39_price`; every number below is on the
+**move-39** base, and every field is named.
+
+### 31a. The composition is well-defined at the token level, and that is CHECKED
+
+Composed field = rp1's 600-plane carry field, with this arm's 78 token writes applied at
+their own positions. **MEASURED: zero position collisions**, 282-pair union, 13 overlapping
+pairs `[7, 118, 165, 167, 202, 237, 293, 398, 502, 546, 565, 584, 593]` — agreeing with
+rp1's own composition receipt. The builder also asserts that no cell OUTSIDE either arm's
+edit set moved, so "well-defined" is a measurement, not a premise.
+
+### 31b. Cross-arm control identity — two arms, two encoders, the same bytes
+
+**rp1's shipped field re-encoded through THIS arm's loop emits 119,568 B sha
+`26e9eba5209495a0…`** — byte-identical to rp1's own retained `candidate_rider_body` — and
+the rebuilt control archive carries rp1's own **180,186 B sha `8877f75d…`**. That is the
+strongest gate available on a cross-arm composition and it passed before any delta was read.
+
+### 31c. Rate — mildly ANTI-synergic, and the mechanism is the coder
+
+| | move 37's field | **move 39's field** |
+|---|---:|---:|
+| this arm's 78 tokens cost | **+47 B** | **+50 B** |
+| bits/token | 4.8205 | **5.1282** |
+| margin vs the subset's 10.4460 break-even | 2.167× | **2.037×** |
+
+**+3 B, 6.4%.** rp1's field is cheaper overall and this arm's tokens are DEARER inside it.
+That is rp1's own yield law read in the mirror: their edits REMOVED learned surprise, so
+writing surprise into a field it has been removed from costs more per token. The effect is
+small — 6.4% on the token leg against the 85% clawback rp1 measured on the saving leg.
+
+### 31d. Seg — SUB-additive, and entirely on the shared pairs
+
+MAIN's instruction was to recompute rather than assume, and the recompute earns itself.
+Re-measured on move 39's base through the receiver's own `render_frame1` at batch 1 and the
+frozen CPU SegNet (`experiments/ddm_sj1_compose_segcheck.py`):
+
+**80 repairs → 74. All four losing pairs are in the 13-pair overlap:** 565 loses one
+outright (−1), and 237, 293, 398 net zero. The 29 non-overlapping pairs are untouched.
+
+So token-additivity does NOT imply seg-additivity. Two arms can write disjoint cells and
+still cost each other repairs, because a repair is a property of the RENDER and the sister's
+writes move the render on every pair they share. **7.5% of this arm's seg credit was spent
+on the 13 pairs of overlap out of 282.**
+
+### 31e. Pose, and the closed candidate
+
+Base **4.886129054887582e-06** (move 39's own carrier on its own shipped field's renders,
+with the overlay; pm2's gate PASSED at −0.08% of the 4.89e-06 print). Stale
+**2.221890e-05**; **resolved 4.886599506372935e-06**. The 42-pair composed pose leg is
+**+6.887478e-07** — near-neutral, and better than move 37's +1.310821e-06.
+
+| gate | result |
+|---|---|
+| stage-tail | `tail_baseline_check: PASS (pointer tail suffix == rider_control39.bin)` |
+| close identity control | **PASSED** |
+| frame-1 section identity | **all identical**; only the carrier moved, 42 pairs / 184 coordinates |
+| candidate | **180,233 B, sha `986d536b31ed1079…`** |
+| runtime | built FROM MOVE 39's TREE, exactly `['archive.zip','inflate.py']` differ |
+| public-entrypoint smoke | REACHED_TOKEN_DECODE / REACHED_CUDA_GATE, both roles |
+
+**The container search SHRANK it: 180,236 B at the tail splice → 180,233 B closed, so the
+total delta is +47 B, not +50.** The +3 B of tail anti-synergy was handed back by the
+container — fe1's lottery law paying out in this arm's favour for once.
+
+**Projected S 0.13763577081553857, net −3.354401e-05 vs move 39 — 1.68× the bar.**
+
+### 31f. The miss against the naive sum
+
+Naive sum = move 39 + this arm's move-38 legs (80 cells, +48 B): **0.1376341479**.
+Projected composition: **0.1376357708**. **Miss +1.62e-06**, and it decomposes:
+
+| term | ΔS |
+|---|---:|
+| 6 seg repairs lost on the overlap | **+5.086e-06** |
+| bytes: +47 measured vs +48 assumed | **−6.66e-07** |
+| T4 seg carry + rounding | remainder |
+
+**The seg loss is four times the byte effect and it is the whole story.** A composition of
+two token arms should be predicted as sub-additive on seg in proportion to their pair
+overlap, and roughly additive on rate with a few bytes of coder anti-synergy that the
+container search may hand back.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
