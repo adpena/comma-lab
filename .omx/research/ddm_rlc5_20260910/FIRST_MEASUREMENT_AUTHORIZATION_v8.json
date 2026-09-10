@@ -1,0 +1,31 @@
+{
+  "schema": "candidate_first_measurement_authorization.v1",
+  "state": "AUTHORIZED_ONCE",
+  "authorized_by": "MAIN",
+  "authorized_at_utc": "2026-09-10T22:02:39.781548+00:00",
+  "intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+    "file_sha256": "e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0",
+    "file_bytes": 16065,
+    "digest": "af30ba258ccb20f77288df9579aabff8ab44b86a192426122c26821ee009e4ad",
+    "commit": "bd29d2c8be11d7b016fe735b82d6148d516248c9"
+  },
+  "candidate_id": "ddm_rlc2_counted_cure_move43_rlc5",
+  "axis": "contest_cuda",
+  "lane_id": "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+  "instance_job_id": "ddm_rlc5_first_measurement_t4_run5_20260910",
+  "claim_agent": "MAIN",
+  "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5",
+  "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+  "authorization_nonce": "f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8",
+  "dispatch_policy_sha256": "e2f86384f9259e35db1aaf1ec3c3b0d0d6d1a9484c2fa2def5caaa65d264410a",
+  "cost_preflight": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc4_first_measurement/cost_preflight/cost_preflight.json",
+    "bytes": 1084,
+    "sha256": "ae3d8306699f6746f916d1bb9ec33e37cb0acc36afcce3bc49dcda3dca23ce64"
+  },
+  "single_axis_waiver_reason": "candidate receiver declares linux-nvidia-t4 and refuses CPU by design; this authorization is T4-only",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "authorization_sha256": "35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664"
+}
