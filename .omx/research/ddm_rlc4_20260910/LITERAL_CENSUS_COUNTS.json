@@ -1,0 +1,29 @@
+{
+  "all_occurrences": 8114,
+  "changed_receiver_occurrences": 628,
+  "changed_files": {
+    "inflate.py": {
+      "STRING": 13,
+      "NUMBER": 2
+    },
+    "inflate.sh": {
+      "NUMERIC_TEXT_RUN": 67
+    },
+    "runtime/residual_archive.py": {
+      "STRING": 83,
+      "NUMBER": 223
+    },
+    "runtime/rlc1_geometry.c": {
+      "NUMERIC_TEXT_RUN": 137
+    },
+    "runtime/rlc1_geometry.py": {
+      "STRING": 3,
+      "NUMBER": 41
+    },
+    "runtime/rlc1_mixer.py": {
+      "STRING": 11,
+      "NUMBER": 48
+    }
+  },
+  "counting_scope": "Python NUMBER and digit-bearing STRING tokens; conservative all numeric text runs in C/shell, including comments and identifiers; counts are not directly comparable to pr9 numeric-only 443."
+}

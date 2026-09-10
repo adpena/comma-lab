@@ -1,0 +1,8 @@
+{
+  "returncode": 13,
+  "attempts": 1,
+  "argv": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_ARGV.json",
+  "stdout": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_STDOUT.txt",
+  "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_STDERR.txt",
+  "score_claim": false
+}

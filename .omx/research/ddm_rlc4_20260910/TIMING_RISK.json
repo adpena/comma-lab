@@ -1,0 +1,67 @@
+{
+  "authority": false,
+  "base_local_diagnostic": {
+    "actual_verdict": "REFUSED",
+    "authority": false,
+    "bytes": 230286,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced_local.json",
+    "sha256": "9cefbac9f1a003a380d817308f070b6122b99e94303bb78eeac7304fc3bc43fd",
+    "wall_seconds": 797.1459791249945
+  },
+  "calculation": {
+    "candidate_local_ceiling_seconds": 831.502915124991,
+    "hard_timeout_seconds": 1800.0,
+    "local_cost_fraction_upper": 0.043099930125356956,
+    "passed": true,
+    "policy_limit_seconds": 1260.0,
+    "source_t4_seconds": 990.053829427,
+    "t4_risk_ceiling_seconds": 1032.7250802956457
+  },
+  "candidate_local_diagnostics": [
+    {
+      "actual_verdict": "REFUSED",
+      "authority": false,
+      "bytes": 228309,
+      "cold": true,
+      "n_samples": 600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/rlc1_g3_threads4_local.json",
+      "sha256": "b8efd88ceb21f48f78b57a3add3b90a665ea7258c3fed44449d306fed37986b9",
+      "wall_seconds": 829.0324737499905
+    },
+    {
+      "actual_verdict": "REFUSED",
+      "authority": false,
+      "bytes": 235786,
+      "cold": true,
+      "n_samples": 600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/receipts/rlc1_g4_threads4_local.json",
+      "sha256": "a8dc34ebd3913031eb6da7c2008c0355a8732311ad610f490041f3f582f98db7",
+      "wall_seconds": 831.502915124991
+    }
+  ],
+  "candidate_receiver": {
+    "sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a"
+  },
+  "diagnostic_reference_receiver": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+    "sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d"
+  },
+  "mode": "completed_t4_receiver_delta",
+  "receiver_delta_manifest": {
+    "bytes": 14974,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/NORMALIZED_RECEIVER_DELTA.json",
+    "sha256": "b6f69f287d23df7453931d191d8feb404bea893d78f0a2bc286cb761bda4d1ce"
+  },
+  "risk_sha256": "fce5bb1e95b734989dcd8694be801552d9bdde108f669aa844d7129e5264afa7",
+  "schema": "candidate_prefire_timing_risk.v1",
+  "score_claim": false,
+  "source_receiver": {
+    "sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf"
+  },
+  "source_t4_leg": {
+    "bytes": 1553,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+    "sha256": "ed929b24cc876bf8ffabc3004b856decbb5e73d0fee13c1d3c87d91d659f9521"
+  },
+  "timing_clearance": false
+}

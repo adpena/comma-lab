@@ -1,0 +1,119 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "binding": {
+    "archive": {
+      "bytes": 180178,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/archive.zip",
+      "sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b"
+    },
+    "native_cache_source": {
+      "bytes": 2582,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc4_native_cache.py",
+      "sha256": "7cad04c7ba47df3ac7baa6e6713d268e7a50bb332ff851eeaeecc0cae47d7135"
+    },
+    "producer": {
+      "bytes": 7277,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc4_public.py",
+      "sha256": "e111031cf278a376ecbcc6e4524a254a7f00ed0f7a0dc52087109124c99c09df"
+    },
+    "receiver_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+    "runtime_sha256": "816f72e31639c8365ef6d5aa3f0738a235fed8d6dfd879d15d1838a5fa847333",
+    "source_raw_sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159"
+  },
+  "candidate_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/0.raw",
+    "sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159"
+  },
+  "checkpoint_resume": false,
+  "cold_start": true,
+  "command": [
+    "bash",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/inflate.sh",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/data",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/file_list.txt"
+  ],
+  "decoded_field": {
+    "bytes": 117964800,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+    "sha256": "d5248c775e49d8ac4299d2b0b60ffe5cffbeaafe348ef57986a169d3f118322b"
+  },
+  "literal_public_output_byte_identity": true,
+  "n_samples": 600,
+  "no_scorer_ran": true,
+  "pointer_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/0.raw",
+    "sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159"
+  },
+  "report": {
+    "archive_bytes": 180178,
+    "archive_sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b",
+    "axis": "[macOS-CPU advisory]",
+    "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/.f26_decode_checkpoints",
+    "checkpoint_resume": false,
+    "compensation": null,
+    "decode_and_render_seconds": 995.452417249995,
+    "device": {
+      "platform_machine": "arm64",
+      "platform_system": "Darwin",
+      "reproducibility": {
+        "cpu_num_interop_threads": 1,
+        "cpu_num_threads": 4
+      },
+      "requested_device": "cpu",
+      "resolved_device": "cpu",
+      "torch_version": "2.12.1"
+    },
+    "pair_count": 600,
+    "parallel_render": null,
+    "raw_bytes": 3662409600,
+    "raw_sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159",
+    "residual_schema": "fixed_boundary_int6",
+    "schema": "ddm_f26p_inflate_report.v1",
+    "score_claim": false,
+    "selector": {
+      "frame_count": 600,
+      "mode_count": 8,
+      "payload_bytes": 34,
+      "payload_sha256": "15c256dcb6a6563966b43f51f2616d7f1c03d16e1812a8dcb5d80ceea432ddd0"
+    },
+    "stage_seconds": {
+      "archive_setup": 2.4167243750125635,
+      "frame0_selector_and_io": 47.42761437500303,
+      "neural_render_and_resize": 230.55491849999817,
+      "render_checkpoint_copy": 0.0,
+      "token_decode_or_checkpoint_load": 713.7927753749973,
+      "total_including_raw_sha256": 995.452417249995
+    },
+    "token_cache": {
+      "status": "DISABLED"
+    },
+    "token_decoder": {
+      "adapter_sha256": "",
+      "checkpoint_resumed_from_frame": 0,
+      "corrected_cdf_input_sha256": "9cba1ee4be9dbd793230b8670cadb228913726e7118e2500a96c42d0b54fca5f",
+      "corrected_quantized_logit_sha256": "8d79bacb324bfaa9a7e83ba4b71351d335142c268acadc00ecb6fca2aea1a086",
+      "decode_runtime_seconds": 710.7456450462341,
+      "decoded_token_sha256": "d5248c775e49d8ac4299d2b0b60ffe5cffbeaafe348ef57986a169d3f118322b",
+      "decoder_bit_position": 956289,
+      "free_corrector": "NativeFreeCorrector",
+      "logit_and_cdf_digest_scope": "suffix from checkpoint_resumed_from_frame; token digest is full n600",
+      "tail_mixer": "RLC1-counted-Q16",
+      "token_codec": "rc64"
+    }
+  },
+  "score_claim": false,
+  "source_receipt": {
+    "bytes": 3280,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/PARSEBACK_RESULT.json",
+    "sha256": "b62148989c00e8afb909b0bc99eeb238a22068b841e16c1b8e274144e6898b36"
+  },
+  "stdout": {
+    "bytes": 6175,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/attempts/attempt_0000/run.log",
+    "sha256": "c0450f1e1a7d968d24ac267802df65c4ee6b1175cb9f617d50f3b20f8fc8033b"
+  },
+  "wall_seconds": 999.3320274169964
+}

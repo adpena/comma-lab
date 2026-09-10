@@ -1,0 +1,10 @@
+{
+  "root": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42",
+  "file_count": 2115,
+  "unique_inode_bytes": 6261596774,
+  "limit_bytes": 8589934592,
+  "passed": true,
+  "free_bytes": 47968251904,
+  "policy": "All payloads preserved. No payload moved, deleted or deduplicated. Public scratch native builds were retained by compiler-cache receipts before inherited shell scratch cleanup.",
+  "score_claim": false
+}

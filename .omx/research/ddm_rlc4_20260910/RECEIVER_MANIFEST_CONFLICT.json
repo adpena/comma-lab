@@ -1,0 +1,29 @@
+{
+  "reference_receiver_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+  "candidate_receiver_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+  "normalized_different_paths": [
+    {
+      "path": "MANIFEST.sha256",
+      "reference": [
+        4570,
+        "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
+      ],
+      "candidate": [
+        4570,
+        "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
+      ]
+    }
+  ],
+  "reference_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/MANIFEST.sha256",
+    "bytes": 4570,
+    "sha256": "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
+  },
+  "candidate_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/MANIFEST.sha256",
+    "bytes": 4570,
+    "sha256": "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
+  },
+  "explanation": "Normalized receiver includes MANIFEST.sha256 verbatim; changing the counted archive pins requires changing the inflate.py hash in the mandatory regenerated manifest. No executable byte changes after normalization. Frozen contract left unchanged.",
+  "score_claim": false
+}

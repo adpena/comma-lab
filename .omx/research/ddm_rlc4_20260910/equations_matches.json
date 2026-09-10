@@ -1,0 +1,390 @@
+[
+  {
+    "canonical_consumers": [
+      "reports/latest.md",
+      "CLAUDE.md",
+      "tools/cathedral_autopilot_autonomous_loop.py"
+    ],
+    "canonical_producers": [
+      "tac.canonical_frontier_pointer",
+      "tools/scan_best_anchor_per_axis.py"
+    ],
+    "domain_of_validity": {
+      "qualifying_axes": [
+        "[contest-CPU]",
+        "[contest-CUDA]"
+      ],
+      "qualifying_hardware": [
+        "linux_x86_64_cpu",
+        "linux_x86_64_t4",
+        "linux_x86_64_a10g",
+        "linux_x86_64_a100",
+        "linux_x86_64_4090",
+        "linux_x86_64_h100",
+        "linux_x86_64_l40s"
+      ]
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "local_frontier_0p19205_contest_cpu_gha_linux_x86_64_20260519",
+        "empirical_output": {
+          "frontier_score": 0.19205
+        },
+        "inputs": {
+          "axis": "[contest-CPU]",
+          "hardware": "linux_x86_64_cpu"
+        },
+        "measurement_method": "gha_linux_x86_64_cpu_eval",
+        "measurement_utc": "2026-05-19T00:00:00Z",
+        "predicted_output": {
+          "frontier_score": 0.19205
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-05-19T13:42:14Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "unknown",
+          "measurement_axis": "[predicted]",
+          "promotion_eligible": false,
+          "rejection_reason": "canonical_equations_registry_initial_population",
+          "score_claim_valid": false,
+          "source_path": ".omx/state/canonical_frontier_pointer.json",
+          "source_sha256": "96c0f72aadf9d40d399ff761cf0937de5d9ac1a93bdd3d1c8b97ce231b5ed819"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/state/canonical_frontier_pointer.json"
+      }
+    ],
+    "equation_id": "canonical_frontier_pointer_v1",
+    "last_calibration_utc": "2026-05-19T00:00:00Z",
+    "latex_form": "F = \\text{argmax}_{\\text{anchor}} \\text{score}(\\text{anchor}) \\text{ over qualifying hardware} \\times \\text{qualifying axis}",
+    "name": "Frontier scores are pointer-only; hardcoded literals drift",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "F = argmax_anchor score(anchor) over qualifying hardware x qualifying axis; consult tac.canonical_frontier_pointer instead of hardcoded literals.",
+    "predicted_vs_empirical_residual": {
+      "gha_linux_x86_64_cpu_eval": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "predicted_from_model",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+      "captured_at_utc": "2026-05-19T13:42:14Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "predicted",
+      "hardware_substrate": "unknown",
+      "measurement_axis": "[predicted]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "<predictor:canonical_frontier_pointer.v1>",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "python_callable_module_path": "tac.canonical_frontier_pointer:load_canonical_frontier_pointer_lenient",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "axis": "str_axis_tag",
+      "hardware": "str_substrate_token"
+    },
+    "units_out": {
+      "frontier_score": "float_contest_score"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "tools.levelset_byte_close_and_eval",
+      "tac.unified_action"
+    ],
+    "canonical_producers": [
+      "tools.levelset_byte_close_and_eval"
+    ],
+    "domain_of_validity": {
+      "citation": "Balle integer-determinism [lit-hunt FEED-ig, advisory not independently read]",
+      "distinct_from": "McMullen superattracting-contraction (FEED-ie) is a separate convergence nugget, NOT this",
+      "mechanism": "integer_fixed_point_arithmetic",
+      "non_negotiable": "deterministic reproducibility (CLAUDE.md)",
+      "role": "decode_determinism_discipline_of_E0",
+      "tier": "discipline_theoretical"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "pythagorean_int_lowered_resize_adjoint_crossproc_bitident_20260713",
+        "empirical_output": "int Q15/int32: unique_hashes=1 cross_process_identical=True; float: unique_hashes=10 cross_process_identical=False; int max_abs_err_vs_numpy=0.007969",
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "fixture": "one 128-wide RGB slice, seed 157",
+          "hardware": "M5-Max Metal, MLX-0.31.2",
+          "n_processes": 10,
+          "op": "render-R bicubic 384->874 one-axis transpose (dup-index) accumulation",
+          "q_bits": 15
+        },
+        "measurement_method": "[macOS-MLX research-signal]",
+        "measurement_utc": "2026-07-14T00:37:45Z",
+        "predicted_output": "integer(Q15/int32) atomic scatter -> cross-process bit-identical (1 unique hash); float atomic scatter -> non-identical",
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_mlx_research_signal",
+          "captured_at_utc": "2026-07-14T00:37:45Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_mlx_research_signal",
+          "hardware_substrate": "macos_arm64_mlx",
+          "measurement_axis": "[macOS-MLX research-signal]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/pythagorean_exact_arithmetic_bitident_probe_20260713.json",
+          "source_sha256": "d543f77580029074b6bafec0634473652b13c64cb8c6d1fb503e6c0a70de6857"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/pythagorean_exact_arithmetic_bitident_probe_20260713.json"
+      }
+    ],
+    "equation_id": "decode_determinism_integer_arithmetic_v1",
+    "last_calibration_utc": "2026-07-14T00:37:45Z",
+    "latex_form": "\\text{decode}(A) \\equiv_{\\text{bit}} \\text{decode}(A)\\ \\forall\\,\\text{host} \\iff \\text{integer/fixed-point arithmetic}",
+    "name": "Bit-identical deterministic decode requires INTEGER arithmetic (Balle), NOT McMullen rigidity",
+    "next_recalibration_trigger": "never_auto_operator_only",
+    "one_line_summary": "Same archive -> bit-identical inflate every host requires integer/fixed-point decode arithmetic (Balle), distinct from the McMullen contraction nugget; floats are non-portable.",
+    "predicted_vs_empirical_residual": {
+      "[macOS-MLX research-signal]": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "predicted_from_model",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+      "captured_at_utc": "2026-06-29T16:42:14Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "predicted",
+      "hardware_substrate": "unknown",
+      "measurement_axis": "[predicted]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "<predictor:witness_system.decode_determinism_integer_arithmetic_v1>",
+      "source_sha256": "ecdde8e75303a64f03cd8e09392f3b7c3cd216c5c0c0f5d09e1d7cb68e8d03a4"
+    },
+    "python_callable_module_path": "tools.levelset_byte_close_and_eval",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "archive_A": "archive_zip_bytes",
+      "host": "decode_host"
+    },
+    "units_out": {
+      "decoded_output": "bit_identical_across_hosts"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "tac.through_r.harness",
+      ".omx/research/resize_exploit_flip_solver_20260709.md",
+      "witness_signal_allocation_decision",
+      "tools/levelset_byte_close_and_eval.py"
+    ],
+    "canonical_producers": [
+      "tac.through_r.flip_inverse",
+      "tac.through_r.resolution_chain"
+    ],
+    "domain_of_validity": {
+      "labels": "n600 GT argmax (gt_n600.npz['lstars']); candidate = resize_degraded_gt(192x256)",
+      "measurement_axis": [
+        "macOS-CPU advisory"
+      ],
+      "note": "means != ends: the resize half is EXACT + cheap; the binding wall is the SegNet response on interior-texture flips (#149), which no resize perturbation fixes. Positive value = WHERE to spend signal (annulus = resize-cheap; interior = needs real capacity).",
+      "promotion_eligible": false,
+      "scope": "SNAPSHOT-scope CHARACTERISATION on the DECODE side at THIS label cache -- a P10 flip-fix map, NOT a byte-closed exact-eval score",
+      "vehicle": [
+        "through_r_flip_solver",
+        "level_set_witness",
+        "v8_edge_centric_per_class_carrier"
+      ],
+      "verdict_scope": "FORMULATION -- the exact operator/adjoint/uniform-\u0394S is UNIVERSAL (any candidate); the 91.2% cheap fraction + 0.594 verify are INSTANCE (this resize-degradation candidate), an UPPER BOUND on a real witness (whose residual is interior-texture -- #149)"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "resize_exploit_exact_operator_uniform_dS_free_frac_20260709",
+        "empirical_output": {
+          "adjoint_identity": "<down(x),y> == <x,down\u1d40(y)> to 1e-6 (test_down_adjoint_is_exact_transpose)",
+          "delta_s_per_flip_n600": 8.477105034722222e-07,
+          "down_kernel_maxabs_vs_torch": 5.684341886080802e-14,
+          "footprint": "<=2x2 bilinear taps, weights sum to 1 (test_seg_pixel_footprint_is_bilinear_stencil)",
+          "free_flip_fraction_eps05": 0.09965799565400878,
+          "row_sums_dev_from_1": 0.0,
+          "verdict": "the RESIZE half is EXACT and cheap: the composite operator, its adjoint (the camera->SEG lever map), the uniform per-flip \u0394S, and the uint8 dead-zone are all closed-form and unit-verified. The SegNet response is the only non-exact factor."
+        },
+        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+        "inputs": {
+          "mechanism": "tac.through_r.flip_inverse.{ResizeComposite,solve_flip_costs,uint8_dead_zone}",
+          "operator_source": "impulse-probe of torch.nn.functional.interpolate (NOT re-derived)",
+          "resize_contract": "down = bilinear/align_corners=False/antialias=False -> matches upstream/modules.py:109 SegNet.preprocess_input EXACTLY",
+          "tests": "src/tac/through_r/tests/test_flip_inverse.py (24 passing, $0)"
+        },
+        "measurement_method": "source inspection + impulse-probe validation vs torch + 24 NO-FAKE unit tests",
+        "measurement_utc": "2026-07-09T00:00:00Z",
+        "predicted_output": {
+          "law_1_exact_operator": "extracted down op == torch (bit-exact); adjoint == transpose",
+          "law_2_uniform_dS": "\u0394S_per_flip = 100/(N\u00b7SEG_H\u00b7SEG_W) (same for every flip)",
+          "law_3_free_frac": "free-flip fraction ~ 2\u00b7eps (uniform uint8 round-frac)"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-07-10T16:13:48Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-verify the operator/adjoint/dead-zone if the upstream resize contract changes (resolution_chain.verify_against_upstream would fail first)",
+          "score_claim_valid": false,
+          "source_path": "src/tac/through_r/flip_inverse.py",
+          "source_sha256": "696ea31bef7188a593b3eadcc7cb2b977a9827e00275d4505ecc9231ad0118f8"
+        },
+        "residual": 0.0,
+        "source_artifact": "src/tac/through_r/flip_inverse.py"
+      },
+      {
+        "anchor_id": "resize_exploit_flip_ledger_frontier_verify_n600_20260709",
+        "empirical_output": {
+          "class_pair_dominant": "Road<->Lane (gt0<->wrong1 ~69k each) + Undrivable->Road 62.6k",
+          "cum_delta_s_free_plus_cheap": 0.28171539306640625,
+          "cum_delta_s_full": 0.3087683783637153,
+          "d_seg": 0.003087683783637153,
+          "frac_flicker_persistence0": 0.740705253158649,
+          "frac_flips_in_annulus_le5px": 0.9897923884932379,
+          "frontier_cheap": 332324,
+          "frontier_costed": 29545,
+          "frontier_free": 1,
+          "frontier_unreachable": 2368,
+          "total_flips": 364238,
+          "verdict": "the resize-adjoint targeting WORKS (net removal at the predicted camera pixels, minimal collateral) but the s0=1 linear cost model over-predicts fix-success by ~40%; per-flip step calibration + a footprint-overlap joint solve are OWED. The 91.2% cheap fraction is candidate-specific (resize-degradation) -- a real witness's residual is interior-texture (#149), so its cheap fraction is far smaller.",
+          "verify_collateral_new_flips": 82,
+          "verify_net_flips_removed": 222,
+          "verify_prediction_vs_realized": 0.59375,
+          "verify_realized_fixed_of_512": 304
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "candidate_class": "resize_degraded_gt(192x256): gt_n600 camera frame1 -> bilinear DOWN to a witness render grid -> R.up (bicubic + uint8) -> camera-uint8; flips are resize-induced (an UPPER BOUND on the real-witness fixable fraction -- #149 caveat)",
+          "labels": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz['lstars'] (600x384x512 int64)",
+          "scorer": "FROZEN CPU-torch SegNet (upstream/modules.py; NEVER MPS/MLX)",
+          "verify_protocol": "top-512 cheapest flips; resize-footprint perturbation (step 16 LSB toward GT appearance at the adjoint camera pixels); re-measured on 346 affected pairs"
+        },
+        "measurement_method": "n600_resize_degraded_gt_real_cpu_torch_segnet_ledger_frontier_targeted_verify",
+        "measurement_utc": "2026-07-09T00:00:00Z",
+        "predicted_output": {
+          "hypothesis": "resize-induced (boundary/annulus) flips are cheaply fixable by a perturbation injected at the exact bilinear-down footprint; interior-texture flips are not"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-07-10T16:13:48Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-run the ledger on a REAL witness render (mod32cap ep650) to measure the interior-texture-dominated cheap fraction; OR add per-flip step calibration + a local joint solve to lift prediction-vs-realized above 0.594; a byte-closed exact eval that ships resize-placed corrections converts this advisory finding to authority",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/resize_exploit_flip_solver_20260709.md",
+          "source_sha256": "8d0cfd21f459e53edfcf1afefd6b74bd273b7e7ffab5d08e4318eccb15b8d6c7"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/resize_exploit_flip_solver_20260709.md"
+      },
+      {
+        "anchor_id": "evaluator_resize_blind_coordinate_law_20260710",
+        "empirical_output": {
+          "camera_px_entering_either_resize": "786432 / 1017336",
+          "input_cols_used": "1024 / 1164",
+          "input_rows_used": "768 / 874",
+          "pair_real_linear_kernel_share": "85.5057% (pre-uint8/range; pair rank/kernel 884736/5219280 of 6104016 input dims)",
+          "receiver_consequence": "fill the 230,904 blind px/frame by a DETERMINISTIC GENERIC rule (rule-118 free); a learned/video-derived value there earns ZERO score. Solve sampled-footprint camera preimages blockwise per scorer pixel as bounded integer 4-to-1. STILL emit exactly 3,662,409,600 raw bytes / 1,200 frames \u2014 a short raw is a NO-FAKE/compliance failure, NEVER a rate lever.",
+          "unsampled_camera_px_per_frame": 230904,
+          "unsampled_rgb_coords_per_frame": 692712,
+          "verdict": "the 692,712 unsampled RGB axes are EXACTLY blind even for uint8; the remaining 1,769,472-dim within-footprint kernel is continuous-linear until bounded integer/float-axis survival is receipted",
+          "verdict_scope": "DERIVED-FROM-CODE (exact linear preprocessing graph; a real-linear kernel dimension, NOT a count of independently reachable integer code symbols)"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_SOURCE_INSPECTION",
+        "inputs": {
+          "advisory": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md (\u00a7Exact camera-to-scorer sampling geometry)",
+          "custody_sha256": "evaluate.py 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b; modules.py 065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa; frame_utils.py d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90; videos/0.mkv 2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+          "frozen_checkout_git": "991b317c41fe3aac657e0f0cb88fd831b2e4185a (molab_witness_machine_upstream_20260709, byte-identical to working upstream/)",
+          "kernel": "x(o)=(o+0.5)*in/out-0.5, bilinear align_corners=False antialias=False (modules.py:73,109); row-step 2.2760417 (874->384), col-step 2.2734375 (1164->512) \u2014 BOTH > 2 => disjoint 2x2 footprints"
+        },
+        "measurement_method": "exact bilinear-resize kernel bookkeeping on the frozen checkout (disjoint-footprint corollary of the impulse-probed operator this equation's derived anchor already pins)",
+        "measurement_utc": "2026-07-10T00:00:00Z",
+        "predicted_output": {
+          "question": "which camera coordinates does EITHER scorer resize read; how many are blind?"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-07-10T16:13:48Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "receipt the bounded integer/float-axis survival of the within-footprint kernel through uint8/clamp/resize/fresh-raw reload; wire the blind-coordinate generic fill into the byte-close receiver (tools/levelset_byte_close_and_eval.py) at #401",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
+          "source_sha256": "cd1914912ccbb1f8f7d771af81849ebf98c2f948270eacade6a702dafaf14231"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md"
+      }
+    ],
+    "equation_id": "resize_exploit_flip_fix_frontier_v1",
+    "last_calibration_utc": "2026-07-09T00:00:00Z",
+    "latex_form": "\\Delta S_{\\mathrm{flip}} = \\frac{100}{N\\,H\\,W}\\ (\\text{uniform});\\quad \\langle D x, y\\rangle = \\langle x, D^{\\top} y\\rangle;\\quad \\text{cost}(p) \\propto \\frac{\\mathrm{deficit}_p}{s_0\\,\\lVert w_{\\mathrm{footprint}}\\rVert_2}",
+    "name": "resize-exploit flip-fix frontier: the R composite is an EXACT linear kernel (+adjoint lever map) with a uint8 dead-zone; each fixed flip is worth a UNIFORM \u0394S so 'what needs to flip for optimal' = cheapest-first; MEASURED n600 -- resize flips are 98.98% annulus (#333), 91.2% resize-cheap, verify pred-vs-realized 0.594 (real SegNet); interior-texture is the #149 unreachable wall",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "R resize is an exact adjoint lever map + uint8 dead-zone; flips are uniform-\u0394S so fix cheapest-first; n600: 91.2% resize-cheap, verify 0.594, interior=#149 wall. Pointer UNMOVED.",
+    "predicted_vs_empirical_residual": {
+      "blind_coordinate_law_derived": 0.0,
+      "derived_source_inspection": 0.0,
+      "measured_n600": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-07-10T16:13:48Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "macos_arm64",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "a real-witness render ledger (interior-texture cheap fraction); per-flip step calibration + footprint joint solve (lift verify > 0.594); OR a byte-closed exact eval shipping resize-placed corrections (advisory -> contest authority)",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/resize_exploit_flip_solver_20260709.md",
+      "source_sha256": "8d0cfd21f459e53edfcf1afefd6b74bd273b7e7ffab5d08e4318eccb15b8d6c7"
+    },
+    "python_callable_module_path": "tac.through_r.flip_inverse:solve_flip_costs",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "candidate_frame": "camera_uint8_rgb",
+      "deficit": "segnet_logit_gap",
+      "footprint_weights": "bilinear_down_weights_sum1"
+    },
+    "units_out": {
+      "cost": "camera_lsb_l2",
+      "delta_s_per_flip": "contest_seg_score",
+      "prediction_vs_realized": "fraction"
+    }
+  }
+]

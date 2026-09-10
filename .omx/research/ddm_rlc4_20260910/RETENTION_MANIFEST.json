@@ -1,0 +1,86 @@
+{
+  "payloads": [
+    {
+      "bytes": 180178,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/archive.zip",
+      "sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b"
+    },
+    {
+      "bytes": 180078,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/retained/twin0.member",
+      "sha256": "d89558443c7ed220e598993bdc0732504dfe1ef20a6814e74ebd0ea1df04b3d6"
+    },
+    {
+      "bytes": 180078,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/retained/twin1.member",
+      "sha256": "d89558443c7ed220e598993bdc0732504dfe1ef20a6814e74ebd0ea1df04b3d6"
+    },
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/0.raw",
+      "sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159"
+    },
+    {
+      "bytes": 658,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/ARCHIVE_PARSEBACK.json",
+      "sha256": "63b1f50f9f8ed334fb23aa5fc098b22efaa3d8114427188dbbd103956e462323"
+    },
+    {
+      "bytes": 119536,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin0.envelope",
+      "sha256": "c7d9556080528ac8bfa307c7324b3bb8171fffc48478161a36a17dd07c982765"
+    },
+    {
+      "bytes": 119529,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin0.rc64",
+      "sha256": "e47a5c2402972c25d9718f55a2fe7bd806a1ded7ced55f9474f1e6e845483914"
+    },
+    {
+      "bytes": 119536,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin1.envelope",
+      "sha256": "c7d9556080528ac8bfa307c7324b3bb8171fffc48478161a36a17dd07c982765"
+    },
+    {
+      "bytes": 119529,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin1.rc64",
+      "sha256": "e47a5c2402972c25d9718f55a2fe7bd806a1ded7ced55f9474f1e6e845483914"
+    },
+    {
+      "bytes": 119620,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin2.envelope",
+      "sha256": "2b1dfe4e71ee6f62cde3bab176ad1ee77e612e6e07324b5be63e90da57ec774f"
+    },
+    {
+      "bytes": 119613,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin2.rc64",
+      "sha256": "106d1f513c624c22a009b31d56194ae2bec9e2889cef5bd2fed60b37420a3462"
+    },
+    {
+      "bytes": 119593,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin0.rider",
+      "sha256": "3fab88c0633779e407b2586b6626dbb4df148ad5d8e02b2aa4d43770f5ca9ed4"
+    },
+    {
+      "bytes": 119593,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/twin1.rider",
+      "sha256": "3fab88c0633779e407b2586b6626dbb4df148ad5d8e02b2aa4d43770f5ca9ed4"
+    },
+    {
+      "bytes": 60,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/retained/config.bin",
+      "sha256": "76f10171e42d27e6a1966a5a4a0a530c18541415b2a60a5fe9f8c2bb8af3d91a"
+    },
+    {
+      "bytes": 180178,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/retained/archive.twin0.zip",
+      "sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b"
+    },
+    {
+      "bytes": 180178,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/retained/archive.twin1.zip",
+      "sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b"
+    }
+  ],
+  "policy": "all stage payloads also retained in assigned store; 8 GiB cap, certify or block",
+  "score_claim": false
+}

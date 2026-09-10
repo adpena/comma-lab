@@ -1,0 +1,35 @@
+{
+  "sources": [
+    {
+      "path": "experiments/ddm_rlc4_rebase.py",
+      "bytes": 10463,
+      "sha256": "89bae717d2f005982ce8ef6626f274d9784afb50a455384e9382bbb52ab527c7"
+    },
+    {
+      "path": "experiments/ddm_rlc4_public.py",
+      "bytes": 7277,
+      "sha256": "e111031cf278a376ecbcc6e4524a254a7f00ed0f7a0dc52087109124c99c09df"
+    },
+    {
+      "path": "experiments/ddm_rlc4_native_cache.py",
+      "bytes": 2582,
+      "sha256": "7cad04c7ba47df3ac7baa6e6713d268e7a50bb332ff851eeaeecc0cae47d7135"
+    },
+    {
+      "path": "experiments/ddm_rlc4_evidence.py",
+      "bytes": 13334,
+      "sha256": "8f3bfb4bbe9cfaf45dcec3f93918d0d0003cf2726e54f136fab7392d2dfa65b7"
+    }
+  ],
+  "reviewer": "ddm_rlc4",
+  "review_scope": "Real source/field/config binding; delegate encoder globals set explicitly; triple independent states; immutable payloads and per-frame resumes; native first-request compilation and retained-byte cache; full cold raw comparison; non-authoritative historical timing risk and exact receiver mismatch preserved.",
+  "findings_closed": [
+    "Manifest paths now match existing relative-path format rather than adding ./; unused imports removed."
+  ],
+  "checks": [
+    "ruff pass",
+    "syntax compile pass"
+  ],
+  "limitations": "new production stages not yet executed; source trace still running; no claim that all intent gates pass",
+  "score_claim": false
+}

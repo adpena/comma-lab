@@ -1,0 +1,49 @@
+2026-09-10 12:40:58.449 xcodebuild[17539:27639604]  DVTFilePathFSEvents: Failed to start fs event stream.
+2026-09-10 12:40:58.663 xcodebuild[17539:27639603] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+{"stage": "public_token_decode", "pairs": 25, "checkpoint": "04cb9a6c1678054d6bfc25a1cf1c4e997f797f6eeff2205746f0a0ba0da8f3ce"}
+{"stage": "public_token_decode", "pairs": 50, "checkpoint": "eb3010d80e6e71251d61a3648e0ee6d3eb8da0290219c3a2d6b1a23cbc83d7ae"}
+{"stage": "public_token_decode", "pairs": 75, "checkpoint": "6235631c039d8b08ed69118ba316f841f3d25a56b8dbc6f62a1229db5ebd8acf"}
+{"stage": "public_token_decode", "pairs": 100, "checkpoint": "00a81c3d38a26ab1befaffa3a928ede0c320a91c5c2543f72d99acaac6aad878"}
+{"stage": "public_token_decode", "pairs": 125, "checkpoint": "a2adfafd482d19d26ed119264052bbb1ce60a162187101d40f0f019dcd0b0a67"}
+{"stage": "public_token_decode", "pairs": 150, "checkpoint": "99f5ece47442fc8d6804ba8a896a5f6767f45044b0afc08027947ddb6eb11f45"}
+{"stage": "public_token_decode", "pairs": 175, "checkpoint": "bf548bb63956defd52cb06d5b1269186ac9bfffbcfff8bf684ab1d50312216a6"}
+{"stage": "public_token_decode", "pairs": 200, "checkpoint": "cd7e7f61744fcc576d32484485d1d4ecd88310a78519a299026085c0342c9d1e"}
+{"stage": "public_token_decode", "pairs": 225, "checkpoint": "458f72a2f18d383e3556ba08bb11f63052e702494b51938b8b13a6efede5e343"}
+{"stage": "public_token_decode", "pairs": 250, "checkpoint": "edb04928fc35f7771127ac2cbfacc1020e6fd451625d91d1d1f15e8cc218ccc7"}
+{"stage": "public_token_decode", "pairs": 275, "checkpoint": "41c5721be9663b37eaee1087738076c28533dca8defcb1542d9203b2b8ca1f4b"}
+{"stage": "public_token_decode", "pairs": 300, "checkpoint": "d4fdbf1edd4a46539a2d75b4a4c192740c8a12c30da64c0ddac047b747721cec"}
+{"stage": "public_token_decode", "pairs": 325, "checkpoint": "63bf8144e561e01cccbfa8244692246e2bd7231ef79dffd083bad08503303d37"}
+{"stage": "public_token_decode", "pairs": 350, "checkpoint": "cef6bcedf5e7c99e9cb1ce5504653b661befc9832ef10c811da98e3d1d7cbaca"}
+{"stage": "public_token_decode", "pairs": 375, "checkpoint": "82b32f3bf30455b122f76d985405f89d6615eb72cd36e67a88979f8fdd845b4e"}
+{"stage": "public_token_decode", "pairs": 400, "checkpoint": "224c29bf7b89550a25b984b986ce78b64e160627a7ed8099c6a5bdb81caf4cfb"}
+{"stage": "public_token_decode", "pairs": 425, "checkpoint": "36046e263b78a1c777afe96e00868ffcade21e1ba8a19539ec06383493197ad9"}
+{"stage": "public_token_decode", "pairs": 450, "checkpoint": "38502ac0991b506071f9f16b127c360dbcd1e40861b42a58379f476301ad0c51"}
+{"stage": "public_token_decode", "pairs": 475, "checkpoint": "ba4b369abc1af85b0355718937c30a3ed94f77dce637705608a82ef04dd42fce"}
+{"stage": "public_token_decode", "pairs": 500, "checkpoint": "7024f07e9f091f6e0aa5559009b77cd69e3ea6fbffa5b1d4b5496510daccc984"}
+{"stage": "public_token_decode", "pairs": 525, "checkpoint": "08d3a5ef0916e78d5dff3632e0dc6289fda576a1e823c6ad02fba25151f9e1ab"}
+{"stage": "public_token_decode", "pairs": 550, "checkpoint": "9e9e4c12aaf497a625b684a8d9a878ba547d479700f963d1d52e0ab2faf0125a"}
+{"stage": "public_token_decode", "pairs": 575, "checkpoint": "3fd6586b1e2546dd6c5b0fd2a0578376be1a21e19302ff33365b6b60c21dbb43"}
+{"stage": "public_token_decode", "pairs": 600, "checkpoint": "5ee978469f6fbb17454361c4e1bf9652d5a9375d4f6ab60a199d6555fe9f5eab"}
+rendered masters 50/600 in 12.7s
+rendered masters 100/600 in 27.2s
+rendered masters 150/600 in 41.9s
+rendered masters 200/600 in 56.8s
+rendered masters 250/600 in 71.6s
+rendered masters 300/600 in 86.5s
+rendered masters 350/600 in 101.4s
+rendered masters 400/600 in 116.4s
+rendered masters 450/600 in 131.3s
+rendered masters 500/600 in 146.3s
+rendered masters 550/600 in 161.1s
+rendered masters 600/600 in 175.9s
+rendered carriers 64/600 in 176.4s
+rendered carriers 128/600 in 176.8s
+rendered carriers 192/600 in 177.3s
+rendered carriers 256/600 in 177.7s
+rendered carriers 320/600 in 178.1s
+rendered carriers 384/600 in 178.5s
+rendered carriers 448/600 in 179.0s
+rendered carriers 512/600 in 179.4s
+rendered carriers 576/600 in 179.8s
+rendered carriers 600/600 in 180.0s
+{"archive_bytes": 180178, "archive_sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b", "axis": "[macOS-CPU advisory]", "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/.f26_decode_checkpoints", "checkpoint_resume": false, "compensation": null, "decode_and_render_seconds": 995.452417249995, "device": {"platform_machine": "arm64", "platform_system": "Darwin", "reproducibility": {"cpu_num_interop_threads": 1, "cpu_num_threads": 4}, "requested_device": "cpu", "resolved_device": "cpu", "torch_version": "2.12.1"}, "pair_count": 600, "parallel_render": null, "raw_bytes": 3662409600, "raw_sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159", "residual_schema": "fixed_boundary_int6", "schema": "ddm_f26p_inflate_report.v1", "score_claim": false, "selector": {"frame_count": 600, "mode_count": 8, "payload_bytes": 34, "payload_sha256": "15c256dcb6a6563966b43f51f2616d7f1c03d16e1812a8dcb5d80ceea432ddd0"}, "stage_seconds": {"archive_setup": 2.4167243750125635, "frame0_selector_and_io": 47.42761437500303, "neural_render_and_resize": 230.55491849999817, "render_checkpoint_copy": 0.0, "token_decode_or_checkpoint_load": 713.7927753749973, "total_including_raw_sha256": 995.452417249995}, "token_cache": {"status": "DISABLED"}, "token_decoder": {"adapter_sha256": "", "checkpoint_resumed_from_frame": 0, "corrected_cdf_input_sha256": "9cba1ee4be9dbd793230b8670cadb228913726e7118e2500a96c42d0b54fca5f", "corrected_quantized_logit_sha256": "8d79bacb324bfaa9a7e83ba4b71351d335142c268acadc00ecb6fca2aea1a086", "decode_runtime_seconds": 710.7456450462341, "decoded_token_sha256": "d5248c775e49d8ac4299d2b0b60ffe5cffbeaafe348ef57986a169d3f118322b", "decoder_bit_position": 956289, "free_corrector": "NativeFreeCorrector", "logit_and_cdf_digest_scope": "suffix from checkpoint_resumed_from_frame; token digest is full n600", "tail_mixer": "RLC1-counted-Q16", "token_codec": "rc64"}}

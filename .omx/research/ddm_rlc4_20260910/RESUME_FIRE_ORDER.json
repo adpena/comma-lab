@@ -1,0 +1,27 @@
+{
+  "schema": "ddm_rlc4.fire_orders.v1",
+  "orders": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_HANDOFF.json",
+      "fire_trigger": "Git-writable MAIN harvests the final verified serializer bundle",
+      "action": "Land the exact verified production source and evidence bundle, preserving unrelated work. Post-attempt verification and status files remain separate handoff metadata."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN / pr12-family",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/RECEIVER_MANIFEST_CONFLICT.json",
+      "fire_trigger": "Harvest of the real rc3 producer refusal and the one-path normalized receiver diff",
+      "action": "Adjudicate the conflict between refreshing MANIFEST.sha256 and requiring the old receiver digest. Freeze any authorized change prospectively and explicitly decide custody of these already-produced bytes; do not retimestamp evidence. Include the bare-CLI experiments import failure in producer readiness."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN / newly chartered producer",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42",
+      "fire_trigger": "A prospective MAIN/pr12-family resolution and explicit resumed charter while the pointer still names move42",
+      "action": "Resume from retained real candidate and proofs under the resolved production-ordering rules; emit and commit a valid intent and exercise both normal-seal refusals. MAIN alone authorizes, fires, harvests and completes afterward."
+    }
+  ],
+  "score_claim": false
+}

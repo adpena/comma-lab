@@ -1,0 +1,16 @@
+{
+  "archive_sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b",
+  "member": {
+    "bytes": 180078,
+    "name": "p",
+    "sha256": "d89558443c7ed220e598993bdc0732504dfe1ef20a6814e74ebd0ea1df04b3d6"
+  },
+  "receiver_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+  "runtime_sha256": "816f72e31639c8365ef6d5aa3f0738a235fed8d6dfd879d15d1838a5fa847333",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 180238,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/candidate/candidate_runtime/archive.zip",
+    "sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "sources": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_charter_20260910.md",
+      "bytes": 4663,
+      "sha256": "096f0db8f4e91be09eb4b8e742233a2ce6c2da1d61257a7b2bea9057ea6698b6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc3_resume_rebase_cure_onto_move42_prefire_intent_charter_20260910.md",
+      "bytes": 6662,
+      "sha256": "6c0250d723fd8ea53773f439fe9d114f2b15df222e9d38793597602b03362386"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_rebase_rule118_cure_onto_move42_charter_20260910.md",
+      "bytes": 6604,
+      "sha256": "326744a8a951b5ab0a50b349cec6e666d5bd2f520c27f618653c5394a1327e67"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+      "bytes": 2682,
+      "sha256": "59158b8fce89e12c06eb4ae3e1cb71f347daa78a2cc5e8a061e1899be1150c2a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+      "bytes": 42309,
+      "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_rebase_rule118_cure_onto_move42_20260910.md",
+      "bytes": 11248,
+      "sha256": "76ba13cf2ef8f91d731a8526d65f3bd96d7d3799c7002e9a99ed56e77fa24caf"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rlc3_move42_trace.py",
+      "bytes": 18728,
+      "sha256": "436ee464bdd00c9f06a16cfae889d05f2cda5be083aee937010d88b1e06fd5cd"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "bytes": 19632,
+      "sha256": "a5c7021579ec7b71f345f8ec26396e755c31aac266de30e3340d5337b11a6f3d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "bytes": 439297,
+      "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "bytes": 439297,
+      "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    }
+  ],
+  "head_at_intake": "950d082b409748ef58faa44d8c05b7953c98bca8",
+  "score_claim": false
+}

@@ -1,0 +1,7 @@
+.omx/state/lane_registry.json:84775:      "id": "ddm_j6_366_prefire_adversarial_review_20260723T065554Z",
+.omx/state/lane_registry.json:84776:      "name": "DDM J6 #366 prefire adversarial review",
+.omx/state/lane_registry.json:84813:      "notes": "research_only=true; $0 independent prefire gate; no campaign launch; MAIN landing review required",
+.omx/state/lane_registry.json:84817:      "id": "ddm_j6a_366_prefire_contract_hardening",
+.omx/state/lane_registry.json:84818:      "name": "DDM #366 prefire contract hardening",
+rg: .omx/state/task_status.json: No such file or directory (os error 2)
+rg: .omx/state/active_lane_claims.json: No such file or directory (os error 2)

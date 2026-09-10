@@ -1,0 +1,9 @@
+{
+  "returncode": 3,
+  "intent_exists": false,
+  "argv_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_ARGV.json",
+  "environment": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_ENV.json",
+  "stdout": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STDOUT.txt",
+  "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STDERR.txt",
+  "score_claim": false
+}

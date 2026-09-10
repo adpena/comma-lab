@@ -1,0 +1,23 @@
+{
+  "candidate_runtime_unchanged": true,
+  "move42_source_runtime_unchanged": true,
+  "contract_sources_unchanged": true,
+  "source_trace_unchanged": true,
+  "shared_index_unchanged_since_intake": true,
+  "pointer": {
+    "pointer_axis": "contest_cuda",
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "pointer_score": 0.1374765052591843,
+    "pointer_archive_sha256": "f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f"
+  },
+  "producer_refusal": {
+    "returncode": 3,
+    "intent_exists": false,
+    "argv_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_ARGV.json",
+    "environment": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_ENV.json",
+    "stdout": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STDOUT.txt",
+    "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STDERR.txt",
+    "score_claim": false
+  },
+  "score_claim": false
+}

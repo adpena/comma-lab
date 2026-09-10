@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/Users/adpena/Projects/pact/tools/make_candidate_seal.py", line 376, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/adpena/Projects/pact/tools/make_candidate_seal.py", line 258, in main
+    return _prefire_main(args, supplied)
+  File "/Users/adpena/Projects/pact/tools/make_candidate_seal.py", line 225, in _prefire_main
+    document = build_prefire_intent(candidate_id=args.candidate_id, runtime_dir=Path(args.runtime_dir),
+        evidence_paths={key: Path(getattr(args, name)) for key, name in mapping.items()},
+        public_entrypoint_smoke=smoke.get("public_entrypoint_smoke", smoke), net_ds_threshold=args.admit_bar_net_ds,
+        retained_paths=[str(Path(p).resolve()) for p in args.retained_path], falsifiers=args.falsifier, out_path=paths[0])
+  File "/Users/adpena/Projects/pact/src/tac/candidate_seal.py", line 2222, in build_prefire_intent
+    return validate_prefire_intent(out_path, require_committed=False, repo=repo, pointer_path=pointer_path)
+  File "/Users/adpena/Projects/pact/src/tac/candidate_seal.py", line 2132, in validate_prefire_intent
+    validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=repo)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/src/tac/candidate_seal.py", line 2051, in validate_prefire_risk
+    problems, _ = validate_decode_wall_clock(leg, runtime_dir=Path(leg["runtime_dir"]), archive_path=Path(leg["archive_path"]))
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/src/tac/decode_wall_clock.py", line 403, in validate_decode_wall_clock
+    seconds, facts = _t4_direct(leg.get("candidate_t4_receipt"), runtime_dir, archive_path, leg)
+                     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/adpena/Projects/pact/src/tac/decode_wall_clock.py", line 307, in _t4_direct
+    runtime_sha = measure_t4_runtime_digest(runtime_dir)
+  File "/Users/adpena/Projects/pact/src/tac/decode_wall_clock.py", line 191, in measure_t4_runtime_digest
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+ModuleNotFoundError: No module named 'experiments'

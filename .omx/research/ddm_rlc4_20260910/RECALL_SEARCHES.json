@@ -1,0 +1,68 @@
+[
+  {
+    "argv": [
+      "rg",
+      "-l",
+      "counted.{0,40}(rider|geometry)|prefire_intent|receiver.delta",
+      ".omx/research"
+    ],
+    "rc": 0,
+    "output": ".omx/research/ddm_rlc4_20260910/recall_0.txt",
+    "lines": 135
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "rule.?118|prefire|receiver.*timing",
+      "docs"
+    ],
+    "rc": 0,
+    "output": ".omx/research/ddm_rlc4_20260910/recall_1.txt",
+    "lines": 5
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "counted.rider|rule.?118|prefire|receiver.*timing",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "rc": 0,
+    "output": ".omx/research/ddm_rlc4_20260910/recall_2.txt",
+    "lines": 172
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "rlc[1234]|prefire|counted.rider",
+      ".omx/state/task_status.json",
+      ".omx/state/lane_registry.json",
+      ".omx/state/active_lane_claims.json"
+    ],
+    "rc": 2,
+    "output": ".omx/research/ddm_rlc4_20260910/recall_3.txt",
+    "lines": 5
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "rc": 0,
+    "output": ".omx/research/ddm_rlc4_20260910/equations.json"
+  }
+]

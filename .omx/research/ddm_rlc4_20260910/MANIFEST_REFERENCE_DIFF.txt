@@ -1,0 +1,11 @@
+--- /Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/MANIFEST.sha256
++++ /Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/MANIFEST.sha256
+@@ -7,7 +7,7 @@
+ a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e  cpr1/inflate.py
+ dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1  cpr1/integer_model_io.py
+ 7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2  cpr1/rc1_adaptive_model_sections.py
+-93303ee37fb9161de3c8adfd346d8738b6fe07168dbc4a89820c3ea2e97f38c9  inflate.py
++c186a94a704b32fad506cb0963665ab62e3bc855195837180c5c1cef7512f76e  inflate.py
+ 0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618  inflate.sh
+ 3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8  runtime/__init__.py
+ 495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38  runtime/baseline.py

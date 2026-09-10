@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "experiments/ddm_rlc4_rebase.py",
+    "encode",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42"
+  ],
+  "completed": true,
+  "execution_id": "ddm_rlc4_independent_rc64_state_0",
+  "execution_scope": "distinct native arithmetic encoder state in one full n600 process; no copied output",
+  "n_samples": 600,
+  "payload": {
+    "bytes": 180078,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/retained/twin0.member",
+    "sha256": "d89558443c7ed220e598993bdc0732504dfe1ef20a6814e74ebd0ea1df04b3d6"
+  },
+  "producer_source_commit": "cdce2752b69cad7de026906683ad414f7f8a5955",
+  "score_claim": false,
+  "source_execution": {
+    "bytes": 4147,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/encode/RESULT.json",
+    "sha256": "65af98b172d103ae9084a6a734eafc51ac7b23b2073f56b5c42e1330f056a7c3"
+  }
+}

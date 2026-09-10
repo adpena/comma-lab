@@ -1,0 +1,15 @@
+{
+  "classification": "DERIVED CONDITIONAL, not a measured candidate contest score",
+  "axis": "[conditional contest-CUDA arithmetic from macOS raw identity, exact bytes and move42 components]",
+  "base_score": 0.1374765052591843,
+  "base_archive_bytes": 180238,
+  "candidate_archive_bytes": 180178,
+  "normalizer_bytes": 37545489,
+  "rate_multiplier": 25,
+  "net_dS": -3.995153718733028e-05,
+  "conditional_score": 0.13743655372199698,
+  "strict_bar": -2e-05,
+  "maximum_integer_archive_bytes": 180207,
+  "score_claim": false,
+  "candidate_exact_evaluator_run": false
+}

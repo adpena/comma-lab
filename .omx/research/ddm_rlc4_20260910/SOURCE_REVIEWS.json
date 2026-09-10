@@ -1,0 +1,42 @@
+{
+  "schema": "ddm_rlc4.source_reviews.v1",
+  "sources": [
+    {
+      "path": "experiments/ddm_rlc4_evidence.py",
+      "bytes": 13145,
+      "sha256": "84d467fa2e4c01376fa4f970de1f8b7232ea40370764987ec8e3a960dd497362"
+    },
+    {
+      "path": "experiments/ddm_rlc4_native_cache.py",
+      "bytes": 2582,
+      "sha256": "7cad04c7ba47df3ac7baa6e6713d268e7a50bb332ff851eeaeecc0cae47d7135"
+    },
+    {
+      "path": "experiments/ddm_rlc4_public.py",
+      "bytes": 7277,
+      "sha256": "e111031cf278a376ecbcc6e4524a254a7f00ed0f7a0dc52087109124c99c09df"
+    },
+    {
+      "path": "experiments/ddm_rlc4_rebase.py",
+      "bytes": 10463,
+      "sha256": "89bae717d2f005982ce8ef6626f274d9784afb50a455384e9382bbb52ab527c7"
+    }
+  ],
+  "passes": [
+    {
+      "pass": 1,
+      "scope": "Real encoder delegation and source control; exact counted config; full checkpoints; first native builds retained; no-payload-overwrite storage guards."
+    },
+    {
+      "pass": 2,
+      "scope": "Adversarial fresh/resumed branches and exact schema fields. Strengthened census from AST comparison to byte-level archive-pin normalization so comments cannot hide a dependency delta. Risk receiver endpoints stay measured even if mismatched; no fake gate pass."
+    }
+  ],
+  "validation": [
+    "Ruff all four files PASS",
+    "Python syntax compile all four files PASS"
+  ],
+  "shared_assumption_challenge": "The gate assumes refreshing a manifest preserves normalized receiver identity. The authoritative digest includes the manifest bytes; this may be a contract conflict rather than a coding or timing failure. The real producer must adjudicate it.",
+  "limitations": "Production encoder, public parseback and intent still pending trace completion at review time. No timing or score authority.",
+  "score_claim": false
+}

@@ -1,0 +1,4 @@
+{
+  "PYTHONPATH": "/Users/adpena/Projects/pact:/Users/adpena/Projects/pact/src",
+  "reason": "Unchanged CLI must import its frozen experiments.contest_auth_eval dependency; exact repository modules, no stubs, no source edit or semantic override."
+}
