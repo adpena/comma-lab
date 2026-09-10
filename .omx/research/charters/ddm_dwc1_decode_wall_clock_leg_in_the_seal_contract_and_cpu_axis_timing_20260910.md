@@ -1,0 +1,30 @@
+# ddm_dwc1 — the seal contract gains a MEASURED decode wall-clock leg (tc4's row timed out inflate.sh at exactly 1,800 s on the contest T4 — a paid row lost, undetectable by any existing gate), and this lineage's CPU-axis decode time is measured for the first time on the live pointer's receiver (charter, 2026-09-10)
+
+Tokens: `[no-triality] [p0-ledger-ok]` · Owner: codex arm (gpt-6-astra, high) · Spawned by MAIN 2026-09-10 (generation 2: generation 1 was spawned on an EMPTY charter file by MAIN's error and stopped). Sources: the failure receipt `/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json` (artifacts `contest_auth_eval.stderr.log`: `ProcessGroupTimeout … timed out after 1800.0 seconds`; `inflate timeout 1800s`), tc4 (`4e486d1ce`: the receiver with further per-token maps; its memo's "one-thread probing violates the inherited four-thread requirement"), tc3 (`62451b9d3`; move 41's runtime `/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime` — decoded in time on T4: the poller took 1,434 s end-to-end incl. scoring), the seal contract (`tac.candidate_seal`, scg1/scg2: `public_entrypoint_smoke` schema `candidate_public_entrypoint_smoke.v1`; `tools/make_candidate_seal.py`; `tools/fire_modal_auth_eval.py` refuses without the smoke), CLAUDE.md: the 30-min full-eval budget on "T4 16GB-VRAM or CPU 4×/16GB" (`upstream/README.md:114`), "Submission auth eval — BOTH CPU AND CUDA" (contest-CPU ranks the public leaderboard; NEVER measured on this lineage), the two-landing rule. Axes: seconds `[measured, local CPU advisory; T4 from receipts]`; `score_claim=false`.
+
+## MANDATE
+(1) SEAL LEG: add a structured `decode_wall_clock` group to the seal (schema-versioned, validated by `tac.candidate_seal` like the public smoke): a local public-entrypoint decode timing (`inflate.sh` on ≥ 20 consecutive frames at the contest's CPU thread count = 4, wall seconds, host, thread count, receipt path), the extrapolation to 600 frames, the CPU→T4 ratio used (from a named receipt: tc3's T4 poller vs its local timing, or MAIN's fire receipts), the projected T4 decode seconds, and a margin rule — REFUSE the seal when projected T4 decode > 0.7 × 1,800 s or when the field is absent. The fire tool refuses a seal without it (as it does for the smoke). Backfill: the live pointer (move 41) gets its leg measured and recorded; tc4's candidate gets its leg measured post hoc (it must FAIL the rule — that is the positive control). (2) CPU AXIS: measure move 41's receiver decode on this host at 4 threads for the full 600 frames if ≤ 40 min, else ≥ 100 frames extrapolated; record `[macOS-CPU advisory]` with the caveat that Linux x86_64 is the axis (CLAUDE.md); state whether the CPU budget is at risk for the PR swap packet. (3) Price the per-token cost of tc3's predictor and tc4's maps in seconds per 10⁶ tokens (measured, not estimated) so future map charters carry a seconds budget beside the bytes.
+
+## PRIOR-LAW PREDICTION (m38)
+- Move 41's receiver: local 4-thread decode ≈ 1.5–2.5× T4's (T4 ≈ 900–1,100 s incl. scoring per the poller); projected T4 decode ≈ 600–900 s → passes the 0.7 rule with margin. tc4's: projected > 1,800 s → refused (positive control). Per-token: tc3 ≈ 1–3 µs/token; tc4's maps ≈ +5–15 µs/token — the budget-breaking class.
+- **FALSIFIER:** if move 41's projected T4 decode is itself > 1,260 s, the live pointer is inside its margin only by luck — report it first; MAIN decides.
+
+## SCOPE
+Apparatus (seal schema + validator + fire-tool refusal + tests) + two timing measurements + the per-token price table. No score work, no Modal.
+
+## HARD CONSTRAINTS
+- `upstream/` READ-ONLY; never touch the pointer tree; timings run on COPIES of the runtime under your dir; ≤ 4 threads (that IS the measurement); launcher `--nice-best-effort`; bulk ≤ 8 GiB on whichever SSD has room.
+- Seal changes must keep every existing seal valid (schema-versioned addition; older seals show `decode_wall_clock: absent` and the fire tool refuses NEW seals without it — strict-flip in the same batch, backfilled for the live pointer). `.py` = 2 visible review passes + ruff; ≥ 12 tests; serializer commits w/ post-edit `--expected-content-sha256`; if git object writes are refused, `landing.patch` + bundle with HEAD ref. Tokens `[no-triality] [p0-ledger-ok]`; NEVER a Co-Authored-By or AI-attribution trailer. Checkpoint `tools/subagent_checkpoint.py --subagent-id ddm_dwc1`.
+- rp1 round 2 is LIVE and about to seal: land the fire-tool refusal LAST and encode the inheritance rule — receiver digest == pointer's receiver digest ⇒ the leg is INHERITED from the pointer's measurement, recorded as such — so a tail/field-only candidate is not blocked.
+- The local SCORER LANE belongs to MAIN, always. Do NOT write who holds it into a charter (the #1210 stale-precondition genus, memo ddm_bz2_bornsmall_capacity_ceiling 2026-08-29).
+
+## PRIOR NEGATIVE SIGNAL
+- tc4: the first receiver extension timed out — the class this gate exists for. # VERDICT_SCOPE_OK: a timing failure of one receiver variant, INSTANCE scope; the gate prevents the class
+- pm2/scg1: gates that refuse at the seal, not at the fire, are the pattern; the fire tool's refusal is the backstop.
+
+## OPTIMAL FORM
+- Reference form: scg1's seal-contract landing (`89f9656f3`) and pm2's gate pattern (`8038f9e77`). SCOPE reductions: none. MECHANISM reductions FORBIDDEN: no estimated timings; no single-thread timing presented as the contest's.
+- **PRIOR-LAW PREDICTION (falsifiable):** as above.
+
+## DELIVERABLE
+Seal schema + validator + fire refusal + tests; move 41's measured leg (backfilled into a receipt beside its seal); tc4's post-hoc leg (the positive control); the per-token seconds table; memo `.omx/research/ddm_dwc1_decode_wall_clock_seal_leg_20260910.md`. Commit via the serializer. End with the live frontier line.
