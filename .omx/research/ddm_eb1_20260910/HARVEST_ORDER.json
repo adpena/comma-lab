@@ -1,0 +1,16 @@
+{
+  "schema": "ddm_eb1_harvest_order_v1",
+  "task_id": "ddm_eb1_entropy_bound_20260910::HARVEST",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_stores": [
+    ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md",
+    ".omx/state/canonical_equations_registry.jsonl",
+    ".omx/state/canonical_task_status.jsonl"
+  ],
+  "fire_trigger": "Harvest the verified isolated ddm_eb1 landing; use narrow serializer import after source/hash review.",
+  "action": "Import memo, count instrument and the one equation event. Record conditional population bounds, no pointwise/tail entropy verdict, token/output distinction and charter-D arithmetic correction.",
+  "no_scorer_dispatch": true,
+  "live_store_written": false,
+  "source_law_or_individual_floor_proved": false
+}

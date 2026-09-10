@@ -1,0 +1,231 @@
+{
+  "conclusion": "CONDITIONAL_POPULATION_CONVERSES_COMPUTED; INDIVIDUAL_VIDEO_AND_TAIL_OPTIMALITY_NOT_IDENTIFIED",
+  "bounds": [
+    {
+      "D": 6270,
+      "conservative_log2_N": 34963,
+      "conservative_log2_ball_upper": "15221.306929175744981114595275315601",
+      "conservative_lower_bits_certified": 19741,
+      "conservative_lower_bytes": 2467.625,
+      "natural_log2_N_interval": [
+        "76287.053911060846516235714690003782",
+        "76287.053911060846516235865370126667"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "36238.169888670774104378780872468217",
+        "36238.169888670774104378919913578250"
+      ],
+      "natural_lower_bits_certified": 40048,
+      "natural_lower_bytes": 5006.0,
+      "natural_minimax_lower_bits_certified": 40048,
+      "natural_minimax_lower_bytes": 5006.0,
+      "uniform_natural_expected_prefix_inherits_subset_bound": false
+    },
+    {
+      "D": 12540,
+      "conservative_log2_N": 34963,
+      "conservative_log2_ball_upper": "23726.398315208132373769012937926145",
+      "conservative_lower_bits_certified": 11236,
+      "conservative_lower_bytes": 1404.5,
+      "natural_log2_N_interval": [
+        "76287.053911060846516235714690003782",
+        "76287.053911060846516235865370126667"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "59484.764245636205558628161331379423",
+        "59484.764245636205558628253423813437"
+      ],
+      "natural_lower_bits_certified": 16802,
+      "natural_lower_bytes": 2100.25,
+      "natural_minimax_lower_bits_certified": 16802,
+      "natural_minimax_lower_bytes": 2100.25,
+      "uniform_natural_expected_prefix_inherits_subset_bound": false
+    },
+    {
+      "D": 25080,
+      "conservative_log2_N": 34963,
+      "conservative_log2_ball_upper": "32920.089213166378991729899173797006",
+      "conservative_lower_bits_certified": 2042,
+      "conservative_lower_bytes": 255.25,
+      "natural_log2_N_interval": [
+        "76287.053911060846516235714690003782",
+        "76287.053911060846516235865370126667"
+      ],
+      "natural_log2_ambient_ball_interval": [
+        "91961.507303107077228204168740280608",
+        "91961.507303107077228204278785545462"
+      ],
+      "natural_lower_bits_certified": 0,
+      "natural_lower_bytes": 0.0,
+      "natural_minimax_lower_bits_certified": 2042,
+      "natural_minimax_lower_bytes": 255.25,
+      "uniform_natural_expected_prefix_inherits_subset_bound": false
+    }
+  ],
+  "geometry": {
+    "gt": {
+      "area": [
+        27407371,
+        690753,
+        58413069,
+        1460386,
+        29993221
+      ],
+      "boundary_cells": 2551338,
+      "boundary_edges": 1619850,
+      "components": [
+        1259,
+        16626,
+        646,
+        2209,
+        600
+      ],
+      "pair_edges": {
+        "0-1": 814105,
+        "0-2": 290128,
+        "0-3": 90320,
+        "0-4": 317551,
+        "1-2": 1567,
+        "1-3": 1296,
+        "1-4": 5119,
+        "2-3": 99601,
+        "2-4": 0,
+        "3-4": 163
+      },
+      "per_frame_distribution": {
+        "boundary_cells": {
+          "max": 5387,
+          "mean": 4252.23,
+          "median": 4271.5,
+          "min": 3291
+        },
+        "boundary_edges": {
+          "max": 3492,
+          "mean": 2699.75,
+          "median": 2716.5,
+          "min": 2048
+        }
+      }
+    },
+    "move37": {
+      "area": [
+        27406243,
+        692021,
+        58412959,
+        1460348,
+        29993229
+      ],
+      "boundary_cells": 2564996,
+      "boundary_edges": 1637797,
+      "components": [
+        1856,
+        18051,
+        1059,
+        2840,
+        793
+      ],
+      "pair_edges": {
+        "0-1": 820316,
+        "0-2": 293937,
+        "0-3": 92602,
+        "0-4": 318595,
+        "1-2": 2153,
+        "1-3": 1843,
+        "1-4": 5433,
+        "2-3": 102661,
+        "2-4": 50,
+        "3-4": 207
+      },
+      "per_frame_distribution": {
+        "boundary_cells": {
+          "max": 5425,
+          "mean": 4274.993333333333,
+          "median": 4288.0,
+          "min": 3309
+        },
+        "boundary_edges": {
+          "max": 3547,
+          "mean": 2729.661666666667,
+          "median": 2741.0,
+          "min": 2080
+        }
+      }
+    },
+    "move40": {
+      "area": [
+        27406475,
+        691796,
+        58413008,
+        1460309,
+        29993212
+      ],
+      "boundary_cells": 2564783,
+      "boundary_edges": 1637623,
+      "components": [
+        1855,
+        18037,
+        1058,
+        2833,
+        791
+      ],
+      "pair_edges": {
+        "0-1": 820195,
+        "0-2": 293952,
+        "0-3": 92600,
+        "0-4": 318574,
+        "1-2": 2143,
+        "1-3": 1833,
+        "1-4": 5425,
+        "2-3": 102644,
+        "2-4": 50,
+        "3-4": 207
+      },
+      "per_frame_distribution": {
+        "boundary_cells": {
+          "max": 5425,
+          "mean": 4274.638333333333,
+          "median": 4286.0,
+          "min": 3304
+        },
+        "boundary_edges": {
+          "max": 3547,
+          "mean": 2729.3716666666664,
+          "median": 2741.0,
+          "min": 2077
+        }
+      }
+    }
+  },
+  "token_gt_disagreements": {
+    "move37": 17195,
+    "move40": 17631
+  },
+  "profile": {
+    "all_frame_invariants_passed": 600,
+    "axis": "[real n600 cached-label counts; scorer-free macOS-CPU]",
+    "mutable_sites": 129963,
+    "qmax": 2,
+    "reference_groups": 8805,
+    "research_only": true,
+    "score_claim": false,
+    "switches": 34963
+  },
+  "input_custody": {
+    "gt": {
+      "bytes": 117964928,
+      "path": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/retained/gt_dali_labels.npy",
+      "sha256": "5ec658702ade05a47fcb7424f644f88a2d76fecb1d226eb23917719e0223f346"
+    },
+    "move37": {
+      "bytes": 117964928,
+      "path": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/retained/move37_tokens.npy",
+      "sha256": "3456202e3571c3a14f1e20b38eced29e75b442f0d47f5c8ff6c383e9a1736ebc"
+    },
+    "move40": {
+      "bytes": 117964928,
+      "path": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/retained/move40_tokens.npy",
+      "sha256": "49b24f1c7d2511c40cc4403a80b7e3d8076f3c731f977b88bfaaa382f7c3f934"
+    }
+  },
+  "scope": "FORMULATION: local topology-preserving profile orbits; scores unchanged; hard distortion and fixed-length minimax"
+}

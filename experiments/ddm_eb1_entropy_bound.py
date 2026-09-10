@@ -1,0 +1,474 @@
+"""Scorer-free n600 geometry and conditional population covering converses.
+
+Research only. No individual-object entropy or contest score is inferred.
+All input copies, alternative partitions, exact integer counts and per-frame
+checkpoints are retained. No compressor, scorer, training or subprocess runs.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import os
+import platform
+import resource
+import shutil
+import time
+from collections import Counter, defaultdict
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, localcontext
+from fractions import Fraction
+from functools import cache
+from pathlib import Path
+
+for _key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[_key] = "1"
+
+import numpy as np
+from scipy import ndimage
+
+ROOT = Path("/Volumes/APDataStore/pact/ddm_eb1_entropy_bound")
+REPO = Path("/Users/adpena/Projects/pact")
+N, H, W, Q = 600, 384, 512, 5
+AXIS = "[real n600 cached-label counts; scorer-free macOS-CPU]"
+OFFSETS = tuple((y, x) for y in range(-2, 3) for x in range(-2, 3) if 0 < abs(y) + abs(x) <= 2)
+CROSS = ndimage.generate_binary_structure(2, 1)
+SOURCES = {
+    "gt": (
+        Path("/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt"),
+        "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994",
+    ),
+    "move37": (
+        Path("/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/source/field.u8"),
+        "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    ),
+    "move40": (
+        Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+        ),
+        "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+    ),
+}
+
+
+def sha(path):
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def fact(path):
+    return {"path": str(path), "bytes": Path(path).stat().st_size, "sha256": sha(path)}
+
+
+def storage(path, need=1024 * 1024):
+    if not Path(path).resolve().is_relative_to(ROOT.resolve()):
+        raise ValueError("write outside owned APDataStore root")
+    if shutil.disk_usage(ROOT).free < 16 * 1024**3 + need:
+        raise RuntimeError("storage reserve: keep all bytes and block")
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+
+def record(path, obj):
+    storage(path)
+    payload = (json.dumps(obj, indent=2, sort_keys=True) + "\n").encode()
+    if Path(path).exists():
+        if Path(path).read_bytes() != payload:
+            raise ValueError(f"immutable record collision: {path}")
+        return
+    temp = Path(str(path) + ".partial")
+    with temp.open("wb") as f:
+        f.write(payload)
+        f.flush()
+        os.fsync(f.fileno())
+    temp.replace(path)
+
+
+def persist_array(path, array):
+    storage(path, array.nbytes)
+    if path.exists():
+        saved = np.load(path, mmap_mode="r", allow_pickle=False)
+        if not np.array_equal(saved, array):
+            raise ValueError(f"array collision: {path}")
+        return
+    temp = Path(str(path) + ".partial")
+    with temp.open("wb") as f:
+        np.save(f, array, allow_pickle=False)
+        f.flush()
+        os.fsync(f.fileno())
+    temp.replace(path)
+
+
+def geometry(plane):
+    """4-neighbour cell union, undirected lattice edges, pair counts and 4-CCs."""
+    if plane.shape != (H, W) or plane.dtype != np.uint8 or int(plane.max()) >= Q:
+        raise ValueError("wrong label geometry/domain")
+    horizontal = plane[:, :-1] != plane[:, 1:]
+    vertical = plane[:-1, :] != plane[1:, :]
+    boundary = np.zeros_like(plane, dtype=bool)
+    boundary[:, :-1] |= horizontal
+    boundary[:, 1:] |= horizontal
+    boundary[:-1, :] |= vertical
+    boundary[1:, :] |= vertical
+    pairs = np.zeros(Q * Q, dtype=np.int64)
+    for left, right, mask in ((plane[:, :-1], plane[:, 1:], horizontal), (plane[:-1], plane[1:], vertical)):
+        a, b = np.minimum(left[mask], right[mask]), np.maximum(left[mask], right[mask])
+        pairs += np.bincount(a * Q + b, minlength=Q * Q)
+    components, size_histograms = [], []
+    for c in range(Q):
+        labels, count = ndimage.label(plane == c, structure=CROSS)
+        sizes = np.bincount(labels.ravel())[1:]
+        components.append(int(count))
+        size_histograms.append({str(k): v for k, v in sorted(Counter(map(int, sizes)).items())})
+    result = {
+        "area": np.bincount(plane.ravel(), minlength=Q).tolist(),
+        "boundary_cells": int(boundary.sum()),
+        "boundary_edges": int(horizontal.sum() + vertical.sum()),
+        "pair_edges": {f"{a}-{b}": int(pairs[a * Q + b]) for a in range(Q) for b in range(a + 1, Q)},
+        "components": components,
+        "component_size_histograms": size_histograms,
+    }
+    assert sum(result["area"]) == H * W
+    assert sum(result["pair_edges"].values()) == result["boundary_edges"]
+    for c in range(Q):
+        hist = result["component_size_histograms"][c]
+        assert sum(hist.values()) == result["components"][c]
+        assert sum(int(k) * v for k, v in hist.items()) == result["area"][c]
+    return result
+
+
+@cache
+def simple_labels(signature):
+    """Colors with one ring component touching cardinal neighbors; center excluded."""
+    ring = np.full((3, 3), 255, dtype=np.uint8)
+    for (y, x), c in zip(OFFSETS, signature, strict=True):
+        if abs(y) <= 1 and abs(x) <= 1:
+            ring[y + 1, x + 1] = c
+    good = []
+    for c in range(Q):
+        labels, _ = ndimage.label(ring == c, structure=CROSS)
+        touching = {int(labels[y, x]) for y, x in ((0, 1), (1, 0), (1, 2), (2, 1))}
+        touching.discard(0)
+        if len(touching) == 1:
+            good.append(c)
+    return tuple(good)
+
+
+def reference_classes(plane):
+    """Exact nested local exchange/permutation orbits preserving area, B, E and CC."""
+    yy, xx = np.indices((H - 4, W - 4))
+    yy, xx = yy + 2, xx + 2
+    choose = (yy + 2 * xx) % 5 == 0
+    ys, xs = yy[choose], xx[choose]
+    collars = np.stack([plane[ys + dy, xs + dx] for dy, dx in OFFSETS], axis=1)
+    centers = plane[ys, xs]
+    # Only potential boundary points can have distinct admissible center labels.
+    potential = np.any(collars != centers[:, None], axis=1)
+    groups = defaultdict(list)
+    for y, x, collar in zip(ys[potential], xs[potential], collars[potential], strict=True):
+        groups[(int(y) // 64, *map(int, collar))].append((int(y), int(x)))
+    natural, conservative = plane.copy(), plane.copy()
+    rows, cardinality, switches, mutable = [], 1, 0, 0
+    for key, positions in sorted(groups.items()):
+        values = [int(plane[y, x]) for y, x in positions]
+        counts = Counter(values)
+        if len(counts) < 2 or not set(counts).issubset(simple_labels(key[1:])):
+            continue
+        m = len(values)
+        remaining, ways = m, 1
+        for c in sorted(counts):
+            ways *= math.comb(remaining, counts[c])
+            remaining -= counts[c]
+        cardinality *= ways
+        mutable += m
+        rotated = values[1:] + values[:1]
+        for (y, x), c in zip(positions, rotated, strict=True):
+            natural[y, x] = c
+        buckets = {c: [p for p, v in zip(positions, values, strict=True) if v == c] for c in counts}
+        pairs = []
+        while sum(bool(v) for v in buckets.values()) >= 2:
+            a, b = sorted((c for c in buckets if buckets[c]), key=lambda c: (-len(buckets[c]), c))[:2]
+            p, q = buckets[a].pop(), buckets[b].pop()
+            pairs.append([p[0] * W + p[1], q[0] * W + q[1]])
+            conservative[p], conservative[q] = plane[q], plane[p]
+        k = len(pairs)
+        assert k == min(m // 2, m - max(counts.values()))
+        switches += k
+        rows.append(
+            {
+                "band_and_collar": list(key),
+                "positions": [y * W + x for y, x in positions],
+                "counts": {str(c): counts[c] for c in sorted(counts)},
+                "paired_switches": pairs,
+                "cardinality_hex": hex(ways),
+            }
+        )
+    return (
+        {
+            "groups": rows,
+            "cardinality_hex": hex(cardinality),
+            "switches": switches,
+            "mutable_sites": mutable,
+            "qmax": max((len(r["counts"]) for r in rows), default=1),
+        },
+        natural,
+        conservative,
+    )
+
+
+def log2_integer_bounds(n):
+    """Proven rational enclosure using top 64 bits and 40-term atanh log series."""
+    if n < 1:
+        raise ValueError("positive integer required")
+    shift = max(0, n.bit_length() - 64)
+    top = n >> shift
+
+    def ln_unit_bounds(u):
+        x = (u - 1) / (u + 1)
+        value = 2 * sum((x ** (2 * j + 1) / (2 * j + 1) for j in range(40)), Fraction(0))
+        remainder = 2 * x**81 / (81 * (1 - x * x))
+        return value, value + remainder
+
+    ln2lo, ln2hi = ln_unit_bounds(Fraction(2))
+
+    def small(v):
+        power = v.bit_length() - 1
+        lo, hi = ln_unit_bounds(Fraction(v, 1 << power))
+        return power + lo / ln2hi, power + hi / ln2lo
+
+    lower, upper = small(top)
+    if shift and n != top << shift:
+        upper = small(top + 1)[1]
+    return lower + shift, upper + shift
+
+
+def hamming_ball(n, d, q):
+    """Exact integer sum C(n,j)(q-1)^j, with recurrence divisibility checked."""
+    term = total = 1
+    for j in range(1, min(n, d) + 1):
+        value = term * (n - j + 1) * (q - 1)
+        term, rem = divmod(value, j)
+        assert rem == 0
+        total += term
+    return total
+
+
+def interval_json(lower, upper):
+    """Outward-rounded decimal display; certified bit floors use exact Fractions."""
+    values = []
+    for value, mode in ((lower, ROUND_FLOOR), (upper, ROUND_CEILING)):
+        with localcontext() as context:
+            context.prec = 35
+            context.rounding = mode
+            values.append(str(Decimal(value.numerator) / Decimal(value.denominator)))
+    return values
+
+
+def partition_description_rate_distortion_lower_bound_v1(cardinality, mutable, qmax, switches, d):
+    """Population worst-case fixed-length converse, never a pointwise video bound."""
+    if min(cardinality, qmax) < 1 or min(mutable, switches, d) < 0 or cardinality < 2**switches:
+        raise ValueError("invalid nested reference counts")
+    nlo, nhi = log2_integer_bounds(cardinality)
+    natural_volume = hamming_ball(mutable, d, qmax)
+    vlo, vhi = log2_integer_bounds(natural_volume)
+    natural_lower = max(0, math.floor(nlo - min(vhi, nhi)))
+    if d >= switches or switches == 0:
+        swap_vhi = Fraction(switches)
+    elif d == 0:
+        swap_vhi = Fraction(0)
+    else:
+        # Product-pair Chernoff bound, valid also for off-class/midpoint reconstructions.
+        _, a_hi = log2_integer_bounds(2 * switches)
+        b_lo, _ = log2_integer_bounds(d)
+        c_lo, _ = log2_integer_bounds(2 * switches - d)
+        swap_vhi = switches * a_hi - Fraction(d, 2) * b_lo - Fraction(2 * switches - d, 2) * c_lo
+    conservative_lower = max(0, math.floor(switches - swap_vhi))
+    return {
+        "D": d,
+        "natural_log2_N_interval": interval_json(nlo, nhi),
+        "natural_log2_ambient_ball_interval": interval_json(vlo, vhi),
+        "natural_ball_hex": hex(natural_volume),
+        "natural_lower_bits_certified": natural_lower,
+        "natural_lower_bytes": natural_lower / 8,
+        "conservative_log2_N": switches,
+        "conservative_log2_ball_upper": interval_json(swap_vhi, swap_vhi)[1],
+        "conservative_lower_bits_certified": conservative_lower,
+        "conservative_lower_bytes": conservative_lower / 8,
+    }
+
+
+def load_inputs():
+    """Verify canonical T4 cache before torch load; retain labels and source copies."""
+    bindings = {}
+    for name, (source, expected) in SOURCES.items():
+        measured = fact(source)
+        if measured["sha256"] != expected:
+            raise ValueError(f"source hash mismatch: {name}")
+        bindings[name] = measured
+    summary = json.loads(SOURCES["gt"][0].with_name("result_summary.json").read_text())
+    assert summary["dali_cache_sha256"] == SOURCES["gt"][1]
+    assert summary["dali_cache_bytes"] == bindings["gt"]["bytes"]
+    assert summary["dali_pairs"] == N and summary["coverage"]["ok"]
+    assert summary["env"]["device_name"] == "Tesla T4"
+    record(ROOT / "retained/GT_PRODUCER.json", summary)
+    pointer = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
+    if (
+        pointer["effective_frontier"]["archive_sha256"]
+        != "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+    ):
+        raise ValueError("pointer moved: explicitly rebind before counting")
+    record(
+        ROOT / "retained/INPUTS.json",
+        {
+            "sources": bindings,
+            "pointer": pointer,
+            "producer_sha256": sha(__file__),
+            "seed": 20260910,
+            "axis": AXIS,
+            "score_claim": False,
+            "research_only": True,
+            "selection_mode": "all_scored_pairs_0_through_599",
+            "retention": "KEEP inputs, exact counts, alternate partitions and stage checkpoints; no bulk deletion",
+        },
+    )
+    gt_path = ROOT / "retained/gt_dali_labels.npy"
+    if not gt_path.exists():
+        import torch
+
+        torch.set_num_threads(1)
+        cache = torch.load(SOURCES["gt"][0], map_location="cpu", weights_only=True)
+        labels = cache["seg"].numpy()
+        if labels.dtype != np.uint8 or labels.shape != (N, H, W):
+            raise ValueError("invalid cached GT shape/dtype")
+        persist_array(gt_path, labels)
+    fields = {"gt": np.load(gt_path, mmap_mode="r", allow_pickle=False)}
+    if fields["gt"].shape != (N, H, W) or fields["gt"].dtype != np.uint8:
+        raise ValueError("retained GT has wrong shape/dtype")
+    for name in ("move37", "move40"):
+        path = ROOT / "retained" / f"{name}_tokens.npy"
+        raw = np.memmap(SOURCES[name][0], mode="r", dtype=np.uint8, shape=(N, H, W))
+        if SOURCES[name][0].stat().st_size != N * H * W:
+            raise ValueError("invalid token byte count")
+        persist_array(path, raw)
+        fields[name] = np.load(path, mmap_mode="r", allow_pickle=False)
+    record(ROOT / "retained/ARRAY_INPUTS.json", {name: fact(Path(field.filename)) for name, field in fields.items()})
+    return fields
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--resume-from", type=Path, required=True)
+    parser.add_argument("--stop-after", type=int, default=N)
+    args = parser.parse_args()
+    if args.resume_from.resolve() != (ROOT / "retained/frames").resolve():
+        raise ValueError("resume path must be the owned per-frame checkpoint store")
+    if not 1 <= args.stop_after <= N:
+        raise ValueError("stop-after outside 1..600")
+    start = time.monotonic()
+    fields = load_inputs()
+    for t in range(args.stop_after):
+        path = args.resume_from / f"{t:03d}.json"
+        if path.exists():
+            continue
+        data = {name: geometry(field[t]) for name, field in fields.items()}
+        refs, natural, conservative = reference_classes(fields["gt"][t])
+        # Persist every materialized reference witness before comparison/disposal.
+        persist_array(ROOT / "retained/natural_witness" / f"{t:03d}.npy", natural)
+        persist_array(ROOT / "retained/conservative_witness" / f"{t:03d}.npy", conservative)
+        invariants = ("area", "boundary_cells", "boundary_edges", "pair_edges", "components")
+        for tag, alternate in (("natural", natural), ("conservative", conservative)):
+            measured = geometry(alternate)
+            assert all(measured[k] == data["gt"][k] for k in invariants), (t, tag)
+            data[tag + "_changed_cells"] = int(np.count_nonzero(alternate != fields["gt"][t]))
+        data["pair_index"] = t
+        data["token_gt_disagreements"] = {
+            name: int(np.count_nonzero(fields[name][t] != fields["gt"][t])) for name in ("move37", "move40")
+        }
+        data["reference_classes"] = refs
+        record(path, data)
+        if (t + 1) % 20 == 0:
+            print(json.dumps({"frames_completed": t + 1, "elapsed_seconds": time.monotonic() - start}), flush=True)
+    if args.stop_after < N:
+        print(json.dumps({"status": "PARTIAL_CHECKPOINT_ONLY", "frames": args.stop_after}), flush=True)
+        return
+    rows = [json.loads((args.resume_from / f"{t:03d}.json").read_text()) for t in range(N)]
+    cardinality = math.prod(int(r["reference_classes"]["cardinality_hex"], 16) for r in rows)
+    switches = sum(r["reference_classes"]["switches"] for r in rows)
+    mutable = sum(r["reference_classes"]["mutable_sites"] for r in rows)
+    qmax = max(r["reference_classes"]["qmax"] for r in rows)
+    result = {
+        "axis": AXIS,
+        "score_claim": False,
+        "research_only": True,
+        "n": N * H * W,
+        "cardinality_hex": hex(cardinality),
+        "switches": switches,
+        "mutable_sites": mutable,
+        "qmax": qmax,
+        "reference_groups": sum(len(r["reference_classes"]["groups"]) for r in rows),
+        "geometry": {},
+        "bounds": [],
+        "gt_token_disagreements": {},
+        "alternate_invariants_verified_frames": N,
+    }
+    for name in fields:
+        totals = {
+            key: np.sum([r[name][key] for r in rows], axis=0).tolist()
+            for key in ("area", "boundary_cells", "boundary_edges", "components")
+        }
+        totals["pair_edges"] = {p: sum(r[name]["pair_edges"][p] for r in rows) for p in rows[0][name]["pair_edges"]}
+        totals["per_frame_distribution"] = {
+            key: {
+                "min": int(min(r[name][key] for r in rows)),
+                "max": int(max(r[name][key] for r in rows)),
+                "mean": sum(r[name][key] for r in rows) / N,
+                "median": float(np.median([r[name][key] for r in rows])),
+            }
+            for key in ("boundary_cells", "boundary_edges")
+        }
+        result["geometry"][name] = totals
+        if name != "gt":
+            result["gt_token_disagreements"][name] = sum(r["token_gt_disagreements"][name] for r in rows)
+    for d in (6270, 12540, 25080):
+        bound = partition_description_rate_distortion_lower_bound_v1(cardinality, mutable, qmax, switches, d)
+        full_ball = hamming_ball(N * H * W, d, Q)
+        bound["full_q5_ball_hex"] = hex(full_ball)
+        bound["full_q5_ball_log2_interval"] = interval_json(*log2_integer_bounds(full_ball))
+        for key in ("natural", "conservative"):
+            lower = bound[key + "_lower_bytes"]
+            bound[key + "_119784_to_bound_ratio"] = 119784 / lower if lower else None
+            bound[key + "_83259_to_bound_ratio"] = 83259 / lower if lower else None
+        result["bounds"].append(bound)
+    record(ROOT / "retained/RESULT.json", result)
+    record(
+        ROOT / "retained/COMPLETE.json",
+        {
+            "result": fact(ROOT / "retained/RESULT.json"),
+            "inputs": {
+                k: fact(ROOT / "retained" / ("gt_dali_labels.npy" if k == "gt" else f"{k}_tokens.npy")) for k in fields
+            },
+            "frames": N,
+            "axis": AXIS,
+            "platform": platform.platform(),
+            "peak_rss_bytes_macos": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        },
+    )
+    print(
+        json.dumps(
+            {
+                "status": "COMPLETE",
+                "switches": switches,
+                "mutable_sites": mutable,
+                "qmax": qmax,
+                "bounds": [{k: v for k, v in b.items() if "hex" not in k} for b in result["bounds"]],
+            }
+        ),
+        flush=True,
+    )
+
+
+if __name__ == "__main__":
+    main()

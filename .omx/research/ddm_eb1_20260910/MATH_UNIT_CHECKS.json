@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Exact Hamming recurrence equals independent direct binomial sums for all n1..9, d0..n, q2..5; mathematical unit check only.",
+    "Off-class and midpoint centers exhaustively included for paired-switch K1..5 at D0..K; reported bound is conservative. Mathematical unit check only.",
+    "Logarithm enclosure returns exact powers of two and ordered intervals for large integers."
+  ],
+  "scope": "mathematical identities, not empirical anchors",
+  "source_sha256": "b4b1a68ba43533740d8befecbbfa73ffddd5c5b320e74e94bd47021fe50f9831"
+}

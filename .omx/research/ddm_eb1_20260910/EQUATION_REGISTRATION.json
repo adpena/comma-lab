@@ -1,0 +1,178 @@
+{
+  "equation": {
+    "schema_version": "canonical_equation_v1_20260519",
+    "equation_id": "partition_description_rate_distortion_lower_bound_v1",
+    "name": "Conditional partition population covering converse",
+    "one_line_summary": "Lower bounds for explicitly declared partition populations under hard Hamming distortion; no pointwise video, source-law, or marginal-tail optimality claim.",
+    "latex_form": "R_{wc}(F,D) >= max(0, log_2|F| - log_2 sup_y |F intersect B(y,D)|); |F_N|=prod_g m_g!/prod_c n_gc!; |F_C|=2^K",
+    "python_callable_module_path": "experiments.ddm_eb1_entropy_bound:partition_description_rate_distortion_lower_bound_v1",
+    "domain_of_validity": {
+      "included": [
+        "fixed source-independent decoder and declared finite reference class",
+        "hard Hamming radius for every member; fixed-length worst-case covering",
+        "uniform-reference expected prefix length only for its own counting converse",
+        "C is paired-swap product; N is profile permutation orbit",
+        "exact n600 topology/area/boundary invariants; physical reachability unverified"
+      ],
+      "excluded": [
+        "positive lower bound on this particular video",
+        "empirical source entropy from one sequence or class-size alone",
+        "tail floor without conditioning on all receiver-visible paid/free information",
+        "using ball at Pstar instead of maximum over arbitrary reproduction centers",
+        "inferring non-near-optimality from a weak lower bound",
+        "inheritance of subset minimax bound by uniform-superset expected length"
+      ],
+      "reference_scope": "FORMULATION",
+      "source_distribution_verified": false,
+      "score_claim": false
+    },
+    "units_in": {
+      "cardinality": "partitions",
+      "mutable": "cells",
+      "qmax": "classes",
+      "switches": "independent two-cell switches",
+      "d": "disagreeing cells"
+    },
+    "units_out": {
+      "natural_lower_bits_certified": "bits",
+      "conservative_lower_bits_certified": "bits"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "ddm_eb1_profile_orbits_n600_20260910",
+        "measurement_utc": "2026-09-10T04:24:56.457497+00:00",
+        "inputs": {
+          "n_cells": 117964800,
+          "D": [
+            6270,
+            12540,
+            25080
+          ],
+          "source_cache": "DALI_NVDEC cached T4 labels",
+          "source_sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994",
+          "class": "per-frame local simple-point profile orbits on fixed Lee lattice"
+        },
+        "predicted_output": {
+          "invariant": "per-frame areas, boundary-cell counts, class-pair edge counts and per-class 4-CC counts unchanged for both permutations and swaps"
+        },
+        "empirical_output": {
+          "invariants_verified_frames": 600,
+          "independent_switches": 34963,
+          "mutable_sites": 129963,
+          "groups": 8805,
+          "bounds": [
+            {
+              "D": 6270,
+              "conservative_log2_N": 34963,
+              "conservative_log2_ball_upper": "15221.306929175744981114595275315601",
+              "conservative_lower_bits_certified": 19741,
+              "conservative_lower_bytes": 2467.625,
+              "natural_log2_N_interval": [
+                "76287.053911060846516235714690003782",
+                "76287.053911060846516235865370126667"
+              ],
+              "natural_log2_ambient_ball_interval": [
+                "36238.169888670774104378780872468217",
+                "36238.169888670774104378919913578250"
+              ],
+              "natural_lower_bits_certified": 40048,
+              "natural_lower_bytes": 5006.0,
+              "natural_minimax_lower_bits_certified": 40048,
+              "natural_minimax_lower_bytes": 5006.0,
+              "uniform_natural_expected_prefix_inherits_subset_bound": false
+            },
+            {
+              "D": 12540,
+              "conservative_log2_N": 34963,
+              "conservative_log2_ball_upper": "23726.398315208132373769012937926145",
+              "conservative_lower_bits_certified": 11236,
+              "conservative_lower_bytes": 1404.5,
+              "natural_log2_N_interval": [
+                "76287.053911060846516235714690003782",
+                "76287.053911060846516235865370126667"
+              ],
+              "natural_log2_ambient_ball_interval": [
+                "59484.764245636205558628161331379423",
+                "59484.764245636205558628253423813437"
+              ],
+              "natural_lower_bits_certified": 16802,
+              "natural_lower_bytes": 2100.25,
+              "natural_minimax_lower_bits_certified": 16802,
+              "natural_minimax_lower_bytes": 2100.25,
+              "uniform_natural_expected_prefix_inherits_subset_bound": false
+            },
+            {
+              "D": 25080,
+              "conservative_log2_N": 34963,
+              "conservative_log2_ball_upper": "32920.089213166378991729899173797006",
+              "conservative_lower_bits_certified": 2042,
+              "conservative_lower_bytes": 255.25,
+              "natural_log2_N_interval": [
+                "76287.053911060846516235714690003782",
+                "76287.053911060846516235865370126667"
+              ],
+              "natural_log2_ambient_ball_interval": [
+                "91961.507303107077228204168740280608",
+                "91961.507303107077228204278785545462"
+              ],
+              "natural_lower_bits_certified": 0,
+              "natural_lower_bytes": 0.0,
+              "natural_minimax_lower_bits_certified": 2042,
+              "natural_minimax_lower_bytes": 255.25,
+              "uniform_natural_expected_prefix_inherits_subset_bound": false
+            }
+          ]
+        },
+        "residual": 0.0,
+        "source_artifact": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/profile/RESULT.json",
+        "measurement_method": "Exact n600 counts; both retained alternative fields independently recounted on all frames. Zero residual denotes equality of invariant counts, not a measured source entropy or forecast.",
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "source_path": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/profile/RESULT.json",
+          "source_sha256": "a89d3f7d09e48beff89ee8c8a4b540b8307e53a6dc344d3b9ab2e52e8afb0151",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "hardware_substrate": "macos_arm64",
+          "evidence_grade": "macos_cpu_advisory",
+          "promotion_eligible": false,
+          "score_claim_valid": false,
+          "captured_at_utc": "2026-09-10T04:24:56.457497+00:00",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "contest_archive_zip_path": "",
+          "contest_archive_member_name": "",
+          "composed_from": [],
+          "rejection_reason": ""
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR"
+      }
+    ],
+    "predicted_vs_empirical_residual": {},
+    "last_calibration_utc": "2026-09-10T04:24:56.457497+00:00",
+    "next_recalibration_trigger": "never_auto_operator_only",
+    "canonical_consumers": [
+      "experiments.ddm_eb1_profile_class.main"
+    ],
+    "canonical_producers": [
+      "experiments.ddm_eb1_entropy_bound.reference_classes",
+      "experiments.ddm_eb1_profile_class.profile_classes"
+    ],
+    "provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "source_path": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/profile/RESULT.json",
+      "source_sha256": "a89d3f7d09e48beff89ee8c8a4b540b8307e53a6dc344d3b9ab2e52e8afb0151",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "hardware_substrate": "macos_arm64",
+      "evidence_grade": "macos_cpu_advisory",
+      "promotion_eligible": false,
+      "score_claim_valid": false,
+      "captured_at_utc": "2026-09-10T04:24:56.457497+00:00",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "contest_archive_zip_path": "",
+      "contest_archive_member_name": "",
+      "composed_from": [],
+      "rejection_reason": ""
+    }
+  },
+  "registration_store": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/checkout/.omx/state/canonical_equations_registry.jsonl",
+  "live_registry_updated": false,
+  "source_result": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/profile/RESULT.json"
+}

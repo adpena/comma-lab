@@ -1,0 +1,27 @@
+{
+  "schema": "ddm_eb1_review_and_validation_v1",
+  "files": {
+    "experiments/ddm_eb1_entropy_bound.py": "3eeb12fc34c375d036c79468c1430bd629d3a85384ee552d22a29b32e48d1fec",
+    "experiments/ddm_eb1_profile_class.py": "425a2635b8032f065eb2b81c559c1ab2c86f1b4b1a8f354536ee4b7fbab5463f"
+  },
+  "visible_review_passes_minimum": 2,
+  "final_python_passes": "CLEAN; base passes repeated after two comment removals, profile retained passes plus checkout re-mark",
+  "ruff_command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "-m",
+    "ruff",
+    "check",
+    "--no-cache",
+    "experiments/ddm_eb1_entropy_bound.py",
+    "experiments/ddm_eb1_profile_class.py"
+  ],
+  "ruff_returncode": 0,
+  "numerical_run_returncodes": {
+    "collar_and_geometry": 0,
+    "profile": 0
+  },
+  "real_validation": "All 600 original frames counted on GT/move37/move40; both alternatives of both reference constructions persisted and independently recounted, all required invariants equal on 600/600.",
+  "independent_math": "Exact finite binomial sums, all small binary reproduction centers including midpoints, rational log enclosure and independent 100-digit arithmetic checks.",
+  "assumption_challenge": "Neither matching geometrical summaries nor a covering bound supplies the natural-video source law, per-member description length, or tail conditional entropy.",
+  "scope": "No scorer, encode, training, remote dispatch or score claim; no live worktree/index edits."
+}

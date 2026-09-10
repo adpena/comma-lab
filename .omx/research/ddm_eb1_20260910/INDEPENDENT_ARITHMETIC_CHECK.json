@@ -1,0 +1,22 @@
+{
+  "method": "Independent 100-decimal-digit mpmath log2/exact integer crosscheck; certification still comes from exact rational enclosures in the producer.",
+  "rows": [
+    {
+      "D": 6270,
+      "independent_conservative_floor_bits": 19741,
+      "independent_natural_raw_floor_bits": 40048
+    },
+    {
+      "D": 12540,
+      "independent_conservative_floor_bits": 11236,
+      "independent_natural_raw_floor_bits": 16802
+    },
+    {
+      "D": 25080,
+      "independent_conservative_floor_bits": 2042,
+      "independent_natural_raw_floor_bits": 0
+    }
+  ],
+  "status": "PASS",
+  "notes": "No real-data entropy estimation, encoding or scorer."
+}

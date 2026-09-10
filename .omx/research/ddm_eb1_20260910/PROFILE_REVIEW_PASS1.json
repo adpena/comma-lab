@@ -1,0 +1,5 @@
+{
+  "status": "CLEAN",
+  "review": "Effect signature: class areas depend on chosen label; pair-edge counts depend only on fixed neighbor histogram; B depends on neighbor histogram plus unsaturated-neighbor histogram; component preservation follows simple point labels. Lee-grid centers have pairwise Manhattan distance at least three, so effects cannot overlap. Pairing and multinomial counts are injective on disjoint sites.",
+  "assumption_challenge": "Full collar identity is unnecessary conditioning; weakening it preserves the proof and broadens the class. Source plausibility still stops at measured geometry."
+}

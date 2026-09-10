@@ -1,0 +1,30 @@
+{
+  "reference_class_C": "Independent binary swaps of pairs of differently labeled, disjoint sites within one natural-class group; all other cells fixed. 2^K elements.",
+  "reference_class_N": "Within each frame, all permutations of observed center labels at radius-two-collar-matched sites in the same 64-row band. Eligible interior sites satisfy (y+2x)%5=0. Only groups with >=2 observed labels, each with exactly one surrounding 4-connected component touching cardinal neighbors, are variable. All other cells fixed.",
+  "invariants": "Per-frame areas, boundary-cell union counts, undirected class-pair edge counts and per-class 4-connected-component counts remain exact. Component size distributions and temporal statistics are measured on originals but not claimed invariant.",
+  "meaning": "Conditional worst-case fixed-length population converse. Uniform-population expected prefix length also obeys it under hard per-object distortion. Not an individual-video minimum, not a measured source distribution, not a realizability certificate.",
+  "claim_scope": "FORMULATION: explicit local exchange/permutation reference classes",
+  "D": [
+    6270,
+    12540,
+    25080
+  ],
+  "source_sha256": "b4b1a68ba43533740d8befecbbfa73ffddd5c5b320e74e94bd47021fe50f9831",
+  "git_head": "d3ae2621c269a454ed8877119991869d774de8e5",
+  "seed": 20260910,
+  "processes": 1,
+  "threads": 1,
+  "score_claim": false,
+  "payload_retention": "all alternative partition arrays, copied source arrays, exact integer count data, frame checkpoints retained",
+  "review_passes": [
+    {
+      "pass": 1,
+      "findings_fixed": "Outward decimal intervals and retained-input identity on resume."
+    },
+    {
+      "pass": 2,
+      "verdict": "CLEAN after fixes; checked injectivity, radius-two isolation, topology invariance, arbitrary reproduction centers, lower/upper directions, source provenance and atomic retention.",
+      "assumption_challenge": "Population distinguishability does not imply any fixed incumbent length. Matching observed geometry is not a proof of physical-video reachability or a source probability law."
+    }
+  ]
+}

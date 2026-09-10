@@ -1,0 +1,9 @@
+{
+  "change": "Removed two import noqa comments already ignored by the repository per-file Ruff config.",
+  "AST_identical": true,
+  "measured_source_sha256": "b4b1a68ba43533740d8befecbbfa73ffddd5c5b320e74e94bd47021fe50f9831",
+  "landing_source_sha256": "3eeb12fc34c375d036c79468c1430bd629d3a85384ee552d22a29b32e48d1fec",
+  "measured_source_preserved": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/checkout/.omx/research/ddm_eb1_20260910/measured_ddm_eb1_entropy_bound.py.txt",
+  "numerical_rerun_necessary": false,
+  "review_counter_reset": true
+}

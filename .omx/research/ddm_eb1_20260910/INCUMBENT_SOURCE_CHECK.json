@@ -1,0 +1,28 @@
+{
+  "score_recomputed_from_components": 0.13763861019288715,
+  "avg_posenet_dist": 4.89e-06,
+  "avg_segnet_dist": 0.00010636,
+  "n_samples": 600,
+  "archive_size_bytes": 180233,
+  "expected_archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+  "score_axis": "contest_cuda",
+  "gpu_model": "Tesla T4",
+  "expected_runtime_tree_sha256": "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39",
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910/MODAL_REMOTE_RESULT.json",
+    "bytes": 159313,
+    "sha256": "cd6d5ef5243e26fa1868100a2bbb34efe0d6446b4a7fb9bd1eab7f309f5d3d00"
+  },
+  "D_charter": 12540,
+  "D_charter_div_n": 0.00010630289713541667,
+  "printed_seg_times_n": 12546.736128,
+  "score_recomputed_here": 0.13763861019288715,
+  "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+  "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+  "score_claim": false,
+  "archive_measured": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+    "bytes": 180233,
+    "sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+  }
+}

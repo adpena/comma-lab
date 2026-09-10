@@ -1,0 +1,59 @@
+[
+  {
+    "name": "research",
+    "query": "entropy lower bound|rate.distortion lower|individual.object|partition.*entropy|boundary.*lower bound|near its entropy",
+    "scope": [
+      ".omx/research"
+    ],
+    "returncode": 0,
+    "matches": 215,
+    "artifact": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/recall/research.txt",
+    "sha256": "629f842d5fca843a9c8b3408af56ca6a39dde8efe26ac0ef09512576406c7293"
+  },
+  {
+    "name": "index_dag",
+    "query": "entropy|rate.distortion|boundary.*bound|individual.object",
+    "scope": [
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "returncode": 0,
+    "matches": 476,
+    "artifact": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/recall/index_dag.txt",
+    "sha256": "351d37d3a3be92d3b9572a98ce67c21e3a9567ab34601f9ba39c5a9ea04f6002"
+  },
+  {
+    "name": "design",
+    "query": "entropy.*bound|rate.distortion|partition.*description|MDL",
+    "scope": [
+      "docs"
+    ],
+    "returncode": 0,
+    "matches": 88,
+    "artifact": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/recall/design.txt",
+    "sha256": "f7e4912a77ae84c776dc5e36b3c9d87915994c61f3b260e982548248ccc97d00"
+  },
+  {
+    "name": "tasks",
+    "query": "entropy.*bound|boundary.*description|ddm_eb1|ddm_(tc[123]|bd1|mc1|gb2)",
+    "scope": [
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/operator_p0_ledger.jsonl",
+      ".omx/state/lane_registry.json"
+    ],
+    "returncode": 0,
+    "matches": 42,
+    "artifact": "/Volumes/APDataStore/pact/ddm_eb1_entropy_bound/recall/tasks.txt",
+    "sha256": "5f0d4d236f004379374ef846e56fb75e57c4b7beaf5dbd517a966a1848294362"
+  }
+]
