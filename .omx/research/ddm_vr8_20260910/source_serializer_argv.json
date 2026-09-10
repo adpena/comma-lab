@@ -1,0 +1,18 @@
+[
+  ".venv/bin/python",
+  "tools/subagent_commit_serializer.py",
+  "--label",
+  "ddm_vr8",
+  "--message",
+  "fix(custody): verify data forks before MOVE publication [no-triality] [p0-ledger-ok]",
+  "--no-co-author",
+  "--fallback-receipt-dir",
+  "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/source_serializer",
+  "--files",
+  "src/tac/artifact_moved.py",
+  "src/tac/tests/test_artifact_moved_verification.py",
+  "--expected-content-sha256",
+  "src/tac/artifact_moved.py=19c59a47cc89c141a8bba4bb75b08c87acb12292070b178257a30e24867b2e1a",
+  "--expected-content-sha256",
+  "src/tac/tests/test_artifact_moved_verification.py=f27289207f5eb15abbf8dfaade9e34cc5ed8aed4a11de546368753e32216d758"
+]

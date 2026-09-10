@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "find",
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+    "-maxdepth",
+    "4",
+    "(",
+    "-name",
+    "MOVED.json",
+    "-o",
+    "-name",
+    "MOVE_LOG.jsonl",
+    "-o",
+    "-name",
+    "*MOVED*.json",
+    ")"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "time": "2026-09-10T15:21:38.040599+00:00",
+  "file_count": 26,
+  "added": [],
+  "removed": []
+}

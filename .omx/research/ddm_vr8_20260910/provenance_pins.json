@@ -1,0 +1,46 @@
+{
+  "pins": [
+    {
+      "path": ".omx/research/ddm_rp1_round2_move40_20260910.md",
+      "bytes": 25513,
+      "sha256": "e67bc3d377a3e71da93f9c039da1c26d9eed956baeec9e519b8cb194f648ffc2"
+    },
+    {
+      "path": ".omx/research/ddm_vr7_certified_deletion_20260910.md",
+      "bytes": 15281,
+      "sha256": "0895278454d1e7f95eb93988dc5afff150ac810f404603671a8b13c7efd54d58"
+    },
+    {
+      "path": ".omx/research/ddm_main_storage_20260910/vertigo_move_sj1.py",
+      "bytes": 2071,
+      "sha256": "ed6040b00cf11c60fbae725ae242711e17ec9fd05af3ef2e7cd9ac2c1c59a496"
+    },
+    {
+      "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+      "bytes": 820151,
+      "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+    },
+    {
+      "path": ".omx/tmp/codex_runs/vertigo_move_sj1_20260910/launch_manifest.json",
+      "bytes": 3053,
+      "sha256": "b06232e313dc7135a9094fa627294d8d21dc096b2b36f004f3c6bded0acbbbbf"
+    },
+    {
+      "path": ".omx/tmp/codex_runs/vr7_apply_20260910/launch_manifest.json",
+      "bytes": 4377,
+      "sha256": "25251f624e8bea7f222d4ddde5129b459c7acf68f9b26ad6a6664f1478f1815d"
+    },
+    {
+      "path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "bytes": 53874786,
+      "sha256": "5cd2ff67bb908582602a40bfadb7bc47be12aa2263254fc859b746d58321730d"
+    },
+    {
+      "path": "src/tac/artifact_moved.py",
+      "bytes": 6276,
+      "sha256": "19c59a47cc89c141a8bba4bb75b08c87acb12292070b178257a30e24867b2e1a"
+    }
+  ],
+  "mv1_requested_landing": "0e8e2e420",
+  "observed_source_head": "3676ad0b0194e8e1958665d404ecb1dd6efea78b"
+}

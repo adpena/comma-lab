@@ -1,0 +1,28 @@
+{
+  "reviewer": "ddm_vr8_restore",
+  "pass": "pass2",
+  "reviewed_at_utc": "2026-09-10T14:40:06.788952+00:00",
+  "files": [
+    {
+      "path": "experiments/ddm_vr8_restore.py",
+      "sha256": "c74c631140eaeb761f839fb60914862b8834b432fe6e1225fe1d592d7ba0f290"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr8_restore.py",
+      "sha256": "73603c66f9f5624f24e0c755463b0f3a351f5d4014710517dee52c33e2d1e09d"
+    }
+  ],
+  "verdict": "CLEAN",
+  "checks": [
+    "Adversarially traced interrupted payload writes, checkpoint gaps, prefix corruption, binding drift and repeated final certificates",
+    "Reviewed GO withdrawal: in-flight bytes finish persistently, next frame and final hash refuse until GO restored",
+    "Reviewed missing/foreign output protection; exact source original equality plus fixed cold-store directory; no sealed-tree writes",
+    "Reviewed tests against removed prefix hash/size checks and GO checks: negative cases would fail",
+    "Checked all output mutation modes are exclusive-create or append; no delete/truncate/replace in restore code"
+  ],
+  "findings": [],
+  "limits": [
+    "Byte equality of actual n600 render remains launch validation, not asserted by unit tests",
+    "Parent reports all seven original source-config pins freshly match; earlier stale-pin concern withdrawn"
+  ]
+}

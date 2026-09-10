@@ -1,0 +1,32 @@
+{
+  "review": "gate pass 1",
+  "reviewer": "ddm_vr8_gate",
+  "files": {
+    "src/tac/artifact_moved_audit.py": "cf1d9f3ed66c752e7770cea85c63c41011857e470933ce86735f95c4e1409b1e",
+    "src/tac/tests/test_artifact_moved_audit.py": "0146a1793a69e55c46fd58ff4dd517a423770cec8e83138d260a3a7d73b7d074"
+  },
+  "focus": [
+    "Historical MOVED assertions still check real bytes after corrections or recovery",
+    "Legacy logs bind only their exact adjacent MOVED.json; identity disagreement fails",
+    "Name/header stub detection and lstat regular-file verification delegate to shared verify_payload",
+    "Default hash_payloads=False forwards no-hash explicitly; header/stat mode is not digest certification",
+    "Malformed JSON, duplicate keys, unknown statuses and unsupported directory formats fail"
+  ],
+  "findings": [
+    "No unresolved functional finding after review; added recovery-elsewhere regression before clean review",
+    "Lint import corrections only"
+  ],
+  "validation": "25 behavioral tests passed before import-only lint correction",
+  "recall_evidence": {
+    "queries": [
+      "AppleDouble|MOVED_CERTIFICATE_FALSE|stub.*MOVED|MOVED.*stub across research Markdown",
+      "AppleDouble|MOVED.json across canonical index, sub015 DAG, task stores and docs"
+    ],
+    "beyond_seeds": [
+      "ddm_sa3_rebase_onto_sz1_20260818.md associates ExFAT sidecars with metadata rather than payload bytes",
+      "docs/meta_bug_class_catalog.md #407 records dotfile inclusion silently affecting byte denominators"
+    ],
+    "change": "Treat AppleDouble naming as explicit refusal, never infer payload validity from a sibling or file count."
+  },
+  "score_claim": false
+}

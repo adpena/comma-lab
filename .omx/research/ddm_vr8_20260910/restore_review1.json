@@ -1,0 +1,32 @@
+{
+  "reviewer": "ddm_vr8_restore",
+  "pass": "pass1",
+  "reviewed_at_utc": "2026-09-10T14:39:48.944671+00:00",
+  "files": [
+    {
+      "path": "experiments/ddm_vr8_restore.py",
+      "sha256": "c74c631140eaeb761f839fb60914862b8834b432fe6e1225fe1d592d7ba0f290"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr8_restore.py",
+      "sha256": "73603c66f9f5624f24e0c755463b0f3a351f5d4014710517dee52c33e2d1e09d"
+    }
+  ],
+  "verdict": "CLEAN_AFTER_FIXES",
+  "checks": [
+    "Traced actual JG1 renderer and SJ1 field loader; no scorer load_body invoked",
+    "Checked source/runtime/config/runner pins and destination allowlist",
+    "Checked crash suffix retained/refused and per-frame fsync before immutable receipt",
+    "Checked source/root symlink refusal, exclusive output/metadata locks",
+    "10 tests passed including resumed full600 synthetic payload identity and quiet GO removal"
+  ],
+  "earlier_findings_fixed": [
+    "Retain in-flight materialized frame when GO disappears; next frame refuses",
+    "Output file lock prevents concurrent writer interleaving",
+    "Runner source included in binding; output storage preflight before model initialization"
+  ],
+  "limitations": [
+    "Actual n600 replay not run by reviewer; tests exercise custody controls with synthetic frames",
+    "Raw original invocation fails closed; parent owns compliant adapter investigation"
+  ]
+}

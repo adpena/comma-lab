@@ -1,0 +1,16 @@
+{
+  "review": "deletion guard pass 1",
+  "files": {
+    "experiments/ddm_vr3_certified_raw_reclaim.py": "f4fb5ea2e47eb04d81435a22dd5301ebf1770d6af6cc8ba86a913e01cc9da1cb",
+    "experiments/tests/test_ddm_vr7_reproducer_descriptor.py": "3bcadf4be2ebe8a494246f7b9dd9f96767d614ce4c63a43f12004275bb66c1a2"
+  },
+  "focus": [
+    "Follow control flow from descriptor load to PRE_DELETE: blocker remains present and path.unlink is unreachable",
+    "Manifest pin checked then parsed from bytes rechecked against pin; duplicate keys, malformed identity and unavailable pin refuse",
+    "Guard has no family whitelist and ignores status-based historical labels",
+    "Active redirect skips retained_revalidation and raw payload SHA; observation-file exclusions do not remove the guard blocker",
+    "No descriptor path preserves original VR5/legacy certification behavior"
+  ],
+  "findings": [],
+  "score_claim": false
+}

@@ -1,0 +1,23 @@
+{
+  "review": "deletion guard pass 2",
+  "files": {
+    "experiments/ddm_vr3_certified_raw_reclaim.py": "f4fb5ea2e47eb04d81435a22dd5301ebf1770d6af6cc8ba86a913e01cc9da1cb",
+    "experiments/tests/test_ddm_vr7_reproducer_descriptor.py": "3bcadf4be2ebe8a494246f7b9dd9f96767d614ce4c63a43f12004275bb66c1a2"
+  },
+  "focus": [
+    "Attack historical-observation waiver: native apply fixture pins MOVED manifest as exclusion yet still blocks",
+    "Attack family exception: sj1 parseback/overlay, tc3 and future-family helper fixtures all block",
+    "Attack path spelling: normalized dot-dot alias still identifies deletion target",
+    "Attack bad input: missing/drifted/malformed/nonobject/relative/bad-sha/duplicate-key/bad-pin all return explicit blockers",
+    "Scope boundary: rebound-to-different-path guard pass is not deletion authorization; original admission checks remain required",
+    "Positive controls: redirect-free VR5 and legacy apply fixtures continue to delete only their own test payloads"
+  ],
+  "findings": [],
+  "validation": "110 passed, 2 skipped across existing VR3/VR5/VR7 tests; Ruff and scoped diff check pass",
+  "limitations": [
+    "Guard covers moved_manifest dependencies declared by descriptors; it is not a global reverse-reference census",
+    "Manifest rebinding or retirement transaction is not implemented; current SJ1 descriptors continue to refuse deletion",
+    "Live-process visibility tests skipped under sandbox ps restrictions"
+  ],
+  "score_claim": false
+}

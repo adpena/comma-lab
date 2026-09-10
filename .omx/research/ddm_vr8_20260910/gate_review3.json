@@ -1,0 +1,17 @@
+{
+  "review": "gate pass 3 after bounded discovery addition",
+  "files": {
+    "src/tac/artifact_moved_audit.py": "df9c6b2d7dc10ec625f5630980cdf69c5ee6ac3568400c07b79ac6bac1b6a051",
+    "src/tac/tests/test_artifact_moved_audit.py": "734684964534713fbc03dc149b521fe4e833ff84830f27430b4d0e1fd0cda6aa"
+  },
+  "focus": [
+    "Depth traced: max_depth=1 only direct files, max_depth=4 root/a/b/c/file",
+    "All root lstat and scandir failures propagate; unavailable volume cannot look empty",
+    "Entry lstat without following links prevents directory link recursion; matching certificate symlinks explicitly refuse",
+    "Discovery selection excludes bare MOVED.json only; supplied bare files still receive explicit schema checks",
+    "Discovery performs no payload reads and default scanner header/stat mode remains unchanged"
+  ],
+  "findings": [],
+  "validation": "32 fixture cases pass; Ruff passes",
+  "score_claim": false
+}

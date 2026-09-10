@@ -1,0 +1,7 @@
+{
+  "returncode": 17,
+  "pins": {
+    "src/tac/artifact_moved.py": "19c59a47cc89c141a8bba4bb75b08c87acb12292070b178257a30e24867b2e1a",
+    "src/tac/tests/test_artifact_moved_verification.py": "f27289207f5eb15abbf8dfaade9e34cc5ed8aed4a11de546368753e32216d758"
+  }
+}

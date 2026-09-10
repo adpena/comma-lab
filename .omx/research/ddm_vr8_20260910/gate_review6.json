@@ -1,0 +1,17 @@
+{
+  "review": "gate pass 6 after bare certificate coverage correction",
+  "files": {
+    "src/tac/artifact_moved_audit.py": "4bce8cc62b6a20c4b36b2ac40c45ce2525c8d8c93a5495232a603720ef28285e",
+    "src/tac/tests/test_artifact_moved_audit.py": "1b7053f1ef0cb72244763835f5a0d757640d541b0b546c9a971cca808a541eb3"
+  },
+  "focus": [
+    "Trace malformed input: object parser errors become included certificates, not suppressed findings",
+    "Legacy recognition uses tuple membership so malformed unhashable schema values do not crash discovery",
+    "Both absolute source and destination are mandatory for tree-schema exclusion; relative paths remain scanner-visible",
+    "No historical event masking, added payload hashing, symlink recursion or implicit root selection introduced",
+    "Updated exact-name fixture now expects bare MOVED.json discovery; eight added parameter cases exercise current/unknown/legacy split"
+  ],
+  "findings": [],
+  "validation": "40 fixture tests and Ruff passed after final edits; code unchanged between passes 5 and 6",
+  "score_claim": false
+}

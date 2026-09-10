@@ -1,0 +1,27 @@
+{
+  "source_helper_sha256": "19c59a47cc89c141a8bba4bb75b08c87acb12292070b178257a30e24867b2e1a",
+  "source_fallback_commit": "9eb5c05ae34bb38c9261743cd22f75a55a711421",
+  "copy_calls": [
+    {
+      "function": "tac.artifact_moved.copy_verified",
+      "src": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/0.raw",
+      "dst": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+      "expected_bytes": 3662409600,
+      "expected_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+    },
+    {
+      "function": "tac.artifact_moved.copy_verified",
+      "src": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/pose/overlay_base/odd_frames.u8",
+      "dst": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+      "expected_bytes": 1831204800,
+      "expected_sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653"
+    }
+  ],
+  "copy_stage_resume": "if destination exists, verify its exact bytes; otherwise exclusive copy; failed partial kept and refused",
+  "GO": "/Volumes/VertigoDataTier/pact/MAIN_GO_CUSTODY_AUDIT",
+  "CPU_count_observed": 18,
+  "concurrent_render_workers_cap": 4,
+  "threads_per_renderer": 4,
+  "CPU_axis": "macOS-CPU byte/custody apparatus",
+  "score_claim": false
+}

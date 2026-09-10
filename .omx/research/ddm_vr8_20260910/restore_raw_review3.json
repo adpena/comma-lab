@@ -1,0 +1,28 @@
+{
+  "reviewer": "ddm_vr8_restore",
+  "pass": "raw_postfix_pass1",
+  "reviewed_at_utc": "2026-09-10T14:48:06.630903+00:00",
+  "files": [
+    {
+      "path": "experiments/ddm_vr8_raw_restore.py",
+      "sha256": "bf5128ab47ed0b690f66453babf2da70c6a5d63260d3fb308974bbb57ba73fef"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr8_raw_restore.py",
+      "sha256": "e8e0992e01d0f1d4af6c532a49315a3f100f00725298fab56cbe25f5d152e214"
+    }
+  ],
+  "verdict": "CLEAN_AFTER_SELECTOR_FIX",
+  "fixed": [
+    "Parent identified skipped mode0; adapter now invokes actual apply_pixel_mode for every selected mode including mode0"
+  ],
+  "checks": [
+    "Regression substitutes nonidentity modes[0] and proves it executes",
+    "Re-reviewed all three unchanged original receiver render functions against adapter",
+    "Nine tests passed; raw/metadata mutations remain exclusive-create or append and source runtimes read-only"
+  ],
+  "limitations": [
+    "No n600 raw yet; expected full SHA final acceptance remains owed",
+    "Prior raw review hashes superseded by this selector correction"
+  ]
+}

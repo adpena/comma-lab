@@ -1,0 +1,10 @@
+{
+  "certificate": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/RECLAIM_stalled_render.json",
+  "destination": "/Volumes/APDataStore/pact/ddm_fe1_frame_embedding_predistortion/parseback/0.raw",
+  "bytes": 3662409600,
+  "sha256": "30964f538c9c5a94095ad295919ce82c5a272e109dba7700ea9bc1e63ca4b455",
+  "observed_at_utc": "2026-09-10T14:48:19.038120+00:00",
+  "status": "DESTINATION_HASHED_ORIGINAL_IDENTITY_UNPROVEN",
+  "reason": "Undated reclaim certificate lacks original raw SHA and uses placeholder rebuild argv; file mtime is 2026-09-09 so conservatively included. Hash measures superseding payload only, not deleted original equality.",
+  "score_claim": false
+}

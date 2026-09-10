@@ -5198,6 +5198,7 @@ def preflight_all(
         # the live backlog is classified.
         check_instrument_binds_to_live_pointer(strict=True, verbose=verbose)
         check_no_bare_cross_arm_artifact_reads(strict=False, verbose=verbose)
+        check_moved_payload_destinations(strict=True, verbose=verbose)
         check_ddm_ledger_before_optional_dump(strict=True, verbose=verbose)
         check_no_unvalidated_required_component_jsonl_readers(
             strict=False, verbose=verbose,
@@ -95257,8 +95258,6 @@ def check_frontier_excludes_disqualified_rows(
     return violations
 
 
-if __name__ == "__main__":
-    _preflight_cli_main()
 def check_no_bare_cross_arm_artifact_reads(*, repo_root=None, strict=False, verbose=False):
     from tac.artifact_moved_gate import violations
     try:
@@ -95268,3 +95267,33 @@ def check_no_bare_cross_arm_artifact_reads(*, repo_root=None, strict=False, verb
     if strict and found:
         raise PreflightError("Catalog #417 / CLAUDE.md certify-or-block: " + "\n".join(found))
     return found
+
+
+def check_moved_payload_destinations(*, roots=None, certificate_paths=None,
+                                     strict=False, verbose=False):
+    """Catalog #419: current file-custody redirects must name real data forks.
+
+    Both SSDs, depth <=4, file MOVED.json / *.MOVED.json and MOVE_LOG.jsonl; metadata/header only.
+    full SHA census is separately gated by MAIN's quiet-window authorization.
+    Only two explicitly recognized legacy directory schemas use the separate tree audit.
+    """
+    from tac.artifact_moved_audit import certificate_violations, discover_certificates
+    try:
+        paths = list(certificate_paths) if certificate_paths is not None else discover_certificates(
+            roots if roots is not None else (
+                Path('/Volumes/VertigoDataTier/pact'), Path('/Volumes/APDataStore/pact')))
+        found = certificate_violations(paths)
+        if not paths:
+            found.append('NO_COVERAGE: no file MOVE certificates in the declared scope')
+    except (OSError, ValueError, TypeError) as exc:
+        found = [f'custody destination census failed closed: {exc}']
+    if verbose:
+        print(f'[catalog-419] {len(found)} current destination violation(s); metadata/header only')
+    if strict and found:
+        raise PreflightError('Catalog #419 / CLAUDE.md certify-or-block + ALWAYS KEEP THE PAYLOAD: '
+                             + '\n'.join(found))
+    return found
+
+
+if __name__ == "__main__":
+    _preflight_cli_main()

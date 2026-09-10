@@ -1,0 +1,22 @@
+{
+  "review": "gate pass 2",
+  "reviewer": "ddm_vr8_gate",
+  "files": {
+    "src/tac/artifact_moved_audit.py": "cf1d9f3ed66c752e7770cea85c63c41011857e470933ce86735f95c4e1409b1e",
+    "src/tac/tests/test_artifact_moved_audit.py": "0146a1793a69e55c46fd58ff4dd517a423770cec8e83138d260a3a7d73b7d074"
+  },
+  "focus": [
+    "Adversarially trace every supported event: no last-event masking or correction waiver",
+    "Path-only log lookup uses source+.MOVED.json exactly and compares optional historical identity",
+    "Schema refusal paths return one path-qualified message and continue later JSONL rows",
+    "No implicit volume discovery, mutation, source presence requirement, resolver hashing or scoring",
+    "Fixture tests create local temporary bytes only; known equal-size corruption explicitly demonstrates metadata-only mode limitation"
+  ],
+  "findings": [],
+  "limitations": [
+    "Directory/tree schemas deliberately unsupported; caller must account for excluded schemas in census denominator",
+    "Metadata-only mode cannot detect equal-size non-AppleDouble corruption; hash_payloads=True is the digest authority",
+    "Scanner does not follow subsequent MOVED chains, so relocation of certified destination remains a violation until original custody assertion is repaired"
+  ],
+  "score_claim": false
+}

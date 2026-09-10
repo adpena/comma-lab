@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "find",
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+    "-maxdepth",
+    "4",
+    "(",
+    "-iname",
+    "*reclaim*.json*",
+    "-o",
+    "-iname",
+    "*delete*log*.json*",
+    ")"
+  ],
+  "rc": 0,
+  "stdout": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/RECLAIM_stalled_render.json\n/Volumes/APDataStore/pact/ddm_hm1_failed_source_repo_20260810/SR3_RECLAIM_CERTIFICATE.json\n/Volumes/APDataStore/pact/ddm_ai1_20260809/SR3_RECLAIM_CERTIFICATE.json\n/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/SR3_RECLAIM_CERTIFICATE.json\n/Volumes/APDataStore/pact/ddm_b2e_f2_alone_run/SR3_RECLAIM_CERTIFICATE.json\n/Volumes/APDataStore/pact/ddm_sa1/SR3_RECLAIM_CERTIFICATE.json\n/Volumes/APDataStore/pact/ddm_tv1_tolerance_curve/SR3_RECLAIM_CERTIFICATE.json\n/Volumes/APDataStore/pact/ddm_tv2_tolerance_curve/SR3_RECLAIM_CERTIFICATE.json\n",
+  "stderr": ""
+}

@@ -1,0 +1,23 @@
+{
+  "time": "2026-09-10T15:26:35.827255+00:00",
+  "files": {
+    "src/tac/preflight.py": "1e8af1a9f8a4a5f6d73fcc88e34f4e3060eb0a9b6f108a88a65334f023d58b5c",
+    "src/tac/tests/test_moved_payload_preflight.py": "e5a0270a7980996f1f095b7b8a0e5ad4932519ec59c961a0172de677b0078f10"
+  },
+  "review": "Hostile review of nonempty discovery, unavailable roots, historical correction cannot waive missing target, strict exception propagation and moved CLI execution boundary. Integration negatives consume missing bytes/unmounted/empty scope; test protects definitions before CLI invocation. Changed strict call has zero current scanner violations; four integration tests rerun passed.",
+  "findings": [],
+  "marks": [
+    {
+      "file": "src/tac/preflight.py",
+      "rc": 0,
+      "stdout": "RESCAN: 'src/tac/preflight.py' current entity census 1360 (last stored census 1360)\nMarked 1360 entities in 'src/tac/preflight.py' as 'reviewed'\n",
+      "stderr": ""
+    },
+    {
+      "file": "src/tac/tests/test_moved_payload_preflight.py",
+      "rc": 0,
+      "stdout": "RESCAN: 'src/tac/tests/test_moved_payload_preflight.py' current entity census 4 (last stored census 4)\nMarked 4 entities in 'src/tac/tests/test_moved_payload_preflight.py' as 'reviewed'\n",
+      "stderr": ""
+    }
+  ]
+}

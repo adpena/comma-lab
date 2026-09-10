@@ -1,0 +1,26 @@
+{
+  "reviewer": "ddm_vr8_restore",
+  "pass": "raw_final_pass2",
+  "reviewed_at_utc": "2026-09-10T14:49:07.240853+00:00",
+  "files": [
+    {
+      "path": "experiments/ddm_vr8_raw_restore.py",
+      "sha256": "729628f8fca97ce112a3f7a227dde7fcc12ccd60db69c8c2279c6a35227e9cc1"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr8_raw_restore.py",
+      "sha256": "e8e0992e01d0f1d4af6c532a49315a3f100f00725298fab56cbe25f5d152e214"
+    }
+  ],
+  "verdict": "CLEAN",
+  "checks": [
+    "Hostile review of crash before/after copy, capture, pair append and checkpoint; no historical or sealed file overwrite",
+    "Confirmed exact per-pair math vs all three original render_video sources; byte parity on reduced geometry",
+    "Verified no scorer call, token decode launch or runtime-file edit; destination equals exact historic source_config original"
+  ],
+  "validation": "9 tests passed; ruff clean",
+  "limitations": [
+    "Actual n600 original-input restore and full expected SHA acceptance remain for parent launch",
+    "Earlier raw review hashes superseded by selector-zero and actual prefix-env corrections"
+  ]
+}

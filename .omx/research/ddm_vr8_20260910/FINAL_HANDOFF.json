@@ -1,0 +1,137 @@
+{
+  "schema": "ddm_vr8.final_handoff.v1",
+  "time": "2026-09-10T15:29:36.056393+00:00",
+  "status": "RECOVERY_VERIFIED_MAIN_LANDINGS_AND_FE1_RESOLUTION_BLOCKED",
+  "axis": "macOS-CPU byte/custody apparatus",
+  "score_claim": false,
+  "memo": ".omx/research/ddm_vr8_moved_payloads_exfat_stub_audit_20260910.md",
+  "census_summary": ".omx/research/ddm_vr8_20260910/final_census_summary.json",
+  "census": {
+    "original_move_claim_rows": 26,
+    "unique_destinations": 14,
+    "expected_and_verified_bytes": 34792891200,
+    "initial_missing_destinations": 11,
+    "initial_false_current_claim_rows": 22,
+    "recovered_payloads": 11,
+    "recovered_bytes": 27468072000,
+    "remaining_false_move_claims": 0,
+    "gate_certificate_files": 16,
+    "correction_rows": 11,
+    "recovery_rows": 11
+  },
+  "additional_scope": {
+    "older_move_directory_certificates_listed_not_full_hashed": 8,
+    "older_reclaim_archives_listed_not_full_hashed": 7,
+    "recent_fe1_replacement_hashed_bytes": 3662409600,
+    "fe1_original_status": "ORIGINAL_PATH_RECORDED_HASH_DIFFERS_FROM_REPLACEMENT",
+    "historical_reclaim_path_rows": 3887,
+    "historical_recent_unique_deletions": 1247,
+    "historical_recent_deleted_logical_bytes": 163219215550
+  },
+  "root_cause": {
+    "actor": "MAIN VR7 apply",
+    "pid": 34056,
+    "launch_time_utc": "2026-09-10T06:24:05Z",
+    "deleted_eleven_between_utc": [
+      "2026-09-10T06:28:41.777008Z",
+      "2026-09-10T06:38:08.271142Z"
+    ],
+    "conclusion": "Original MOVE succeeded and rehashed actual bytes. Later VR7 deleted data forks while leaving live MOVED redirects. AppleDouble creation actor unknown."
+  },
+  "gate": {
+    "catalog": 419,
+    "strict_in_working_tree": true,
+    "metadata_header_only": true,
+    "live_violations": 0,
+    "deletion_guard_scope": "descriptor-declared active MOVED redirects; no global reverse-reference or retirement transaction claimed"
+  },
+  "validation": {
+    "combined_tests_passed": 237,
+    "process_visibility_tests_skipped": 2,
+    "post_strict_flip_tests_passed": 4,
+    "ruff": "owned small modules clean; preflight edited diff reviewed",
+    "python_reviews": "two current passes per Python file",
+    "log_prefix_unchanged": true,
+    "source_manifests_unchanged": 15,
+    "original_stubs_unchanged": 19,
+    "shared_index_unchanged": true
+  },
+  "landings": [
+    {
+      "label": "source",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle",
+      "bytes": 3358,
+      "sha256": "c4200331fe20c184119ac8c6494fd27ee5f4922b36179ef58823ddb808f85e2d",
+      "verify_rc": 0,
+      "verify_stdout": "The bundle contains this ref:\n9eb5c05ae34bb38c9261743cd22f75a55a711421 refs/heads/serializer-fallback\nThe bundle requires this ref:\n3676ad0b0194e8e1958665d404ecb1dd6efea78b \nThe bundle uses this hash algorithm: sha1\n",
+      "verify_stderr": ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle is okay\n",
+      "heads": "9eb5c05ae34bb38c9261743cd22f75a55a711421 refs/heads/serializer-fallback\n"
+    },
+    {
+      "label": "enforcement",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-commit.bundle",
+      "bytes": 1010897,
+      "sha256": "5b75c7066c836cd4564899a31e99dc8a299cc01af08e365f82a850d1cdf87088",
+      "verify_rc": 0,
+      "verify_stdout": "The bundle contains this ref:\ndc739926296496bc29362ba4329e2fb059db7ebf refs/heads/serializer-fallback\nThe bundle requires this ref:\nb3276d60d8e31123cef5eef07b822a7a9367e3a4 \nThe bundle uses this hash algorithm: sha1\n",
+      "verify_stderr": ".omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-commit.bundle is okay\n",
+      "heads": "dc739926296496bc29362ba4329e2fb059db7ebf refs/heads/serializer-fallback\n"
+    }
+  ],
+  "main_landing_claim": false,
+  "landing_order": [
+    "9eb5c05ae34bb38c9261743cd22f75a55a711421",
+    "dc739926296496bc29362ba4329e2fb059db7ebf"
+  ],
+  "landing_blocker": "Both serializer attempts rc17: Git object-store writes Operation not permitted. Patches and bundles retained; no repeated approval request or shared index mutation.",
+  "boundaries": [
+    "MAIN_GO_CUSTODY_AUDIT present before hashing/copy/render",
+    "No scorer, Modal, GPU, MPS, eval or GT decode",
+    "No upstream, PR or sealed-tree edits; rp1 round2 and sj1 sealed candidate read-only",
+    "No existing payload or stub deletion/overwrite; original MOVE_LOG prefix preserved",
+    "All recovery outputs and per-frame checkpoints retained on SSD; seed20260910 and four CPU threads per render, at most four render workers",
+    "No shared staged-index edits/stash, no review override, no co-author trailer, no external messages, no /tmp evidence",
+    "No score or pointer promotion by VR8"
+  ],
+  "frontier_from_live_hot_state": "## POINTER_LINE\n- OWN-VEHICLE FRONTIER (SUBMITTABLE): S 0.1374765052591843 @ 180,238 B [contest-CUDA T4 n600] \u2014 move 42 (rp1 round 2: rate-directed pre-distortion re-based onto move 40's field + carrier re-solve; pose 4.66e-06 below base, seg exactly 0, +5 B; receiver = move 40's, decode leg inherited t4_direct 990.054 s; T4 inflate 978.1 s)\n- archive sha f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f \u00b7 lane ddm_rp1_round2_rate_directed_predistortion_k192_20260910 \u00b7 packet d2803c214 \u00b7 custody /Volumes/APDataStore/pact/ddm_rp1_round2_rate_directed_predistortion_k192_20260910/custody_pointer42\n- canonical pointer JSON AGREES (refreshed after the packet); move 41 remains journaled as disqualified (rule 118)\n- sub-0.12 gap (submittable): 0.01747651 \u00b7 PR #140 carries move 23 (19 behind); swap packet STAGED for move 40 (now itself superseded) \u2014 the readiness chain (CPU eval, receiver import hygiene, manifests) applies to whichever bytes ship",
+  "next_if_resumed": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER (blocked)",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_vr8_20260910/FINAL_HANDOFF.json",
+      "fire_trigger": "Harvest verified bundles in Git-writable MAIN session; source first then enforcement; verify live zero census",
+      "task_id": "ddm_vr8_two_landings_20260910"
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER (blocked)",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_vr8_20260910/fe1_original_hash_followup.json",
+      "fire_trigger": "Harvest audit; resolve FE1 original render completion/runtime timeline against four historical hashes before certified original recovery or explicit replacement-only retirement",
+      "task_id": "ddm_vr8_fe1_identity_20260910"
+    }
+  ],
+  "live_hypotheses": [
+    {
+      "lead": "FE1 removed temporary raw may represent different render state from replacement",
+      "why_plausible": "Four old-path hashes agree but differ from replacement; reclaim note names stalled run. Exact cause unproven."
+    }
+  ],
+  "dead_ends": [
+    {
+      "path": "SJ1 original failed copy or five-minute reaper kill",
+      "reason": "Later full hashes prove bytes existed, and VR7 journals record the deletion actor; INSTANCE scope"
+    },
+    {
+      "path": "Trust sidecar or MOVED label without bytes",
+      "reason": "Initially false current redirects; only restored full SHA equality repairs custody"
+    },
+    {
+      "path": "Delete active MOVE target because rebuildable",
+      "reason": "Demonstrated lifecycle bug; new descriptor apply guard blocks it"
+    },
+    {
+      "path": "FE1 replacement byte identity assertion",
+      "reason": "Current replacement SHA differs from four historical old-path full hashes"
+    }
+  ]
+}

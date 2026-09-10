@@ -1,0 +1,26 @@
+{
+  "reviewer": "ddm_vr8_restore",
+  "pass": "raw_final_pass1",
+  "reviewed_at_utc": "2026-09-10T14:49:07.240561+00:00",
+  "files": [
+    {
+      "path": "experiments/ddm_vr8_raw_restore.py",
+      "sha256": "729628f8fca97ce112a3f7a227dde7fcc12ccd60db69c8c2279c6a35227e9cc1"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr8_raw_restore.py",
+      "sha256": "e8e0992e01d0f1d4af6c532a49315a3f100f00725298fab56cbe25f5d152e214"
+    }
+  ],
+  "verdict": "CLEAN",
+  "checks": [
+    "Rechecked selector invokes every actual mode, including mode0; regression covers nonidentity zero",
+    "Traced actual F26_ADVISORY_PAIR_LIMIT env name; clear matches original parser",
+    "Actual full token checkpoint must load; decoder fallthrough refuses; original input hashes revalidate"
+  ],
+  "validation": "9 tests passed; ruff clean",
+  "limitations": [
+    "Actual n600 original-input restore and full expected SHA acceptance remain for parent launch",
+    "Earlier raw review hashes superseded by selector-zero and actual prefix-env corrections"
+  ]
+}

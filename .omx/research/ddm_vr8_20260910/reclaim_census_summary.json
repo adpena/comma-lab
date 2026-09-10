@@ -1,0 +1,7 @@
+{
+  "path_bearing_rows": 3887,
+  "since": "2026-09-09",
+  "unique_deleted_paths": 1247,
+  "historical_logical_bytes": 163219215550,
+  "note": "includes 18 VR3 ledger deletions with applied_at_utc, not only VR5/VR7 journals"
+}

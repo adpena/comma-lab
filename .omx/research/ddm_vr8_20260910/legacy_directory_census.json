@@ -1,0 +1,98 @@
+[
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_ai1_20260809_MOVE_MANIFEST/MOVED.json",
+    "certificate_sha256": "8bb38b2d98036441b3b53fc9b6bb27e2eabdeef58a3aeb9be71e40f276c69169",
+    "source": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809",
+    "destination": "/Volumes/APDataStore/pact/ddm_ai1_20260809",
+    "source_state": "SYMLINK",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": 26941292544,
+    "declared_files": 141,
+    "date": "2026-08-10T21:42:47Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/MOVED.json",
+    "certificate_sha256": "3d60dcb31dd0c198b3ebe7548634c4b5aef4ad21333f4bff40b052cbc9de96db",
+    "source": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+    "destination": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns",
+    "source_state": "SYMLINK",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": 234889540091,
+    "declared_files": 4404,
+    "date": "2026-08-12T00:17:52Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b/MOVED_RECEIPT.json",
+    "certificate_sha256": "7b27e499b31c06b0e05de900f6b8f62350fb48f788d0b8800cf43412be0cb02d",
+    "source": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b",
+    "destination": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b",
+    "source_state": "PRESENT",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": null,
+    "declared_files": 3,
+    "date": "2026-08-15T15:33:42Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64/MOVED_RECEIPT.json",
+    "certificate_sha256": "80d1958aa812754481431081131d3f6e7b431adf7c841e54335145b323e66e6a",
+    "source": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64",
+    "destination": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64",
+    "source_state": "PRESENT",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": null,
+    "declared_files": 3,
+    "date": "2026-08-15T15:33:42Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_2/MOVED_RECEIPT.json",
+    "certificate_sha256": "502e62b68d20a76e70f0cf2de4485dc0d8c58dc6cc4cc7a12ee70220daf7eb62",
+    "source": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b",
+    "destination": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_2",
+    "source_state": "PRESENT",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": null,
+    "declared_files": 3,
+    "date": "2026-08-15T15:35:25Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_2/MOVED_RECEIPT.json",
+    "certificate_sha256": "00c4dbee8bc4040d56e1581aa27394ff6eef1f799a128a9a4794f1a0a9e78ebe",
+    "source": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64",
+    "destination": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_2",
+    "source_state": "PRESENT",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": null,
+    "declared_files": 3,
+    "date": "2026-08-15T15:35:25Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3/MOVED_RECEIPT.json",
+    "certificate_sha256": "d4f525e7625169cd2ae76c930ba4ee63258472aebd0a5edeae0c9e18e894ec44",
+    "source": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b",
+    "destination": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3",
+    "source_state": "PRESENT",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": null,
+    "declared_files": 3,
+    "date": "2026-08-15T15:40:58Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  },
+  {
+    "certificate": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3/MOVED_RECEIPT.json",
+    "certificate_sha256": "40fe04d5f729c9cc7984703bb7b36771c07f3bf57fb44318b1bc23689543fe19",
+    "source": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64",
+    "destination": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3",
+    "source_state": "PRESENT",
+    "destination_state": "PRESENT_DIRECTORY",
+    "declared_bytes": null,
+    "declared_files": 3,
+    "date": "2026-08-15T15:40:58Z",
+    "hash_status": "EARLIER_THAN_20260909_LISTED_NOT_PAYLOAD_HASHED"
+  }
+]

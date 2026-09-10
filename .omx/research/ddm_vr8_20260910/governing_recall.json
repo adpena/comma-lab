@@ -1,0 +1,15 @@
+{
+  "recent_directive_filenames": [
+    ".omx/research/ddm_bnd2_directive_main_sj1_s25_level_correction_20260910.md",
+    ".omx/research/ddm_pr8_directive_main_tc4_t4_failure_receipt_20260910.md",
+    ".omx/research/ddm_dwc1_directive_main_rlc1_timing_order_20260910.md",
+    ".omx/research/ddm_dwc1_directive_main_rp1_timing_corrections_20260910.md",
+    ".omx/research/ddm_dwc1_directive_main_pr8_margin_finding_20260910.md",
+    ".omx/research/ddm_eb2_directive_main_pr7_requirements_20260910.md",
+    ".omx/research/ddm_pm2_directive_main_per_arm_model_hunks_20260909.md"
+  ],
+  "lane_registry_sha256": "179138d0e52df84066b3d65978d33af4de4a66941814836e579b1bd1f0591a06",
+  "vr8_lane_found": false,
+  "checkpoint": "ddm_vr8",
+  "no_remote_or_scorer_dispatch": true
+}

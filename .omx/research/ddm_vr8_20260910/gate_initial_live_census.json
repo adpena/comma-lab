@@ -1,0 +1,39 @@
+{
+  "observed_at_utc": "2026-09-10T15:00:49.168432+00:00",
+  "paths": [
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/pose/overlay_base/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/pose/overlay_cand/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/source_raw_custody/0.raw.MOVED.json"
+  ],
+  "violations": [
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:1:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:5:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:7:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:8:[Errno 2] No such file or directory: '/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw'",
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:9:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:10:[Errno 2] No such file or directory: '/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8'",
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl:11:[Errno 2] No such file or directory: '/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8'",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8.MOVED.json:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw.MOVED.json:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw.MOVED.json:[Errno 2] No such file or directory: '/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw'",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8.MOVED.json:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8.MOVED.json:[Errno 2] No such file or directory: '/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8'",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8.MOVED.json:[Errno 2] No such file or directory: '/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8'",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw.MOVED.json:BYTE_DRIFT:/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw"
+  ],
+  "hash_payloads": false,
+  "score_claim": false
+}

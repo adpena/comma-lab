@@ -1,0 +1,12 @@
+[
+  "src/tac/artifact_moved_audit.py",
+  "src/tac/tests/test_artifact_moved_audit.py",
+  "src/tac/preflight.py",
+  "src/tac/tests/test_moved_payload_preflight.py",
+  "experiments/ddm_vr8_restore.py",
+  "experiments/tests/test_ddm_vr8_restore.py",
+  "experiments/ddm_vr8_raw_restore.py",
+  "experiments/tests/test_ddm_vr8_raw_restore.py",
+  "experiments/ddm_vr3_certified_raw_reclaim.py",
+  "experiments/tests/test_ddm_vr7_reproducer_descriptor.py"
+]

@@ -1,0 +1,530 @@
+{
+  "recorded_at_utc": "2026-09-10T15:26:35.908714+00:00",
+  "launches": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0001/launch_manifest.json",
+      "sha256": "5bd2129b8ac817f70d17b6f41debfeb3a9fb3c62b6a3d49dc74917210b9e3875",
+      "pid": 61137,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/overlay_row_0001_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0001/launch_manifest.json",
+        "monotonic_launch_counter": 1417,
+        "pid": 61137
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 2.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.73,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0001",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.54,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 54.78,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.54,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0002/launch_manifest.json",
+      "sha256": "c4a56884e13be8be5cea2c29329b31865ba97a10016bd8e6a5ac2c9839940b5c",
+      "pid": 62468,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_overlay_0002",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0002/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/overlay_row_0002_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0002/launch_manifest.json",
+        "monotonic_launch_counter": 1418,
+        "pid": 62468
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 2.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.7,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0002",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.54,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 53.36,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.54,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0004/launch_manifest.json",
+      "sha256": "801ff737d0859a0118c9742df3f2ea77fb1c6a736c328ddb4f41e85324f41ef6",
+      "pid": 77351,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_overlay_0004",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0004/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/overlay_row_0004_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0004/launch_manifest.json",
+        "monotonic_launch_counter": 1423,
+        "pid": 77351
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 2.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.61,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0004",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.4,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 49.32,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.4,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0008/launch_manifest.json",
+      "sha256": "1c212cac91145cd5e0e84cf846df520867dc5673fcec318cb2b26a1e801d9993",
+      "pid": 84993,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_overlay_0008",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0008/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/overlay_row_0008_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0008/launch_manifest.json",
+        "monotonic_launch_counter": 1424,
+        "pid": 84993
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 2.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.56,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0008",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.4,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 47.6,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.4,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0009/launch_manifest.json",
+      "sha256": "8f83aad94807c236edb794b3042ed8f99407fc930ebed646a230985fe126d66b",
+      "pid": 99040,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_overlay_0009",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0009/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/overlay_row_0009_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0009/launch_manifest.json",
+        "monotonic_launch_counter": 1426,
+        "pid": 99040
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 2.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.53,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0009",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.28,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 41.8,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.28,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0010/launch_manifest.json",
+      "sha256": "7a2aeb0fd5d3af35c6b3922380eb3574bfdcb13c47110b6d99b2a151373f40e7",
+      "pid": 17311,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_overlay_0010",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0010/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/overlay_row_0010_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0010/launch_manifest.json",
+        "monotonic_launch_counter": 1428,
+        "pid": 17311
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 2.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.49,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_overlay_0010",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.17,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 37.92,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.17,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass/launch_manifest.json",
+      "sha256": "9b9e33711f2fdf506d739bcfd421ae736a4775cc8ce426c83422afde4b14234e",
+      "pid": 74870,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_raw_multipass",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_raw_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/raw_multipass_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass/launch_manifest.json",
+        "monotonic_launch_counter": 1422,
+        "pid": 74870
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 4.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.62,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.53,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 49.89,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.53,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass3/launch_manifest.json",
+      "sha256": "b2e665e9114a46c54f8d743ce285417bffa276137cbfa313462031c59c167bae",
+      "pid": 4065,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_raw_multipass3",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass3/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_raw_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/raw_multipass3_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass3/launch_manifest.json",
+        "monotonic_launch_counter": 1427,
+        "pid": 4065
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 4.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.51,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_multipass3",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.28,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 41.24,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.28,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_pass5/launch_manifest.json",
+      "sha256": "5d1bb1a8c41f4137caa192788a69e01e1ade6bd1b4627a4ae3d9b0959d21f8cf",
+      "pid": 86813,
+      "argv": [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--timeout",
+        "1800",
+        "--label",
+        "ddm_vr8_raw_pass5",
+        "--status-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_pass5/safe_run.json",
+        "--",
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_vr8_raw_restore.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/raw_pass5_restore.json"
+      ],
+      "launch_id": {
+        "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_pass5/launch_manifest.json",
+        "monotonic_launch_counter": 1425,
+        "pid": 86813
+      },
+      "storage_waterfall": {
+        "artifact_budget_gib": 4.0,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 226.54,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/launch_raw_pass5",
+        "ssd_tiers": [
+          {
+            "free_gib": 54.4,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 46.83,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 54.4,
+        "verdict": "PASS"
+      }
+    }
+  ],
+  "certificates": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0001/RESTORE_CERTIFICATE.json",
+      "sha256": "a2b49669d7fce6143f38b329df0d3a9a505730d6d9e42a2c2529ea3b5b620898",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 1831204800,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+        "sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0002/RESTORE_CERTIFICATE.json",
+      "sha256": "ada27ec120b35e9dbb370c58dc6ab1ed3ab67053adc56c756dfa917a447e198d",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 1831204800,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+        "sha256": "494484d210cc91ac33ff5107ea40616509b3a6536f541aa9845fc0c8164f80cc"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0004/RESTORE_CERTIFICATE.json",
+      "sha256": "d52fed5553fde88c19cbd1f87fd75969b442acbe713c757f44eee6e53084a80f",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 1831204800,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+        "sha256": "6966a44acf5566ed1894b2e4d4110a00c25313643461458b1d6b80a2d79b3f53"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0008/RESTORE_CERTIFICATE.json",
+      "sha256": "fd496bd4d043640c4c56643435a41c60247b7975215acab0f2a6df98512d0f6a",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 1831204800,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+        "sha256": "35b001e499232cdda63bc805574df13976553fb3498833feeeefa7f66eb9b253"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0009/RESTORE_CERTIFICATE.json",
+      "sha256": "5a9d96775dfa889ca2aeeeda8940d1be529dcd13e451b73a56945655daf7e46f",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 1831204800,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+        "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0010/RESTORE_CERTIFICATE.json",
+      "sha256": "2f8787c26a96437dd48297bb06aba96a21ed821aac84667f2d369516a76fe180",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 1831204800,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+        "sha256": "bbbea5058041a39e05ffacfe8d97a70b441f589b761a831570a9878c8903ae18"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/raw_multipass/RESTORE_CERTIFICATE.json",
+      "sha256": "67692ecb6e2a5c3b8672b57390285c071f47db53a39404331ed4327cb7fd182a",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 3662409600,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+        "sha256": "5aa5ffe54837f07cce002830b8623b73e185abde49f6a96b2be1bb9d2d448879"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/raw_multipass3/RESTORE_CERTIFICATE.json",
+      "sha256": "71716f01553fc41bca42e567dd60d04eb80898aa3a40a9cdc77acf95bc3e1eea",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 3662409600,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+        "sha256": "bfe96bac3066dfec78cf32075582686ac74e6c1756df6008522e589bf0709b4b"
+      },
+      "seed": 20260910,
+      "threads": 4
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/raw_pass5/RESTORE_CERTIFICATE.json",
+      "sha256": "adbc38ff6b965c4c1f5263f34f2d6afa7fbb67eefea06e502d26bd34285160b2",
+      "complete": true,
+      "rebuilt": {
+        "bytes": 3662409600,
+        "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+        "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12"
+      },
+      "seed": 20260910,
+      "threads": 4
+    }
+  ],
+  "score_claim": false
+}

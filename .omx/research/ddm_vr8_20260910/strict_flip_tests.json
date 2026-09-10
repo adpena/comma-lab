@@ -1,0 +1,12 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "src/tac/tests/test_moved_payload_preflight.py"
+  ],
+  "returncode": 0,
+  "stdout": "....                                                                     [100%]\n4 passed in 2.11s\n",
+  "stderr": ""
+}

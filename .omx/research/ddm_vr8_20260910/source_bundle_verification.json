@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "git",
+    "bundle",
+    "verify",
+    ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle"
+  ],
+  "returncode": 0,
+  "stdout": "The bundle contains this ref:\n9eb5c05ae34bb38c9261743cd22f75a55a711421 refs/heads/serializer-fallback\nThe bundle requires this ref:\n3676ad0b0194e8e1958665d404ecb1dd6efea78b \nThe bundle uses this hash algorithm: sha1\n",
+  "stderr": ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle is okay\n",
+  "bytes": 3358,
+  "sha256": "c4200331fe20c184119ac8c6494fd27ee5f4922b36179ef58823ddb808f85e2d"
+}

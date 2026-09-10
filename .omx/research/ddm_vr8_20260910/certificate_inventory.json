@@ -1,0 +1,724 @@
+{
+  "argv": [
+    "find",
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+    "-maxdepth",
+    "4",
+    "(",
+    "-name",
+    "MOVED.json",
+    "-o",
+    "-name",
+    "MOVE_LOG.jsonl",
+    "-o",
+    "-name",
+    "*MOVED*.json",
+    ")"
+  ],
+  "rc": 0,
+  "stderr": "",
+  "files": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw.MOVED.json",
+      "bytes": 402,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+          "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8",
+          "bytes": 3662409600,
+          "rebuildable_from": "candidate/candidate_runtime/archive.zip via ddm_sj1_joint_admission.py parseback, or ddm_rp1_pose.py render",
+          "reason": "round-1 bulk cold-stored to free Vertigo for round 2; bytes preserved"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/pose/overlay_base/odd_frames.u8.MOVED.json",
+      "bytes": 413,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/overlay_base_odd_frames.u8",
+          "sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da",
+          "bytes": 1831204800,
+          "rebuildable_from": "candidate/candidate_runtime/archive.zip via ddm_sj1_joint_admission.py parseback, or ddm_rp1_pose.py render",
+          "reason": "round-1 bulk cold-stored to free Vertigo for round 2; bytes preserved"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/pose/overlay_cand/odd_frames.u8.MOVED.json",
+      "bytes": 413,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/overlay_cand_odd_frames.u8",
+          "sha256": "8c3fecf0bdb578104bb7a220abebcf568ca50a4fe4d94938b85b1e66bf6d9eca",
+          "bytes": 1831204800,
+          "rebuildable_from": "candidate/candidate_runtime/archive.zip via ddm_sj1_joint_admission.py parseback, or ddm_rp1_pose.py render",
+          "reason": "round-1 bulk cold-stored to free Vertigo for round 2; bytes preserved"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw.MOVED.json",
+      "bytes": 523,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+          "sha256": "5aa5ffe54837f07cce002830b8623b73e185abde49f6a96b2be1bb9d2d448879",
+          "bytes": 3662409600,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T05:00:38Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw.MOVED.json",
+      "bytes": 529,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+          "sha256": "bfe96bac3066dfec78cf32075582686ac74e6c1756df6008522e589bf0709b4b",
+          "bytes": 3662409600,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T05:04:31Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8.MOVED.json",
+      "bytes": 524,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+          "sha256": "35b001e499232cdda63bc805574df13976553fb3498833feeeefa7f66eb9b253",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T05:06:11Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8.MOVED.json",
+      "bytes": 530,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+          "sha256": "bbbea5058041a39e05ffacfe8d97a70b441f589b761a831570a9878c8903ae18",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T05:09:29Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8.MOVED.json",
+      "bytes": 530,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+          "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T05:07:48Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/source_raw_custody/0.raw.MOVED.json.provenance.json",
+      "bytes": 424,
+      "rows": [
+        {
+          "original_path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw.MOVED.json",
+          "retained_path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/source_raw_custody/0.raw.MOVED.json",
+          "bytes": 402,
+          "sha256": "5728d89eff30a555f91ef298b81ecab88aa11dad7987b21af7c940dc05c0e3ac",
+          "purpose": "preserve certified source raw cold-store custody after concurrent move"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/source_raw_custody/0.raw.MOVED.json",
+      "bytes": 402,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+          "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8",
+          "bytes": 3662409600,
+          "rebuildable_from": "candidate/candidate_runtime/archive.zip via ddm_sj1_joint_admission.py parseback, or ddm_rp1_pose.py render",
+          "reason": "round-1 bulk cold-stored to free Vertigo for round 2; bytes preserved"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw.MOVED.json",
+      "bytes": 499,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+          "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+          "bytes": 3662409600,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T04:53:03Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+      "bytes": 515,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+          "sha256": "6966a44acf5566ed1894b2e4d4110a00c25313643461458b1d6b80a2d79b3f53",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T04:54:55Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+      "bytes": 515,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+          "sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T04:56:40Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw.MOVED.json",
+      "bytes": 495,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+          "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12",
+          "bytes": 3662409600,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T04:46:25Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+      "bytes": 511,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+          "sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T04:48:06Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+      "bytes": 511,
+      "rows": [
+        {
+          "moved_to": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+          "sha256": "494484d210cc91ac33ff5107ea40616509b3a6536f541aa9845fc0c8164f80cc",
+          "bytes": 1831204800,
+          "reason": "Vertigo under the 40 GiB serializer reserve; rebuildable bulk of a finished arm cold-stored, bytes preserved",
+          "rebuildable_from": "the arm's sealed archive + candidate_runtime via its parse-back/render stages (see the arm memo)",
+          "moved_at_utc": "2026-09-10T04:49:44Z"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_ai1_20260809_MOVE_MANIFEST/MOVED.json",
+      "bytes": 751,
+      "rows": [
+        {
+          "schema": "vertigo_cold_move.v2",
+          "original_path": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809",
+          "destination": "/Volumes/APDataStore/pact/ddm_ai1_20260809",
+          "bytes_source_allocated": 26941292544,
+          "files_data": 141,
+          "sha256_manifest": "/Volumes/APDataStore/pact/ddm_ai1_20260809_MOVE_MANIFEST/src.sha256",
+          "verified": "per-file sha256 diff clean on DATA FORKS both sides, pre-delete; ExFAT AppleDouble ._* sidecars excluded (metadata-only, xattrs not preserved on cold tier)",
+          "reason": "ddm_ai1 SUPERSEDED by ddm_lc2 (#1007, decode identical by construction); Vertigo 100% full blocked ps135 Leg-A candidate-retention preflight (3GB minimum)",
+          "moved_at_utc": "2026-08-10T21:42:47Z",
+          "symlink_left_at_original_path": true
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/MOVED.json",
+      "bytes": 2771,
+      "rows": [
+        {
+          "schema": "ddm_sr2_vertigo_move_v1",
+          "status": "complete_verified",
+          "original_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+          "destination": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns",
+          "manifest_root": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns",
+          "bytes": 234889540091,
+          "source_allocated_kib": 229393440,
+          "freed_kib_measured": 229289216,
+          "data_files": 4404,
+          "directories": 758,
+          "appledouble_files_destination": 5161,
+          "appledouble_excluded_from_data_fork_manifest": true,
+          "tree_sha_sample": "81d865cd3d2ddf0ba81a5a9b76423ceac6e65fab8c5d67404f1557dd28e4443a",
+          "source_tree_manifest_sha256": "81d865cd3d2ddf0ba81a5a9b76423ceac6e65fab8c5d67404f1557dd28e4443a",
+          "destination_tree_manifest_sha256": "81d865cd3d2ddf0ba81a5a9b76423ceac6e65fab8c5d67404f1557dd28e4443a",
+          "full_manifest_equal": true,
+          "largest20_equal": true,
+          "largest20_verification": {
+            "source": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/source.largest20.sha256",
+            "destination_subset_from_complete_manifest": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/destination.largest20.from_full_manifest.sha256"
+          },
+          "rsync_reconciliation": {
+            "command": "rsync -a --stats SOURCE/ DESTINATION/",
+            "transferred_files": 0,
+            "transferred_bytes": 0,
+            "permission_only_dryrun_file_rows": 4404,
+            "permission_only_dryrun_directory_rows": 758
+          },
+          "symlink": {
+            "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+            "target": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns",
+            "resolves": true
+          },
+          "reason": "Cold June 2026 NeRV campaign; no live consumer found in bounded current surfaces; original citations preserved by symlink; moved to restore Vertigo safety headroom.",
+          "axis": "[byte/custody apparatus, scorer-free]",
+          "score_claim": false,
+          "copy_started_utc": "2026-08-11T20:12:14Z",
+          "copy_completed_utc": "2026-08-11T22:24:50Z",
+          "destination_manifest_completed_utc": "2026-08-12T00:12:35Z",
+          "source_retired_utc": "2026-08-12T00:17:52Z",
+          "source_manifest": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/source.sha256",
+          "destination_manifest": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/destination.sha256",
+          "df_before": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/df_before_copy.txt",
+          "df_after": "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/_manifests/nerv_long_training_campaigns/df_after_swap.txt"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b/MOVED_RECEIPT.json",
+      "bytes": 1566,
+      "rows": [
+        {
+          "destination_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b",
+          "file_count_before_manifest": 3,
+          "files": [
+            {
+              "bytes": 4096,
+              "original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/._launcher",
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "bytes": 4096,
+              "original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/launcher/._launch_manifest.json",
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "bytes": 3822,
+              "original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b/launcher/launch_manifest.json",
+              "sha256": "e39ecd0464a669034f06b926267bfb5e7ba5fcd9dca1ce55ad89f1adbe92fec6"
+            }
+          ],
+          "generated_utc": "2026-08-15T15:33:42Z",
+          "move_manifest": {
+            "bytes": 1273,
+            "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b/DRY_RUN_MOVE_MANIFEST.json",
+            "sha256": "e231ad2708ecd521f7fd0ec89a4ec46212bed4fe8425abd229f760758770cf3b"
+          },
+          "move_operation": "os.replace on the explicit validated directory; no deletion",
+          "original_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b",
+          "reason": "preserve launcher --dry-run manifests while restoring the sealed ticket fresh-root precondition",
+          "schema": "ddm_wd2_dry_run_manifest_move.v1",
+          "status": "MOVED_RECOVERABLY"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64/MOVED_RECEIPT.json",
+      "bytes": 1596,
+      "rows": [
+        {
+          "destination_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64",
+          "file_count_before_manifest": 3,
+          "files": [
+            {
+              "bytes": 4096,
+              "original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/._launcher",
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "bytes": 4096,
+              "original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/launcher/._launch_manifest.json",
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "bytes": 4740,
+              "original_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/launcher/launch_manifest.json",
+              "sha256": "42391cf9a9069ea35f02af3d81b1dabada933ebf6f97f4a02861de2f96e0e5c5"
+            }
+          ],
+          "generated_utc": "2026-08-15T15:33:42Z",
+          "move_manifest": {
+            "bytes": 1298,
+            "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64/DRY_RUN_MOVE_MANIFEST.json",
+            "sha256": "77b2b5b55b3638d91f6c2068447e202541c2c6705d191a455fb01da3d594ea3b"
+          },
+          "move_operation": "os.replace on the explicit validated directory; no deletion",
+          "original_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64",
+          "reason": "preserve launcher --dry-run manifests while restoring the sealed ticket fresh-root precondition",
+          "schema": "ddm_wd2_dry_run_manifest_move.v1",
+          "status": "MOVED_RECOVERABLY"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_2/MOVED_RECEIPT.json",
+      "bytes": 863,
+      "rows": [
+        {
+          "destination_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_2",
+          "file_count_before_manifest": 3,
+          "generated_utc": "2026-08-15T15:35:25Z",
+          "move_manifest": {
+            "bytes": 1295,
+            "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_2/DRY_RUN_MOVE_MANIFEST.json",
+            "sha256": "aea9e97d85444f552e1358afcb655e5b581e3920b9eb436848d2e95dc6f5ced1"
+          },
+          "move_operation": "explicit same-volume mv on validated directory; no deletion",
+          "original_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b",
+          "reason": "preserve the current-ticket launcher dry-run manifest while restoring the sealed fresh-root precondition",
+          "schema": "ddm_wd2_dry_run_manifest_move.v1",
+          "status": "MOVED_RECOVERABLY"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_2/MOVED_RECEIPT.json",
+      "bytes": 878,
+      "rows": [
+        {
+          "destination_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_2",
+          "file_count_before_manifest": 3,
+          "generated_utc": "2026-08-15T15:35:25Z",
+          "move_manifest": {
+            "bytes": 1320,
+            "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_2/DRY_RUN_MOVE_MANIFEST.json",
+            "sha256": "ae58020c31ec927572d566d889ba783b8ec4b0d8d6955d38e564399b270f0b20"
+          },
+          "move_operation": "explicit same-volume mv on validated directory; no deletion",
+          "original_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64",
+          "reason": "preserve the current-ticket launcher dry-run manifest while restoring the sealed fresh-root precondition",
+          "schema": "ddm_wd2_dry_run_manifest_move.v1",
+          "status": "MOVED_RECOVERABLY"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3/MOVED_RECEIPT.json",
+      "bytes": 868,
+      "rows": [
+        {
+          "destination_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3",
+          "file_count_before_manifest": 3,
+          "generated_utc": "2026-08-15T15:40:58Z",
+          "move_manifest": {
+            "bytes": 1300,
+            "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/teacher_cache_e480b_validation_3/DRY_RUN_MOVE_MANIFEST.json",
+            "sha256": "8f7c1ea7a775016298be4634c60e2acaeeac2336577c347d33f9066f5a5b0441"
+          },
+          "move_operation": "explicit same-volume mv on validated directory; no deletion",
+          "original_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/teacher_cache_e480b",
+          "reason": "preserve the final source-pinned launcher dry-run manifest while restoring the sealed fresh-root precondition",
+          "schema": "ddm_wd2_dry_run_manifest_move.v1",
+          "status": "MOVED_RECOVERABLY"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3/MOVED_RECEIPT.json",
+      "bytes": 883,
+      "rows": [
+        {
+          "destination_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3",
+          "file_count_before_manifest": 3,
+          "generated_utc": "2026-08-15T15:40:58Z",
+          "move_manifest": {
+            "bytes": 1325,
+            "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/dry_run_validation/primary_flattened_d4_w64_validation_3/DRY_RUN_MOVE_MANIFEST.json",
+            "sha256": "534343b24d3fbb6598cc672f5f348465a6fb3e37a45f9764b8d39da543599b34"
+          },
+          "move_operation": "explicit same-volume mv on validated directory; no deletion",
+          "original_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64",
+          "reason": "preserve the final source-pinned launcher dry-run manifest while restoring the sealed fresh-root precondition",
+          "schema": "ddm_wd2_dry_run_manifest_move.v1",
+          "status": "MOVED_RECOVERABLY"
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen3_receipts/PYCACHE_CONTAMINATION_REMOVED_20260818.json",
+      "bytes": 7716,
+      "rows": [
+        {
+          "schema": "pycache_contamination_removal.v1",
+          "reason": "CPython 3.13 bytecode + AppleDouble twins written into the staged submission directory by an in-place receiver import (traced to .omx/tmp/sa3/probe_identity.py, which sys.path.insert's the packet dir and imports carrier_codec/runtime.*). THE OPERATIVE DEFECT IS PUBLIC HYGIENE: every .pyc embeds co_filename = the packet's own absolute local path, which must not ship in a submission artifact. Reproducible build artifacts: nothing in inflate.sh/inflate.py/cpr1/runtime reads them; regenerable by re-import.",
+          "removed_utc": "2026-08-18T13:27:21Z",
+          "count": 33,
+          "files": [
+            {
+              "path": "cpr1/.___pycache__",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "cpr1/__pycache__/._carrier_codec.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "cpr1/__pycache__/carrier_codec.cpython-313.pyc",
+              "bytes": 10007,
+              "sha256": "8492a48f8118f95efff69136f826cc6e3c89a17984adbe7e74b7d58e1a436d80"
+            },
+            {
+              "path": "runtime/.___pycache__",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/.___init__.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._baseline.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._bits.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._carrier_repack.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._compensation_overlay.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._frame0_selector.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._ihs2.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/._residual_archive.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/__pycache__/__init__.cpython-313.pyc",
+              "bytes": 269,
+              "sha256": "bb29e35662a502580c5d2cca5ffa59f550610b13252b7711f8a4a57adf740dda"
+            },
+            {
+              "path": "runtime/__pycache__/baseline.cpython-313.pyc",
+              "bytes": 4070,
+              "sha256": "99aa58e150229c87c160f912202758fe5edea6def79d25200ac37f6490025e38"
+            },
+            {
+              "path": "runtime/__pycache__/bits.cpython-313.pyc",
+              "bytes": 2557,
+              "sha256": "c8ed8d3c2c31c05922f986d6fffb84ad62476bfff11f58b0ab52c96eeebd75a0"
+            },
+            {
+              "path": "runtime/__pycache__/carrier_repack.cpython-313.pyc",
+              "bytes": 12555,
+              "sha256": "3819d5d4cfed69f98887a29b2bc10d1648d6365ef1316c34cc560f356c2c51b8"
+            },
+            {
+              "path": "runtime/__pycache__/compensation_overlay.cpython-313.pyc",
+              "bytes": 11133,
+              "sha256": "307f820cf51747f1071909548d57ca792901c4bc1f63de8f39bc2e99343257b1"
+            },
+            {
+              "path": "runtime/__pycache__/frame0_selector.cpython-313.pyc",
+              "bytes": 7941,
+              "sha256": "3c67e9460edad22cdf0ea759779165289262eba01cef5d37a65275be36b70d49"
+            },
+            {
+              "path": "runtime/__pycache__/ihs2.cpython-313.pyc",
+              "bytes": 20657,
+              "sha256": "0c295a3ffdb58a36da1bb6e8d553a087a335cf3db4955a703a8f264be7c5cce0"
+            },
+            {
+              "path": "runtime/__pycache__/residual_archive.cpython-313.pyc",
+              "bytes": 33438,
+              "sha256": "a45295f6f03d5a7f22fa2f0b9c3a287ed8d35372b61dcd20458da888f17d7d7d"
+            },
+            {
+              "path": "runtime/entropy/.___pycache__",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/.___init__.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/._adaptive_ans.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/._coefficient_ar1_codec.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/._coefficient_predictor.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/._rc64.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/._renderer_weight_codec.cpython-313.pyc",
+              "bytes": 4096,
+              "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/__init__.cpython-313.pyc",
+              "bytes": 274,
+              "sha256": "a169b87790eabce39c5823200f681f659a73f11849eefb748d1ae0f617c06a2f"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/adaptive_ans.cpython-313.pyc",
+              "bytes": 6805,
+              "sha256": "cba081d8ccac34661a741229786dfe0b46fff11d79546353fad27e348cb4ce6e"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/coefficient_ar1_codec.cpython-313.pyc",
+              "bytes": 6226,
+              "sha256": "15ee17dc6069f3c4d7e292f5db07cb3e591f1fca013538c4252684adbb12e2e8"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/coefficient_predictor.cpython-313.pyc",
+              "bytes": 7209,
+              "sha256": "3b9e32cd972b5e765bfd04cb624c7647a7c57107cb60c7f8ae799340c0deb83d"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/rc64.cpython-313.pyc",
+              "bytes": 5587,
+              "sha256": "2fa590d7c2808f3ebd8c7259466a168c9ba0aaa2a0dedce2fc481c0708946ad4"
+            },
+            {
+              "path": "runtime/entropy/__pycache__/renderer_weight_codec.cpython-313.pyc",
+              "bytes": 14109,
+              "sha256": "30e72f9e550b7d158421e33ec46bb34714df06396367f0571d08ce586faf4334"
+            }
+          ],
+          "correction_20260818_round10_F3": "SUPERSEDES this record's original reason string, which claimed the .pyc 'break the pinned runtime-tree sha 0d0fc008...'. THAT CLAIM WAS FALSE and is withdrawn. The runtime-tree sha is MANIFEST-DERIVED (scripts/pre_submission_compliance_check.py::_runtime_tree_sha_from_manifest:624 over contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files); the 34-entry manifest contains ZERO .pyc entries (verified: 0 matches), so the sha could not move and measurably did not \u2014 the round-10 reviewer re-hashed all 34 manifest files WHILE the contaminants were present and got 34/34 identical. Consequence: the post-removal sha match does NOT prove the .pyc were 'the only delta' (MAIN asserted this; withdrawn). It proves only that the tree is intact, which it always was. The public-hygiene half of the reason is true and sufficient on its own. Correct framing precedent: round-5 F5 said 'outside the hashed walk'."
+        }
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl",
+      "bytes": 2393,
+      "rows": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw",
+          "status": "MOVED",
+          "bytes": 3662409600,
+          "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "494484d210cc91ac33ff5107ea40616509b3a6536f541aa9845fc0c8164f80cc"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw",
+          "status": "MOVED",
+          "bytes": 3662409600,
+          "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "6966a44acf5566ed1894b2e4d4110a00c25313643461458b1d6b80a2d79b3f53"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+          "status": "MOVED",
+          "bytes": 3662409600,
+          "sha256": "5aa5ffe54837f07cce002830b8623b73e185abde49f6a96b2be1bb9d2d448879"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+          "status": "MOVED",
+          "bytes": 3662409600,
+          "sha256": "bfe96bac3066dfec78cf32075582686ac74e6c1756df6008522e589bf0709b4b"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "35b001e499232cdda63bc805574df13976553fb3498833feeeefa7f66eb9b253"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+          "status": "MOVED",
+          "bytes": 1831204800,
+          "sha256": "bbbea5058041a39e05ffacfe8d97a70b441f589b761a831570a9878c8903ae18"
+        }
+      ]
+    }
+  ]
+}

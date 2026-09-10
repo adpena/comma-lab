@@ -1,0 +1,35 @@
+{
+  "schema": "ddm_vr8.raw_restore.v1",
+  "source_config": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/raw_source_multipass.json",
+    "bytes": 13152,
+    "sha256": "c16d217b41196654ebfe5c42c38fe18626be36a7d9a6916e146f4863e8d8129a"
+  },
+  "output": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+  "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/raw_multipass",
+  "consumer_store": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl",
+  "seed": 20260910,
+  "threads": 4,
+  "retained_inputs": {
+    "tokens": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "bytes": 117964800,
+      "sha256": "7dd70ab29ea4b79232a7a94127a1d6d93da96ccd1391255a98595ef53bd5a28a"
+    },
+    "token_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+      "bytes": 3544,
+      "sha256": "cc53dcb2120b39f7c9c79c3874e5890b606c1d4f567f23dd7c6420481ff8f7d0"
+    },
+    "rc64": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/build/rc64_backend.so",
+      "bytes": 33888,
+      "sha256": "8540b974266e384fb41ae450d724d175f7c47c0887a3e0a59838e48803bb4e1c"
+    },
+    "corrector": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/build/f26_corrector_native.so",
+      "bytes": 34568,
+      "sha256": "2edc68867e38cec5ee8820646bb75d98d05ba19598bb9616f3a81c4d650d1597"
+    }
+  }
+}

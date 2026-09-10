@@ -1,0 +1,21 @@
+{
+  "review": "gate pass 4 after bounded discovery addition",
+  "files": {
+    "src/tac/artifact_moved_audit.py": "df9c6b2d7dc10ec625f5630980cdf69c5ee6ac3568400c07b79ac6bac1b6a051",
+    "src/tac/tests/test_artifact_moved_audit.py": "734684964534713fbc03dc149b521fe4e833ff84830f27430b4d0e1fd0cda6aa"
+  },
+  "focus": [
+    "Adversarial boundary: unavailable root is an exception even if another root is valid",
+    "Symlink root refuses; nested symlink directories never enter pending stack; cyclic link fixture stays bounded",
+    "Overlapping supplied roots deduplicate exact paths without global volume discovery",
+    "Legacy directory-schema exclusion is filename-based, explicit and caller-owned; malformed per-file schemas still fail",
+    "Certificate discovery skips ._ names while destination verifier still rejects ._ payload paths and magic"
+  ],
+  "findings": [],
+  "validation": "32 fixture cases passed after final edits; no code edits between passes 3 and 4",
+  "limitations": [
+    "Directory schemas require parent full-census handling",
+    "Concurrent hostile filesystem replacement is not a transactional snapshot; discovery is a bounded local observation"
+  ],
+  "score_claim": false
+}

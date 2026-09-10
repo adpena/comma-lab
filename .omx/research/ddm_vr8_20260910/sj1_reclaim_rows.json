@@ -1,0 +1,1613 @@
+[
+  {
+    "applied_at_utc": "2026-09-10T06:28:41.777008+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 3662409600,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 102038380544,
+      "drives": [
+        {
+          "available_bytes": 38683672576,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:28:41.776954+00:00"
+        },
+        {
+          "available_bytes": 63354707968,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:28:41.776974+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:28:41.776999+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:51:04.918313+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12",
+    "inode": 11804435,
+    "inventory_rank": 1,
+    "lsof_plan": null,
+    "mtime_ns": 1789002535220000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971094+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/archive.zip",
+      "archive_sha256": "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_parseback",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/rebuild_pass5_certificate.json",
+        "sha256": "62372690523c1a053d984ace34faf4ad7e24df9039693415f336fee036b82a37"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_sj1_joint_admission.py",
+        "parseback",
+        "--runtime",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/restored_raw_0000",
+        "--threads",
+        "4"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/parseback/0.raw",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "f7cd6a31635fcba5fce0053db19e2543c8b1999fe83d2f6f37be4f666a9a8a12",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:34:11.172246+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 118519148544,
+      "drives": [
+        {
+          "available_bytes": 51502645248,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:34:11.172202+00:00"
+        },
+        {
+          "available_bytes": 67016503296,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:34:11.172217+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:34:11.172241+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:51:51.191459+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da",
+    "inode": 12001750,
+    "inventory_rank": 2,
+    "lsof_plan": null,
+    "mtime_ns": 1788997945590000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971123+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/archive.zip",
+      "archive_sha256": "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_pass5_certificate.json",
+        "sha256": "518c5d34b8811d671c0c1fd22c899417f99ecb93dc2d5dbaa5d6f42225ad3664"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0001.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "aaf85da8282d090fbc56d0e0af43d8b63ebee6486e26b3b3973ec9504c9219da",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:34:58.421556+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 120350482432,
+      "drives": [
+        {
+          "available_bytes": 53333983232,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:34:58.421503+00:00"
+        },
+        {
+          "available_bytes": 67016499200,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:34:58.421528+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:34:58.421551+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:51:51.981754+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "494484d210cc91ac33ff5107ea40616509b3a6536f541aa9845fc0c8164f80cc",
+    "inode": 12105196,
+    "inventory_rank": 3,
+    "lsof_plan": null,
+    "mtime_ns": 1788997933650000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971126+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime/archive.zip",
+      "archive_sha256": "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_pass5_certificate.json",
+        "sha256": "518c5d34b8811d671c0c1fd22c899417f99ecb93dc2d5dbaa5d6f42225ad3664"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0002.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "494484d210cc91ac33ff5107ea40616509b3a6536f541aa9845fc0c8164f80cc",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:30:14.881948+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 3662409600,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 105700900864,
+      "drives": [
+        {
+          "available_bytes": 42346217472,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:30:14.881891+00:00"
+        },
+        {
+          "available_bytes": 63354683392,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:30:14.881913+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:30:14.881937+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:53:24.671732+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+    "inode": 12111216,
+    "inventory_rank": 4,
+    "lsof_plan": null,
+    "mtime_ns": 1789009224820000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971129+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_parseback",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/rebuild_compose39_certificate.json",
+        "sha256": "d0a92f4a8faa02fb56e9a59fd4a2d7ca9c29c9f971dc5f6abf03ad44da17e6bc"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_sj1_joint_admission.py",
+        "parseback",
+        "--runtime",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/restored_raw_0003",
+        "--threads",
+        "4"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/parseback/0.raw",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:35:45.612044+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 122181832704,
+      "drives": [
+        {
+          "available_bytes": 55165321216,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:35:45.611990+00:00"
+        },
+        {
+          "available_bytes": 67016511488,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:35:45.612012+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:35:45.612037+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:54:11.016405+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "6966a44acf5566ed1894b2e4d4110a00c25313643461458b1d6b80a2d79b3f53",
+    "inode": 12174212,
+    "inventory_rank": 5,
+    "lsof_plan": null,
+    "mtime_ns": 1789006444880000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971133+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_compose39_certificate.json",
+        "sha256": "0392d3e317485dbff6fe753334392df81b55d6f21ba8b8cb184e9347de21c874"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0004.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "6966a44acf5566ed1894b2e4d4110a00c25313643461458b1d6b80a2d79b3f53",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:36:32.622217+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 124012511232,
+      "drives": [
+        {
+          "available_bytes": 56996659200,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:36:32.622169+00:00"
+        },
+        {
+          "available_bytes": 67015852032,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:36:32.622190+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:36:32.622211+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:54:57.252618+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653",
+    "inode": 12186604,
+    "inventory_rank": 6,
+    "lsof_plan": null,
+    "mtime_ns": 1789006447810000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971136+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_compose39_certificate.json",
+        "sha256": "0392d3e317485dbff6fe753334392df81b55d6f21ba8b8cb184e9347de21c874"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0005.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "37ea3842982a7fe7d1c4c06216fde20e5bc4d1b6c15841d71981085f0fe2c653",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:31:48.263631+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 3662409600,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 109363376128,
+      "drives": [
+        {
+          "available_bytes": 46008762368,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:31:48.263590+00:00"
+        },
+        {
+          "available_bytes": 63354613760,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:31:48.263603+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:31:48.263623+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:56:29.426250+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "5aa5ffe54837f07cce002830b8623b73e185abde49f6a96b2be1bb9d2d448879",
+    "inode": 12232126,
+    "inventory_rank": 7,
+    "lsof_plan": null,
+    "mtime_ns": 1788659320440000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971137+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_parseback",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/rebuild_multipass_certificate.json",
+        "sha256": "7d8460d56492e8d39954d1e521477df5e994fad54cf672d8335a7ff8e10ac276"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_sj1_joint_admission.py",
+        "parseback",
+        "--runtime",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/candidate_runtime",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/restored_raw_0006",
+        "--threads",
+        "4"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "5aa5ffe54837f07cce002830b8623b73e185abde49f6a96b2be1bb9d2d448879",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:33:21.802276+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 3662409600,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 113025294336,
+      "drives": [
+        {
+          "available_bytes": 49671307264,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:33:21.802224+00:00"
+        },
+        {
+          "available_bytes": 63353987072,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:33:21.802245+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:33:21.802269+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:56:30.788511+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "bfe96bac3066dfec78cf32075582686ac74e6c1756df6008522e589bf0709b4b",
+    "inode": 12614235,
+    "inventory_rank": 8,
+    "lsof_plan": null,
+    "mtime_ns": 1788668309530000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971140+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/candidate_runtime/archive.zip",
+      "archive_sha256": "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_parseback",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/rebuild_multipass_certificate.json",
+        "sha256": "7d8460d56492e8d39954d1e521477df5e994fad54cf672d8335a7ff8e10ac276"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_sj1_joint_admission.py",
+        "parseback",
+        "--runtime",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/candidate_runtime",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_vr7_certify/restored_raw_0007",
+        "--threads",
+        "4"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "bfe96bac3066dfec78cf32075582686ac74e6c1756df6008522e589bf0709b4b",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:37:19.675909+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 125843836928,
+      "drives": [
+        {
+          "available_bytes": 58827997184,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:37:19.675858+00:00"
+        },
+        {
+          "available_bytes": 67015839744,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:37:19.675879+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:37:19.675902+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:57:16.814119+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "35b001e499232cdda63bc805574df13976553fb3498833feeeefa7f66eb9b253",
+    "inode": 12677012,
+    "inventory_rank": 9,
+    "lsof_plan": null,
+    "mtime_ns": 1788650171090000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971141+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/candidate_runtime/archive.zip",
+      "archive_sha256": "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_multipass_certificate.json",
+        "sha256": "754ba614d02e73bd2666c021d057ba5467553725fa27414a8be08b112c7befdd"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0008.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "35b001e499232cdda63bc805574df13976553fb3498833feeeefa7f66eb9b253",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:37:21.277644+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 127675174912,
+      "drives": [
+        {
+          "available_bytes": 60659335168,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:37:21.277586+00:00"
+        },
+        {
+          "available_bytes": 67015839744,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:37:21.277612+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:37:21.277638+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:58:02.889442+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859",
+    "inode": 12731561,
+    "inventory_rank": 10,
+    "lsof_plan": null,
+    "mtime_ns": 1788664128360000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971144+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/candidate_runtime/archive.zip",
+      "archive_sha256": "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_multipass_certificate.json",
+        "sha256": "754ba614d02e73bd2666c021d057ba5467553725fa27414a8be08b112c7befdd"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0009.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "4560927f432a20db598d028dadf90614967d6f11a54125803d87e686306e2859",
+    "verdict": "DELETED"
+  },
+  {
+    "applied_at_utc": "2026-09-10T06:38:08.271142+00:00",
+    "apply_certificate": {
+      "journal_path": ".omx/research/ddm_vr7_apply_journal_20260910.jsonl",
+      "lsof_no_open_descriptors": true,
+      "preapply_ledger_sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394",
+      "repository_reference_hits": [],
+      "reproducer_revalidated": true,
+      "source_absent_after": true
+    },
+    "arm": "ddm_vr7",
+    "blockers": [],
+    "bytes": 1831204800,
+    "certificate_complete": true,
+    "certificate_status": "RETAINED_CHAIN_CURRENT",
+    "consumer_store": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "device": 16777242,
+    "df_after": {
+      "available_bytes": 129506512896,
+      "drives": [
+        {
+          "available_bytes": 62490673152,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:38:08.271085+00:00"
+        },
+        {
+          "available_bytes": 67015839744,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:38:08.271107+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:38:08.271131+00:00"
+    },
+    "df_before": {
+      "available_bytes": 102179749888,
+      "drives": [
+        {
+          "available_bytes": 35021127680,
+          "block_size": 131072,
+          "path": "/Volumes/APDataStore/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878703+00:00"
+        },
+        {
+          "available_bytes": 67158622208,
+          "block_size": 4096,
+          "path": "/Volumes/VertigoDataTier/pact",
+          "sampled_at_utc": "2026-09-10T06:14:18.878837+00:00"
+        }
+      ],
+      "sampled_at_utc": "2026-09-10T06:14:18.878860+00:00"
+    },
+    "family": "ddm_sj1",
+    "fire_trigger": "MAIN harvest; outside sandbox with live process/reference/certificate gates",
+    "freed_bytes": 0,
+    "hash_completed_utc": "2026-09-10T05:58:49.083636+00:00",
+    "hash_status": "HASHED_STABLE",
+    "hash_timestamp_note": null,
+    "historical_sha256": "bbbea5058041a39e05ffacfe8d97a70b441f589b761a831570a9878c8903ae18",
+    "inode": 12775741,
+    "inventory_rank": 11,
+    "lsof_plan": null,
+    "mtime_ns": 1788969481380000000,
+    "observation_files": [],
+    "observation_policy": {
+      "path": ".omx/research/ddm_vr7_20260910/closures.json",
+      "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+    },
+    "owner": "MAIN / ddm_sj1",
+    "path": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+    "planned_verdict": "DELETABLE",
+    "process_plan": {
+      "owner": "MAIN",
+      "score_claim": false,
+      "status": "LIVE_CHECK_REQUIRED_AT_APPLY"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+      "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8"
+    ],
+    "reference_scan": {
+      "aliases": [
+        "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8"
+      ],
+      "checked_at_utc": "2026-09-10T06:15:23.971145+00:00",
+      "hits": [],
+      "observation_exclusions": null,
+      "observation_policy": {
+        "path": ".omx/research/ddm_vr7_20260910/closures.json",
+        "sha256": "daf45e9ac57de9c13025daeb2cfa918d8ef2447e83b8759da9ebc6bb69a0ca45"
+      }
+    },
+    "reproducer": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/candidate_runtime/archive.zip",
+      "archive_sha256": "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3",
+      "descriptor": {
+        "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+        "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+      },
+      "kind": "sj1_overlay",
+      "proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_multipass_certificate.json",
+        "sha256": "754ba614d02e73bd2666c021d057ba5467553725fa27414a8be08b112c7befdd"
+      },
+      "reproducer_argv": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-B",
+        "experiments/ddm_vr7_overlay_rebuild.py",
+        "--resume-from",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0010.json",
+        "--retain-output"
+      ]
+    },
+    "reproducer_descriptor": {
+      "entry": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/descriptors.json",
+      "sha256": "d917fc68d7fd1eeaecd9c0fb489944ab4d06440e41fd8a616f149f4f6d332901"
+    },
+    "retained_admission": {
+      "closure": {
+        "disposition": "REBUILDABLE_FINISHED_BULK",
+        "family": "ddm_sj1",
+        "memo": {
+          "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vr7_certified_deletion_of_cold_stored_sj1_bulk_and_superseded_tc3_traces_20260910.md",
+          "sha256": "e7a372e910dbf3749c468c385c7e38bf7950a106926be0e8cf7d620e5cf8de8a"
+        },
+        "verdict_quote": "No deletion of any inventory row (MAIN applies)."
+      },
+      "rehash_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/rehash.jsonl",
+        "sha256": "540026da17224f7e06e1f861e743d2901a4423af4081ab729c217a94e1ec5c33"
+      },
+      "source_ledger": {
+        "path": ".omx/research/ddm_vr7_20260910/sources.jsonl",
+        "sha256": "455de54ed39b83c5ca900e87765cc3fa9c2166a5db640f362fe78ccf43e96d58"
+      }
+    },
+    "schema": "ddm_vr3.reclaim_ledger.v1",
+    "score_claim": false,
+    "sha256": "bbbea5058041a39e05ffacfe8d97a70b441f589b761a831570a9878c8903ae18",
+    "verdict": "DELETED"
+  }
+]

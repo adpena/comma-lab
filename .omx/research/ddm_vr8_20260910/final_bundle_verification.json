@@ -1,0 +1,32 @@
+{
+  "time": "2026-09-10T15:28:09.005468+00:00",
+  "bundles": [
+    {
+      "label": "source",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle",
+      "bytes": 3358,
+      "sha256": "c4200331fe20c184119ac8c6494fd27ee5f4922b36179ef58823ddb808f85e2d",
+      "verify_rc": 0,
+      "verify_stdout": "The bundle contains this ref:\n9eb5c05ae34bb38c9261743cd22f75a55a711421 refs/heads/serializer-fallback\nThe bundle requires this ref:\n3676ad0b0194e8e1958665d404ecb1dd6efea78b \nThe bundle uses this hash algorithm: sha1\n",
+      "verify_stderr": ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle is okay\n",
+      "heads": "9eb5c05ae34bb38c9261743cd22f75a55a711421 refs/heads/serializer-fallback\n"
+    },
+    {
+      "label": "enforcement",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-commit.bundle",
+      "bytes": 1010897,
+      "sha256": "5b75c7066c836cd4564899a31e99dc8a299cc01af08e365f82a850d1cdf87088",
+      "verify_rc": 0,
+      "verify_stdout": "The bundle contains this ref:\ndc739926296496bc29362ba4329e2fb059db7ebf refs/heads/serializer-fallback\nThe bundle requires this ref:\nb3276d60d8e31123cef5eef07b822a7a9367e3a4 \nThe bundle uses this hash algorithm: sha1\n",
+      "verify_stderr": ".omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-commit.bundle is okay\n",
+      "heads": "dc739926296496bc29362ba4329e2fb059db7ebf refs/heads/serializer-fallback\n"
+    }
+  ],
+  "working_tree_file_sha_count": 80,
+  "working_tree_file_sha_drift": [],
+  "shared_index_unchanged": true,
+  "main_head": "b3276d60d8e31123cef5eef07b822a7a9367e3a4",
+  "main_landing_claim": false,
+  "order": "source then enforcement; two separate commits, neither claimed landed in MAIN",
+  "score_claim": false
+}

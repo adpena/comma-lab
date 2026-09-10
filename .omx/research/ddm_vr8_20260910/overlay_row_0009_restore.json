@@ -1,0 +1,14 @@
+{
+  "schema": "ddm_vr8.restore.v1",
+  "source_config": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/overlay_row_0009.json",
+    "bytes": 13837,
+    "sha256": "05140d850c76228d1f086d18435dcee01eb4cd21429473c55d1969e6b6ec220d"
+  },
+  "kind": "sj1_overlay",
+  "output": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8",
+  "checkpoint_dir": "/Volumes/VertigoDataTier/pact/ddm_vr8_audit/retained/overlay_row_0009",
+  "consumer_store": "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl",
+  "seed": 20260910,
+  "threads": 4
+}

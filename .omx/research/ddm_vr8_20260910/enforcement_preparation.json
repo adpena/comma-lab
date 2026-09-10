@@ -1,0 +1,18 @@
+{
+  "time": "2026-09-10T15:16:54.631986+00:00",
+  "files": {
+    "src/tac/artifact_moved_audit.py": "4bce8cc62b6a20c4b36b2ac40c45ce2525c8d8c93a5495232a603720ef28285e",
+    "src/tac/tests/test_artifact_moved_audit.py": "1b7053f1ef0cb72244763835f5a0d757640d541b0b546c9a971cca808a541eb3",
+    "src/tac/preflight.py": "1cc0787d35deef6676a38a1dbd31154a5796f621dbba62d8b5e855cf7b842e3c",
+    "src/tac/tests/test_moved_payload_preflight.py": "e5a0270a7980996f1f095b7b8a0e5ad4932519ec59c961a0172de677b0078f10",
+    "experiments/ddm_vr8_restore.py": "c74c631140eaeb761f839fb60914862b8834b432fe6e1225fe1d592d7ba0f290",
+    "experiments/tests/test_ddm_vr8_restore.py": "73603c66f9f5624f24e0c755463b0f3a351f5d4014710517dee52c33e2d1e09d",
+    "experiments/ddm_vr8_raw_restore.py": "729628f8fca97ce112a3f7a227dde7fcc12ccd60db69c8c2279c6a35227e9cc1",
+    "experiments/tests/test_ddm_vr8_raw_restore.py": "e8e0992e01d0f1d4af6c532a49315a3f100f00725298fab56cbe25f5d152e214",
+    "experiments/ddm_vr3_certified_raw_reclaim.py": "f4fb5ea2e47eb04d81435a22dd5301ebf1770d6af6cc8ba86a913e01cc9da1cb",
+    "experiments/tests/test_ddm_vr7_reproducer_descriptor.py": "3bcadf4be2ebe8a494246f7b9dd9f96767d614ce4c63a43f12004275bb66c1a2"
+  },
+  "diff_check_rc": 0,
+  "index": "",
+  "source_packet_first_required": true
+}

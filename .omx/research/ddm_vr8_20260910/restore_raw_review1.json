@@ -1,0 +1,27 @@
+{
+  "reviewer": "ddm_vr8_restore",
+  "pass": "raw_pass1",
+  "reviewed_at_utc": "2026-09-10T14:47:27.581950+00:00",
+  "files": [
+    {
+      "path": "experiments/ddm_vr8_raw_restore.py",
+      "sha256": "40d72f4166e43d97f104631738a4f9b2ca5be17eb43ec55463cf50f7ea00a5e4"
+    },
+    {
+      "path": "experiments/tests/test_ddm_vr8_raw_restore.py",
+      "sha256": "7557e1b7506bd7c5014ff8479db1864a28990dcd43af499ce858b482528e4ac2"
+    }
+  ],
+  "verdict": "CLEAN",
+  "checks": [
+    "Actual f26 input verification, archive setup, compensation, semantic weights and retained token checkpoint run unchanged",
+    "Only in-memory render_video intercepted, with finally restoration; missing token checkpoint cannot fall into decode",
+    "Pinned input copies use xb then full rehash; partial copies retained and refused",
+    "Global pair indices, CPU batch-one interpolation/clamp/round/einsum and selector match source",
+    "Eight tests pass, including unchanged original render_video and normalized_basis from each of three sealed receiver files on reduced synthetic geometry"
+  ],
+  "limitations": [
+    "No full n600 restored raw produced yet; exact expected full SHA remains final acceptance",
+    "Two raw receiver generations lack intra-token decode checkpoint; mandatory retained token-stage reuse avoids launching that route"
+  ]
+}

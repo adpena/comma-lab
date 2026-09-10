@@ -1,0 +1,57 @@
+{
+  "observed_at_utc": "2026-09-10T15:13:42.496386+00:00",
+  "status": "ORIGINAL_PATH_RECORDED_HASH_DIFFERS_FROM_REPLACEMENT",
+  "original_path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/parseback/.f26_decode_checkpoints/render_cpu_in_progress.raw",
+  "original_recorded_sha256": "bbb0230c09aedb1a2e61ff32d578636a1ecb9de71acfda472d9889907eb2c9ae",
+  "replacement_measured_sha256": "30964f538c9c5a94095ad295919ce82c5a272e109dba7700ea9bc1e63ca4b455",
+  "evidence": [
+    {
+      "path": "experiments/ddm_fe1_frame_embedding_search.py",
+      "bytes": 35061,
+      "sha256": "083bbdc028337bcd105931946478a496636734c79b3f355f57f5703c86d7026c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/seg_final/shard_1/run.log",
+      "bytes": 5265,
+      "sha256": "0e02bfbc34cae2ad4b65990778981e35204797b110c69bbc2adb0d2203d51442"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/seg_final/shard_0/run.log",
+      "bytes": 5041,
+      "sha256": "8844e8d32f17a51de1ec0375453459b3d8c504ebf4b531266544cb382189a540"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/seg_final/shard_2/run.log",
+      "bytes": 5265,
+      "sha256": "c3fd05e89736e21f8480c495a585499b9282c4e4404732be83c829622dce2861"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/seg_final/shard_3/run.log",
+      "bytes": 5267,
+      "sha256": "69127215c844d51e52df8e9b84288d3956282e42abac748cc7e22047a3d8c613"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_fe1_frame_embedding_predistortion/parseback_run/launch_manifest.json",
+      "bytes": 4804,
+      "sha256": "ced2ced36a0143d252f4f50e171e42a50e068be828e0485f7e4b7452572a3f6b"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_fe1_frame_embedding_predistortion/parseback/PARSEBACK_RESULT.json",
+      "bytes": 3217,
+      "sha256": "7675f83d285bc9ec1db3e400f6d8caa93a8a5c28c1dfaff81165f3bc1c7e2caf"
+    }
+  ],
+  "scope": "All four shard logs line171 record old path SHA; line344 records replacement. Source lines136-141 and513 compute full file SHA. Historical file bytes no longer present; completion/time relation to deletion not proven. No original equality or recovery claimed.",
+  "score_claim": false,
+  "replacement_actual_argv": [
+    ".venv/bin/python",
+    "experiments/ddm_sj1_joint_admission.py",
+    "parseback",
+    "--runtime",
+    "/Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/candidate_runtime",
+    "--out-dir",
+    "/Volumes/APDataStore/pact/ddm_fe1_frame_embedding_predistortion/parseback",
+    "--threads",
+    "4"
+  ]
+}

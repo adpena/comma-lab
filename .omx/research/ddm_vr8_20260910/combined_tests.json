@@ -1,0 +1,21 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "src/tac/tests/test_artifact_moved.py",
+    "src/tac/tests/test_artifact_moved_verification.py",
+    "src/tac/tests/test_artifact_moved_audit.py",
+    "src/tac/tests/test_moved_payload_preflight.py",
+    "experiments/tests/test_ddm_vr8_restore.py",
+    "experiments/tests/test_ddm_vr8_raw_restore.py",
+    "experiments/tests/test_ddm_vr7_reproducer_descriptor.py",
+    "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py",
+    "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py"
+  ],
+  "returncode": 0,
+  "stdout": "........................................................................ [ 30%]\n........................................................................ [ 60%]\n........................................................................ [ 90%]\n..................ss...                                                  [100%]\n237 passed, 2 skipped in 12.68s\n",
+  "stderr": "",
+  "time": "2026-09-10T15:11:45.131812+00:00"
+}

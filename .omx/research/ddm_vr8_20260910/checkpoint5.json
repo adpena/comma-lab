@@ -1,0 +1,23 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/subagent_checkpoint.py",
+    "--subagent-id",
+    "ddm_vr8",
+    "--step",
+    "5",
+    "--status",
+    "in_progress",
+    "--files-touched",
+    "src/tac/artifact_moved_audit.py,src/tac/tests/test_artifact_moved_audit.py,src/tac/preflight.py,src/tac/tests/test_moved_payload_preflight.py,experiments/ddm_vr8_restore.py,experiments/tests/test_ddm_vr8_restore.py,experiments/ddm_vr8_raw_restore.py,experiments/tests/test_ddm_vr8_raw_restore.py,experiments/ddm_vr3_certified_raw_reclaim.py,experiments/tests/test_ddm_vr7_reproducer_descriptor.py,src/tac/artifact_moved.py,src/tac/tests/test_artifact_moved_verification.py,CLAUDE.md,docs/meta_bug_class_catalog.md,.omx/state/next_catalog_number.txt,.omx/research/ddm_vr8_20260910,.omx/research/ddm_vr8_moved_payloads_exfat_stub_audit_20260910.md",
+    "--next-action",
+    "Harvest remaining four restore certificates, require original SHA equality, live zero before strict gate, then second serializer packet",
+    "--finding",
+    "MAIN VR7 deleted 11 successfully copied destinations; six restored and one further producer hash matched; original MOVE was valid at creation",
+    "--notes",
+    "Source isolated commit 9eb5c05ae34bb38c9261743cd22f75a55a711421 exists only in fallback bundle; MAIN Git writes denied; four scorer-free 4-thread workers; retained payloads and stubs preserved"
+  ],
+  "returncode": 0,
+  "stdout": "{\"expected_outputs\": null, \"files_touched\": [\"src/tac/artifact_moved_audit.py\", \"src/tac/tests/test_artifact_moved_audit.py\", \"src/tac/preflight.py\", \"src/tac/tests/test_moved_payload_preflight.py\", \"experiments/ddm_vr8_restore.py\", \"experiments/tests/test_ddm_vr8_restore.py\", \"experiments/ddm_vr8_raw_restore.py\", \"experiments/tests/test_ddm_vr8_raw_restore.py\", \"experiments/ddm_vr3_certified_raw_reclaim.py\", \"experiments/tests/test_ddm_vr7_reproducer_descriptor.py\", \"src/tac/artifact_moved.py\", \"src/tac/tests/test_artifact_moved_verification.py\", \"CLAUDE.md\", \"docs/meta_bug_class_catalog.md\", \".omx/state/next_catalog_number.txt\", \".omx/research/ddm_vr8_20260910\", \".omx/research/ddm_vr8_moved_payloads_exfat_stub_audit_20260910.md\"], \"findings\": [\"MAIN VR7 deleted 11 successfully copied destinations; six restored and one further producer hash matched; original MOVE was valid at creation\"], \"host\": \"mac.lan\", \"lane_id\": null, \"next_action\": \"Harvest remaining four restore certificates, require original SHA equality, live zero before strict gate, then second serializer packet\", \"notes\": \"Source isolated commit 9eb5c05ae34bb38c9261743cd22f75a55a711421 exists only in fallback bundle; MAIN Git writes denied; four scorer-free 4-thread workers; retained payloads and stubs preserved\", \"parent_id_or_session\": \"01a08bb8-f4be-7a92-8a3c-fcb574f1d0e1\", \"pid\": 20733, \"respawn_context\": null, \"status\": \"in_progress\", \"step\": 5, \"subagent_id\": \"ddm_vr8\", \"written_at_utc\": \"2026-09-10T15:11:32.844343+00:00\"}\n",
+  "stderr": ""
+}
