@@ -468,7 +468,46 @@ delta below is therefore measured against a baseline this code can rebuild.
 **Score projected 0.13766654648761660 against the pointer's 0.13791730003757818 —
 net ΔS −2.5075e-04, 12.5× the 2e-5 admit bar.**
 
-## 14. State on hand-off, and what it would cost to finish
+## 14. SEAL READY (move-37 base) — and the re-base plan
+
+**SEAL:**
+`/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/SEAL_ddm_rp1_rate_directed_predistortion_contest_cuda.json`
+(seal sha `7d2f208bf04466ed…`, candidate id `ddm_rp1_rate_directed_predistortion`, axis
+contest_cuda, runtime sha `86ac31f6…` over 48 files / 994,128 B, archive **180,186 B sha
+`8877f75d…`**, admit bar −2e-05 anchored to pointer `670d38d0…` at 0.13791730003757818).
+
+Gates, all measured, all passed:
+
+| gate | result |
+|---|---|
+| null build (control body → pointer member) | PASS, member `723cd022…` |
+| twin encodes of the admitted field | byte-identical, 119,568 B body sha `26e9eba5…` |
+| carrier identity control | PASS, staged archive returned exactly |
+| frame-1 section identity | PASS (hpac/semantic/tail byte-identical) |
+| parse-back through the candidate's own receiver | PASS, pin check PASS, 0.raw sha `fd4b08e6…` |
+| **seg final on that parse-back** | **0 of 117,964,800 cells differ; 12,614 = 12,614; Δd_seg 0.0** |
+| public entrypoint smoke | candidate and frontier IDENTICAL (both REACHED_CUDA_GATE, both REACHED_TOKEN_DECODE at 240 s) |
+
+**Projected 0.13766654648761660, net ΔS −2.5075e-04 against cmp2 — 12.5× the bar.**
+
+**Composition with sj1's pass 5, measured before any re-base** (its 42-pair subset fired on
+T4; both arms change the move-37 token field, so the second to seal re-bases by
+re-verification and never by carrying):
+
+| | measured |
+|---|---|
+| my admitted pairs | 253 (473 tokens) |
+| sj1 pass-5 pairs | 42 (78 tokens vs the move-37 field) |
+| **pair overlap** | **13 pairs**, carrying **31 of my 473 tokens (6.6 %)** and 20 of sj1's 78 |
+| **position collisions** | **0** — no cell is written by both arms |
+
+So the composition is 94 % clean by pairs and disjoint by cells. The re-base is therefore
+bounded: re-verify strict argmax identity on **13 pairs only**, re-solve the carrier from
+the NEW pointer's coefficients over the union of edited pairs (282), re-price by twin
+encode against the new tail, and re-seal. Everything else in this candidate is untouched by
+sj1's change.
+
+## 15. State on hand-off, and what it would cost to finish
 
 **Landed and retained** (all under
 `/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/`, 11 MB):
@@ -496,6 +535,6 @@ refuses **95.4 %** of what the coder calls expensive; and the adaptive coder ret
 **15–27 %** of what the survivors are worth. Any successor aiming at the 26,908 B corner
 through the FIELD must beat all three of those numbers at once.
 
-## 15. Frontier line
+## 16. Frontier line
 
 `cmp2 S 0.13791730003757818 @ 180,388 B [contest-CUDA T4 n600]`
