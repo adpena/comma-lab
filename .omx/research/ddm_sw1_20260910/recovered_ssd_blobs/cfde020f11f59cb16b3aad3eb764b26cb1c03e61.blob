@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_fs1_frame0_selector
+DALI=/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt
+TOK=/Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8
+RND=/Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/archive.zip
+run () {
+  local NAME="$1" RT="$2" SHA="$3"
+  .venv/bin/python -u experiments/ddm_fs1_frame0_selector_reselection.py measure \
+    --runtime "$RT" --gt-cache "$DALI" --renderer "$RND" --tokens "$TOK" \
+    --batch-size 8 --threads 4 --expect-archive-sha256 "$SHA" \
+    --label "$NAME" --out "$STORE/retained/measure_${NAME}_n600.json"
+}
+run base_shipped_selector          "$STORE/measure_runtime_BASE"               cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25
+run candA_ratio_gate_101           "$STORE/measure_runtime_A_ratio_gate_101"   d507fb3561eff8a16b6881f75ed3dc329a67f3a38c5016f7329cbb2e4e5c2d8d
+run candB_byte_optimal_101         "$STORE/measure_runtime_B_byte_optimal_101" 50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf
+echo FS1_MEASURES_DONE

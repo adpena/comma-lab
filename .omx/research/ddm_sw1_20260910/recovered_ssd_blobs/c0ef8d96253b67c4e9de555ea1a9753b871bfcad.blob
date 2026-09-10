@@ -1,0 +1,9 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+R=/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow/qbt1_trainer
+.venv/bin/python tools/repack_npz_deflate.py --root $R/governed_n32_r3 --apply >> $R/repack_r3.log 2>&1
+.venv/bin/python tools/repack_npz_deflate.py --root $R/governed_n32_r4 --apply >> $R/repack_r4.log 2>&1
+.venv/bin/python tools/repack_npz_deflate.py --root $R/governed_n32 --apply >> $R/repack_r1.log 2>&1
+.venv/bin/python tools/repack_npz_deflate.py --root $R/qbt2b_inherited_palette_birth --apply >> $R/repack_init.log 2>&1
+df -g /Volumes/APDataStore >> $R/repack_r4.log

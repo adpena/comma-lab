@@ -1,0 +1,56 @@
+"""Robustness control for prediction 2: compare the two cells' BORN sets at IDENTICAL steps.
+
+The pre-registered comparison takes each cell's born set at its OWN d_seg peak, and the two peaks
+differ (cold live 16 vs warm live 224).  Part of the measured disjointness could therefore be
+"different moment" rather than "different sites".  This control removes that by comparing at the
+SAME step, on the same seed and the same data order.
+"""
+import json, os, sys
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+import numpy as np
+from pathlib import Path
+from experiments import ddm_ar1_aa_render_price as ar1
+from experiments import ddm_qbt1_qbflow_trainer as qbt
+
+S = Path("/Volumes/APDataStore/pact/ddm_md1_micro_macro")
+COLD, WARM = "cold_control_seed_20260902", "warm_transition_seed_20260902"
+gt = ar1.load_ground_truth()
+ids = np.asarray(qbt.SELECTION_IDS, dtype=np.int64)
+gt_seg = np.asarray(gt["dali_seg"], dtype=np.uint8)[ids].reshape(-1)
+
+def wrong(cell, kind, step):
+    with np.load(S / "payloads" / cell / f"{kind}_step_{step:06d}.npz") as z:
+        return np.asarray(z["argmax_u8"], dtype=np.uint8).reshape(-1) != gt_seg
+
+rows = []
+for kind in ("live", "shadow"):
+    zero = wrong(COLD, "shadow", 0)          # identical start; one payload
+    for step in (16, 64, 224, 512, 1024, 2000, 2304, 3072, 4000, 5000):
+        try:
+            cb = (~zero) & wrong(COLD, kind, step)
+            wb = (~zero) & wrong(WARM, kind, step)
+        except FileNotFoundError:
+            continue
+        inter = int((cb & wb).sum())
+        rows.append({
+            "forward": kind, "step": int(step),
+            "cold_born": int(cb.sum()), "warm_born": int(wb.sum()),
+            "intersection": inter,
+            "warm_only": int((wb & ~cb).sum()),
+            "warm_only_fraction": float((wb & ~cb).sum() / wb.sum()) if wb.any() else 0.0,
+            "jaccard": float(inter / (cb | wb).sum()) if (cb | wb).any() else 0.0,
+        })
+out = {
+    "schema": "ddm_md1_same_step_born_overlap.v1",
+    "axis": "[macOS-CPU advisory; DALI authority; same seed, same data order; not contest authority]",
+    "score_claim": False,
+    "definition": "born(step) = correct at step 0 AND wrong at that step, both cells at the SAME step",
+    "rows": rows,
+    "metal_invocations": 0, "modal_invocations": 0, "contest_eval_invocations": 0,
+}
+p = S / "SAME_STEP_BORN_OVERLAP.json"; tmp = p.with_suffix(".json.tmp")
+tmp.write_text(json.dumps(out, indent=2, sort_keys=True)); os.replace(tmp, p)
+for r in rows:
+    print("%-7s step %5d  cold_born %6d  warm_born %6d  inter %6d  warm_only %6d = %6.2f%%  jaccard %.4f" % (
+        r["forward"], r["step"], r["cold_born"], r["warm_born"], r["intersection"], r["warm_only"],
+        100*r["warm_only_fraction"], r["jaccard"]))

@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+for _ in $(seq 1 600); do
+  [ -f "$OUT/stage2/castcount.json" ] && break
+  sleep 10
+done
+[ -f "$OUT/stage2/castcount.json" ] || { echo "REFUSED: stage 2 never completed" >&2; exit 3; }
+sleep 5
+exec bash "$OUT/run_stage3.sh"

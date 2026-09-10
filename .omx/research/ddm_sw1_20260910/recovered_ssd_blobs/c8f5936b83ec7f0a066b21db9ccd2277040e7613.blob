@@ -1,0 +1,23 @@
+#!/bin/bash
+# ddm_sr2f — resumable rc2 pose leg.  An external SIGTERM kills the python at pair 140 / ~341 s
+# deterministically (attempts 3 and 4; governor exonerated).  This loop re-invokes the resumable
+# driver, which checkpoints every 40 pairs and resumes from disk, so the kill costs at most one
+# partial chunk instead of the whole run.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+export PYTHONDONTWRITEBYTECODE=1
+SCR=/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sr2f
+RUN=/Volumes/APDataStore/pact/ddm_sr2f/run
+OUT="$SCR/rc2_pose"
+: > "$RUN/leg_rc2_resumable.log"
+for i in $(seq 1 14); do
+  if [ -f "$OUT.receipt.json" ]; then break; fi
+  echo "=== invocation $i ===" >> "$RUN/leg_rc2_resumable.log"
+  .venv/bin/python experiments/ddm_sr2f_rc2_pose_resumable.py \
+    --raw "$SCR/0.raw" --work "$SCR" --out "$OUT" \
+    --frames 600 --threads 8 --chunk 40 \
+    >> "$RUN/leg_rc2_resumable.log" 2>&1
+  echo "rc=$?" >> "$RUN/leg_rc2_resumable.log"
+  sleep 2
+done
+touch "$RUN/leg_rc2_resumable.done"

@@ -1,0 +1,16 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+S=/Volumes/APDataStore/pact/ddm_fs2/reencode
+COMMON=(--store "$S" \
+  --runtime-root /Volumes/APDataStore/pact/ddm_rc1/candidate_runtime_composed \
+  --expect-pointer-sha256 df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 \
+  --tokens /Volumes/APDataStore/pact/ddm_rc2/composed_decode_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8)
+echo "=== STAGE control ==="
+.venv/bin/python experiments/ddm_jg2_tail_reencode.py --stage control "${COMMON[@]}" --tag fs2ctl
+rc=$?; echo "control rc=$rc"
+[ $rc -ne 0 ] && exit $rc
+echo "=== STAGE encode (u7.75 argmax substitution) ==="
+.venv/bin/python experiments/ddm_jg2_tail_reencode.py --stage encode "${COMMON[@]}" \
+  --edits /Volumes/APDataStore/pact/ddm_fs2/retained/fields/edits_u7p75.npz --tag fs2u7p75
+echo "encode rc=$?"

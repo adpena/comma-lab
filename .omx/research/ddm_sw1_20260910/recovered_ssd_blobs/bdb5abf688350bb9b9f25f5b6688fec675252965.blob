@@ -1,0 +1,16 @@
+#!/bin/bash
+# ddm_ane2 -- the remaining stages, STRICTLY SERIAL in ONE process.
+#
+# The earlier form chained each stage behind the previous one's artifact through
+# its OWN governed launch.  That is serial in EXECUTION but not in RESERVATION:
+# five launches held their declared peaks at once (42 GiB) and refused md3's
+# Metal cell on the memory leg while only one had a worker.  One process, one
+# reservation, one measured peak.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+for stage in 5 6 7 8 9; do
+  echo "########## STAGE $stage ##########"
+  bash "$OUT/run_stage${stage}.sh"
+done
+echo "TAIL_SERIAL COMPLETE"

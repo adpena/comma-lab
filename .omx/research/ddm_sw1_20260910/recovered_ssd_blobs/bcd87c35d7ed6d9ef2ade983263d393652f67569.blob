@@ -1,0 +1,35 @@
+# ddm_cl3 fire sequence (exact commands; Metal STRICTLY serial)
+
+Gate: `.omx/tmp/codex_runs/md3_different_init_DONE.json.done` exists AND `ps -eo args | grep -c '[q]br1_born_fairform'`
+is 0.  Tripwire while any cl3 trainer runs: a new `"alarm": "memory_pressure"` line in
+`.omx/tmp/memory_watchdog/launch_r6/run.log` -> SIGTERM the trainer, resume after the md3 receipt.
+
+CL3=/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection
+
+1. train lambda_2p0     : $CL3/launch_rung.sh lambda_2p0     2.0 20260716 "<purpose>"
+2. price lambda_2p0     : $CL3/price_rung.sh  lambda_2p0     "<purpose>"      # CPU, may overlap (3)
+3. train lambda_1p0_s17 : $CL3/launch_rung.sh lambda_1p0_s17 1.0 20260717 "<purpose>"
+4. price lambda_1p0_s17 : $CL3/price_rung.sh  lambda_1p0_s17 "<purpose>"      # CPU, may overlap (5)
+5. train lambda_1p0_s18 : $CL3/launch_rung.sh lambda_1p0_s18 1.0 20260718 "<purpose>"
+6. price lambda_1p0_s18 : $CL3/price_rung.sh  lambda_1p0_s18 "<purpose>"
+7. lambda_4p0 ONLY IF lambda_2p0 paid (net joint < 0 vs the 126,885 control):
+   $CL3/launch_rung.sh lambda_4p0 4.0 20260716 "<purpose>" ; then price_rung.sh lambda_4p0
+   If lambda_2p0 did NOT pay, record lambda_4p0 as NOT-RUN-BECAUSE-FALSIFIED (pre-registered).
+8. verify each priced rung:
+   .venv/bin/python experiments/ddm_cl2_hpac_prior_capacity_ladder.py verify --rung <rung>
+9. report (LIVE pointer bar, cl2's landed report untouched):
+   .venv/bin/python experiments/ddm_cl2_hpac_prior_capacity_ladder.py report \
+       --pointer-archive-bytes 179982 --out $CL3/LADDER_REPORT.json
+10. If the min-J winner is NOT cl2's lambda_1p0 control: twin it (<rung>_twin, same lambda+seed),
+    require byte-identical stream + archive sha, parseback, then seal:
+   .venv/bin/python tools/make_candidate_seal.py --candidate-id ddm_cl3_<rung> \
+       --runtime-dir <rung>/retained/receiver_copy_runtime --axis contest_cuda \
+       --admit-bar-net-ds -2e-05 --pointer-axis contest_cuda \
+       --bound-base-receipt /Volumes/APDataStore/pact/ddm_cl2_t4_lambda1_control_repack_20260905/MODAL_REMOTE_RESULT.json \
+       --sealed-by ddm_cl3 --out $CL3/SEAL_ddm_cl3_<rung>_contest_cuda.json --notes "<single-axis waiver reason>"
+    MAIN fires T4 from the seal.  This arm dispatches NO Modal.
+
+Bars, re-derived at the LIVE pointer (cl2 lambda_1p0 control, S 0.14781744131049854 @ 179,982 B):
+  pointer move  : archive < 179,982 B  (joint < 126,885 B)
+  rate corner   : archive <= 138,205.2 B   (demand 41,776.8 B)
+  exchange      : 6.658589531221714e-7 S/B

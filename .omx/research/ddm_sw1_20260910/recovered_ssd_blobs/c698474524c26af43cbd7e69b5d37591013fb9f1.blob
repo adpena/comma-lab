@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+bash "$STORE/run_reflected_n600.sh"
+bash "$STORE/run_base_control_solve.sh"
+echo PR1_CHAIN_DONE

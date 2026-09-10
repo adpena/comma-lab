@@ -1,0 +1,16 @@
+import json
+S = "/Volumes/APDataStore/pact/ddm_fs1_frame0_selector/retained"
+c = json.load(open(f"{S}/fs1_compose_B_byte_optimal_101.json"))
+sel = json.load(open(f"{S}/fs1_select.json"))
+bo = [v for v in sel["variants"] if v["strategy"]=="byte_optimal" and abs(v["margin_gate"]-1.01)<1e-9][0]
+byp = {ch["pair"]: ch for ch in bo["changed_pairs"]}
+rows = sorted(c["per_pair_changed"], key=lambda r: -r["gain"])
+print("| pair | shipped mode -> new | batch-1 screen ratio | measured base d_pose | measured cand d_pose | measured gain | measured ratio |")
+print("|---:|---|---:|---:|---:|---:|---:|")
+for r in rows:
+    ch = byp[r["pair"]]
+    print(f"| {r['pair']} | {ch['from_mode']} -> {ch['to_mode']} | {ch['ratio']:.3f}x | {r['base_d_pose']:.6e} | {r['candidate_d_pose']:.6e} | {r['gain']:.4e} | {r['ratio']:.3f}x |")
+print()
+print("total measured gain sum:", sum(r["gain"] for r in rows))
+print("n600 mean:", sum(r["gain"] for r in rows)/600)
+print("screen predicted n600 mean:", bo["n600_mean_d_pose_gain"])

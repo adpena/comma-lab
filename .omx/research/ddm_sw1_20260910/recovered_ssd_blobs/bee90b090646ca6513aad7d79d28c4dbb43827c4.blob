@@ -1,0 +1,15 @@
+#!/bin/bash
+# Wait for the n600 reference to land, then run the screen.  Sequential by
+# design: the reference and the screen never share the machine.
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+for _ in $(seq 1 240); do
+  [ -f "$OUT/reference_n600.json" ] && break
+  sleep 10
+done
+if [ ! -f "$OUT/reference_n600.json" ]; then
+  echo "REFUSED: reference_n600.json never landed" >&2
+  exit 3
+fi
+sleep 5
+exec bash "$OUT/run_screen.sh"

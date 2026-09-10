@@ -1,0 +1,26 @@
+#!/bin/bash
+# ddm_md1 sweep driver: cold control first (the primary result), then the warm cell at whatever
+# depth it has reached.  Both resume from disk; re-running skips every (step, forward) already in
+# the JSONL.  $0, CPU only, 4 threads, nice 10.  Never writes under any cell's runs/.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+STORE=/Volumes/APDataStore/pact/ddm_md1_micro_macro
+COLD=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/control_native100
+WARM=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng1_warm_transition/runs/seed_20260902_warm_transition
+CFG=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/sealed_configs/seed_20260902_control_native100.json
+
+echo "=== md1 sweep: COLD control (seed 20260902) $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell cold_control_seed_20260902 --run-root "$COLD" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 6600
+COLD_RC=$?
+echo "cold rc=$COLD_RC $(date -u +%FT%TZ)"
+
+echo "=== md1 sweep: WARM transition (seed 20260902, live cell; finished checkpoints only) $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell warm_transition_seed_20260902 --run-root "$WARM" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 3600
+WARM_RC=$?
+echo "warm rc=$WARM_RC $(date -u +%FT%TZ)"
+echo "=== md1 sweep driver done cold=$COLD_RC warm=$WARM_RC $(date -u +%FT%TZ) ==="

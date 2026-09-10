@@ -1,0 +1,41 @@
+"""ddm_rw1 post-train: actuation + reach curve for BOTH weight sets, from disk."""
+import json, sys
+from pathlib import Path
+import numpy as np
+import torch
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+import ddm_rw1_renderer_edge_foldback as rw1
+
+RUN = Path("/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/runs/foldback")
+sec = rw1.load_semantic_section()
+names = rw1.EDGE_TENSORS
+rows = []
+for ck in sorted(RUN.glob("ckpt.*.pt")):
+    blob = torch.load(ck, map_location="cpu", weights_only=False)
+    row = {"ckpt": ck.name, "step": int(blob["step"])}
+    for which in ("latent", "shadow"):
+        total, drift, per_tensor = 0, 0.0, {}
+        for n in names:
+            base = np.asarray(sec.codes[n], dtype=np.int64)
+            lat = blob[which][n].float()
+            realized = torch.clamp(torch.round(lat), -8, 7).numpy().astype(np.int64)
+            changed = int((realized != base).sum())
+            per_tensor[n] = changed
+            total += changed
+            drift = max(drift, float(np.abs(lat.numpy() - base).max()))
+        row[f"{which}_changed_codes"] = total
+        row[f"{which}_max_drift"] = round(drift, 4)
+        row[f"{which}_by_tensor"] = per_tensor
+    rows.append(row)
+out = {"schema": "ddm_rw1_posttrain.v1", "checkpoints": rows}
+# the eval curve from the run log
+log = Path("/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/logs/train/run.log")
+curve = []
+for line in log.read_text().splitlines():
+    if '"reach_fraction_of_residual"' in line:
+        curve.append(json.loads(line))
+out["eval_curve_ema_shadow"] = curve
+print(json.dumps(out, indent=1))
+Path("/Volumes/VertigoDataTier/pact/ddm_rw1_renderer_edge_foldback/receipts/POSTTRAIN.json").write_text(
+    json.dumps(out, indent=1)
+)
