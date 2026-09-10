@@ -105,6 +105,45 @@ POINTER_SCORE_T4 = 0.13867171823146562
 
 S_PER_BYTE = 25.0 / jg1.SCORE_RATE_DENOMINATOR
 
+#: The tail-coder registry, keyed by the rider MAGIC the pointer's own archive carries.
+#: Moves 36-40 shipped TC1M, move 41 shipped TC3M, and tc4's TC4M is in flight -- each is a
+#: strict WRAPPER of the previous one with the same four-call interface, so the coder is
+#: DATA here rather than a branch, and a tail-only pointer move costs zero source edits.
+#: ``observe`` is required by every mixer whose context is group-causal: it must see a
+#: group's truth before the next group is coded, and it refuses if the sequence is violated.
+CODEC_REGISTRY: dict[bytes, dict[str, Any]] = {
+    b"TC1M": {"module": "ddm_tc1_mixer_codec", "mixer": "SharedMixer",
+              "observe": False, "config_bytes": 35},
+    b"TC3M": {"module": "ddm_tc3_mixer", "mixer": "LaneMixer",
+              "observe": True, "config_bytes": 41},
+    b"TC4M": {"module": "ddm_tc4_maps", "mixer": "ContextMixer",
+              "observe": True, "config_bytes": None},
+}
+
+
+def detect_codec(tree: Path) -> tuple[bytes, dict[str, Any], bytes, bytes]:
+    """Read the pointer's own rider and return (magic, spec, config, stream).
+
+    The coder is IDENTIFIED from the bytes that ship, never from a flag someone
+    remembered to update -- a tail-only pointer move that silently re-priced against the
+    previous coder would be a mispricing no downstream gate could see.
+    """
+    member = jg2.read_archive_member(Path(tree) / "archive.zip")
+    rider = jg2.split_member(member)["tail"][96:]
+    magic = bytes(rider[:4])
+    spec = CODEC_REGISTRY.get(magic)
+    if spec is None:
+        raise Rp1Error(
+            f"the pointer ships an unknown tail rider {magic!r}; add it to CODEC_REGISTRY "
+            "rather than pricing against a coder this arm cannot read"
+        )
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    module = __import__(spec["module"])
+    config, stream = module.unpack_rider(bytes(rider))
+    return magic, spec, bytes(config), bytes(stream)
+
+
 #: Savings below this are not worth a row in the sparse dump; the CENSUS still counts them.
 DEFAULT_MIN_SAVING_BITS = 0.5
 #: Hard cap on retained candidates per frame, so the dump cannot grow without bound.
@@ -534,11 +573,12 @@ def build_parser() -> argparse.ArgumentParser:
     mixer.add_argument("--expect-pointer-sha", default=None)
     mixer.add_argument(
         "--codec",
-        choices=("tc1", "tc3"),
+        choices=("auto", "tc1", "tc3", "tc4"),
         default="tc1",
-        help="tc1 = the 35-weight shared mixer (moves 36-40); tc3 = move 41's variant-1 "
-        "lane-predictor mixer, which wraps tc1 and adds a sixth causal context",
+        help="auto reads the coder off --codec-tree's own rider magic, which is the only "
+        "way a tail-only pointer move cannot silently re-price against the old coder",
     )
+    mixer.add_argument("--codec-tree", default=None)
     mixer.add_argument(
         "--field",
         default=None,
@@ -625,13 +665,20 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     # tc1's unchanged 35-weight mixer and appends five more weights, and it requires one
     # extra call (``observe``) between coding a group and coding the next.  Everything
     # else in this loop is the same object, so the coder swaps here rather than in a fork.
-    use_tc3 = args.codec == "tc3"
-    if use_tc3:
-        # tc3's module imports its siblings as ``experiments.*``, so the REPO root has to
-        # be importable, not just ``experiments/``.
-        if str(REPO) not in sys.path:
-            sys.path.insert(0, str(REPO))
-        import ddm_tc3_mixer as tc3
+    # AUTO by default: the coder is read off the pointer tree's own rider magic.
+    codec_tree = Path(args.codec_tree) if args.codec_tree else None
+    if args.codec == "auto":
+        if codec_tree is None:
+            raise Rp1Error("--codec auto needs --codec-tree (the pointer runtime)")
+        magic, codec_spec, shipped_config, _ = detect_codec(codec_tree)
+    else:
+        magic = {"tc1": b"TC1M", "tc3": b"TC3M", "tc4": b"TC4M"}[args.codec]
+        codec_spec = CODEC_REGISTRY[magic]
+        shipped_config = None
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    codec_module = __import__(codec_spec["module"])
+    use_observe = bool(codec_spec["observe"])
 
     field_sha = sha256_file(field_u8)
     if args.live_field_u8 is None and field_sha != CMP1_FIELD_SHA256:
@@ -677,15 +724,20 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     )
     sparse = residual._sparse_class(renderer_dir)(model, EVAL_H, EVAL_W)
     corrector = FreeCorrector(EVAL_H * EVAL_W)
-    if use_tc3:
-        config = weights_path.read_bytes()
-        if len(config) != 41 or config[0] not in (1, 2):
-            raise Rp1Error(
-                f"tc3 needs a 41-byte config (variant + 40 int8), got {len(config)} B"
-            )
-        mixer = tc3.LaneMixer(config)
-    else:
-        mixer = tc1.SharedMixer(weights_path.read_bytes())
+    config = weights_path.read_bytes() if args.weights else shipped_config
+    if config is None:
+        raise Rp1Error("no mixer config: pass --weights or use --codec auto")
+    expected_len = codec_spec["config_bytes"]
+    if expected_len is not None and len(config) != expected_len:
+        raise Rp1Error(
+            f"{magic.decode()} needs a {expected_len}-byte config, got {len(config)} B"
+        )
+    if shipped_config is not None and config != shipped_config:
+        raise Rp1Error(
+            "the supplied mixer config is not the one the pointer ships; pricing against "
+            "a different coder than the archive carries is a mispricing"
+        )
+    mixer = getattr(codec_module, codec_spec["mixer"])(config)
     groups = [
         np.flatnonzero(mask.cpu().numpy().reshape(-1))
         for mask in renderer.group_masks(device)
@@ -780,10 +832,10 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
 
                 encoder.encode(symbols, coding)
                 corrector.observe(state, symbols.astype(np.int64))
-                if use_tc3:
-                    # tc3's geometry map is strictly group-causal: it must see this
-                    # group's truth before the next group is coded, and it refuses if the
-                    # sequence is violated rather than silently mispredicting.
+                if use_observe:
+                    # A group-causal context must see this group's truth before the next
+                    # group is coded; the mixer refuses a violated sequence rather than
+                    # silently mispredicting.
                     mixer.observe(positions, symbols.astype(np.int64))
                 current.reshape(-1)[torch.from_numpy(positions)] = torch.from_numpy(
                     symbols.astype(np.int64)
@@ -886,7 +938,10 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
         "schema": "ddm_rp1_rank_mixer.v1",
         "axis": "[macOS-CPU advisory / scorer-free EXACT coder measurement]",
         "score_claim": False,
-        "coder": "tc1 35-weight shared mixer over HPAC (pointer move 36, cmp1)",
+        "coder": {"rider_magic": magic.decode(), "module": codec_spec["module"],
+                  "mixer": codec_spec["mixer"], "group_causal_observe": use_observe,
+                  "config_bytes": len(config),
+                  "detected_from": str(codec_tree) if codec_tree else "flag"},
         "pointer": pointer,
         "build": build,
         "identity_control": identity,
