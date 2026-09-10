@@ -1,0 +1,33 @@
+{
+  "runtime": {
+    "sha256": "32d5e269c310ecec35f7a13349f842e9562daf586e6ce4d3d6553e4f54f9b846",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "total_bytes": 1009263
+  },
+  "archive": {
+    "bytes": 180173,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/archive.zip",
+    "sha256": "8c2eaefa944ca8acba3db80829a5cd7a3d06a17b1fdb7ed5f39ce5a6fd9a124d"
+  },
+  "geometry_config_sha256": "3f9d0f64699308047b8d90cd51800a1518d0cea39ea449d15681b2efc2b38619",
+  "counted_geometry_bytes": 19,
+  "counted_fitted_weight_bytes": 40,
+  "format_version_bytes": 1,
+  "source_runtime": {
+    "sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 48,
+    "total_bytes": 994175
+  },
+  "literal_count": 443,
+  "changed_sources": {
+    "inflate.py": "93303ee37fb9161de3c8adfd346d8738b6fe07168dbc4a89820c3ea2e97f38c9",
+    "inflate.sh": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618",
+    "runtime/residual_archive.py": "15333b33264093641d096af25efe38ab6e62549bc6eb57e515e5d2a78b3fbae4",
+    "runtime/rlc1_geometry.c": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5",
+    "runtime/rlc1_geometry.py": "c6fc46dd647725bd3fa256c7e712e255e135bd1928e93f70bad53c0ef56c451f",
+    "runtime/rlc1_mixer.py": "80dd1a6be9541f833924675e9596633486e82db0ec2e09c4463161d4f100bb4d"
+  },
+  "score_claim": false
+}

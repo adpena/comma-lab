@@ -1,0 +1,668 @@
+{
+  "source": {
+    "path": ".omx/research/ddm_rlc1_20260910/equations_recall.json",
+    "bytes": 3703678,
+    "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+  },
+  "query": [
+    "decode_determinism_integer_arithmetic_v1",
+    "lane_boundary_context_map_bound_v1"
+  ],
+  "rows": [
+    {
+      "canonical_consumers": [
+        "tools.levelset_byte_close_and_eval",
+        "tac.unified_action"
+      ],
+      "canonical_producers": [
+        "tools.levelset_byte_close_and_eval"
+      ],
+      "domain_of_validity": {
+        "citation": "Balle integer-determinism [lit-hunt FEED-ig, advisory not independently read]",
+        "distinct_from": "McMullen superattracting-contraction (FEED-ie) is a separate convergence nugget, NOT this",
+        "mechanism": "integer_fixed_point_arithmetic",
+        "non_negotiable": "deterministic reproducibility (CLAUDE.md)",
+        "role": "decode_determinism_discipline_of_E0",
+        "tier": "discipline_theoretical"
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "pythagorean_int_lowered_resize_adjoint_crossproc_bitident_20260713",
+          "empirical_output": "int Q15/int32: unique_hashes=1 cross_process_identical=True; float: unique_hashes=10 cross_process_identical=False; int max_abs_err_vs_numpy=0.007969",
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "fixture": "one 128-wide RGB slice, seed 157",
+            "hardware": "M5-Max Metal, MLX-0.31.2",
+            "n_processes": 10,
+            "op": "render-R bicubic 384->874 one-axis transpose (dup-index) accumulation",
+            "q_bits": 15
+          },
+          "measurement_method": "[macOS-MLX research-signal]",
+          "measurement_utc": "2026-07-14T00:37:45Z",
+          "predicted_output": "integer(Q15/int32) atomic scatter -> cross-process bit-identical (1 unique hash); float atomic scatter -> non-identical",
+          "provenance": {
+            "artifact_kind": "advisory_non_promotable",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_mlx_research_signal",
+            "captured_at_utc": "2026-07-14T00:37:45Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "macos_mlx_research_signal",
+            "hardware_substrate": "macos_arm64_mlx",
+            "measurement_axis": "[macOS-MLX research-signal]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": ".omx/research/pythagorean_exact_arithmetic_bitident_probe_20260713.json",
+            "source_sha256": "d543f77580029074b6bafec0634473652b13c64cb8c6d1fb503e6c0a70de6857"
+          },
+          "residual": 0.0,
+          "source_artifact": ".omx/research/pythagorean_exact_arithmetic_bitident_probe_20260713.json"
+        }
+      ],
+      "equation_id": "decode_determinism_integer_arithmetic_v1",
+      "last_calibration_utc": "2026-07-14T00:37:45Z",
+      "latex_form": "\\text{decode}(A) \\equiv_{\\text{bit}} \\text{decode}(A)\\ \\forall\\,\\text{host} \\iff \\text{integer/fixed-point arithmetic}",
+      "name": "Bit-identical deterministic decode requires INTEGER arithmetic (Balle), NOT McMullen rigidity",
+      "next_recalibration_trigger": "never_auto_operator_only",
+      "one_line_summary": "Same archive -> bit-identical inflate every host requires integer/fixed-point decode arithmetic (Balle), distinct from the McMullen contraction nugget; floats are non-portable.",
+      "predicted_vs_empirical_residual": {
+        "[macOS-MLX research-signal]": 0.0
+      },
+      "provenance": {
+        "artifact_kind": "predicted_from_model",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+        "captured_at_utc": "2026-06-29T16:42:14Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "predicted",
+        "hardware_substrate": "unknown",
+        "measurement_axis": "[predicted]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "<predictor:witness_system.decode_determinism_integer_arithmetic_v1>",
+        "source_sha256": "ecdde8e75303a64f03cd8e09392f3b7c3cd216c5c0c0f5d09e1d7cb68e8d03a4"
+      },
+      "python_callable_module_path": "tools.levelset_byte_close_and_eval",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "archive_A": "archive_zip_bytes",
+        "host": "decode_host"
+      },
+      "units_out": {
+        "decoded_output": "bit_identical_across_hosts"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "tools.probe_throughput_frontier_math",
+        "tools.probe_pythagorean_exact_arithmetic_bitident"
+      ],
+      "canonical_producers": [
+        "tac.local_acceleration.throughput_frontier_math",
+        "tools.probe_throughput_frontier_math"
+      ],
+      "domain_of_validity": {
+        "authority": "[DERIVED analytic law; NumPy/Python reference; research-only MEANS; no score/promotion authority]",
+        "distinct_from": [
+          "decode_determinism_integer_arithmetic_v1: decode discipline plus one measured Q15 resize-adjoint instance; this law supplies the minimal range condition",
+          "witness_fp_reorder_transform_bit_identity_wall_v1: measured floating-point reorder wall, not a sufficient exact-accumulation theorem"
+        ],
+        "domain": "bounded exact fixed-point/integer reductions, or injective CRT reductions, with no overflow, saturation, rounded intermediate, or nondeterministic finalizer",
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "req_R": "for deployment, prove the actual op/tensor fan-in and absolute-sum bound on real n600 0.mkv states, then bit-compare all outputs across fresh target-device processes",
+        "research_only": true,
+        "score_claim": false,
+        "verdict_scope": "THEOREM over declared bounded reductions; failure of one width/scale is an INSTANCE, not a fixed-point, RNS, accumulator, or throughput-family negative"
+      },
+      "empirical_anchors": [],
+      "equation_id": "exact_commutative_reduction_reorder_invariance_v1",
+      "last_calibration_utc": "2026-07-14T01:49:24Z",
+      "latex_form": "(\\mathcal A,\\oplus,0)\\ \\mathrm{commutative},\\ E(\\bigoplus_i x_i)\\ \\mathrm{exact}\\Rightarrow q(\\bigoplus_{i=1}^{n}x_i)=q(\\bigoplus_{i=1}^{n}x_{\\pi(i)});\\quad |x_i|\\le A,\\ nA\\le2^{w-1}-1,\\ w_{\\min}=1+\\lceil\\log_2(nA+1)\\rceil",
+      "name": "Exact commutative reduction is invariant to execution reordering",
+      "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+      "one_line_summary": "A reduction is reorder-invariant when every reachable partial sum is represented exactly in a commutative monoid and one deterministic finalization follows.",
+      "predicted_vs_empirical_residual": {},
+      "provenance": {
+        "artifact_kind": "research_sidecar",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+        "captured_at_utc": "2026-07-14T01:49:24Z",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "research_only",
+        "hardware_substrate": "backend_free_numpy_python_reference",
+        "measurement_axis": "[DERIVED analytic law; NumPy/Python reference; research-only MEANS; no score/promotion authority]",
+        "promotion_eligible": false,
+        "rejection_reason": "bind an actual target reduction to a proved range bound, then pass real-n600 cross-process target-device bit comparison and deterministic finalization",
+        "score_claim_valid": false,
+        "source_path": ".omx/research/throughput_frontier_math_20260714T015118Z.md",
+        "source_sha256": "46b796568d47bc76f112baf5d9f86b88eb9dadd475124bc0226b89723dc5ea7b"
+      },
+      "python_callable_module_path": "tac.local_acceleration.throughput_frontier_math:fixed_width_reduction_certificate",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "accumulator_bits_w": "signed_bits",
+        "fan_in_n": "term_count",
+        "max_abs_term_A": "integer_accumulator_units"
+      },
+      "units_out": {
+        "minimum_signed_bits": "signed_bits",
+        "reorder_invariant": "boolean",
+        "sum_abs_bound": "integer_accumulator_units"
+      }
+    },
+    {
+      "canonical_consumers": [
+        "experiments.ddm_tc2_result.register"
+      ],
+      "canonical_producers": [
+        "experiments.ddm_tc2_lane_context.fit"
+      ],
+      "domain_of_validity": {
+        "excluded": [
+          "joint 40-weight refit",
+          "arbitrary lane geometry",
+          "integer coder or archive byte bounds",
+          "successor-field transfer"
+        ],
+        "included": [
+          "fixed shipped base probabilities",
+          "fixed features",
+          "five-weight box",
+          "continuous numerical log-loss certificate"
+        ]
+      },
+      "empirical_anchors": [
+        {
+          "anchor_id": "ddm_tc2_move37_full_n600_20260910",
+          "empirical_output": {
+            "codelength_result": {
+              "axis": "[macOS-CPU advisory / real full-n600 counts, scorer-free]",
+              "binding": {
+                "archive": {
+                  "bytes": 180388,
+                  "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+                  "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+                },
+                "axis": "[macOS-CPU advisory / real full-n600 counts, scorer-free]",
+                "dependencies": [
+                  {
+                    "bytes": 59351,
+                    "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+                    "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
+                  },
+                  {
+                    "bytes": 8590,
+                    "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_mixer_codec.py",
+                    "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+                  }
+                ],
+                "field": {
+                  "bytes": 117964800,
+                  "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/field.u8",
+                  "sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94"
+                },
+                "score_claim": false,
+                "seed": 20260910,
+                "source": {
+                  "bytes": 24036,
+                  "path": "/Users/adpena/Projects/pact/experiments/ddm_tc2_lane_context.py",
+                  "sha256": "1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7"
+                },
+                "trace": {
+                  "bytes": 2628,
+                  "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+                  "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+                },
+                "upstream": {
+                  "bytes": 6005,
+                  "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+                  "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+                }
+              },
+              "causal_gain_bytes": 82.77145659571397,
+              "codelength_bits": [
+                [
+                  958224.1848907213,
+                  692286.1826638858,
+                  692286.1826638858
+                ],
+                [
+                  914381.007165347,
+                  648669.3107128632,
+                  648669.3107128632
+                ],
+                [
+                  914382.0143860583,
+                  648674.0571712196,
+                  648674.0571712196
+                ],
+                [
+                  957562.0132379556,
+                  691642.6682404064,
+                  691642.6682404064
+                ],
+                [
+                  957561.7344875649,
+                  691646.1896743805,
+                  691646.1896743805
+                ]
+              ],
+              "codelength_is_not_payload_price": true,
+              "columns": [
+                "all_symbols",
+                "lane_and_road_symbols",
+                "lane_and_road_in_rows_128_319"
+              ],
+              "encode_gate": true,
+              "full_n600": true,
+              "gate_disposition": "ENCODE",
+              "labels": [
+                "shipped",
+                "oracle_float",
+                "oracle_int8",
+                "causal_float",
+                "causal_int8"
+              ],
+              "oracle_fixed_family_optimistic_gain_bytes": 5513.942163933214,
+              "positions": 117964800,
+              "reference_gain_bytes": 5480.397215671794,
+              "scope": "fixed shipped TC1 base plus one causal online ratio feature per coding winner; no refit of original 35 weights",
+              "score_claim": false,
+              "universal_upper_bound": false
+            },
+            "conditional_entropy": [
+              {
+                "correction_bits": 352.01758997690706,
+                "degrees": 488,
+                "miller_madow_bits": 1162781.2314508655,
+                "occupied_context_symbols": 755,
+                "occupied_contexts": 267,
+                "plugin_bits": 1162429.2138608885,
+                "symbols": 117964800
+              },
+              {
+                "correction_bits": 1280.391848788955,
+                "degrees": 1775,
+                "miller_madow_bits": 983173.0639734946,
+                "occupied_context_symbols": 3382,
+                "occupied_contexts": 1607,
+                "plugin_bits": 981892.6721247056,
+                "symbols": 117964800
+              },
+              {
+                "correction_bits": 1177.2391533653943,
+                "degrees": 1632,
+                "miller_madow_bits": 1131969.3175417404,
+                "occupied_context_symbols": 3442,
+                "occupied_contexts": 1810,
+                "plugin_bits": 1130792.078388375,
+                "symbols": 117964800
+              }
+            ],
+            "fit_certificates": [
+              {
+                "gap_bits": 0.00010793978101419059,
+                "name": "oracle",
+                "omitted_credit_bytes": 82.89330827168514,
+                "optimistic_gain_bytes": 5513.942163933214,
+                "quantized": [
+                  44,
+                  40,
+                  28,
+                  31,
+                  28
+                ],
+                "weight_payload": {
+                  "bytes": 5,
+                  "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/fit/oracle/weights_i8.bin",
+                  "sha256": "f179423eedfdd0e28754bf6a0ae04636df07357cc6f14dbe2c17af8581f4286e"
+                },
+                "weights": [
+                  1.3639517751639516,
+                  1.2398286940885639,
+                  0.8716199187186144,
+                  0.9839676431086702,
+                  0.8801782279036516
+                ]
+              },
+              {
+                "gap_bits": 3.286689771248378e-05,
+                "name": "causal",
+                "omitted_credit_bytes": 82.89330827168514,
+                "optimistic_gain_bytes": 161.42525086028036,
+                "quantized": [
+                  30,
+                  23,
+                  6,
+                  10,
+                  5
+                ],
+                "weight_payload": {
+                  "bytes": 5,
+                  "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/fit/causal/weights_i8.bin",
+                  "sha256": "2b5f93f62e6e1bf9bdf57eec9db9418fd41fa2cd7d42aab0d4c79e8c8ed4f490"
+                },
+                "weights": [
+                  0.9226355690500556,
+                  0.7225275825358498,
+                  0.18917985141471358,
+                  0.3014703979601765,
+                  0.17184463036505246
+                ]
+              }
+            ],
+            "signed_difference_from_15KB_prior_bytes": -9519.602784328206
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "baseline_bits": 958224.1848907213,
+            "binding": {
+              "archive": {
+                "bytes": 180388,
+                "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+                "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+              },
+              "axis": "[macOS-CPU advisory / real full-n600 counts, scorer-free]",
+              "dependencies": [
+                {
+                  "bytes": 59351,
+                  "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+                  "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
+                },
+                {
+                  "bytes": 8590,
+                  "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_mixer_codec.py",
+                  "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+                }
+              ],
+              "field": {
+                "bytes": 117964800,
+                "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/field.u8",
+                "sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94"
+              },
+              "score_claim": false,
+              "seed": 20260910,
+              "source": {
+                "bytes": 24036,
+                "path": "/Users/adpena/Projects/pact/experiments/ddm_tc2_lane_context.py",
+                "sha256": "1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7"
+              },
+              "trace": {
+                "bytes": 2628,
+                "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+                "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+              },
+              "upstream": {
+                "bytes": 6005,
+                "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+                "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+              }
+            },
+            "symbols": 117964800
+          },
+          "measurement_method": "All n600 shipped-frequency rows; fixed-base online-ratio features; numerical convex certificate and full-symbol codelength totals. No encoded-byte or score claim.",
+          "measurement_utc": "2026-09-10T02:12:35.521722+00:00",
+          "predicted_output": {
+            "charter_prior_oracle_gain_bytes": 15000,
+            "prior_causal_encoded_gain_bytes": [
+              3000,
+              8000
+            ]
+          },
+          "provenance": {
+            "artifact_kind": "advisory_non_promotable",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+            "captured_at_utc": "2026-09-10T02:12:35.521722+00:00",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "macos_cpu_advisory",
+            "hardware_substrate": "macos_arm64",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/RESULT.json",
+            "source_sha256": "f14fa3212dd8cb92d932a04c7241e6e5e9d2b76ef446f1436d0e3363d63dd89e"
+          },
+          "residual": 0.6346401856218804,
+          "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/RESULT.json"
+        },
+        {
+          "anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910",
+          "empirical_output": {
+            "composite_real_saved_bytes": 133,
+            "full_results_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+            "integer_to_real_gaps_bytes": [
+              5.527293249819195,
+              5.141915261148824,
+              4.918346150487196,
+              5.319775631607627,
+              5.537039683302282,
+              15.755482344975462
+            ],
+            "interaction_miss_bytes": 32,
+            "score_claim": false,
+            "standalone_real_saved_bytes": [
+              96,
+              42,
+              11,
+              10,
+              27
+            ],
+            "upper_bound_claim": false
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "composite_added_weights": 15,
+            "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+            "fixed_old_weights": 40,
+            "scope": "Empirical fixed-base context-map ideal-to-real calibration. Existing numerical tangent evaluator is not re-executed here; no new upper bound is asserted. Five-weight standalone rows meet the equation dimension; 15-weight composite is separately labeled interaction evidence, outside its five-weight bound.",
+            "source_archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+            "standalone_added_weights": 5,
+            "symbols": 117964800
+          },
+          "measurement_method": "Continuous and integer full-symbol codelength totals; independent real RC64 twin encodes of each candidate, with all fitted weights and envelope counted. Residual is fractional distance from composite prior midpoint175B, not an equation-bound residual.",
+          "measurement_utc": "2026-09-10T06:11:42.087050+00:00",
+          "predicted_output": {
+            "composite_real_saved_bytes_range": [
+              100,
+              250
+            ],
+            "standalone_real_saved_bytes_ranges": [
+              [
+                40,
+                150
+              ],
+              [
+                20,
+                80
+              ],
+              [
+                0,
+                60
+              ],
+              [
+                20,
+                60
+              ],
+              [
+                10,
+                40
+              ]
+            ]
+          },
+          "provenance": {
+            "artifact_kind": "advisory_non_promotable",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+            "captured_at_utc": "2026-09-10T06:11:42.087050+00:00",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "macos_cpu_advisory",
+            "hardware_substrate": "macos_arm64",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+            "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+          },
+          "residual": 0.24,
+          "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json"
+        },
+        {
+          "anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910_provenance_corrected",
+          "empirical_output": {
+            "composite_real_saved_bytes": 133,
+            "full_results_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+            "integer_to_real_gaps_bytes": [
+              5.527293249819195,
+              5.141915261148824,
+              4.918346150487196,
+              5.319775631607627,
+              5.537039683302282,
+              15.755482344975462
+            ],
+            "interaction_miss_bytes": 32,
+            "score_claim": false,
+            "standalone_real_saved_bytes": [
+              96,
+              42,
+              11,
+              10,
+              27
+            ],
+            "upper_bound_claim": false
+          },
+          "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+          "inputs": {
+            "composite_added_weights": 15,
+            "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+            "fixed_old_weights": 40,
+            "provenance_correction": {
+              "append_only_registry_preserves_original": true,
+              "new_archive_fact": {
+                "bytes": 180021,
+                "path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+                "sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+              },
+              "old_provenance": {
+                "artifact_kind": "advisory_non_promotable",
+                "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+                "captured_at_utc": "2026-09-10T06:11:42.087050+00:00",
+                "composed_from": [],
+                "contest_archive_member_name": "",
+                "contest_archive_zip_path": "",
+                "evidence_grade": "macos_cpu_advisory",
+                "hardware_substrate": "macos_arm64",
+                "measurement_axis": "[macOS-CPU advisory]",
+                "promotion_eligible": false,
+                "rejection_reason": "",
+                "score_claim_valid": false,
+                "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json",
+                "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+              },
+              "reason": "Old provenance source_path named calibration JSON but source_sha256 named candidate archive. Withdraw that mismatched provenance tuple; scientific measurements are unchanged. Corrected provenance names the actual archive file, whose measured hash matches. The independent source_artifact remains calibration JSON with its separately retained hash.",
+              "superseded_anchor_id": "ddm_tc4_move41_real_context_slate_n600_20260910"
+            },
+            "scope": "Empirical fixed-base context-map ideal-to-real calibration. Existing numerical tangent evaluator is not re-executed here; no new upper bound is asserted. Five-weight standalone rows meet the equation dimension; 15-weight composite is separately labeled interaction evidence, outside its five-weight bound.",
+            "source_archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+            "standalone_added_weights": 5,
+            "symbols": 117964800
+          },
+          "measurement_method": "Continuous and integer full-symbol codelength totals; independent real RC64 twin encodes of each candidate, with all fitted weights and envelope counted. Residual is fractional distance from composite prior midpoint175B, not an equation-bound residual.",
+          "measurement_utc": "2026-09-10T06:18:37.109757+00:00",
+          "predicted_output": {
+            "composite_real_saved_bytes_range": [
+              100,
+              250
+            ],
+            "standalone_real_saved_bytes_ranges": [
+              [
+                40,
+                150
+              ],
+              [
+                20,
+                80
+              ],
+              [
+                0,
+                60
+              ],
+              [
+                20,
+                60
+              ],
+              [
+                10,
+                40
+              ]
+            ]
+          },
+          "provenance": {
+            "artifact_kind": "advisory_non_promotable",
+            "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+            "captured_at_utc": "2026-09-10T06:18:37Z",
+            "composed_from": [],
+            "contest_archive_member_name": "",
+            "contest_archive_zip_path": "",
+            "evidence_grade": "macos_cpu_advisory",
+            "hardware_substrate": "macos_arm64",
+            "measurement_axis": "[macOS-CPU advisory]",
+            "promotion_eligible": false,
+            "rejection_reason": "",
+            "score_claim_valid": false,
+            "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime/archive.zip",
+            "source_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5"
+          },
+          "residual": 0.24,
+          "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/EQUATION_CALIBRATION.json"
+        }
+      ],
+      "equation_id": "lane_boundary_context_map_bound_v1",
+      "last_calibration_utc": "2026-09-10T06:18:37Z",
+      "latex_form": "\\Delta L/8\\leq [L_0-(F(w)-\\sum_j g_j(w_j-e_j))/\\ln2]/8",
+      "name": "Lane-context fixed-family numerical codelength bound",
+      "next_recalibration_trigger": "when_operator_invokes_recalibrate_equation",
+      "one_line_summary": "Price a concrete extra context on pinned TC1 probabilities without treating GT geometry as a universal ceiling or ideal bits as charged bytes.",
+      "predicted_vs_empirical_residual": {
+        "Continuous and integer full-symbol codelength totals; independent real RC64 twin encodes of each candidate, with all fitted weights and envelope counted. Residual is fractional distance from composite prior midpoint175B, not an equation-bound residual.": 0.24
+      },
+      "provenance": {
+        "artifact_kind": "advisory_non_promotable",
+        "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+        "captured_at_utc": "2026-09-10T02:12:35.521722+00:00",
+        "composed_from": [],
+        "contest_archive_member_name": "",
+        "contest_archive_zip_path": "",
+        "evidence_grade": "macos_cpu_advisory",
+        "hardware_substrate": "macos_arm64",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "promotion_eligible": false,
+        "rejection_reason": "",
+        "score_claim_valid": false,
+        "source_path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/RESULT.json",
+        "source_sha256": "f14fa3212dd8cb92d932a04c7241e6e5e9d2b76ef446f1436d0e3363d63dd89e"
+      },
+      "python_callable_module_path": "experiments.ddm_tc2_result:lane_boundary_context_map_bound",
+      "schema_version": "canonical_equation_v1_20260519",
+      "units_in": {
+        "base_bits": "bits",
+        "gradient": "nats per weight",
+        "loss_nats": "nats",
+        "weights": "dimensionless"
+      },
+      "units_out": {
+        "gap_bits": "bits",
+        "optimistic_gain_bytes": "ideal bits divided by eight; not a price"
+      }
+    }
+  ]
+}

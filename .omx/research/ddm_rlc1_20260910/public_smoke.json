@@ -1,0 +1,72 @@
+{
+  "inflate_sh_smokes": {
+    "candidate": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/archive.zip",
+      "archive_sha256": "8c2eaefa944ca8acba3db80829a5cd7a3d06a17b1fdb7ed5f39ce5a6fd9a124d",
+      "argv": [
+        "bash",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/inflate.sh",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_smoke/candidate/data",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_smoke/candidate/output",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_smoke/candidate/file_list.txt"
+      ],
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "exception_class": "RuntimeError",
+      "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4",
+      "outcome": "REACHED_CUDA_GATE",
+      "returncode": 1,
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+      "scope": "ordinary declared-axis gate; not full decode",
+      "seconds": 3.7407226670038654,
+      "tree_sha256": "32d5e269c310ecec35f7a13349f842e9562daf586e6ce4d3d6553e4f54f9b846"
+    },
+    "frontier": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "argv": [
+        "bash",
+        "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/inflate.sh",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_smoke/frontier/data",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_smoke/frontier/output",
+        "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_smoke/frontier/file_list.txt"
+      ],
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "exception_class": "RuntimeError",
+      "exception_message": "semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4",
+      "outcome": "REACHED_CUDA_GATE",
+      "returncode": 1,
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+      "scope": "ordinary declared-axis gate; not full decode",
+      "seconds": 3.5604109579871874,
+      "tree_sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a"
+    }
+  },
+  "public_path_probe_seconds": 180,
+  "public_path_probes": {
+    "candidate": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/archive.zip",
+      "archive_sha256": "8c2eaefa944ca8acba3db80829a5cd7a3d06a17b1fdb7ed5f39ce5a6fd9a124d",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "exception_class": null,
+      "exception_message": "",
+      "outcome": "REACHED_TOKEN_DECODE",
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime",
+      "scope": "setup observer only; actual full public twins are separate",
+      "seconds": 2.872900458998629,
+      "tree_sha256": "32d5e269c310ecec35f7a13349f842e9562daf586e6ce4d3d6553e4f54f9b846"
+    },
+    "frontier": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "exception_class": null,
+      "exception_message": "",
+      "outcome": "REACHED_TOKEN_DECODE",
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/candidate/candidate_runtime",
+      "scope": "setup observer only; actual full public twins are separate",
+      "seconds": 2.776088708997122,
+      "tree_sha256": "24d372dcca5ca619b2716a1792a9e38d7e966d0dd1c66c3320e9ced58e12e91a"
+    }
+  },
+  "schema": "candidate_public_entrypoint_smoke.v1"
+}

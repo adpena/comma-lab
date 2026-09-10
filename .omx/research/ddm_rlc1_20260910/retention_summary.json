@@ -1,0 +1,13 @@
+{
+  "schema": "ddm_rlc1.retention.v1",
+  "root": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure",
+  "total_bytes": 7782941141,
+  "budget_bytes": 8589934592,
+  "all_payloads_retained": true,
+  "cleanup_policy": "KEEP retained candidates, checkpoints and proofs; BLOCK new bulk if8GiB cap would be exceeded. No payload deletion or movement. Shell temporary build copies were rebuildable and their exact native originals were retained with source/flag/hash manifests.",
+  "hash_recipe": "sorted pathlib.rglob regular files; hashlib.file_digest SHA256; exclude this manifest itself",
+  "tree_sha256": "49e0b1001417ad786d19f61e82f444c1c5e35ddb02343198f02f7cb4f45c641a",
+  "host": "mac.lan",
+  "score_claim": false,
+  "elapsed_seconds": 3.203638499995577
+}

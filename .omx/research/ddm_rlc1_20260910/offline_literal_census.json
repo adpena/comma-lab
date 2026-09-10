@@ -1,0 +1,2865 @@
+[
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 26,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "argv = sys.argv[1:]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 27,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(argv) < 2 or argv[-2] != \"-o\":"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 27,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(argv) < 2 or argv[-2] != \"-o\":"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 29,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "destination = Path(argv[-1]).resolve()"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 33,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "matched = [row for row in manifest[\"rows\"] if row[\"argv_template\"] == [*argv[:-1], \"{output}\"]]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 34,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(matched) != 1:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 36,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "row = matched[0]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_cached_cc.py",
+    "line": 54,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "destination.with_suffix(destination.suffix + \".cache.json\").write_text(json.dumps(receipt, indent=2) + \"\\n\")"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 1,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "/* RLC1 Q16 causal moment geometry. All content-selected knobs arrive in cfg."
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 2,
+    "literal": "64",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "* Generic constants: public H/W/K, 64-cell HPAC slots, six sufficient moments,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 3,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "* Q16 arithmetic, integer bit/cardinality operations. No floating arithmetic. */"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 7,
+    "literal": "384",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "#define H 384"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 8,
+    "literal": "512",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "#define W 512"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 9,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "#define K 5"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 10,
+    "literal": "8",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "#define S 8"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 11,
+    "literal": "65536",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "#define Q 65536"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 13,
+    "literal": "28",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "typedef __int128 wide;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 15,
+    "literal": "17",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t cfg[17];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 16,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t now[6][H][S], old[6][H][S];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 16,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t now[6][H][S], old[6][H][S];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 23,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "return (int64_t)(q-(r<0));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 26,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t a=0, bit=(uint64_t)1<<62;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 26,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t a=0, bit=(uint64_t)1<<62;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 26,
+    "literal": "62",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t a=0, bit=(uint64_t)1<<62;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 27,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "while(bit>n) bit>>=2;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 29,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(n>=a+bit) { n-=a+bit; a=(a>>1)+bit; }"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 30,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "else a>>=1;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 31,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "bit>>=2;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 37,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "return q+(r>Q/2 || (r==Q/2 && (q&1)));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 37,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "return q+(r>Q/2 || (r==Q/2 && (q&1)));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 37,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "return q+(r>Q/2 || (r==Q/2 && (q&1)));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 40,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "Geometry *g=calloc(1,sizeof(*g));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 43,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int y=0;y<H;y++) for(int s=0;s<S;s++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 43,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int y=0;y<H;y++) for(int s=0;s<S;s++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 45,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "g->hi[y][s]=g->phi[y][s]=-1;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 46,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int runs=0, active=0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 46,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int runs=0, active=0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 47,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int t=0;t<W/S;t++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 48,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int x=s*(W/S)+t, hit=previous && previous[y*W+x]==cfg[0];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 50,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t v[6]={1,y,y*y,x,x*y,x*x};"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 50,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t v[6]={1,y,y*y,x,x*y,x*x};"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 51,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int j=0;j<6;j++) g->old[j][y][s]+=v[j];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 51,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int j=0;j<6;j++) g->old[j][y][s]+=v[j];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 58,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "g->ambiguous[y][s]=runs>1;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 65,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int i=0;i<n;i++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 67,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(symbols[i]==g->cfg[0]) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 68,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t v[6]={1,y,y*y,x,x*y,x*x};"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 68,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t v[6]={1,y,y*y,x,x*y,x*x};"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 69,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int j=0;j<6;j++) g->now[j][y][s]+=v[j];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 69,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int j=0;j<6;j++) g->now[j][y][s]+=v[j];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 72,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "} else g->other[y][s]|=(uint64_t)1<<(x%(W/S));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 79,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "memset(valid,0,sizeof(valid));"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 80,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int s=0;s<S;s++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 81,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int bad[H], badsum=0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 82,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t sums[6]={0};"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 82,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t sums[6]={0};"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 83,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int y=0;y<H;y++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 85,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t between=0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 86,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(hi>lo+1) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 88,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "between=(((uint64_t)1<<h)-1)^(((uint64_t)1<<(l+1))-1);"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 88,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "between=(((uint64_t)1<<h)-1)^(((uint64_t)1<<(l+1))-1);"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 88,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "between=(((uint64_t)1<<h)-1)^(((uint64_t)1<<(l+1))-1);"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 88,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "between=(((uint64_t)1<<h)-1)^(((uint64_t)1<<(l+1))-1);"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 88,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "between=(((uint64_t)1<<h)-1)^(((uint64_t)1<<(l+1))-1);"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 92,
+    "literal": "10",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "bad[y]=g->ambiguous[y][s] || (g->other[y][s]&between) || bothhi-bothlo>g->cfg[10];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 93,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t c=sums[0], sy=sums[1], syy=sums[2], sx=sums[3], sxy=sums[4], sxx=sums[5];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 93,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t c=sums[0], sy=sums[1], syy=sums[2], sx=sums[3], sxy=sums[4], sxx=sums[5];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 93,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t c=sums[0], sy=sums[1], syy=sums[2], sx=sums[3], sxy=sums[4], sxx=sums[5];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 93,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t c=sums[0], sy=sums[1], syy=sums[2], sx=sums[3], sxy=sums[4], sxx=sums[5];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 93,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t c=sums[0], sy=sums[1], syy=sums[2], sx=sums[3], sxy=sums[4], sxx=sums[5];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 93,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t c=sums[0], sy=sums[1], syy=sums[2], sx=sums[3], sxy=sums[4], sxx=sums[5];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 95,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(c>=g->cfg[5]*g->cfg[4] && d>0 && !badsum && b<=g->cfg[7]*d && b>=-g->cfg[7]*d) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 95,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(c>=g->cfg[5]*g->cfg[4] && d>0 && !badsum && b<=g->cfg[7]*d && b>=-g->cfg[7]*d) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 95,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(c>=g->cfg[5]*g->cfg[4] && d>0 && !badsum && b<=g->cfg[7]*d && b>=-g->cfg[7]*d) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 95,
+    "literal": "7",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(c>=g->cfg[5]*g->cfg[4] && d>0 && !badsum && b<=g->cfg[7]*d && b>=-g->cfg[7]*d) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 95,
+    "literal": "7",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(c>=g->cfg[5]*g->cfg[4] && d>0 && !badsum && b<=g->cfg[7]*d && b>=-g->cfg[7]*d) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 98,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(r<=g->cfg[6]*den) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 100,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t squared=r>0?(uint64_t)(r*g->cfg[9]*Q*Q/den):0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 100,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t squared=r>0?(uint64_t)(r*g->cfg[9]*Q*Q/den):0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 100,
+    "literal": "9",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "uint64_t squared=r>0?(uint64_t)(r*g->cfg[9]*Q*Q/den):0;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 101,
+    "literal": "8",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "int64_t w=(int64_t)root(squared), minimum=Q/g->cfg[8];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 103,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "valid[y][s]=1;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 106,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int j=0;j<6;j++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 106,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int j=0;j<6;j++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 107,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "sums[j]+=g->cfg[4]*g->now[j][y][s]+g->old[j][y][s];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 108,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y>=g->cfg[3]) sums[j]-=g->cfg[4]*g->now[j][y-g->cfg[3]][s]+g->old[j][y-g->cfg[3]][s];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 108,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y>=g->cfg[3]) sums[j]-=g->cfg[4]*g->now[j][y-g->cfg[3]][s]+g->old[j][y-g->cfg[3]][s];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 108,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y>=g->cfg[3]) sums[j]-=g->cfg[4]*g->now[j][y-g->cfg[3]][s]+g->old[j][y-g->cfg[3]][s];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 108,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y>=g->cfg[3]) sums[j]-=g->cfg[4]*g->now[j][y-g->cfg[3]][s]+g->old[j][y-g->cfg[3]][s];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 111,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y>=g->cfg[3]) badsum-=bad[y-g->cfg[3]];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 111,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y>=g->cfg[3]) badsum-=bad[y-g->cfg[3]];"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 114,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int i=0;i<n;i++) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 116,
+    "literal": "8",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "out[i]=8;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 117,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y<g->cfg[1] || y>=g->cfg[2]) continue;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 117,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(y<g->cfg[1] || y>=g->cfg[2]) continue;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 119,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "for(int s=0;s<S;s++) if(valid[y][s]) {"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 122,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(a<0) a=-a;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 123,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(b<0) b=-b;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 127,
+    "literal": "7",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if(best==INT64_MAX) out[i]=7;"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 128,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "else { int j=0; while(j<6 && best>g->cfg[11+j]) j++; out[i]=(uint8_t)j; }"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 128,
+    "literal": "11",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "else { int j=0; while(j<6 && best>g->cfg[11+j]) j++; out[i]=(uint8_t)j; }"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.c",
+    "line": 128,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "else { int j=0; while(j<6 && best>g->cfg[11+j]) j++; out[i]=(uint8_t)j; }"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 17,
+    "literal": "384",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "H, W, K = 384, 512, 5"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 17,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "H, W, K = 384, 512, 5"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 17,
+    "literal": "512",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "H, W, K = 384, 512, 5"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 19,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "GROUP = X % 64 + 2 * (Y % 64)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 19,
+    "literal": "64",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "GROUP = X % 64 + 2 * (Y % 64)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 19,
+    "literal": "64",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "GROUP = X % 64 + 2 * (Y % 64)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 20,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "POSITIONS = tuple(np.flatnonzero(GROUP.reshape(-1) == g) for g in range(190))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 20,
+    "literal": "190",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "POSITIONS = tuple(np.flatnonzero(GROUP.reshape(-1) == g) for g in range(190))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 28,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if not (v[0] < K and 0 <= v[1] < v[2] <= H):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 28,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if not (v[0] < K and 0 <= v[1] < v[2] <= H):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 28,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if not (v[0] < K and 0 <= v[1] < v[2] <= H):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 28,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if not (v[0] < K and 0 <= v[1] < v[2] <= H):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 32,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "1 <= v[3] <= 16"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 32,
+    "literal": "16",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "1 <= v[3] <= 16"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 32,
+    "literal": "3",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "1 <= v[3] <= 16"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 33,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[4] <= 4"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 33,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[4] <= 4"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 33,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[4] <= 4"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 34,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[5] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 34,
+    "literal": "255",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[5] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 34,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[5] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 35,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[6] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 35,
+    "literal": "255",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[6] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 35,
+    "literal": "6",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[6] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 36,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[7] <= 2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 36,
+    "literal": "2",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[7] <= 2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 36,
+    "literal": "7",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[7] <= 2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 37,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[8] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 37,
+    "literal": "255",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[8] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 37,
+    "literal": "8",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[8] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 38,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[9] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 38,
+    "literal": "255",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[9] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 38,
+    "literal": "9",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and 1 <= v[9] <= 255"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 39,
+    "literal": "10",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and v[10] < 64"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 39,
+    "literal": "64",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "and v[10] < 64"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 42,
+    "literal": "11",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if any(a >= b for a, b in itertools.pairwise(v[11:])):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 57,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "or np.any(previous < 0)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 78,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.group = 0"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 112,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "or np.any(symbols < 0)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 118,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.plane.reshape(-1)[positions] = symbols"
+  },
+  {
+    "file": "experiments/ddm_rlc1_geometry.py",
+    "line": 119,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.group += 1"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 15,
+    "literal": "384",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "K, H, W, BINS = 5, 384, 512, 9"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 15,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "K, H, W, BINS = 5, 384, 512, 9"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 15,
+    "literal": "512",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "K, H, W, BINS = 5, 384, 512, 9"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 15,
+    "literal": "9",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "K, H, W, BINS = 5, 384, 512, 9"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 21,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "length = 1 + 40 + FORMAT.size"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 21,
+    "literal": "40",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "length = 1 + 40 + FORMAT.size"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 22,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(payload) <= 4 + length or payload[:4] != MAGIC or payload[4] not in (1, 17):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 22,
+    "literal": "17",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(payload) <= 4 + length or payload[:4] != MAGIC or payload[4] not in (1, 17):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 22,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(payload) <= 4 + length or payload[:4] != MAGIC or payload[4] not in (1, 17):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 22,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(payload) <= 4 + length or payload[:4] != MAGIC or payload[4] not in (1, 17):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 22,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(payload) <= 4 + length or payload[:4] != MAGIC or payload[4] not in (1, 17):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 24,
+    "literal": "15",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "config, stream = bytes([payload[4] & 15]) + payload[5 : 4 + length], payload[4 + length :]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 24,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "config, stream = bytes([payload[4] & 15]) + payload[5 : 4 + length], payload[4 + length :]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 24,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "config, stream = bytes([payload[4] & 15]) + payload[5 : 4 + length], payload[4 + length :]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 24,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "config, stream = bytes([payload[4] & 15]) + payload[5 : 4 + length], payload[4 + length :]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 24,
+    "literal": "5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "config, stream = bytes([payload[4] & 15]) + payload[5 : 4 + length], payload[4 + length :]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 25,
+    "literal": "41",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "parse_config(config[41:])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 26,
+    "literal": "16",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if payload[4] & 16:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 26,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if payload[4] & 16:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 39,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(config) != 41 + FORMAT.size or config[0] != 1:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 39,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(config) != 41 + FORMAT.size or config[0] != 1:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 39,
+    "literal": "41",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "if len(config) != 41 + FORMAT.size or config[0] != 1:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 42,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.variant = config[0]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 43,
+    "literal": "41",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "parse_config(config[41:])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 44,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "raw = np.frombuffer(config[1:41], dtype=np.int8).copy()"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 44,
+    "literal": "41",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "raw = np.frombuffer(config[1:41], dtype=np.int8).copy()"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 45,
+    "literal": "35",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.old = base.SharedMixer(raw[:35].tobytes())"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 46,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.weights = raw[35:].reshape(K, 1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 46,
+    "literal": "35",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.weights = raw[35:].reshape(K, 1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 64,
+    "literal": "0.5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "ratio = (self.counts + 0.5) / (self.expected.astype(np.float64) / TOTAL + 0.5)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 64,
+    "literal": "0.5",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "ratio = (self.counts + 0.5) / (self.expected.astype(np.float64) / TOTAL + 0.5)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 65,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.table = base.log2_fixed(np.clip(ratio, 1 / 16, 16))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 65,
+    "literal": "16",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.table = base.log2_fixed(np.clip(ratio, 1 / 16, 16))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 65,
+    "literal": "16",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.table = base.log2_fixed(np.clip(ratio, 1 / 16, 16))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 75,
+    "literal": "41",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.geometry = LaneGeometry(previous, self.config[41:])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 78,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "phi = np.empty((len(rows), K, 1), dtype=np.int16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 80,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "arg = freq.argmax(axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 82,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "extra[bins == 8] = 0"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 82,
+    "literal": "8",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "extra[bins == 8] = 0"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 83,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "phi[:, :, -1] = extra"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 93,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "inactive = np.all(phi[:, :, 0] == 0, axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 93,
+    "literal": "0",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "inactive = np.all(phi[:, :, 0] == 0, axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 93,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "inactive = np.all(phi[:, :, 0] == 0, axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 106,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "truth = np.asarray(plane, dtype=np.uint8).reshape(-1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 107,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "np.testing.assert_array_equal(self.geometry.plane.reshape(-1), truth)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 108,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "code = self.base.argmax(axis=1) * BINS + self.bins"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 109,
+    "literal": "1",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.counts += np.bincount(code * K + truth, minlength=K * BINS * K).reshape(-1, K)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_mixer.py",
+    "line": 130,
+    "literal": "4",
+    "provenance": "RECEIVER SOURCE: matches the independently enumerated runtime counterpart after import-root adaptation; see receiver literal census above.",
+    "source": "self.old.restore({k[4:]: v for k, v in state.items() if k.startswith(\"old_\")})"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 23,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "REPO = Path(__file__).resolve().parents[1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 24,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "sys.path[:0] = [str(REPO), str(REPO / \"src\")]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 43,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "tmp.write_text(json.dumps(value, indent=2, sort_keys=True) + \"\\n\")"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 50,
+    "literal": "10",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "result = subprocess.run([\"ps\", \"-axo\", \"pid,ppid,%cpu,command\"], capture_output=True, text=True, timeout=10)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 60,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"controlled_arm_worker_limit\": 2,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 69,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "while chunk := left.read(8 * 1024**2):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 69,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "while chunk := left.read(8 * 1024**2):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 69,
+    "literal": "8",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "while chunk := left.read(8 * 1024**2):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 78,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "parser.add_argument(\"--threads\", type=int, choices=(1, 4), required=True)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 78,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "parser.add_argument(\"--threads\", type=int, choices=(1, 4), required=True)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 79,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "parser.add_argument(\"--stop-after\", type=int, default=600)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 81,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if args.resume_from.resolve() != ROOT.resolve() or not 0 < args.stop_after <= 600:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 81,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if args.resume_from.resolve() != ROOT.resolve() or not 0 < args.stop_after <= 600:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 93,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"torch_threads\": 4,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 110,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "required = 3662409600 + 192 * 1024**2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 110,
+    "literal": "192",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "required = 3662409600 + 192 * 1024**2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 110,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "required = 3662409600 + 192 * 1024**2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 110,
+    "literal": "3662409600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "required = 3662409600 + 192 * 1024**2"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 111,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + required > 8 * 1024**3 or shutil.disk_usage(ROOT).free < required + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 111,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + required > 8 * 1024**3 or shutil.disk_usage(ROOT).free < required + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 111,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + required > 8 * 1024**3 or shutil.disk_usage(ROOT).free < required + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 111,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + required > 8 * 1024**3 or shutil.disk_usage(ROOT).free < required + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 111,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + required > 8 * 1024**3 or shutil.disk_usage(ROOT).free < required + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 111,
+    "literal": "8",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + required > 8 * 1024**3 or shutil.disk_usage(ROOT).free < required + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 182,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if args.stop_after < 600 and (work / \"frame_checkpoints/LATEST.json\").exists():"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 196,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(reports) != 1:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 198,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "report = reports[0]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 211,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "or report[\"pair_count\"] != 600"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 222,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"checkpoint_resumed_from_frame\": report[\"token_decoder\"].get(\"checkpoint_resumed_from_frame\", 0),"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 223,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"cpu_threads\": 4,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_public.py",
+    "line": 225,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"frames\": list(range(600)),"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 16,
+    "literal": "384",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "H, W, K, SLOT_WIDTH = 384, 512, 5, 64"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 16,
+    "literal": "5",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "H, W, K, SLOT_WIDTH = 384, 512, 5, 64"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 16,
+    "literal": "512",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "H, W, K, SLOT_WIDTH = 384, 512, 5, 64"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 16,
+    "literal": "64",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "H, W, K, SLOT_WIDTH = 384, 512, 5, 64"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 18,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "Q = 1 << 16"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 18,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "Q = 1 << 16"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 21,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "GROUP = X % SLOT_WIDTH + 2 * (Y % SLOT_WIDTH)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 22,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "POSITIONS = tuple(np.flatnonzero(GROUP.ravel() == g) for g in range(3 * SLOT_WIDTH - 2))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 22,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "POSITIONS = tuple(np.flatnonzero(GROUP.ravel() == g) for g in range(3 * SLOT_WIDTH - 2))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 48,
+    "literal": "11",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "result = cls(*values[:11], tuple(values[11:]))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 48,
+    "literal": "11",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "result = cls(*values[:11], tuple(values[11:]))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 54,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 0 <= self.class_id < K or not 0 <= self.row_start < self.row_end <= H:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 54,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 0 <= self.class_id < K or not 0 <= self.row_start < self.row_end <= H:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 56,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.window <= SLOT_WIDTH or not 1 <= self.prior_den <= 16:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 56,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.window <= SLOT_WIDTH or not 1 <= self.prior_den <= 16:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 56,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.window <= SLOT_WIDTH or not 1 <= self.prior_den <= 16:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 58,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.width_den <= 255 or not 1 <= self.min_count <= 255:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 58,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.width_den <= 255 or not 1 <= self.min_count <= 255:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 58,
+    "literal": "255",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.width_den <= 255 or not 1 <= self.min_count <= 255:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 58,
+    "literal": "255",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if not 1 <= self.width_den <= 255 or not 1 <= self.min_count <= 255:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 60,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if any(not 0 <= v <= 255 for v in (self.residual_max, self.slope_max, self.width_mult, self.wide_max)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 60,
+    "literal": "255",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if any(not 0 <= v <= 255 for v in (self.residual_max, self.slope_max, self.width_mult, self.wide_max)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 62,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(self.bins) != 6 or any(not 0 <= v <= 255 for v in self.bins):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 62,
+    "literal": "255",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(self.bins) != 6 or any(not 0 <= v <= 255 for v in self.bins):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 62,
+    "literal": "6",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if len(self.bins) != 6 or any(not 0 <= v <= 255 for v in self.bins):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 64,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if any(a >= b for a, b in zip(self.bins[:-1], self.bins[1:], strict=True)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 64,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if any(a >= b for a, b in zip(self.bins[:-1], self.bins[1:], strict=True)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 71,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "return quotient + (2 * remainder > Q or (2 * remainder == Q and quotient % 2 != 0))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 71,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "return quotient + (2 * remainder > Q or (2 * remainder == Q and quotient % 2 != 0))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 71,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "return quotient + (2 * remainder > Q or (2 * remainder == Q and quotient % 2 != 0))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 71,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "return quotient + (2 * remainder > Q or (2 * remainder == Q and quotient % 2 != 0))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 80,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if d <= 0:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 91,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "width = math.isqrt((config.width_mult * max(r, 0) * Q * Q) // denominator)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 97,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "prefix = np.concatenate((np.zeros_like(values[:, :1]), np.cumsum(values, axis=1, dtype=np.int64)), axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 97,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "prefix = np.concatenate((np.zeros_like(values[:, :1]), np.cumsum(values, axis=1, dtype=np.int64)), axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 97,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "prefix = np.concatenate((np.zeros_like(values[:, :1]), np.cumsum(values, axis=1, dtype=np.int64)), axis=1)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 99,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "return prefix[:, rows] - prefix[:, np.maximum(0, rows - window)]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 112,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if np.any(previous < 0) or np.any(previous >= K):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 115,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.old = np.stack([(v * prior).reshape(H, SLOTS, SLOT_WIDTH).sum(axis=2) for v in VALUES])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 119,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.old_lo = np.where(prior_slots, X.reshape(H, SLOTS, SLOT_WIDTH), W).min(axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 120,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.old_hi = np.where(prior_slots, X.reshape(H, SLOTS, SLOT_WIDTH), -1).max(axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 120,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.old_hi = np.where(prior_slots, X.reshape(H, SLOTS, SLOT_WIDTH), -1).max(axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 121,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "starts = prior_slots & ~np.concatenate((np.zeros((H, SLOTS, 1), dtype=bool), prior_slots[:, :, :-1]), axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 121,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "starts = prior_slots & ~np.concatenate((np.zeros((H, SLOTS, 1), dtype=bool), prior_slots[:, :, :-1]), axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 121,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "starts = prior_slots & ~np.concatenate((np.zeros((H, SLOTS, 1), dtype=bool), prior_slots[:, :, :-1]), axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 122,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.ambiguous_prior = starts.sum(axis=2) > 1"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 122,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.ambiguous_prior = starts.sum(axis=2) > 1"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 124,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.hi = np.full((H, SLOTS), -1, dtype=np.int64)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 125,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.group = 0"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 145,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "gap = ((known < K) & (known != config.class_id) & (xx > self.lo[:, :, None]) & (xx < self.hi[:, :, None])).any(axis=2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 147,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "bad = _window((gap | wide | self.ambiguous_prior)[None].astype(np.int64), config.window)[0] != 0"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 147,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "bad = _window((gap | wide | self.ambiguous_prior)[None].astype(np.int64), config.window)[0] != 0"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 149,
+    "literal": "8",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "result = np.full(len(positions), 8, dtype=np.uint8)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 164,
+    "literal": "7",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "result[index] = 7"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 172,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if np.any(symbols < 0) or np.any(symbols >= K):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference.py",
+    "line": 181,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "self.group += 1"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 19,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "sys.path.insert(0, str(REPO))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 30,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "temporary.write_text(json.dumps(value, indent=2) + '\\n')"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 43,
+    "literal": "20260910",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "frames = sorted(np.random.default_rng(20260910).choice(600, 32, replace=False).tolist())"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 43,
+    "literal": "32",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "frames = sorted(np.random.default_rng(20260910).choice(600, 32, replace=False).tolist())"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 43,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "frames = sorted(np.random.default_rng(20260910).choice(600, 32, replace=False).tolist())"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "128",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "24",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "320",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "36",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 44,
+    "literal": "8",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "config = CONFIG_STRUCT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 45,
+    "literal": "20260910",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "bound = {'sources': facts, 'frames': frames, 'seed': 20260910, 'field_sha256': sha(FIELD), 'config_hex': config.hex()}"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 55,
+    "literal": "384",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(FIELD, mode='r', dtype=np.uint8, shape=(600, 384, 512))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 55,
+    "literal": "512",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(FIELD, mode='r', dtype=np.uint8, shape=(600, 384, 512))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 55,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(FIELD, mode='r', dtype=np.uint8, shape=(600, 384, 512))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 67,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "previous = None if frame == 0 else field[frame - 1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 67,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "previous = None if frame == 0 else field[frame - 1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 69,
+    "literal": "384",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "native_bins, reference_bins = np.empty((384, 512), np.uint8), np.empty((384, 512), np.uint8)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 69,
+    "literal": "384",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "native_bins, reference_bins = np.empty((384, 512), np.uint8), np.empty((384, 512), np.uint8)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 69,
+    "literal": "512",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "native_bins, reference_bins = np.empty((384, 512), np.uint8), np.empty((384, 512), np.uint8)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 69,
+    "literal": "512",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "native_bins, reference_bins = np.empty((384, 512), np.uint8), np.empty((384, 512), np.uint8)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 84,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "receipt = {'frame': frame, 'positions': native_bins.size, 'equal': mismatches == 0, 'mismatches': mismatches, 'wall_s': time.monotonic() - start, 'arrays': rows, 'concurrency': {'control_processes': 1, 'operator_note': args.concurrency_note}, 'score_claim': False, 'axis': '[macOS-CPU advisory / geometry parity only]'}"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 84,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "receipt = {'frame': frame, 'positions': native_bins.size, 'equal': mismatches == 0, 'mismatches': mismatches, 'wall_s': time.monotonic() - start, 'arrays': rows, 'concurrency': {'control_processes': 1, 'operator_note': args.concurrency_note}, 'score_claim': False, 'axis': '[macOS-CPU advisory / geometry parity only]'}"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 89,
+    "literal": "384",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "atomic_json(root / 'complete.json', {'complete': True, 'frames': frames, 'position_count': len(frames) * 384 * 512, 'score_claim': False, 'build_command': command, 'library_sha256': sha(library)})"
+  },
+  {
+    "file": "experiments/ddm_rlc1_reference_controls.py",
+    "line": 89,
+    "literal": "512",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "atomic_json(root / 'complete.json', {'complete': True, 'frames': frames, 'position_count': len(frames) * 384 * 512, 'score_claim': False, 'build_command': command, 'library_sha256': sha(library)})"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 19,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "REPO = Path(__file__).resolve().parents[1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 20,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "sys.path[:0] = [str(REPO), str(REPO / \"src\")]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 94,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if child.returncode == 0 or \"TC1_RECEIVER_STAGE_COMPLETE\" not in (work / \"run.log\").read_text():"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 97,
+    "literal": "26",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if after[\"frame\"] != 26 or after[\"binding\"] != before[\"binding\"]:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 103,
+    "literal": "384",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(source_field, mode=\"r\", dtype=np.uint8, shape=(600, 384, 512))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 103,
+    "literal": "512",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(source_field, mode=\"r\", dtype=np.uint8, shape=(600, 384, 512))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 103,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(source_field, mode=\"r\", dtype=np.uint8, shape=(600, 384, 512))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 105,
+    "literal": "26",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "np.testing.assert_array_equal(data[\"tokens\"], field[:26])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 109,
+    "literal": "25",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"from_frame\": 25,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_resume_smoke.py",
+    "line": 110,
+    "literal": "26",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"to_frame\": 26,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 20,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "REPO = Path(__file__).resolve().parents[1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 21,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "sys.path[:0] = [str(REPO), str(REPO / \"src\")]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 37,
+    "literal": "20260910",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "SEED = 20260910"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 44,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "def storage(need=0):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 46,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + need > 8 * 1024**3 or shutil.disk_usage(ROOT).free < need + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 46,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + need > 8 * 1024**3 or shutil.disk_usage(ROOT).free < need + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 46,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + need > 8 * 1024**3 or shutil.disk_usage(ROOT).free < need + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 46,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + need > 8 * 1024**3 or shutil.disk_usage(ROOT).free < need + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 46,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + need > 8 * 1024**3 or shutil.disk_usage(ROOT).free < need + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 46,
+    "literal": "8",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if used + need > 8 * 1024**3 or shutil.disk_usage(ROOT).free < need + 16 * 1024**3:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 86,
+    "literal": "1024",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "storage(128 * 1024**2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 86,
+    "literal": "128",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "storage(128 * 1024**2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 86,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "storage(128 * 1024**2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "128",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "24",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "320",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "36",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 101,
+    "literal": "8",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "cfg = geo.FORMAT.pack(1, 128, 320, 16, 4, 4, 36, 2, 2, 3, 24, 0, 1, 2, 4, 8, 16)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 104,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "blob(ROOT / \"retained/config.bin\", bytes([1]) + old + fitted + cfg)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 145,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "start, state = 0, None"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 151,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "start = int(state[\"frame\"][0])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 152,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "mixer.restore({k[2:]: v for k, v in state.items() if k.startswith(\"m_\")})"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 156,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "route.NativeRc64Encoder(library, None if state is None else state[f\"enc{i}\"].tobytes()) for i in range(3)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 158,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "field = np.memmap(TRACE / \"field.u8\", mode=\"r\", dtype=np.uint8, shape=(600, geo.H, geo.W))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 166,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "plane, previous = field[frame], None if frame == 0 else field[frame - 1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 166,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "plane, previous = field[frame], None if frame == 0 else field[frame - 1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 172,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "mixer.observe(positions, plane.reshape(-1)[positions])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 174,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "truth = plane.reshape(-1)[ORDER].astype(np.int32)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 175,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for enc in encoders[:2]:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 177,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "encoders[2].encode(truth, data[\"rows\"][ORDER])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 178,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "state = {\"frame\": np.array([frame + 1]), **{\"m_\" + k: v for k, v in mixer.snapshot().items()}}"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 180,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "payload = save(work / \"states\" / f\"frame_{frame + 1:04d}.npz\", state)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 181,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "record(latest, {\"binding\": pin, \"state\": payload, \"frame\": frame + 1})"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 182,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "print(json.dumps({\"frame\": frame + 1, \"elapsed\": time.monotonic() - started}), flush=True)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 183,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if stop != 600:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 194,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if raw_streams[0] != raw_streams[1] or raw_streams[2] != (ROOT / \"retained/source.rc64\").read_bytes():"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 194,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if raw_streams[0] != raw_streams[1] or raw_streams[2] != (ROOT / \"retained/source.rc64\").read_bytes():"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 194,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if raw_streams[0] != raw_streams[1] or raw_streams[2] != (ROOT / \"retained/source.rc64\").read_bytes():"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 197,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for i in range(2):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 204,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"positions\": 600 * geo.H * geo.W,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 207,
+    "literal": "3",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"streams\": [fact(work / f\"twin{i}.rc64\") for i in range(3)],"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 215,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "storage(len(member) * 2)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 237,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if text.count(old) != 1:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 238,
+    "literal": "80",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "raise ValueError(\"receiver replacement not unique: \" + old[:80])"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 256,
+    "literal": "96",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "prefix = b\"\".join(section[k] for k in (\"header\", \"hpac\", \"semantic\", \"carrier\")) + section[\"tail\"][:96]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 259,
+    "literal": "10",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for quality in (9, 10, 11):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 259,
+    "literal": "11",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for quality in (9, 10, 11):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 259,
+    "literal": "9",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for quality in (9, 10, 11):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 260,
+    "literal": "22",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for window in (22, 23, 24):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 260,
+    "literal": "23",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for window in (22, 23, 24):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 260,
+    "literal": "24",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for window in (22, 23, 24):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 263,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "alternatives.append((f\"q{quality}_w{window}\", mix.MAGIC + bytes([config[0] | 16]) + config[1:] + packed))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 263,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "alternatives.append((f\"q{quality}_w{window}\", mix.MAGIC + bytes([config[0] | 16]) + config[1:] + packed))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 263,
+    "literal": "16",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "alternatives.append((f\"q{quality}_w{window}\", mix.MAGIC + bytes([config[0] | 16]) + config[1:] + packed))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 269,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for method, level in ((\"stored\", None), (\"deflate\", 1), (\"deflate\", 6), (\"deflate\", 9)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 269,
+    "literal": "6",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for method, level in ((\"stored\", None), (\"deflate\", 1), (\"deflate\", 6), (\"deflate\", 9)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 269,
+    "literal": "9",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "for method, level in ((\"stored\", None), (\"deflate\", 1), (\"deflate\", 6), (\"deflate\", 9)):"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 274,
+    "literal": "180233",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "saved = 180233 - winner[\"archive\"][\"bytes\"]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 277,
+    "literal": "19",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "{\"samples\": census, \"winner\": winner, \"net_saved_bytes\": saved, \"config_bytes\": 19, \"score_claim\": False},"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 279,
+    "literal": "30",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if saved < 30:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 392,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "parser.add_argument(\"--stop-after\", type=int, default=600)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 394,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if args.resume_from.resolve() != ROOT.resolve() or not 0 < args.stop_after <= 600:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_run.py",
+    "line": 394,
+    "literal": "600",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "if args.resume_from.resolve() != ROOT.resolve() or not 0 < args.stop_after <= 600:"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 19,
+    "literal": "1",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "REPO = Path(__file__).resolve().parents[1]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 20,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "sys.path[:0] = [str(REPO), str(REPO / \"src\")]"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 31,
+    "literal": "2",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "temp.write_text(json.dumps(value, sort_keys=True, indent=2) + \"\\n\")"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 44,
+    "literal": "0",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "sys.path.insert(0, str(runtime))"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 50,
+    "literal": "20260910",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "torch.manual_seed(20260910)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 78,
+    "literal": "4",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "num_threads=4,"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 116,
+    "literal": "180",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "process = subprocess.run(argv, env=env, capture_output=True, timeout=180)"
+  },
+  {
+    "file": "experiments/ddm_rlc1_smoke.py",
+    "line": 141,
+    "literal": "180",
+    "provenance": "OFFLINE producer/reference/control; not shipped in receiver. Public geometry/indexing or fixed test/format/storage arithmetic; actual video-selected config/weights are counted as described above.",
+    "source": "\"public_path_probe_seconds\": 180,"
+  },
+  {
+    "file": ".omx/research/ddm_rlc1_20260910/python_reference_equivalence_test.py",
+    "line": 5,
+    "literal": "0",
+    "provenance": "OFFLINE audit-bundle delegate: parents[3] resolves repository root from .omx/research/arm; no receiver or video content.",
+    "source": "sys.path.insert(0, str(Path(__file__).resolve().parents[3]))"
+  },
+  {
+    "file": ".omx/research/ddm_rlc1_20260910/python_reference_equivalence_test.py",
+    "line": 5,
+    "literal": "3",
+    "provenance": "OFFLINE audit-bundle delegate: parents[3] resolves repository root from .omx/research/arm; no receiver or video content.",
+    "source": "sys.path.insert(0, str(Path(__file__).resolve().parents[3]))"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "all_retained_tokens_equal_source": true,
+  "axis": "macOS-CPU advisory",
+  "expected_exception": "TC1_RECEIVER_STAGE_COMPLETE",
+  "from_frame": 25,
+  "native_libraries_match_original": true,
+  "public_entrypoint": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/inflate.sh",
+  "restored_and_decoded_next_frame": true,
+  "resumed_state": {
+    "bytes": 556463,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_resume_control/frame_checkpoints/stage_0026.npz",
+    "sha256": "5114b2957d78a0cbf258248ec17ba5c1f356e8f30635f364ab1a4e66bcb22f56"
+  },
+  "returncode": 1,
+  "score_claim": false,
+  "source_checkpoint": {
+    "bytes": 553578,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads1_g2/frame_checkpoints/stage_0025.npz",
+    "sha256": "2429fb944a40a9afe8766a01b81b1aad550edf29e51209a6b89f7de88b54a100"
+  },
+  "to_frame": 26
+}

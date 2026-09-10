@@ -1,0 +1,46 @@
+{
+  "schema": "ddm_rlc1.retained_evidence.v1",
+  "score_claim": false,
+  "evidence": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/INPUTS.json",
+      "bytes": 2585,
+      "sha256": "57b2a2a8df84593e3d0fd53f59d7b664f1c865a35a84aeb0259a988429c8ce38"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/SOURCE_RUNTIME_BINDING.json",
+      "bytes": 196,
+      "sha256": "580fc9a50a7d97cb72d3f0b97c378a720e94d5d163c681832b5856c6b85fd7ba"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/encode/RESULT.json",
+      "bytes": 3535,
+      "sha256": "d3c85831bbbc5f7fca5686c2bdc8de48d12ab2ba1cac17bb610868f4ade79083"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/CONTAINERS.json",
+      "bytes": 19982,
+      "sha256": "4aa2559d9a68d3f08a56f879bacc63194e34f5f496441002e76781793f1f38fb"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/CANDIDATE.json",
+      "bytes": 3842,
+      "sha256": "3c29650fd2e4ea0702ebf4334899bb3dcea74ca2b2435ec4e6d864817a8c79c0"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/FIXED_POINT_STREAM_COMPARISON.json",
+      "bytes": 540,
+      "sha256": "b879e58befcf7e7e2c969626e8adcfeffe7f60c931662d6a9f0c60a64cb4f841"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/reference_controls_final/verified_summary.json",
+      "bytes": 550,
+      "sha256": "0f7ba4be8039d27bee59c9197ffee1aad2e11a7a39d7168707027e91412ed107"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/retained/build_geometry.json",
+      "bytes": 463,
+      "sha256": "758e71658c15381e3903ecd362ad7ac5eba5a4040054cf78aad31f30460b88ca"
+    }
+  ]
+}

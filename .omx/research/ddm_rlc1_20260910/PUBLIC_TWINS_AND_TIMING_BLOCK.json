@@ -1,0 +1,67 @@
+{
+  "schema": "ddm_rlc1.public_twins_and_timing_block.v1",
+  "rows": [
+    {
+      "threads": 1,
+      "result": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads1_g2/RESULT.json",
+        "sha256": "3afc44f8c6676932e2226befbba2373f8f631863de492c1efe1bce4f9e818395"
+      },
+      "local_timing": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads1_g2/TIMING.json",
+        "sha256": "669feb2987dc87d1b198e4bd78a102b41fdc95f8a7775291bb06174c16f70199"
+      },
+      "raw": {
+        "bytes": 3662409600,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads1_g2/output/0.raw",
+        "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+      },
+      "wall_seconds": 1494.5509698749956,
+      "inflate_report_seconds": 1490.7940488750028,
+      "token_seconds": 1048.0954020420031,
+      "refusal": {
+        "class": "SealContractError",
+        "message": "decode_wall_clock: competing process count absent"
+      }
+    },
+    {
+      "threads": 4,
+      "result": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g2/RESULT.json",
+        "sha256": "6b41b1a6bbad7f6976061f09eeec45000b74f8f38d4056d080a5dd09a33d5530"
+      },
+      "local_timing": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g2/TIMING.json",
+        "sha256": "7e4423c62b7ac601a4e7f2549c3672f40d28e589ec0b2aedb77454251b4ed9d2"
+      },
+      "raw": {
+        "bytes": 3662409600,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g2/output/0.raw",
+        "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5"
+      },
+      "wall_seconds": 1518.1966355839977,
+      "inflate_report_seconds": 1514.442229458,
+      "token_seconds": 1046.8198892079963,
+      "refusal": {
+        "class": "SealContractError",
+        "message": "decode_wall_clock: competing process count absent"
+      }
+    }
+  ],
+  "two_configurations_all_output_bytes_equal": true,
+  "torch_threads": 4,
+  "blas_environment_configurations": [
+    1,
+    4
+  ],
+  "frames_per_run": 600,
+  "bytes_per_run": 3662409600,
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "seal_created": false,
+  "timing_status": "BLOCKED_EVIDENCE",
+  "reason": "Whole-host concurrency unavailable; no matched admissible calibration. Local loaded measurements cannot establish <=1260s projected T4 margin.",
+  "verdict_scope": "INSTANCE",
+  "tc4_maps": "not included; no timing-admitted slate measured",
+  "validator_source_sha256": "a76c4777655fdd198161a3f100e22c392b1385ab0f9e40ab2183503a86753fa3"
+}

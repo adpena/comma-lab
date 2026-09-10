@@ -1,0 +1,13 @@
+{
+  "verified_files": 17,
+  "exact_file_set": true,
+  "all_blob_hashes_match": true,
+  "fallback_commit": "ad868ae19965f6c60ac87090743ac9aec94e38e1",
+  "bundle_ref": "refs/heads/serializer-fallback",
+  "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc1_20260910/source_serializer/20260910T080439.416605Z-17543/intended-commit.bundle",
+  "bundle_sha256": "06481356e88fa3c1c51f670bcf864cfdc7e37cf7b579544a6f64a138e81d7624",
+  "patch": ".omx/research/ddm_rlc1_20260910/source_landing.patch",
+  "shared_index_empty": true,
+  "main_landed": false,
+  "score_claim": false
+}

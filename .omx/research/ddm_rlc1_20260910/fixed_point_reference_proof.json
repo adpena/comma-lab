@@ -1,0 +1,16 @@
+{
+  "frames": 32,
+  "positions": 6291456,
+  "mismatches": 0,
+  "wall_s_sum": 7.6389100379892625,
+  "retained_array_bytes": 12582912,
+  "source_still_matches": {
+    "/Users/adpena/Projects/pact/experiments/ddm_rlc1_geometry.c": true,
+    "/Users/adpena/Projects/pact/experiments/ddm_rlc1_geometry.py": true,
+    "/Users/adpena/Projects/pact/experiments/ddm_rlc1_reference.py": true,
+    "/Users/adpena/Projects/pact/experiments/ddm_rlc1_reference_controls.py": true
+  },
+  "all_array_hashes_match": true,
+  "score_claim": false,
+  "complete": true
+}

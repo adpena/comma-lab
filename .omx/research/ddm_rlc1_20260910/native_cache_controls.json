@@ -1,0 +1,85 @@
+{
+  "rows": [
+    {
+      "threads": 1,
+      "source": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/runtime/entropy/rc64_backend.c",
+        "bytes": 5638,
+        "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+      },
+      "retained_output": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/native_cache_controls/t1_0.so",
+      "sha256": "df1e5bc7ab6719751168b9d552ee99911488ca4b5faea0f0d4ccf282c16955b1",
+      "bytes": 33888,
+      "positive_rc": 0,
+      "changed_flag_rc": 1
+    },
+    {
+      "threads": 1,
+      "source": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/runtime/f26_corrector_native.c",
+        "bytes": 50299,
+        "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+      },
+      "retained_output": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/native_cache_controls/t1_1.so",
+      "sha256": "81fa0e0fc37a3b58a94dd82686c4d8d310745ad1d7970fba5d188abbdb3d334b",
+      "bytes": 34568,
+      "positive_rc": 0,
+      "changed_flag_rc": 1
+    },
+    {
+      "threads": 1,
+      "source": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/runtime/rlc1_geometry.c",
+        "bytes": 4238,
+        "sha256": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5"
+      },
+      "retained_output": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/native_cache_controls/t1_2.so",
+      "sha256": "3bec1df7ef353c238bb83905271c753c38cf9693165a6e731dd5fe61a12098f6",
+      "bytes": 33824,
+      "positive_rc": 0,
+      "changed_flag_rc": 1
+    },
+    {
+      "threads": 4,
+      "source": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/runtime/entropy/rc64_backend.c",
+        "bytes": 5638,
+        "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+      },
+      "retained_output": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/native_cache_controls/t4_0.so",
+      "sha256": "93d7e0f58f4aef7feaeb2b094294f77cead75b8d3dde124792dd60ce1d155ccd",
+      "bytes": 33888,
+      "positive_rc": 0,
+      "changed_flag_rc": 1
+    },
+    {
+      "threads": 4,
+      "source": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/runtime/f26_corrector_native.c",
+        "bytes": 50299,
+        "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+      },
+      "retained_output": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/native_cache_controls/t4_1.so",
+      "sha256": "13b425764ba26f9729cba36543b81a1387f1c5db442537e432d731ebaffc7373",
+      "bytes": 34568,
+      "positive_rc": 0,
+      "changed_flag_rc": 1
+    },
+    {
+      "threads": 4,
+      "source": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/runtime/rlc1_geometry.c",
+        "bytes": 4238,
+        "sha256": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5"
+      },
+      "retained_output": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/native_cache_controls/t4_2.so",
+      "sha256": "0998201494a68d2c8f112c8a9cb473912b627cdc2f61cfc0b13493cf6c7bf466",
+      "bytes": 33824,
+      "positive_rc": 0,
+      "changed_flag_rc": 1
+    }
+  ],
+  "all_six_original_builds_reused_exactly": true,
+  "all_six_flag_mutations_refused": true,
+  "score_claim": false
+}
