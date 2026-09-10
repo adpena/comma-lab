@@ -1,0 +1,3 @@
+[subagent-commit-serializer] git apply --cached failed (rc=128) — the patch is likely NOT cleanly based on HEAD. Regenerate it against HEAD and retry:
+error: unable to create temporary file: Operation not permitted
+error: unable to create backing store for newly created file scripts/pre_submission_compliance_check.py

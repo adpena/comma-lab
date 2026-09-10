@@ -1,0 +1,282 @@
+{
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_cpx2_20260910/serializer/20260910T194858.193412Z-18600/intended-commit.bundle",
+  "bundle_bytes": 759098,
+  "bundle_sha256": "b34d67b9309cc3cad32d36088302db45d378112b7820314851ba57a359b81948",
+  "bundle_hash_matches_receipt": true,
+  "commit": "67f4eaa0cbea3ebaad37636871e0b7f1be251355",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "init",
+        "--bare",
+        ".omx/research/ddm_cpx2_20260910/bundle_verify.git"
+      ],
+      "rc": 0,
+      "stdout": "Initialized empty Git repository in /Users/adpena/Projects/pact/.omx/research/ddm_cpx2_20260910/bundle_verify.git/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=.omx/research/ddm_cpx2_20260910/bundle_verify.git",
+        "bundle",
+        "verify",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_cpx2_20260910/serializer/20260910T194858.193412Z-18600/intended-commit.bundle"
+      ],
+      "rc": 0,
+      "stdout": "The bundle contains this ref:\n67f4eaa0cbea3ebaad37636871e0b7f1be251355 refs/heads/serializer-fallback\nThe bundle requires this ref:\n74446adf20c932f6176d04bd0a7962f412047eea \nThe bundle uses this hash algorithm: sha1\n",
+      "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_cpx2_20260910/serializer/20260910T194858.193412Z-18600/intended-commit.bundle is okay\n"
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=.omx/research/ddm_cpx2_20260910/bundle_verify.git",
+        "bundle",
+        "unbundle",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_cpx2_20260910/serializer/20260910T194858.193412Z-18600/intended-commit.bundle"
+      ],
+      "rc": 0,
+      "stdout": "67f4eaa0cbea3ebaad37636871e0b7f1be251355 refs/heads/serializer-fallback\n",
+      "stderr": ""
+    }
+  ],
+  "verified_content_files": 30,
+  "files": [
+    {
+      "path": "scripts/pre_submission_compliance_check.py",
+      "rc": 0,
+      "sha256": "d9d91ac94ea632def83ef667277bb1dd1d5e05a0e704b258a137db0b4f3e56c9",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": "src/tac/auth_eval_schema.py",
+      "rc": 0,
+      "sha256": "ee150085090a2e289f9e7d834384cd3940cc253df6c8b498015916dddc4f468d",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": "src/tac/tests/test_contest_cpu_axis_refusal.py",
+      "rc": 0,
+      "sha256": "8f07332402a4f14b4b7f411d2dcdfad6d01f781daebc25b2d5b11aedff152245",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_checker_cuda_only_refusal_adjudication_path_20260910.md",
+      "rc": 0,
+      "sha256": "a48f685cbd42666a4702cad1c10901f40bc2963beb08c6aa60835d7575096991",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/BOUNDARY_VERIFICATION.json",
+      "rc": 0,
+      "sha256": "4911132aabae975f1c75f0a7706e8a25fbf6897376843d56a042a706a65879bd",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/COMPLIANCE.json",
+      "rc": 0,
+      "sha256": "78eba74b1e1f4e88e7d795ff482ae5048a4c00644229b6c9f4c050fb7adb5f3a",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/COMPLIANCE_BEFORE.json",
+      "rc": 0,
+      "sha256": "1d3f61f0f7c5115e50f8e9f563262b7d12f9118a0d68f2ee574ac730f1b61a6c",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/COMPLIANCE_BEFORE_COMMAND.json",
+      "rc": 0,
+      "sha256": "b5da7f08ce477d0d31e7520b60fd671876105ef15b2fc02f87ef138b1d30d09a",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/COMPLIANCE_COMMAND.json",
+      "rc": 0,
+      "sha256": "6438e846b54b4915d85d2af0464fb8d8dfe42437605453c785a1b6a4c1454df0",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/COMPLIANCE_SUMMARY.json",
+      "rc": 0,
+      "sha256": "f1bb4eb4af8a4b5cc890324d2cc4fefc006f19dfe1ae15bb13766697e12c8428",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/CPU_AXIS_REFUSAL.json",
+      "rc": 0,
+      "sha256": "c2d39fe845f69b9f835936f20259fb6bd8eb00f8b8fe64e0a6c50c48d827f52e",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/FIRE_ORDERS.json",
+      "rc": 0,
+      "sha256": "3adc075640f459a794de89905d99a20da52fe29c4b30a0c7adddbc9d0843c125",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/INPUT_BINDINGS.json",
+      "rc": 0,
+      "sha256": "b1428a9b481f1f54a193fab236570eba54014499f4d05c4a9ac66aa10b5adba5",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/RECALL_SEARCHES.json",
+      "rc": 0,
+      "sha256": "df1de80529b3e55aa97130c64dd2b40eb6a410bc0f2cc5c4e8c972ba13f8814d",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/RECALL_SUPPLEMENT.json",
+      "rc": 0,
+      "sha256": "499a822cfaa2125819d8d3885d577fadb670932551e9388ab076cd60ded71823",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/REVIEW_PASSES.json",
+      "rc": 0,
+      "sha256": "7e2ee08b11a5e756e8e3b91b4cc51ea43978e0ff6b2d8baaf5b4d8810d8243e3",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/RUNTIME_BINDINGS.json",
+      "rc": 0,
+      "sha256": "44e482fabb2ff50bfa4e19f698e71e004b308307c04e218729ce113e85682069",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/SUBMISSION_POLICY_ADJUDICATION.json",
+      "rc": 0,
+      "sha256": "2c3126d13c0e2b1401d0f8e6521b2c273f98925ce090eb12f815ac84a52f2018",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/pytest_final.txt",
+      "rc": 0,
+      "sha256": "12d6c6910829f96022f4db1c51a1c9d8ff90f112bcb74b6c31a4ebd91ce550fd",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/pytest_initial.txt",
+      "rc": 0,
+      "sha256": "a6fa885c4d5a334112ce7e8367b88fa74a05220dd6968819e9eec9b202a1c304",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/recall_0.txt",
+      "rc": 0,
+      "sha256": "b75d3ed40bc3abea47991983f721547533de65c082ffbf8dad7100e91201297c",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/recall_1.txt",
+      "rc": 0,
+      "sha256": "a21238de32711957744d133f53fcdf7b7365b1c54704d1ea39e56db7d1d04ed8",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/recall_2.txt",
+      "rc": 0,
+      "sha256": "89e65d7713b33e5d132149b30059e3d4f92c2a7bd1ac9ea3f272ae9a88c74dbc",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/recall_3.txt",
+      "rc": 0,
+      "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/recall_receipts.txt",
+      "rc": 0,
+      "sha256": "4eceec750c2a77dc66fcd789d35e697fb04b4f11ef0d088143dff3be3de93e23",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/review_pass_1.txt",
+      "rc": 0,
+      "sha256": "bedd54a9811197ff14e4b7684d5eead28832f6442847aa182adc7a5f459bd3b8",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/review_pass_2.txt",
+      "rc": 0,
+      "sha256": "2173f5e7e4516b0a72b48f590c24f7278e0ec0850f93eb71ce8ebd504a7d4178",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/review_scan.txt",
+      "rc": 0,
+      "sha256": "922f8ed5df97121db869a17e77f0039abbdeded3e799ee88b0cc216db24b1210",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/review_scan_final.txt",
+      "rc": 0,
+      "sha256": "4e8a37407ef442677983c2339d35dea9e8d457a06283b7563ef25374c466edac",
+      "matches_intended": true,
+      "matches_serializer": true
+    },
+    {
+      "path": ".omx/research/ddm_cpx2_20260910/ruff.txt",
+      "rc": 0,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "matches_intended": true,
+      "matches_serializer": true
+    }
+  ],
+  "empty_diagnostic_outputs_not_in_patch": {
+    ".omx/research/ddm_cpx2_20260910/compliance.stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    ".omx/research/ddm_cpx2_20260910/compliance.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    ".omx/research/ddm_cpx2_20260910/compliance_before.stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    ".omx/research/ddm_cpx2_20260910/index_before.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    ".omx/research/ddm_cpx2_20260910/index_before_serializer.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "unexpected_commit_paths": [],
+  "commit_message": "compliance: bind CUDA-only CPU refusal and packet policy review [no-triality] [p0-ledger-ok]\n\nCheckpoint: tools/subagent_checkpoint.py --subagent-id ddm_cpx2, step 3.\nReal move-43 strict check 85/93 -> 91/93; import hygiene and hosting remain blockers.\n160 tests pass; two review_tracker passes per Python file.\nSix solver hooks N/A: checker custody only; no score, receiver or dispatch changes.\n\n",
+  "shared_index_unchanged": true
+}

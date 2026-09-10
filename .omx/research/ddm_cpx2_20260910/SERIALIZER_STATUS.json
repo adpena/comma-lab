@@ -1,0 +1,27 @@
+{
+  "rc": 17,
+  "attempts": 1,
+  "main_branch_landed": false,
+  "status": "BUNDLE_VERIFIED_MAIN_MUST_LAND",
+  "argv": ".omx/research/ddm_cpx2_20260910/SERIALIZER_ARGV.json",
+  "stdout": ".omx/research/ddm_cpx2_20260910/serializer.stdout.txt",
+  "stderr": ".omx/research/ddm_cpx2_20260910/serializer.stderr.txt",
+  "fallback_commit": "67f4eaa0cbea3ebaad37636871e0b7f1be251355",
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cpx2_20260910/serializer/20260910T194858.193412Z-18600/intended-commit.bundle",
+    "bytes": 759098,
+    "sha256": "b34d67b9309cc3cad32d36088302db45d378112b7820314851ba57a359b81948"
+  },
+  "verified_content_files": 30,
+  "empty_diagnostic_outputs_not_bundled": [
+    ".omx/research/ddm_cpx2_20260910/compliance.stderr.txt",
+    ".omx/research/ddm_cpx2_20260910/compliance.stdout.txt",
+    ".omx/research/ddm_cpx2_20260910/compliance_before.stderr.txt",
+    ".omx/research/ddm_cpx2_20260910/index_before.txt",
+    ".omx/research/ddm_cpx2_20260910/index_before_serializer.txt"
+  ],
+  "verification": ".omx/research/ddm_cpx2_20260910/BUNDLE_VERIFICATION.json",
+  "shared_index_unchanged": true,
+  "owner": "MAIN",
+  "fire_trigger": "harvest this verified bundle and land the exact intended commit"
+}
