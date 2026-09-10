@@ -248,6 +248,22 @@ def cmd_merge(args: argparse.Namespace) -> int:
                 )
             rows[pair] = row
 
+    # A MISSING SHARD IS INVISIBLE OTHERWISE.  Merging four shards of five produces a
+    # perfectly valid field carrying four fifths of the edits, which then gets priced and
+    # sealed as if it were the whole pass.  So the pairs that OWED a rebase row are
+    # recomputed from the acceptance itself and every one is required to have produced one.
+    if args.sizing_rows:
+        owed = set(load_accepted([Path(p) for p in args.sizing_rows]))
+        missing = sorted(owed - set(rows))
+        extra = sorted(set(rows) - owed)
+        if missing or extra:
+            raise rp1.Rp1Error(
+                f"{len(missing)} pairs with accepted edits have no rebase row "
+                f"(first: {missing[:8]}) and {len(extra)} rebase rows have no accepted "
+                f"edits (first: {extra[:8]}); a partial merge ships a field that prices "
+                "as if it were the whole pass"
+            )
+
     field = np.array(base_field, dtype=np.uint8)
     tokens = 0
     for pair, row in rows.items():
@@ -402,6 +418,14 @@ def build_parser() -> argparse.ArgumentParser:
     merge = sub.add_parser("merge", help="merge rebase shards into one 600-plane field")
     merge.add_argument("--rows", nargs="+", required=True)
     merge.add_argument("--out-dir", required=True)
+    merge.add_argument(
+        "--sizing-rows",
+        nargs="*",
+        default=[],
+        help="the acceptance's own SIZING_ROWS.jsonl files; when given, every pair that "
+        "carried an accepted edit must have produced a rebase row, so a shard that died "
+        "cannot be merged into a field that prices as if it were the whole pass",
+    )
     _pointer_flags(merge)
     merge.set_defaults(func=cmd_merge)
 
