@@ -1,0 +1,67 @@
+#!/bin/bash
+# ddm_md4 — TERMINAL READ of md3's armed different-START cell.
+# md1's instrument (ddm_md1_micro_to_macro.py) and md2's overlap tool
+# (ddm_md2_persistent_site_overlap.py) are used UNCHANGED, exactly as md3's
+# step1 data-order driver used them.  The only new thing is the cell.
+#
+#   cell    seed_20260902_different_init_r10_live_control_native100
+#   start   md3_r10_live_state.pt sha 414b7701... (incumbent 991a1cc6...)
+#   config  the AUTHORIZED config that fired (md1 reads only initial_state.path)
+#
+# Pre-registered falsifier (charter ddm_md3): J(persistent_new, persistent_cold)
+#   >= 0.70 -> DATA-ANCHORED ; <= 0.45 -> INIT-ANCHORED.  Ceiling 0.8082 (md3 §4).
+# $0, CPU only, 4 threads, one process, resumable from disk.  Writes only under
+# the md4 terminal_read store.  Never writes under any cell's runs/.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+STORE=/Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read
+MD1=/Volumes/APDataStore/pact/ddm_md1_micro_macro
+MD3=/Volumes/APDataStore/pact/ddm_md3_different_initialisation
+CELL=seed_20260902_different_init_r10_live_control_native100
+COLD=cold_control_seed_20260902
+ORDER=data_order_control_seed_20260903
+RUN=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/md3_different_initialisation/runs/seed_20260902_different_init_r10_live_control_native100
+CFG=$MD3/authorized_configs/seed_20260902_different_init_r10_live_control_native100.json
+
+echo "=== md4 stage A sweep: $CELL $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell "$CELL" --run-root "$RUN" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 16200
+echo "sweep rc=$? $(date -u +%FT%TZ)"
+
+for L in dali pyav; do
+  echo "=== md4 stage B analyze $L $(date -u +%FT%TZ) ==="
+  $PY experiments/ddm_md1_micro_to_macro.py --mode analyze \
+      --cell "$CELL" --gt-lineage "$L" --store "$STORE"
+  echo "analyze $L rc=$? $(date -u +%FT%TZ)"
+done
+
+for L in dali pyav; do
+  echo "=== md4 stage C overlap $L (different-start vs md1 COLD control) $(date -u +%FT%TZ) ==="
+  $PY experiments/ddm_md2_persistent_site_overlap.py \
+      --out-store "$STORE" \
+      --a-store "$STORE" --a-cell "$CELL" \
+      --b-store "$MD1" --b-cell "$COLD" \
+      --gt-lineage "$L" > "$STORE/overlap_diffstart_vs_cold_${L}.stdout.txt" 2>&1
+  echo "overlap-vs-cold $L rc=$? $(date -u +%FT%TZ)"
+done
+
+for L in dali pyav; do
+  echo "=== md4 stage C overlap $L (different-start vs DATA-ORDER control) $(date -u +%FT%TZ) ==="
+  $PY experiments/ddm_md2_persistent_site_overlap.py \
+      --out-store "$STORE" \
+      --a-store "$STORE" --a-cell "$CELL" \
+      --b-store "$MD3" --b-cell "$ORDER" \
+      --gt-lineage "$L" > "$STORE/overlap_diffstart_vs_dataorder_${L}.stdout.txt" 2>&1
+  echo "overlap-vs-dataorder $L rc=$? $(date -u +%FT%TZ)"
+done
+
+echo "=== md4 stage D tables $(date -u +%FT%TZ) ==="
+for L in dali pyav; do
+  $PY experiments/ddm_md1_micro_to_macro.py --mode tables \
+      --store "$STORE" --gt-lineage "$L" > "$STORE/TABLES_${L}.md" 2>&1
+  echo "tables $L rc=$?"
+done
+
+echo "=== md4 terminal-read driver done $(date -u +%FT%TZ) ==="

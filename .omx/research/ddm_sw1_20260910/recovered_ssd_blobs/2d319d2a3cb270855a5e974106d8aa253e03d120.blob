@@ -1,0 +1,153 @@
+# ql1 MEASURED facts (draft store; memo assembled from here)
+
+## Root causes at HEAD fa80f8256 (independently derived; corroborated by cd1's ledger)
+1. EP725 renderer SOURCE-PIN  -> 30 tests
+2. V15 producer SOURCE-PIN (direct_description_carrier_compose.py) -> 19 tests
+3. PBR2/V9 teacher source-manifest pin -> 1 test
+4. stale competitive-target fixture -> 1 test  [ALREADY FIXED by cd1 563b093e3]
+   30+19+1+1 = 51
+
+## (1) EP725 drift chain  MEASURED
+pin hashes the TEXT of tools/levelset_byte_close_and_eval.py (source pin, not an output hash)
+  b77a97d4c (2026-07-21) .. f73bfb4e8~1 : 1cecaa3ee987...  <- the pinned value
+  f73bfb4e8  2026-08-03  : 00106018a420...  consolidate upstream evaluate-REPORT regex parse into tac.submission_chain
+  90d537745  2026-08-26  : 35d6ce6bdaa5...  run_inflate raw ZipFile.extractall -> safe_extract_zip   [= HEAD]
+cd1 named only 90d537745; f73bfb4e8 is a SECOND drift commit cd1's ledger missed.
+Both diffs are OUTSIDE the three callables the adapter requires
+(_read_blob_bytes_full / _dequant_blob / numpy_oracle_reference_frames).
+
+## (1) EP725 RECEIPT  MEASURED 2026-09-03, real custody, n1 and n2
+custody: /Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet
+  numpy double-decode deterministic ......... True (n1, n2)
+  shipped double-decode deterministic ....... True (n1, n2)
+  shipped raw == canonical numpy raw ........ True (n1, n2)
+  chronological_camera_frame_sha256 ......... BIT-EXACT to frozen
+  chronological_raw_prefix_sha256 ........... BIT-EXACT to frozen
+  labels_sha256 ............................. BIT-EXACT to frozen
+  predictor_semantic_binding_sha256 ......... MOVED (renderer sha is an INPUT to _expected_semantic_binding)
+  predictor_state_binding_sha256 ............ MOVED (derived from the semantic binding)
+  receipt_sha256 ............................ MOVED (sha of canonical_json of all fields)
+All 3 moved digests RE-DERIVED from first principles (not read back from a test):
+  n1 semantic 33c764f0c610c24dc35db53d867de5ad6267678fac4ab959df9e468372d2845f
+  n1 state    39d82bb34b5e48d62997de241066b3b9476d430fc8b85d8a12d847104c343374
+  n1 receipt  d80746e144220d135381da0a9d4966bef86b0d3a709c735dcf54cabb06e583f8
+  n2 semantic 0a4a1f7b1c14b79dad6daa42f87e83880cffd0309fc4d9c174239092e9367a8a
+  n2 state    d5efebd7dc3fe6b2de0385641007e14627deb58aef39737d01c122714606effe
+  n2 receipt  79ab7e0e2aa8d0cda4824269ede43734684dac0269480ca44569036642902b75
+receipts:
+  .../ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_decode_receipt_20260903.json
+  .../ddm_ql1_retired_lineage_test_quarantine/receipts/ep725_receipt_sha_derivation_20260903.json
+=> DISPOSITION: PIN-REFRESH (honest; decoder output unchanged, provenance-only drift)
+
+## (2) V15 producer drift chain  MEASURED
+receipt: .omx/research/original_taskspace_inverse_witness_codec_20260725/
+         fresh_v15_semantic_base_n600_20260726/ddm_v15_scorer_solved_templates_n600_receipt.json
+  tools/measure_ddm_v15_scorer_solved_templates.py  pinned 33966 B a39dad6f...  current MATCH=True
+  src/tac/optimization/direct_description_carrier_compose.py
+        pinned  156551 B 3e1f69bb168da7b4...
+        current 160470 B 6fef110dce06791a...   MATCH=False
+  3e1f69bb (b8f24ae63, 9934d488b~1)
+    -> 7c9a02b4  9934d488b 2026-08-20  ddm_oc2 consolidation: land sh1 integration CONTENT
+    -> 6fef110d  36f4b2947 2026-08-20  ddm_ad1 apparatus batch (6 sh1 review bugs + 3 two-landing cures) [= HEAD]
+  content of 9934d488b's hunk: ADDS rule id G4HM "mycar_static_mask" + encode_static_class_mask_rule()
+    + its decode branch. Pure vocabulary ADDITION, not an edit to an existing rule's arithmetic.
+  RECEIPT BLOCKED FOR THIS ARM: tools/measure_ddm_v15_scorer_solved_templates.py line 2 —
+    "Solve counted row-band RGB templates encode-side through exact R + SegNet" — it runs the
+    frozen SCORER, which this charter forbids. A fresh compile receipt is structurally out of scope.
+
+## (3) PBR2/V9 teacher manifest  (cd1) pinned 92ab2350... current 715e3e57..., first drift 2ed5794ed3
+    tools/measure_g1_teacher_atom_census.py CensusError: "exact V9/PBR2 pair window or renderer identity differs"
+    Rematerialization is also scorer-class => out of scope for this arm.
+
+## Live-consumer evidence  MEASURED (AST import graph over src/tac/witness_dsl + repo grep)
+  every caller of every red module is inside the taskspace / ep725 July lineage
+  shipped vehicle: submissions/semantic_joint_ctxmix/, src/tac/semantic_pipeline*, submission_chain*,
+    contest_score* import NONE of them (grep: zero hits)
+  ONE Track-B staged packet, submissions/robust_current/taskspace_pvsa_staging/inflate.py, imports
+    tac.witness_dsl.taskspace_g85_pvsa_public_receiver_v1, which TRANSITIVELY reaches
+    taskspace_selected_preimage_program_v1.  This is Track B (robust_current), not the shipped vehicle,
+    and the quarantined tests are custody/pin assertions, not receiver-behaviour assertions.
+
+## Quarantine mechanism  MEASURED (probe on SSD: probe/test_xfail_setup_probe.py)
+  xfail(strict=True) DOES cover a fixture SETUP error -> the 16 ERRORs are quarantinable
+  xfail(strict=True) reports XPASS as FAILED -> a quarantine self-reports the moment the lineage is repaired
+
+## Suite counts
+  BEFORE (clean, MAIN, pre-cd1-repair working tree):
+    35 failed, 1324 passed, 16 errors in 1749.98 s
+    /Volumes/VertigoDataTier/pact/ddm_cd1_working_tree_debt_landing/witness_dsl_full_suite_20260903.log
+    (grep "Timeout (>60" -> 0 hits: no load-induced timeouts in that run)
+  MY HEAD baseline run: CONTAMINATED (launched concurrently with two investigation agents; produced
+    pytest-timeout(>60s) failures the clean run did not have) — recorded, not used as the comparator.
+  AFTER: <fill from clean unloaded run>
+
+## Agent-2 report (g17 / g17-g49 / g72 / g82 / inverse-stack) — cross-checked
+- g17_actuator_ir_v1: 8 ERRORs were EP725-pin (fixture real_pair_bundle); after my refresh -> 8 PASSED. GREEN.
+- g17_g49 bridge (3E) + g72 (1F) + g82 (2F+5E) = 11 occurrences of ONE signature:
+    TaskspaceSelectedPreimageProgramError: current producer source drifted:
+    src/tac/optimization/direct_description_carrier_compose.py   (raised taskspace_selected_preimage_program_v1.py:572)
+- inverse_stack_receipt: 1 failure now (not 2) — cd1 already fixed the pointer fixture. 26 passed.
+- V15 drift chain re-derived independently, adds the pin's own commit:
+    61460bc7e 07-22 1a3622a6 154532 | 2c20f08ed 07-22 8b097db2 155115
+    b8f24ae63 08-20 03:51 3e1f69bb 156551  <- THE PIN
+    9934d488b 08-20 05:18 7c9a02b4 159234  <- drift 1
+    36f4b2947 08-20 07:35 6fef110d 160470  <- drift 2 (= HEAD)
+- Inside/outside verdict (agent, DERIVED not measured):
+    9934d488b touches the decode path (new rule id G4HM + branch + relaxed validator + paint admission)
+      but argues it is inert for the sealed payload (old validator raised on code>=25, so no pre-existing
+      archive carries one; new predicate reduces algebraically to the old one for codes<25).
+    36f4b2947 touches only prove_carrier_archive_fail_closed (a proof/audit function).
+      DECISIVE: the V15 producer CALLS it and embeds its dict as receipt key fail_closed_mutation_proof,
+      and 36f4b2947 ADDS the key non_empty_member_payload_count -> a REGENERATED receipt legitimately
+      differs. So a pin refresh here is NOT a hash swap; it needs a real re-compile (scorer-class).
+- inverse-stack B': CensusError isolates to ONE of five OR'd conditions — renderer identity
+    715e3e57 vs sealed 92ab2350. Pair window/receiver conditions all PASS.
+    Manifest = digest over 13 declared source files; THREE rows drifted (cd1 said one):
+      predictor_upgrade_xi_chart.py   60f19569 -> 46901b60  (merge 8181d8763 2026-07-27)
+      direct_description_minimizer.py 4029644b -> 980fdcf7  (b8f24ae63 2026-08-20)
+      direct_description_carrier_compose.py 8b097db2 -> 6fef110d (b8f24ae63/9934d488b/36f4b2947)
+    All 13 sealed shas reproduce exactly at e153f2031 (main tip at seal time) -> the seal is faithful.
+- The two receipts DISAGREE about compose.py: census seals 8b097db2, V15 seals 3e1f69bb. Same day,
+  different hours; the V15 compile ran after that day's compose.py edit, the census before.
+- Live consumer verdict for all five: (b) TESTS/MEMOS ONLY. Cleared the near-miss:
+  src/tac/canonical_frontier_pointer.py mentions taskspace_inverse_stack_receipt at line 339 in a
+  DOCSTRING only; no import. submissions/ has zero refs to those six modules.
+- Retained custody all EXISTS and every artifact passes its own sha check. No artifact drift anywhere.
+
+## Agent-1 report (PGA + preimage) — cross-checked, and it CHANGED two dispositions
+- PGA receiver is NOT a pin problem. Post-refresh it is 7 failed / 28 passed, ONE signature, all
+  pytest-timeout(>60s) inside _shipped_decode_once. Its pins (archive/member/runtime/manifest) all MATCH.
+- MEASURED: one shipped n2 decode = 15.6/16.7 s; the cold path = 4 decodes; falsifier at --timeout=300
+  -> "1 passed in 67.32s" (65.59s call). It dies 5.6 s short of 60 on an IDLE machine.
+- The file already carried ONE @pytest.mark.timeout(180) (line 951) and that test PASSED; the @cache
+  then made every test after it pass. The pass/fail pattern is pure file ORDER.
+- Agent independently hashed the three required callables at f73bfb4e8~1 and HEAD:
+  _read_blob_bytes_full 5dab864b913d78ee == 5dab864b913d78ee; _dequant_blob c46719fe7fcc56e0 == ;
+  numpy_oracle_reference_frames 728a5c1ec5cb29f7 == . BYTE-IDENTICAL -> corroborates my receipt.
+- V15: the drift IS on the called path (3 changed defs: render_camera_pairs,
+  _decode_realization_static_rule, prove_carrier_archive_fail_closed; +2 added, 0 removed) but agent
+  MEASURED output-equivalence on the sealed archive: identical on every pre-existing key
+  (refused 5, changed_decode 0, sampled_member_payload_homes 5, unique_home_coverage_bytes 133941);
+  the sole delta is the ADDED key non_empty_member_payload_count that no check reads.
+- TWO MORE sites hash the same file: taskspace_selected_preimage_program_v1.py:1923 and
+  ..._v2.py:723 -> only a RECEIPT refresh cures all sites; waiving :572 alone would not.
+- tools/build_taskspace_inverse_stack_receipt.py calls build_stack_receipt(strict_source_reopen=True)
+  HARDCODED at :34, so the V9 manifest drift breaks that TOOL too, not only the test.
+
+## MEASURED durations vs the 60 s ceiling (raised-timeout run, ep725_durations.log)
+  73.01 s  test_real_explicit_member_runtime_decode_is_source_independent_and_causally_bound
+  63.86 s  test_real_ep725_n2_v2_control_exactly_reconstructs_frozen_target_without_transport
+  63.70 s  test_real_ep725_n2_double_decode_is_hash_bound_bit_exact_and_label_owned
+  -> 180 s budget = 2.5x the worst measured. Not a new number: the PGA file already used 180.
+
+## The timeout was MASKING a real assertion (found only after raising it)
+  test_bounded_target_g_encoder.py:179  packet_sha256 9139f2a7 != d2a70126
+  MEASURED delta (bounded_target_g_delta_20260903.json): EXACTLY 3 fields changed, one cause -
+    predictor_binding_sha256          a25ee501 -> d5efebd7   (== ql1's re-derived n2 state binding)
+    packet_sha256                     9139f2a7 -> d2a70126   (packet folds it into pbr1_sha256)
+    compile_receipt_binding_sha256    23d9775d -> 32011a33   (binds the receipt holding both)
+  UNCHANGED: debt 60,217 - events 21,323 - births 12,259 - deaths 9,064 - packet_bytes 341,316 -
+    decoded_labels_sha256 == target 6a9ee68a - scorer_invoked False - candidate_archive_eligible False
+  -> PIN-REFRESH CONSEQUENCE, not a regression. QUARANTINED rather than refreshed because the cure
+     needs the SEALED July receipt ep725_n2_bounded_target_g_v2_receipt.json regenerated, and ql1
+     refused that same class of move for the V15 receipt. Consistency, not doubt about the evidence.

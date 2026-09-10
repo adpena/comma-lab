@@ -1,0 +1,18 @@
+import sys, json
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+from tac.report_8dp_bounds import derive_pose_score_bound, derive_seg_score_bound
+base_d_pose_T4 = 6.37e-06
+cand_d_pose_adv = 6.169860284911831e-06
+seg = derive_seg_score_bound()
+b_base = seg + derive_pose_score_bound(base_d_pose_T4)
+b_cand = seg + derive_pose_score_bound(cand_d_pose_adv)
+two_row = b_base + b_cand
+net = -0.00011036099816394324
+print(json.dumps({
+    "base_row_bound": b_base,
+    "candidate_row_bound_projected": b_cand,
+    "two_row_delta_bound_projected": two_row,
+    "measured_net_dS_advisory": net,
+    "multiple_of_bound": abs(net) / two_row,
+    "admit_bar_net_dS": -two_row,
+}, indent=2))

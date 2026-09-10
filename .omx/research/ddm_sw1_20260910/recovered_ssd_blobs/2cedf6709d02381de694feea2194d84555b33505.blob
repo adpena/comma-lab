@@ -1,0 +1,5 @@
+This is NOT a capacity win and NOT evidence for the prior-capacity ladder: the ladder's bigger direction is FALSIFIED (λ 1.0→0.5: +350 B model
+bought +156 B of stream; secant +0.446 against the −1 the law `hpac_prior_capacity_slope_v1` requires; net +465 B). The −41 B is the
+retrain/pack-size residual of one control at one seed — training noise of that order, banked because the archive is real and its output is
+byte-identical. It does not open the rate corner (demand −41,818 B; this row is 0.098 % of it). `[contest-CPU]` stays RECORD-WITH-REASON
+(the 1,800 s inflate timeout); no CPU claim. PR #140 still carries afr1's bytes; a public update is the operator's decision.

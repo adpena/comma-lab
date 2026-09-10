@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+for _ in $(seq 1 480); do
+  [ -f "$OUT/screen/sensitivity_segnet_n120.json" ] && break
+  sleep 10
+done
+if [ ! -f "$OUT/screen/sensitivity_segnet_n120.json" ]; then
+  echo "REFUSED: stage-1 screen never completed" >&2; exit 3
+fi
+sleep 5
+exec bash "$OUT/run_stage2.sh"

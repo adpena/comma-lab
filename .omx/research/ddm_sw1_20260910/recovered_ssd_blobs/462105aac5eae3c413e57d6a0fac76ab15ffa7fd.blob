@@ -1,0 +1,50 @@
+#!/bin/bash
+# ddm_md3 — hold until the Metal is FREE, then fire the sealed different-START cell through the
+# queue driver.  The driver's admission is an ADVISORY_GATE and would admit alongside cl2 on
+# memory grounds; the binding rule is ONE Metal cell at a time, so this waiter enforces it on the
+# PROCESS TABLE (the actor), not on a receipt that may never be written.
+# Gates, in order:
+#   1. no live process holding the Metal (--device mps, or a qbr1 run-config burn)
+#   2. that condition HOLDS 3/3 a minute apart (a single poll fires on the oscillation's trough)
+#   3. the queue driver's own plan is ready (it re-verifies the seal, storage, peak, lanes)
+#   4. fire
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+S=/Volumes/APDataStore/pact/ddm_md3_different_initialisation
+QUEUE=$S/QUEUE_SPEC.json
+MAX_WAIT_S=21600   # 6 h; refuse rather than hold a slot forever
+
+metal_busy() {
+  # our OWN cell is not a blocker once it is the thing running
+  ps -Ao pid,command | grep -v grep \
+    | grep -E '(--device[= ]mps)|(ddm_qbr1_born_fairform_burn_prep\.py run-config)' \
+    | grep -v 'different_init_r10_live' | head -1
+}
+
+started=$SECONDS
+clear_streak=0
+while [ $((SECONDS-started)) -lt $MAX_WAIT_S ]; do
+  busy=$(metal_busy)
+  if [ -n "$busy" ]; then
+    if [ $((clear_streak)) -gt 0 ]; then echo "$(date -u +%FT%TZ) streak reset by: ${busy:0:150}"; fi
+    clear_streak=0
+  else
+    clear_streak=$((clear_streak+1))
+    echo "$(date -u +%FT%TZ) Metal clear ${clear_streak}/3"
+    if [ $clear_streak -ge 3 ]; then
+      echo "=== md3: Metal free 3/3, planning $(date -u +%FT%TZ) ==="
+      $PY tools/cell_queue_driver.py run --queue "$QUEUE" --dry-run > "$S/FIRE_PLAN.json" 2>&1
+      echo "plan rc=$?"
+      echo "=== md3: FIRING $(date -u +%FT%TZ) ==="
+      $PY tools/cell_queue_driver.py run --queue "$QUEUE" --agent ddm_md3 > "$S/FIRE_RECEIPT.json" 2>&1
+      rc=$?
+      echo "fire rc=$rc $(date -u +%FT%TZ)"
+      tail -30 "$S/FIRE_RECEIPT.json"
+      exit $rc
+    fi
+  fi
+  sleep 60
+done
+echo "=== md3 waiter: REFUSED after ${MAX_WAIT_S}s — Metal never freed $(date -u +%FT%TZ) ==="
+exit 9

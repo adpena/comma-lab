@@ -1,0 +1,40 @@
+#!/bin/bash
+# ddm_pr1 final harvest: merge -> measure -> report. DELTA_D_SEG is passed in from
+# the n600 realized verdict so the coupling's denominator is a same-instrument
+# DIFFERENCE, never a borrowed level.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+DALI=/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt
+TOK=/Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8
+CAND_R=/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune/retained/ft1_step600_semantic_section.bin
+DELTA_D_SEG=${DELTA_D_SEG:?set DELTA_D_SEG}
+DELTA_SRC=${DELTA_SRC:?set DELTA_SRC}
+
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py codes \
+  --runtime "$STORE/runtime_afr1" \
+  --rows "$STORE/solve_cand_s0/rows.jsonl" "$STORE/solve_cand_s1/rows.jsonl" \
+  --out "$STORE/retained/codes_resolved_step600_n600.npy"
+
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py measure \
+  --runtime "$STORE/runtime_afr1" --gt-cache "$DALI" --renderer "$CAND_R" --tokens "$TOK" \
+  --codes "$STORE/retained/codes_resolved_step600_n600.npy" \
+  --pairs 600 --batch-size 8 --threads 4 --label cand_step600_re_solved \
+  --out "$STORE/retained/measure_cand_step600_re_solved_n600.json"
+
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py report \
+  --base-measure "$STORE/retained/measure_base_shipped_codes_n600.json" \
+  --before-measure "$STORE/retained/measure_cand_step600_stale_carrier_n600.json" \
+  --after-measure "$STORE/retained/measure_cand_step600_re_solved_n600.json" \
+  --rows "$STORE/solve_cand_s0/rows.jsonl" "$STORE/solve_cand_s1/rows.jsonl" \
+  --delta-d-seg "$DELTA_D_SEG" --delta-d-seg-source "$DELTA_SRC" \
+  --seg-cut-fraction 0.25 --label pr1_step600_n600 \
+  --out "$STORE/retained/report_step600_n600.json"
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py selector \
+  --runtime "$STORE/runtime_afr1" --gt-cache "$DALI" --renderer "$CAND_R" --tokens "$TOK" \
+  --codes "$STORE/retained/codes_resolved_step600_n600.npy" \
+  --pairs-list $(seq 0 599 | tr '\n' ' ') \
+  --threads 4 --label selector_sweep_cand_re_solved_n600 \
+  --out "$STORE/retained/selector_sweep_cand_re_solved_n600.json"
+
+echo PR1_FINAL_HARVEST_DONE

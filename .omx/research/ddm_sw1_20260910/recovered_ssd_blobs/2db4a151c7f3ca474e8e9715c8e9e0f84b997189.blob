@@ -1,0 +1,13 @@
+# Aborted: ddm_cl3 lambda_2p0, first attempt (ExFAT tier)
+
+Launched 2026-09-05T16:04Z (launcher counter 907, trainer pid 1273), stopped by ddm_cl3 at
+~16:12Z after 8 minutes / 3 logged epochs.  NOT a failure of the run: the trainer was healthy
+and descending (epoch 2 est. joint 147,153 B).
+
+REASON, MEASURED: this tier is ExFAT.  Copying the fs2 fire tree onto it makes macOS write 44
+AppleDouble `._*` companions (68 files -> 85), which would corrupt the staged receiver runtime
+tree's census and sha; and `._*.pt` companions (5 already present here) pollute the trainer's
+`rglob("*.pt")` artifact manifest.  Every ddm_cl3 rung was moved to the APFS primary tier
+(/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection) and relaunched
+under the identical law (profile cl2_shipped_ladder, lambda 2.0, seed 20260716, same pinned
+cache + init).  Nothing here is cited as evidence; it is retained only so no bytes are lost.

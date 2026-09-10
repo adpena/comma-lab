@@ -1,0 +1,8 @@
+import json,sys
+from pathlib import Path
+root,out=map(Path,sys.argv[1:]);sys.path[:0]=[str(root/'cpr1'),str(root)]
+import inflate
+from runtime.residual_archive import read_residual_archive
+from runtime.ihs2 import materialize_ihs1
+body=materialize_ihs1(read_residual_archive(root/'archive.zip').hpac_blob,inflate)
+with out.open('xb') as f: f.write(body)

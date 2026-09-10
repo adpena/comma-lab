@@ -1,0 +1,8 @@
+The pose carrier's 600 × 12 coefficients (int12, AR1 + Rice, 9,830 B) were re-quantized onto a lattice coarsened ×4 (12 → 10 bits per coefficient) and
+then RE-SOLVED for every pair with the full n600 damped Gauss–Newton (`ddm_jg5.refine_pair`, the fs2 solver verbatim) against the frozen PoseNet on the
+shipped renders — the twelve basis atoms are bit-identical to the shipped carrier, which is why this is the one variant of five that survived. The
+re-solve did not merely recover the coarsening cost (4.79× without it), it landed BELOW the base: d_pose 6.14e-6 → 5.73e-6 (T4; 5.727914e-6 cpu_torch
+n600) while the coefficient payload fell by 1,801 B. Token tail, model sections (rc1's adaptive coding) and basis are byte-identical to the 27th-move
+archive; only the carrier coefficient block moved. Determinism twin: 24/24 pairs reproduce the codes bit-identically. Seal
+`SEAL_ddm_pc1_v3_lattice_x4_resolved_on_rc1.json` (canonical digest cd454d01…); memo `ddm_pc1_pose_carrier_efficiency_20260905.md`; law
+`pose_carrier_basis_rate_fidelity_exchange_v1`; 12 commits (edeef17b0…fdbd0ced1).

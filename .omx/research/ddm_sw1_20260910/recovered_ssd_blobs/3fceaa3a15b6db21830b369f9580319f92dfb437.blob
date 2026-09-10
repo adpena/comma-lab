@@ -1,0 +1,40 @@
+#!/bin/bash
+# ddm_md2 driver: run md1's instrument UNCHANGED on ng5's run root (the burn default: tau band x
+# carried duals), then md1's analyze on BOTH gt lineages, then md2's site-overlap tool against
+# md1's OWN cold-control store (the comparator; never a re-typed number).
+# $0, CPU only, 4 threads.  Resumes from disk: re-running skips every (step, forward) already in
+# the JSONL.  Never writes under any cell's runs/.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+STORE=/Volumes/APDataStore/pact/ddm_md2_persistent_under_burn_default
+MD1=/Volumes/APDataStore/pact/ddm_md1_micro_macro
+CELL=ng5_tau_band_seed_20260902
+COLD=cold_control_seed_20260902
+NG5=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng5_tau_band_x_continuous_objective/runs/seed_20260902_tau_band_x_continuous_objective_control_native100
+CFG=/Volumes/APDataStore/pact/ddm_ng5_tau_band_x_continuous_objective/authorized_configs/seed_20260902_tau_band_x_continuous_objective_control_native100.json
+
+echo "=== md2 sweep: ng5 tau-band x carried-duals cell $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell "$CELL" --run-root "$NG5" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 16200
+echo "sweep rc=$? $(date -u +%FT%TZ)"
+
+for L in dali pyav; do
+  echo "=== md2 analyze $L $(date -u +%FT%TZ) ==="
+  $PY experiments/ddm_md1_micro_to_macro.py --mode analyze \
+      --cell "$CELL" --gt-lineage "$L" --store "$STORE"
+  echo "analyze $L rc=$? $(date -u +%FT%TZ)"
+done
+
+for L in dali pyav; do
+  echo "=== md2 overlap $L (ng5 vs md1 cold control) $(date -u +%FT%TZ) ==="
+  $PY experiments/ddm_md2_persistent_site_overlap.py \
+      --out-store "$STORE" \
+      --a-store "$STORE" --a-cell "$CELL" \
+      --b-store "$MD1" --b-cell "$COLD" \
+      --gt-lineage "$L" > "$STORE/overlap_${L}.stdout.txt" 2>&1
+  echo "overlap $L rc=$? $(date -u +%FT%TZ)"
+done
+
+echo "=== md2 driver done $(date -u +%FT%TZ) ==="

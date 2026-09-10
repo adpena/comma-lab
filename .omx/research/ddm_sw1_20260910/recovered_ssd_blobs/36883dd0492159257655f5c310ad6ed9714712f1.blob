@@ -1,0 +1,72 @@
+### seed_20260902_different_init_r10_live_control_native100 — site-trajectory classes (pyav authority)
+
+`live` forward — calibration gate max |Σclasses − total| = **0** (integer), exact zero: **True**; terminal d_seg_hat **0.002787017822**
+
+| class | sites | site fraction | terminal wrong sites | terminal d_seg contribution | share of terminal error |
+|---|---:|---:|---:|---:|---:|
+| ALWAYS_CORRECT | 6,225,384 | 0.9895 | 0 | 0 | 0.000% |
+| CHURN | 38,030 | 0.006045 | 11,400 | 0.0017657 | 63.354% |
+| PERSISTENT | 6,537 | 0.001039 | 6,469 | 0.000974401 | 34.962% |
+| NEW_PERSISTENT | 306 | 4.864e-05 | 306 | 4.64122e-05 | 1.665% |
+| TRANSIENT_BORN | 21,147 | 0.003361 | 0 | 0 | 0.000% |
+| HEALED | 52 | 8.265e-06 | 3 | 5.08626e-07 | 0.018% |
+
+excursion (`live`): peak at step **16**, d_seg_hat 0.0026260376 → 0.0053026835 → 0.0027870178; **20,551** sites born wrong, **84.58%** of them recovered by the terminal checkpoint; **3,887** wrong-at-zero sites healed by the peak; rare-class over-paint at the peak **21,536** sites = **64.15%** of the peak error, **66.90%** of them born during the run, **63.93%** recovered.
+
+reachability (`live`): terminal d_seg_hat **0.0027870178** = **20.42x** the sub-0.12 target 0.00013646784; the PERSISTENT floor is **0.00097440084** = **7.14x** the target; **65.04%** of the terminal error is optimizer-reachable (non-PERSISTENT).
+
+BORN (GT→predicted) edges at the peak, `live`: Road->Lane 9,491, Road->Movable 2,662, Road->Undrivable 2,483, Undrivable->Movable 2,148, Undrivable->Road 907, Lane->Road 761, Movable->Undrivable 656, MyCar->Road 547
+
+pairs leading the birth, `live`: pair 173 (1,271 born, Lane×1.23), pair 573 (1,075 born, Lane×1.487), pair 31 (978 born, Lane×1.367), pair 278 (884 born, Lane×1.488), pair 563 (851 born, Lane×1.474), pair 456 (765 born, Lane×1.449)
+
+terminal (GT→predicted) edges by class, `live`:
+
+* **CHURN** — Road->Lane 5,118, Undrivable->Movable 1,371, Road->Movable 1,354, Undrivable->Road 1,109, MyCar->Road 677, Road->Undrivable 653
+* **PERSISTENT** — Lane->Road 3,338, Road->Lane 1,298, Road->Movable 567, Undrivable->Movable 451, MyCar->Road 192, Road->Undrivable 153
+* **NEW_PERSISTENT** — Road->Lane 140, MyCar->Road 74, Lane->Road 49, Undrivable->Road 18, Movable->Road 8, Undrivable->Movable 7
+* **HEALED** — Road->Lane 2, Lane->Road 1
+
+terminal margin band of each class (within_delta_R, 1_to_2_delta_R, 2_to_25_delta_R, above_25_delta_R), `live`:
+
+* **ALWAYS_CORRECT** — 134 / 299 / 84,036 / 6,140,915
+* **CHURN** — 4,597 / 4,365 / 28,713 / 355
+* **PERSISTENT** — 76 / 105 / 2,564 / 3,792
+* **NEW_PERSISTENT** — 138 / 64 / 104 / 0
+* **TRANSIENT_BORN** — 262 / 384 / 17,573 / 2,928
+* **HEALED** — 0 / 5 / 42 / 5
+
+`shadow` forward — calibration gate max |Σclasses − total| = **0** (integer), exact zero: **True**; terminal d_seg_hat **0.002400843302**
+
+| class | sites | site fraction | terminal wrong sites | terminal d_seg contribution | share of terminal error |
+|---|---:|---:|---:|---:|---:|
+| ALWAYS_CORRECT | 6,261,375 | 0.9952 | 0 | 0 | 0.000% |
+| CHURN | 9,756 | 0.001551 | 3,536 | 0.000559743 | 23.314% |
+| PERSISTENT | 10,742 | 0.001707 | 10,216 | 0.00155017 | 64.568% |
+| NEW_PERSISTENT | 1,272 | 0.0002022 | 1,272 | 0.000200272 | 8.342% |
+| TRANSIENT_BORN | 6,174 | 0.0009813 | 0 | 0 | 0.000% |
+| HEALED | 2,137 | 0.0003397 | 579 | 9.06626e-05 | 3.776% |
+
+excursion (`shadow`): peak at step **1024**, d_seg_hat 0.0026260376 → 0.0027202606 → 0.0024008433; **3,881** sites born wrong, **63.02%** of them recovered by the terminal checkpoint; **3,136** wrong-at-zero sites healed by the peak; rare-class over-paint at the peak **10,264** sites = **58.15%** of the peak error, **27.40%** of them born during the run, **31.23%** recovered.
+
+reachability (`shadow`): terminal d_seg_hat **0.0024008433** = **17.59x** the sub-0.12 target 0.00013646784; the PERSISTENT floor is **0.0015501658** = **11.36x** the target; **35.43%** of the terminal error is optimizer-reachable (non-PERSISTENT).
+
+BORN (GT→predicted) edges at the peak, `shadow`: Road->Lane 1,753, Undrivable->Movable 633, Undrivable->Road 420, Road->Movable 413, Road->Undrivable 257, Lane->Road 119, MyCar->Road 107, Movable->Undrivable 62
+
+pairs leading the birth, `shadow`: pair 187 (238 born, Lane×1.098), pair 278 (200 born, Lane×1.103), pair 573 (197 born, Lane×1.15), pair 173 (194 born, Lane×1.102), pair 52 (173 born, Lane×1.084), pair 256 (166 born, Lane×1.041)
+
+terminal (GT→predicted) edges by class, `shadow`:
+
+* **CHURN** — Road->Lane 1,505, Road->Movable 443, Undrivable->Movable 415, Road->Undrivable 404, Undrivable->Road 281, Lane->Road 208
+* **PERSISTENT** — Lane->Road 3,486, Road->Lane 3,181, Road->Movable 1,080, Undrivable->Movable 847, Undrivable->Road 397, Road->Undrivable 380
+* **NEW_PERSISTENT** — Road->Lane 554, Road->Movable 156, Road->Undrivable 145, Undrivable->Movable 118, Lane->Road 96, Undrivable->Road 70
+* **HEALED** — Road->Lane 209, Road->Movable 71, Undrivable->Movable 66, Road->Undrivable 63, Lane->Road 47, Undrivable->Road 47
+
+terminal margin band of each class (within_delta_R, 1_to_2_delta_R, 2_to_25_delta_R, above_25_delta_R), `shadow`:
+
+* **ALWAYS_CORRECT** — 386 / 990 / 112,073 / 6,147,926
+* **CHURN** — 2,451 / 1,947 / 5,350 / 8
+* **PERSISTENT** — 680 / 691 / 5,540 / 3,831
+* **NEW_PERSISTENT** — 428 / 249 / 595 / 0
+* **TRANSIENT_BORN** — 603 / 756 / 4,780 / 35
+* **HEALED** — 342 / 333 / 1,450 / 12
+
