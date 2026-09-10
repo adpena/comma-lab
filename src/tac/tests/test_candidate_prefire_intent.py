@@ -1396,5 +1396,5 @@ def test_completed_seal_anchor_mirror_lifts_quarantine_only_with_a_valid_seal(tm
 def test_call_id_ledger_accepts_reconciliation_event_types():
     """pr16 §5 / pr17 §4: the reconciliation events must be representable in the canonical ledger taxonomy."""
     from tac.deploy.modal import call_id_ledger as L
-    assert "reconciled_terminal_failure" in L.VALID_EVENT_TYPES and "reconciled_completed" in L.VALID_EVENT_TYPES
+    assert "reconciled_terminal_failure" in L.VALID_EVENT_TYPES and "reconciled_terminal_success" in L.VALID_EVENT_TYPES
     assert L.EVENT_RECONCILED_TERMINAL_FAILURE == "reconciled_terminal_failure"

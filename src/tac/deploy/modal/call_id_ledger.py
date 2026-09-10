@@ -160,7 +160,7 @@ EVENT_PRE_SPAWN_FATAL = "pre_spawn_fatal"
 # a terminal receipt that rehashes every retained artifact and links the run's intent, authorization,
 # nonce state, and claim closure. Never a score; never mutates the row it reconciles.
 EVENT_RECONCILED_TERMINAL_FAILURE = "reconciled_terminal_failure"
-EVENT_RECONCILED_COMPLETED = "reconciled_completed"
+EVENT_RECONCILED_TERMINAL_SUCCESS = "reconciled_terminal_success"
 
 VALID_EVENT_TYPES = frozenset(
     {
@@ -171,7 +171,7 @@ VALID_EVENT_TYPES = frozenset(
         EVENT_MANUALLY_TERMINATED,
         EVENT_PRE_SPAWN_FATAL,
         EVENT_RECONCILED_TERMINAL_FAILURE,
-        EVENT_RECONCILED_COMPLETED,
+        EVENT_RECONCILED_TERMINAL_SUCCESS,
     }
 )
 

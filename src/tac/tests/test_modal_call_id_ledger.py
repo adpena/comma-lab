@@ -60,6 +60,8 @@ def test_valid_event_types_canonical_set():
         "dispatched",
         "harvested",
         "failed",
+            "reconciled_terminal_failure",
+            "reconciled_terminal_success",
         "stale",
         "manually_terminated",
     } == VALID_EVENT_TYPES
