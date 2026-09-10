@@ -7747,7 +7747,7 @@ def preflight_all(
         )
         # Catalog #418: MAIN owns the live journal decision; strict-flip after
         # MAIN disqualifies move 41, refreshes, and records a zero live census.
-        check_frontier_excludes_disqualified_rows(strict=False, verbose=verbose)
+        check_frontier_excludes_disqualified_rows(strict=True, verbose=verbose)
 
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
