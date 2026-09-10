@@ -22,8 +22,8 @@ Two review passes per .py. Checkpoint as `ddm_cpx2`. Provenance pins: cpx1 memo 
 pointer commit 48109233e / archive 7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e.
 
 ## OPTIMAL FORM
-- Reference form: as cpx1's charter (the checker's existing CUDA-axis inspection; same helper, same strictness). No delta.
-- Provenance pins: as above; swp2 COMPLIANCE_COMMAND.json (record its sha).
+- Reference form: the checker's existing CUDA-axis inspection in `scripts/pre_submission_compliance_check.py` (`inspect_contest_cpu_auth_eval`, same `_add` pattern, same strictness) — a scoped extension, not a new checker; no scope reduction: run on the real staged move-43 packet.
+- Provenance pins (sha256 prefixes): cpx1 memo 5a5d83e3932cbe6a…; CPU adjudication record `.omx/research/ddm_sj1_pass6_packet_inputs_20260910/CPU_AXIS_ADJUDICATION.json` d9c60343cc5a6c52…; swp2 `COMPLIANCE_COMMAND.json` 890f7b0ebb728c4c…; refusal receipt `/Volumes/VertigoDataTier/pact/ddm_sj1_pass6_cpu_20260910/MODAL_REMOTE_RESULT.json` (record its sha); pointer commit 48109233e / archive 7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e.
 
 ## Prior negatives accounted (operator 2026-08-15)
 - cpx1: refusal bound to move 42 — cured by the move-43 dispatch; never relabel.
