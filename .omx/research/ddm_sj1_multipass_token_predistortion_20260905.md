@@ -1896,6 +1896,70 @@ round (§28) and the representation-level boundary door.
 
 ---
 
+## 30. The FRAME-0 n600 SIZING — the lever is a REPAIR, not a general win
+
+MAIN asked for the same 8-mode sweep over ALL 600 pairs on the move-37 pointer's own
+shipped field, renders and carrier, with the selector-blob cost curve, so the pointer-bound
+round could choose a set by Lagrange with the bytes charged. It is done — 600 pairs × 8
+modes, 1,384 s, `cpu_torch` fp32, receipt
+`ddm_sj1_pass5_price/frame0/SELECTOR_SWEEP_n600_move37.json` — and **it overturns the
+inference §28 invited.**
+
+| | 84 DROPPED pairs, pass-5 field's renders (§28) | **ALL 600 pairs, the SHIPPED field** |
+|---|---:|---:|
+| pairs with a better mode | 74 of 84 = **88.1%** | **78 of 600 = 13.0%** |
+| best mode == shipped | 10 | **502 (83.7%)** |
+| ≥10× d_pose reduction | 27 | **2** |
+| `n600_mean_gain_if_shipped` | 4.474916e-05 | **3.812022e-08** |
+
+**The population gain is 1,174× smaller.** On the shipped field the default mode 0 is
+already the per-pair optimum on 502 of 600 pairs. The reading that "the shipped selector
+has not been chosen per pair since fs1 re-selected it on afr1's field, six field moves ago"
+is **falsified**: whatever fs1 chose, the current shipped configuration sits at or near the
+per-pair optimum for 84% of the population on the CURRENT field.
+
+### 30a. Charged against its own bytes, the n600 adoption does not clear the bar
+
+Blob law read from the live tree's `runtime/frame0_selector.py`: 7 header bytes +
+⌈log2 C(600,k)⌉ bits of rank + 3k bits of labels, byte-aligned. It reproduces the shipped
+k=5 at **14 B** exactly. Curve at k = 5/15/30/74/150/600 → 14/25/40/75/124/232 B (sublinear,
+and non-monotone at the top: k=600 costs 232 B, less than k=500's 243, because
+C(600,600)=1 costs zero rank bits).
+
+Lagrange ladder over the ratio gate, pose credit against the move-38 print 5.06e-06:
+
+| ratio ≥ | k | mean d_pose gain | blob Δ B | pose ΔS | **net ΔS** |
+|---:|---:|---:|---:|---:|---:|
+| 1.01 | 70 | 3.722342e-08 | +58 | −2.621271e-05 | **+1.240711e-05** |
+| 1.5 | 30 | 2.270279e-08 | +26 | −1.597577e-05 | +1.336558e-06 |
+| 2.0 | 19 | 1.738602e-08 | +15 | −1.223118e-05 | −2.243300e-06 |
+| **3.0** | **9** | 1.351445e-08 | **+5** | −9.505687e-06 | **−6.176393e-06** |
+| 5.0 | 3 | 2.506305e-09 | −2 | −1.761905e-06 | −3.093623e-06 |
+| all improving | 78 | 3.812022e-08 | +64 | −2.684543e-05 | **+1.576954e-05** |
+
+**The best net anywhere on the ladder is −6.176e-06 at k=9 — 0.31× the −2e-05 admit bar.**
+Adopting every improving pair is net POSITIVE: the blob's +64 B (+4.26e-05) swamps a
+−2.68e-05 pose credit. The batch-shape caveat still stands, but it cannot rescue this: the
+shortfall is a factor of 3 to 9, and the population gain is three orders of magnitude below
+what the bytes cost.
+
+### 30b. What the lever actually is
+
+Frame-0 re-selection is **not a general pose win on this vehicle. It is a REPAIR for
+edit-induced pose damage.** The two measurements say the same thing from both sides: on
+pairs nothing has touched, the shipped default is already optimal 84% of the time; on pairs
+whose own token edit broke frame 0, a better mode exists 88% of the time and by an order of
+magnitude in 27 of 84 cases.
+
+So its budget is not the population — it is **the pairs an edit breaks**, and it should be
+priced INSIDE an edit round's admission rather than as a standalone adoption. Concretely,
+for the composition round: run it on the pairs each arm's edits made pose-bound (this arm's
+84, rp1's 44), charge the blob delta for exactly that set, and let the Lagrange sweep see a
+pose leg that the re-selection has already repaired — not as a separate candidate that must
+clear the bar alone, because §30a measures that it cannot.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
