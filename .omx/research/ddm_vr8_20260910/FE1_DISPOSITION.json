@@ -1,0 +1,13 @@
+{
+  "schema": "main.moved_payload_disposition.v1",
+  "object": "FE1 /Volumes/VertigoDataTier/pact/ddm_fe1_frame_embedding_predistortion/candidate/parseback/.f26_decode_checkpoints/render_cpu_in_progress.raw",
+  "decision": "REPLACEMENT-ONLY RETIREMENT (explicit)",
+  "reasoning": "The recorded hash bbb0230c\u2026 is of an IN-PROGRESS render checkpoint of a stalled fe1 run (the file name and the reclaim note say so); the retained replacement 30964f53\u2026 is the completed render of the same parse-back. No equality is claimed; the historical hash stays on record. The fe1 arm is superseded (no pointer lineage depends on that checkpoint), so no rebuild of the stalled intermediate state is warranted. The completed replacement is the retained payload.",
+  "no_equality_claim": true,
+  "historical_sha256": "bbb0230c09aedb1a2e61ff32d578636a1ecb9de71acfda472d9889907eb2c9ae",
+  "retained_replacement_sha256": "30964f538c9c5a94095ad295919ce82c5a272e109dba7700ea9bc1e63ca4b455",
+  "evidence": ".omx/research/ddm_vr8_20260910/fe1_original_hash_followup.json",
+  "decided_by": "MAIN",
+  "utc": "2026-09-10T15:35:24Z",
+  "score_claim": false
+}
