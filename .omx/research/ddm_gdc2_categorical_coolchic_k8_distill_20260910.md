@@ -1,6 +1,10 @@
 # ddm_gdc2 — categorical Cool-Chic distillation of the retained K=8 scanline teacher (arm memo, 2026-09-10)
 
 `research_only=true` · `score_claim=false` · `promotable=false` · `frontier_moved=false`
+**VERDICT: FORMULATION-NO-GO** — best construction `packet + R_exact = 540,681 B` against the
+`94,010 B` gate, **5.75x over**. Scope: the GDC1 governed Cool-Chic form at the specified latent budget,
+distilled from the K=8 scanline teacher. The paradigm (counted generator + exact residual) is intact and
+is now equipped with a measured frontier; this *formulation* of it is closed.
 Axis: `[macOS-MLX research-signal]` training · `[macOS-CPU scorer-free exact-field measurement, n600]` verdicts.
 No scorer, no Modal, no candidate archive, no MPS number anywhere in this arm.
 
@@ -186,12 +190,17 @@ sites.
 | stage | steps | packet B (z0 / z1 / params) | mismatches vs field | vs teacher | bits/latent symbol | nonzero latents | decode s | parity |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
 | A final | 10,000 | **233,206** (182,920 / 45,723 / 4,521) | **1,061,038** | 993,989 | 6.478 | 98.61% | 173 | exact |
-| B λ=1e-4 | 8,000 | | | | | | | |
-| B λ=3e-4 | 8,000 | | | | | | | |
-| B λ=1e-3 | 8,000 | | | | | | | |
-| C λ=1e-4 | 4,000 | | | | | | | |
-| C λ=3e-4 | 4,000 | | | | | | | |
-| C λ=1e-3 | 4,000 | | | | | | | |
+| B λ=1e-4 | 8,000 | 160,112 | 1,014,640 | 948,713 | 4.448 | 100.00% | 195 | exact |
+| B λ=3e-4 | 8,000 | 151,468 | 1,047,012 | 980,034 | 4.207 | 100.00% | 230 | exact |
+| B λ=1e-3 | 8,000 | 154,051 | 1,069,621 | 1,002,400 | 4.279 | 100.00% | 170 | exact |
+| C λ=1e-4 | 4,000 | 159,581 | 1,015,116 | 948,888 | 4.433 | 100.00% | 334 | exact |
+| **C λ=3e-4** | 4,000 | **151,461** | **1,047,075** | 980,218 | 4.207 | 100.00% | 203 | exact |
+| C λ=1e-3 | 4,000 | 154,027 | 1,070,175 | 1,003,267 | 4.279 | 100.00% | 171 | exact |
+
+Nineteen full-n600 authority evaluations in all (mid-stage rows every 2,000 steps are in
+`stages/*/EVALUATIONS.json`). **Every one of the nineteen** proved exact MLX/NumPy argmax identity,
+byte-identical packet repeat, exact receiver parse-back, and decode inside the 900 s budget
+(range 169–386 s). No branch was early-stopped; none diverged. Elapsed 2.68 h, peak RSS **1.54 GiB**.
 
 Stage A ended at cross entropy 0.0159 nats. Field mismatches by class 0..4:
 `[214,100 · 561,888 · 126,154 · 92,797 · 66,099]` — Lane 53.0%, still the dominant class but spread
@@ -214,12 +223,79 @@ rate-distortion curve. Rate pressure moves `M` **up**, i.e. further from the adm
 sweep measures how the total `packet + R(M)` behaves, not whether a smaller packet can rescue the
 construction. That is the honest reading of GF1's "form and fit are one fact" for this vehicle.
 
-## Closure arithmetic
+## Closure arithmetic — VERDICT: FORMULATION-NO-GO, by 5.75x
 
-The authority gate is `packet_bytes + real_exact_residual_bytes <= 94,010 B`, with receiver parse-back
-exact, deterministic packet repeat, and full-n600 decode under 900 s.
+Every branch's Stage-C render was carried back to the move-43 field with the real coder over all eight
+residual orders. Every row proves exact field closure.
 
-*(filled by the governed burn)*
+| branch | λ | packet B | mismatches | R_exact B | B/mismatch | best order | **packet + R** | over gate | x gate |
+|---|---:|---:|---:|---:|---:|---|---:|---:|---:|
+| lam0 | 1e-4 | 159,581 | 1,015,116 | 425,904 | 0.4196 | tile64_time | 585,485 | 491,475 | 6.23 |
+| **lam1** | **3e-4** | **151,461** | **1,047,075** | **389,220** | 0.3717 | tile64_time | **540,681** | **446,671** | **5.75** |
+| lam2 | 1e-3 | 154,027 | 1,070,175 | 405,356 | 0.3788 | tile64_time | 559,383 | 465,373 | 5.95 |
+
+Best construction: **540,681 B against a 94,010 B gate — 446,671 B over.** `gate_pass=false`,
+`frontier_moved=false`. Receiver parse-back exact, deterministic repeat, decode 203 s, parity exact —
+the construction is *correct*; it is simply nowhere near the gate.
+
+### Finding 5 (MEASURED) — the decoder's accuracy is capacity-limited, not rate-limited
+
+Rate pressure moved the packet 233,206 → 151,461 B (**−35%**) while the mismatch count stayed flat
+inside 1.015–1.070 M (**±2.7%**). The three lambdas are not a rate-distortion curve at all: they are
+three points at essentially the same distortion. Three consequences:
+
+- **λ is non-monotone in packet**: 1e-3 (154,027 B) is *worse* than 3e-4 (151,461 B). The latent
+  stream hits an entropy floor near 4.21 bits/symbol for this capacity, and pressure past it buys
+  accuracy loss without byte savings.
+- **The rate proxy is calibrated but the coder found nothing beyond it.** The measured packet is
+  exactly `8 x 151,461 / 288,000 = 4.207` bits per latent symbol — identical to the trained soft-entropy
+  proxy. Brotli/zlib/LZMA extracted **zero** spatial or temporal correlation beyond the zeroth-order
+  symbol entropy, and the nonzero-latent fraction went to **100.00%**: the pressure narrowed the symbol
+  distribution instead of sparsifying it. There is no compression headroom hiding in the coder.
+- **Stage C changed nothing** (160,112 → 159,581; 151,468 → 151,461; 154,051 → 154,027), which is the
+  expected result of making every stage quantisation-aware by construction: there was no float-to-integer
+  gap left for QAT to close. That is a property of this build, recorded, not a null result about QAT.
+
+The decoder never entered the admissible region at any λ. Its error rate is 0.888% of the 117,964,800
+cells; the frontier's zero-budget ceiling is M ≈ 190,000, i.e. **0.161%**. It needs to be 5.5x more
+accurate before a single packet byte is affordable, and no lever in this construction moves M.
+
+### Finding 6 (MEASURED) — the residual rate is set by error GEOMETRY, not by error count
+
+The neural point extends the R(M) roster to a sixth measurement — and it breaks the within-family law:
+
+| generator | M | R | B/mismatch |
+|---|---:|---:|---:|
+| scanline K=4 | 673,602 | 174,680 | 0.2593 |
+| **Cool-Chic λ=3e-4** | **1,047,075** | **389,220** | **0.3717** |
+
+Extrapolating the scanline family's own exponent (0.476) to M = 1,047,075 predicts **≈213,150 B**. The
+neural decoder actually costs **389,220 B — 1.83x more for a comparable error count.** Within the
+scanline family the rate *falls* with M; across families at the same M it *rises* when the errors are
+diffuse. Scanline errors are contiguous runs the residual coder addresses cheaply; a coordinate
+decoder's errors are scattered single cells, and scattered cells are the expensive kind.
+
+So R(M) is a family-local law, not a universal one. **A successor must measure its own residual rate at
+its own operating point and its own error geometry** — inheriting either GF1's 0.2909, GDC1's 0.4508,
+this arm's 0.6854, or the scanline exponent would misprice it by up to 1.8x in either direction. This
+is the third time in one memo that a borrowed rate constant produced a wrong number.
+
+## Successor levers (named, not run)
+
+1. **The corner is wrong for any smooth generator.** The admissible frontier rewards near-exact
+   description (M ~ 1e3 buys ~92.8 kB of program); a coordinate INR is a low-frequency approximator that
+   lives at M ~ 1e6. Distilling, retraining on the field directly (worth at most 8% of M, per Finding 4),
+   importance-weighting Lane, or scaling this architecture all attack a 5.5x accuracy gap with levers
+   measured to move M by a few percent. Prefer a combinatorial exact-description family over a smooth one.
+2. **If a smooth carrier is kept, it must be paired with a cheap-geometry residual.** Finding 6 says the
+   penalty is the scatter, not the count. A construction that forces its errors into contiguous runs —
+   or a residual grammar built for scattered cells — recovers up to 1.83x, which is still 3.1x short.
+3. **The rate half is closed for this latent budget.** 288,000 counted symbols at a measured 4.21 bits
+   floor is 151.5 kB; the gate allows 94.0 kB *including* residual. Any successor on this architecture
+   must first show a latent budget whose entropy floor is under ~2.6 bits/symbol at equal accuracy.
+4. **Re-race the residual order roster per operating point.** The winner is `tile64_time` above ~1e4
+   mismatches and `frame_raster` below it; the spread across eight orders reached 11.3% at K=8 and 24%
+   at the neural point.
 
 ## Retained custody
 
@@ -233,7 +309,7 @@ payload.
 | `teacher_residual_probe/` | K=8 exact-residual race, 8 orders x 3 coders + repeats | 64 | 4.9 M |
 | `residual_law/k04 k06 k12 k16/` | the same race at four more mismatch counts | 64 each | 21 M / 9.9 M / 1.0 M / 292 K |
 | `smoke_parity_scope/` | declared-SCOPE parity smoke: packets, renders, checkpoints | — | 386 M |
-| `governed_v1/` | the governed burn: tile schedule, per-stage checkpoints every 250 steps, per-branch stage ends, per-evaluation packets/renders, heartbeats | — | *(burn)* |
+| `governed_v1/` | the governed burn: tile schedule, 184 per-250-step checkpoints, seven distinct stage ends, 19 evaluation packets + full-n600 renders, three closure races, heartbeats | — | see MANIFEST |
 
 Launch receipts: `.omx/tmp/codex_runs/gdc2_teacher_residual_probe.done`,
 `gdc2_smoke_parity.done`, `gdc2_residual_law_k{04,06,12,16}.done`, `gdc2_governed_v1.done`.
