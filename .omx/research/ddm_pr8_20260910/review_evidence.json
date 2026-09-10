@@ -1,0 +1,106 @@
+{
+  "schema": "ddm_pr8_receiver_compliance_review_v1",
+  "score_claim": false,
+  "review_only": true,
+  "verdict": "P0_RULE118_BLOCK_PR_SUBMISSION_SWAP",
+  "pointer_mutated": false,
+  "runtime_roots": {
+    "move40": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/source_runtime",
+    "move41": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime",
+    "tc4_candidate": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime"
+  },
+  "changed_path_census": {
+    "move40_to_move41": [
+      "archive.zip",
+      "inflate.py",
+      "inflate.sh",
+      "runtime/residual_archive.py",
+      "runtime/tc3_geometry.py",
+      "runtime/tc3_mixer.py"
+    ],
+    "move41_to_tc4": [
+      "archive.zip",
+      "inflate.py",
+      "runtime/residual_archive.py",
+      "runtime/tc4_fast.py",
+      "runtime/tc4_maps.py"
+    ]
+  },
+  "rule118_blockers": [
+    {
+      "runtime": "move41",
+      "content_selected_constants": ["Lane class 1", "rows 128..319"],
+      "lines": [
+        "runtime/tc3_geometry.py:84",
+        "runtime/tc3_geometry.py:109",
+        "runtime/tc3_geometry.py:122",
+        "runtime/tc3_geometry.py:127"
+      ]
+    },
+    {
+      "runtime": "tc4_candidate",
+      "content_selected_constants": ["Movable class 3", "rows 128..319"],
+      "lines": [
+        "runtime/tc4_maps.py:84-86",
+        "runtime/tc4_fast.py:56-60"
+      ]
+    }
+  ],
+  "counted_payload_control": {
+    "move41": {
+      "archive_bytes": 180154,
+      "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "mixer_weight_count": 40,
+      "new_weights": [29, 23, 6, 10, 5]
+    },
+    "tc4_candidate": {
+      "archive_bytes": 180021,
+      "archive_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+      "selection_mask": 19,
+      "selected_maps": [0, 1, 4],
+      "mixer_weight_count": 55,
+      "new_weights": [23, 20, -16, 16, 21, -12, 20, 11, -10, 10, 10, 12, 18, 14, -32]
+    }
+  },
+  "move41_exact_cuda": {
+    "axis": "[contest-CUDA T4 n600]",
+    "archive_bytes": 180154,
+    "d_seg": 0.00010636,
+    "d_pose": 0.00000489,
+    "seg_contribution": 0.010636,
+    "pose_contribution": 0.006992853494818835,
+    "rate_contribution": 0.11995715384077166,
+    "score": 0.13758600733559048,
+    "inflate_seconds": 1336.668977565,
+    "token_stage_seconds": 1258.585670749,
+    "decoded_token_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5"
+  },
+  "move40_t4_timing": {
+    "inflate_seconds": 990.053829427,
+    "token_stage_seconds": 917.58079029
+  },
+  "timing_deltas": {
+    "move41_added_token_seconds": 341.004880459,
+    "move41_added_microseconds_per_token": 2.8907341890038384,
+    "move41_margin_policy_seconds": 1260,
+    "move41_margin_deficit_seconds": 76.668977565,
+    "tc4_timeout_seconds": 1800,
+    "tc4_added_seconds_lower_bound_vs_move41_inflate": 463.331022435,
+    "tc4_added_microseconds_per_token_lower_bound": 3.9277057430267334
+  },
+  "tc4_score": {
+    "measured": false,
+    "reason": "inflate timed out before evaluator and contest_auth_eval.json",
+    "held_distortion_projection_only": 0.13749744809482524
+  },
+  "cpu_axis": {
+    "measured": false,
+    "normal_entrypoint_runs": false,
+    "reason": "inflate.py requires CUDA unless TC3_ADVISORY_CPU=1"
+  },
+  "strict_scorer": {
+    "passed": true,
+    "new_absolute_external_import_roots": [],
+    "scorer_or_source_runtime_references": 0
+  }
+}
