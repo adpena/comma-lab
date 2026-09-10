@@ -2049,6 +2049,61 @@ container search may hand back.
 
 ---
 
+## 32. Move 40 — the composition PROMOTED, and the print-bound law confirms
+
+**S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]**, sha `986d536b…`, lane
+`ddm_sj1_t4_compose39_rp1_union_20260910`, call `fc-01M24MA90ER7YTGRTCX9SNQNM4`.
+**Δ −3.070463e-05 vs move 39 — 1.54× the bar.**
+
+Verified at source: the lane's own `MODAL_REMOTE_RESULT.json` reads
+`score_recomputed_from_components = 0.13763861019288715`, `avg_segnet_dist = 0.00010636`,
+`avg_posenet_dist = 4.89e-06`, `n_samples = 600`, `archive_size_bytes = 180233`,
+`expected_archive_sha256 = 986d536b…` (the seal's), `score_axis = contest_cuda`.
+
+Campaign lineage: **0.14784474152757654 → 0.13763861019288715 = −1.020613e-02 over 14 rows.**
+
+### 32a. The print-bound law holds a second time, exactly
+
+| | value |
+|---|---:|
+| projected | 0.13763577081553857 |
+| **MEASURED** | **0.13763861019288715** |
+| residual | **+2.839377e-06** (optimistic) |
+| seg, printed 0.00010636 vs projected 0.00010635240209 | +7.597907e-07 |
+| pose, printed 4.89e-06 vs projected 4.8870919835e-06 | +2.079587e-06 |
+| **sum of the two print gaps** | **+2.839377e-06** |
+
+**Again the residual equals the sum of the print gaps to the last digit.** §29a proposed
+this as the successor's pre-registration and here it is confirmed on an independent row:
+when the seg leg is verified at zero-cell disagreement on the shipped bytes and the pose
+leg is the resolved composition, the projection carries NO modelling error and the entire
+residual is the receipt's 8-decimal printing. Two rows, two exact matches. **A successor
+should pre-register the 8-dp print bound and treat any residual outside it as a new effect.**
+
+### 32b. What this row is
+
+It is not a new search. It is this arm's move-38 pass-5 subset **re-based onto rp1's move-39
+field by re-verification** — the 42 pairs re-measured, six repairs found lost on the 13-pair
+overlap (§31d), the carrier re-solved over the 282-pair union from move 39's coefficients,
+the rate re-priced by twin encode against move 39's tail, and the whole thing re-sealed. The
+value of the re-verification is exactly the +5.086e-06 of seg it refused to claim: had the
+80 repairs been carried across, the seal would have promised a row it could not deliver, and
+the seg gate on the shipped bytes would have caught it only after the money was spent.
+
+### 32c. Where the arm stands
+
+The singles family is converged (§29b). This row is composition, not search. What remains
+on this object, in order:
+
+1. the frame-0 repair, priced INSIDE a future edit round's admission on exactly the pairs
+   that round breaks (§30 measured that it cannot clear the bar as a standalone round);
+2. the four pairs this composition carries at zero or negative repair (237, 293, 398, 565) —
+   dropping them needs its own twin encode to price, and would buy back one cell and a few
+   bytes;
+3. the representation-level boundary door, which §25b and the ddm_bnd1 charter carry.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
@@ -2056,6 +2111,6 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ## Frontier line
 
-`sj1 S 0.13789029376306361 @ 180,436 B [contest-CUDA T4 n600]` (move 38, sha `eae99e0083129a91…`; the live pointer may have moved past this — the canonical pointer file is the SoT)
+`sj1 S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40, sha `986d536b31ed1079…`; the canonical pointer file is the SoT)
 
 Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 ×4 0.1451981569076111 @ 176,448 B → pc1 ×8 0.1445177913121716 @ 175,576 B → pc1 ×16 0.14411787458634504 @ 174,786 B → sj1 pass 2a 0.1398140172839628 @ 180,904 B → sj1 pass 3 (above).
