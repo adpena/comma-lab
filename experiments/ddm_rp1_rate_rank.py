@@ -533,6 +533,13 @@ def build_parser() -> argparse.ArgumentParser:
     mixer.add_argument("--control-envelope", default=None)
     mixer.add_argument("--expect-pointer-sha", default=None)
     mixer.add_argument(
+        "--codec",
+        choices=("tc1", "tc3"),
+        default="tc1",
+        help="tc1 = the 35-weight shared mixer (moves 36-40); tc3 = move 41's variant-1 "
+        "lane-predictor mixer, which wraps tc1 and adds a sixth causal context",
+    )
+    mixer.add_argument(
         "--field",
         default=None,
         help="pricing mode: encode this 600-plane edited field instead of the live one; "
@@ -612,6 +619,20 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
 
     import ddm_tc1_mixer_codec as tc1
 
+    # THE CODER IS A FLAG.  Pointer move 41 (tc3) added a SIXTH context map -- a causal
+    # lane predictor -- on top of tc1's five, as a TAIL-ONLY change: the field, the
+    # renders and the carrier are byte-identical to move 40.  Its variant-1 rider wraps
+    # tc1's unchanged 35-weight mixer and appends five more weights, and it requires one
+    # extra call (``observe``) between coding a group and coding the next.  Everything
+    # else in this loop is the same object, so the coder swaps here rather than in a fork.
+    use_tc3 = args.codec == "tc3"
+    if use_tc3:
+        # tc3's module imports its siblings as ``experiments.*``, so the REPO root has to
+        # be importable, not just ``experiments/``.
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        import ddm_tc3_mixer as tc3
+
     field_sha = sha256_file(field_u8)
     if args.live_field_u8 is None and field_sha != CMP1_FIELD_SHA256:
         raise Rp1Error(f"cmp1 field sha {field_sha} != {CMP1_FIELD_SHA256}")
@@ -656,7 +677,15 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
     )
     sparse = residual._sparse_class(renderer_dir)(model, EVAL_H, EVAL_W)
     corrector = FreeCorrector(EVAL_H * EVAL_W)
-    mixer = tc1.SharedMixer(weights_path.read_bytes())
+    if use_tc3:
+        config = weights_path.read_bytes()
+        if len(config) != 41 or config[0] not in (1, 2):
+            raise Rp1Error(
+                f"tc3 needs a 41-byte config (variant + 40 int8), got {len(config)} B"
+            )
+        mixer = tc3.LaneMixer(config)
+    else:
+        mixer = tc1.SharedMixer(weights_path.read_bytes())
     groups = [
         np.flatnonzero(mask.cpu().numpy().reshape(-1))
         for mask in renderer.group_masks(device)
@@ -751,6 +780,11 @@ def cmd_rank_mixer(args: argparse.Namespace) -> int:
 
                 encoder.encode(symbols, coding)
                 corrector.observe(state, symbols.astype(np.int64))
+                if use_tc3:
+                    # tc3's geometry map is strictly group-causal: it must see this
+                    # group's truth before the next group is coded, and it refuses if the
+                    # sequence is violated rather than silently mispredicting.
+                    mixer.observe(positions, symbols.astype(np.int64))
                 current.reshape(-1)[torch.from_numpy(positions)] = torch.from_numpy(
                     symbols.astype(np.int64)
                 )
