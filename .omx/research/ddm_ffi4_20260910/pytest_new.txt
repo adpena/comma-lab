@@ -1,0 +1,20 @@
+...............................................................F....     [100%]
+=================================== FAILURES ===================================
+_____________ test_prefire_risk_refuses_nonpin_inflate_byte_change _____________
+
+fixture = {'intent': {'schema': 'candidate_prefire_intent.v1', 'state': 'PREFIRE_FIRST_MEASUREMENT_ONLY', 'candidate_id': 'fixtu...ybt6vcwjs200000gn/T/pytest-of-adpena/pytest-257/test_prefire_risk_refuses_nonp0/canonical_frontier_pointer.json'), ...}
+
+    def test_prefire_risk_refuses_nonpin_inflate_byte_change(fixture):
+        ref = fixture["intent"]["evidence"]["timing_risk"]
+        assert cs.validate_prefire_risk(ref, fixture["intent"], repo=fixture["repo"])
+        path = fixture["root"] / "inflate.py"
+        before = path.read_bytes()
+        after = before.replace(b"return None", b"return True", 1)
+>       assert sum(a != b for a, b in zip(before, after, strict=True)) == 4
+E       assert 3 == 4
+E        +  where 3 = sum(<generator object test_prefire_risk_refuses_nonpin_inflate_byte_change.<locals>.<genexpr> at 0x109460790>)
+
+src/tac/tests/test_candidate_prefire_intent.py:663: AssertionError
+=========================== short test summary info ============================
+FAILED src/tac/tests/test_candidate_prefire_intent.py::test_prefire_risk_refuses_nonpin_inflate_byte_change
+1 failed, 67 passed in 1.72s

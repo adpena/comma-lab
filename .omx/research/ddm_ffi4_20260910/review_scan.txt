@@ -1,0 +1,5 @@
+Scan complete: 181798 entities across 11442 files
+  Incremental files parsed: 145 | Removed files: 0
+  New: 562 | Changed (stale): 0 | Unchanged: 181236 | Removed: 0
+  needs_fix: 0  reviewed: 168880  stale: 22  unreviewed: 12896
+  Coverage: 92.9%

@@ -1,0 +1,5 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: src/tac/candidate_seal.py: failed to insert into database
+error: unable to index file 'src/tac/candidate_seal.py'
+fatal: updating files failed

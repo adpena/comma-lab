@@ -1,0 +1,41 @@
+{
+  "axis": "macOS-CPU scorer-free",
+  "score_claim": false,
+  "status": "VERIFIED_BUNDLE_MAIN_LANDING_REQUIRED",
+  "serializer_rc": 17,
+  "serializer_attempts": 1,
+  "commit": "8948b1706687290b81e7208f5db9153b6c7a2ddc",
+  "main_landed": false,
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/serializer/20260910T185739.021679Z-79664/intended-commit.bundle",
+  "bundle_sha256": "685cfedbecc1d1b3e40690d59521d7ac882b0291ded9c08cd523553a4a961250",
+  "bundle_bytes": 24220,
+  "verified_files": 14,
+  "exact_changed_file_set": true,
+  "all_committed_blobs_equal_reviewed_post_edit_hashes": true,
+  "shared_staged_index_unchanged": true,
+  "protected_baseline_pins_unchanged": {
+    "src/tac/decode_wall_clock.py": true,
+    "tools/make_candidate_seal.py": true,
+    "src/tac/tests/test_candidate_seal.py": true,
+    ".omx/research/ddm_pr14_adjudicate_manifest_in_normalized_receiver_digest_20260910.md": true,
+    ".omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json": true
+  },
+  "pytest_passed": 135,
+  "ruff": "passed",
+  "source_review_passes": 2,
+  "freeze_draft": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/FREEZE_APPEND_DRAFT.json",
+  "next_actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi4_20260910/FREEZE_APPEND_DRAFT.json",
+      "fire_trigger": "Harvest verified bundle and recheck pins/tests; land implementation, generate committed manifest, then append and commit frozen amendment."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN / rlc5",
+      "consumer_store": "PR14 reuse table and new risk delta, timing-risk receipt and intent",
+      "fire_trigger": "Implementation and freeze committed; retained evidence hashes valid and pointer still move 42."
+    }
+  ]
+}
