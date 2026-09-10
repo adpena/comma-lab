@@ -141,3 +141,5 @@ DEAD-ENDS: Plain int64 evaluation of R is unsafe on valid format inputs because
 the products can exceed 64 bits. Merely counting the Lane id and row band is an
 incomplete compliance cure: pr8 explicitly left the other tuning provenance
 unproved, so this config pays for every such operand.
+
+verdict_scope: instance — rlc1's own dead-ends (plain int64 moment products overflow; fresh native builds cannot restore hash-bound checkpoints; unknown host concurrency cannot establish a timing seal) are properties of this build and this host; nothing about the receiver-code family is closed by them.
