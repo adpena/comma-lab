@@ -53,6 +53,16 @@
       "verdict": "REFUSED by the frozen rule: dasd 95-97 % for ~3.7 min from ~8.7 min in, syspolicyd 27-73 %, aggregate >= 200 % four times; count 3. User-activity assertion did not prevent the burst",
       "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced4_local.json",
       "concurrency": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced4/CONCURRENCY.json"
+    },
+    {
+      "attempt": "move40_quiesced5 (FROZEN admission_rule.v3 25d0a778; caffeinate -u)",
+      "wall_seconds": 789.2894042919943,
+      "cold_start": true,
+      "raw_sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+      "stage_excess_fraction": 0.006,
+      "verdict": "REFUSED (count 2) \u2014 the dasd/syspolicyd burst WAS waived by v3 (allowance valid, all 11 checks true, one burst), but ordinary competitors appeared: searchpartyd 56 % beside MAIN's own Modal poller python 99 % (during_0003), launchd 28 %, biomesyncd 86 % (during_0035)",
+      "local_receipt": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced5_local.json",
+      "concurrency": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_quiesced5/CONCURRENCY.json"
     }
   ],
   "calibration": {
@@ -92,5 +102,6 @@
     "authority": "ddm_pr11 T4-DIRECT contract (exact); cold n600 public entrypoint on Tesla T4, CUDA available, canonical contest path; no local denominator",
     "inheritance": "rp1's candidate (receiver byte-identical except archive.zip + the two pins) inherits this leg; proven on the pointer tree: mode inherited, source_mode t4_direct, 990.054 s, no problems",
     "folded_calibrated_sidecar_backup": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/folded_calibrated_sidecar_e58adf1d_backup.json"
-  }
+  },
+  "decision_after_five_runs": "Local calibration for rlc1 is SUSPENDED: five cold runs (783.1-797.1 s, all bit-identical) and five refusals, the last under the second family's own v3 rule by Apple daemons outside its class and by MAIN's Modal poller. Move 40's authority is t4_direct (unaffected). rlc1 is re-based onto the pointer after rp1's T4 row (its -60 B cure sits on move 40's tree and would not out-score rp1's candidate); its timing authority will be its own T4 fire (pr11's preferred route) once re-based."
 }
