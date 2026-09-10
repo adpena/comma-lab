@@ -291,6 +291,82 @@ that is not reproducible it would have been unrecoverable.
 renders: **4.88709198352764e-06** (pose leg 0.006990774), against sj1's 4.886599506e-06 —
 +0.010 %, comfortably inside pm2's [1/3, 3]× gate. Measured, never inherited.
 
+## 8d. THE PRICE INVERTED — the K-curve's promise is not a charge, and at K=192 it flips SIGN
+
+Twin encodes of the whole rebased field, byte-identical (120,244 B envelope / 120,238 B body,
+sha `27813d91…`, both twins):
+
+| | bytes |
+|---|---|
+| control (move 40's own stream) | 119,624 |
+| candidate (all 4,142 kept edits) | 120,244 |
+| **delta** | **+620** |
+
+The first-order ranking promised **−1,756.6 B**. The real coder charged **+620 B**. Not a
+decayed yield — an **inverted sign**.
+
+Round 1 at K=32 returned −144.65 B on 838 changes (ratio 0.1445, still a saving). Round 2 at
+K=192 returns +620 B on 4,142. **§2's K-curve measured only the first-order prize decaying
+8.5×; what it could not see is that the realized price crosses zero somewhere above K=32.**
+The deep ranks are not merely cheap, they are net-harmful: removing a low-surprise token
+re-prices its neighbourhood by more than it saves.
+
+Per-pair, from the two real ledgers: of 576 edited pairs, **146 are savers (−115.38 B) and
+430 are losers (+734.79 B)**. Encoder drift on the 324 untouched pairs is +0.96 B and is
+pinned out of the sweep rather than charged to this arm.
+
+**So the pass survives only because it is a per-pair SELECTION, not a field.** This is the
+sharpest confirmation yet of [[first_order_token_price_is_a_ranking_never_a_charge…]]: at
+K=192 the ranking does not merely over-promise, it points the wrong way.
+
+## 8e. THE ADMISSION on the RESOLVED pose
+
+Three-column pose leg over all 600 pairs, this arm's own instrument:
+
+| column | d_pose mean | vs base |
+|---|---|---|
+| base (move 40's carrier on move 40's renders) | 4.88709198e-06 | — |
+| **stale** (candidate renders, shipped carrier) | **1.05512811e-03** | **216× worse** |
+| **carrier-resolved** (576 pairs re-solved, all adopted) | **4.98084259e-06** | +1.9 % |
+
+The re-solve recovers 99.99 % of the stale damage; the residual +1.9 % is what the sweep
+then prices per pair.
+
+**Sweep result (`admission/ADMISSION.json`), ledger-sum selection:**
+
+| | value |
+|---|---|
+| pairs kept / offered | **160 / 576** |
+| tokens kept | **1,054** of 4,142 |
+| rate delta (ledger sum) | **−43.98 B** → −2.93e-05 S |
+| d_pose mean | **4.64947689e-06** (BELOW base) → −1.721e-04 S |
+| d_seg | 0 by construction |
+| **net ΔS vs move 40** | **−2.0134828823e-04 = 10.1× the bar** |
+
+The win is mostly **pose**, not rate: the carrier re-solve on the selected pairs lands the
+pose *below* base, the same shape as round 1's −5.16e-5.
+
+## 8f. FRAME 0, run INSIDE the admission — measured, priced, NOT adopted
+
+Target: the post-re-solve residual tail among edited pairs, including all 35 pose-bound drops
+(pairs whose rate is a saver and whose pose killed them, stranding −21.90 B = −1.458e-05 S).
+
+- 120 pairs swept, 8 modes each, on the candidate's own renders with the re-solved codes.
+- **38 of 120 (31.7 %) have a better mode** — against the 13 % population baseline sj1
+  measured. **All 17 the greedy blob-price adopted fell OUTSIDE the kept set.** Both facts
+  confirm sj1 §30's law exactly: frame 0 is a repair lever for pairs an edit BROKE, not a
+  population win.
+- Re-admitting with those pose values recovers **3 pairs**: 160 → 163, ΔS −2.0135e-04 →
+  −2.0463e-04.
+- The selector blob for exactly those 3, ENCODED and round-tripped through the receiver's own
+  `decode_selector`: 34 B → 36 B, **+2 B = +1.332e-06 S**.
+- **Frame-0 net effect: −1.950e-06 S = 0.0975× the bar.**
+
+**Not adopted, and the reason is not that it failed.** It is 1 % of the candidate, and buying
+it costs a fresh ~27-minute subset re-encode plus a carrier selector-splice path this arm has
+not verified exists (`ddm_rp1_build.close` splices CODES only). Putting the seal at risk for
+1 % is the wrong trade. Receipt: `frame0/FRAME0_VERDICT.json`.
+
 ## 9. Frontier line
 
 `ddm_sj1 compose39+rp1 union S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40)
