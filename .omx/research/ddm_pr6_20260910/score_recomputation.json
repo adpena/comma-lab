@@ -1,0 +1,95 @@
+{
+  "schema": "ddm_pr6_score_recomputation.v1",
+  "review_axis": "receipt-only review",
+  "score_claim": false,
+  "receipt_and_archive_hashes_rechecked": true,
+  "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+  "tolerance": 1e-12,
+  "rows": [
+    {
+      "move": 38,
+      "candidate": "sj1_pass5",
+      "receipt": "/Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_pass5_20260909/MODAL_REMOTE_RESULT.json",
+      "receipt_sha256": "fbc62d6f75db684cb0c2d1496671f058706b919e08b92d6b0b57b47613118339",
+      "archive_sha256": "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07",
+      "d_seg": 0.00010632,
+      "d_pose": 0.00000506,
+      "archive_bytes": 180436,
+      "seg_term": 0.010631999999999999,
+      "pose_term": 0.007113367697511495,
+      "rate_term": 0.1201449260655521,
+      "recomputed_score": 0.1378902937630636,
+      "receipt_score": 0.1378902937630636,
+      "recomputed_minus_receipt": 0.0,
+      "passes_tolerance": true,
+      "projection": 0.13788255886142803,
+      "realized_minus_projection": 0.000007734901635580993,
+      "projection_residual_cause": "8-decimal component printing: seg plus pose"
+    },
+    {
+      "move": 39,
+      "candidate": "rp1_rate_directed",
+      "receipt": "/Volumes/APDataStore/pact/ddm_rp1_t4_rate_directed_predistortion_20260910/MODAL_REMOTE_RESULT.json",
+      "receipt_sha256": "41d24304787b7c17505550bb17e516c981e985d8822c0b74e329e1e6c67c7b5f",
+      "archive_sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4",
+      "d_seg": 0.00010698,
+      "d_pose": 0.00000489,
+      "archive_bytes": 180186,
+      "seg_term": 0.010698,
+      "pose_term": 0.0069928534948188355,
+      "rate_term": 0.11997846132727157,
+      "recomputed_score": 0.1376693148220904,
+      "receipt_score": 0.13766931482209038,
+      "recomputed_minus_receipt": 2.7755575615628914e-17,
+      "passes_tolerance": true,
+      "projection": 0.1376665464876166,
+      "realized_minus_projection": 0.000002768334473796097,
+      "projection_residual_cause": "8-decimal component printing: pose only"
+    },
+    {
+      "move": 40,
+      "candidate": "sj1_compose39_rp1_union",
+      "receipt": "/Volumes/APDataStore/pact/ddm_sj1_t4_compose39_rp1_union_20260910/MODAL_REMOTE_RESULT.json",
+      "receipt_sha256": "cd6d5ef5243e26fa1868100a2bbb34efe0d6446b4a7fb9bd1eab7f309f5d3d00",
+      "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+      "d_seg": 0.00010636,
+      "d_pose": 0.00000489,
+      "archive_bytes": 180233,
+      "seg_term": 0.010636,
+      "pose_term": 0.0069928534948188355,
+      "rate_term": 0.1200097566980683,
+      "recomputed_score": 0.13763861019288715,
+      "receipt_score": 0.13763861019288715,
+      "recomputed_minus_receipt": 0.0,
+      "passes_tolerance": true,
+      "projection": 0.13763577081553857,
+      "realized_minus_projection": 0.000002839377348573535,
+      "projection_residual_cause": "8-decimal component printing: seg plus pose"
+    }
+  ],
+  "delta_chain": [
+    {
+      "from_move": 37,
+      "to_move": 38,
+      "delta_score": -0.000027006274514573825
+    },
+    {
+      "from_move": 38,
+      "to_move": 39,
+      "delta_score": -0.00022097894097322657
+    },
+    {
+      "from_move": 39,
+      "to_move": 40,
+      "delta_score": -0.00003070462920323758
+    }
+  ],
+  "cumulative_delta_move37_to_move40": -0.00027868984469103797,
+  "pointer_check": {
+    "path": ".omx/state/canonical_frontier_pointer.json",
+    "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
+    "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+    "score": 0.13763861019288715,
+    "matches_move_40": true
+  }
+}
