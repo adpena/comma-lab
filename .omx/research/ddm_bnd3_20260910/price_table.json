@@ -1,0 +1,3386 @@
+[
+  {
+    "address_bytes": 477996,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 636902,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k0_m1/archive.zip",
+      "sha256": "95cf2692aa3ea9e5af3cea4add43419bc95dbc7d09065804fde1a98909a94aff"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 61307,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 456514,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k0_m1/RESULT.json",
+      "sha256": "03b555f6a4eb5d55cf64da6353077fc0dd867d2df3d068a61c86b3e640999b5f"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 576298,
+    "twin_identical": true,
+    "variant": "price_o0_k0_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 75992,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 244626,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k0_m2/archive.zip",
+      "sha256": "de046d6ea2db9dec6c7faffcc60af487e5961b72db5b75651560a4ad4254a146"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 7674,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 64238,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 100334,
+    "result": {
+      "bytes": 2240,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k0_m2/RESULT.json",
+      "sha256": "8cf171423e0de23e893204b7ba193c8cf57f51638047e9947cc6decbcf611ecc"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 53464,
+    "support_displaceable_bytes": 19450,
+    "symbols": 117964800,
+    "total_envelope_bytes": 184022,
+    "twin_identical": true,
+    "variant": "price_o0_k0_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 3362,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 183098,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k0_m4/archive.zip",
+      "sha256": "fa5cb348884cfa77569b2eed52a233258161714e1d04c6709833f361662a225d"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 271,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 2710,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118839,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k0_m4/RESULT.json",
+      "sha256": "97b6ebb67d4d255bbf5007405e89ffa3fbce39fe0c37d3dde8dd613aeeb0cf6d"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 3128,
+    "support_displaceable_bytes": 945,
+    "symbols": 117964800,
+    "total_envelope_bytes": 122494,
+    "twin_identical": true,
+    "variant": "price_o0_k0_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 481137,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 636520,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k1_m1/archive.zip",
+      "sha256": "4c948a1e0dc22a988d636a53783b12e94404dde37ec5434961676c5bf6255974"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 57784,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 456132,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k1_m1/RESULT.json",
+      "sha256": "ba1a30735baf249c56cfb7b1493affa1b4b66a3200e6958c32a60f643c0c9baf"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 575916,
+    "twin_identical": true,
+    "variant": "price_o0_k1_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 120807,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 281651,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k1_m2/archive.zip",
+      "sha256": "8bfe350bf44a887eec36788ec1fcdd96fd6754425d723e0f88bf6038f824e086"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 11078,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 101263,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 89140,
+    "result": {
+      "bytes": 2242,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k1_m2/RESULT.json",
+      "sha256": "d9ae63c88d4e704139c9d899d26f1128efb61b897bb74d72c834ef2dc1e5a444"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 78164,
+    "support_displaceable_bytes": 30644,
+    "symbols": 117964800,
+    "total_envelope_bytes": 221047,
+    "twin_identical": true,
+    "variant": "price_o0_k1_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 5442,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 184754,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k1_m4/archive.zip",
+      "sha256": "266f203e669a883cd2141d8720915e04938ac61c53e6d8ed454c92a4ab8e3e7a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 386,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 4366,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118300,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k1_m4/RESULT.json",
+      "sha256": "356bca95ee4640c1440ed60d7ca5a2fd00536743d3d237908571beb2a665e491"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 4796,
+    "support_displaceable_bytes": 1484,
+    "symbols": 117964800,
+    "total_envelope_bytes": 124150,
+    "twin_identical": true,
+    "variant": "price_o0_k1_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 483595,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 636638,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k2_m1/archive.zip",
+      "sha256": "3278218516ec7e0a040923455112162ce36ae414165a28fad6e0ebbe4f6dbefb"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 55444,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 456250,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k2_m1/RESULT.json",
+      "sha256": "29128a165956f0be2e0a4bd2017a8c5c7ac3825a7f3fe8a6f36c0baf07511016"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 576034,
+    "twin_identical": true,
+    "variant": "price_o0_k2_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 153321,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 310700,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k2_m2/archive.zip",
+      "sha256": "a0cf777d5a6c66de1bdc219366dce3d167904d4c56a9ecb4f7c028387fd37677"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 13477,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 130312,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 83276,
+    "result": {
+      "bytes": 2242,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k2_m2/RESULT.json",
+      "sha256": "d8407125c188b92263dfce024643d91703f402becaf2a76e3ba2ecaeacc9c073"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 94355,
+    "support_displaceable_bytes": 36508,
+    "symbols": 117964800,
+    "total_envelope_bytes": 250096,
+    "twin_identical": true,
+    "variant": "price_o0_k2_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 6659,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 185751,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k2_m4/archive.zip",
+      "sha256": "905187764651b4457a884d9b067d934396e8cc909e160ace999b32a48ab8222a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 448,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 5363,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118018,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k2_m4/RESULT.json",
+      "sha256": "fb851bd50b65840e21a486c6c83374bf46c7938b949520baded6ab4ed6e00c81"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 5642,
+    "support_displaceable_bytes": 1766,
+    "symbols": 117964800,
+    "total_envelope_bytes": 125147,
+    "twin_identical": true,
+    "variant": "price_o0_k2_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 488929,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 637261,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k4_m1/archive.zip",
+      "sha256": "70b408f2938a0c40e67b61795f5fb4445a670b0da161edec95d89395085a62e4"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 50733,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 456873,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k4_m1/RESULT.json",
+      "sha256": "b3981b65b9161589c1ce404bb09ed9cc74f058b0cb05168ea6215817647aa414"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 576657,
+    "twin_identical": true,
+    "variant": "price_o0_k4_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 219684,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 371935,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k4_m2/archive.zip",
+      "sha256": "0a6c74d240514a0ed941b68d5060ab9a1eb1527401b4d4565c8cd98de8e81823"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 18114,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 191547,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 73511,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k4_m2/RESULT.json",
+      "sha256": "0308e82dbf7d0cde20f6c336077d7f40e4991aa8ad449f07fe37b58a1597a54a"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 126241,
+    "support_displaceable_bytes": 46273,
+    "symbols": 117964800,
+    "total_envelope_bytes": 311331,
+    "twin_identical": true,
+    "variant": "price_o0_k4_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 9304,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 188004,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k4_m4/archive.zip",
+      "sha256": "99f43d28717760aa809890754ff90f0c880d93724f8f95c5daafa7869494bce3"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 574,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 7616,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 117500,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o0_k4_m4/RESULT.json",
+      "sha256": "9d2b3a027234e12a58741a0e0d693ec480dad48b50ffdc8222eae94d7ca6e056"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 7265,
+    "support_displaceable_bytes": 2284,
+    "symbols": 117964800,
+    "total_envelope_bytes": 127400,
+    "twin_identical": true,
+    "variant": "price_o0_k4_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 483499,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 648258,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k0_m1/archive.zip",
+      "sha256": "d9a0e433763bcb1bb656d26f9c5a05c119df77c22f7cc64e19dc39a647306d6b"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 67116,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 467870,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k0_m1/RESULT.json",
+      "sha256": "4b3e98fb357bf682835d68ea4d18760f2d57f8f59eff0ae69a3ef57f12852486"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 587654,
+    "twin_identical": true,
+    "variant": "price_o1_k0_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 77245,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 246110,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k0_m2/archive.zip",
+      "sha256": "d1bace8f7c885e1fe811f8f76ce347b967501f6bacad4877f8138a412b80f25c"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8137,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 65722,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 100102,
+    "result": {
+      "bytes": 2240,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k0_m2/RESULT.json",
+      "sha256": "23f9d08a2b6075826698130e62e99679712315730fe11668832e12a79c8f6995"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 54150,
+    "support_displaceable_bytes": 19682,
+    "symbols": 117964800,
+    "total_envelope_bytes": 185506,
+    "twin_identical": true,
+    "variant": "price_o1_k0_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 3425,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 183170,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k0_m4/archive.zip",
+      "sha256": "21e3b6a1e82fc4d66d3add7a0c003da726c4e74e28e0861a40f33972ea677af5"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 291,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 2782,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118828,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k0_m4/RESULT.json",
+      "sha256": "d9b409202cd26f58c8f9013d18623125c725bb7aef84e1e4c7ef9ceaa2388c3b"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 3168,
+    "support_displaceable_bytes": 956,
+    "symbols": 117964800,
+    "total_envelope_bytes": 122566,
+    "twin_identical": true,
+    "variant": "price_o1_k0_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 484835,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 645576,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k1_m1/archive.zip",
+      "sha256": "fe8897a9aa675c8ba840a1b44b1e1d474ee08fe717226d4ecf85d8b48d75c93e"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 63098,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 465188,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k1_m1/RESULT.json",
+      "sha256": "bd209a4faf96ff991a66afa7c934bce5afb4641770c8aacd631bbd9982668e6e"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 584972,
+    "twin_identical": true,
+    "variant": "price_o1_k1_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 122654,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 284045,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k1_m2/archive.zip",
+      "sha256": "600129f61b7e8001687c483d901f22dcbfcddb76124b1bd3993e47dc3edb8be0"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 11927,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 103657,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 88838,
+    "result": {
+      "bytes": 2242,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k1_m2/RESULT.json",
+      "sha256": "296ac52cd871c387eea9d72516a17da06485b1d7d97662f839a516a08c4b7f9d"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 79106,
+    "support_displaceable_bytes": 30946,
+    "symbols": 117964800,
+    "total_envelope_bytes": 223441,
+    "twin_identical": true,
+    "variant": "price_o1_k1_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 5853,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 185102,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k1_m4/archive.zip",
+      "sha256": "4a12f42999e9bda93c6455c4aa0dc3b30286eacd078499dfebe115571cfc207c"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 440,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 4714,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118183,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k1_m4/RESULT.json",
+      "sha256": "b41f0d7d155f4d2089547c645299b4b0b608ed419f8e9a87bb4a987e0a961c15"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 5117,
+    "support_displaceable_bytes": 1601,
+    "symbols": 117964800,
+    "total_envelope_bytes": 124498,
+    "twin_identical": true,
+    "variant": "price_o1_k1_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 487019,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 644836,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k2_m1/archive.zip",
+      "sha256": "9b258df3af08759785db3445e9849ce7393d98c94e959aa122f83962bb7833d8"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 60174,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 464448,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k2_m1/RESULT.json",
+      "sha256": "edeab5cc55a1fad3f7949b47dfa507f7c9696622d616fd5aaded470fd46ee13d"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 584232,
+    "twin_identical": true,
+    "variant": "price_o1_k2_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 155081,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 313043,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k2_m2/archive.zip",
+      "sha256": "c06c6c582ec8cab764603fe4b715e6db27a8168f628999e8ef807fc887e3fef2"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 14313,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 132655,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 83023,
+    "result": {
+      "bytes": 2242,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k2_m2/RESULT.json",
+      "sha256": "d4f9e584880099660c3dc73df3ca891f09810560bb8990c5b8ef51f82165d385"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 95181,
+    "support_displaceable_bytes": 36761,
+    "symbols": 117964800,
+    "total_envelope_bytes": 252439,
+    "twin_identical": true,
+    "variant": "price_o1_k2_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 7732,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 186675,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k2_m4/archive.zip",
+      "sha256": "545469dee850badbcc55d6df83bdef8afb38d766af811f1b7718a876b9aabc26"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 540,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 6287,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 117777,
+    "result": {
+      "bytes": 2236,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k2_m4/RESULT.json",
+      "sha256": "49f459c100c34d74155487f76684e01652b5f1733a11dacf4dbcd76e674e829c"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 6326,
+    "support_displaceable_bytes": 2007,
+    "symbols": 117964800,
+    "total_envelope_bytes": 126071,
+    "twin_identical": true,
+    "variant": "price_o1_k2_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 490780,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 642739,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k4_m1/archive.zip",
+      "sha256": "1dceda8e99f75ae0e7131aa87fc4eab3d8a4db0e6479082d7eb187be3e8c832a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 54316,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 462351,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2245,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k4_m1/RESULT.json",
+      "sha256": "0799629959cbbf753ed82b484f2261c651f2da8a6dc1eb493a71ed5c0db288b8"
+    },
+    "resumed_from_frame": 600,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 582135,
+    "twin_identical": true,
+    "variant": "price_o1_k4_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 222859,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 375816,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k4_m2/archive.zip",
+      "sha256": "3912495a38ec57d5eae03f53a2e8a51f09b2b7029047f308e162ea0f00441856"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 19191,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 195428,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 73140,
+    "result": {
+      "bytes": 2243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k4_m2/RESULT.json",
+      "sha256": "d203c4e88a94fb3d3951ad17bbdcbd184af4557003cc8f84ee2573ccda25f25a"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 127347,
+    "support_displaceable_bytes": 46644,
+    "symbols": 117964800,
+    "total_envelope_bytes": 315212,
+    "twin_identical": true,
+    "variant": "price_o1_k4_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 12634,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 190786,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k4_m4/archive.zip",
+      "sha256": "d7d4e6cc478c35767b4762d17294cf6700ffadea5d0616aee96960f2dcdfd2f5"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 773,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 10398,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 116753,
+    "result": {
+      "bytes": 2238,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/price_o1_k4_m4/RESULT.json",
+      "sha256": "7123eafdc6971ec95d75b21df2c85dbb12bfbdb38fd9476a89c46097c2742b0c"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 9357,
+    "support_displaceable_bytes": 3031,
+    "symbols": 117964800,
+    "total_envelope_bytes": 130182,
+    "twin_identical": true,
+    "variant": "price_o1_k4_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 338805,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 445070,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m1/archive.zip",
+      "sha256": "01ec8ccbb0f3725ef6e06da97a6e68f82b37cdb51ebceadc85db6a7d26136a84"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8666,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 264682,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m1/RESULT.json",
+      "sha256": "5bf77e48ffb3251893e7bb25f834010773388588ea05ddae643d1b31228d64e4"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 384466,
+    "twin_identical": true,
+    "variant": "planar_o0_k0_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 59349,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 223713,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m2/archive.zip",
+      "sha256": "d0059b01b6c7aa79306ffbc9568d7262bc95579d80960449a61180569d82bbd1"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 3404,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 43325,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 100334,
+    "result": {
+      "bytes": 2456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m2/RESULT.json",
+      "sha256": "b8f080f3929f9b120d4c653cb353ec16542600ec7ef8367dbe725fbfb6adbb8b"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 53464,
+    "support_displaceable_bytes": 19450,
+    "symbols": 117964800,
+    "total_envelope_bytes": 163109,
+    "twin_identical": true,
+    "variant": "planar_o0_k0_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 2559,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 182293,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m4/archive.zip",
+      "sha256": "a7f19bd0833026eb847d0d28afd2573a038a6d9368fec27e32d9b0dba3ab142a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 269,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 1905,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118839,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m4/RESULT.json",
+      "sha256": "3576b3fec5f89634cf775333c025b971c2409a7f8ce9ced69e5e15b16d811e42"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 3128,
+    "support_displaceable_bytes": 945,
+    "symbols": 117964800,
+    "total_envelope_bytes": 121689,
+    "twin_identical": true,
+    "variant": "planar_o0_k0_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 349005,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 454967,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k1_m1/archive.zip",
+      "sha256": "36bf81e2337dd963c430362d18c82801ea40b414b4e030734cf18975cad94a19"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8363,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 274579,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k1_m1/RESULT.json",
+      "sha256": "1a5d2fc1b0773df4a64a2acd74925b8591346e6384e6a71d4092b8d5b87f4fdc"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 394363,
+    "twin_identical": true,
+    "variant": "planar_o0_k1_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 94329,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 248082,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k1_m2/archive.zip",
+      "sha256": "3b88d148573a5f39e4e50fa01c9cc155f7400fd3754d33921de392e17e26f656"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 3987,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 67694,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 89140,
+    "result": {
+      "bytes": 2455,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k1_m2/RESULT.json",
+      "sha256": "202f84a53cfe7a2cb60830a80481faf5d68bc03d2872d2b7e0c6addefbdceb69"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 78164,
+    "support_displaceable_bytes": 30644,
+    "symbols": 117964800,
+    "total_envelope_bytes": 187478,
+    "twin_identical": true,
+    "variant": "planar_o0_k1_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 4266,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 183580,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k1_m4/archive.zip",
+      "sha256": "22faad316b0b1afd618e93d463e20e7007eade3342361e1b2b074dbbfd69fd4a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 388,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 3192,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118300,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k1_m4/RESULT.json",
+      "sha256": "17838225f6b8309322c4e10c9feb0b280a262834ddee7be37746cbcb2a257b6e"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 4796,
+    "support_displaceable_bytes": 1484,
+    "symbols": 117964800,
+    "total_envelope_bytes": 122976,
+    "twin_identical": true,
+    "variant": "planar_o0_k1_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 350534,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 456250,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k2_m1/archive.zip",
+      "sha256": "f9f71ed1e139d6c184092d1a47a706fafdad88806a9a24e696ac24232ba5aed5"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8117,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 275862,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k2_m1/RESULT.json",
+      "sha256": "be22677e7a39129dfd1eec13c8af0da7037f4b1629184db94f85c479385ec83a"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 395646,
+    "twin_identical": true,
+    "variant": "planar_o0_k2_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 120230,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 268417,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k2_m2/archive.zip",
+      "sha256": "de1c459debc9615062c548fb5ddc28ba080f03efa3a2edfe733ec5fdb85c56ad"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 4285,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 88029,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 83276,
+    "result": {
+      "bytes": 2456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k2_m2/RESULT.json",
+      "sha256": "0bff484db8a0e0dd6a082a9e97b278884ec09732400fb42f3b10738bc5114e10"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 94355,
+    "support_displaceable_bytes": 36508,
+    "symbols": 117964800,
+    "total_envelope_bytes": 207813,
+    "twin_identical": true,
+    "variant": "planar_o0_k2_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 5279,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 184371,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k2_m4/archive.zip",
+      "sha256": "69997e166f62f8baa20f0e3a09d84ccaacae2c6a8a62445a04f500f7adf3443f"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 448,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 3983,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118018,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k2_m4/RESULT.json",
+      "sha256": "d3141620dbf381742f1e3f541599f8f9246e068b0fa4ce512d525e96631aa4be"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 5642,
+    "support_displaceable_bytes": 1766,
+    "symbols": 117964800,
+    "total_envelope_bytes": 123767,
+    "twin_identical": true,
+    "variant": "planar_o0_k2_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 361386,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 466706,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k4_m1/archive.zip",
+      "sha256": "0a3592a41130cb10abaf32c88712633bb9b323d677d3d08499d8e8a0dc59b23a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 7721,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 286318,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 36973,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k4_m1/RESULT.json",
+      "sha256": "c28224a60f0207a290a0113dd1a22899813c22c29d2cbd217272df3da931422c"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232843,
+    "support_displaceable_bytes": 82811,
+    "symbols": 117964800,
+    "total_envelope_bytes": 406102,
+    "twin_identical": true,
+    "variant": "planar_o0_k4_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 173256,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 312122,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k4_m2/archive.zip",
+      "sha256": "bd513b887bb6da16ac26e06cdfa00c3ec3750f84146ffffb267bfeaa53d9365e"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 4729,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 131734,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 73511,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k4_m2/RESULT.json",
+      "sha256": "7803793ae7a691175302d6f15296e0748b3764370599531e2ae67507dba75526"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 126241,
+    "support_displaceable_bytes": 46273,
+    "symbols": 117964800,
+    "total_envelope_bytes": 251518,
+    "twin_identical": true,
+    "variant": "planar_o0_k4_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 7452,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 186143,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k4_m4/archive.zip",
+      "sha256": "b21e7bbddbe077359b446fb037573b475c311559658b1783c81ec0c8dfa61a8a"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 565,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 5755,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 117500,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k4_m4/RESULT.json",
+      "sha256": "b629209e4907f7afc4002ffdad43e98165cacc67f3c6860b591e3441c2b479b6"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 7265,
+    "support_displaceable_bytes": 2284,
+    "symbols": 117964800,
+    "total_envelope_bytes": 125539,
+    "twin_identical": true,
+    "variant": "planar_o0_k4_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 344283,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 450623,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k0_m1/archive.zip",
+      "sha256": "c83a0d86778a040a738af54b03c10d41ac5571e8c42491935826f4181f3a0f48"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8697,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 270235,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k0_m1/RESULT.json",
+      "sha256": "c039cf8188e2649cda9f20a2fba75ef5b785bb752240eb5daaed54e309f69bc7"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 390019,
+    "twin_identical": true,
+    "variant": "planar_o1_k0_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 60824,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 225169,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k0_m2/archive.zip",
+      "sha256": "2e972b3ec43affac0f7fb5be4928d9e43ce6c21248609b41eb6ae04a856b5619"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 3617,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 44781,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 100102,
+    "result": {
+      "bytes": 2456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k0_m2/RESULT.json",
+      "sha256": "87a9a12b0dc48d46e2494423fbfb2b8ff49afdceeb56648a771148399eff59fe"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 54150,
+    "support_displaceable_bytes": 19682,
+    "symbols": 117964800,
+    "total_envelope_bytes": 164565,
+    "twin_identical": true,
+    "variant": "planar_o1_k0_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 2614,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 182361,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k0_m4/archive.zip",
+      "sha256": "4312283a6f7939864d98fca2cb5846309db0d4c8109daa6800e75194751cd900"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 293,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 1973,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118828,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k0_m4/RESULT.json",
+      "sha256": "13f690860e7d3ed2b49ab8f83ca4ab810b54888d2bf077ee4d2c8be9b1a7104c"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 3168,
+    "support_displaceable_bytes": 956,
+    "symbols": 117964800,
+    "total_envelope_bytes": 121757,
+    "twin_identical": true,
+    "variant": "planar_o1_k0_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 348659,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 454678,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k1_m1/archive.zip",
+      "sha256": "375517ab8dfdb215106d5593a114871c8c6a4f062f24ef1f6bcebb8705741efb"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8376,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 274290,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k1_m1/RESULT.json",
+      "sha256": "7e269424f1037f269320648cee835707e89749fe39a34f9d646b92f5b8ed9271"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 394074,
+    "twin_identical": true,
+    "variant": "planar_o1_k1_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 96594,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 250268,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k1_m2/archive.zip",
+      "sha256": "b47fd8de8559bcaee25f89c6b6a7c8453537001998ab73c28f960508fad353ea"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 4210,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 69880,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 88838,
+    "result": {
+      "bytes": 2455,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k1_m2/RESULT.json",
+      "sha256": "a7be3d545eb8907a20672d434acc43414f27694354debb66e05e77b9f1279b47"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 79106,
+    "support_displaceable_bytes": 30946,
+    "symbols": 117964800,
+    "total_envelope_bytes": 189664,
+    "twin_identical": true,
+    "variant": "planar_o1_k1_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 4667,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 183922,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k1_m4/archive.zip",
+      "sha256": "be4a3e24af77ad72b362e929c2ee70865b22175953e7c43494063368b85e2b69"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 446,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 3534,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 118183,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k1_m4/RESULT.json",
+      "sha256": "3da120171bc72102a5ed2badbfb680442b76740c6abf384e753d4b618f65d7fc"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 5117,
+    "support_displaceable_bytes": 1601,
+    "symbols": 117964800,
+    "total_envelope_bytes": 123318,
+    "twin_identical": true,
+    "variant": "planar_o1_k1_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 353636,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 459462,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k2_m1/archive.zip",
+      "sha256": "90cb18e10a4faab6cee06f57fb26b97481c7b2b84c394bd160f34f88e539247b"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 8183,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 279074,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k2_m1/RESULT.json",
+      "sha256": "9e39ae8208d42aa45590d3e06c527ec5932088203742b32756a5081b312edac6"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 398858,
+    "twin_identical": true,
+    "variant": "planar_o1_k2_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 123210,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 271364,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k2_m2/archive.zip",
+      "sha256": "2969f78b4463cdc7c27f643d080e5b10e96d7a928d376859aed5a6987b015148"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 4505,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 90976,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 83023,
+    "result": {
+      "bytes": 2456,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k2_m2/RESULT.json",
+      "sha256": "2aa641a34839035576b9ff7a9ecbf797635f5a2524d4d885e2e0dcc516526403"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 95181,
+    "support_displaceable_bytes": 36761,
+    "symbols": 117964800,
+    "total_envelope_bytes": 210760,
+    "twin_identical": true,
+    "variant": "planar_o1_k2_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 6176,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 185123,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k2_m4/archive.zip",
+      "sha256": "476029aea047c1a9394e534005743912596116416be2e964629e70124ab800be"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 544,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 4735,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 117777,
+    "result": {
+      "bytes": 2452,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k2_m4/RESULT.json",
+      "sha256": "6e7c10c9510a99b8779d7a21883ab74ba556783f08bdc0975c38432552c146ac"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 6326,
+    "support_displaceable_bytes": 2007,
+    "symbols": 117964800,
+    "total_envelope_bytes": 124519,
+    "twin_identical": true,
+    "variant": "planar_o1_k2_m4",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 364607,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 470016,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k4_m1/archive.zip",
+      "sha256": "c39a902e0d4ef4cf9ff06e1433e56976168eb4714ae634a08453fafff891a9d9"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 7766,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 289628,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 1,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 37017,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k4_m1/RESULT.json",
+      "sha256": "ee02e1de59a28a87313e28546c6d121f791233a006d57b15fa052e7bd743b284"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 232608,
+    "support_displaceable_bytes": 82767,
+    "symbols": 117964800,
+    "total_envelope_bytes": 409412,
+    "twin_identical": true,
+    "variant": "planar_o1_k4_m1",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 176240,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 314970,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k4_m2/archive.zip",
+      "sha256": "094f638be8cd39b4e8819c3266340ec3871a33937113fa91d595d35b4886d6b4"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 4964,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 134582,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 2,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 73140,
+    "result": {
+      "bytes": 2458,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k4_m2/RESULT.json",
+      "sha256": "4afc0acd2c75d65f2154b04774a845facedce957f532772ab893f9cfb64c7133"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 127347,
+    "support_displaceable_bytes": 46644,
+    "symbols": 117964800,
+    "total_envelope_bytes": 254366,
+    "twin_identical": true,
+    "variant": "planar_o1_k4_m2",
+    "verdict_scope": "FORMULATION"
+  },
+  {
+    "address_bytes": 10235,
+    "all_payload_twins_reverified": true,
+    "archive": {
+      "bytes": 188376,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k4_m4/archive.zip",
+      "sha256": "4d3199c3e335395dc9f24be5200e32cdc6809b440b02d0cdd29af2a4cef27d79"
+    },
+    "axis": "[exact serialized bytes; scorer-free macOS-CPU n600]",
+    "baseline_envelope_bytes": 119784,
+    "binding": {
+      "archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+      "columnar_adapter": {
+        "bytes": 6514,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_columnar.py",
+        "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703"
+      },
+      "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "joint": {
+        "bytes": 7867,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_joint_address.py",
+        "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14"
+      },
+      "library": {
+        "bytes": 34688,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/build/rc64_bnd2_trace/librc64_jg2.dylib",
+        "sha256": "bed7211df3aca49f931d1ace6a3e2591b70f73273335e45e6dc9c4df5f163910"
+      },
+      "old_codec": {
+        "bytes": 24269,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd2_segment_encode.py",
+        "sha256": "510cf59e5959464a840e600f078b6ae973475ee8eef13deac20080b0037dad7f"
+      },
+      "producer": {
+        "bytes": 22212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_bnd3_address_term.py",
+        "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608"
+      },
+      "seed": 20260910,
+      "source": {
+        "bytes": 2628,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+        "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+      }
+    },
+    "cached_rows_parseback": true,
+    "content_bytes": 762,
+    "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "delta_bytes": 7988,
+    "draw_gate": false,
+    "frames": 600,
+    "framing_bytes": 22,
+    "fresh_causal_decoder": false,
+    "full_retained_field_rehashed": true,
+    "minimum": 4,
+    "oracle": false,
+    "research_only": true,
+    "residual_bytes": 116753,
+    "result": {
+      "bytes": 2453,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o1_k4_m4/RESULT.json",
+      "sha256": "43c61d982e330980a2f2ad46940b3b0cdd770d57d4579b2a5d6567b38346d007"
+    },
+    "resumed_from_frame": 0,
+    "score_claim": false,
+    "supplied_tokens": 9357,
+    "support_displaceable_bytes": 3031,
+    "symbols": 117964800,
+    "total_envelope_bytes": 127772,
+    "twin_identical": true,
+    "variant": "planar_o1_k4_m4",
+    "verdict_scope": "FORMULATION"
+  }
+]

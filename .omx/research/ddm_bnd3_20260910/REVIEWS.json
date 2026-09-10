@@ -1,0 +1,75 @@
+{
+  "schema": "ddm_bnd3_reviews.v1",
+  "files": [
+    {
+      "path": "experiments/ddm_bnd3_address_term.py",
+      "sha256": "039b676a950eca182417346ba3b06e6c1444b6a098a6605098d2ac4f3a925608",
+      "bytes": 22212,
+      "review_passes": 2,
+      "reviewer": "ddm_bnd3 self-review",
+      "review_scope": [
+        "real-input mechanism and byte accounting",
+        "decoder, retention, determinism and resume paths"
+      ],
+      "tracker_marked": true
+    },
+    {
+      "path": "experiments/ddm_bnd3_joint_address.py",
+      "sha256": "e80764791e4c9b25665c599b00e9e7438699a733e3633fdc10aa745208641d14",
+      "bytes": 7867,
+      "review_passes": 2,
+      "reviewer": "ddm_bnd3 self-review",
+      "review_scope": [
+        "real-input mechanism and byte accounting",
+        "decoder, retention, determinism and resume paths"
+      ],
+      "tracker_marked": true
+    },
+    {
+      "path": "experiments/ddm_bnd3_columnar.py",
+      "sha256": "1cc5be783bba4911e1df62250eb351ec79e8ab49234c946e61f7067c1a7d5703",
+      "bytes": 6514,
+      "review_passes": 2,
+      "reviewer": "ddm_bnd3 self-review",
+      "review_scope": [
+        "real-input mechanism and byte accounting",
+        "decoder, retention, determinism and resume paths"
+      ],
+      "tracker_marked": true
+    },
+    {
+      "path": "experiments/ddm_bnd3_frozen_field.py",
+      "sha256": "22c44f51741495d508948f98fe8a8812faf41de49453a0c25811539d8d22fff5",
+      "bytes": 3292,
+      "review_passes": 2,
+      "reviewer": "ddm_bnd3 self-review",
+      "review_scope": [
+        "real-input mechanism and byte accounting",
+        "decoder, retention, determinism and resume paths"
+      ],
+      "tracker_marked": true
+    },
+    {
+      "path": "experiments/test_ddm_bnd3_address_term.py",
+      "sha256": "9952d22255f7d7d26c01b10095da95c0741a2a567ca1cd5bf65ed8800fcdbf2a",
+      "bytes": 4352,
+      "review_passes": 2,
+      "reviewer": "ddm_bnd3 self-review",
+      "review_scope": [
+        "real-input mechanism and byte accounting",
+        "decoder, retention, determinism and resume paths"
+      ],
+      "tracker_marked": true
+    }
+  ],
+  "initial_findings_fixed": [
+    "bridge vertex wraparound",
+    "old four-field segment API adaptation",
+    "shared compressed address/content attribution is not uniquely separable",
+    "fixed-width compression layout confound checked with planar adapter"
+  ],
+  "shared_assumption_challenge": "A minimum for a fixed raw address wire is not a minimum over compressed formats; even achieved compressed lengths are not universal lower bounds. Current field differs after move38.",
+  "tests_log": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/launch_final_tests/run.log",
+  "tests_result": "3 passed",
+  "ruff": "passed"
+}

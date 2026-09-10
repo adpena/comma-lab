@@ -1,0 +1,75 @@
+{
+  "anchor_id": "ddm_bnd3_move37_address_oracle_joint_gap_n600_20260910",
+  "measurement_utc": "2026-09-10T02:00:59.428739+00:00",
+  "inputs": {
+    "study_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+    "study_archive_sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc",
+    "frames": 600,
+    "symbols": 117964800,
+    "mispredictions": 235044,
+    "baseline_envelope_bytes": 119784,
+    "configurations": 48
+  },
+  "predicted_output": {
+    "original_address_share_at_least": 0.6,
+    "oracle_displaceable_bytes_at_most": 20000,
+    "no_variant_below_baseline": true,
+    "proposed_scope": "FAMILY"
+  },
+  "empirical_output": {
+    "original_physical_split": {
+      "remainder": 119187,
+      "shared_segment_brotli": 1997,
+      "framing": 16
+    },
+    "separate_old_transform_address": 1717,
+    "separate_old_transform_content": 189,
+    "oracle_remainder": 36525,
+    "oracle_displaceable_bytes": 83259,
+    "best_new_total": 121689,
+    "best_new_archive": {
+      "bytes": 182293,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m4/archive.zip",
+      "sha256": "a7f19bd0833026eb847d0d28afd2573a038a6d9368fec27e32d9b0dba3ab142a"
+    },
+    "rows_fact": {
+      "path": ".omx/research/ddm_bnd3_20260910/price_table.json",
+      "bytes": 137020,
+      "sha256": "639dcbf7eda5c5a70c38ffd127492c046eebc5c24bafaab1cd4eabd4c64f9ab6"
+    },
+    "rows_count": 48,
+    "all_twins_reverified": true,
+    "all_field_hashes_verified": true,
+    "accounting_residual_bytes": 0,
+    "verdict_scope": "FORMULATION",
+    "family_closed": false,
+    "address_falsifier_population_caveat": "The cheapest selective address has3128 cells; oracle has235044. No full-population cheap address is shown.",
+    "result_fact": {
+      "path": ".omx/research/ddm_bnd3_20260910/RESULT.json",
+      "bytes": 156181,
+      "sha256": "0a833ffdd0f32eb6d61dd4dc961f4372a9311310d48787b8c3cbe95d190bff08"
+    }
+  },
+  "residual": 3.16295,
+  "source_artifact": "/Users/adpena/Projects/pact/.omx/research/ddm_bnd3_20260910/RESULT.json",
+  "measurement_method": "Full600 native RC64 twins, true-symbol zero-cost oracle with unchanged causal rows, joint MILP path assignment and k1,2,4 bridge paths, two real Brotli layouts, complete cached-row field parseback; no scorer",
+  "provenance": {
+    "artifact_kind": "advisory_non_promotable",
+    "source_path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/planar_o0_k0_m4/archive.zip",
+    "source_sha256": "a7f19bd0833026eb847d0d28afd2573a038a6d9368fec27e32d9b0dba3ab142a",
+    "measurement_axis": "[macOS-CPU advisory]",
+    "hardware_substrate": "macos_arm64",
+    "evidence_grade": "macos_cpu_advisory",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "captured_at_utc": "2026-09-10T02:00:59Z",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+    "contest_archive_zip_path": "",
+    "contest_archive_member_name": "",
+    "composed_from": [],
+    "rejection_reason": ""
+  },
+  "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+  "noise_floor": 0.0,
+  "noise_floor_provenance": "All fixed-input same-host primary/repeat compressed packets and ZIPs byte-identical; no across-host or across-field noise floor asserted"
+}

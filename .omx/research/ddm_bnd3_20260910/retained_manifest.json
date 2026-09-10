@@ -1,0 +1,11 @@
+{
+  "manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_bnd3_address_term/RETAINED_MANIFEST.json",
+    "bytes": 10464138,
+    "sha256": "1e5393a7ece9010b1e76e8182cb2528e383b3a713a39b22b629bca129231b76d"
+  },
+  "files": 45872,
+  "field_trees": 49,
+  "total_bytes": 7072820818,
+  "no_payload_deleted": true
+}

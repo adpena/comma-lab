@@ -1,0 +1,11 @@
+{
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": ".omx/state/canonical_task_status.jsonl",
+  "action": "Execute linked bnd1 ITEM_2 draw only after a new receiver-verified twin lossless candidate passes the same-field5000B-saving gate and explicit scorer allocation. If field changes, rederive gate and field-bind first.",
+  "fire_trigger": "all of: new candidate envelope <=114784B on move37 or equivalent rederived5000B cut on explicitly selected field; receiver identity; explicit scorer allocation",
+  "predecessor": "ddm_bnd1_boundary_representation_closed_form_pricing_20260909::ITEM_2",
+  "charter_falsifier": "min achieved selective address2559B < half whole-population displacement41629.5B; supports differ and this is not evidence of a cheap complete code",
+  "scorer_dispatched": false,
+  "live_hypotheses_disposition": "FOLDED into this existing admission gate; no unconditional research or draw launch"
+}
