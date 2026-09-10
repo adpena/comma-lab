@@ -1677,6 +1677,117 @@ reading.** The pose chain runs and the Lagrange sweep decides, exactly as §20d 
 
 ---
 
+## 27. PASS 5 — SEALED, `ddm_sj1_token_predistortion_pass5`, contest-CUDA
+
+**Candidate 180,436 B, sha `eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07`,
+projected S 0.13788255886142803, net −3.474118e-05 vs the pointer — 1.74× the admit bar,
+on +48 B.** Seal
+`/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/SEAL_ddm_sj1_token_predistortion_pass5_contest_cuda.json`
+(seal sha `ba7d1771…`, runtime 48 files digest `bfb233be…`). Lane
+`ddm_sj1_t4_token_predistortion_pass5_20260909`, call `fc-01M24EG4R59D365KWRT7538XA8`.
+
+### 27a. The full field fails, and it fails AFTER the re-solve
+
+| composition | seg ΔS | **pose ΔS (RESOLVED)** | rate ΔS | net |
+|---|---:|---:|---:|---:|
+| **full 126-pair field** | −2.010010e-04 | **+1.328120e-04** | +1.524318e-04 | **+8.424286e-05 — POSITIVE** |
+| **42-pair admitted subset** | −6.784842e-05 | **+1.310821e-06** | +3.260119e-05 | **−3.393641e-05** |
+
+§20d pre-registered "the full-field composition must not be sealed — it is projected
+POSITIVE." It is, and the projection was close: −4.1022e-05 central was wrong in sign
+because §20's pose model was, but the CALL was right.
+
+**The pose leg above is the RESOLVED one, and this is worth its own table because the
+re-solve is the largest single effect in the entire chain.** Base 5.049766e-06 (the
+pointer's own carrier on the renders of the field the pointer actually SHIPS, with the
+overlay — the §19c trap, and pm2's magnitude gate passed it at −0.0046% of the T4 print):
+
+| composition | stale (shipped carrier) | RESOLVED (re-solved carrier) | credit the re-solve bought |
+|---|---:|---:|---:|
+| full 126-pair | +2.483197e-02 (1241.6× bar) | **+1.328120e-04** (6.6×) | **−2.469916e-02** (1235× bar) |
+| 42-pair subset | +7.952000e-03 (397.6× bar) | **+1.310821e-06** (0.1×) | **−7.950689e-03** (397.5× bar) |
+
+The full field is not failing for want of a re-solve. It fails DESPITE one that removed
+1,235 bars of damage. And unlike pass 4 — whose subset flipped pose from a +1.04e-04 cost
+to a −3.53e-05 CREDIT — pass 5's subset pose is **+1.31e-06, essentially neutral**. The
+sweep is not harvesting a pose credit this time; it is declining to PAY pose on the 84
+pairs whose seg yield does not cover it.
+
+**Frame 0 is NOT in this chain.** SegNet scores only the last frame, so frame 0 is a
+pose-only degree of freedom and fs1's per-pair selector re-selection
+(`experiments/ddm_fs1_frame0_selector_reselection.py`; the live tree carries
+`runtime/frame0_selector.py`) is a second lever that could be applied BEFORE the sweep
+discards 84 pairs. It was not applied here. There is no third column to report and no
+receipt to cite — that round is owed on this same field.
+
+### 27b. What the sweep bought
+
+| | full field | subset | subset share |
+|---|---:|---:|---:|
+| pairs | 126 | **42** | 33.3% |
+| cells repaired | 237 | **80** | 33.8% |
+| tokens changed | 235 | **78** | 33.2% |
+| tail bytes (EXACT) | +229 | **+47** | **20.5%** |
+| bits/token | 7.7957 | **4.8205** | 0.618× |
+| its own break-even | 10.2715 | **10.4460** | |
+| **price margin** | 1.318× | **2.167×** | |
+
+The subset keeps a third of the seg credit for a fifth of the rate. Its tokens are
+**0.618× the price** of the average pass-5 token — the sweep is selecting cheap placements,
+which is the same mechanism §24b identified from the other side when FORCED placements
+priced at 1.73×.
+
+### 27c. A law corrected: the ledger residual is small and EITHER-SIGNED
+
+| pass | subset | ledger predicted | REAL re-encode | residual |
+|---|---|---:|---:|---:|
+| 3 | 370 pairs | 181,612.4 B | 181,632 B | **+19.6 B** |
+| 4 | 112 pairs | — | — | **+5.70 B** |
+| **5** | **42 pairs** | **+48.96 B** | **+47 B** | **−1.96 B** |
+
+§12 and §19d both read this as "sums under-charge, encodes price." The third point is a
+mild OVER-charge, so the honest statement is narrower and more useful: **the per-pair
+ledger sum RANKS pairs faithfully and prices them to within a couple of bytes at this
+scale, with a residual that is small and of either sign, shrinking with the subset size.**
+It is still not the price — the SELECTED subset is still re-encoded, and at pass 5's margin
+only 20.9 B of extra cost separated admission from failure — but "under-charge" was a
+two-point generalisation and the third point breaks it.
+
+The full field's ledger did better still: 229.191 B predicted against **229 B** measured,
+with **228.925 B of it landing on the 126 edited pairs and 0.266 B on the other 474**.
+Adding surprise stays local at this density; rp1 measured that removing it does not.
+
+### 27d. Gates, all green on the shipped bytes
+
+| gate | result |
+|---|---|
+| live tail via the live tree's own reader | 119,779 B sha `ffcd64bd…` |
+| CONTROL identity — shipped field re-encodes to the shipped tail | **byte-identical** |
+| control re-encoded again under the POST-EDIT source | **119,779 B `ffcd64bd…`** — my own source change MEASURED inert on the encode path, not asserted |
+| subset twin encodes | **byte-identical**, 119,826 B sha `c9c41fca…` |
+| rebuilt control archive | 180,388 B sha `670d38d0…` — the live pointer's own bytes |
+| stage-tail | `tail_baseline_check: PASS (pointer tail suffix == rider_control.bin)` |
+| close identity control | **PASSED** — the staged body rebuilds byte-identically from its own codes |
+| frame-1 section identity | **all identical** (hpac 11,911 / semantic 29,862 / tail 119,962); only the carrier moved, 42 pairs / 205 coordinates / +1 B |
+| candidate runtime | built FROM THE POINTER TREE, exactly `['archive.zip','inflate.py']` differ, re-pinned `670d38d0…` → `eae99e00…` |
+| parse-back through its OWN receiver | `decoded_field_matches_admitted: true`, pin check PASS, 938.9 s |
+| **seg final on the SHIPPED bytes** | **12,534 cells predicted, 12,534 measured — zero disagreement**; d_seg 0.00010625203450520833 against a projected …834 |
+| public-entrypoint smoke | REACHED_TOKEN_DECODE both roles; REACHED_CUDA_GATE rc=1 both roles |
+
+### 27e. Where the lever stands
+
+Convergence: **80 of 12,614 = 0.634%**, BELOW §20d's 1% bar. On the pre-registered rule the
+singles family has converged and **pass 6 does not fire**. That is the honest reading of
+this pass even though it admits: the subset is real and it moves the pointer, but it moved
+it by declining five sixths of what the search found, and what the search found was itself
+0.63% of the residual. §25b says what remains and why the grid cannot reach it.
+
+The live levers that are NOT yet spent on this field are (1) frame-0 re-selection before the
+sweep, which is pose-only by construction and could recover some of the 84 discarded pairs,
+and (2) the representation-level boundary door that §25b and the ddm_bnd1 charter carry.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
