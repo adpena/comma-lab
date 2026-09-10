@@ -77,10 +77,10 @@ def build_parser() -> argparse.ArgumentParser:
     # default protects. Caught by the producer control in test_candidate_seal.py — the
     # operator would otherwise have met it at seal time, by hand, which is the hazard.
     ap._negative_number_matcher = re.compile(r"^-\d+$|^-\d*\.\d+$|^-\d*\.?\d+[eE][+-]?\d+$")
-    ap.add_argument("--candidate-id", required=True, help="the candidate's name; a placeholder refuses")
-    ap.add_argument("--runtime-dir", required=True, help="the staged runtime tree that will be fired")
+    ap.add_argument("--candidate-id", help="the candidate's name; a placeholder refuses")
+    ap.add_argument("--runtime-dir", help="the staged runtime tree that will be fired")
     ap.add_argument("--archive", default=None, help="default: <runtime-dir>/archive.zip")
-    ap.add_argument("--axis", required=True, choices=list(SEAL_AXES))
+    ap.add_argument("--axis", choices=list(SEAL_AXES))
     ap.add_argument("--out", required=True, help="where to write the seal JSON")
     ap.add_argument(
         "--receiver",
@@ -91,7 +91,6 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--archive-member", default="", help="pin one member INSIDE the archive, e.g. 0.bin")
     ap.add_argument(
         "--public-entrypoint-smoke",
-        required=True,
         help="JSON receipt block (or JSON document containing that block) with candidate/frontier "
         "public_path_probes and inflate_sh_smokes",
     )
@@ -103,9 +102,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--inherit-decode-wall-clock",
         help="pointer's measured leg; revalidates identical receiver code and timing before inheritance",
     )
+    timing.add_argument("--first-fire-intent", action="store_true")
+    timing.add_argument("--complete-first-fire-intent")
+    for flag in ("candidate-manifest", "manifest-validation", "twin-encode-receipt",
+                 "archive-parseback-receipt", "raw-identity-receipt", "literal-census",
+                 "retention-manifest", "timing-risk-evidence", "first-measurement-authorization",
+                 "candidate-t4-receipt"):
+        ap.add_argument("--" + flag)
     ap.add_argument("--retained-path", action="append", default=[], help="retained payload custody (repeatable)")
     ap.add_argument("--falsifier", action="append", default=[], help="pre-registered falsifier (repeatable)")
-    ap.add_argument("--admit-bar-net-ds", required=True, type=float, help="the net dS threshold to admit")
+    ap.add_argument("--admit-bar-net-ds", type=float, help="the net dS threshold to admit")
     ap.add_argument("--admit-bar-rule", default=DEFAULT_ADMIT_RULE)
     ap.add_argument("--pointer-axis", default="contest_cuda", choices=("contest_cuda", "contest_cpu", "effective"))
     ap.add_argument(
@@ -177,8 +183,82 @@ def compose_bound_falsifier(base_receipt_path: str) -> str:
     )
 
 
+def _prefire_main(args: argparse.Namespace, supplied: list[str]) -> int:
+    from tac.candidate_seal import (
+        PrefireRefusal,
+        build_prefire_intent,
+        complete_first_fire_intent,
+        write_prefire_refusal,
+    )
+    paths = [Path(args.out)]
+    output_dir = None
+    try:
+        flags = {value.split("=", 1)[0] for value in supplied if value.startswith("--")}
+        if args.complete_first_fire_intent:
+            paths.append(Path(args.complete_first_fire_intent))
+            allowed = {"--complete-first-fire-intent", "--first-measurement-authorization", "--candidate-t4-receipt", "--out"}
+            if flags - allowed or not args.first_measurement_authorization or not args.candidate_t4_receipt:
+                raise PrefireRefusal("FIRST_MEASUREMENT_ARGUMENT_REFUSED", "completion accepts only intent, authorization, receipt, and new output")
+            paths.append(Path(args.first_measurement_authorization))
+            try:
+                from tac.candidate_seal import _pf_output
+                auth = json.loads(paths[2].read_text())
+                output_dir = _pf_output(auth.get("output_dir"))
+            except (OSError, ValueError, AttributeError, PrefireRefusal):
+                pass  # The authoritative completion validator below emits the typed refusal.
+            document = complete_first_fire_intent(intent_path=paths[1], authorization_path=paths[2],
+                receipt_path=Path(args.candidate_t4_receipt), out_path=paths[0])
+        else:
+            mapping = {"candidate_manifest": "candidate_manifest", "manifest_validation": "manifest_validation",
+                "twin_encode": "twin_encode_receipt", "archive_parseback": "archive_parseback_receipt",
+                "raw_identity_n600": "raw_identity_receipt", "literal_census": "literal_census",
+                "retention_manifest": "retention_manifest", "timing_risk": "timing_risk_evidence"}
+            allowed = {"--first-fire-intent", "--candidate-id", "--runtime-dir", "--axis", "--public-entrypoint-smoke",
+                "--admit-bar-net-ds", "--pointer-axis", "--bar-tolerance", "--retained-path", "--falsifier", "--out",
+                *("--" + name.replace("_", "-") for name in mapping.values())}
+            if flags - allowed or args.axis != "contest_cuda" or args.pointer_axis != "contest_cuda" or args.bar_tolerance != 0:
+                raise PrefireRefusal("FIRST_MEASUREMENT_ARGUMENT_REFUSED", "intent accepts only frozen CUDA contract flags")
+            if any(getattr(args, name) is None for name in (*mapping.values(), "candidate_id", "runtime_dir",
+                    "public_entrypoint_smoke", "admit_bar_net_ds")):
+                raise PrefireRefusal("PREFIRE_NON_TIMING_GATE_REFUSED", "all non-timing evidence flags required")
+            smoke = json.loads(Path(args.public_entrypoint_smoke).read_text())
+            document = build_prefire_intent(candidate_id=args.candidate_id, runtime_dir=Path(args.runtime_dir),
+                evidence_paths={key: Path(getattr(args, name)) for key, name in mapping.items()},
+                public_entrypoint_smoke=smoke.get("public_entrypoint_smoke", smoke), net_ds_threshold=args.admit_bar_net_ds,
+                retained_paths=[str(Path(p).resolve()) for p in args.retained_path], falsifiers=args.falsifier, out_path=paths[0])
+        print(f"CREATED: {args.out} ({document['schema']})")
+        return 0
+    except (PrefireRefusal, OSError, ValueError, KeyError, TypeError, AttributeError, SealContractError) as exc:
+        code = "FIRST_MEASUREMENT_RESULT_REFUSED" if args.complete_first_fire_intent else "PREFIRE_NON_TIMING_GATE_REFUSED"
+        refusal = exc if isinstance(exc, PrefireRefusal) else PrefireRefusal(code, str(exc))
+        write_prefire_refusal(refusal, paths=tuple(paths), output_dir=output_dir)
+        return 3
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    supplied = list(sys.argv[1:] if argv is None else argv)
+    parser = build_parser()
+    is_prefire = any(s.split("=", 1)[0] in {"--first-fire-intent", "--complete-first-fire-intent"} for s in supplied)
+    if is_prefire:
+        from tac.candidate_seal import PrefireRefusal, write_prefire_refusal
+        def argument_refusal(message):
+            raise PrefireRefusal("FIRST_MEASUREMENT_ARGUMENT_REFUSED", message)
+        parser.error = argument_refusal
+        try:
+            args = parser.parse_args(supplied)
+        except PrefireRefusal as exc:
+            paths = tuple(Path(supplied[i + 1]) for i, flag in enumerate(supplied[:-1])
+                          if flag in {"--out", "--complete-first-fire-intent", "--first-measurement-authorization"}
+                          and not supplied[i + 1].startswith("--"))
+            write_prefire_refusal(exc, paths=paths)
+            return 3
+    else:
+        args = parser.parse_args(supplied)
+    if args.first_fire_intent or args.complete_first_fire_intent:
+        return _prefire_main(args, supplied)
+    for name in ("candidate_id", "runtime_dir", "axis", "public_entrypoint_smoke", "admit_bar_net_ds"):
+        if getattr(args, name) is None:
+            build_parser().error("--" + name.replace("_", "-") + " is required for a normal seal")
 
     runtime_dir = Path(args.runtime_dir)
     archive_path = Path(args.archive) if args.archive else runtime_dir / "archive.zip"

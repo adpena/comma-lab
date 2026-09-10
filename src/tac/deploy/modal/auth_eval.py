@@ -692,6 +692,10 @@ def _recovered_claim_flags(
         "promotion_eligible": False,
         "artifact_required": True,
     }
+    if result_without_artifacts.get("prefire_intent_sha256") or (out_dir / "FIRST_MEASUREMENT_CONTEXT.json").exists():
+        flags["adjudication_required"] = True
+        flags["diagnostic_blockers"] = ["first_measurement_requires_completed_candidate_seal_v3"]
+        return flags
     artifact = out_dir / "contest_auth_eval.json"
     if not artifact.is_file():
         flags["diagnostic_blockers"] = ["missing_canonical_contest_auth_eval_json"]

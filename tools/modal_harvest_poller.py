@@ -123,6 +123,8 @@ def build_anchor_mirror(
     deliberately no fallback to it, because a fallback is how a rounded number
     becomes an anchor.
     """
+    if result.get("prefire_intent_sha256") or result.get("first_measurement"):
+        return None, "first measurement quarantined until completed candidate_seal.v3"
     score = result.get("score_recomputed_from_components")
     if not isinstance(score, (int, float)):
         return None, "score_recomputed_from_components absent or non-numeric"
@@ -514,7 +516,7 @@ def _stage_pointer_move_packet(
     already durable.
     """
 
-    if not isinstance(result, dict) or result.get("passed") is not True:
+    if not isinstance(result, dict) or result.get("passed") is not True or result.get("prefire_intent_sha256"):
         return None
     try:
         sys.path.insert(0, REPO_SRC)
@@ -667,6 +669,26 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     result_path = out / args.result_name
 
+    first_context = None
+    first_auth = None
+    context_path = out / "FIRST_MEASUREMENT_CONTEXT.json"
+    if context_path.exists():
+        from tac.candidate_seal import (
+            PrefireRefusal,
+            _pf_read,
+            _pf_require,
+            prefire_file_reference,
+            quarantine_first_measurement_result,
+            transition_first_measurement,
+        )
+        first_context = _pf_read(context_path, "FIRST_MEASUREMENT_RESULT_REFUSED")
+        _pf_require(args.deadline_s == 5400 and args.result_name == "MODAL_REMOTE_RESULT.json"
+                    and args.lane_id == first_context["lane_id"]
+                    and args.instance_job_id == first_context["instance_job_id"],
+                    "FIRST_MEASUREMENT_TIMEOUT_REFUSED", "poller bindings differ from first measurement")
+        first_auth = _pf_read(pathlib.Path(first_context["authorization_path"]), "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED")
+        args.no_anchor_mirror = True
+
     outcome = poll_modal_call(
         call_id=args.call_id,
         deadline_s=args.deadline_s,
@@ -674,6 +696,21 @@ def main() -> int:
     )
     if outcome["kind"] == POLL_RESULT:
         r = outcome["result"]
+        if first_context:
+            # A mismatch is retained as a quarantined refusal; never replace the provider's conflicting value.
+            mismatches = [key for key in ("prefire_intent_sha256", "first_measurement_authorization_sha256",
+                "lane_id", "instance_job_id", "receipt_path") if r.get(key) != first_context[key]]
+            if mismatches:
+                r = dict(r, passed=False, returncode=9, first_measurement_refusal={
+                    "code": "FIRST_MEASUREMENT_RESULT_REFUSED", "mismatched_fields": mismatches})
+            r = quarantine_first_measurement_result(r, {})
+            r["call_id"] = args.call_id
+            request = out / "modal_cuda_auth_eval_local_request.json"
+            try:
+                r["worker_request"] = prefire_file_reference(request)
+            except OSError as exc:
+                r.update(passed=False, returncode=9, first_measurement_refusal={
+                    "code": "FIRST_MEASUREMENT_RESULT_REFUSED", "detail": f"worker request missing: {exc}"})
         # `json.dumps(r, ..., default=str)` wrote Python bytes-REPRS here: Modal
         # returns `artifacts` as dict[str, bytes], and `str(b"...")` produced a
         # receipt that raises JSONDecodeError for json.load. It damaged every
@@ -681,6 +718,8 @@ def main() -> int:
         # The canonical projection decodes UTF-8 bytes to text, base64s the
         # rest, and RECORDS which transform each path received.
         dump_modal_result_json(result_path, r)
+        if first_auth:
+            transition_first_measurement(first_auth, "HARVESTED", call_id=args.call_id, receipt_path=result_path)
         # The remote result carries the two facts the spend ledger needs and
         # this poller has always dropped: MEASURED billed wall-clock and the
         # hardware it ran on. Without them 49 of 63 cap-window calls carried
@@ -735,6 +774,11 @@ def main() -> int:
         (out / "poller.done").write_text("ok\n")
         return 0
 
+    if first_context:
+        from tac.candidate_seal import write_prefire_refusal
+        refusal = PrefireRefusal("FIRST_MEASUREMENT_TIMEOUT_REFUSED", str(outcome["error"]))
+        write_prefire_refusal(refusal, paths=(pathlib.Path(first_context["intent_path"]),
+            pathlib.Path(first_context["authorization_path"])), output_dir=out)
     error = str(outcome["error"])
     (out / "poller.failed").write_text(f"{outcome['error_class']}: {error}\n")
     rc = 124 if outcome["kind"] == POLL_DEADLINE else 1

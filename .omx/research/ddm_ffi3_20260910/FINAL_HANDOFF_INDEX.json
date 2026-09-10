@@ -1,0 +1,29 @@
+{
+  "schema": "ddm_ffi3_final_handoff_index.v1",
+  "utc": "2026-09-10T16:48:08.423962+00:00",
+  "status": "BLOCKED_UNLANDED_FREEZE_ABSENT",
+  "implementation_then_handoff_bundles": [
+    {
+      "commit": "91836b61649a0215a854ecb85e87d768512f5aca",
+      "status": "BUNDLE_READY_MAIN_MUST_LAND",
+      "receipt": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/receipts.jsonl",
+      "bundle_path": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/intended-commit.bundle",
+      "bundle_sha256": "bcb9eb3497846e78ec05e7e94480ef9d3ab1b29d10e5a80e072bef3bcb55de04",
+      "file_count": 22,
+      "all_live_files_and_artifacts_verified": true
+    },
+    {
+      "commit": "561bcf514be9d63a2d4806d81eb5f22010d7f346",
+      "status": "BUNDLE_READY_MAIN_MUST_LAND",
+      "receipt": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164708.491895Z-41098/receipts.jsonl",
+      "bundle_path": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164708.491895Z-41098/intended-commit.bundle",
+      "bundle_sha256": "29a5287b64389ba2933d8d44f9e77d073003f866247f71d272a089aaf2aecef3",
+      "file_count": 8,
+      "all_live_files_and_artifacts_verified": true
+    }
+  ],
+  "landing_fire_order": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/LANDING_FIRE_ORDER.json",
+  "delivery": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/DELIVERY.json",
+  "score_claim": false,
+  "promotion_eligible": false
+}

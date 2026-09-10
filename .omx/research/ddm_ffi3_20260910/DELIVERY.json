@@ -1,0 +1,93 @@
+{
+  "schema": "ddm_ffi3_delivery.v1",
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "written_at_utc": "2026-09-10T16:46:31.824692+00:00",
+  "charter_complete": false,
+  "landed_implementation_commit": null,
+  "bundle_only_implementation_commit": "91836b61649a0215a854ecb85e87d768512f5aca",
+  "base_head": "7ed5ebde8e8379c9a3a3aa0d589044658a5b663c",
+  "serializer_exit_code": 17,
+  "serializer_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/receipts.jsonl",
+    "bytes": 6172,
+    "sha256": "4a0235e8e5618d4715ec1029817d79addf9bbf6796492a8dc4b3602ae5080e20"
+  },
+  "bundle": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/intended-commit.bundle",
+    "bytes": 80602,
+    "sha256": "bcb9eb3497846e78ec05e7e94480ef9d3ab1b29d10e5a80e072bef3bcb55de04"
+  },
+  "format_patch": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/intended-commit.format-patch",
+    "bytes": 208523,
+    "sha256": "2905f6744ad5f886f6008c3d0d30e99103d1e69f4a4b12036e139ed96bdc70ee"
+  },
+  "verification": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/BUNDLE_VERIFICATION.json",
+    "bytes": 1143,
+    "sha256": "37e9d86ad6d2e89fc0a43d34c1337773d69edce31b25da2824dfda3d519f587e"
+  },
+  "frozen_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+  "frozen_receipt_exists": false,
+  "frozen_receipt_sha256": null,
+  "blockers": [
+    "Shared .git object writes denied with Operation not permitted; serializer canonical fallback preserved one code/test commit on SSD",
+    "3 mandatory existing ps tests plus 1 broader Unix socket test denied by sandbox; required all-green validation unmet",
+    "Actual committed freeze requires real landed implementation and must precede RLC2 production"
+  ],
+  "tests": {
+    "new_passed": 67,
+    "broad_passed": 341,
+    "broad_permission_failures": 4,
+    "required_initial_passed": 156,
+    "required_initial_permission_failures": 3,
+    "ruff": "PASS",
+    "review_passes_per_changed_python": 2,
+    "changed_python_files": 10,
+    "real_producer_or_harvest_control": "NOT_RUN_FORBIDDEN_THIS_ARM"
+  },
+  "compliance_memo": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_implement_prefire_intent_contract_20260910.md",
+    "bytes": 21603,
+    "sha256": "bebdeac26c682b7058322cc1017e88719e7ff47d64adf18584c58ed358c00a5b"
+  },
+  "contract_inputs": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/CONTRACT_INPUTS.json",
+    "bytes": 2751,
+    "sha256": "5b2782e1f795f0aa631e28b7e9b731c2e09920cb4da9e8561b6275b0a53042a6"
+  },
+  "prepared_freeze_inputs": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/FREEZE_INPUTS_PREPARED.json",
+    "bytes": 6280,
+    "sha256": "e7d1f94d90c0e0f85be7b578b4373656dc8cbae9f94a7945c7184bc25c74daae"
+  },
+  "landing_fire_order": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/LANDING_FIRE_ORDER.json",
+    "bytes": 2386,
+    "sha256": "eb6b257d36888ab3d09c5a78f135bb83862712bafefa163f093cea54786f142e"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "frontier": "composition S 0.1374765052591843 @ 180,238 B [contest-CUDA T4 n600] (move 42)",
+  "frontier_changed": false,
+  "boundaries": {
+    "modal_provider_calls": 0,
+    "paid_fires": 0,
+    "timing_windows": 0,
+    "scorer_runs": 0,
+    "real_n600_passes": 0,
+    "candidate_materializations": 0,
+    "upstream_edits": false,
+    "pr_tree_edits": false,
+    "sealed_tree_edits": false,
+    "rlc2_live_directory_edits": false,
+    "sj1_live_directory_edits": false,
+    "legacy_decode_wall_clock_edits": false,
+    "protected_common_file_edits": false,
+    "shared_staged_index_edits": false,
+    "unrelated_dirty_work_preserved": true,
+    "existing_payloads_moved_deleted_or_discarded": false,
+    "mps_authority": false,
+    "gt_decoding": false
+  }
+}

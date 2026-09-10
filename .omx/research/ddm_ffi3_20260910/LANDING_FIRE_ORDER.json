@@ -1,0 +1,39 @@
+{
+  "schema": "ddm_ffi3_landing_fire_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/DELIVERY.json",
+  "fire_trigger": "MAIN harvest of ddm_ffi3 implementation packet",
+  "actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/intended-commit.bundle",
+      "fire_trigger": "permitted Git object/ref writes and custody verification",
+      "action": "Land the single 22-file code/test bundle through the serializer, preserving unrelated dirty work and shared staged index; verify every SERIALIZER_INPUTS.json file hash against the landed commit."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/VALIDATION_COMMANDS.json",
+      "fire_trigger": "exact implementation bytes landed in an environment permitting ps and Unix socket bind",
+      "action": "Run the unchanged required suites and the recorded broad selection; retain outcomes. Do not skip, weaken, or relabel the permission failures."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+      "fire_trigger": "verified landed implementation and required validation complete",
+      "action": "Use FREEZE_INPUTS_PREPARED.json and the exact implementation manifest to create the actual freeze receipt with pr12 SHA, both verbatim clarifications, ffi3 charter SHA, actual landed commit, schema versions, flags, and real freeze UTC; commit it before any RLC2 production."
+    },
+    {
+      "disposition": "FOLDED",
+      "owner": "RLC2 producer / MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_20260910/CONTRACT_DECISION_FIRE_ORDER.json",
+      "fire_trigger": "committed freeze and the existing pr12 admission conditions",
+      "action": "Continue the existing RLC2 producer and MAIN real authorization/fire/harvest control; this arm performed none and authorizes no extra fire."
+    }
+  ],
+  "score_claim": false,
+  "promotion_eligible": false
+}

@@ -1,0 +1,12 @@
+[
+  "src/tac/candidate_seal.py",
+  "src/tac/git_custody_read.py",
+  "src/tac/tests/test_candidate_prefire_intent.py",
+  "src/tac/tests/test_git_custody_read.py",
+  "tools/make_candidate_seal.py",
+  "tools/authorize_candidate_first_measurement.py",
+  "tools/fire_modal_auth_eval.py",
+  "experiments/modal_auth_eval.py",
+  "tools/modal_harvest_poller.py",
+  "src/tac/deploy/modal/auth_eval.py"
+]

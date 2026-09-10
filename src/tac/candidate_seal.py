@@ -75,6 +75,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import stat as stat_module
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1168,6 +1169,16 @@ def validate_seal(
     except SealContractError as exc:
         return SealValidation(verdict=SEAL_SCHEMA_VIOLATION, seal_path=seal_path, problems=(str(exc),))
 
+    if document.get("schema") == PREFIRE_INTENT_SCHEMA:
+        return SealValidation(verdict="PREFIRE_INTENT_SCHEMA_REFUSED", seal_path=seal_path,
+                              problems=("candidate_prefire_intent.v1 is not a completed seal",))
+    if document.get("schema") == SEAL_SCHEMA_V3:
+        try:
+            _pf_validate_completed_seal(document, pointer_path=pointer_path)
+        except (SealContractError, KeyError, TypeError, AttributeError, ValueError, OSError) as exc:
+            return SealValidation(verdict=getattr(exc, "code", "FIRST_MEASUREMENT_RESULT_REFUSED"),
+                                  seal_path=seal_path, problems=(str(exc),))
+
     candidate_id = str(document.get("candidate_id") or "")
     axis = str(document.get("axis") or "")
 
@@ -1189,7 +1200,7 @@ def validate_seal(
     for name in ("retained_payload_paths", "falsifiers"):
         if name in document and not isinstance(document[name], list):
             problems.append(f"field {name!r} must be a list, got {type(document[name]).__name__}")
-    if "schema" in document and document["schema"] not in (SEAL_SCHEMA_V1, SEAL_SCHEMA):
+    if "schema" in document and document["schema"] not in (SEAL_SCHEMA_V1, SEAL_SCHEMA, SEAL_SCHEMA_V3):
         # No ``None`` escape hatch: an unversioned seal is one this validator cannot claim to
         # understand, and claiming to is how a v2 document gets validated by v1 rules.
         problems.append(f"unknown seal schema {document.get('schema')!r}; this validator speaks {SEAL_SCHEMA}")
@@ -1436,7 +1447,7 @@ def validate_seal(
     timing_block = document.get("decode_wall_clock")
     if timing_block is None:
         observed["decode_wall_clock"] = "absent"
-        if require_decode_wall_clock or document["schema"] == SEAL_SCHEMA:
+        if require_decode_wall_clock or document["schema"] in (SEAL_SCHEMA, SEAL_SCHEMA_V3):
             return SealValidation(
                 verdict=SEAL_DECODE_WALL_CLOCK_MISSING, seal_path=seal_path,
                 candidate_id=candidate_id, axis=axis,
@@ -1584,3 +1595,1038 @@ def _find_placeholder_pins(document: dict) -> list[str]:
         _require_real(item, f"falsifiers[{index}]")
 
     return problems
+
+# ddm_pr12, with ddm_ffi3 clarifications: a prefire intent is deliberately NOT a seal.
+PREFIRE_INTENT_SCHEMA = "candidate_prefire_intent.v1"
+PREFIRE_RISK_SCHEMA = "candidate_prefire_timing_risk.v1"
+FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA = "candidate_first_measurement_authorization.v1"
+SEAL_SCHEMA_V3 = "candidate_seal.v3"
+PREFIRE_REFUSAL_CODES = (
+    "PREFIRE_INTENT_SCHEMA_REFUSED", "PREFIRE_INTENT_FALSE_AUTHORITY_REFUSED",
+    "PREFIRE_CONTRACT_DRIFT_REFUSED", "PREFIRE_IDENTITY_DRIFT_REFUSED",
+    "PREFIRE_NON_TIMING_GATE_REFUSED", "PREFIRE_POINTER_DRIFT_REFUSED",
+    "PREFIRE_RISK_EVIDENCE_REFUSED", "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED",
+    "FIRST_MEASUREMENT_REPLAY_REFUSED", "FIRST_MEASUREMENT_ARGUMENT_REFUSED",
+    "FIRST_MEASUREMENT_LANE_REFUSED", "FIRST_MEASUREMENT_TIMEOUT_REFUSED",
+    "FIRST_MEASUREMENT_WARM_REFUSED", "FIRST_MEASUREMENT_T4_POLICY_REFUSED",
+    "FIRST_MEASUREMENT_RESULT_REFUSED",
+)
+PREFIRE_DISPATCH_POLICY = {
+    "axis": "contest_cuda", "gpu": "T4", "scorer_device": "cuda", "inflate_device": "auto",
+    "inflate_timeout_seconds": 1800, "evaluate_timeout_seconds": 1800,
+    "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400,
+    "n_samples": 600, "cold_required": True, "checkpoint_resume_required": False,
+    "token_cache_status_required": "DISABLED", "source_snapshot_required": True,
+    "claim_policy": "require_active", "max_paid_dispatches": 1, "currency": "USD",
+    "maximum_total_cost_usd_exclusive": 5.0, "cost_preflight_max_age_seconds": 86400,
+}
+PREFIRE_TOP_FIELDS = {"schema", "state", "candidate_id", "created_at_utc", "created_by", "producer_source_commit", "score_claim", "promotion_eligible", "timing_clearance", "contract", "candidate", "admit_bar", "public_entrypoint_smoke", "evidence", "dispatch_policy", "retained_payload_paths", "falsifiers", "intent_sha256"}
+PREFIRE_EVIDENCE_FIELDS = {"candidate_manifest", "manifest_validation", "twin_encode", "archive_parseback", "raw_identity_n600", "literal_census", "retention_manifest", "timing_risk"}
+PREFIRE_IMPLEMENTATION_PATHS = (
+    "src/tac/candidate_seal.py", "src/tac/decode_wall_clock.py", "src/tac/git_custody_read.py",
+    "tools/make_candidate_seal.py", "tools/authorize_candidate_first_measurement.py",
+    "tools/fire_modal_auth_eval.py", "experiments/modal_auth_eval.py",
+    "tools/modal_harvest_poller.py", "src/tac/deploy/modal/auth_eval.py",
+    "src/tac/deploy/modal/single_flight.py", "src/tac/deploy/modal/call_id_ledger.py",
+    "src/tac/modal_source_snapshot.py", "tools/launch_detached_process.py",
+    "src/tac/checkpoint_maturity.py", "src/tac/deploy/modal/result_json.py",
+)
+PREFIRE_MEMO_SHA256 = "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+PREFIRE_MEMO = ".omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md"
+PREFIRE_FREEZE = ".omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json"
+PREFIRE_SINGLE_AXIS_REASON = (
+    "candidate receiver declares linux-nvidia-t4 and refuses CPU by design; this authorization is T4-only"
+)
+
+
+class PrefireRefusal(SealContractError):
+    """A first-measurement refusal, never timing or score authority."""
+
+    def __init__(self, code: str, detail: str):
+        if code not in PREFIRE_REFUSAL_CODES:
+            raise ValueError(f"unknown prefire refusal code: {code}")
+        self.code, self.detail = code, detail
+        super().__init__(f"{code}: {detail}")
+
+    def to_dict(self) -> dict:
+        return {"schema": "candidate_first_measurement_refusal.v1", "code": self.code,
+                "detail": self.detail, "score_claim": False, "promotion_eligible": False,
+                "created_at_utc": _utc_now()}
+
+
+def _pf_require(condition: bool, code: str, detail: str) -> None:
+    if not condition:
+        raise PrefireRefusal(code, detail)
+
+
+def prefire_digest(document: object, self_field: str = "") -> str:
+    """pr12 canonical UTF-8 digest; omit exactly one named self field."""
+    body = {k: v for k, v in document.items() if k != self_field} if self_field else document
+    return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                                    ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest()
+
+
+def prefire_file_reference(path: Path) -> dict:
+    path = Path(path).resolve(strict=True)
+    return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+
+
+def _pf_read(path: Path, code: str) -> object:
+    try:
+        def reject_constant(value):
+            raise ValueError(f"non-finite JSON constant {value}")
+        def unique_object(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError(f"duplicate JSON key: {key}")
+                result[key] = value
+            return result
+        def finite_float(value):
+            number = float(value)
+            if not math.isfinite(number):
+                raise ValueError("non-finite JSON number")
+            return number
+        return json.loads(Path(path).read_text(encoding="utf-8"), parse_constant=reject_constant,
+                          parse_float=finite_float, object_pairs_hook=unique_object)
+    except (OSError, ValueError, TypeError) as exc:
+        raise PrefireRefusal(code, f"cannot read JSON {path}: {exc}") from exc
+
+
+def _pf_ref(ref: object, code: str, *, parse: bool = True) -> object:
+    _pf_require(isinstance(ref, dict), code, "reference must be an object")
+    _pf_require(isinstance(ref.get("path"), str) and Path(ref["path"]).is_absolute(), code,
+                "reference requires an absolute path")
+    path = Path(ref["path"])
+    _pf_require(type(ref.get("bytes")) is int and ref["bytes"] > 0 and _is_sha256(ref.get("sha256")),
+                code, f"invalid byte/hash reference: {path}")
+    try:
+        _pf_require(path.is_file() and path.stat().st_size == ref["bytes"]
+                    and sha256_file(path) == ref["sha256"], code, f"reference bytes/hash differ: {path}")
+    except OSError as exc:
+        raise PrefireRefusal(code, f"reference unavailable: {path}: {exc}") from exc
+    return _pf_read(path, code) if parse else path
+
+
+def _pf_number(value: object, code: str, label: str, *, positive: bool = False) -> float:
+    import math
+    _pf_require(type(value) in (int, float) and math.isfinite(value), code, f"{label}: finite number required")
+    _pf_require(not positive or value > 0, code, f"{label}: positive number required")
+    return float(value)
+
+
+def _pf_time(value: object, code: str):
+    from datetime import datetime
+    try:
+        _pf_require(isinstance(value, str) and (value.endswith("Z") or value.endswith("+00:00")),
+                    code, "timestamp must be RFC3339 UTC")
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        _pf_require("T" in value and parsed.tzinfo is not None and parsed.utcoffset().total_seconds() == 0,
+                    code, "timestamp must contain an explicit UTC time")
+        return parsed
+    except ValueError as exc:
+        raise PrefireRefusal(code, "invalid UTC timestamp") from exc
+
+
+def _pf_git(repo: Path, *args: str) -> bytes:
+    """Read committed custody in-process: preflight never spawns a Git subprocess."""
+    from tac.git_custody_read import GitCustodyReader
+    try:
+        reader = GitCustodyReader(repo)
+        if args[0] == "rev-parse":
+            return reader.resolve(args[1]).encode()
+        if args[:3] == ("show", "-s", "--format=%cI"):
+            return reader.committed_at(args[3]).encode()
+        if args[0] == "show":
+            ref, path = args[1].split(":", 1)
+            return reader.blob(ref, path)
+        if args[:2] == ("merge-base", "--is-ancestor"):
+            _pf_require(reader.ancestor(args[2], args[3]), "PREFIRE_CONTRACT_DRIFT_REFUSED", "commit ancestry differs")
+            return b""
+        raise ValueError("unsupported custody query")
+    except Exception as exc:
+        raise PrefireRefusal("PREFIRE_CONTRACT_DRIFT_REFUSED", f"Git custody query failed: {args}: {exc}") from exc
+
+
+def _pf_blob(repo: Path, commit: str, path: Path) -> None:
+    code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
+    try:
+        rel = path.resolve().relative_to(repo.resolve()).as_posix()
+        _pf_require(_pf_git(repo, "show", f"{commit}:{rel}") == path.read_bytes(), code,
+                    f"live file differs from committed blob: {path}")
+    except (OSError, ValueError) as exc:
+        raise PrefireRefusal(code, f"file is not in repository custody: {path}") from exc
+
+
+def _pf_contract(intent: dict, repo: Path, intent_path: Path | None) -> None:
+    code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
+    contract = intent["contract"]
+    _pf_require(isinstance(contract, dict) and set(contract) == {
+        "adjudication_memo", "implementation_commit", "implementation_manifest", "implementation_manifest_sha256"},
+        code, "contract fields differ")
+    commit = contract["implementation_commit"]
+    _pf_require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit), code, "full implementation commit required")
+    _pf_git(repo, "merge-base", "--is-ancestor", commit, "HEAD")
+    manifest = _pf_ref(contract["implementation_manifest"], code)
+    _pf_require(isinstance(manifest, list) and manifest, code, "sorted implementation manifest array required")
+    _pf_require(contract["implementation_manifest_sha256"] == contract["implementation_manifest"]["sha256"],
+                code, "implementation manifest digest differs")
+    paths = [r.get("path") for r in manifest if isinstance(r, dict)]
+    _pf_require(len(paths) == len(manifest) and all(isinstance(p, str) for p in paths)
+                and paths == sorted(set(paths)) and set(PREFIRE_IMPLEMENTATION_PATHS) <= set(paths),
+                code, "implementation manifest omits a consumer or is unsorted")
+    for row in manifest:
+        path = repo / row["path"]
+        _pf_require(not Path(row["path"]).is_absolute() and ".." not in Path(row["path"]).parts,
+                    code, "implementation path escapes repository")
+        _pf_require(path.is_file() and sha256_file(path) == row.get("sha256"), code, f"implementation drift: {path}")
+        _pf_blob(repo, commit, path)
+    _pf_ref(contract["adjudication_memo"], code, parse=False)
+    _pf_require(contract["adjudication_memo"]["sha256"] == PREFIRE_MEMO_SHA256, code, "normative pr12 memo pin differs")
+    _pf_require(Path(contract["adjudication_memo"]["path"]).resolve() == (repo / PREFIRE_MEMO).resolve(),
+                code, "wrong adjudication memo")
+    _pf_blob(repo, commit, repo / PREFIRE_MEMO)
+    committed_at = _pf_git(repo, "show", "-s", "--format=%cI", commit).decode().strip()
+    produced = _pf_ref(intent["evidence"]["candidate_manifest"], code)
+    _pf_require(_pf_time(committed_at, code) <= _pf_time(produced.get("production_started_at_utc"), code)
+                <= _pf_time(intent["created_at_utc"], code), code, "implementation must precede every producer timestamp")
+    production = intent["producer_source_commit"]
+    _pf_require(isinstance(production, str) and re.fullmatch(r"[0-9a-f]{40}", production), code, "producer source commit malformed")
+    _pf_git(repo, "merge-base", "--is-ancestor", commit, production)
+    _pf_git(repo, "merge-base", "--is-ancestor", production, "HEAD")
+    if intent_path is not None:
+        _pf_blob(repo, "HEAD", intent_path)
+
+
+def _pf_schema(intent: object) -> None:
+    code = "PREFIRE_INTENT_SCHEMA_REFUSED"
+    _pf_require(isinstance(intent, dict), code, "intent must be an object")
+    forbidden = {"decode_wall_clock", "candidate_t4_receipt", "measured_t4_decode_seconds",
+                 "projected_t4_decode_seconds", "timing_passed", "candidate_score", "score"}
+    def authority_keys(value):
+        if isinstance(value, dict):
+            return any(k in forbidden or (k in {"score_claim", "promotion_eligible", "timing_clearance"} and v is True)
+                       or authority_keys(v) for k, v in value.items())
+        if isinstance(value, list):
+            return any(authority_keys(v) for v in value)
+        return False
+    _pf_require(not authority_keys(intent), "PREFIRE_INTENT_FALSE_AUTHORITY_REFUSED",
+                "intent carries timing or score authority")
+    _pf_require(all(intent.get(k) is False for k in ("score_claim", "promotion_eligible", "timing_clearance")),
+                code, "false authority flags must be explicit typed false")
+    _pf_require(set(intent) == PREFIRE_TOP_FIELDS and intent["schema"] == PREFIRE_INTENT_SCHEMA
+                and intent["state"] == "PREFIRE_FIRST_MEASUREMENT_ONLY", code, "exact v1 schema/state required")
+    for key in ("candidate_id", "created_by"):
+        _pf_require(isinstance(intent[key], str) and not _is_placeholder(intent[key]), code, f"invalid {key}")
+    _pf_time(intent["created_at_utc"], code)
+    for key in ("candidate", "admit_bar", "evidence", "contract", "public_entrypoint_smoke", "dispatch_policy"):
+        _pf_require(isinstance(intent[key], dict), code, f"{key} must be an object")
+    _pf_require(prefire_digest(intent["dispatch_policy"]) == prefire_digest(PREFIRE_DISPATCH_POLICY),
+                code, "dispatch policy must equal the fixed v1 policy, including types")
+    _pf_require(set(intent["evidence"]) == PREFIRE_EVIDENCE_FIELDS, code, "evidence fields differ")
+    _pf_require(set(intent["candidate"]) == {"archive", "runtime", "normalized_receiver", "receiver_pins", "archive_member"},
+                code, "candidate fields differ")
+    _pf_require(intent.get("intent_sha256") == prefire_digest(intent, "intent_sha256"), code, "canonical intent digest differs")
+    for key in ("retained_payload_paths", "falsifiers"):
+        _pf_require(isinstance(intent[key], list) and intent[key] and all(isinstance(s, str)
+                    and not _is_placeholder(s) for s in intent[key]), code, f"nonempty {key} required")
+
+
+def _pf_identity(intent: dict) -> tuple[Path, Path]:
+    from tac.decode_wall_clock import measure_receiver_digest
+    code = "PREFIRE_IDENTITY_DRIFT_REFUSED"
+    candidate = intent["candidate"]
+    archive = _pf_ref(candidate["archive"], code, parse=False)
+    runtime = candidate["runtime"]
+    _pf_require(isinstance(runtime, dict) and isinstance(runtime.get("path"), str)
+                and Path(runtime["path"]).is_absolute(), code, "absolute runtime directory required")
+    root = Path(runtime["path"])
+    measured = measure_runtime_digest(root)
+    for key, value in {"sha256": measured.sha256, "file_count": measured.file_count,
+                       "total_bytes": measured.total_bytes,
+                       "digest_definition": "tac.candidate_seal.measure_runtime_digest"}.items():
+        _pf_require(type(runtime.get(key)) is type(value) and runtime.get(key) == value, code, f"runtime {key} differs")
+    receiver = candidate["normalized_receiver"]
+    _pf_require(receiver == {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+                            "sha256": measure_receiver_digest(root)}, code, "normalized receiver differs")
+    pins = candidate["receiver_pins"]
+    _pf_require(isinstance(pins, list) and {p.get("relative_path") for p in pins if isinstance(p, dict)}
+                >= {"inflate.py", "inflate.sh"}, code, "both receiver pins required")
+    for pin in pins:
+        _pf_require(isinstance(pin, dict) and set(pin) == {"relative_path", "bytes", "sha256"}, code, "malformed receiver pin")
+        rel = pin["relative_path"]
+        _pf_require(rel in measured.file_map() and measured.file_map()[rel] == (pin["bytes"], pin["sha256"]),
+                    code, f"receiver pin differs: {rel}")
+    _pf_require(check_pin_consistency(root, archive_path=archive).ok, code, "receiver/archive pins disagree")
+    import zipfile
+    try:
+        with zipfile.ZipFile(archive) as zf:
+            _pf_require(zf.namelist() and len(zf.namelist()) == len(set(zf.namelist()))
+                        and zf.testzip() is None, code, "invalid ZIP/member bytes")
+        member = candidate["archive_member"]
+        if member is not None:
+            _pf_require(isinstance(member, dict) and set(member) == {"name", "sha256", "bytes"}, code, "bad member pin")
+            _pf_require(read_archive_member_identity(archive, member["name"]) == (member["sha256"], member["bytes"]),
+                        code, "member pin differs")
+    except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
+        raise PrefireRefusal(code, f"archive invalid: {exc}") from exc
+    return root, archive
+
+
+def _pf_pointer(intent: dict, pointer_path: Path | None) -> dict:
+    code = "PREFIRE_POINTER_DRIFT_REFUSED"
+    bar = intent["admit_bar"]
+    _pf_require(set(bar) == {"rule", "net_dS_threshold", "pointer_axis", "pointer_score_at_intent",
+                "pointer_archive_sha256_at_intent", "pointer_tolerance_abs", "require_pointer_archive_identity",
+                "rate_only_precheck"}, code, "admit bar fields differ")
+    _pf_require(bar["pointer_axis"] == "contest_cuda" and type(bar["pointer_tolerance_abs"]) in (int, float)
+                and bar["pointer_tolerance_abs"] == 0 and bar["require_pointer_archive_identity"] is True,
+                code, "zero-tolerance CUDA pointer identity required")
+    live = read_pointer_state(pointer_path=pointer_path, axis="contest_cuda")
+    _pf_require(_pf_number(bar["pointer_score_at_intent"], code, "pointer score") == live["pointer_score"]
+                and bar["pointer_archive_sha256_at_intent"] == live["pointer_archive_sha256"], code, "pointer moved")
+    _pf_require(_pf_number(bar["net_dS_threshold"], code, "bar") < 0, code, "negative admit bar required")
+    # The pointer archive is re-read through the smoke's already-bound frontier endpoint.
+    base_path = Path(intent["public_entrypoint_smoke"]["public_path_probes"]["frontier"]["archive_path"])
+    base = measure_archive_identity(base_path)
+    _pf_require(base.sha256 == live["pointer_archive_sha256"], code, "frontier archive differs from live pointer")
+    ds = 25 * (intent["candidate"]["archive"]["bytes"] - base.bytes) / 37545489
+    expected = {"raw_identity_required": True, "normalizer_bytes": 37545489, "derived_net_dS": ds, "passed": True}
+    _pf_require(prefire_digest(bar["rate_only_precheck"]) == prefire_digest(expected)
+                and ds < bar["net_dS_threshold"], "PREFIRE_NON_TIMING_GATE_REFUSED", "rate-only admission failed")
+    return live
+
+
+def _pf_endpoints(receipt: dict, intent: dict, code: str) -> None:
+    candidate = intent["candidate"]
+    for key, wanted in {"archive_sha256": candidate["archive"]["sha256"],
+                        "runtime_sha256": candidate["runtime"]["sha256"],
+                        "receiver_sha256": candidate["normalized_receiver"]["sha256"]}.items():
+        _pf_require(receipt.get(key) == wanted, code, f"evidence endpoint differs: {key}")
+
+
+def _pf_evidence(intent: dict, root: Path, archive: Path) -> None:
+    code = "PREFIRE_NON_TIMING_GATE_REFUSED"
+    evidence = {k: _pf_ref(v, code) for k, v in intent["evidence"].items() if k != "timing_risk"}
+    _pf_require(all(isinstance(v, dict) for v in evidence.values()), code, "evidence receipts must be objects")
+    problems, _ = _public_smoke_problems(intent["public_entrypoint_smoke"], candidate_runtime_dir=root,
+        candidate_archive_path=archive, pointer_archive_sha256=intent["admit_bar"]["pointer_archive_sha256_at_intent"])
+    _pf_require(not problems, code, "; ".join(problems))
+    runtime = measure_runtime_digest(root)
+    for name in ("candidate_manifest", "manifest_validation", "twin_encode", "archive_parseback",
+                 "raw_identity_n600", "literal_census"):
+        _pf_endpoints(evidence[name], intent, "PREFIRE_IDENTITY_DRIFT_REFUSED")
+    manifest = evidence["candidate_manifest"]
+    verification = evidence["manifest_validation"]
+    _pf_require(not Path(intent["evidence"]["manifest_validation"]["path"]).is_relative_to(root),
+                code, "manifest must be independently verified outside candidate tree")
+    rows = manifest.get("files")
+    _pf_require(isinstance(rows, list) and rows, code, "manifest files absent")
+    actual = runtime.file_map()
+    declared = {}
+    for row in rows:
+        _pf_require(isinstance(row, dict) and set(row) == {"relative_path", "bytes", "sha256"}, code, "bad dependency row")
+        rel = row["relative_path"]
+        _pf_require(rel not in declared, code, "duplicate dependency row")
+        declared[rel] = (row["bytes"], row["sha256"])
+    _pf_require(declared == actual and verification.get("all_hashes_passed") is True
+                and verification.get("all_runtime_dependencies_listed") is True
+                and verification.get("manifest") == intent["evidence"]["candidate_manifest"], code,
+                "dependency manifest/verification not complete")
+    _pf_require(manifest.get("producer_source_commit") == intent["producer_source_commit"], code,
+                "producer source commit differs")
+    produced = _pf_time(manifest.get("production_started_at_utc"), code)
+    _pf_require(produced <= _pf_time(intent["created_at_utc"], code), code, "production follows intent")
+    twin, parseback = evidence["twin_encode"], evidence["archive_parseback"]
+    payloads = twin.get("payloads")
+    _pf_require(twin.get("n_samples") == 600 and isinstance(payloads, list) and len(payloads) == 2,
+                code, "two full-n600 encoded payloads required")
+    for ref in payloads:
+        _pf_ref(ref, code, parse=False)
+    executions = twin.get("executions")
+    _pf_require(isinstance(executions, list) and len(executions) == 2, code, "two independent encoder execution receipts required")
+    execution_ids = set()
+    for ref, payload in zip(executions, payloads, strict=True):
+        execution = _pf_ref(ref, code)
+        _pf_require(execution.get("n_samples") == 600 and execution.get("completed") is True
+                    and execution.get("payload") == payload and isinstance(execution.get("command"), list)
+                    and execution["command"] and execution.get("producer_source_commit") == intent["producer_source_commit"],
+                    code, "encoder execution is not complete n600 on the frozen source/payload")
+        identity = execution.get("execution_id")
+        _pf_require(isinstance(identity, str) and not _is_placeholder(identity) and identity not in execution_ids,
+                    code, "twin execution identity absent/duplicated")
+        execution_ids.add(identity)
+    _pf_require(payloads[0]["path"] != payloads[1]["path"]
+                and (payloads[0]["bytes"], payloads[0]["sha256"]) == (payloads[1]["bytes"], payloads[1]["sha256"]),
+                code, "twin encodes not distinct retained byte-identical payloads")
+    member = parseback.get("member")
+    _pf_require(isinstance(member, dict), code, "parsed member pin absent")
+    measured_member = read_archive_member_identity(archive, member["name"])
+    _pf_require(measured_member == (member.get("sha256"), member.get("bytes"))
+                == (payloads[0]["sha256"], payloads[0]["bytes"]), code, "selected payload differs from archive member")
+    raw = evidence["raw_identity_n600"]
+    _pf_require(raw.get("n_samples") == 600 and raw.get("pair_count") == 600
+                and raw.get("entrypoint") == "inflate.sh" and raw.get("checkpoint_resume") is False
+                and raw.get("token_cache_status") == "DISABLED", code, "full cold public raw identity required")
+    from tac.decode_wall_clock import _cold_public_report
+    raw_log = _pf_ref(raw.get("candidate_public_stdout"), code, parse=False)
+    try:
+        _cold_public_report({"artifacts": {"contest_auth_eval.stdout.log": raw_log.read_text()}})
+    except SealContractError as exc:
+        raise PrefireRefusal(code, f"public raw cold proof refused: {exc}") from exc
+    command = raw.get("command")
+    _pf_require(isinstance(command, list) and len(command) >= 2 and command[:2] == ["bash", str(root / "inflate.sh")],
+                code, "raw identity did not bind literal public inflate.sh argv")
+    for key in ("candidate_raw", "pointer_raw"):
+        _pf_ref(raw.get(key), code, parse=False)
+        _pf_require(raw[key]["bytes"] == 3662409600, code, "n600 raw byte count differs")
+    _pf_require(raw["candidate_raw"]["sha256"] == raw["pointer_raw"]["sha256"]
+                and raw.get("pointer_archive_sha256") == intent["admit_bar"]["pointer_archive_sha256_at_intent"],
+                code, "raw bytes/pointer identity differ")
+    census = evidence["literal_census"]
+    _pf_require(census.get("verdict") == "CLEAR" and census.get("rule") == 118
+                and census.get("complete") is True, code, "complete rule-118 literal census required")
+    census_rows = census.get("files")
+    _pf_require(isinstance(census_rows, list) and census_rows, code, "literal census coverage absent")
+    _pf_require({r.get("relative_path"): (r.get("bytes"), r.get("sha256")) for r in census_rows
+                 if isinstance(r, dict)} == actual and len(census_rows) == len(actual), code,
+                 "new receiver/dependency not covered by literal census")
+    retention = evidence["retention_manifest"]
+    retained = retention.get("payloads")
+    _pf_require(isinstance(retained, list) and retained, code, "retention manifest payloads absent")
+    paths = set()
+    for ref in retained:
+        _pf_ref(ref, code, parse=False)
+        _pf_require(ref["path"] not in paths, code, "duplicate retained payload")
+        paths.add(ref["path"])
+    required = {str(archive), *(r["path"] for r in payloads), raw["candidate_raw"]["path"],
+                intent["evidence"]["archive_parseback"]["path"], *intent["retained_payload_paths"]}
+    _pf_require(required <= paths, code, "retention missing archive/twins/raw/parseback/declared payload")
+
+
+def prefire_receiver_rows(root: Path) -> list[tuple[str, int, str]]:
+    """Materialize the exact existing receiver digest's normalized path rows, without writes."""
+    import ast
+
+    from tac.decode_wall_clock import measure_receiver_digest
+    rows = []
+    for path in sorted(Path(root).rglob("*")):
+        if not path.is_file() or path.is_symlink():
+            continue
+        rel = path.relative_to(root).as_posix()
+        if rel == "archive.zip" or runtime_digest_skip_reason(rel):
+            continue
+        data = path.read_bytes()
+        if rel == "inflate.py":
+            tree = ast.parse(data)
+            lines = data.splitlines(keepends=True)
+            offsets = [sum(map(len, lines[:i])) for i in range(len(lines))]
+            edits = []
+            for node in tree.body:
+                if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                        and isinstance(node.targets[0], ast.Name)
+                        and node.targets[0].id in {"ARCHIVE_SHA256", "ARCHIVE_BYTES"}):
+                    value = node.value
+                    edits.append((offsets[value.lineno - 1] + value.col_offset,
+                                  offsets[value.end_lineno - 1] + value.end_col_offset))
+            for start, end in sorted(edits, reverse=True):
+                data = data[:start] + b"<ARCHIVE_PIN>" + data[end:]
+        rows.append((rel, len(data), hashlib.sha256(data).hexdigest()))
+    _pf_require(hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
+                == measure_receiver_digest(root), "PREFIRE_RISK_EVIDENCE_REFUSED", "normalized row parity failed")
+    return rows
+
+
+def validate_prefire_risk(risk_ref: dict, intent: dict, *, repo: Path) -> dict:
+    from tac.decode_wall_clock import measure_receiver_digest, validate_decode_wall_clock
+    code = "PREFIRE_RISK_EVIDENCE_REFUSED"
+    risk = _pf_ref(risk_ref, code)
+    _pf_require(isinstance(risk, dict) and set(risk) == {"schema", "mode", "authority", "timing_clearance", "source_t4_leg", "source_receiver", "candidate_receiver", "diagnostic_reference_receiver", "receiver_delta_manifest", "base_local_diagnostic", "candidate_local_diagnostics", "calculation", "score_claim", "risk_sha256"},
+        code, "risk shape differs")
+    _pf_require(risk["schema"] == PREFIRE_RISK_SCHEMA and risk["mode"] == "completed_t4_receiver_delta"
+                and all(risk[k] is False for k in ("authority", "timing_clearance", "score_claim"))
+                and risk["risk_sha256"] == prefire_digest(risk, "risk_sha256"), code, "risk type/digest differs")
+    leg = _pf_ref(risk["source_t4_leg"], code)
+    _pf_require(isinstance(leg, dict) and leg.get("mode") == "t4_direct", code, "completed source t4_direct required")
+    problems, _ = validate_decode_wall_clock(leg, runtime_dir=Path(leg["runtime_dir"]), archive_path=Path(leg["archive_path"]))
+    _pf_require(not problems, code, "; ".join(problems))
+    source = risk["source_receiver"].get("sha256")
+    candidate = intent["candidate"]["normalized_receiver"]["sha256"]
+    diagnostic_root = Path(risk["diagnostic_reference_receiver"]["path"])
+    _pf_require(source == leg.get("receiver_sha256") and risk["candidate_receiver"] == {"sha256": candidate}
+                and risk["diagnostic_reference_receiver"].get("sha256") == candidate
+                and measure_receiver_digest(diagnostic_root) == candidate, code, "receiver risk endpoints differ")
+    delta = _pf_ref(risk["receiver_delta_manifest"], code)
+    source_rows = prefire_receiver_rows(Path(leg["runtime_dir"]))
+    candidate_rows = prefire_receiver_rows(Path(intent["candidate"]["runtime"]["path"]))
+    smap, cmap = {r[0]: list(r[1:]) for r in source_rows}, {r[0]: list(r[1:]) for r in candidate_rows}
+    wanted = [{"relative_path": p, "source": smap.get(p), "candidate": cmap.get(p)} for p in sorted(smap.keys() | cmap.keys())]
+    _pf_require(delta.get("files") == wanted and delta.get("source_receiver_sha256") == source
+                and delta.get("candidate_receiver_sha256") == candidate, code, "complete normalized receiver delta differs")
+    base = risk["base_local_diagnostic"]
+    candidates = risk["candidate_local_diagnostics"]
+    _pf_require(isinstance(candidates, list) and candidates, code, "candidate diagnostics missing")
+    is_rlc2 = "rlc2" in intent["candidate_id"].lower()
+    for ref in [base, *candidates]:
+        doc = _pf_ref(ref, code)
+        wall = _pf_number(ref.get("wall_seconds"), code, "diagnostic seconds", positive=True)
+        _pf_require(ref.get("authority") is False and ref.get("actual_verdict") == "REFUSED"
+                    and doc.get("wall_seconds") == wall and doc.get("score_claim") is False,
+                    code, "diagnostic must retain actual refused verdict and measured wall")
+        _pf_require(doc.get("receiver_sha256") == (source if ref is base else candidate), code, "diagnostic receiver differs")
+        if not is_rlc2:
+            _pf_require(doc.get("actual_verdict") == "REFUSED", code, "diagnostic's retained actual verdict is not REFUSED")
+        if ref is not base:
+            _pf_require(ref.get("cold") is True and ref.get("n_samples") == 600 and doc.get("cold_start") is True
+                        and doc.get("checkpoint_resume") is False and doc.get("frames") == list(range(600)),
+                        code, "candidate diagnostic must be cold n600")
+    ceiling = max(ref["wall_seconds"] for ref in candidates)
+    fraction = max(0, ceiling / base["wall_seconds"] - 1)
+    seconds = leg["measured_t4_decode_seconds"]
+    projection = seconds * (1 + fraction)
+    calculation = {"candidate_local_ceiling_seconds": ceiling, "local_cost_fraction_upper": fraction,
+                   "source_t4_seconds": seconds, "t4_risk_ceiling_seconds": projection,
+                   "policy_limit_seconds": 1260.0, "hard_timeout_seconds": 1800.0, "passed": True}
+    for key in calculation:
+        if key != "passed":
+            _pf_number(risk["calculation"].get(key), code, key)
+    _pf_require(risk["calculation"].get("passed") is True and risk["calculation"] == calculation and projection <= 1260.0 < 1800.0,
+                code, "risk arithmetic/1260-second policy differs")
+    # RLC2 is the specifically reviewed old-rule diagnostic chain, not an unknown-receiver fallback.
+    summary_path = repo / ".omx/research/ddm_rlc1_20260910/QUIESCED_TIMING_RECORD.json"
+    if is_rlc2:
+        _pf_require(risk["source_t4_leg"]["sha256"] == "ed929b24cc876bf8ffabc3004b856decbb5e73d0fee13c1d3c87d91d659f9521"
+                    and risk["source_t4_leg"]["bytes"] == 1553
+                    and candidate == "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d"
+                    and summary_path.stat().st_size == 3064
+                    and sha256_file(summary_path) == "a8d1e1a781a0c2f80962591288dbcc4ed023113e31766baaec368db8ef75c4ed",
+                    code, "RLC2 pinned historical chain differs")
+        summary = _pf_read(summary_path, code)
+        for ref in candidates:
+            matches = [row for row in summary["runs"] if row.get("local_receipt") == ref["path"]]
+            _pf_require(len(matches) == 1 and matches[0]["wall_seconds"] == ref["wall_seconds"]
+                        and matches[0].get("verdict", "").startswith("REFUSED"), code,
+                        "RLC2 diagnostic differs from its retained actual old-rule verdict")
+        _pf_require(base["wall_seconds"] == 797.1459791249945 and ceiling == 831.502915124991,
+                    code, "RLC2 diagnostics differ from reviewed chain")
+    return risk
+
+
+def validate_prefire_intent(path: Path, *, require_committed: bool = True,
+                            repo: Path | None = None, pointer_path: Path | None = None) -> dict:
+    """Read every non-timing gate from disk; raise one typed refusal on any unknown state."""
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    code = "PREFIRE_INTENT_SCHEMA_REFUSED"
+    try:
+        intent = _pf_read(path, code)
+        _pf_schema(intent)
+        code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
+        _pf_contract(intent, repo, Path(path) if require_committed else None)
+        code = "PREFIRE_IDENTITY_DRIFT_REFUSED"
+        root, archive = _pf_identity(intent)
+        code = "PREFIRE_POINTER_DRIFT_REFUSED"
+        _pf_pointer(intent, pointer_path)
+        code = "PREFIRE_NON_TIMING_GATE_REFUSED"
+        _pf_evidence(intent, root, archive)
+        code = "PREFIRE_RISK_EVIDENCE_REFUSED"
+        validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=repo)
+        return intent
+    except PrefireRefusal:
+        raise
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, SealContractError) as exc:
+        raise PrefireRefusal(code, str(exc)) from exc
+
+
+def write_prefire_refusal(exc: PrefireRefusal, *, paths: tuple[Path, ...] = (), output_dir: Path | None = None) -> None:
+    """Keep typed refusals beside both immutable objects and in authorized output custody."""
+    import sys
+    destinations = {Path(p).parent for p in paths}
+    if output_dir is not None:
+        destinations.add(Path(output_dir))
+    print(str(exc), file=sys.stderr)
+    for directory in destinations:
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            # Each refusal remains independently retained; do not overwrite a prior fact.
+            import uuid
+            path = directory / f"PREFIRE_REFUSAL_{uuid.uuid4().hex}.json"
+            path.write_text(json.dumps(exc.to_dict(), indent=2) + "\n", encoding="utf-8")
+        except OSError as write_error:
+            print(f"REFUSAL_CUSTODY_FAILED: {directory}: {write_error}", file=sys.stderr)
+
+
+def _pf_write_new(path: Path, document: dict) -> None:
+    """Exclusive, fsynced object creation. Never overwrite immutable lifecycle history."""
+    import os
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8") as handle:
+            handle.write(json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except FileExistsError as exc:
+        raise PrefireRefusal("FIRST_MEASUREMENT_REPLAY_REFUSED", f"object already exists: {path}") from exc
+
+
+def build_prefire_intent(*, candidate_id: str, runtime_dir: Path, evidence_paths: dict,
+                         public_entrypoint_smoke: dict, net_ds_threshold: float,
+                         retained_paths: list[str], falsifiers: list[str], out_path: Path,
+                         repo: Path | None = None, pointer_path: Path | None = None) -> dict:
+    from tac.decode_wall_clock import measure_receiver_digest
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    code = "PREFIRE_CONTRACT_DRIFT_REFUSED"
+    frozen = _pf_read(repo / PREFIRE_FREEZE, code)
+    commit = frozen["implementation_commit"]
+    root = runtime_dir.resolve()
+    archive = root / "archive.zip"
+    runtime = measure_runtime_digest(root)
+    live = read_pointer_state(pointer_path=pointer_path, axis="contest_cuda")
+    evidence = {k: prefire_file_reference(v) for k, v in evidence_paths.items()}
+    manifest = _pf_ref(evidence["candidate_manifest"], "PREFIRE_NON_TIMING_GATE_REFUSED")
+    base_archive = Path(public_entrypoint_smoke["public_path_probes"]["frontier"]["archive_path"])
+    ds = 25 * (archive.stat().st_size - base_archive.stat().st_size) / 37545489
+    document = {
+        "schema": PREFIRE_INTENT_SCHEMA, "state": "PREFIRE_FIRST_MEASUREMENT_ONLY",
+        "candidate_id": candidate_id, "created_at_utc": _utc_now(), "created_by": "candidate-prefire-producer",
+        "producer_source_commit": manifest["producer_source_commit"], "score_claim": False,
+        "promotion_eligible": False, "timing_clearance": False,
+        "contract": {"adjudication_memo": prefire_file_reference(repo / PREFIRE_MEMO),
+                     "implementation_commit": commit, "implementation_manifest": frozen["implementation_manifest"],
+                     "implementation_manifest_sha256": frozen["implementation_manifest"]["sha256"]},
+        "candidate": {"archive": prefire_file_reference(archive), "runtime": {"path": str(root), **runtime.to_dict()},
+                      "normalized_receiver": {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+                                              "sha256": measure_receiver_digest(root)},
+                      "receiver_pins": [{"relative_path": p, "bytes": runtime.file_map()[p][0],
+                                         "sha256": runtime.file_map()[p][1]} for p in ("inflate.py", "inflate.sh")],
+                      "archive_member": None},
+        "admit_bar": {"rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold",
+                      "net_dS_threshold": net_ds_threshold, "pointer_axis": "contest_cuda",
+                      "pointer_score_at_intent": live["pointer_score"],
+                      "pointer_archive_sha256_at_intent": live["pointer_archive_sha256"],
+                      "pointer_tolerance_abs": 0.0, "require_pointer_archive_identity": True,
+                      "rate_only_precheck": {"raw_identity_required": True, "normalizer_bytes": 37545489,
+                                             "derived_net_dS": ds, "passed": True}},
+        "public_entrypoint_smoke": public_entrypoint_smoke, "evidence": evidence,
+        "dispatch_policy": dict(PREFIRE_DISPATCH_POLICY), "retained_payload_paths": retained_paths,
+        "falsifiers": falsifiers,
+    }
+    document["intent_sha256"] = prefire_digest(document, "intent_sha256")
+    _pf_write_new(out_path, document)
+    try:
+        return validate_prefire_intent(out_path, require_committed=False, repo=repo, pointer_path=pointer_path)
+    except Exception:
+        Path(out_path).unlink()  # New failed object only; no input payload or historical object is removed.
+        raise
+
+
+def first_measurement_nonce(intent_digest: str, lane_id: str, instance_job_id: str) -> str:
+    return hashlib.sha256("\0".join((intent_digest, lane_id, instance_job_id,
+                                   "candidate-first-measurement-v1")).encode("utf-8")).hexdigest()
+
+
+def _pf_cost(ref: dict, *, now=None) -> dict:
+    from datetime import UTC, datetime
+    code = "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED"
+    cost = _pf_ref(ref, code)
+    _pf_require(isinstance(cost, dict) and cost.get("gpu") == "T4" and cost.get("currency") == "USD"
+                and type(cost.get("paid_dispatches")) is int and cost["paid_dispatches"] == 1,
+                code, "cost must bind one T4 dispatch in USD")
+    seconds = _pf_number(cost.get("remote_seconds"), code, "remote seconds", positive=True)
+    _pf_require(seconds == 4800, code, "cost must bound the full 4800-second function cap")
+    fetched = _pf_time(cost.get("provider_price_fetched_at_utc"), code)
+    _pf_require(0 <= ((now or datetime.now(UTC)) - fetched).total_seconds() <= 86400, code, "provider price stale/future")
+    source = cost.get("provider_price_source")
+    _pf_require(isinstance(source, dict) and isinstance(source.get("url"), str)
+                and source["url"].startswith("https://"), code, "current provider-price source absent")
+    source_doc = _pf_ref(source, code)
+    _pf_require(isinstance(source_doc, dict), code, "machine-readable provider price source required")
+    resources = cost.get("resources")
+    _pf_require(isinstance(resources, list) and resources and all(isinstance(r, dict) for r in resources)
+                and {r.get("resource") for r in resources}
+                >= {"gpu", "cpu", "memory"}, code, "all charged resources must be enumerated")
+    resource_map = {r["resource"]: r for r in resources}
+    chargeable = source_doc.get("chargeable_resources")
+    _pf_require(isinstance(chargeable, list) and chargeable and all(isinstance(name, str) for name in chargeable)
+                and len(chargeable) == len(set(chargeable)) and set(resource_map) == set(chargeable), code,
+                "every provider-declared charged resource must be priced, including storage/transfer when charged")
+    _pf_require(len(resource_map) == len(resources) and resource_map["gpu"].get("quantity") == 1
+                and resource_map["cpu"].get("quantity") == 4 and resource_map["memory"].get("quantity") == 16,
+                code, "one T4, four CPUs, sixteen GiB hard resource bounds required")
+    total = 0.0
+    for row in resources:
+        quantity = _pf_number(row.get("quantity"), code, "resource quantity", positive=True)
+        price = _pf_number(row.get("usd_per_unit_second"), code, "resource unit price")
+        _pf_require(price >= 0, code, "negative resource price")
+        field_path = row.get("price_field")
+        _pf_require(isinstance(field_path, list) and field_path and all(isinstance(k, str) for k in field_path),
+                    code, "price must name its field in retained provider source")
+        source_price = source_doc
+        for key in field_path:
+            _pf_require(isinstance(source_price, dict) and key in source_price, code, "provider price field absent")
+            source_price = source_price[key]
+        _pf_require(type(source_price) in (int, float) and source_price == price, code, "price differs from provider source")
+        subtotal = quantity * price * seconds
+        _pf_require(row.get("upper_bound_usd") == subtotal, code, "resource cost not re-derived")
+        total += subtotal
+    _pf_require(cost.get("upper_bound_usd") == total and 0 < total < 5.0, code, "cost bound must be strictly < 5 USD")
+    return cost
+
+
+def _pf_output(path: object) -> Path:
+    code = "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED"
+    _pf_require(isinstance(path, str) and Path(path).is_absolute(), code, "absolute output path required")
+    out = Path(path)
+    _pf_require(any(out.resolve().is_relative_to(Path(root)) for root in
+                ("/Volumes/VertigoDataTier/pact", "/Volumes/APDataStore/pact")), code, "output must be durable SSD custody")
+    _pf_require(out == out.resolve(), code, "output path must be canonical without symlink indirection")
+    return out
+
+
+def build_first_measurement_authorization(*, intent_path: Path, lane_id: str, instance_job_id: str,
+                                          output_dir: Path, cost_path: Path, repo: Path | None = None) -> dict:
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    intent = validate_prefire_intent(intent_path, repo=repo)
+    head = _pf_git(repo, "rev-parse", "HEAD").decode().strip()
+    _pf_git(repo, "merge-base", "--is-ancestor", head, "main")
+    output = _pf_output(str(output_dir))
+    _pf_require(not _is_placeholder(lane_id) and not _is_placeholder(instance_job_id),
+                "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED", "real lane and job required")
+    cost = prefire_file_reference(cost_path)
+    _pf_cost(cost)
+    ref = prefire_file_reference(intent_path)
+    document = {"schema": FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA, "state": "AUTHORIZED_ONCE",
+                "authorized_by": "MAIN", "authorized_at_utc": _utc_now(),
+                "intent": {"path": ref["path"], "file_sha256": ref["sha256"], "file_bytes": ref["bytes"],
+                           "digest": intent["intent_sha256"], "commit": head},
+                "candidate_id": intent["candidate_id"], "axis": "contest_cuda", "lane_id": lane_id,
+                "instance_job_id": instance_job_id, "claim_agent": "MAIN", "output_dir": str(output),
+                "receipt_path": str(output / "MODAL_REMOTE_RESULT.json"),
+                "authorization_nonce": first_measurement_nonce(intent["intent_sha256"], lane_id, instance_job_id),
+                "dispatch_policy_sha256": prefire_digest(intent["dispatch_policy"]), "cost_preflight": cost,
+                "single_axis_waiver_reason": PREFIRE_SINGLE_AXIS_REASON, "score_claim": False,
+                "promotion_eligible": False}
+    document["authorization_sha256"] = prefire_digest(document, "authorization_sha256")
+    return document
+
+
+def validate_first_measurement_authorization(path: Path, intent_path: Path, intent: dict, *,
+                                             repo: Path | None = None, check_cost: bool = True) -> dict:
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    code = "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED"
+    try:
+        auth = _pf_read(path, code)
+        expected_keys = {"schema", "state", "authorized_by", "authorized_at_utc", "intent", "candidate_id", "axis", "lane_id", "instance_job_id", "claim_agent", "output_dir", "receipt_path", "authorization_nonce", "dispatch_policy_sha256", "cost_preflight", "single_axis_waiver_reason", "score_claim", "promotion_eligible", "authorization_sha256"}
+        _pf_require(isinstance(auth, dict) and set(auth) == expected_keys
+                    and auth["schema"] == FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA
+                    and auth["state"] == "AUTHORIZED_ONCE" and auth["authorized_by"] == auth["claim_agent"] == "MAIN"
+                    and auth["score_claim"] is False and auth["promotion_eligible"] is False
+                    and auth["authorization_sha256"] == prefire_digest(auth, "authorization_sha256"), code,
+                    "authorization schema/workflow/digest refused")
+        ref = auth["intent"]
+        actual = prefire_file_reference(intent_path)
+        _pf_require(set(ref) == {"path", "file_sha256", "file_bytes", "digest", "commit"}
+                    and ref["path"] == actual["path"] and type(ref["file_bytes"]) is int
+                    and ref["file_bytes"] == actual["bytes"] and ref["file_sha256"] == actual["sha256"]
+                    and ref["digest"] == intent["intent_sha256"], code,
+                    "authorization must bind both exact intent file bytes/hash AND canonical digest")
+        _pf_require(auth["candidate_id"] == intent["candidate_id"] and auth["axis"] == "contest_cuda"
+                    and auth["dispatch_policy_sha256"] == prefire_digest(intent["dispatch_policy"])
+                    and auth["single_axis_waiver_reason"] == PREFIRE_SINGLE_AXIS_REASON, code, "authorization field mismatch")
+        _pf_require(all(isinstance(auth[k], str) and not _is_placeholder(auth[k]) for k in ("lane_id", "instance_job_id")),
+                    code, "lane/job malformed")
+        _pf_require(auth["authorization_nonce"] == first_measurement_nonce(intent["intent_sha256"], auth["lane_id"],
+                    auth["instance_job_id"]), code, "nonce differs from exact NUL derivation")
+        output = _pf_output(auth["output_dir"])
+        _pf_require(auth["receipt_path"] == str(output / "MODAL_REMOTE_RESULT.json"), code, "receipt destination differs")
+        _pf_require(_pf_time(auth["authorized_at_utc"], code) >= _pf_time(intent["created_at_utc"], code),
+                    code, "authorization precedes intent")
+        _pf_blob(repo, "HEAD", path)
+        _pf_blob(repo, "HEAD", intent_path)
+        _pf_blob(repo, ref["commit"], intent_path)
+        _pf_git(repo, "merge-base", "--is-ancestor", ref["commit"], "HEAD")
+        _pf_git(repo, "merge-base", "--is-ancestor", intent["contract"]["implementation_commit"], ref["commit"])
+        head = _pf_git(repo, "rev-parse", "HEAD").decode().strip()
+        _pf_git(repo, "merge-base", "--is-ancestor", head, "main")
+        _pf_require(re.fullmatch(r"[0-9a-f]{40}", ref["commit"]) is not None, code, "intent commit malformed")
+        if check_cost:
+            _pf_cost(auth["cost_preflight"])
+        else:
+            _pf_ref(auth["cost_preflight"], code)
+        return auth
+    except PrefireRefusal as exc:
+        if exc.code == code:
+            raise
+        raise PrefireRefusal(code, exc.detail) from exc
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        raise PrefireRefusal(code, str(exc)) from exc
+
+
+def first_measurement_consumption_path(auth: dict, repo: Path | None = None) -> Path:
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    return repo / ".omx/state/first_measurement_consumptions" / f"{auth['authorization_nonce']}.json"
+
+
+def check_first_measurement_unconsumed(auth: dict, *, repo: Path | None = None) -> None:
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    code = "FIRST_MEASUREMENT_REPLAY_REFUSED"
+    path = first_measurement_consumption_path(auth, repo)
+    _pf_require(not path.exists(), code, "nonce already consumed, including partial/ambiguous reservations")
+    for previous in path.parent.glob("*.json"):
+        old = _pf_read(previous, code)
+        _pf_require(old.get("instance_job_id") != auth["instance_job_id"] and old.get("output_dir") != auth["output_dir"],
+                    code, "job/output already used")
+    out = Path(auth["output_dir"])
+    _pf_require(not out.exists() or not any(not p.name.startswith("PREFIRE_REFUSAL_") for p in out.iterdir()),
+                code, "output contains an existing or ambiguous dispatch")
+
+
+def reserve_first_measurement(auth: dict, *, repo: Path | None = None) -> dict:
+    """One durable reservation under a global lock; all failures leave nonce consumed."""
+    import fcntl
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    target = first_measurement_consumption_path(auth, repo)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with (target.parent / ".reservation.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        check_first_measurement_unconsumed(auth, repo=repo)
+        record = {"schema": "candidate_first_measurement_consumption.v1", "state": "RESERVED",
+                  "authorization_sha256": auth["authorization_sha256"], "authorization_nonce": auth["authorization_nonce"],
+                  "prefire_intent_sha256": auth["intent"]["digest"], "intent_file_sha256": auth["intent"]["file_sha256"],
+                  "intent_file_bytes": auth["intent"]["file_bytes"], "instance_job_id": auth["instance_job_id"],
+                  "output_dir": auth["output_dir"], "receipt_path": auth["receipt_path"], "lane_id": auth["lane_id"],
+                  "reserved_at_utc": _utc_now(), "score_claim": False, "promotion_eligible": False,
+                  "authorization_containing_commit": _pf_git(repo, "rev-parse", "HEAD").decode().strip()}
+        _pf_write_new(target, record)
+        _pf_write_new(Path(auth["output_dir"]) / "FIRST_MEASUREMENT_CONSUMPTION.json", record)
+        return record
+
+
+def transition_first_measurement(auth: dict, state: str, *, call_id: str,
+                                 receipt_path: Path | None = None, repo: Path | None = None) -> dict:
+    """Forward-only, locked, atomic nonce state transitions; never retry/reset a reservation."""
+    import fcntl
+    import os
+    target = first_measurement_consumption_path(auth, repo)
+    code = "FIRST_MEASUREMENT_REPLAY_REFUSED"
+    with (target.parent / ".reservation.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        record = _pf_read(target, code)
+        _pf_require(record.get("authorization_sha256") == auth["authorization_sha256"], code, "consumption authorization differs")
+        _pf_require((record.get("state"), state) in {("RESERVED", "SPAWNED"), ("SPAWNED", "HARVESTED")}
+                    and isinstance(call_id, str) and call_id.startswith("fc-"), code, "invalid forward transition/call id")
+        _pf_registered_call(auth, call_id, Path(repo) if repo else Path(__file__).resolve().parents[2])
+        if state == "HARVESTED":
+            _pf_require(record.get("call_id") == call_id and receipt_path is not None
+                        and str(Path(receipt_path).resolve()) == auth["receipt_path"], code, "harvest call/receipt differs")
+            record["receipt"] = prefire_file_reference(receipt_path)
+        record.update(state=state, call_id=call_id, updated_at_utc=_utc_now())
+        for destination in (target, Path(auth["output_dir"]) / "FIRST_MEASUREMENT_CONSUMPTION.json"):
+            temporary = destination.with_suffix(".next.json")
+            with temporary.open("w", encoding="utf-8") as handle:
+                json.dump(record, handle, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, destination)
+        return record
+
+
+def quarantine_first_measurement_result(result: dict, context: dict) -> dict:
+    """Preserve components and payloads while withholding promotion at worker and harvest."""
+    result = dict(result)
+    result.update(context)
+    result.update(score_claim=False, promotion_eligible=False, adjudication_required=True,
+                  first_measurement=True)
+    return result
+
+
+def _pf_completion_facts(intent: dict, auth: dict, receipt_path: Path, *, repo: Path) -> tuple[dict, dict]:
+    from tac.decode_wall_clock import _cold_public_report, _field, build_t4_direct_leg
+    code = "FIRST_MEASUREMENT_RESULT_REFUSED"
+    consumed = _pf_read(first_measurement_consumption_path(auth, repo), code)
+    _pf_require(consumed.get("state") == "HARVESTED" and consumed.get("authorization_sha256") == auth["authorization_sha256"],
+                code, "authorization not harvested")
+    _pf_require(consumed.get("receipt") == prefire_file_reference(receipt_path)
+                and str(receipt_path.resolve()) == auth["receipt_path"], code, "receipt custody differs")
+    _pf_registered_call(auth, consumed.get("call_id"), repo)
+    result = _pf_ref(consumed["receipt"], code)
+    request_path = Path(auth["output_dir"]) / "modal_cuda_auth_eval_local_request.json"
+    request = _pf_read(request_path, code)
+    for key, value in {"prefire_intent_sha256": intent["intent_sha256"],
+                       "first_measurement_authorization_sha256": auth["authorization_sha256"],
+                       "lane_id": auth["lane_id"], "instance_job_id": auth["instance_job_id"],
+                       "receipt_path": auth["receipt_path"]}.items():
+        _pf_require(result.get(key) == value and request.get(key) == value, code, f"result/request {key} differs")
+    _pf_require(result.get("call_id") == consumed.get("call_id") and isinstance(result.get("call_id"), str),
+                code, "call lineage differs")
+    _pf_require(result.get("score_claim") is False and result.get("promotion_eligible") is False
+                and result.get("adjudication_required") is True, code, "result escaped quarantine")
+    _pf_require(result.get("worker_request") == prefire_file_reference(request_path), code, "retained worker request differs")
+    snapshot = request.get("source_snapshot")
+    _pf_require(isinstance(snapshot, dict) and snapshot.get("schema") == "modal_source_snapshot.v1"
+                and snapshot.get("complete") is True and not snapshot.get("verify_failures")
+                and not snapshot.get("missing_in_source") and _is_sha256(snapshot.get("files_digest"))
+                and result.get("source_snapshot") == snapshot, code, "immutable source snapshot custody differs")
+    argv = request.get("exact_argv")
+    _pf_require(isinstance(argv, list) and argv == result.get("exact_argv"), code, "exact dispatch argv absent/different")
+    for flag, value in {"--gpu": "T4", "--scorer-device": "cuda", "--inflate-device": "auto",
+                        "--inflate-timeout": "1800", "--evaluate-timeout": "1800",
+                        "--claim-policy": "require_active", "--lane-id": auth["lane_id"],
+                        "--instance-job-id": auth["instance_job_id"], "--output-dir": auth["output_dir"],
+                        "--expected-archive-sha256": intent["candidate"]["archive"]["sha256"]}.items():
+        _pf_require(argv.count(flag) == 1 and argv.index(flag) + 1 < len(argv)
+                    and argv[argv.index(flag) + 1] == value, code, f"worker argv {flag} differs")
+    expected = {"inflate_timeout_seconds": 1800, "evaluate_timeout_seconds": 1800,
+                "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400}
+    for key, value in expected.items():
+        _pf_require(type(request.get(key)) is int and request[key] == value and result.get(key) == value,
+                    "FIRST_MEASUREMENT_TIMEOUT_REFUSED", f"timeout binding {key} differs")
+    _pf_require(result.get("returncode") != 124 and not result.get("timed_out"),
+                "FIRST_MEASUREMENT_TIMEOUT_REFUSED", "worker timed out")
+    try:
+        _pf_require(_field(result, ["artifacts", "contest_auth_eval.json", "n_samples"], "n_samples") == 600,
+                    "FIRST_MEASUREMENT_WARM_REFUSED", "not n600")
+        _cold_public_report(result)
+    except SealContractError as exc:
+        if isinstance(exc, PrefireRefusal):
+            raise
+        raise PrefireRefusal("FIRST_MEASUREMENT_WARM_REFUSED", str(exc)) from exc
+    try:
+        seconds = _field(result, ["artifacts", "contest_auth_eval.json", "inflate_elapsed_seconds"], "seconds")
+        seconds = _pf_number(seconds, "FIRST_MEASUREMENT_TIMEOUT_REFUSED", "inflate seconds", positive=True)
+        _pf_require(seconds <= 1260, "FIRST_MEASUREMENT_T4_POLICY_REFUSED", "completed inflate exceeds 1260 seconds")
+        leg = build_t4_direct_leg(t4_receipt_path=receipt_path,
+            runtime_dir=Path(intent["candidate"]["runtime"]["path"]), archive_path=Path(intent["candidate"]["archive"]["path"]))
+    except PrefireRefusal:
+        raise
+    except SealContractError as exc:
+        raise PrefireRefusal(code, str(exc)) from exc
+    return leg, result
+
+
+def _pf_completed_score(intent: dict, result: dict) -> None:
+    from tac.decode_wall_clock import _field
+    code = "FIRST_MEASUREMENT_RESULT_REFUSED"
+    import math
+    seg = _pf_number(_field(result, ["artifacts", "contest_auth_eval.json", "avg_segnet_dist"], "d_seg"), code, "exact d_seg")
+    pose = _pf_number(_field(result, ["artifacts", "contest_auth_eval.json", "avg_posenet_dist"], "d_pose"), code, "exact d_pose")
+    _pf_require(result.get("avg_segnet_dist") == seg and result.get("avg_posenet_dist") == pose, code,
+                "outer components differ from exact evaluator artifact")
+    _pf_require(seg >= 0 and pose >= 0 and result.get("archive_size_bytes") == intent["candidate"]["archive"]["bytes"],
+                code, "invalid exact components or archive bytes")
+    score = 100 * seg + math.sqrt(10 * pose) + 25 * intent["candidate"]["archive"]["bytes"] / 37545489
+    _pf_require(score - intent["admit_bar"]["pointer_score_at_intent"] < intent["admit_bar"]["net_dS_threshold"],
+                code, "exact recomputed score misses frozen net-dS bar")
+
+
+
+def complete_first_fire_intent(*, intent_path: Path, authorization_path: Path, receipt_path: Path,
+                               out_path: Path, repo: Path | None = None, pointer_path: Path | None = None) -> dict:
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[2]
+    intent = _pf_read(intent_path, "PREFIRE_INTENT_SCHEMA_REFUSED")
+    _pf_schema(intent)
+    auth = validate_first_measurement_authorization(authorization_path, intent_path, intent, repo=repo, check_cost=False)
+    try:
+        leg, result = _pf_completion_facts(intent, auth, receipt_path, repo=repo)
+    except PrefireRefusal:
+        raise
+    except (SealContractError, OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise PrefireRefusal("FIRST_MEASUREMENT_RESULT_REFUSED", str(exc)) from exc
+    intent = validate_prefire_intent(intent_path, repo=repo, pointer_path=pointer_path)
+    try:
+        _pf_completed_score(intent, result)
+    except PrefireRefusal:
+        raise
+    except (SealContractError, OSError, ValueError, KeyError, TypeError) as exc:
+        raise PrefireRefusal("FIRST_MEASUREMENT_RESULT_REFUSED", str(exc)) from exc
+    bar = intent["admit_bar"]
+    document = build_seal(candidate_id=intent["candidate_id"], runtime_dir=Path(intent["candidate"]["runtime"]["path"]),
+        archive_path=Path(intent["candidate"]["archive"]["path"]), axis="contest_cuda",
+        admit_bar=AdmitBar(rule=bar["rule"], net_dS_threshold=bar["net_dS_threshold"], pointer_axis="contest_cuda",
+            pointer_score_at_seal=bar["pointer_score_at_intent"],
+            pointer_archive_sha256_at_seal=bar["pointer_archive_sha256_at_intent"]),
+        public_entrypoint_smoke=intent["public_entrypoint_smoke"], decode_wall_clock=leg,
+        archive_member_name=(intent["candidate"]["archive_member"] or {}).get("name", ""),
+        retained_payload_paths=tuple(intent["retained_payload_paths"]), falsifiers=tuple(intent["falsifiers"]), sealed_by="MAIN")
+    leg_path = out_path.with_name(out_path.name + ".decode_wall_clock.json")
+    _pf_write_new(leg_path, leg)
+    document.update(decode_wall_clock_reference=prefire_file_reference(leg_path))
+    document.update(schema=SEAL_SCHEMA_V3, prefire_intent=prefire_file_reference(intent_path),
+                    first_measurement_authorization=prefire_file_reference(authorization_path),
+                    first_measurement_receipt=prefire_file_reference(receipt_path), prefire_intent_sha256=intent["intent_sha256"])
+    document["seal_sha256"] = compute_seal_sha256(document)
+    _pf_write_new(out_path, document)
+    verdict = validate_seal(out_path, pointer_path=pointer_path, require_decode_wall_clock=True)
+    if not verdict.ok:
+        out_path.unlink()
+        raise PrefireRefusal("FIRST_MEASUREMENT_RESULT_REFUSED", verdict.summary())
+    return document
+
+
+def _pf_validate_completed_seal(document: dict, *, pointer_path: Path | None = None) -> None:
+    repo = Path(__file__).resolve().parents[2]
+    code = "FIRST_MEASUREMENT_RESULT_REFUSED"
+    for name in ("prefire_intent", "first_measurement_authorization", "first_measurement_receipt", "decode_wall_clock_reference"):
+        _pf_ref(document.get(name), code)
+    path = Path(document["prefire_intent"]["path"])
+    intent = validate_prefire_intent(path, repo=repo, pointer_path=pointer_path)
+    _pf_require(document.get("prefire_intent_sha256") == intent["intent_sha256"]
+                and document["archive"] == intent["candidate"]["archive"]
+                and document["runtime"] == intent["candidate"]["runtime"]
+                and document["candidate_id"] == intent["candidate_id"], code, "completed seal differs from immutable intent")
+    bar = intent["admit_bar"]
+    expected_bar = AdmitBar(rule=bar["rule"], net_dS_threshold=bar["net_dS_threshold"], pointer_axis="contest_cuda",
+        pointer_score_at_seal=bar["pointer_score_at_intent"],
+        pointer_archive_sha256_at_seal=bar["pointer_archive_sha256_at_intent"]).to_dict()
+    _pf_require(document["axis"] == "contest_cuda" and document["admit_bar"] == expected_bar
+                and document["receiver_pins"] == intent["candidate"]["receiver_pins"]
+                and document.get("archive_member") == intent["candidate"]["archive_member"]
+                and document["falsifiers"] == intent["falsifiers"]
+                and document["retained_payload_paths"] == intent["retained_payload_paths"],
+                code, "completed seal changed a frozen non-timing binding")
+    auth = validate_first_measurement_authorization(Path(document["first_measurement_authorization"]["path"]),
+        path, intent, repo=repo, check_cost=False)
+    leg, result = _pf_completion_facts(intent, auth, Path(document["first_measurement_receipt"]["path"]), repo=repo)
+    _pf_completed_score(intent, result)
+    stored_leg = _pf_ref(document["decode_wall_clock_reference"], code)
+    _pf_require(document.get("decode_wall_clock") == leg == stored_leg, code,
+                "completed seal leg differs from its retained file or unchanged direct builder")
+
+
+def _pf_registered_call(auth: dict, call_id: str, repo: Path) -> None:
+    """Require the real dispatch registration, not merely a plausible call-id string."""
+    code = "FIRST_MEASUREMENT_RESULT_REFUSED"
+    ledger = repo / ".omx/state/modal_call_id_ledger.jsonl"
+    try:
+        rows = [json.loads(line) for line in ledger.read_text().splitlines() if line.strip()]
+    except (OSError, ValueError) as exc:
+        raise PrefireRefusal(code, f"call-id ledger unavailable: {exc}") from exc
+    matches = [r for r in rows if r.get("call_id") == call_id and r.get("event_type") == "dispatched"]
+    _pf_require(len(matches) == 1 and matches[0].get("first_measurement_authorization_sha256") == auth["authorization_sha256"]
+                and matches[0].get("prefire_intent_sha256") == auth["intent"]["digest"]
+                and matches[0].get("intent_file_sha256") == auth["intent"]["file_sha256"]
+                and matches[0].get("intent_file_bytes") == auth["intent"]["file_bytes"]
+                and matches[0].get("instance_job_id") == auth["instance_job_id"] and matches[0].get("lane_id") == auth["lane_id"]
+                and matches[0].get("expected_axis") == "contest_cuda" and matches[0].get("gpu") == "T4"
+                and matches[0].get("archive_count") == 1, code, "real one-call T4 registration absent or ambiguous")
+
+
+def retain_first_measurement_worker_tree(root: Path, context: dict) -> dict:
+    """Certify persistent-volume custody; block deletion of uncategorized raw/scratch bytes."""
+    rows = []
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.name != "FIRST_MEASUREMENT_RETENTION.json":
+            rows.append(prefire_file_reference(path))
+    manifest = {"schema": "candidate_first_measurement_worker_retention.v1", "payloads": rows,
+                "exact_argv": context["exact_argv"], "authorization_sha256": context["first_measurement_authorization_sha256"],
+                "prefire_intent_sha256": context["prefire_intent_sha256"], "retention_destination": str(root),
+                "cleanup_disposition": "BLOCKED_KEEP_BYTES", "cleanup_reason": "no certified lossless local harvest for this remote tree yet",
+                "score_claim": False, "promotion_eligible": False}
+    path = root / "FIRST_MEASUREMENT_RETENTION.json"
+    _pf_write_new(path, manifest)
+    return prefire_file_reference(path)

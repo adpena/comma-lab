@@ -380,6 +380,8 @@ def refuse_seal(seal_path: Path, out_dir: Path, rc: int, reason: str, manifest: 
         "refusal_reason": reason,
         "seal_validation": detail,
     }
+    if detail.get("verdict") == "PREFIRE_INTENT_SCHEMA_REFUSED":
+        receipt.update(code="PREFIRE_INTENT_SCHEMA_REFUSED", score_claim=False, promotion_eligible=False)
     try:
         seal_receipt = seal_path.with_name(seal_path.name + ".REFUSED.json")
         seal_receipt.write_text(json.dumps(receipt, indent=2, default=str))
@@ -403,6 +405,7 @@ def build_dispatch_argv(
     single_axis_waiver_reason: str = "",
     pair_group_id: str = "",
     claim_policy: str = "",
+    first_measurement_context: Path | None = None,
 ) -> list[str]:
     """Compose the fixed dispatch template. Identical on both axes but the entrypoint.
 
@@ -439,6 +442,13 @@ def build_dispatch_argv(
         cmd += ["--pair-group-id", pair_group_id]
     if claim_policy:
         cmd += ["--claim-policy", claim_policy]
+    if first_measurement_context is not None:
+        from tac.candidate_seal import PrefireRefusal
+        if spec["axis"] != "cuda" or claim_policy != "require_active":
+            raise PrefireRefusal("FIRST_MEASUREMENT_LANE_REFUSED", "first measurement requires CUDA and an active claim")
+        cmd += ["--gpu", "T4", "--scorer-device", "cuda", "--inflate-device", "auto",
+                "--inflate-timeout", "1800", "--evaluate-timeout", "1800",
+                "--first-measurement-context", str(first_measurement_context)]
     return cmd
 
 
@@ -576,7 +586,154 @@ def measure_fire_runtime_digests(runtime_dir: Path) -> dict:
     }
 
 
+def first_measurement_cloud_apps() -> list[str] | None:
+    """Query the same active-container surface directly, without spawning a provider CLI."""
+    import asyncio
+    async def query():
+        from modal._object import _get_environment_name
+        from modal.client import _Client
+        from modal_proto import api_pb2
+        client = await _Client.from_env()
+        response = await client.stub.TaskList(api_pb2.TaskListRequest(environment_name=_get_environment_name(None)))
+        return sorted({task.app_id for task in response.tasks})
+    try:
+        return asyncio.run(asyncio.wait_for(query(), timeout=20))
+    except Exception:
+        return None  # Caller MUST produce FIRST_MEASUREMENT_LANE_REFUSED on unknown state.
+
+
+def _first_measurement_main(argv: list[str]) -> int:
+    from tac.candidate_seal import (
+        PrefireRefusal,
+        _pf_read,
+        _pf_require,
+        _pf_write_new,
+        check_first_measurement_unconsumed,
+        reserve_first_measurement,
+        transition_first_measurement,
+        validate_first_measurement_authorization,
+        validate_prefire_intent,
+        write_prefire_refusal,
+    )
+    from tac.checkpoint_maturity import pointer_promotion_verdict
+    from tac.deploy.modal.auth_eval import ClaimSpec, require_active_modal_auth_eval_claim
+    from tac.deploy.modal.single_flight import single_flight_findings
+
+    paths = []
+    output = None
+    try:
+        # Reject overrides even when explicitly set to the current default.
+        allowed = {"--first-measurement", "--first-measurement-authorization", "--dry-run"}
+        flags = [v.split("=", 1)[0] for v in argv if v.startswith("--")]
+        for flag in ("--first-measurement", "--first-measurement-authorization"):
+            for i, value in enumerate(argv):
+                if value == flag and i + 1 < len(argv):
+                    paths.append(Path(argv[i + 1]))
+                elif value.startswith(flag + "="):
+                    paths.append(Path(value.split("=", 1)[1]))
+        _pf_require(not (set(flags) - allowed) and len(flags) == len(set(flags)),
+                    "FIRST_MEASUREMENT_ARGUMENT_REFUSED", "first measurement accepts only intent, authorization, and dry-run")
+        _pf_require("--first-measurement-authorization" in flags,
+                    "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED", "separate committed authorization required")
+        class FirstMeasurementParser(argparse.ArgumentParser):
+            def error(self, message):
+                raise PrefireRefusal("FIRST_MEASUREMENT_ARGUMENT_REFUSED", message)
+        parser = FirstMeasurementParser()
+        parser.add_argument("--first-measurement", required=True)
+        parser.add_argument("--first-measurement-authorization", required=True)
+        parser.add_argument("--dry-run", action="store_true")
+        args = parser.parse_args(argv)
+        intent_path, auth_path = Path(args.first_measurement), Path(args.first_measurement_authorization)
+        raw_auth = _pf_read(auth_path, "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED")
+        # Only use a structurally valid SSD destination for failure custody.
+        from tac.candidate_seal import _pf_output
+        output = _pf_output(raw_auth.get("output_dir"))
+        intent = validate_prefire_intent(intent_path, repo=REPO)
+        auth = validate_first_measurement_authorization(auth_path, intent_path, intent, repo=REPO)
+        check_first_measurement_unconsumed(auth, repo=REPO)
+        lane_ok, lane_reason = pointer_promotion_verdict(auth["lane_id"])
+        _pf_require(lane_ok, "FIRST_MEASUREMENT_LANE_REFUSED", lane_reason)
+        claim = require_active_modal_auth_eval_claim(repo_root=REPO,
+            spec=ClaimSpec(lane_id=auth["lane_id"], instance_job_id=auth["instance_job_id"], agent="MAIN"))
+        _pf_require(claim.get("agent") == "MAIN", "FIRST_MEASUREMENT_LANE_REFUSED", "active claim is not MAIN's")
+        findings = single_flight_findings(label=auth["instance_job_id"], lane_id=auth["lane_id"],
+            claim_agent="MAIN", repo_root=REPO, check_cloud=False)
+        _pf_require(not findings, "FIRST_MEASUREMENT_LANE_REFUSED", "; ".join(findings))
+        # Explicit unknown-cloud refusal; legacy helper's optional override cannot apply here.
+        cloud = first_measurement_cloud_apps()
+        _pf_require(cloud is not None and not cloud, "FIRST_MEASUREMENT_LANE_REFUSED", "cloud state unknown or another scored job is live")
+        runtime = Path(intent["candidate"]["runtime"]["path"])
+        archive = Path(intent["candidate"]["archive"]["path"])
+        _pf_require(not validate_tree(runtime), "PREFIRE_NON_TIMING_GATE_REFUSED", "runtime upload validator refused")
+        context = {
+            "prefire_intent_sha256": intent["intent_sha256"], "intent_file_sha256": auth["intent"]["file_sha256"],
+            "intent_file_bytes": auth["intent"]["file_bytes"], "first_measurement_authorization_sha256": auth["authorization_sha256"],
+            "lane_id": auth["lane_id"], "instance_job_id": auth["instance_job_id"], "receipt_path": auth["receipt_path"],
+            "inflate_timeout_seconds": 1800, "evaluate_timeout_seconds": 1800,
+            "modal_function_timeout_seconds": 4800, "poller_deadline_seconds": 5400,
+            "score_claim": False, "promotion_eligible": False, "adjudication_required": True,
+            "authorization_path": str(auth_path.resolve()), "intent_path": str(intent_path.resolve()),
+        }
+        context_path = output / "FIRST_MEASUREMENT_CONTEXT.json"
+        cmd = build_dispatch_argv(spec=axis_spec("cuda"), archive=archive, runtime_dir=runtime,
+            archive_sha=intent["candidate"]["archive"]["sha256"], out_dir=output,
+            lane_id=auth["lane_id"], instance_job_id=auth["instance_job_id"], claim_agent="MAIN",
+            single_axis_waiver_reason=auth["single_axis_waiver_reason"], claim_policy="require_active",
+            first_measurement_context=context_path)
+        context["exact_argv"] = cmd
+        _pf_require(not verify_dispatch_paths(REPO, cmd), "PREFIRE_CONTRACT_DRIFT_REFUSED", "dispatch path resolution failed")
+        if args.dry_run:
+            print(json.dumps({"dry_run": True, "nonce_consumed": False, "argv": cmd, **context}, indent=2))
+            return 0
+        # Re-read just before reservation. Any ambiguous failure after this point stays consumed.
+        validate_prefire_intent(intent_path, repo=REPO)
+        validate_first_measurement_authorization(auth_path, intent_path, intent, repo=REPO)
+        reserve_first_measurement(auth, repo=REPO)
+        spec = axis_spec("cuda")
+        prune_snapshots(REPO / SNAPSHOT_ROOT_REL, retain_days=3.0)
+        snap = build_snapshot(source_root=REPO, entrypoint=REPO / spec["entrypoint"].split("::", 1)[0],
+                              label=auth["instance_job_id"])
+        failures = assert_python_source_resolves(snap.root, snap.mounts.python_source_modules,
+            python_executable=VENV_PY, entrypoint=snap.entrypoint) if snap.complete else ["incomplete source snapshot"]
+        _pf_require(snap.complete and not failures, "PREFIRE_CONTRACT_DRIFT_REFUSED", "; ".join(failures))
+        # Frozen candidate/contract still must match after snapshot work and before paid spawn.
+        validate_prefire_intent(intent_path, repo=REPO)
+        context["source_snapshot"] = snap.to_dict()
+        _pf_write_new(context_path, context)
+        manifest = {"schema": "fire_modal_first_measurement.v1", **context}
+        write_fire_manifest(output, manifest)
+        dispatched = subprocess.run(cmd, cwd=REPO, env=dispatch_env(snap.root, entrypoint=snap.entrypoint),
+                                   capture_output=True, text=True, check=False)
+        (output / "dispatch_stdout.log").write_text(dispatched.stdout)
+        (output / "dispatch_stderr.log").write_text(dispatched.stderr)
+        spawn = _pf_read(output / "modal_auth_eval_spawn.json", "FIRST_MEASUREMENT_REPLAY_REFUSED")
+        call_id = spawn.get("call_id")
+        _pf_require(isinstance(call_id, str) and call_id.startswith("fc-"),
+                    "FIRST_MEASUREMENT_REPLAY_REFUSED", "spawn ambiguous; nonce stays consumed")
+        transition_first_measurement(auth, "SPAWNED", call_id=call_id, repo=REPO)
+        poller = [VENV_PY, str(REPO / "tools/launch_detached_process.py"), "--output-dir", str(output),
+            "--purpose", f"first measurement harvest {call_id}", "--done-receipt", _done_receipt_name(auth["instance_job_id"]),
+            "--", VENV_PY, str(REPO / "tools/modal_harvest_poller.py"), "--call-id", call_id,
+            "--output-dir", str(output), "--deadline-s", "5400", "--lane-id", auth["lane_id"],
+            "--instance-job-id", auth["instance_job_id"], "--no-anchor-mirror"]
+        armed = subprocess.run(poller, cwd=REPO, capture_output=True, text=True, check=False)
+        (output / "poller_arm_stdout.log").write_text(armed.stdout)
+        (output / "poller_arm_stderr.log").write_text(armed.stderr)
+        _pf_require(armed.returncode == 0 and bool(json.loads(armed.stdout).get("pid")),
+                    "FIRST_MEASUREMENT_TIMEOUT_REFUSED", "call exists but durable poller failed to arm; recover exact call")
+        manifest.update(call_id=call_id, poller_argv=poller)
+        write_fire_manifest(output, manifest)
+        return 0
+    except (PrefireRefusal, OSError, ValueError, KeyError, TypeError, AttributeError, SystemExit) as exc:
+        refusal = exc if isinstance(exc, PrefireRefusal) else PrefireRefusal("FIRST_MEASUREMENT_LANE_REFUSED", str(exc))
+        write_prefire_refusal(refusal, paths=tuple(paths), output_dir=output)
+        return 9
+
+
 def main(argv: list[str] | None = None) -> int:
+    supplied = list(sys.argv[1:] if argv is None else argv)
+    if any(v.split("=", 1)[0] in {"--first-measurement", "--first-measurement-authorization"} for v in supplied):
+        return _first_measurement_main(supplied)
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
         "--seal",

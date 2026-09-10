@@ -1,0 +1,112 @@
+{
+  "schema": "ddm_ffi3_review_receipt.v1",
+  "reviewed_at_utc": "2026-09-10T16:44:13.302739+00:00",
+  "reviewer": "ddm_ffi3",
+  "python_override_used": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "source_files": [
+    {
+      "path": "src/tac/candidate_seal.py",
+      "bytes": 138711,
+      "sha256": "4c0baadd883717a693c77825adb207941d9c63796a53d90e930229b5c6144efb"
+    },
+    {
+      "path": "src/tac/git_custody_read.py",
+      "bytes": 10222,
+      "sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5"
+    },
+    {
+      "path": "src/tac/tests/test_candidate_prefire_intent.py",
+      "bytes": 36168,
+      "sha256": "fc28a441a3bfce8aff926d5fb03d6c6d69bbb543a9f1fafc0535b83067701f7f"
+    },
+    {
+      "path": "src/tac/tests/test_git_custody_read.py",
+      "bytes": 3586,
+      "sha256": "09a07bc394a82405c762b7aa834f631390078551428b2734e763f316fa639370"
+    },
+    {
+      "path": "tools/make_candidate_seal.py",
+      "bytes": 20219,
+      "sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791"
+    },
+    {
+      "path": "tools/authorize_candidate_first_measurement.py",
+      "bytes": 1547,
+      "sha256": "96bab07767e5e7e3f6243c30be3a58e58b232b1111b0088e97367cca2e0c4174"
+    },
+    {
+      "path": "tools/fire_modal_auth_eval.py",
+      "bytes": 67484,
+      "sha256": "22771b01138df50782d7edefd47bf6cac486252bbd187d02429c7c7254d0084c"
+    },
+    {
+      "path": "experiments/modal_auth_eval.py",
+      "bytes": 82320,
+      "sha256": "d0c9fc519b004ba8f250d80ffac9d5f48c8abc3dce256462be4d88665c8071a7"
+    },
+    {
+      "path": "tools/modal_harvest_poller.py",
+      "bytes": 36333,
+      "sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f"
+    },
+    {
+      "path": "src/tac/deploy/modal/auth_eval.py",
+      "bytes": 35999,
+      "sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1"
+    }
+  ],
+  "passes": [
+    {
+      "number": 1,
+      "scope": "pr12 clauses, both clarification bindings, typed refusal paths, exact file/commit/reference checks",
+      "log": {
+        "path": ".omx/research/ddm_ffi3_20260910/REVIEW_FINAL_1.txt",
+        "bytes": 1643,
+        "sha256": "2e7a64e59d3fdf6bc269062463b3208de680df881c230c166be678892ce5bb4b"
+      }
+    },
+    {
+      "number": 2,
+      "scope": "dispatch snapshot import custody, nonce/call ledger, worker retention, quarantine/recovery, unchanged legacy consumers",
+      "log": {
+        "path": ".omx/research/ddm_ffi3_20260910/REVIEW_FINAL_2.txt",
+        "bytes": 1643,
+        "sha256": "ae8bf6524d192d366928572a1afbff1f4f8af1fd124ba96af3cd37e639c937d7"
+      }
+    }
+  ],
+  "fixed_before_final_passes": [
+    "Missing retained legacy leg FILE reference",
+    "Legacy helper error escaped normal consumer typed refusal",
+    "Worker snapshot import selected wrong default repository custody root"
+  ],
+  "unresolved_validation": [
+    "3 existing process inspection tests denied ps by sandbox",
+    "1 existing Unix socket test denied bind by sandbox",
+    "Real RLC2 producer and MAIN harvest not run; forbidden in this arm"
+  ],
+  "validation": [
+    {
+      "path": ".omx/research/ddm_ffi3_20260910/PYTEST_FINAL.txt",
+      "bytes": 5022,
+      "sha256": "3d1f7a737c991629dd8f5528672560e29fb8587283f74db0aba00159e96e2385"
+    },
+    {
+      "path": ".omx/research/ddm_ffi3_20260910/PYTEST_NEW.txt",
+      "bytes": 99,
+      "sha256": "3964d3cf4946b51b60381e02d490c066899862d9676e30be20329ac12c65d42b"
+    },
+    {
+      "path": ".omx/research/ddm_ffi3_20260910/RUFF.txt",
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": ".omx/research/ddm_ffi3_20260910/VALIDATION_COMMANDS.json",
+      "bytes": 1334,
+      "sha256": "5b49a406bd45496272be3359b9ac9812ffb27004ee1b0d8753329815b68b1b12"
+    }
+  ]
+}

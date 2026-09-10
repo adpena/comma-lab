@@ -496,6 +496,7 @@ def _run_auth_eval_inner(
     scorer_input_cache_tensor_large_pair_threshold: int = 64,
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
+    retained_work_root: str = "",
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -571,11 +572,17 @@ def _run_auth_eval_inner(
 
     out_dir = REMOTE_OUT
     work_dir = REMOTE_WORK_ROOT / "eval_work"
+    if retained_work_root:
+        remote_root = Path(retained_work_root)
+        work_dir = remote_root / "eval_work"
+        out_dir = remote_root / "out"
+        if work_dir.exists() or out_dir.exists():
+            raise ValueError("first measurement remote work already exists; no replay")
     archive_path = out_dir / "archive.zip"
     uv_env = out_dir / "uv_project_env"
     if out_dir.exists():
         shutil.rmtree(out_dir)
-    if REMOTE_WORK_ROOT.exists():
+    if not retained_work_root and REMOTE_WORK_ROOT.exists():
         shutil.rmtree(REMOTE_WORK_ROOT)
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -1004,9 +1011,11 @@ def _run_auth_eval_fail_closed(
     scorer_input_cache_tensor_large_pair_threshold: int = 64,
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
+    retained_work_root: str = "",
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
+            retained_work_root=retained_work_root,
             archive_bytes=archive_bytes,
             archive_sha256=archive_sha256,
             archive_size_bytes=archive_size_bytes,
@@ -1034,8 +1043,8 @@ def _run_auth_eval_fail_closed(
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
-            out_dir=REMOTE_OUT,
-            work_dir=REMOTE_WORK_ROOT / "eval_work",
+            out_dir=(Path(retained_work_root) / "out" if retained_work_root else REMOTE_OUT),
+            work_dir=(Path(retained_work_root) if retained_work_root else REMOTE_WORK_ROOT) / "eval_work",
             validation_path=REMOTE_OUT / "modal_cuda_auth_eval_validation.json",
             canonical_path=(
                 f"archive.zip -> inflate.sh -> upstream/evaluate.py --device {scorer_device}"
@@ -1072,10 +1081,30 @@ def run_auth_eval(
     scorer_input_cache_tensor_large_pair_threshold: int = 64,
     allow_large_scorer_input_cache_tensor_export: bool = False,
     scorer_input_cache_tensor_volume_run_id: str = "",
+    first_measurement_context: dict | None = None,
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal T4."""
 
-    return _run_auth_eval_fail_closed(
+    context = first_measurement_context
+    retained_root = ""
+    if context:
+        import re
+        import shutil
+
+        from tac.candidate_seal import quarantine_first_measurement_result, retain_first_measurement_worker_tree
+        digest = context.get("first_measurement_authorization_sha256", "")
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("invalid first measurement authorization digest")
+        retained_root = str(AUTH_CACHE_VOLUME_ROOT / "first_measurements" / digest)
+        if shutil.disk_usage(AUTH_CACHE_VOLUME_ROOT).free < 16 * 1024**3:
+            raise ValueError("first measurement storage preflight: need 16 GiB retained-volume headroom")
+        Path(retained_root).mkdir(parents=True, exist_ok=False)
+        (Path(retained_root) / "INPUT_archive.zip").write_bytes(archive_bytes)
+        if submission_dir_zip_bytes is not None:
+            (Path(retained_root) / "INPUT_runtime.zip").write_bytes(submission_dir_zip_bytes)
+        auth_cache_vol.commit()
+    result = _run_auth_eval_fail_closed(
+        retained_work_root=retained_root,
         archive_bytes=archive_bytes,
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,
@@ -1097,6 +1126,16 @@ def run_auth_eval(
         allow_large_scorer_input_cache_tensor_export=allow_large_scorer_input_cache_tensor_export,
         scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
     )
+
+    if context:
+        retained = retain_first_measurement_worker_tree(Path(retained_root), context)
+        auth_cache_vol.commit()
+        result = quarantine_first_measurement_result(result, context)
+        result["retained_remote_payload"] = {"volume_name": AUTH_CACHE_VOLUME_NAME,
+            "path": retained_root, "manifest": retained,
+            "scope": "every file actually materialized; see hashed manifest"}
+        result.setdefault("artifacts", {})["FIRST_MEASUREMENT_RETENTION.json"] = Path(retained["path"]).read_bytes()
+    return result
 
 
 @app.function(
@@ -1269,6 +1308,7 @@ def main(
     claim_policy: str = "open",
     pair_group_id: str = "",
     single_axis_waiver_reason: str = "",
+    first_measurement_context: str = "",
 ) -> None:
     """Upload an archive and harvest Modal CUDA auth-eval artifacts."""
 
@@ -1293,6 +1333,40 @@ def main(
         raise SystemExit(
             "FATAL: --claim-policy must be one of open, require_active"
         )
+
+    first_context = None
+    if first_measurement_context:
+        from tac.candidate_seal import (
+            _pf_read,
+            _pf_require,
+            first_measurement_consumption_path,
+            validate_first_measurement_authorization,
+            validate_prefire_intent,
+        )
+        first_context = _pf_read(Path(first_measurement_context), "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED")
+        first_intent_path = Path(first_context["intent_path"])
+        # Imports come from the immutable mount snapshot; custody stays in the local CWD.
+        custody_repo = Path.cwd()
+        first_intent = validate_prefire_intent(first_intent_path, repo=custody_repo,
+            pointer_path=custody_repo / ".omx/state/canonical_frontier_pointer.json")
+        first_auth = validate_first_measurement_authorization(Path(first_context["authorization_path"]),
+            first_intent_path, first_intent, repo=custody_repo)
+        consumed = _pf_read(first_measurement_consumption_path(first_auth, repo=custody_repo), "FIRST_MEASUREMENT_REPLAY_REFUSED")
+        _pf_require(consumed.get("state") == "RESERVED" and consumed.get("authorization_sha256") == first_auth["authorization_sha256"],
+                    "FIRST_MEASUREMENT_REPLAY_REFUSED", "worker requires exact RESERVED authorization")
+        _pf_require(gpu == "T4" and scorer_device == "cuda" and inflate_device == "auto"
+                    and inflate_timeout == evaluate_timeout == 1800 and claim_policy == "require_active"
+                    and detach and not inflate_env and not scorer_input_cache_tensors and not scorer_input_cache_hashes
+                    and lane_id == first_auth["lane_id"] and instance_job_id == first_auth["instance_job_id"]
+                    and str(Path(output_dir).resolve()) == first_auth["output_dir"]
+                    and str(Path(archive).resolve()) == first_intent["candidate"]["archive"]["path"]
+                    and str(Path(submission_dir).resolve()) == first_intent["candidate"]["runtime"]["path"]
+                    and expected_archive_sha256 == first_intent["candidate"]["archive"]["sha256"]
+                    and first_context.get("source_snapshot", {}).get("complete") is True
+                    and bool(os.environ.get("PACT_MODAL_SOURCE_ROOT"))
+                    and first_context["prefire_intent_sha256"] == first_intent["intent_sha256"]
+                    and first_context["first_measurement_authorization_sha256"] == first_auth["authorization_sha256"],
+                    "FIRST_MEASUREMENT_ARGUMENT_REFUSED", "worker values differ from one-shot contract")
 
     prepared = prepare_modal_auth_eval_request(
         archive=archive,
@@ -1414,6 +1488,8 @@ def main(
         "adjudication_required": True,
         **pairing,
     }
+    if first_context:
+        local_summary.update(first_context)
     local_summary = complete_false_authority_fields(local_summary)
     write_json(out_dir / "modal_cuda_auth_eval_local_request.json", local_summary)
 
@@ -1446,6 +1522,9 @@ def main(
     else:
         raise SystemExit(f"FATAL: unsupported --gpu {gpu!r}; use T4, A100, or H100")
 
+    if first_context:
+        # Tuple request+limit fixes ALL billed compute quantities; a scalar memory value has no hard cap.
+        auth_eval_fn = auth_eval_fn.with_options(cpu=(4.0, 4.0), memory=(16384, 16384))
     call_args = (
         archive_bytes,
         archive_sha256,
@@ -1468,6 +1547,8 @@ def main(
         bool(allow_large_scorer_input_cache_tensor_export),
         tensor_volume_run_id,
     )
+    if first_context:
+        call_args = (*call_args, first_context)
     if claim_policy_normalized == "require_active":
         require_active_modal_auth_eval_claim(repo_root=Path.cwd(), spec=claim_spec)
     else:
@@ -1510,13 +1591,15 @@ def main(
             gpu=gpu_key,
             expected_axis=axis_label,
             recipe="experiments/modal_auth_eval.py",
-            max_seconds=int(inflate_timeout) + int(evaluate_timeout),
+            max_seconds=4800 if first_context else int(inflate_timeout) + int(evaluate_timeout),
             mounted_code_git_head=source_repo_commit,
             agent=claim_agent,
             base_archive_sha256=archive_sha256,
             composed_archive_sha256=archive_sha256,
             archive_count=1,
             pair_group_id=pairing.get("pair_group_id"),
+            **({key: first_context[key] for key in ("prefire_intent_sha256", "first_measurement_authorization_sha256",
+                "intent_file_sha256", "intent_file_bytes", "instance_job_id")} if first_context else {}),
         )
         write_spawn_metadata(
             out_dir=out_dir,

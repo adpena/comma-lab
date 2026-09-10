@@ -1,0 +1,139 @@
+{
+  "schema": "ddm_ffi3_prepared_freeze_inputs.v1",
+  "state": "PREPARED_INPUTS_NOT_FROZEN",
+  "prepared_at_utc": "2026-09-10T16:46:31.824438+00:00",
+  "target_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json",
+  "implementation_commit": null,
+  "bundle_candidate_commit": "91836b61649a0215a854ecb85e87d768512f5aca",
+  "implementation_manifest": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+    "bytes": 2072,
+    "sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d"
+  },
+  "contract_inputs": {
+    "schema": "ddm_ffi3.contract_inputs.v1",
+    "utc": "2026-09-10T16:36:37.416131+00:00",
+    "clarifications_verbatim": {
+      "1": "## Clarification 1 (ffi1; MAIN, pending pr12-family ratification) \u2014 the authorization's intent binding\nWhere pr12 writes `authorization.intent.sha256 = \"<intent digest>\"` (line ~308) while line ~85 requires\nexact byte count + SHA-256 for referenced JSON: bind BOTH and refuse on either mismatch \u2014\n`authorization.intent.file_sha256` + `authorization.intent.file_bytes` (exact file bytes of the committed\nintent JSON) AND `authorization.intent.digest` (the canonical self-omitting intent digest exactly as pr12\ndefines it). Dispatch custody records all three.\n",
+      "2": "## Clarification 2 (ffi2; MAIN, pending ratification) \u2014 scope of `{path, bytes, sha256}`\npr12 line ~84 (\"Every referenced JSON or manifest carries `{path, bytes, sha256}`\") governs every reference\nINTRODUCED by the new objects (`candidate_prefire_intent.v1`, the authorization, the completion producer's\n`candidate_seal.v3` fields, the risk receipt, the retention manifest). It does NOT rewrite the embedded\nLEGACY objects that pr12 explicitly preserves unchanged \u2014 the completed `t4_direct` leg and its\n`{path, sha256}` receipt references validated by the unchanged `tac.decode_wall_clock` (pr12: \"retains the\ncompleted t4_direct requirements\"). Where a new object embeds a legacy leg, it references the legacy leg's\nFILE with `{path, bytes, sha256}` and leaves the leg's own interior to the legacy validator.\n"
+    },
+    "inputs": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_implement_prefire_intent_contract_bounded_charter_20260910.md",
+        "bytes": 5634,
+        "sha256": "dd0de8cd84b59c795750ac99ebe9c5e1f5a543951537da4c66fb72fa6951814f"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+        "bytes": 4124,
+        "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+        "bytes": 42309,
+        "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi1_implement_prefire_intent_contract_20260910.md",
+        "bytes": 9018,
+        "sha256": "b61562bb9bce9450689648b43b395e19ce81fb7099d82006446b6631c190d78d"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi2_implement_prefire_intent_contract_20260910.md",
+        "bytes": 13937,
+        "sha256": "efb9fee9fc694d6e397fd0fdc300e77ce9523281de68595b175d52e939fc049f"
+      }
+    ],
+    "score_claim": false
+  },
+  "schema_ids": [
+    "candidate_prefire_intent.v1",
+    "candidate_prefire_timing_risk.v1",
+    "candidate_first_measurement_authorization.v1",
+    "candidate_seal.v3",
+    "candidate_first_measurement_consumption.v1",
+    "candidate_first_measurement_worker_retention.v1"
+  ],
+  "flag_names": {
+    "intent": [
+      "--first-fire-intent",
+      "--candidate-id",
+      "--runtime-dir",
+      "--axis",
+      "--public-entrypoint-smoke",
+      "--candidate-manifest",
+      "--manifest-validation",
+      "--twin-encode-receipt",
+      "--archive-parseback-receipt",
+      "--raw-identity-receipt",
+      "--literal-census",
+      "--retention-manifest",
+      "--timing-risk-evidence",
+      "--admit-bar-net-ds",
+      "--pointer-axis",
+      "--bar-tolerance",
+      "--retained-path",
+      "--falsifier",
+      "--out"
+    ],
+    "authorization": [
+      "--intent",
+      "--lane-id",
+      "--instance-job-id",
+      "--output-dir",
+      "--cost-preflight",
+      "--out"
+    ],
+    "fire": [
+      "--first-measurement",
+      "--first-measurement-authorization",
+      "--dry-run"
+    ],
+    "completion": [
+      "--complete-first-fire-intent",
+      "--first-measurement-authorization",
+      "--candidate-t4-receipt",
+      "--out"
+    ]
+  },
+  "dispatch_policy": {
+    "axis": "contest_cuda",
+    "gpu": "T4",
+    "scorer_device": "cuda",
+    "inflate_device": "auto",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "modal_function_timeout_seconds": 4800,
+    "poller_deadline_seconds": 5400,
+    "n_samples": 600,
+    "cold_required": true,
+    "checkpoint_resume_required": false,
+    "token_cache_status_required": "DISABLED",
+    "source_snapshot_required": true,
+    "claim_policy": "require_active",
+    "max_paid_dispatches": 1,
+    "currency": "USD",
+    "maximum_total_cost_usd_exclusive": 5.0,
+    "cost_preflight_max_age_seconds": 86400
+  },
+  "typed_refusal_codes": [
+    "PREFIRE_INTENT_SCHEMA_REFUSED",
+    "PREFIRE_INTENT_FALSE_AUTHORITY_REFUSED",
+    "PREFIRE_CONTRACT_DRIFT_REFUSED",
+    "PREFIRE_IDENTITY_DRIFT_REFUSED",
+    "PREFIRE_NON_TIMING_GATE_REFUSED",
+    "PREFIRE_POINTER_DRIFT_REFUSED",
+    "PREFIRE_RISK_EVIDENCE_REFUSED",
+    "FIRST_MEASUREMENT_AUTHORIZATION_REFUSED",
+    "FIRST_MEASUREMENT_REPLAY_REFUSED",
+    "FIRST_MEASUREMENT_ARGUMENT_REFUSED",
+    "FIRST_MEASUREMENT_LANE_REFUSED",
+    "FIRST_MEASUREMENT_TIMEOUT_REFUSED",
+    "FIRST_MEASUREMENT_WARM_REFUSED",
+    "FIRST_MEASUREMENT_T4_POLICY_REFUSED",
+    "FIRST_MEASUREMENT_RESULT_REFUSED"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "instruction": "MAIN must land/verify the implementation, rerun required checks, then construct and commit the actual target receipt with real landed commit and freeze UTC; this document grants no producer/fire permission."
+}

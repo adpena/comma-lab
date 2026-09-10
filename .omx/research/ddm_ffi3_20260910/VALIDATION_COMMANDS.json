@@ -1,0 +1,9 @@
+{
+  "new_tests": ".venv/bin/python -m pytest -q src/tac/tests/test_candidate_prefire_intent.py src/tac/tests/test_git_custody_read.py --tb=short",
+  "full_selection": ".venv/bin/python -m pytest -q src/tac/tests/test_candidate_prefire_intent.py src/tac/tests/test_git_custody_read.py src/tac/tests/test_candidate_seal.py src/tac/tests/test_decode_wall_clock.py src/tac/tests/test_decode_wall_clock_t4_direct.py src/tac/tests/test_decode_timing_concurrency.py tools/tests/test_fire_modal_auth_eval_axis.py tools/tests/test_fire_modal_auth_eval_claim_exemption.py src/tac/tests/test_modal_auth_eval.py src/tac/tests/test_modal_auth_eval_recovery.py src/tac/tests/test_recover_modal_auth_eval_tool.py --tb=short",
+  "ruff": ".venv/bin/python -m ruff check src/tac/candidate_seal.py src/tac/git_custody_read.py src/tac/tests/test_candidate_prefire_intent.py src/tac/tests/test_git_custody_read.py tools/make_candidate_seal.py tools/authorize_candidate_first_measurement.py tools/fire_modal_auth_eval.py experiments/modal_auth_eval.py tools/modal_harvest_poller.py src/tac/deploy/modal/auth_eval.py",
+  "review_pass_command": ".venv/bin/python tools/review_tracker.py mark-file <each changed Python file> --status reviewed",
+  "axis": "source inspection; scorer-free unit fixtures",
+  "score_claim": false,
+  "promotion_eligible": false
+}

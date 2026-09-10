@@ -1,0 +1,20 @@
+{
+  "schema": "ddm_ffi3_bundle_verification.v1",
+  "verified_at_utc": "2026-09-10T16:46:31.764414+00:00",
+  "fallback_commit": "91836b61649a0215a854ecb85e87d768512f5aca",
+  "base_head": "7ed5ebde8e8379c9a3a3aa0d589044658a5b663c",
+  "bundle_verify": "The bundle contains this ref:\n91836b61649a0215a854ecb85e87d768512f5aca refs/heads/serializer-fallback\nThe bundle requires this ref:\n7ed5ebde8e8379c9a3a3aa0d589044658a5b663c \nThe bundle uses this hash algorithm: sha1\n",
+  "serializer_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164413.779923Z-37983/receipts.jsonl",
+    "bytes": 6172,
+    "sha256": "4a0235e8e5618d4715ec1029817d79addf9bbf6796492a8dc4b3602ae5080e20"
+  },
+  "file_count": 22,
+  "all_22_input_committed_live_sha256_equal": true,
+  "all_three_retained_serializer_artifacts_match_hash_and_bytes": true,
+  "all_seven_unchanged_implementation_dependencies_match_base_HEAD": true,
+  "shared_staged_index": "",
+  "decode_wall_clock_sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff",
+  "score_claim": false,
+  "promotion_eligible": false
+}
