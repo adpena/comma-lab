@@ -1,0 +1,95 @@
+{
+  "axis": "[macOS-CPU advisory / real full-n600 counts, scorer-free]",
+  "binding": {
+    "archive": {
+      "bytes": 180388,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+      "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+    },
+    "axis": "[macOS-CPU advisory / real full-n600 counts, scorer-free]",
+    "dependencies": [
+      {
+        "bytes": 59351,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+        "sha256": "06b7a506bdb9e09a363af48933c53ca1ddb67b91d4a05b513470e288fd3858f2"
+      },
+      {
+        "bytes": 8590,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_tc1_mixer_codec.py",
+        "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+      }
+    ],
+    "field": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/field.u8",
+      "sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94"
+    },
+    "score_claim": false,
+    "seed": 20260910,
+    "source": {
+      "bytes": 24036,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc2_lane_context.py",
+      "sha256": "1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7"
+    },
+    "trace": {
+      "bytes": 2628,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_bnd2_segment_code/generation2/trace/RESULT.json",
+      "sha256": "a715df024b8e6d07186717358db496c58f07948881ad6b10c7e82d2c27f219fd"
+    },
+    "upstream": {
+      "bytes": 6005,
+      "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "causal_gain_bytes": 82.77145659571397,
+  "codelength_bits": [
+    [
+      958224.1848907213,
+      692286.1826638858,
+      692286.1826638858
+    ],
+    [
+      914381.007165347,
+      648669.3107128632,
+      648669.3107128632
+    ],
+    [
+      914382.0143860583,
+      648674.0571712196,
+      648674.0571712196
+    ],
+    [
+      957562.0132379556,
+      691642.6682404064,
+      691642.6682404064
+    ],
+    [
+      957561.7344875649,
+      691646.1896743805,
+      691646.1896743805
+    ]
+  ],
+  "codelength_is_not_payload_price": true,
+  "columns": [
+    "all_symbols",
+    "lane_and_road_symbols",
+    "lane_and_road_in_rows_128_319"
+  ],
+  "encode_gate": true,
+  "full_n600": true,
+  "gate_disposition": "ENCODE",
+  "labels": [
+    "shipped",
+    "oracle_float",
+    "oracle_int8",
+    "causal_float",
+    "causal_int8"
+  ],
+  "oracle_fixed_family_optimistic_gain_bytes": 5513.942163933214,
+  "positions": 117964800,
+  "reference_gain_bytes": 5480.397215671794,
+  "scope": "fixed shipped TC1 base plus one causal online ratio feature per coding winner; no refit of original 35 weights",
+  "score_claim": false,
+  "universal_upper_bound": false
+}

@@ -1,0 +1,45 @@
+{
+  "orders": [
+    {
+      "action": "Implement and price the supplied better-predictor charter; fold joint40-weight calibration into that build; no richer implementation was made by TC2.",
+      "build_charter": ".omx/research/charters/ddm_tc2_better_causal_lane_predictor_build_20260910.md",
+      "canonical_consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/better_predictor/FIRE_ORDER.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "MAIN harvests completed TC2 handoff; verifies encode net78B below1000B and GT reference5480.397216 above3000 ideal B; deduplicates ownership and pins the current field.",
+      "measurement_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "owner": "MAIN",
+      "schema": "ddm_tc2_fire_order.v1",
+      "score_claim": false,
+      "source_memo": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "task_id": "ddm_tc2_lane_boundary_context_map_20260910::BETTER_PREDICTOR"
+    },
+    {
+      "action": "Consume the retained twin rider as a rate candidate, regenerate base probabilities in the public receiver, and route a verified positive current-archive result through the existing seal chain. The move37 tail saving78B is not an archive or score claim.",
+      "candidate_rider": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/codec/encode/twin0.rider",
+      "canonical_consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/seal_intake/FIRE_ORDER.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "MAIN harvests a successful full600 conditional parse-back receipt; checks current-field compatibility or rebases once; public-prefix receiver, cross-host bin parity and actual archive net-positive gates precede any seal or evaluation.",
+      "measurement_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "owner": "MAIN",
+      "schema": "ddm_tc2_fire_order.v1",
+      "score_claim": false,
+      "source_memo": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "task_id": "ddm_tc2_lane_boundary_context_map_20260910::SEAL_INTAKE"
+    },
+    {
+      "action": "Land and verify the final retained patch/bundle; the earlier source-only fallback is superseded by the final handoff. No main landing is currently claimed.",
+      "canonical_consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/landing/FIRE_ORDER.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "MAIN harvest in a Git-writable context with required checks; use final landing.patch and manifest, deduplicate only owned equation/task/lane events, and preserve the shared staged index.",
+      "measurement_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "owner": "MAIN",
+      "schema": "ddm_tc2_fire_order.v1",
+      "score_claim": false,
+      "source_memo": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "task_id": "ddm_tc2_lane_boundary_context_map_20260910::LANDING"
+    }
+  ]
+}

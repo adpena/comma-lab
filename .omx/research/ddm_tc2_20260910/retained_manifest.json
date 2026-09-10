@@ -1,0 +1,21 @@
+{
+  "authority": {
+    "score_claim": false,
+    "standalone_public_receiver_proof": false
+  },
+  "captured_utc": "2026-09-10T02:23:28.663489+00:00",
+  "files": 6795,
+  "late_metadata_rule": "Final serializer and handoff metadata are separately SHA bound after this immutable payload manifest.",
+  "manifest": {
+    "bytes": 1277341,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/retained_manifest.jsonl",
+    "sha256": "19cce9d51e2a63afbfc9808a1c5d6e38d9d8a442a9761aa2865174ab1643cd41"
+  },
+  "no_artifacts_moved_or_deleted": true,
+  "no_payload_discarded": true,
+  "reproduction_argv": "Exact launch argv/config and statuses in all manifest-listed launch_*/launch_manifest.json and safe_run.json; frozen source snapshots in retained/sources. Each stage requires --resume-from this root.",
+  "retention": "Keep all candidates, arrays, checkpoints and inputs. Reserve40GiB fail-closed before writes. This manifest is custody, not cleanup permission.",
+  "schema": "ddm_tc2_retained_manifest.v1",
+  "source_binding": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/INPUTS.json",
+  "total_bytes": 5922365818
+}

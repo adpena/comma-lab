@@ -1,0 +1,42 @@
+{
+  "gates": {
+    "contest_cpu": {
+      "evidence": "",
+      "status": false
+    },
+    "contest_cuda": {
+      "evidence": "",
+      "status": false
+    },
+    "deploy_runbook": {
+      "evidence": "",
+      "status": false
+    },
+    "impl_complete": {
+      "evidence": "",
+      "status": false
+    },
+    "memory_entry": {
+      "evidence": "",
+      "status": false
+    },
+    "real_archive_empirical": {
+      "evidence": "",
+      "status": false
+    },
+    "strict_preflight": {
+      "evidence": "",
+      "status": false
+    },
+    "three_clean_review": {
+      "evidence": "",
+      "status": false
+    }
+  },
+  "id": "ddm_tc2_lane_boundary_context_map_20260910",
+  "level": 0,
+  "name": "TC2 lane boundary context map",
+  "notes": "TC2 measurement complete on immutable move37 field361cc6c9: GT reference5480.397 ideal B; one n600 twin saves78 actual tail B including5 weights; full conditional online parse-back117964800 symbols exact. No active measurement, scorer, archive or score claim. Public base-recompute/cross-host proof remains separate. MAIN better-predictor, seal intake and landing fire orders: /Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/FIRE_ORDERS.json. Instance scope; no geometry-family closure.",
+  "phase": 1.0,
+  "research_only": true
+}

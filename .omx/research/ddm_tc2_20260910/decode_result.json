@@ -1,0 +1,46 @@
+{
+  "all_group_geometry_and_phi_parity": true,
+  "axis": "[conditional tail parse-back, macOS-CPU scorer-free]",
+  "base_probability_source": "verified shipped trace, justified by same-prefix induction; HPAC not rerun here",
+  "binding": {
+    "candidate_rider": {
+      "bytes": 119741,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/codec/encode/twin0.rider",
+      "sha256": "f8eec37c914631ea83a9e871c05e634709b21754f1c536dba28a66f734b3425e"
+    },
+    "gate": {
+      "bytes": 2889,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/RESULT.json",
+      "sha256": "f14fa3212dd8cb92d932a04c7241e6e5e9d2b76ef446f1436d0e3363d63dd89e"
+    },
+    "measurement_inputs": {
+      "bytes": 1841,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/INPUTS.json",
+      "sha256": "83f0b8ca0962df7722f3f867a8ce8efd41c32f5c6d1503fa3307e6ff0069ba77"
+    },
+    "native_wrapper": {
+      "bytes": 14138,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_rc64p_native_cpu_decode/route_b_rc64.py",
+      "sha256": "c2d9759a77e793d643ca1d4a557934cdb66f39473b244f382dd9f0b8faaf89e5"
+    },
+    "source": {
+      "bytes": 14088,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_tc2_codec.py",
+      "sha256": "b07505176b33bd0d9ca3068bfd57820caf86fa2f417d25f8ed7c7942710a37df"
+    },
+    "weights": {
+      "bytes": 5,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/fit/causal/weights_i8.bin",
+      "sha256": "2b5f93f62e6e1bf9bdf57eec9db9418fd41fa2cd7d42aab0d4c79e8c8ed4f490"
+    }
+  },
+  "cross_host_bin_parity_measured": false,
+  "decoded_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "frames": 600,
+  "full_frame_inflate_output_parity_missing": true,
+  "full_n600_identity": true,
+  "positions": 117964800,
+  "resumed_from_frame": 2,
+  "score_claim": false,
+  "standalone_public_receiver_proof": false
+}

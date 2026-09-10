@@ -1,0 +1,39 @@
+{
+  "axis": "[macOS-CPU advisory / real n600 counts, scorer-free]",
+  "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "not_an_encoded_price": true,
+  "rows": [
+    {
+      "correction_bits": 102.4313479031164,
+      "degrees": 142,
+      "miller_madow_bits": 574634.6100326658,
+      "name": "shipped_probability_bucket",
+      "occupied_context_symbols": 339,
+      "occupied_contexts": 197,
+      "plugin_bits": 574532.1786847627,
+      "symbols": 28098264
+    },
+    {
+      "correction_bits": 310.17943379112717,
+      "degrees": 430,
+      "miller_madow_bits": 467633.7098421739,
+      "name": "plus_GT_distance",
+      "occupied_context_symbols": 1467,
+      "occupied_contexts": 1037,
+      "plugin_bits": 467323.53040838277,
+      "symbols": 28098264
+    },
+    {
+      "correction_bits": 437.1365973893559,
+      "degrees": 606,
+      "miller_madow_bits": 567508.2532313492,
+      "name": "plus_causal_distance",
+      "occupied_context_symbols": 1689,
+      "occupied_contexts": 1083,
+      "plugin_bits": 567071.1166339598,
+      "symbols": 28098264
+    }
+  ],
+  "score_claim": false,
+  "selection": "tokens whose shipped class is Road or Lane, rows128..319, all600 frames; selected-class conditional entropy is descriptive, not a decoder-free selection"
+}
