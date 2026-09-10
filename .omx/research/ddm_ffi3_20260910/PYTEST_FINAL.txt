@@ -1,0 +1,68 @@
+........................................................................ [ 20%]
+........................................................................ [ 41%]
+..............................................FF......F................. [ 62%]
+..........................................................F............. [ 83%]
+.........................................................                [100%]
+=================================== FAILURES ===================================
+__________________ test_read_process_table_sees_this_process ___________________
+src/tac/tests/test_decode_timing_concurrency.py:148: in test_read_process_table_sees_this_process
+    table = read_process_table()
+            ^^^^^^^^^^^^^^^^^^^^
+src/tac/decode_timing_concurrency.py:167: in read_process_table
+    result = subprocess.run(["ps", "-axo", "pid,ppid,pcpu,comm"], capture_output=True, text=True,
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1039: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+_________ test_paused_process_custody_records_identity_and_transitions _________
+src/tac/tests/test_decode_timing_concurrency.py:155: in test_paused_process_custody_records_identity_and_transitions
+    with PausedProcesses([child.pid]) as paused:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/tac/decode_timing_concurrency.py:474: in __enter__
+    before = _identity(pid)
+             ^^^^^^^^^^^^^^
+src/tac/decode_timing_concurrency.py:452: in _identity
+    out = subprocess.run(["ps", "-o", "pid=,ppid=,lstart=,stat=,comm=", "-p", str(pid)],
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1039: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+________ test_run_producer_freezes_the_rule_before_the_producer_starts _________
+src/tac/tests/test_decode_timing_concurrency.py:345: in test_run_producer_freezes_the_rule_before_the_producer_starts
+    code, summary = run_producer(command, cwd=tmp_path, env=dict(os.environ), stdout_path=tmp_path / "out.log",
+src/tac/decode_timing_concurrency.py:510: in run_producer
+    wait_until_quiet(monitor, settle_seconds=settle_seconds)
+src/tac/decode_timing_concurrency.py:434: in wait_until_quiet
+    sample = monitor.sample(f"settle_{attempt:04d}")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/tac/decode_timing_concurrency.py:401: in sample
+    value = classify(read_process_table(), rule=self.rule, monitor_pid=self.monitor_pid,
+                     ^^^^^^^^^^^^^^^^^^^^
+src/tac/decode_timing_concurrency.py:167: in read_process_table
+    result = subprocess.run(["ps", "-axo", "pid,ppid,pcpu,comm"], capture_output=True, text=True,
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:554: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1039: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+../../.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+_________ test_mount_ignore_still_excludes_git_tree_and_special_files __________
+src/tac/tests/test_modal_auth_eval.py:280: in test_mount_ignore_still_excludes_git_tree_and_special_files
+    srv.bind(str(sock_path))
+E   PermissionError: [Errno 1] Operation not permitted
+=========================== short test summary info ============================
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_read_process_table_sees_this_process
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_paused_process_custody_records_identity_and_transitions
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_run_producer_freezes_the_rule_before_the_producer_starts
+FAILED src/tac/tests/test_modal_auth_eval.py::test_mount_ignore_still_excludes_git_tree_and_special_files
+4 failed, 341 passed in 7.70s

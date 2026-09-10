@@ -1,0 +1,20 @@
+RESCAN: 'src/tac/candidate_seal.py' current entity census 83 (last stored census 83)
+Marked 83 entities in 'src/tac/candidate_seal.py' as 'reviewed'
+RESCAN: 'src/tac/git_custody_read.py' current entity census 10 (last stored census 10)
+Marked 10 entities in 'src/tac/git_custody_read.py' as 'reviewed'
+RESCAN: 'src/tac/tests/test_candidate_prefire_intent.py' current entity census 34 (last stored census 33)
+Marked 34 entities in 'src/tac/tests/test_candidate_prefire_intent.py' as 'reviewed'
+RESCAN: 'src/tac/tests/test_git_custody_read.py' current entity census 7 (last stored census 7)
+Marked 7 entities in 'src/tac/tests/test_git_custody_read.py' as 'reviewed'
+RESCAN: 'tools/make_candidate_seal.py' current entity census 4 (last stored census 4)
+Marked 4 entities in 'tools/make_candidate_seal.py' as 'reviewed'
+RESCAN: 'tools/authorize_candidate_first_measurement.py' current entity census 1 (last stored census 1)
+Marked 1 entities in 'tools/authorize_candidate_first_measurement.py' as 'reviewed'
+RESCAN: 'tools/fire_modal_auth_eval.py' current entity census 17 (last stored census 17)
+Marked 17 entities in 'tools/fire_modal_auth_eval.py' as 'reviewed'
+RESCAN: 'experiments/modal_auth_eval.py' current entity census 18 (last stored census 18)
+Marked 18 entities in 'experiments/modal_auth_eval.py' as 'reviewed'
+RESCAN: 'tools/modal_harvest_poller.py' current entity census 12 (last stored census 12)
+Marked 12 entities in 'tools/modal_harvest_poller.py' as 'reviewed'
+RESCAN: 'src/tac/deploy/modal/auth_eval.py' current entity census 29 (last stored census 29)
+Marked 29 entities in 'src/tac/deploy/modal/auth_eval.py' as 'reviewed'

@@ -1,0 +1,6 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: .omx/research/ddm_ffi3_20260910/BUNDLE_VERIFICATION.json: failed to insert into database
+error: unable to index file '.omx/research/ddm_ffi3_20260910/BUNDLE_VERIFICATION.json'
+fatal: adding files failed
+BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164708.491895Z-41098/intended-commit.bundle format_patch=/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164708.491895Z-41098/intended-commit.format-patch receipt=/Volumes/VertigoDataTier/pact/ddm_ffi3/receipts/commit_serializer_fallbacks/20260910T164708.491895Z-41098/receipts.jsonl fallback_commit=561bcf514be9d63a2d4806d81eb5f22010d7f346
