@@ -1,0 +1,10 @@
+{
+  "schema": "main.cpu_axis_adjudication.v1",
+  "object": "move 42 exact bytes f111ab42\u2026 (receiver = move 40's code, declares linux-nvidia-t4)",
+  "call": "fc-01M25W34DGHHJES03531X3VDXV",
+  "outcome": "REFUSED-BY-DESIGN: inflate.sh raises 'requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget' (returncode 1) within the first minute; no CPU score exists or can exist for this receiver",
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2_cpu_20260910/MODAL_REMOTE_RESULT.json",
+  "consequence": "the PR packet's contest_cpu_auth_eval requirement is a runtime-declaration question (same as PR #140's afr1 bytes): the PR declares the CUDA runtime and is scored by the maintainer's CUDA bot; the leaderboard's CPU axis is not reproducible for this receiver family by design (tc4/dwc1 law)",
+  "utc": "2026-09-10T14:55Z",
+  "score_claim": false
+}
