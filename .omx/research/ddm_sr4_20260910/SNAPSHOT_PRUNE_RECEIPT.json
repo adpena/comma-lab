@@ -1,0 +1,9 @@
+{
+  "action": "prune_snapshots",
+  "retain_days": 3,
+  "removed": [],
+  "reclaimed_bytes": 0,
+  "protected_snapshot_present": true,
+  "df_after": "Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on\n/dev/disk5s1  1953309744 1915584236  37432688    99% 1622597 374326880    0%   /Volumes/VertigoDataTier\n/dev/disk6s1  1953450624 1919870464  33580160    99%       1         0  100%   /Volumes/APDataStore\n",
+  "score_claim": false
+}

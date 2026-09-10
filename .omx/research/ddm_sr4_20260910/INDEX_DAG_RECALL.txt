@@ -1,0 +1,20 @@
+QUERY hardlink|certify.and.move|reclaim|SSD reserve
+SOURCES
+.omx/research/CANONICAL_RESEARCH_INDEX_20260629.md
+.omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md
+.omx/research/sub015_DAG_sps_gradient_separation_20260713.md
+.omx/research/sub015_DAG_infdesc_foundations_20260713.md
+.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md
+.omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md
+.omx/research/sub015_DAG_steps_dimension_95kill_20260713.md
+.omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md
+.omx/research/sub015_DAG_int8_training_rungs_20260713.md
+.omx/research/sub015_DAG_jrd_reusable_priors_20260713.md
+.omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md
+.omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md
+RESULT
+.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:2437:- **TOTAL reclaimable ~17.7 s/ep = ~10.9% @ 162 s/ep (up to ~14.7% @ the OOM-log ~120 s/ep avg).**
+.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:2484:- Reclaimable: **~4.7% NOW (async verdict, BIT-IDENTICAL)** + **~6.2% NEXT-ROW (reorient, PARITY-GATED)**
+.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:2490:- **Next-row launch (adds the bit-identical reclaim to the live config):** append `--async-verdict`
+.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:2524:flips dominate the cos but barely move the realized argmax). The 6.2% is **not safely reclaimable at
+.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md:2567:### 3. Total reclaimable wall-clock (beyond the 4.7% async already applied)

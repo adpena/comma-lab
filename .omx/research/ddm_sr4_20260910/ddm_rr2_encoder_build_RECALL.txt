@@ -1,0 +1,6 @@
+.omx/research/ddm_rr2_encoder_byteclose_20260817.md:8:**Store:** `/Volumes/APDataStore/pact/ddm_rr2_encoder_build/`.
+.omx/research/ddm_rr2_encoder_byteclose_20260817.md:293:Store root `/Volumes/APDataStore/pact/ddm_rr2_encoder_build/`, every file with sha256 and byte
+.omx/research/ddm_rr4_cuda_prob_reencode_20260817.md:74:* `/Volumes/APDataStore/pact/ddm_rr2_encoder_build/{staged_cuda_runtime,candidate_runtime,retained,work}`
+.omx/research/ddm_sr1_submission_gauntlet_20260817.md:218:* `ddm_rr2_receiver_close.py` — 2 hits, incl. `STORE = Path("/Volumes/APDataStore/pact/ddm_rr2_encoder_build")`,
+.omx/research/ddm_jg1_joint_solve_20260819.md:343:(`experiments/ddm_rr2_encoder_byteclose.py` + the `ddm_rr2_encoder_build` custody), so it
+.omx/research/ddm_t1h_pose_coeff_resolve_headroom_20260817.md:122:`/Volumes/APDataStore/pact/ddm_rr2_encoder_build/parseback/inflated/0.raw`; its sha256

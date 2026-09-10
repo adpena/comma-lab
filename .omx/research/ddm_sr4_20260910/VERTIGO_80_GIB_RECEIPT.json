@@ -1,0 +1,8 @@
+{
+  "status": "VERTIGO_80_GIB_THRESHOLD_REACHED_AP_OFFLOAD_HEADROOM_OWED",
+  "subagent_id": "ddm_sr4",
+  "utc_epoch": 1789075594.2684748,
+  "df": "Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on\n/dev/disk5s1  1953309744 1866136820  86880104    96% 1622726 868801040    0%   /Volumes/VertigoDataTier\n/dev/disk6s1  1953450624 1919870464  33580160    99%       1         0  100%   /Volumes/APDataStore\n",
+  "next_action": "Continue dedup to 115 GiB; verify MOVED census, then move nine certified AP raw data forks with 80 GiB destination floor",
+  "score_claim": false
+}

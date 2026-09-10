@@ -1,0 +1,96 @@
+{
+  "path": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw",
+  "bytes": 3662409600,
+  "score_claim": false,
+  "promotable": false,
+  "status": "REBUILD_CHAIN_VERIFIED_RAW_SAFELY_EXTERNALIZED",
+  "expected_raw_sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9",
+  "reproducer": {
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/hv1_ep0634_s1p25_c1p0_brotli_q10/archive.zip",
+    "archive_bytes": 182759,
+    "archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "archive_sha256_verified_current": true,
+    "reproducer_argv": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/hv1_ep0634_s1p25_c1p0_brotli_q10/archive.zip",
+      "--inflate-sh",
+      "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/hv1_ep0634_s1p25_c1p0_brotli_q10/inflate.sh",
+      "--upstream-dir",
+      "/Volumes/APDataStore/pact/upstream_eval_mirror_20260815",
+      "--video-names-file",
+      "/Volumes/APDataStore/pact/upstream_eval_mirror_20260815/public_test_video_names.txt",
+      "--device",
+      "cpu",
+      "--inflate-device",
+      "cpu",
+      "--work-dir",
+      "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2",
+      "--keep-work-dir",
+      "--json-out",
+      "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json",
+      "--inflate-timeout",
+      "5400",
+      "--evaluate-timeout",
+      "14400"
+    ],
+    "inflate_script": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/hv1_ep0634_s1p25_c1p0_brotli_q10/inflate.sh",
+    "inflate_script_sha256": "c857840c26e0f4079e1617dad833c1502bd064d9c14f0a45956d3ad7d092d823",
+    "inflate_script_sha256_verified_current": true,
+    "upstream_snapshot_sha256": "fa7c4bf51d47a6140ec0f95275ebf86b0e6c3c1dc00caff03a417ee989645799",
+    "runtime_root": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/hv1_ep0634_s1p25_c1p0_brotli_q10",
+    "runtime_file_count": 25,
+    "runtime_tree_sha256": "2d0bbdb46eadd13390276109de1819be8ec81393069799d5cb5879ea8d8c0ef6",
+    "runtime_content_tree_sha256": "aafb5f6b9a804c84591a01fd0468e95faa94cc2f72e561ffb4916da37af201d6",
+    "runtime_files_sha256": "9b629f3713cc7b1e50729ea4d7d1ac6d01d6c36da83b4c220aaeea38106f82ce",
+    "runtime_file_manifest_verified_current": true,
+    "runtime_path_set_equal": true,
+    "decode_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated_outputs_manifest.json",
+      "sha256": "e5554e7a5c4843ddfaa204d97019ceb3a6b97454517b4f1ba6fe30435e00777c",
+      "raw_sha256_field": "files[0].sha256",
+      "raw_sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9",
+      "equals_file_sha256": true
+    },
+    "provenance_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/provenance.json",
+      "sha256": "c4e6db5c234397e24d03ef3acd0351d85d333af3cc9acded8eaf10218c3d7b45"
+    },
+    "eval_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/contest_auth_eval.json",
+      "sha256": "ced865c452a306f8158c33fc62f4d679185c19252b647c3dfca93a066bc27a8e"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw",
+      "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated"
+    ]
+  },
+  "stat": {
+    "path": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw",
+    "bytes": 3662409600,
+    "dev": 16777242,
+    "ino": 13548093,
+    "nlink": 1,
+    "blocks": 7153152,
+    "mtime_ns": 1786820036130000000
+  },
+  "actual_sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9",
+  "hashed_at": 1789073562.94912,
+  "producer_commit": "1931270e9109114176f65bbce99a4b58ddb64a7f",
+  "producer_memo": ".omx/research/ddm_hv1_pointer_move_and_wd2_advisory_chain_20260815.md",
+  "action": "RETAIN_NO_DELETION_REQUEST",
+  "deletion_candidate": false,
+  "prior_predelete_requirements_archived": [
+    "Confirm current owner and consumers permit raw retirement",
+    "Reject active MOVED destination or protected sealed/live tree",
+    "Rehash raw and all rebuild dependencies immediately before operator action"
+  ],
+  "current_custody": {
+    "source": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw",
+    "destination": "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/retained/ap_offload/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw",
+    "manifest": "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/0.raw.MOVED.json",
+    "sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9",
+    "bytes": 3662409600
+  }
+}

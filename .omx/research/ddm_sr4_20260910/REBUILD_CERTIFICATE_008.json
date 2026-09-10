@@ -1,0 +1,93 @@
+{
+  "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/inflated/0.raw",
+  "bytes": 3662409600,
+  "score_claim": false,
+  "promotable": false,
+  "status": "REBUILD_CHAIN_VERIFIED_RETAINED",
+  "expected_raw_sha256": "7a065f110f0b8202f098cec9dc2267d6be7e99a179c911e404226d6a289f2c56",
+  "reproducer": {
+    "archive_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/submission/archive.zip",
+    "archive_bytes": 165387,
+    "archive_sha256": "e9c4a9ed5e6bef89d228ca877a9f9e37345e3c79dc07ba20087c218ff89fcf87",
+    "archive_sha256_verified_current": true,
+    "reproducer_argv": [
+      "/Users/adpena/Projects/pact/.venv/bin/python",
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/submission/archive.zip",
+      "--inflate-sh",
+      "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/submission/inflate.sh",
+      "--upstream-dir",
+      "/Volumes/APDataStore/pact/upstream_eval_mirror_20260815",
+      "--video-names-file",
+      "/Volumes/APDataStore/pact/upstream_eval_mirror_20260815/public_test_video_names.txt",
+      "--device",
+      "cpu",
+      "--inflate-device",
+      "cpu",
+      "--work-dir",
+      "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work",
+      "--keep-work-dir",
+      "--json-out",
+      "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/contest_auth_eval.json",
+      "--inflate-timeout",
+      "5400",
+      "--evaluate-timeout",
+      "14400"
+    ],
+    "inflate_script": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/submission/inflate.sh",
+    "inflate_script_sha256": "c857840c26e0f4079e1617dad833c1502bd064d9c14f0a45956d3ad7d092d823",
+    "inflate_script_sha256_verified_current": true,
+    "upstream_snapshot_sha256": "fa7c4bf51d47a6140ec0f95275ebf86b0e6c3c1dc00caff03a417ee989645799",
+    "runtime_root": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/submission",
+    "runtime_file_count": 26,
+    "runtime_tree_sha256": "7c02cbb212f460b16333ea1bde6a69da99b6208ebea672e90cf4a1639445f2fc",
+    "runtime_content_tree_sha256": "0d9ce80320480235cdc4b51033273bac4163c54a0d90f1db5d67217889e795a7",
+    "runtime_files_sha256": "4952e3fe581731a0989e27a8728c49eb91f233c2b904f1b6124f99cd1dd6f3de",
+    "runtime_file_manifest_verified_current": true,
+    "runtime_path_set_equal": true,
+    "decode_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/inflated_outputs_manifest.json",
+      "sha256": "3342c49692215ff22f4f13318bdd56053f6d5af655d9acf6f9d53e5c0bb53ffc",
+      "raw_sha256_field": "files[0].sha256",
+      "raw_sha256": "7a065f110f0b8202f098cec9dc2267d6be7e99a179c911e404226d6a289f2c56",
+      "equals_file_sha256": true
+    },
+    "provenance_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/provenance.json",
+      "sha256": "07a9cf1809f84237c05b7c522596258f5345d4d7183c247cdb8250f80c782d36"
+    },
+    "eval_receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/contest_auth_eval.json",
+      "sha256": "da33a39ec24326b96888d68dd292fe595a8a36852f366a789901a73a42e36363"
+    },
+    "reference_aliases": [
+      "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/inflated/0.raw",
+      "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/inflated"
+    ]
+  },
+  "stat": {
+    "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/inflated/0.raw",
+    "bytes": 3662409600,
+    "dev": 16777242,
+    "ino": 13493626,
+    "nlink": 1,
+    "blocks": 7153152,
+    "mtime_ns": 1786816856230000000
+  },
+  "actual_sha256": "7a065f110f0b8202f098cec9dc2267d6be7e99a179c911e404226d6a289f2c56",
+  "hashed_at": 1789073470.7548869,
+  "producer_commit": "f9b6ddae99921c2bb868c00634fb8a6024683dd1",
+  "producer_memo": ".omx/research/ddm_wd2_ep60_advisory_refusal_verdict_20260815.md",
+  "action": "RETAIN_NO_DELETION_REQUEST",
+  "deletion_candidate": false,
+  "prior_predelete_requirements_archived": [
+    "Confirm current owner and consumers permit raw retirement",
+    "Reject active MOVED destination or protected sealed/live tree",
+    "Rehash raw and all rebuild dependencies immediately before operator action"
+  ],
+  "current_custody": {
+    "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/work/inflated/0.raw",
+    "disposition": "FOLDED_NO_RECLAIM_NEEDED_TARGETS_MET"
+  }
+}

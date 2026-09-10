@@ -1,0 +1,130 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced3_refused/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc4/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced2/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced5/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced4/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/0.raw",
+    "ino": 4940873,
+    "dev": 16777240,
+    "nlink": 1,
+    "bytes": 3662409600,
+    "mtime_ns": 1789048566339321636
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/parseback/0.raw",
+    "ino": 5089628,
+    "dev": 16777240,
+    "nlink": 2,
+    "bytes": 3662409600,
+    "mtime_ns": 1789063749548349879
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/0.raw",
+    "ino": 5086387,
+    "dev": 16777240,
+    "nlink": 1,
+    "bytes": 3662409600,
+    "mtime_ns": 1789063055562719404
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "ino": 5089628,
+    "dev": 16777240,
+    "nlink": 2,
+    "bytes": 3662409600,
+    "mtime_ns": 1789063749548349879
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads1_g2/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g2/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g4/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/public_threads4_g3/output/0.raw",
+    "ino": 4936445,
+    "dev": 16777240,
+    "nlink": 12,
+    "bytes": 3662409600,
+    "mtime_ns": 1789026024865917111
+  }
+]

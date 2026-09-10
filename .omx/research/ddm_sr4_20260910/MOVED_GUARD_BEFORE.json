@@ -1,0 +1,26 @@
+{
+  "utc_epoch": 1789076863.735656,
+  "mode": "metadata_and_AppleDouble_header_not_full_hash",
+  "scope_depth": 4,
+  "certificate_paths": [
+    "/Volumes/APDataStore/pact/cold_store_sj1_bulk_20260910/MOVE_LOG.jsonl",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/pose/overlay_base/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/pose/overlay_cand/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass3/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose/overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass3/overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/pose_pass4/overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/parseback/0.raw.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/base_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/pose/cand_overlay/odd_frames.u8.MOVED.json",
+    "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/source_raw_custody/0.raw.MOVED.json"
+  ],
+  "violations": [],
+  "count": 16,
+  "score_claim": false
+}

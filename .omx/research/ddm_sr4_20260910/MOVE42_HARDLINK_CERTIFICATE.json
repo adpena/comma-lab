@@ -1,0 +1,32 @@
+{
+  "schema": "ddm_sr4.twin_raw_dedup_certificate.v1",
+  "source": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/0.raw",
+    "ino": 5086387,
+    "dev": 16777240,
+    "nlink": 1,
+    "bytes": 3662409600,
+    "mtime_ns": 1789063055562719404,
+    "sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159",
+    "hashed_at": 1789073584.1571798
+  },
+  "destination": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/0.raw",
+    "ino": 4940873,
+    "dev": 16777240,
+    "nlink": 1,
+    "bytes": 3662409600,
+    "mtime_ns": 1789048566339321636,
+    "sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159",
+    "hashed_at": 1789073379.90529
+  },
+  "df_before": "Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on\n/dev/disk5s1  1953309744 1915741404  37275520    99% 1622627 372755200    0%   /Volumes/VertigoDataTier\n/dev/disk6s1  1953450624 1919870464  33580160    99%       1         0  100%   /Volumes/APDataStore\n",
+  "score_claim": false,
+  "promotable": false,
+  "lsof": "",
+  "reason": "Independent full SHA verification in current run; preserve both payload paths with one inode",
+  "status": "HARDLINK_VERIFIED",
+  "df_after": "Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on\n/dev/disk5s1  1953309744 1912169232  40847692    98% 1622628 408476920    0%   /Volumes/VertigoDataTier\n/dev/disk6s1  1953450624 1919870464  33580160    99%       1         0  100%   /Volumes/APDataStore\n",
+  "final_inode": 4940873,
+  "utc_epoch": 1789073777.539819
+}

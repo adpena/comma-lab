@@ -1,0 +1,50 @@
+[
+  {
+    "path": "/Volumes/APDataStore/pact/scratch_gb1_identity_20260824/out/0.raw",
+    "bytes": 3662409600,
+    "dev": 16777242,
+    "ino": 7113818,
+    "nlink": 1,
+    "blocks": 7153152,
+    "mtime_ns": 1787631570950000000,
+    "destination": "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/retained/ap_offload/scratch_gb1_identity_20260824/out/0.raw",
+    "producer_memo": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+    "producer_memo_sha256": "56866135b84f4e941df35b81dfa1bafbdf36e75a01ca50fe4530b6ba237f558a",
+    "producer_memo_commit": "884bb65f1ef9409cbeda1cb02ca2b268fe7ab3e6",
+    "score_claim": false,
+    "promotable": false,
+    "rebuild_command": [
+      "cp",
+      "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/retained/ap_offload/scratch_gb1_identity_20260824/out/0.raw",
+      "/Volumes/APDataStore/pact/scratch_gb1_identity_20260824/out/0.raw"
+    ],
+    "rebuild_basis": "Exact data fork retained at destination; restore by byte copy, not by inferred rendering",
+    "state": "BLOCKED_SEALED_CANDIDATE_RAW",
+    "min_destination_after_gib": 80,
+    "reason": "GB1 memo binds these identity raws to its candidate seal; hardlink-only exception does not allow moving them"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/scratch_gb1_native_identity_20260824/out/0.raw",
+    "bytes": 3662409600,
+    "dev": 16777242,
+    "ino": 7222121,
+    "nlink": 1,
+    "blocks": 7153152,
+    "mtime_ns": 1787632466210000000,
+    "destination": "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/retained/ap_offload/scratch_gb1_native_identity_20260824/out/0.raw",
+    "producer_memo": ".omx/research/ddm_gb1_groupbin8_verdict_20260824.md",
+    "producer_memo_sha256": "56866135b84f4e941df35b81dfa1bafbdf36e75a01ca50fe4530b6ba237f558a",
+    "producer_memo_commit": "884bb65f1ef9409cbeda1cb02ca2b268fe7ab3e6",
+    "score_claim": false,
+    "promotable": false,
+    "rebuild_command": [
+      "cp",
+      "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/retained/ap_offload/scratch_gb1_native_identity_20260824/out/0.raw",
+      "/Volumes/APDataStore/pact/scratch_gb1_native_identity_20260824/out/0.raw"
+    ],
+    "rebuild_basis": "Exact data fork retained at destination; restore by byte copy, not by inferred rendering",
+    "state": "BLOCKED_SEALED_CANDIDATE_RAW",
+    "min_destination_after_gib": 80,
+    "reason": "GB1 memo binds these identity raws to its candidate seal; hardlink-only exception does not allow moving them"
+  }
+]

@@ -1,0 +1,5 @@
+{
+  "status": "EMPTY_NO_DELETION_NEEDED",
+  "files": [],
+  "reason": "Both reserve targets achieved with certified hardlinks and retained cross-volume copies; no payload deletion requested."
+}

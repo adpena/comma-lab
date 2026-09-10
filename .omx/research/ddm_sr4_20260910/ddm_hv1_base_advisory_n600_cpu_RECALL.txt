@@ -1,0 +1,15 @@
+.omx/research/ddm_wd2_ep60_advisory_refusal_verdict_20260815.md:40:/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json; r1 crashed on
+.omx/research/ddm_b2e_edit_replay_admission_verdict_20260816.md:192:- `/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json` — hv1 base row.
+.omx/research/ddm_dk2_apdatastore_cold_store_sweep_20260904.md:270:| `ddm_hv1_harvest_compose`, `ddm_hv1_base_advisory_n600_cpu` | 14.07 + 3.52 GiB | charter never-touch (`hv1`). The `hv1_base_advisory` tree holds a 3.52 GiB `work_r2/inflated` that is otherwise exactly the moved class. |
+.omx/research/ddm_mp2_relay_base_advisory_row_20260815.md:4:- Receipt: /Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json
+.omx/research/ddm_rc4_rung4_token_drop_verdict_20260816.md:143:(`.../ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8`,
+.omx/research/ddm_gb1_groupbin8_conditioning_20260824.md:115:`ddm_hv1_base_advisory_n600_cpu/.../tokens_cpu_stage_complete.u8`, sha256 **`9ba2e52b3096…`**.
+.omx/research/ddm_wc1_advisory_decode_wallclock_charter_20260815.md:21:  `/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/launcher_r2/run.log` line 30.
+.omx/research/ddm_wc1_advisory_decode_wallclock_charter_20260815.md:76:  (`/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/launcher_r2/run.log` line 30,
+.omx/research/ddm_av2_fresh_eyes_and_distillation_reopen_20260815.md:34:| A1. Cross-instrument delta | **SURVIVES WITH CORRECTED SAME-AXIS NUMBERS** | Base `/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json` SHA `cfdac1fd...`; WD2 receipt `/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/contest_auth_eval.json` | Replace 8.2x/634x with 7.0059x cap / 623.7625x Pose. Relay base row to MP2 through this memo and MAIN's queue. |
+.omx/research/ddm_av2_fresh_eyes_and_distillation_reopen_20260815.md:228:| **FOLDED** | AV2 audit; MP2/MAIN consumer | `/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json` and this memo | Complete | Same-axis base and deltas computed above; MP2 consumes hv1 `d_seg=0.00042714`, `d_pose=0.00014747`, `S=0.20280753928705508` on this advisory instrument. |
+.omx/research/charters/ddm_av2_fresh_eyes_and_distillation_reopen_20260815.md:14:   /Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json
+.omx/research/ddm_rr2_encoder_byteclose_20260817.md:185:CPU inflate (`ddm_hv1_base_advisory_n600_cpu`, 2026-08-15, same machine, same python decoder,
+.omx/research/ddm_wc1_relay_wallclock_ladder_20260815.md:10:Receipt: `/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json`
+.omx/research/charters/ddm_wd3_scorer_aware_width_distillation_20260815.md:23:   `/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json`, 23,416 B, SHA
+.omx/research/ddm_ps1u_uncapped_pose_solve_20260816.md:22:`/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json` ·

@@ -1,0 +1,385 @@
+[
+  {
+    "original_path": "/Volumes/VertigoDataTier/pact/evidence",
+    "du_sg_measurement": [
+      "329\t/Volumes/VertigoDataTier/pact/evidence"
+    ],
+    "status": "BLOCKED_NOT_CERTIFIED_FOR_WHOLE_TREE_RETIREMENT",
+    "tree_sha256": null,
+    "rebuild_command": null,
+    "score_claim": false,
+    "promotable": false,
+    "reasons": [
+      "No verified complete whole-tree deterministic rebuild chain",
+      "Both destination SSD reserves below 40 GiB; no off-tier destination admitted",
+      "Same-volume cold_store move does not reclaim space"
+    ],
+    "action": "RETAIN_ALL_BYTES"
+  },
+  {
+    "original_path": "/Volumes/VertigoDataTier/pact/experiments",
+    "du_sg_measurement": [
+      "248\t/Volumes/VertigoDataTier/pact/experiments"
+    ],
+    "status": "BLOCKED_NOT_CERTIFIED_FOR_WHOLE_TREE_RETIREMENT",
+    "tree_sha256": null,
+    "rebuild_command": null,
+    "score_claim": false,
+    "promotable": false,
+    "reasons": [
+      "No verified complete whole-tree deterministic rebuild chain",
+      "Both destination SSD reserves below 40 GiB; no off-tier destination admitted",
+      "Same-volume cold_store move does not reclaim space"
+    ],
+    "action": "RETAIN_ALL_BYTES"
+  },
+  {
+    "original_path": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813",
+    "du_sg_measurement": [
+      "109\t/Volumes/VertigoDataTier/pact/ddm_pk4_20260813"
+    ],
+    "status": "BLOCKED_NOT_CERTIFIED_FOR_WHOLE_TREE_RETIREMENT",
+    "tree_sha256": null,
+    "rebuild_command": null,
+    "score_claim": false,
+    "promotable": false,
+    "reasons": [
+      "No verified complete whole-tree deterministic rebuild chain",
+      "Both destination SSD reserves below 40 GiB; no off-tier destination admitted",
+      "Same-volume cold_store move does not reclaim space"
+    ],
+    "action": "RETAIN_ALL_BYTES",
+    "producer_metadata": {
+      "FINAL_RESULT.json": {
+        "all_materialized_payloads_retained": true,
+        "byte_closed_rung_denominator": 0,
+        "exact_eval_denominator": 0,
+        "frontier_moved": false,
+        "generalization_gate_denominator": 0,
+        "honesty_boundary": "preflight and generic code only; no Jacobian, pose curve, generalization verdict, archive rung, d_pose, or score was measured",
+        "jacobian_pair_denominator": 0,
+        "local_fire_order": {
+          "bytes": 1266,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813/LOCAL_METAL_FIRE_ORDER.json",
+          "sha256": "9a53ccf1d0e557bed6ac266514619a08a19fbdf9b7a1d8774bc0e5dc5d77cb59"
+        },
+        "metal_probe": {
+          "bytes": 301,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813/METAL_PROBE.json",
+          "sha256": "3ace288f2d8e3c60f4762cc1114c546bba3369f60eee8a6179b31fbec056f818"
+        },
+        "promotion_eligible": false,
+        "reason": "local MLX Metal probe failed: RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+        "run_id": "ddm_pk4_optimal_form_frame0_pose_20260813",
+        "sample_denominator": 64,
+        "sample_plan": {
+          "bytes": 892,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813/checkpoints/stage_05_sample_plan.json",
+          "sha256": "27158f13b63339e607719732a29b98bd915e00552ece14a327364f7468e76261"
+        },
+        "schema": "ddm_pk4_final_result.v1",
+        "score_claim": false,
+        "scorer_calls": 0,
+        "source_preflight": {
+          "bytes": 4580,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813/checkpoints/stage_00_source_preflight_8e6728b15d055ba8.json",
+          "sha256": "6c4f714353b2c3d678eec31befd7734b8c8deaec74f13784778ea038af3ee5f8"
+        },
+        "sources_pinned": 15,
+        "status": "BLOCKED_BEFORE_SCORER_LAUNCH_NO_METAL",
+        "storage_preflight": {
+          "already_retained_bytes": 19044,
+          "cleanup_policy": "certify-or-block; retain every materialized payload; never delete",
+          "expected_total_retained_bytes": 103079215104,
+          "free_bytes": 227303604224,
+          "passed": true,
+          "required_free_bytes": 111669130652,
+          "reserve_bytes": 8589934592,
+          "sample_count": 64,
+          "schema": "ddm_pk4_storage_preflight.v1",
+          "tier": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813"
+        }
+      },
+      "STATE.json": {
+        "completed": 64,
+        "denominator": 64,
+        "last_pair": 571,
+        "resume_from": "/Volumes/VertigoDataTier/pact/ddm_pk4_20260813",
+        "schema": "ddm_pk4_resume_state.v1",
+        "stage": "jacobian_bank"
+      },
+      "LANE_SUMMARY.json": {
+        "command": [
+          ".venv/bin/python",
+          "tools/claim_lane_dispatch.py",
+          "summary"
+        ],
+        "returncode": 0,
+        "schema": "ddm_pk4_lane_summary.v1",
+        "stderr": "",
+        "stdout": "CLAIM_SUMMARY active=1 stale_nonterminal=36 terminal_latest=1611 unparsable_timestamp=0 invalid_lane_id=4\nACTIVE lane_id=ddm_qs5_resolve_compensation_n600_20260813 job=modal:ddm_qs5_dual_axis_20260813_r1 platform=modal status=active_qs1_dual_axis_spawning agent=MAIN\nSTALE_NONTERMINAL lane_id=codex-snerv-official-snar2-zero-mfu-smoke2 job=local-smoke-20260605Tsnerv-official-qatreject platform=local status=running_local_smoke agent=codex\nSTALE_NONTERMINAL lane_id=codex-snerv-official-snar2-zero-mfu-smoke2 job=local-smoke-20260605Tsnerv-official-qatreject-patched platform=local status=running_local_smoke agent=codex\nSTALE_NONTERMINAL lane_id=ddm_pb3_parametric_blind_alignment job=local-cpu-micro-probe platform=local_macos status=active agent=ddm_pb3\nSTALE_NONTERMINAL lane_id=ddm_ps135_pose_scorer_lane job=pid26406_gen3_pass5 platform=local_metal status=active agent=claude_main\nSTALE_NONTERMINAL lane_id=ddm_r1c_rung1_continuation job=local-macos-cpu-mlx platform=local_macos status=active_training agent=ddm_r1c\nSTALE_NONTERMINAL lane_id=inverse_solve_einstein_avenue_20260720T092250Z job=inverse_solve_einstein_avenue_20260720T092250Z platform=local status=local_inverse_solve agent=codex:gpt-5.6-sol\nSTALE_NONTERMINAL lane_id=lane_afsr1_aimed_retrain_20260610 job=macos_cpu_smoke_1781067616 platform=macos_cpu_local status=active_local_smoke agent=afsr1_campaign_20260610\nSTALE_NONTERMINAL lane_id=lane_afsr1_aimed_retrain_20260610 job=smoke_restart_flush_1781069169 platform=macos_cpu_local status=active_local_smoke agent=afsr1_campaign_20260610\nSTALE_NONTERMINAL lane_id=lane_b1_baseline_229k_pilot_20260609 job=local_m5max_mlx platform=local_macos_mlx status=active_local_mlx_training agent=b1_baseline_launch\nSTALE_NONTERMINAL lane_id=lane_b1_clean_relaunch_20260609 job=b1_229k_clean_20260609T085348Z platform=local_mlx_macos status=active_local_mlx agent=CLEAN-RELAUNCH\nSTALE_NONTERMINAL lane_id=lane_b1_clean_relaunch_20260609 job=local-mlx-macos-clean-relaunch platform=local_mlx_macos status=active_local_mlx agent=CLEAN-RELAUNCH\nSTALE_NONTERMINAL lane_id=lane_b1_hinerv_pr95_229k_full_curriculum_20260609 job=m5max-mlx-b1v2-1780979702 platform=macos_mlx_local status=active_local_mlx_training agent=B1-CAMPAIGN-V2\nSTALE_NONTERMINAL lane_id=lane_capstone_capacity_ablation_2x2_20260611 job=local_mlx_gpu_ablation platform=local_mlx_gpu status=active agent=capstone-builder\nSTALE_NONTERMINAL lane_id=lane_ddm_bc1_qa24_reburn_20260731 job=bc1-burn-local platform=local-mlx-cpu status=active agent=ddm_bc1\nSTALE_NONTERMINAL lane_id=lane_ddm_bc1_qa24_reburn_20260731 job=bc1-burn-pid68621 platform=local-mlx-cpu status=active agent=ddm_bc1\nSTALE_NONTERMINAL lane_id=lane_ddm_cl1_hpac_capacity_20260809 job=ddm_cl1_capacity_ladder_20260809 platform=local_metal status=training agent=MAIN\nSTALE_NONTERMINAL lane_id=lane_ddm_ps135_pose_resolve_20260810 job=ddm_ps135_lc2_joint_pose_n600 platform=local_macos_cpu status=running_full_n600_local_cpu agent=MAIN\nSTALE_NONTERMINAL lane_id=lane_g52_fulln600_lossy_selected_plane_codec_20260726 job=g52_lossy_selected_plane_frontier46_scorebridge_20260726 platform=macos_cpu_local status=local_batch16_score_measurement agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=lane_g52_fulln600_lossy_selected_plane_codec_20260726 job=g52_lossy_selected_plane_n600_frontier46_20260726 platform=macos_cpu_local status=local_codec_diagnostic agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=lane_g52_fulln600_lossy_selected_plane_codec_20260726 job=g52_lossy_selected_plane_n600_high_20260726 platform=macos_cpu_local status=local_codec_diagnostic agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=lane_g52_fulln600_lossy_selected_plane_codec_20260726 job=g52_lossy_selected_plane_n600_low_20260726 platform=macos_cpu_local status=local_codec_diagnostic agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=lane_g52_fulln600_lossy_selected_plane_codec_20260726 job=g52_lossy_selected_plane_n600_low_repeat_20260726 platform=macos_cpu_local status=local_codec_determinism_replay agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=lane_g52_fulln600_lossy_selected_plane_codec_20260726 job=g52_lossy_selected_plane_n600_lp1_ab_20260726 platform=macos_cpu_local status=local_codec_determinism_replay agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=lane_g95_population_pose_inverse_control_20260727 job=g95_conditional_pose_preimage_chart_20260727072941 platform=local_main_worktree status=active_local_build agent=codex:g95_conditional_pose_preimage_chart\nSTALE_NONTERMINAL lane_id=lane_pr110pp_r2_nonmps_mode_table_20260609 job=pr110pp_r1_verdict_20260609 platform=analysis status=defer_pending_contest_cpu_substrate agent=claude:pr110pp_r1_paired_eval\nSTALE_NONTERMINAL lane_id=lane_ripo_fisher_isometric_trust_region_500_20260714 job=ripo_capture_v2_n600_20260714T1640Z platform=macos_cpu_local status=active_local_cpu_measurement agent=codex:gpt-5.6-sol\nSTALE_NONTERMINAL lane_id=lane_slot_c_negative_results_audit_v2_top_3_op_routables_combined_corrective_action_cascade_20260528 job=slot_c_20260528 platform=local status=eval agent=claude\nSTALE_NONTERMINAL lane_id=lane_snerv_mistake_b_g1a_crosswire_20260609 job=snerv_mistake_b_g1a_20260609T201221Z platform=local_mlx_macos status=active_local_mlx agent=snerv_crosswire_fix_and_launch_20260609\nSTALE_NONTERMINAL lane_id=levelset_n600_v2_attrclean job=local-mlx-20260630T194549Z platform=mlx_local status=active_training agent=claude\nSTALE_NONTERMINAL lane_id=levelset_openpilot_seeded_n200_DEPLOY job=levelset_openpilot_seeded_n200_DEPLOY_20260629T234046Z platform=local_mlx_m5max status=running_local_mlx agent=claude:opus-4.8\nSTALE_NONTERMINAL lane_id=pdw1_dB_attack_step2_20260719T192712Z job=pdw1_step2_local_20260719T192712Z platform=local_macos_cpu_advisory status=build_measure agent=codex:gpt-5.6-sol-xhigh\nSTALE_NONTERMINAL lane_id=pr95_full_curriculum_mps_decisive_n600 job=local_mps_Primary_43366 platform=local_mps status=running_local_mps agent=claude-opus-fire\nSTALE_NONTERMINAL lane_id=ps135b_pose_resolve_scorer_lane job=pid26406_gen3_resume platform=local_macos_cpu status=active agent=claude_main\nSTALE_NONTERMINAL lane_id=r1b_boundary_generator_solve_20260720T161946Z job=r1b_boundary_generator_solve_20260720T161946Z platform=local status=build agent=codex:gpt-5.6-sol-high\nSTALE_NONTERMINAL lane_id=whole_step_megakernel_356 job=task356_bounded_n96_kernel_bench_20260711 platform=local-mlx-apple-gpu status=benchmark agent=codex:gpt-5.6-sol\nSTALE_NONTERMINAL lane_id=yousfi_r3_taper_marginhinge_e5 job=local_mps platform=local_mps status=running_local_mps agent=claude\n"
+      }
+    }
+  },
+  {
+    "original_path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729",
+    "du_sg_measurement": [
+      "48\t/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729"
+    ],
+    "status": "BLOCKED_NOT_CERTIFIED_FOR_WHOLE_TREE_RETIREMENT",
+    "tree_sha256": null,
+    "rebuild_command": null,
+    "score_claim": false,
+    "promotable": false,
+    "reasons": [
+      "No verified complete whole-tree deterministic rebuild chain",
+      "Both destination SSD reserves below 40 GiB; no off-tier destination admitted",
+      "Same-volume cold_store move does not reclaim space"
+    ],
+    "action": "RETAIN_ALL_BYTES"
+  },
+  {
+    "original_path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813",
+    "du_sg_measurement": [
+      "41\t/Volumes/VertigoDataTier/pact/ddm_qs1_20260813"
+    ],
+    "status": "BLOCKED_NOT_CERTIFIED_FOR_WHOLE_TREE_RETIREMENT",
+    "tree_sha256": null,
+    "rebuild_command": null,
+    "score_claim": false,
+    "promotable": false,
+    "reasons": [
+      "No verified complete whole-tree deterministic rebuild chain",
+      "Both destination SSD reserves below 40 GiB; no off-tier destination admitted",
+      "Same-volume cold_store move does not reclaim space"
+    ],
+    "action": "RETAIN_ALL_BYTES",
+    "producer_metadata": {
+      "FINAL_RESULT.json": {
+        "axis": "[macOS-CPU advisory frozen CPU-torch PoseNet; 14 retained Q3 pairs] NON-PROMOTABLE",
+        "best_screen_margin_s": 4.490617360555023e-05,
+        "best_screen_proposal_id": "js6_0000_9fbf75d81c43",
+        "diagnostic_denominator": {
+          "declared": 14,
+          "examined": 14
+        },
+        "finalization": {
+          "compile_result": {
+            "bytes": 44595,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/COMPILE_RESULT.json",
+            "sha256": "a39c4cad93380bcc31281b1b4ca4cc7b1efc77c9fccf47f4c828e8b20b3853df"
+          },
+          "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+          "fire_order": {
+            "bytes": 1809,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/SEALED_FIRE_ORDER.json",
+            "sha256": "c1fc0fb036d90a2b939a8e8fc244428307b8c263ec87c2bfdb11408ed781c704"
+          }
+        },
+        "held_count": 3,
+        "max_cancellation_energy_fraction": 0.9999505445264794,
+        "max_cancellation_proposal_id": "js6_0008_475971909891",
+        "pointer_moved": false,
+        "promotion_eligible": false,
+        "proposal_results": [
+          {
+            "cancellation_energy_fraction": 0.9824727427765708,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 105,
+            "proposal_id": "js6_0000_9fbf75d81c43",
+            "result": {
+              "bytes": 3578,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0000_9fbf75d81c43/RESULT.json",
+              "sha256": "a69cd301b117c3e481a6af8332ea449a7765c9b703b25f659a1c70da43beaba5"
+            },
+            "screen_margin_s": 4.490617360555023e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9420698297490632,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 523,
+            "proposal_id": "js6_0001_da319a6b65d0",
+            "result": {
+              "bytes": 3601,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0001_da319a6b65d0/RESULT.json",
+              "sha256": "c6d0dff5cd4018c6eab3bd7583106554db0b9e839faba4c9fe7b30919389ae7b"
+            },
+            "screen_margin_s": 4.1310515591229585e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.8961247095960134,
+            "disposition": "HELD",
+            "pair": 510,
+            "proposal_id": "js6_0002_721cb5eefb29",
+            "result": {
+              "bytes": 3594,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0002_721cb5eefb29/RESULT.json",
+              "sha256": "b358899ae7a00915307ff19e2770edf36ad3815f444f1a18d6203d8e91313c15"
+            },
+            "screen_margin_s": -0.00030737985962128446
+          },
+          {
+            "cancellation_energy_fraction": 0.9828241378224546,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 176,
+            "proposal_id": "js6_0003_56b961be310e",
+            "result": {
+              "bytes": 3610,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0003_56b961be310e/RESULT.json",
+              "sha256": "741ed5aa01f445f2c944688bc9a1c45cf06d04de22f1082a2247728fc1d1f591"
+            },
+            "screen_margin_s": 1.6949275272145732e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9987473955994428,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 517,
+            "proposal_id": "js6_0004_06fc74e20d9e",
+            "result": {
+              "bytes": 3598,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0004_06fc74e20d9e/RESULT.json",
+              "sha256": "e4e8ba69ccbcc8ec1e62ba9eede7cf5470ef310c35920d4a4a9ca0810f9d6e21"
+            },
+            "screen_margin_s": 1.4880439568637723e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.7536524531201473,
+            "disposition": "HELD",
+            "pair": 133,
+            "proposal_id": "js6_0005_d74f2ea3311e",
+            "result": {
+              "bytes": 3590,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0005_d74f2ea3311e/RESULT.json",
+              "sha256": "ad482948724018de6273653bfc339d5495e365501972fa04af0cb5a79df34e46"
+            },
+            "screen_margin_s": -0.00014406775607110934
+          },
+          {
+            "cancellation_energy_fraction": 0.991058947206006,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 178,
+            "proposal_id": "js6_0006_92685b3e3e44",
+            "result": {
+              "bytes": 3604,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0006_92685b3e3e44/RESULT.json",
+              "sha256": "b8e8fcb0fed9b32a46417f5c8983502f68ebc98a9f719e10a9a81d5459d7511c"
+            },
+            "screen_margin_s": 2.0267934931699195e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9999505445264794,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 105,
+            "proposal_id": "js6_0008_475971909891",
+            "result": {
+              "bytes": 3590,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0008_475971909891/RESULT.json",
+              "sha256": "ecfdc6ec06cf4039fbb2c4aa80c22a027ac36cced9f0062cec8ed69861d32339"
+            },
+            "screen_margin_s": 2.4363813936988403e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9998995399449081,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 517,
+            "proposal_id": "js6_0013_601ba15f163b",
+            "result": {
+              "bytes": 3592,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0013_601ba15f163b/RESULT.json",
+              "sha256": "85bfe78751ae5ae5d3b6ce562f4c634ccc96eb02eeccc2918b8e97c571c2581d"
+            },
+            "screen_margin_s": 1.4116699562755507e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.5104065221690421,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 532,
+            "proposal_id": "js6_0037_454f04bf6579",
+            "result": {
+              "bytes": 3612,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0037_454f04bf6579/RESULT.json",
+              "sha256": "c35b14ef43a8675aff6cbef316f408ab4d3eac62e2ba9fbc5a4ab3906cef06eb"
+            },
+            "screen_margin_s": 1.0212422709413516e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9996695436414534,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 517,
+            "proposal_id": "js6_0045_b10b9acfe9ee",
+            "result": {
+              "bytes": 3595,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0045_b10b9acfe9ee/RESULT.json",
+              "sha256": "4cafb9fd05338350fee33ebd3a484b493bfca94a28ddcf03d3bc78aa38dd8a49"
+            },
+            "screen_margin_s": 1.2787880749932541e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9986013021863517,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 176,
+            "proposal_id": "js6_0072_f790b6493122",
+            "result": {
+              "bytes": 3625,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0072_f790b6493122/RESULT.json",
+              "sha256": "75eec35d5682e6a6c0aa21dc72ec76d800fed8cdc2f999f5e48452186fdb0da7"
+            },
+            "screen_margin_s": 2.6958638163766224e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9272549631360923,
+            "disposition": "HELD",
+            "pair": 17,
+            "proposal_id": "js6_0088_85cbcbde920f",
+            "result": {
+              "bytes": 3598,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0088_85cbcbde920f/RESULT.json",
+              "sha256": "e0a72c1b1007c30bd5d0dfef918aaa93893a770af4062036a298c95984423154"
+            },
+            "screen_margin_s": -8.33740178328965e-05
+          },
+          {
+            "cancellation_energy_fraction": 0.9992341878094058,
+            "disposition": "SCREEN_SURVIVOR",
+            "pair": 532,
+            "proposal_id": "js6_0118_83f376603d6e",
+            "result": {
+              "bytes": 3599,
+              "path": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/retained/proposals/js6_0118_83f376603d6e/RESULT.json",
+              "sha256": "53aa40d39ad8c9db9c9720c03a74b283a504135896896aee7d0520346dbea409"
+            },
+            "screen_margin_s": 1.110156368639664e-05
+          }
+        ],
+        "run_id": "ddm_qs1_frame0_schur_coupled_solve_20260813",
+        "schema": "ddm_qs1_final_result.v1",
+        "score_claim": false,
+        "survivor_count": 11
+      },
+      "STATE.json": {
+        "completed": 14,
+        "declared": 14,
+        "last_proposal_id": "js6_0118_83f376603d6e",
+        "resume_from": "/Volumes/VertigoDataTier/pact/ddm_qs1_20260813",
+        "schema": "ddm_qs1_resume_state.v1"
+      }
+    }
+  },
+  {
+    "original_path": "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810",
+    "du_sg_measurement": [
+      "32\t/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810"
+    ],
+    "status": "BLOCKED_NOT_CERTIFIED_FOR_WHOLE_TREE_RETIREMENT",
+    "tree_sha256": null,
+    "rebuild_command": null,
+    "score_claim": false,
+    "promotable": false,
+    "reasons": [
+      "No verified complete whole-tree deterministic rebuild chain",
+      "Both destination SSD reserves below 40 GiB; no off-tier destination admitted",
+      "Same-volume cold_store move does not reclaim space"
+    ],
+    "action": "RETAIN_ALL_BYTES"
+  }
+]

@@ -1,0 +1,29 @@
+{
+  "subagent_id": "ddm_sr4",
+  "status": "storage_complete_serializer_pending",
+  "utc_epoch": 1789078842.514567,
+  "completed": [
+    "du -sg census 1460 entries",
+    "raw census 237 entries no walk errors",
+    "32 snapshots checked; own prune function removed none",
+    "move42 raw hardlink verified",
+    "three AP raw rebuild certificates full-hash verified",
+    "Filesystem types measured: Vertigo APFS, APDataStore ExFAT; old MOVED ledgers expanded historical hash coverage to 130/237",
+    "Public raw census 21/21 full hashes, four byte groups",
+    "AP move-source census 9/9 full hashes",
+    "Bounded MOVED file-custody validation 16/16; two legacy directory certificates excluded by canonical rules",
+    "Dedup pass completed at 116.55 GiB Vertigo free",
+    "Canonical recursive MOVED discovery completed: 16 certificates, zero violations; same scope as filename census",
+    "25 hardlink and 9 move final identity checks passed",
+    "25 old/new MOVED certificates passed canonical metadata/header audit",
+    "Vertigo >=80 GiB and APDataStore >=60 GiB verified"
+  ],
+  "running": {},
+  "next_action": "Freeze this owned packet and invoke required serializer; verify any retained fallback bundle before handoff.",
+  "consumer_store": ".omx/research/ddm_sr4_20260910",
+  "score_claim": false,
+  "current_df": "Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on\n/dev/disk5s1  1953309744 1863691464  89325460    96% 1622978 893254600    0%   /Volumes/VertigoDataTier\n/dev/disk6s1  1953450624 1887683712  65766912    97%       1         0  100%   /Volumes/APDataStore\n",
+  "plan": "No bulk deletion. Full-hash hardlinks until Vertigo 115 GiB, then nine source/destination-verified AP advisory raw moves, each retaining >=80 GiB on destination.",
+  "completed_moves": 9,
+  "retained_move_bytes": 32961686400
+}

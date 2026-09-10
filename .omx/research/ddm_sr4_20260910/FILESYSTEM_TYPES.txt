@@ -1,0 +1,2 @@
+/dev/disk6s1 on /Volumes/APDataStore (exfat, local, nodev, nosuid, noowners, noatime, fskit)
+/dev/disk5s1 on /Volumes/VertigoDataTier (apfs, local, nodev, nosuid, journaled, noowners)

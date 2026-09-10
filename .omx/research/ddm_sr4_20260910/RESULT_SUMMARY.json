@@ -1,0 +1,27 @@
+{
+  "axis": "macOS filesystem custody, scorer-free",
+  "status": "RESERVES_RESTORED_CUSTODY_VERIFIED",
+  "before_free_bytes": {
+    "/Volumes/VertigoDataTier": 38464204800,
+    "/Volumes/APDataStore": 34386477056
+  },
+  "after_dedup_free_bytes": {
+    "/Volumes/VertigoDataTier": 125143867392,
+    "/Volumes/APDataStore": 34386083840
+  },
+  "after_free_bytes": {
+    "/Volumes/VertigoDataTier": 91469271040,
+    "/Volumes/APDataStore": 67345317888
+  },
+  "hardlink_replacements": 25,
+  "hardlink_logical_duplicate_bytes": 91560240000,
+  "hardlink_phase_net_vertigo_free_bytes": 86679662592,
+  "offload_retained_payload_bytes": 32961686400,
+  "offload_phase_net_ap_free_bytes": 32959234048,
+  "offload_phase_net_vertigo_free_bytes": -33674596352,
+  "snapshot_prune_bytes": 0,
+  "payload_delete_bytes": 0,
+  "accounting_limit": "Phase df changes include filesystem metadata and concurrent unrelated activity; overlapping per-action df intervals are not summed. Logical duplicate and moved byte totals are exact file counts, not physical reclaim claims.",
+  "certified_deletion_list": [],
+  "score_claim": false
+}

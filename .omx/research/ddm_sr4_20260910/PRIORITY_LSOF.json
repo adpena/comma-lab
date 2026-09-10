@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "lsof",
+    "-Fpn",
+    "--",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_rp1_round2/parseback/0.raw"
+  ],
+  "rc": 1,
+  "stdout": "p78436\nf4\nn/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/public_rlc4/output/0.raw\n",
+  "stderr": ""
+}

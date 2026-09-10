@@ -1,0 +1,39 @@
+QUERY storage|reclaim|dedup|hardlink
+      "precision_class": "fp32_compute_optional_fp16_storage_with_canonical_helper_quantization"
+          "precision": "fp32_storage_fp16_per_element_quantization_optional",
+        "anchor_id": "film_coord_mlp_fp16_storage_mlx_pytorch_tolerance_20260528",
+          "fp16_storage_with_fp32_compute": true,
+        "measurement_method": "fp16_storage_fp32_compute_mlx_pytorch_paired_inflation_tolerance",
+      "fp16_storage_fp32_compute_mlx_pytorch_paired_inflation_tolerance": 0.0
+      "decoder_storage_ratio_of_archive": "float ~ 0.94",
+      "latent_storage_ratio_of_archive": "float ~ 0.06"
+        "anchor_id": "pr101_conv4_storage_perms_13_tensors_anchor",
+    "equation_id": "pr95_family_l22_conv4_storage_perms_v1",
+    "name": "L22: CONV4_STORAGE_PERMS per-tensor permutation for entropy-friendly storage",
+    "python_callable_module_path": "tac.canonical_equations.pr95_family_l22_conv4_storage_perms",
+        "anchor_id": "v8_residual_deshare_dedup_measured_20260709",
+          "pairwise_dedup_audit_top": {
+              "verdict": "NEW small double-count at Road/Undriv/Lane triple-points -> assign each px to ONE edge (free deflation ~0.001); found by the operator's general dedup sweep"
+          "module": "tac.boundary_math.movable_deshare.{measure_deshare_magnitude,pairwise_dedup_audit}",
+          "probe": "Lever-1 Movable-first de-share + general pairwise archive-dedup audit (n600)"
+        "measurement_method": "n600_argmax_movable_first_deshare_plus_pairwise_dedup_bit_exact_coder",
+        "anchor_id": "v8_macro_rate_pass_exhaustive_dedup_and_egocharge_measured_20260710",
+          "R1_exhaustive_wholeset_dedup_MEASURED": {
+          "measured_artifacts": "residual_kit_measured_20260709.json (probe1b whole-set pairwise-dedup audit; probe2 curve-relative REFUTED) + experiments/results/keyframe_ego_residual_coding_n600/results.json (R1 ego-warp residual coding, n600, all resolutions)",
+        "measurement_method": "wholeset_dedup_from_probe1b_plus_egowarp_negative_from_keyframe_ego_n600_read_only",
+          "law": "S_rate(macro) = S_rate(micro) - [dedup(whole-set) + ego-rigid xi-charge + hood single-static-store + joint-coding] ; residual re-coding = MEASURED DEAD",
+          "thesis": "the residual enemy is coding-irreducible; the macro view RELOCATES bytes onto dedup + xi-charge + hood + generator-COVERAGE, and REFRAMES the enemy as coverage"
+          "rejection_reason": "measure the owed R3 hood single-static-store ($0) and/or build increment-2 R5 generator-coverage; OR byte-close a v8 archive applying whole-set dedup + xi-charge",
+      "macro_rate_pass_wholeset_dedup_and_egocharge_measured": 0.0,
+    "name": "Full-stack unique-home assignment: every scored DOF of W=(G, xi, T) has exactly one carrier home derived from the measured scorer obligation matrix + stem passband + per-class basin price list (clause A/B; dedup falls out of the map)",
+          "defect_mechanism_subverdict": "NO-GO_HEADER_DEDUPLICATION_CONFOUND",
+        "bijective 2-D storage-axis permutation",
+      "negative_scope": "post-hoc exact shared value-codebook and exact-row dedup on the named checkpoint only",
+        "anchor_id": "v9_ep150_n600_lossless_joint_storage_20260713",
+          "storage_law": "min over bijective axis charts and raw-vs-frame-delta pair charts of exact archive bytes"
+    "equation_id": "witness_lossless_cross_tensor_storage_law_v1",
+    "name": "Lossless cross-tensor witness storage over a fixed quantized state",
+    "one_line_summary": "Choose exact-byte-minimizing bijective storage charts only after fixing q; decoded state and scored components remain invariant.",
+    "python_callable_module_path": "tac.canonical_equations.witness_crosstensor_coding_20260713:lossless_joint_storage_gain_bytes",
+        "anchor_id": "e2_dedup_gain_vs_rate_dual_20260723",
+    "one_line_summary": "e2 laws: pose-absent packet floor=seg+rate (3.0902 @C1 ceiling, FORMULATION-scoped); stage ledger closes exactly (paint=99.23% -> description-limited); dedup pays 19.09x rate dual.",

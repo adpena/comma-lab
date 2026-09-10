@@ -1,0 +1,3 @@
+Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on
+/dev/disk5s1  1953309744 1915454224  37562700    99% 1622591 375627000    0%   /Volumes/VertigoDataTier
+/dev/disk6s1  1953450624 1919870080  33580544    99%       1         0  100%   /Volumes/APDataStore

@@ -1,0 +1,56 @@
+{
+  "serializer_rc": 17,
+  "prior_attempt": {
+    "serializer_rc": 13,
+    "utc_epoch": 1789078888.391627,
+    "frozen_file_count": 93,
+    "index_before": {
+      "path": "/Users/adpena/Projects/pact/.git/index",
+      "sha256": "250b54dbc76bc9c6e6ad1511c6cc755374dd95e5672ecf530361fe5ac7e9d0fe",
+      "staged_names": "",
+      "head": "b3f0a6ecdc50eb023c1cf9277c615ce31e11c284",
+      "utc_epoch": 1789078888.2191281
+    },
+    "after": {
+      "index_sha256": "250b54dbc76bc9c6e6ad1511c6cc755374dd95e5672ecf530361fe5ac7e9d0fe",
+      "staged_names": "",
+      "head": "b3f0a6ecdc50eb023c1cf9277c615ce31e11c284"
+    },
+    "index_unchanged": true,
+    "log": ".omx/research/ddm_sr4_20260910/SERIALIZER_RUN.log",
+    "file_hashes_still_match": true
+  },
+  "utc_epoch": 1789078966.6352441,
+  "index_unchanged": true,
+  "file_hashes_still_match": true,
+  "eligible_commit_files": 91,
+  "log": ".omx/research/ddm_sr4_20260910/SERIALIZER_RETRY.log",
+  "head_after": "b3f0a6ecdc50eb023c1cf9277c615ce31e11c284",
+  "status": "BUNDLE_VERIFIED_MAIN_MUST_LAND",
+  "fallback_commit": "e2c5fbe115dbf1217544f1c3ee762bbb4fe53aa8",
+  "base_head": "b3f0a6ecdc50eb023c1cf9277c615ce31e11c284",
+  "bundle_path": "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/serializer/20260910T222154.044769Z-53312/intended-commit.bundle",
+  "bundle_sha256": "c347b84b7c2862c03f239b3a4f41682605c4d483196d4a4fb83f333e94d25fb0",
+  "receipt_path": "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/serializer/20260910T222154.044769Z-53312/receipts.jsonl",
+  "bundle_verification": {
+    "git_bundle_verify_rc": 0,
+    "committed_files_verified": 91,
+    "changed_paths_exact": true,
+    "all_worktree_and_commit_hashes_match": true,
+    "no_coauthor_or_ai_trailer": true,
+    "isolated_object_store": "/Volumes/VertigoDataTier/pact/ddm_sr4_20260910/serializer/20260910T222154.044769Z-53312/verification.git",
+    "index_sha256_unchanged": "250b54dbc76bc9c6e6ad1511c6cc755374dd95e5672ecf530361fe5ac7e9d0fe"
+  },
+  "post_serializer_df": "Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on\n/dev/disk5s1  1953309744 1863835804  89181120    96% 1623027 891811200    0%   /Volumes/VertigoDataTier\n/dev/disk6s1  1953450624 1887683584  65767040    97%       1         0  100%   /Volumes/APDataStore\n",
+  "post_serializer_free_bytes": {
+    "/Volumes/VertigoDataTier": 91321466880,
+    "/Volumes/APDataStore": 67345448960
+  },
+  "next_action": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": "/Users/adpena/Projects/pact Git history",
+    "fire_trigger": "MAIN harvest in a Git-writable environment",
+    "action": "Land the verified fallback commit e2c5fbe115dbf1217544f1c3ee762bbb4fe53aa8 from /Volumes/VertigoDataTier/pact/ddm_sr4_20260910/serializer/20260910T222154.044769Z-53312/intended-commit.bundle; revalidate frozen hashes and avoid unrelated dirty work."
+  }
+}

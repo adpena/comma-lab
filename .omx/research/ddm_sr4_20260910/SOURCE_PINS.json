@@ -1,0 +1,12 @@
+{
+  ".omx/research/ddm_rlc1_20260910/TWIN_RAW_DEDUP_CERTIFICATE.json": "7d91733b0673e1f4675009e0a486a5b373b3ff5d3e711446b6c39d4a3114d9af",
+  "docs/meta_bug_class_catalog.md": "a48c8bd13c6d4f6a3a8c4157840d0fefc55c3334552db8991eca1beb68439620",
+  ".omx/research/ddm_vr8_20260910/FE1_DISPOSITION.json": "7be3defbd64d8135e2898cc18e3b56b4c70219108f6151408b8800e57218a515",
+  "CLAUDE.md": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f",
+  "AGENTS.md": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f",
+  "head": "23a72b934392c0a11ed55150b35a983ebc7f63a3",
+  "src/tac/artifact_moved.py": "19c59a47cc89c141a8bba4bb75b08c87acb12292070b178257a30e24867b2e1a",
+  "src/tac/artifact_moved_audit.py": "4bce8cc62b6a20c4b36b2ac40c45ce2525c8d8c93a5495232a603720ef28285e",
+  "src/tac/modal_source_snapshot.py": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290",
+  "experiments/ddm_vr3_certified_raw_reclaim.py": "f4fb5ea2e47eb04d81435a22dd5301ebf1770d6af6cc8ba86a913e01cc9da1cb"
+}
