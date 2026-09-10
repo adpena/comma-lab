@@ -1,0 +1,1590 @@
+diff --git a/experiments/ddm_dwc1_timing.py b/experiments/ddm_dwc1_timing.py
+new file mode 100644
+index 000000000..342f4e116
+--- /dev/null
++++ b/experiments/ddm_dwc1_timing.py
+@@ -0,0 +1,175 @@
++"""Time copied public receivers, retaining payloads and resumable stage state.
++
++Scorer-free macOS CPU proxy only. Native shell startup and full rendering are timed.
++Concurrency visibility failure is retained and prevents a margin PASS.
++"""
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import os
++import platform
++import shutil
++import signal
++import subprocess
++import sys
++import time
++import zipfile
++from pathlib import Path
++
++REPO = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(REPO / 'src'))
++sys.dont_write_bytecode = True
++from tac.candidate_seal import measure_runtime_digest
++
++SOURCES = {
++    'tc3': Path('/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime'),
++    'tc4': Path('/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime'),
++}
++ROOT = Path('/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock')
++THREAD_KEYS = ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS',
++               'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS')
++
++
++def fact(path):
++    path = Path(path).resolve()
++    with path.open('rb') as stream:
++        sha = hashlib.file_digest(stream, 'sha256').hexdigest()
++    return {'path': str(path), 'bytes': path.stat().st_size, 'sha256': sha}
++
++
++def save(path, value):
++    path.parent.mkdir(parents=True, exist_ok=True)
++    temporary = path.with_suffix(path.suffix + '.new')
++    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
++    temporary.replace(path)
++
++
++def load_snapshot():
++    try:
++        result = subprocess.run(['ps', '-axo', 'pid,ppid,%cpu,command'], capture_output=True,
++                                text=True, timeout=10)
++        rows, code, error = result.stdout.splitlines(), result.returncode, result.stderr
++    except OSError as exc:
++        rows, code, error = [], None, repr(exc)
++    return {'load_average': list(os.getloadavg()), 'process_inventory_returncode': code,
++            'process_inventory': rows, 'process_inventory_error': error,
++            'concurrent_process_count': len(rows) - 1 if code == 0 else None,
++            'quiesced': False, 'normalization': None}
++
++
++def hygiene(root):
++    paths = [p for p in root.rglob('*') if p.is_file()]
++    size = sum(p.stat().st_size for p in paths)
++    if size > 8 * 1024**3:
++        raise RuntimeError('8 GiB retention ceiling reached; retain bytes and block')
++    return {'bytes': size, 'budget_bytes': 8 * 1024**3,
++            'policy': 'KEEP_ALL_PAYLOADS_ON_SSD; no deletion without verified lossless custody',
++            'score_claim': False}
++
++
++def prepare(role):
++    work = ROOT / role
++    runtime = work / 'runtime'
++    work.mkdir(parents=True, exist_ok=True)
++    if shutil.disk_usage(ROOT).free < 44 * 1024**3:
++        raise RuntimeError('storage reserve plus next 4 GiB decode not available')
++    source = measure_runtime_digest(SOURCES[role])
++    if not runtime.exists():
++        shutil.copytree(SOURCES[role], runtime,
++                        ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '*.so', '*.dylib', '._*'))
++    if measure_runtime_digest(runtime).sha256 != source.sha256:
++        raise RuntimeError('copied runtime identity differs from source')
++    for name in ('data', 'output', 'scratch', 'frame_checkpoints'):
++        (work / name).mkdir(exist_ok=True)
++    with zipfile.ZipFile(runtime / 'archive.zip') as archive:
++        payload = archive.read('p')
++    payload_path = work / 'data/p'
++    if payload_path.exists() and payload_path.read_bytes() != payload:
++        raise RuntimeError('retained input payload drift')
++    payload_path.write_bytes(payload)
++    (work / 'files.txt').write_text('0.hevc\n')
++    binding = {'source_runtime': str(SOURCES[role]), 'runtime_sha256': source.sha256,
++               'archive': fact(runtime / 'archive.zip'), 'payload': fact(payload_path),
++               'producer': fact(Path(__file__)), 'seed': 20260910,
++               'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()}
++    prior = work / 'BINDING.json'
++    if prior.exists() and json.loads(prior.read_text()) != binding:
++        raise RuntimeError('resume binding drift')
++    save(prior, binding)
++    return work, runtime, binding
++
++
++def run(role, timeout):
++    work, runtime, binding = prepare(role)
++    complete = work / 'TIMING.json'
++    if complete.exists():
++        value = json.loads(complete.read_text())
++        if value['binding'] != binding:
++            raise RuntimeError('completed timing binding drift')
++        return value
++    attempt = work / f'attempt_{len(list(work.glob("attempt_*"))):04d}'
++    attempt.mkdir()
++    env = {k: v for k, v in os.environ.items() if not k.startswith(('F26_', 'TC1_RECEIVER_', 'TC3_ADVISORY_', 'CPR1_RC64_'))}
++    env.update(dict.fromkeys(THREAD_KEYS, '4'))
++    env.update(PATH=str(REPO / '.venv/bin') + os.pathsep + env.get('PATH', ''),
++               TMPDIR=str(work / 'scratch'), PYTHONDONTWRITEBYTECODE='1', PYTHONHASHSEED='20260910',
++               TC1_RECEIVER_CHECKPOINT_DIR=str(work / 'frame_checkpoints'),
++               TC1_RECEIVER_STOP_AFTER='600', TC3_ADVISORY_CPU='1', F26_TOKEN_DECODER='python')
++    command = ['bash', str(runtime / 'inflate.sh'), str(work / 'data'),
++               str(work / 'output'), str(work / 'files.txt')]
++    resumed = (work / 'frame_checkpoints/LATEST.json').exists()
++    before = load_snapshot()
++    save(attempt / 'LAUNCH.json', {'binding': binding, 'command': command,
++         'environment': {k: env[k] for k in (*THREAD_KEYS, 'TMPDIR', 'TC3_ADVISORY_CPU',
++             'TC1_RECEIVER_CHECKPOINT_DIR', 'TC1_RECEIVER_STOP_AFTER', 'F26_TOKEN_DECODER')},
++         'concurrency': before, 'resumed': resumed, 'timeout_seconds': timeout,
++         'retention': hygiene(ROOT)})
++    started = time.monotonic()
++    timed_out = False
++    with (attempt / 'stdout.log').open('wb') as output:
++        process = subprocess.Popen(command, cwd=work, env=env, stdout=output,
++                                   stderr=subprocess.STDOUT, start_new_session=True)
++        try:
++            code = process.wait(timeout=timeout)
++        except subprocess.TimeoutExpired:
++            timed_out = True
++            os.killpg(process.pid, signal.SIGKILL)
++            code = process.wait()
++    seconds = time.monotonic() - started
++    reports = []
++    for line in (attempt / 'stdout.log').read_text().splitlines():
++        if line.startswith('{"archive_bytes"'):
++            reports.append(json.loads(line))
++    value = {'schema': 'ddm_dwc1.raw_timing.v1', 'binding': binding, 'command': command,
++             'axis': '[macOS-CPU advisory]', 'measurement_kind': 'cuda_path_equivalent_proxy',
++             'score_claim': False, 'wall_seconds': seconds, 'cpu_threads': 4,
++             'host': platform.node(), 'platform': platform.platform(), 'resumed': resumed,
++             'returncode': code, 'timed_out': timed_out, 'concurrency_before': before,
++             'concurrency_after': load_snapshot(), 'log': fact(attempt / 'stdout.log'),
++             'report': reports[-1] if reports else None, 'retention': hygiene(ROOT)}
++    latest = work / 'frame_checkpoints/LATEST.json'
++    value['last_token_checkpoint'] = json.loads(latest.read_text()) if latest.exists() else None
++    if code == 0:
++        if len(reports) != 1 or reports[0]['pair_count'] != 600:
++            raise RuntimeError('public shell exited without a full-population report')
++        value['raw'] = fact(work / 'output/0.raw')
++        value['tokens'] = fact(work / 'output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8')
++        if value['raw']['sha256'] != reports[0]['raw_sha256']:
++            raise RuntimeError('raw report identity mismatch')
++        save(complete, value)
++    save(attempt / 'RESULT.json', value)
++    print(json.dumps(value, sort_keys=True), flush=True)
++    return value
++
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--resume-from', type=Path, required=True)
++    parser.add_argument('--role', choices=tuple(SOURCES), required=True)
++    parser.add_argument('--timeout-seconds', type=float, default=2400)
++    args = parser.parse_args()
++    if args.resume_from.resolve() != ROOT or not 0 < args.timeout_seconds <= 2400:
++        raise ValueError('invalid resume root or wall budget')
++    run(args.role, args.timeout_seconds)
+diff --git a/experiments/ddm_dwc1_components.py b/experiments/ddm_dwc1_components.py
+new file mode 100644
+index 000000000..8c041503e
+--- /dev/null
++++ b/experiments/ddm_dwc1_components.py
+@@ -0,0 +1,316 @@
++"""Replay shipped causal geometry/map methods on retained real decoded fields.
++
++This measures map work only: no probability rows are invented and no entropy
++decode, calibration, renderer, or contest score is claimed. Run after the public
++timings, never alongside them. Every sampled frame retains emitted maps.
++"""
++from __future__ import annotations
++
++import argparse
++import hashlib
++import importlib
++import json
++import os
++import platform
++import shutil
++import subprocess
++import sys
++import time
++import types
++from pathlib import Path
++
++THREAD_KEYS = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
++               "VECLIB_MAXIMUM_THREADS", "NUMEXPR_NUM_THREADS")
++for _key in THREAD_KEYS:
++    os.environ[_key] = "4"
++sys.dont_write_bytecode = True
++
++import numpy as np
++
++REPO = Path(__file__).resolve().parents[1]
++ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock")
++SOURCES = {
++    "tc3": Path("/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime"),
++    "tc4": Path("/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime"),
++}
++IDENTITY = SOURCES["tc3"].parent / "PUBLIC_IDENTITY.json"
++MODULES = ("tc1_shared_mixer.py", "tc3_geometry.py", "tc3_mixer.py",
++           "tc4_maps.py", "tc4_fast.py")
++SHAPE = (600, 384, 512)
++COMPONENT_BUDGET = 1024**3
++TOTAL_BUDGET = 8 * 1024**3
++
++
++def fact(path):
++    path = Path(path).resolve()
++    with path.open("rb") as stream:
++        digest = hashlib.file_digest(stream, "sha256").hexdigest()
++    return {"path": str(path), "bytes": path.stat().st_size, "sha256": digest}
++
++
++def save(path, value):
++    path.parent.mkdir(parents=True, exist_ok=True)
++    temporary = path.with_suffix(path.suffix + ".new")
++    with temporary.open("w") as stream:
++        json.dump(value, stream, sort_keys=True, indent=2)
++        stream.write("\n")
++        stream.flush()
++        os.fsync(stream.fileno())
++    temporary.replace(path)
++
++
++def occupied(root):
++    return sum(p.stat().st_size for p in root.rglob("*") if p.is_file())
++
++
++def reserve(root, additional):
++    """Reserve worst-case next output; bytes are retained on every failure."""
++    component_used = occupied(root)
++    total_used = occupied(ROOT)
++    facts = {"component_bytes": component_used, "total_bytes": total_used,
++             "reserved_next_bytes": additional, "component_budget": COMPONENT_BUDGET,
++             "total_budget": TOTAL_BUDGET}
++    if (component_used + additional > COMPONENT_BUDGET
++            or total_used + additional > TOTAL_BUDGET
++            or shutil.disk_usage(ROOT).free < 40 * 1024**3 + additional):
++        save(root / "STORAGE_BLOCKED.json", facts)
++        raise RuntimeError("storage reservation blocked; every existing payload retained")
++    return facts
++
++
++def snapshot():
++    try:
++        result = subprocess.run(["ps", "-axo", "pid,ppid,%cpu,command"],
++                                capture_output=True, text=True, timeout=5)
++        rows = result.stdout.splitlines()
++        return {"load_average": list(os.getloadavg()), "quiesced": False,
++                "process_inventory_returncode": result.returncode,
++                "process_inventory_error": result.stderr, "process_inventory": rows,
++                "concurrent_process_count": max(0, len(rows) - 1) if result.returncode == 0 else None,
++                "normalization": None}
++    except (OSError, subprocess.TimeoutExpired) as exc:
++        return {"load_average": list(os.getloadavg()), "quiesced": False,
++                "concurrent_process_count": None, "error": repr(exc), "normalization": None}
++
++
++def frame_ids(sample, seed):
++    if not 32 <= sample <= 100:
++        raise ValueError("sample must be 32..100")
++    rng = np.random.default_rng(seed)
++    return [int(rng.choice(chunk)) for chunk in np.array_split(np.arange(600), sample)]
++
++
++def load_modules(role, root):
++    """Import byte-identical bounded copies under a role-specific package name."""
++    destination = root / "sources" / role
++    destination.mkdir(parents=True, exist_ok=True)
++    names = MODULES[:3] if role == "tc3" else MODULES
++    sources = {}
++    for name in names:
++        source = SOURCES[role] / "runtime" / name
++        target = destination / name
++        source_fact = fact(source)
++        if not target.exists():
++            shutil.copyfile(source, target)
++        target_fact = fact(target)
++        if target_fact["sha256"] != source_fact["sha256"]:
++            raise RuntimeError("copied source changed; refusing drift")
++        sources[name] = {"source": source_fact, "copy": target_fact}
++    package_name = "dwc1_" + role
++    package = types.ModuleType(package_name)
++    package.__path__ = [str(destination)]
++    sys.modules[package_name] = package
++    geometry = importlib.import_module(package_name + ".tc3_geometry")
++    mixer = importlib.import_module(package_name + ".tc3_mixer")
++    fast = None if role == "tc3" else importlib.import_module(package_name + ".tc4_fast")
++    return geometry, mixer, fast, sources
++
++
++def replay_frame(role, modules, truth, previous):
++    """Invoke actual methods on exact causal map state, excluding probabilities.
++
++    For tc4 we materialize only probability-independent state from begin_frame
++    and coding. old.pending/old.bins are the coding method's group handoff. The
++    real old LaneMixer.observe consumes that handoff and updates LaneGeometry.
++    No synthetic probabilities, weights, or learned counts enter this replay.
++    """
++    geometry, mixer_module, fast_module = modules
++    counters = {"lane_init_seconds": 0.0, "lane_contexts_seconds": 0.0,
++                "lane_observe_seconds": 0.0, "tc4_previous_map_seconds": 0.0,
++                "tc4_context_codes_seconds": 0.0, "tc4_observe_inclusive_seconds": 0.0,
++                "tc4_old_observe_seconds": 0.0, "tc4_state_setup_seconds": 0.0}
++    started = time.perf_counter()
++    lane = geometry.LaneGeometry(previous)
++    counters["lane_init_seconds"] = time.perf_counter() - started
++    bins_all = np.empty((384, 512), dtype=np.uint8)
++    codes_all = np.empty((384, 512, 5), dtype=np.uint8) if role == "tc4" else None
++    fast = None
++    if role == "tc4":
++        started = time.perf_counter()
++        fast = fast_module.FastContextMixer.__new__(fast_module.FastContextMixer)
++        old = mixer_module.LaneMixer.__new__(mixer_module.LaneMixer)
++        old.geometry, old.pending = lane, None
++        old.bins = np.empty(384 * 512, dtype=np.uint8)
++        fast.old = old
++        fast.row_length = np.zeros(384 * 512, dtype=np.uint8)
++        fast.transitions = np.zeros((384 // 64, 512), dtype=np.uint64)
++        fast.lane_bins = np.full((384, 512), 9, dtype=np.uint8)
++        counters["tc4_state_setup_seconds"] = time.perf_counter() - started
++        original_observe = old.observe
++
++        def timed_old_observe(positions, symbols):
++            started = time.perf_counter()
++            original_observe(positions, symbols)
++            counters["tc4_old_observe_seconds"] += time.perf_counter() - started
++
++        old.observe = timed_old_observe
++    visits = 0
++    for positions in geometry.POSITIONS:
++        symbols = truth.reshape(-1)[positions].astype(np.int64)
++        started = time.perf_counter()
++        bins = lane.contexts(positions)
++        counters["lane_contexts_seconds"] += time.perf_counter() - started
++        bins_all.reshape(-1)[positions] = bins
++        if fast is None:
++            started = time.perf_counter()
++            lane.observe(positions, symbols)
++            counters["lane_observe_seconds"] += time.perf_counter() - started
++        else:
++            fast.old.pending = positions.copy()
++            fast.old.bins[positions] = bins
++            if visits == 0:
++                started = time.perf_counter()
++                fast.temporal = fast_module.maps.previous_map(previous)
++                counters["tc4_previous_map_seconds"] = time.perf_counter() - started
++            started = time.perf_counter()
++            codes = fast.context_codes(positions)
++            counters["tc4_context_codes_seconds"] += time.perf_counter() - started
++            codes_all.reshape(-1, 5)[positions] = codes
++            fast.lane_bins.reshape(-1)[positions] = bins
++            started = time.perf_counter()
++            fast.observe(positions, symbols)
++            counters["tc4_observe_inclusive_seconds"] += time.perf_counter() - started
++        visits += len(positions)
++    np.testing.assert_array_equal(lane.plane, truth)
++    if visits != 384 * 512 or lane.group != len(geometry.POSITIONS) or lane.pending:
++        raise RuntimeError("incomplete causal frame replay")
++    counters["tc4_observe_incremental_seconds"] = (
++        counters["tc4_observe_inclusive_seconds"] - counters["tc4_old_observe_seconds"])
++    if role == "tc3":
++        counters["tc3_predictor_seconds"] = (counters["lane_init_seconds"]
++            + counters["lane_contexts_seconds"] + counters["lane_observe_seconds"])
++    else:
++        counters["tc4_additional_maps_seconds"] = (counters["tc4_previous_map_seconds"]
++            + counters["tc4_context_codes_seconds"] + counters["tc4_observe_incremental_seconds"])
++    arrays = {"lane_bins": bins_all}
++    if codes_all is not None:
++        arrays["tc4_codes"] = codes_all
++        arrays["tc4_temporal"] = fast.temporal
++    return arrays, {"times": counters, "token_visits": visits,
++                    "group_calls": len(geometry.POSITIONS), "exact_final_plane": True}
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--resume-from", type=Path, required=True)
++    parser.add_argument("--sample", type=int, default=32)
++    parser.add_argument("--seed", type=int, default=20260910)
++    args = parser.parse_args()
++    root = args.resume_from.resolve()
++    if root != ROOT / "components":
++        raise ValueError("unexpected component retention root")
++    root.mkdir(parents=True, exist_ok=True)
++    ids = frame_ids(args.sample, args.seed)
++    reserve(root, 150 * 1024**2 + args.sample * 2 * 2 * 1024**2)
++    original = json.loads(IDENTITY.read_text())["decoded_field"]
++    if fact(original["path"]) != original or original["bytes"] != int(np.prod(SHAPE)):
++        raise RuntimeError("retained source field differs from public identity receipt")
++    source_field = Path(original["path"])
++    retained_field = root / "tokens.u8"
++    if not retained_field.exists():
++        temporary = retained_field.with_suffix(".new")
++        shutil.copyfile(source_field, temporary)
++        temporary.replace(retained_field)
++    if fact(retained_field)["sha256"] != original["sha256"]:
++        raise RuntimeError("retained field drift")
++    field = np.memmap(retained_field, mode="r", dtype=np.uint8, shape=SHAPE)
++    binding = {"schema": "ddm_dwc1.components_binding.v1", "seed": args.seed,
++               "frame_ids": ids, "selection": "one seeded random frame per equal temporal stratum",
++               "source_identity": fact(IDENTITY), "field": fact(retained_field),
++               "producer": fact(Path(__file__)), "numpy": np.__version__,
++               "git_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip(),
++               "platform": platform.platform(), "host": platform.node(),
++               "threads": {key: os.environ[key] for key in THREAD_KEYS}, "sources": {}}
++    modules = {}
++    for role in SOURCES:
++        geometry, mixer, fast, source_facts = load_modules(role, root)
++        modules[role] = (geometry, mixer, fast)
++        binding["sources"][role] = source_facts
++    binding_path = root / "BINDING.json"
++    if binding_path.exists() and json.loads(binding_path.read_text()) != binding:
++        raise RuntimeError("component resume binding drift")
++    save(binding_path, binding)
++    binding_sha = fact(binding_path)["sha256"]
++    rows = []
++    for frame in ids:
++        truth = np.asarray(field[frame])
++        previous = None if frame == 0 else np.asarray(field[frame - 1])
++        if np.any(truth >= 5) or (previous is not None and np.any(previous >= 5)):
++            raise RuntimeError("real decoded field contains an invalid class")
++        for role in SOURCES:
++            receipt_path = root / role / f"frame_{frame:04d}.json"
++            if receipt_path.exists():
++                row = json.loads(receipt_path.read_text())
++                if (row["role"] != role or row["frame"] != frame
++                        or row["binding_sha256"] != binding_sha
++                        or row["token_visits"] != 384 * 512
++                        or row["group_calls"] != 190
++                        or any(not np.isfinite(value) or value < 0 for value in row["times"].values())
++                        or fact(row["output"]["path"]) != row["output"]):
++                    raise RuntimeError("retained component output drift")
++                rows.append(row)
++                continue
++            reserve(root, 4 * 1024**2)
++            before = snapshot()
++            arrays, result = replay_frame(role, modules[role], truth, previous)
++            output = receipt_path.with_suffix(".npz")
++            output.parent.mkdir(parents=True, exist_ok=True)
++            if output.exists():
++                # An interrupted receipt write never authorizes payload overwrite.
++                with np.load(output, allow_pickle=False) as old:
++                    if set(old.files) != set(arrays) or any(not np.array_equal(old[k], v) for k, v in arrays.items()):
++                        raise RuntimeError("orphan retained maps differ from replay")
++            else:
++                temporary = output.with_suffix(".npz.new")
++                with temporary.open("wb") as stream:
++                    np.savez_compressed(stream, **arrays)
++                    stream.flush()
++                    os.fsync(stream.fileno())
++                temporary.replace(output)
++            row = {"role": role, "frame": frame, "binding_sha256": binding_sha,
++                   "output": fact(output), **result,
++                   "concurrency_before": before, "concurrency_after": snapshot()}
++            save(receipt_path, row)
++            rows.append(row)
++            save(root / "LATEST.json", {"role": role, "frame": frame,
++                 "completed_rows": len(rows), "receipt": fact(receipt_path)})
++            print(json.dumps({"role": role, "frame": frame, "times": result["times"]}), flush=True)
++    summary = {}
++    for role in SOURCES:
++        selected = [row for row in rows if row["role"] == role]
++        tokens = sum(row["token_visits"] for row in selected)
++        seconds = {key: sum(row["times"][key] for row in selected) for key in selected[0]["times"]}
++        summary[role] = {"frames": len(selected), "token_visits": tokens,
++                         "seconds": seconds,
++                         "seconds_per_million_tokens": {key: value * 1e6 / tokens for key, value in seconds.items()},
++                         "n600_projected_seconds": {key: value * int(np.prod(SHAPE)) / tokens for key, value in seconds.items()}}
++    save(root / "RESULT.json", {"schema": "ddm_dwc1.components.v1", "binding": binding,
++         "axis": "[macOS-CPU advisory]", "score_claim": False, "summary": summary,
++         "scope": "exact shipped geometry and map methods, real causal decoded fields; excludes probability calibration, mix_rows, learned-count updates, entropy decode and rendering",
++         "tc4_incremental_method": "outer shipped FastContextMixer.observe wall minus nested shipped LaneMixer.observe wall on the same call; wrapper overhead remains",
++         "normalization": None, "quiesced": False, "retention": reserve(root, 0),
++         "n600_status": "projection from the recorded stratified frame sample, not n600 timing"})
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/tac/decode_wall_clock.py b/src/tac/decode_wall_clock.py
+new file mode 100644
+index 000000000..9980632d7
+--- /dev/null
++++ b/src/tac/decode_wall_clock.py
+@@ -0,0 +1,321 @@
++"""Measured decode budget receipts. Timing projections are advisory, never score authority.
++
++The receiver identity differs from the seal runtime identity ONLY by replacing the
++literal values of the two top-level archive pins. Payload-dependent work can still
++change: inheritance records code identity, not a new timing measurement.
++"""
++from __future__ import annotations
++
++import ast
++import hashlib
++import json
++import math
++import re
++from pathlib import Path
++
++from tac.candidate_seal import (
++    SealContractError,
++    measure_archive_identity,
++    measure_runtime_digest,
++    runtime_digest_skip_reason,
++    sha256_file,
++)
++
++DECODE_WALL_CLOCK_SCHEMA = "candidate_decode_wall_clock.v1"
++LOCAL_SCHEMA = "decode_wall_clock.local.v1"
++CALIBRATION_SCHEMA = "decode_wall_clock.calibration.v1"
++LIMIT_SECONDS = 1260.0
++
++
++def _require(condition: bool, message: str) -> None:
++    if not condition:
++        raise SealContractError("decode_wall_clock: " + message)
++
++
++def _number(value: object, label: str, *, zero: bool = False) -> float:
++    _require(type(value) in (int, float), f"{label} must be a finite number")
++    result = float(value)
++    _require(math.isfinite(result) and (result >= 0 if zero else result > 0), f"{label} out of range")
++    return result
++
++
++def _read(path: Path) -> dict:
++    try:
++        doc = json.loads(path.read_text())
++    except (OSError, ValueError) as exc:
++        raise SealContractError(f"decode_wall_clock: cannot read {path}: {exc}") from exc
++    _require(isinstance(doc, dict), f"{path} must contain an object")
++    return doc
++
++
++def receipt_reference(path: Path) -> dict:
++    path = Path(path).resolve()
++    _require(path.is_file(), f"receipt missing: {path}")
++    return {"path": str(path), "sha256": sha256_file(path)}
++
++
++def _receipt(ref: object) -> dict:
++    _require(isinstance(ref, dict), "receipt reference must be an object")
++    _require(isinstance(ref.get("path"), str) and bool(ref["path"]), "receipt path absent")
++    path = Path(ref["path"])
++    _require(path.is_file(), f"receipt missing: {path}")
++    _require(sha256_file(path) == ref.get("sha256"), f"receipt drift: {path}")
++    return _read(path)
++
++
++def measure_receiver_digest(runtime_dir: Path) -> str:
++    """Hash shipped files, normalizing only the values of explicit archive pin assignments."""
++    root = Path(runtime_dir)
++    _require(root.is_dir(), f"runtime missing: {root}")
++    rows = []
++    for path in sorted(root.rglob("*")):
++        if not path.is_file() or path.is_symlink():
++            continue
++        rel = path.relative_to(root).as_posix()
++        if rel == "archive.zip" or runtime_digest_skip_reason(rel):
++            continue
++        data = path.read_bytes()
++        if rel == "inflate.py":
++            try:
++                tree = ast.parse(data)
++            except (SyntaxError, UnicodeDecodeError) as exc:
++                raise SealContractError(f"decode_wall_clock: invalid inflate.py: {exc}") from exc
++            lines = data.splitlines(keepends=True)
++            offsets = [sum(map(len, lines[:i])) for i in range(len(lines))]
++            edits = []
++            seen = set()
++            for node in tree.body:
++                if not isinstance(node, ast.Assign) or len(node.targets) != 1:
++                    continue
++                target = node.targets[0]
++                if not isinstance(target, ast.Name) or target.id not in {"ARCHIVE_SHA256", "ARCHIVE_BYTES"}:
++                    continue
++                _require(target.id not in seen, f"duplicate archive pin {target.id}")
++                seen.add(target.id)
++                value = node.value
++                expected = str if target.id == "ARCHIVE_SHA256" else int
++                _require(isinstance(value, ast.Constant) and type(value.value) is expected,
++                         f"nonliteral archive pin {target.id}")
++                edits.append((offsets[value.lineno - 1] + value.col_offset,
++                              offsets[value.end_lineno - 1] + value.end_col_offset))
++            for start, end in sorted(edits, reverse=True):
++                data = data[:start] + b"<ARCHIVE_PIN>" + data[end:]
++        rows.append((rel, len(data), hashlib.sha256(data).hexdigest()))
++    _require(bool(rows), "receiver tree empty")
++    return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
++
++
++def _local(ref: object, *, require_margin_basis: bool = True) -> tuple[dict, float]:
++    doc = _receipt(ref)
++    _require(doc.get("schema") == LOCAL_SCHEMA, "unknown local timing schema")
++    _require(doc.get("axis") == "macOS-CPU advisory", "local timing axis must be macOS-CPU advisory")
++    _require(doc.get("measurement_kind") in {"public_entrypoint_decode", "cuda_path_equivalent_proxy"},
++             "timing must cover complete decode work, not token-only parsing")
++    _require(doc.get("completed") is True, "decode did not complete")
++    _require(doc.get("cold_start") is True and doc.get("resumed", False) is False
++             and doc.get("checkpoint_resume", False) is False
++             and doc.get("checkpoint_resumed_from_frame", 0) == 0,
++             "timing requires a cold start; resumed suffix timing is not a full decode")
++    _require(type(doc.get("cpu_threads")) is int and doc["cpu_threads"] == 4, "timing requires exactly four CPU threads")
++    frames = doc.get("frames")
++    _require(isinstance(frames, list) and 20 <= len(frames) <= 600, "timing needs 20..600 consecutive pair frames")
++    _require(all(type(x) is int for x in frames), "frame indices must be integers")
++    _require(frames == list(range(frames[0], frames[0] + len(frames))) and frames[0] >= 0 and frames[-1] < 600,
++             "pair frames must be consecutive within 0..599")
++    _require(isinstance(doc.get("host"), str) and bool(doc["host"].strip()), "host absent")
++    _require(isinstance(doc.get("command"), list) and bool(doc["command"])
++             and all(isinstance(x, str) and x for x in doc["command"]), "command argv absent")
++    concurrency = doc.get("concurrency")
++    _require(isinstance(concurrency, dict), "concurrency object absent")
++    count = concurrency.get("competing_process_count")
++    _require((type(count) is int and count >= 0) or (count is None and not require_margin_basis),
++             "competing process count absent")
++    load = concurrency.get("load_average")
++    _require(isinstance(load, list) and len(load) == 3, "three load averages required")
++    for value in load:
++        _number(value, "load average", zero=True)
++    if require_margin_basis:
++        _require(doc.get("margin_time_basis") == "quiesced" and count == 0,
++                 "margin timing must be quiesced; competing measurements need measured normalization")
++    for name in ("runtime_dir", "archive_path"):
++        _require(isinstance(doc.get(name), str) and bool(doc[name]), f"{name} absent")
++    root, archive = Path(doc["runtime_dir"]), Path(doc["archive_path"])
++    _require(measure_runtime_digest(root).sha256 == doc.get("runtime_sha256"), "local runtime drift")
++    _require(measure_receiver_digest(root) == doc.get("receiver_sha256"), "local receiver drift")
++    _require(measure_archive_identity(archive).sha256 == doc.get("archive_sha256"), "local archive drift")
++    seconds = _number(doc.get("wall_seconds"), "wall seconds")
++    return doc, seconds * 600 / len(frames)
++
++
++def _field(document: dict, keys: object, label: str) -> object:
++    _require(isinstance(keys, list) and bool(keys) and all(isinstance(k, str) for k in keys), f"{label} field path absent")
++    value = document
++    for key in keys:
++        if isinstance(value, str):
++            value = json.loads(value)
++        _require(isinstance(value, dict) and key in value, f"{label} receipt field missing: {key}")
++        value = value[key]
++    return value
++
++
++def measure_t4_runtime_digest(runtime_dir: Path) -> str:
++    """Use the worker's upload projection, preserving its distinct digest definition."""
++    from experiments.contest_auth_eval import _runtime_dependency_manifest
++    from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
++
++    repo = Path(__file__).resolve().parents[2]
++    manifest = _runtime_dependency_manifest(Path(runtime_dir) / "inflate.sh", repo / "upstream")
++    return modal_uploaded_submission_dir_runtime_manifest(manifest)["runtime_tree_sha256"]
++
++
++def _calibration(ref: object, *, require_margin_basis: bool = True) -> tuple[dict, float]:
++    doc = _receipt(ref)
++    _require(doc.get("schema") == CALIBRATION_SCHEMA, "unknown calibration schema")
++    _require(isinstance(doc.get("name"), str) and bool(doc["name"].strip()), "calibration name absent")
++    local, local600 = _local(doc.get("local_receipt"), require_margin_basis=require_margin_basis)
++    t4 = _receipt(doc.get("t4_receipt"))
++    seconds = _number(_field(t4, doc.get("t4_seconds_field"), "T4 seconds"), "T4 receipt seconds")
++    _require(doc.get("t4_timing_scope") in {"decode", "full_eval_upper_bound"}, "T4 timing scope absent")
++    _require(doc.get("archive_sha256") == local["archive_sha256"], "calibration archive differs from local timing")
++    _require(doc.get("receiver_sha256") == local["receiver_sha256"], "calibration receiver differs from local timing")
++    _require(_field(t4, doc.get("t4_archive_sha256_field"), "T4 archive") == local["archive_sha256"],
++             "T4 source archive differs from calibration")
++    hardware = _field(t4, doc.get("t4_hardware_field"), "T4 hardware")
++    _require(isinstance(hardware, str) and hardware.lower() in {"nvidia-t4", "tesla t4", "nvidia tesla t4", "nvidia t4"}, "source receipt must identify T4 hardware")
++    _require(doc.get("t4_runtime_digest_definition") ==
++             "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
++             "T4 runtime digest definition absent or unsupported")
++    source_runtime_sha = _field(t4, doc.get("t4_runtime_sha256_field"), "T4 runtime")
++    _require(source_runtime_sha == measure_t4_runtime_digest(Path(local["runtime_dir"])),
++             "T4 source runtime differs from calibration receiver")
++    ratio = seconds / local600
++    _require(math.isclose(_number(doc.get("cpu_to_t4_ratio"), "CPU-to-T4 ratio"), ratio, rel_tol=1e-9),
++             "CPU-to-T4 ratio must equal T4 seconds / local extrapolated seconds")
++    local_host_identity = {key: local[key] for key in ("host", "platform", "hardware_fingerprint") if key in local}
++    return {**doc, "measured_t4_seconds": seconds, "local_host_identity": local_host_identity}, ratio
++
++
++def _candidate_t4(ref: object, runtime_dir: Path, archive_sha: str) -> tuple[float, str]:
++    """Consume an exact candidate's completed decode or observed inflate timeout."""
++    doc = _receipt(ref)
++    _require(doc.get("expected_archive_sha256") == archive_sha, "candidate T4 archive differs")
++    runtime_sha = measure_t4_runtime_digest(runtime_dir)
++    _require(doc.get("expected_runtime_tree_sha256") == runtime_sha, "candidate T4 runtime differs")
++    hardware = _field(doc, ["artifacts", "modal_cuda_preflight.json", "torch_cuda_device_name"], "candidate hardware")
++    _require(isinstance(hardware, str) and hardware.lower() in {"nvidia-t4", "tesla t4", "nvidia tesla t4", "nvidia t4"},
++             "candidate receipt does not identify T4 hardware")
++    if doc.get("passed") is True and type(doc.get("returncode")) is int and doc["returncode"] == 0:
++        seconds = _number(_field(doc, ["artifacts", "contest_auth_eval.json", "inflate_elapsed_seconds"],
++                                 "candidate decode seconds"), "candidate T4 decode seconds")
++        return seconds, "completed"
++    _require(doc.get("passed") is False and type(doc.get("returncode")) is int and doc["returncode"] != 0,
++             "candidate T4 failure status is missing")
++    stderr = _field(doc, ["artifacts", "contest_auth_eval.stderr.log"], "candidate stderr")
++    _require(isinstance(stderr, str), "candidate stderr must be text")
++    match = re.search(r"ProcessGroupTimeout: Command .*inflate\.sh.* timed out after ([0-9.]+) seconds", stderr)
++    _require(match is not None and "[inflate] TIMED OUT" in stderr, "candidate failure was not an observed inflate timeout")
++    seconds = _number(float(match.group(1)), "observed inflate timeout")
++    configured = _number(_field(doc, ["artifacts", "provenance.json", "inflate_timeout_seconds"],
++                               "configured timeout"), "configured inflate timeout")
++    _require(seconds == configured, "timeout log disagrees with configured timeout")
++    _require(_field(doc, ["artifacts", "provenance.json", "archive_sha256"], "timeout archive") == archive_sha,
++             "timeout provenance archive differs")
++    _require(_field(doc, ["artifacts", "provenance.json", "inflate_runtime_manifest", "runtime_tree_sha256"],
++                    "timeout runtime") == runtime_sha, "timeout provenance runtime differs")
++    return seconds, "timeout_lower_bound"
++
++
++def build_decode_wall_clock(*, local_receipt_path: Path, calibration_receipt_path: Path,
++                            runtime_dir: Path, archive_path: Path, enforce_margin: bool = True,
++                            candidate_t4_receipt_path: Path | None = None) -> dict:
++    """Construct a measured leg and reject missing, stale, or over-budget evidence."""
++    local_ref, calibration_ref = receipt_reference(local_receipt_path), receipt_reference(calibration_receipt_path)
++    local, local600 = _local(local_ref, require_margin_basis=enforce_margin)
++    _, ratio = _calibration(calibration_ref, require_margin_basis=enforce_margin)
++    leg = {"schema": DECODE_WALL_CLOCK_SCHEMA, "mode": "measured", "score_claim": False,
++           "local_receipt": local_ref, "calibration_receipt": calibration_ref,
++           "receiver_sha256": local["receiver_sha256"], "archive_sha256": local["archive_sha256"],
++           "local_600_seconds": local600, "cpu_to_t4_ratio": ratio,
++           "ratio_definition": "T4_seconds / local_600_seconds",
++           "projected_t4_decode_seconds": local600 * ratio, "limit_seconds": LIMIT_SECONDS}
++    if candidate_t4_receipt_path is not None:
++        leg["candidate_t4_receipt"] = receipt_reference(candidate_t4_receipt_path)
++    problems, _ = validate_decode_wall_clock(leg, runtime_dir=runtime_dir, archive_path=archive_path)
++    if enforce_margin:
++        _require(not problems, "; ".join(problems))
++    else:
++        leg["validation_problems_at_construction"] = problems
++    return leg
++
++
++def inherit_decode_wall_clock(*, source_leg_path: Path, runtime_dir: Path, archive_path: Path,
++                               pointer_archive_sha256: str) -> dict:
++    """Inherit only a valid measured pointer leg whose normalized receiver code is identical."""
++    source = _read(Path(source_leg_path))
++    leg = {"schema": DECODE_WALL_CLOCK_SCHEMA, "mode": "inherited", "score_claim": False,
++           "source_leg": receipt_reference(source_leg_path), "pointer_archive_sha256": pointer_archive_sha256,
++           "receiver_sha256": measure_receiver_digest(runtime_dir),
++           "archive_sha256": measure_archive_identity(archive_path).sha256,
++           "projected_t4_decode_seconds": source.get("projected_t4_decode_seconds"),
++           "limit_seconds": LIMIT_SECONDS,
++           "inheritance_scope": "identical receiver code; payload-dependent time is not remeasured"}
++    problems, _ = validate_decode_wall_clock(leg, runtime_dir=runtime_dir, archive_path=archive_path,
++                                            pointer_archive_sha256=pointer_archive_sha256)
++    _require(not problems, "; ".join(problems))
++    return leg
++
++
++def validate_decode_wall_clock(leg: object, *, runtime_dir: Path, archive_path: Path,
++                              pointer_archive_sha256: str = "") -> tuple[list[str], dict]:
++    """Re-read every receipt and source object; malformed input becomes a typed refusal."""
++    observed = {}
++    try:
++        _require(isinstance(leg, dict), "leg must be an object")
++        _require(leg.get("schema") == DECODE_WALL_CLOCK_SCHEMA, "unknown leg schema")
++        _require(leg.get("score_claim") is False, "timing cannot claim score authority")
++        _require(leg.get("receiver_sha256") == measure_receiver_digest(runtime_dir), "candidate receiver differs from measurement")
++        _require(leg.get("archive_sha256") == measure_archive_identity(archive_path).sha256, "candidate archive differs from timing leg")
++        if "candidate_t4_receipt" in leg:
++            actual, kind = _candidate_t4(leg["candidate_t4_receipt"], runtime_dir, leg["archive_sha256"])
++            observed.update(measured_t4_decode_seconds=actual, measured_t4_kind=kind)
++            _require(actual <= LIMIT_SECONDS, f"measured T4 {kind} {actual:.6f}s exceeds {LIMIT_SECONDS}s")
++        if leg.get("mode") == "measured":
++            calibration_doc, _ = _calibration(leg.get("calibration_receipt"), require_margin_basis=False)
++            actual = calibration_doc["measured_t4_seconds"]
++            if (calibration_doc["archive_sha256"] == leg.get("archive_sha256")
++                    and calibration_doc["receiver_sha256"] == leg.get("receiver_sha256")
++                    and calibration_doc.get("t4_timing_scope") == "decode"):
++                observed["measured_t4_decode_seconds"] = actual
++                _require(actual <= LIMIT_SECONDS, f"measured T4 decode {actual:.6f}s exceeds {LIMIT_SECONDS}s")
++        if leg.get("mode") == "inherited":
++            source = _receipt(leg.get("source_leg"))
++            _require(source.get("mode") == "measured", "inheritance must point directly to a measured leg")
++            _require(bool(pointer_archive_sha256) and leg.get("pointer_archive_sha256") == pointer_archive_sha256,
++                     "inherited pointer identity absent or stale")
++            _require(source.get("archive_sha256") == pointer_archive_sha256, "source measurement is not the pointer archive")
++            local, _ = _local(source.get("local_receipt"), require_margin_basis=False)
++            problems, _ = validate_decode_wall_clock(source, runtime_dir=Path(local["runtime_dir"]),
++                                                     archive_path=Path(local["archive_path"]))
++            _require(not problems, "invalid inherited source: " + "; ".join(problems))
++            _require(source.get("receiver_sha256") == leg.get("receiver_sha256"), "inherited receiver code differs")
++            projected = _number(source.get("projected_t4_decode_seconds"), "source projection")
++        else:
++            _require(leg.get("mode") == "measured", "unknown timing mode")
++            local, local600 = _local(leg.get("local_receipt"))
++            calibration, ratio = _calibration(leg.get("calibration_receipt"))
++            local_host_identity = {key: local[key] for key in ("host", "platform", "hardware_fingerprint") if key in local}
++            _require(local_host_identity == calibration["local_host_identity"],
++                     "candidate local host/platform differs from calibration host")
++            _require(local["archive_sha256"] == leg.get("archive_sha256") and local["receiver_sha256"] == leg.get("receiver_sha256"),
++                     "local receipt differs from timing leg identity")
++            _require(math.isclose(_number(leg.get("local_600_seconds"), "local extrapolation"), local600, rel_tol=1e-9), "local extrapolation arithmetic mismatch")
++            _require(math.isclose(_number(leg.get("cpu_to_t4_ratio"), "ratio"), ratio, rel_tol=1e-9), "ratio arithmetic mismatch")
++            _require(leg.get("ratio_definition") == "T4_seconds / local_600_seconds", "ratio direction absent")
++            projected = local600 * ratio
++        _require(math.isclose(_number(leg.get("projected_t4_decode_seconds"), "projection"), projected, rel_tol=1e-9), "projection arithmetic mismatch")
++        _require(leg.get("limit_seconds") == LIMIT_SECONDS, "margin limit must be 0.7 * 1800 seconds")
++        _require(projected <= LIMIT_SECONDS, f"projected T4 decode {projected:.6f}s exceeds {LIMIT_SECONDS}s")
++        observed.update(mode=leg["mode"], projected_t4_decode_seconds=projected, limit_seconds=LIMIT_SECONDS)
++    except (SealContractError, OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
++        return [str(exc)], observed
++    return [], observed
+diff --git a/src/tac/candidate_seal.py b/src/tac/candidate_seal.py
+index 894dbf2ef..32253b919 100644
+--- a/src/tac/candidate_seal.py
++++ b/src/tac/candidate_seal.py
+@@ -89,6 +89,8 @@ __all__ = [
+     "SEAL_AXES",
+     "SEAL_BAR_DRIFT",
+     "SEAL_BYTE_DRIFT",
++    "SEAL_DECODE_WALL_CLOCK_INVALID",
++    "SEAL_DECODE_WALL_CLOCK_MISSING",
+     "SEAL_FILE_MISSING",
+     "SEAL_PLACEHOLDER_PIN",
+     "SEAL_PUBLIC_SMOKE_INVALID",
+@@ -96,6 +98,7 @@ __all__ = [
+     "SEAL_RECEIVER_PIN_MISMATCH",
+     "SEAL_RUNTIME_DRIFT",
+     "SEAL_SCHEMA",
++    "SEAL_SCHEMA_V1",
+     "SEAL_SCHEMA_VIOLATION",
+     "SEAL_SHA_DRIFT",
+     "SEAL_TAMPERED",
+@@ -535,7 +538,10 @@ def repin_receiver(
+ # BRICK 2 — the seal DOCUMENT: freeze every pin, constrain the fire path to consume it.
+ # ======================================================================================
+ 
+-SEAL_SCHEMA = "candidate_seal.v1"
++SEAL_SCHEMA_V1 = "candidate_seal.v1"
++SEAL_SCHEMA = "candidate_seal.v2"
++SEAL_DECODE_WALL_CLOCK_MISSING = "SEAL_DECODE_WALL_CLOCK_MISSING"
++SEAL_DECODE_WALL_CLOCK_INVALID = "SEAL_DECODE_WALL_CLOCK_INVALID"
+ 
+ #: Verdicts of the seal-document layer.  Deliberately a separate namespace from brick 1's
+ #: pin verdicts: a caller must never confuse "this tree's receiver names this archive"
+@@ -982,6 +988,7 @@ def build_seal(
+     axis: str = "contest_cuda",
+     admit_bar: AdmitBar,
+     public_entrypoint_smoke: dict,
++    decode_wall_clock: dict | None = None,
+     receiver_relative_paths: tuple[str, ...] = (DEFAULT_RECEIVER_NAME, "inflate.sh"),
+     archive_member_name: str = "",
+     retained_payload_paths: tuple[str, ...] = (),
+@@ -1015,6 +1022,15 @@ def build_seal(
+     if smoke_problems:
+         raise SealContractError("public-entrypoint smoke refused: " + "; ".join(smoke_problems))
+ 
++    from tac.decode_wall_clock import validate_decode_wall_clock
++
++    timing_problems, _ = validate_decode_wall_clock(
++        decode_wall_clock, runtime_dir=runtime_dir, archive_path=archive_path,
++        pointer_archive_sha256=admit_bar.pointer_archive_sha256_at_seal,
++    )
++    if timing_problems:
++        raise SealContractError("decode wall-clock refused: " + "; ".join(timing_problems))
++
+     # Older producers predate digest naming. Validate their bytes first, then name the
+     # verified algorithm on a private copy; never mutate a retained input receipt.
+     public_entrypoint_smoke = json.loads(json.dumps(public_entrypoint_smoke))
+@@ -1046,6 +1062,7 @@ def build_seal(
+         "receiver_pins": receivers,
+         "admit_bar": admit_bar.to_dict(),
+         "public_entrypoint_smoke": public_entrypoint_smoke,
++        "decode_wall_clock": json.loads(json.dumps(decode_wall_clock)),
+         "retained_payload_paths": [str(p) for p in retained_payload_paths],
+         "falsifiers": list(falsifiers),
+         "notes": notes,
+@@ -1134,6 +1151,7 @@ def validate_seal(
+     pointer_path: Path | None = None,
+     check_pointer: bool = True,
+     allow_missing_public_smoke: bool = False,
++    require_decode_wall_clock: bool = False,
+ ) -> SealValidation:
+     """Re-verify EVERY pin against disk.  Fail-closed with a typed reason.
+ 
+@@ -1168,7 +1186,7 @@ def validate_seal(
+     for name in ("retained_payload_paths", "falsifiers"):
+         if name in document and not isinstance(document[name], list):
+             problems.append(f"field {name!r} must be a list, got {type(document[name]).__name__}")
+-    if "schema" in document and document["schema"] != SEAL_SCHEMA:
++    if "schema" in document and document["schema"] not in (SEAL_SCHEMA_V1, SEAL_SCHEMA):
+         # No ``None`` escape hatch: an unversioned seal is one this validator cannot claim to
+         # understand, and claiming to is how a v2 document gets validated by v1 rules.
+         problems.append(f"unknown seal schema {document.get('schema')!r}; this validator speaks {SEAL_SCHEMA}")
+@@ -1412,6 +1430,30 @@ def validate_seal(
+     elif allow_missing_public_smoke:
+         observed["public_entrypoint_smoke"] = {"missing_allowed_by_consumer": True}
+ 
++    timing_block = document.get("decode_wall_clock")
++    if timing_block is None:
++        observed["decode_wall_clock"] = "absent"
++        if require_decode_wall_clock or document["schema"] == SEAL_SCHEMA:
++            return SealValidation(
++                verdict=SEAL_DECODE_WALL_CLOCK_MISSING, seal_path=seal_path,
++                candidate_id=candidate_id, axis=axis,
++                problems=("seal lacks required decode_wall_clock measurement",), observed=observed,
++            )
++    else:
++        from tac.decode_wall_clock import validate_decode_wall_clock
++
++        timing_problems, timing_observed = validate_decode_wall_clock(
++            timing_block, runtime_dir=runtime_dir, archive_path=archive_path,
++            pointer_archive_sha256=AdmitBar.from_dict(document["admit_bar"]).pointer_archive_sha256_at_seal,
++        )
++        observed["decode_wall_clock"] = timing_observed
++        if timing_problems:
++            return SealValidation(
++                verdict=SEAL_DECODE_WALL_CLOCK_INVALID, seal_path=seal_path,
++                candidate_id=candidate_id, axis=axis,
++                problems=tuple(timing_problems), observed=observed,
++            )
++
+     # ---- 6. retained payload custody -----------------------------------------------------
+     missing_payload = [p for p in document.get("retained_payload_paths", []) if not Path(str(p)).exists()]
+     if missing_payload:
+diff --git a/src/tac/tests/test_decode_wall_clock.py b/src/tac/tests/test_decode_wall_clock.py
+new file mode 100644
+index 000000000..d30ab3e20
+--- /dev/null
++++ b/src/tac/tests/test_decode_wall_clock.py
+@@ -0,0 +1,346 @@
++"""Synthetic contract controls, never empirical timing evidence or score claims."""
++from __future__ import annotations
++
++import copy
++import json
++from pathlib import Path
++
++import pytest
++
++from tac.candidate_seal import (
++    SEAL_DECODE_WALL_CLOCK_INVALID,
++    SEAL_DECODE_WALL_CLOCK_MISSING,
++    SEAL_VALID,
++    SealContractError,
++    compute_seal_sha256,
++    load_seal,
++    measure_archive_identity,
++    measure_runtime_digest,
++    validate_seal,
++    write_seal,
++)
++from tac.decode_wall_clock import (
++    CALIBRATION_SCHEMA,
++    LOCAL_SCHEMA,
++    build_decode_wall_clock,
++    inherit_decode_wall_clock,
++    measure_receiver_digest,
++    measure_t4_runtime_digest,
++    receipt_reference,
++    validate_decode_wall_clock,
++)
++
++
++def _json(path: Path, doc: dict) -> Path:
++    path.write_text(json.dumps(doc))
++    return path
++
++
++def timing_fixture(runtime: Path, root: Path) -> dict:
++    """Construct explicit synthetic positive control receipts outside the shipped runtime."""
++    root.mkdir(parents=True, exist_ok=True)
++    archive = runtime / "archive.zip"
++    archive_sha = measure_archive_identity(archive).sha256
++    receiver_sha = measure_receiver_digest(runtime)
++    local_path = _json(root / "local.json", {
++        "schema": LOCAL_SCHEMA, "axis": "macOS-CPU advisory", "measurement_kind": "cuda_path_equivalent_proxy",
++        "completed": True, "cold_start": True, "cpu_threads": 4, "frames": list(range(20)), "wall_seconds": 40,
++        "host": "synthetic-test-host", "command": ["synthetic-control"],
++        "concurrency": {"competing_process_count": 0, "load_average": [0, 0, 0]},
++        "margin_time_basis": "quiesced", "runtime_dir": str(runtime), "archive_path": str(archive),
++        "runtime_sha256": measure_runtime_digest(runtime).sha256, "receiver_sha256": receiver_sha,
++        "archive_sha256": archive_sha,
++    })
++    t4_path = _json(root / "t4.json", {"inflate_seconds": 900, "archive_sha256": archive_sha, "hardware": "nvidia-t4",
++        "runtime_sha256": measure_t4_runtime_digest(runtime)})
++    calibration_path = _json(root / "calibration.json", {
++        "schema": CALIBRATION_SCHEMA, "name": "synthetic-test-calibration", "local_receipt": receipt_reference(local_path),
++        "t4_receipt": receipt_reference(t4_path), "t4_seconds_field": ["inflate_seconds"],
++        "t4_archive_sha256_field": ["archive_sha256"], "t4_hardware_field": ["hardware"],
++        "t4_runtime_sha256_field": ["runtime_sha256"],
++        "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
++        "t4_timing_scope": "decode", "archive_sha256": archive_sha, "receiver_sha256": receiver_sha,
++        "t4_hardware": "nvidia-t4", "cpu_to_t4_ratio": 0.75,
++    })
++    return build_decode_wall_clock(local_receipt_path=local_path, calibration_receipt_path=calibration_path,
++                                   runtime_dir=runtime, archive_path=archive)
++
++
++@pytest.fixture
++def case(tmp_path):
++    from tac.tests.test_candidate_seal import _stage_candidate
++    runtime, archive = _stage_candidate(tmp_path)
++    leg = timing_fixture(runtime, tmp_path / "timing")
++    return runtime, archive, leg
++
++
++def _validate(case, leg=None):
++    runtime, archive, original = case
++    return validate_decode_wall_clock(original if leg is None else leg, runtime_dir=runtime, archive_path=archive)[0]
++
++
++def test_real_receipt_arithmetic_passes(case):
++    assert not _validate(case)
++    assert case[2]["local_600_seconds"] == 1200
++    assert case[2]["projected_t4_decode_seconds"] == 900
++
++
++@pytest.mark.parametrize("field,value", [("wall_seconds", float("nan")), ("wall_seconds", 0),
++    ("cold_start", False), ("resumed", True), ("checkpoint_resumed_from_frame", 20),
++    ("cpu_threads", 1), ("cpu_threads", True), ("frames", list(range(19))),
++    ("frames", list(range(0, 40, 2))), ("completed", False), ("measurement_kind", "token_only"),
++    ("concurrency", {}), ("margin_time_basis", "estimated"), ("host", "")])
++def test_bad_local_receipts_refuse_even_when_rehashed(case, field, value):
++    leg = copy.deepcopy(case[2])
++    path = Path(leg["local_receipt"]["path"])
++    doc = json.loads(path.read_text())
++    doc[field] = value
++    _json(path, doc)
++    leg["local_receipt"] = receipt_reference(path)
++    cal_path = Path(leg["calibration_receipt"]["path"])
++    cal = json.loads(cal_path.read_text())
++    cal["local_receipt"] = receipt_reference(path)
++    _json(cal_path, cal)
++    leg["calibration_receipt"] = receipt_reference(cal_path)
++    assert _validate(case, leg)
++
++
++@pytest.mark.parametrize("field,value", [("local_600_seconds", 1), ("cpu_to_t4_ratio", 0.1),
++    ("projected_t4_decode_seconds", float("nan")), ("limit_seconds", 1800), ("score_claim", True),
++    ("mode", "grandfathered"), ("schema", "candidate_decode_wall_clock.v99")])
++def test_leg_cannot_forge_arithmetic_or_authority(case, field, value):
++    leg = copy.deepcopy(case[2])
++    leg[field] = value
++    assert _validate(case, leg)
++
++
++def test_receipt_byte_drift_refuses(case):
++    path = Path(case[2]["local_receipt"]["path"])
++    path.write_text(path.read_text() + " ")
++    assert "receipt drift" in _validate(case)[0]
++
++
++def test_candidate_runtime_drift_refuses(case):
++    (case[0] / "new_decode.py").write_text("def decode(): return 1\n")
++    assert "receiver differs" in _validate(case)[0]
++
++
++def test_only_pin_literals_normalized(case):
++    receiver = case[0] / "inflate.py"
++    original = measure_receiver_digest(case[0])
++    text = receiver.read_text()
++    archive_sha = measure_archive_identity(case[1]).sha256
++    receiver.write_text(text.replace(archive_sha, "a" * 64))
++    assert measure_receiver_digest(case[0]) == original
++    receiver.write_text(receiver.read_text() + "\n# changed receiver\n")
++    assert measure_receiver_digest(case[0]) != original
++
++
++def test_inheritance_requires_matching_pointer_and_real_source(case, tmp_path):
++    from tac.tests.test_candidate_seal import _stage_candidate
++    source = _json(tmp_path / "source.json", case[2])
++    other_dir = tmp_path / "other"
++    other_dir.mkdir()
++    runtime, archive = _stage_candidate(other_dir, payload=b"new payload")
++    inherited = inherit_decode_wall_clock(source_leg_path=source, runtime_dir=runtime, archive_path=archive,
++        pointer_archive_sha256=case[2]["archive_sha256"])
++    assert not validate_decode_wall_clock(inherited, runtime_dir=runtime, archive_path=archive,
++        pointer_archive_sha256=case[2]["archive_sha256"])[0]
++    assert validate_decode_wall_clock(inherited, runtime_dir=runtime, archive_path=archive,
++        pointer_archive_sha256="e" * 64)[0]
++    (runtime / "inflate.sh").write_text("echo changed\n")
++    with pytest.raises(SealContractError, match="receiver code differs"):
++        inherit_decode_wall_clock(source_leg_path=source, runtime_dir=runtime, archive_path=archive,
++            pointer_archive_sha256=case[2]["archive_sha256"])
++
++
++def test_legacy_seal_readable_but_fire_requires_leg(tmp_path):
++    from tac.tests.test_candidate_seal import _seal, _stage_candidate, _write_pointer
++    runtime, _ = _stage_candidate(tmp_path)
++    path = _seal(tmp_path, runtime)
++    doc = load_seal(path)
++    del doc["decode_wall_clock"]
++    doc["schema"] = "candidate_seal.v1"
++    doc["seal_sha256"] = compute_seal_sha256(doc)
++    write_seal(doc, path)
++    result = validate_seal(path, pointer_path=_write_pointer(tmp_path))
++    assert result.verdict == SEAL_VALID
++    assert result.observed["decode_wall_clock"] == "absent"
++    assert validate_seal(path, check_pointer=False, require_decode_wall_clock=True).verdict == SEAL_DECODE_WALL_CLOCK_MISSING
++    doc["schema"] = "candidate_seal.v2"
++    doc["seal_sha256"] = compute_seal_sha256(doc)
++    write_seal(doc, path)
++    assert validate_seal(path, check_pointer=False).verdict == SEAL_DECODE_WALL_CLOCK_MISSING
++
++
++def test_malformed_leg_returns_refusal_not_exception(tmp_path):
++    from tac.tests.test_candidate_seal import _seal, _stage_candidate
++    runtime, _ = _stage_candidate(tmp_path)
++    path = _seal(tmp_path, runtime)
++    doc = load_seal(path)
++    doc["decode_wall_clock"] = ["malformed"]
++    doc["seal_sha256"] = compute_seal_sha256(doc)
++    write_seal(doc, path)
++    assert validate_seal(path, check_pointer=False).verdict == SEAL_DECODE_WALL_CLOCK_INVALID
++
++
++def test_actual_t4_failure_refuses_even_unknown_concurrency(case):
++    runtime, archive, leg = case
++    local_path = Path(leg["local_receipt"]["path"])
++    local = json.loads(local_path.read_text())
++    local["concurrency"]["competing_process_count"] = None
++    local["margin_time_basis"] = "unknown"
++    _json(local_path, local)
++    cal_path = Path(leg["calibration_receipt"]["path"])
++    cal = json.loads(cal_path.read_text())
++    t4_path = Path(cal["t4_receipt"]["path"])
++    t4 = json.loads(t4_path.read_text())
++    t4["inflate_seconds"] = 1336.668977565
++    # Real Modal receipts nest artifact JSON as strings.
++    _json(t4_path, {"artifacts": {"auth.json": json.dumps(t4)}})
++    cal["t4_seconds_field"] = ["artifacts", "auth.json", "inflate_seconds"]
++    cal["t4_archive_sha256_field"] = ["artifacts", "auth.json", "archive_sha256"]
++    cal["t4_hardware_field"] = ["artifacts", "auth.json", "hardware"]
++    cal["t4_runtime_sha256_field"] = ["artifacts", "auth.json", "runtime_sha256"]
++    cal["t4_receipt"] = receipt_reference(t4_path)
++    cal["local_receipt"] = receipt_reference(local_path)
++    cal["cpu_to_t4_ratio"] = t4["inflate_seconds"] / 1200
++    _json(cal_path, cal)
++    rejected = build_decode_wall_clock(local_receipt_path=local_path, calibration_receipt_path=cal_path,
++        runtime_dir=runtime, archive_path=archive, enforce_margin=False)
++    assert "measured T4 decode" in rejected["validation_problems_at_construction"][0]
++    assert "1336.668978s exceeds 1260.0s" in _validate(case, rejected)[0]
++    source = _json(cal_path.parent / "rejected.json", rejected)
++    with pytest.raises(SealContractError):
++        inherit_decode_wall_clock(source_leg_path=source, runtime_dir=runtime, archive_path=archive,
++            pointer_archive_sha256=rejected["archive_sha256"])
++
++
++def test_below_margin_loaded_measurement_still_refuses(case):
++    leg = copy.deepcopy(case[2])
++    path = Path(leg["local_receipt"]["path"])
++    doc = json.loads(path.read_text())
++    doc["concurrency"]["competing_process_count"] = 2
++    _json(path, doc)
++    leg["local_receipt"] = receipt_reference(path)
++    cal_path = Path(leg["calibration_receipt"]["path"])
++    cal = json.loads(cal_path.read_text())
++    cal["local_receipt"] = receipt_reference(path)
++    _json(cal_path, cal)
++    leg["calibration_receipt"] = receipt_reference(cal_path)
++    assert "quiesced" in _validate(case, leg)[0]
++
++
++def test_calibration_ratio_cannot_use_unrelated_t4_archive(case):
++    leg = copy.deepcopy(case[2])
++    path = Path(leg["calibration_receipt"]["path"])
++    cal = json.loads(path.read_text())
++    t4_path = Path(cal["t4_receipt"]["path"])
++    t4 = json.loads(t4_path.read_text())
++    t4["archive_sha256"] = "d" * 64
++    _json(t4_path, t4)
++    cal["t4_receipt"] = receipt_reference(t4_path)
++    _json(path, cal)
++    leg["calibration_receipt"] = receipt_reference(path)
++    assert "T4 source archive differs" in _validate(case, leg)[0]
++
++
++def test_calibration_same_archive_wrong_runtime_refuses(case):
++    leg = copy.deepcopy(case[2])
++    path = Path(leg["calibration_receipt"]["path"])
++    cal = json.loads(path.read_text())
++    t4_path = Path(cal["t4_receipt"]["path"])
++    t4 = json.loads(t4_path.read_text())
++    t4["runtime_sha256"] = "d" * 64
++    _json(t4_path, t4)
++    cal["t4_receipt"] = receipt_reference(t4_path)
++    _json(path, cal)
++    leg["calibration_receipt"] = receipt_reference(path)
++    assert "T4 source runtime differs" in _validate(case, leg)[0]
++
++
++def test_inherited_source_cannot_be_forged_or_chained(case, tmp_path):
++    runtime, archive, leg = case
++    source_path = _json(tmp_path / "source.json", leg)
++    inherited = inherit_decode_wall_clock(source_leg_path=source_path, runtime_dir=runtime,
++        archive_path=archive, pointer_archive_sha256=leg["archive_sha256"])
++    chained_path = _json(tmp_path / "inherited.json", inherited)
++    with pytest.raises(SealContractError, match="directly to a measured"):
++        inherit_decode_wall_clock(source_leg_path=chained_path, runtime_dir=runtime,
++            archive_path=archive, pointer_archive_sha256=leg["archive_sha256"])
++    source_path.write_text(source_path.read_text() + " ")
++    assert "receipt drift" in validate_decode_wall_clock(inherited, runtime_dir=runtime,
++        archive_path=archive, pointer_archive_sha256=leg["archive_sha256"])[0][0]
++
++
++def test_build_seal_refuses_missing_timing(case):
++    from tac.candidate_seal import AdmitBar, build_seal
++    from tac.tests.test_candidate_seal import _public_smoke
++    runtime, archive, leg = case
++    bar = AdmitBar(rule="synthetic test", net_dS_threshold=-1, pointer_axis="contest_cuda", pointer_score_at_seal=1,
++        pointer_archive_sha256_at_seal=leg["archive_sha256"])
++    with pytest.raises(SealContractError, match="decode wall-clock"):
++        build_seal(candidate_id="missing-clock", runtime_dir=runtime, admit_bar=bar,
++            public_entrypoint_smoke=_public_smoke(runtime, archive))
++
++
++def _timeout_receipt(case, path):
++    runtime, archive, leg = case
++    runtime_sha = measure_t4_runtime_digest(runtime)
++    return _json(path, {"passed": False, "returncode": 1,
++        "expected_archive_sha256": leg["archive_sha256"], "expected_runtime_tree_sha256": runtime_sha,
++        "artifacts": {
++            "modal_cuda_preflight.json": json.dumps({"torch_cuda_device_name": "Tesla T4"}),
++            "contest_auth_eval.stderr.log": "ProcessGroupTimeout: Command '['bash', '/runtime/inflate.sh']' timed out after 1800.0 seconds\n[ inflate ]\n[inflate] TIMED OUT",
++            "provenance.json": json.dumps({"inflate_timeout_seconds": 1800, "archive_sha256": leg["archive_sha256"],
++                "inflate_runtime_manifest": {"runtime_tree_sha256": runtime_sha}})}})
++
++
++def test_observed_timeout_overrides_optimistic_projection(case, tmp_path):
++    leg = copy.deepcopy(case[2])
++    leg["candidate_t4_receipt"] = receipt_reference(_timeout_receipt(case, tmp_path / "timeout.json"))
++    problems, observed = validate_decode_wall_clock(leg, runtime_dir=case[0], archive_path=case[1])
++    assert "timeout_lower_bound 1800.000000s exceeds 1260.0s" in problems[0]
++    assert observed["measured_t4_kind"] == "timeout_lower_bound"
++
++
++@pytest.mark.parametrize("field", ["expected_archive_sha256", "expected_runtime_tree_sha256"])
++def test_timeout_cannot_attach_to_unrelated_candidate(case, tmp_path, field):
++    leg = copy.deepcopy(case[2])
++    path = _timeout_receipt(case, tmp_path / "timeout.json")
++    doc = json.loads(path.read_text())
++    doc[field] = "d" * 64
++    _json(path, doc)
++    leg["candidate_t4_receipt"] = receipt_reference(path)
++    assert "differs" in _validate(case, leg)[0]
++
++
++def test_noninflate_timeout_is_not_decode_evidence(case, tmp_path):
++    leg = copy.deepcopy(case[2])
++    path = _timeout_receipt(case, tmp_path / "timeout.json")
++    doc = json.loads(path.read_text())
++    doc["artifacts"]["contest_auth_eval.stderr.log"] = "evaluate.py timed out after 1800.0 seconds"
++    _json(path, doc)
++    leg["candidate_t4_receipt"] = receipt_reference(path)
++    assert "not an observed inflate timeout" in _validate(case, leg)[0]
++
++
++def test_candidate_host_cannot_borrow_another_hosts_ratio(case, tmp_path):
++    runtime, archive, original = case
++    candidate_local_path = tmp_path / "candidate_local.json"
++    local = json.loads(Path(original["local_receipt"]["path"]).read_text())
++    local["host"] = "different-host"
++    _json(candidate_local_path, local)
++    leg = copy.deepcopy(original)
++    leg["local_receipt"] = receipt_reference(candidate_local_path)
++    assert "local host/platform differs" in _validate(case, leg)[0]
++
++
++def test_optional_platform_identity_cannot_drift(case, tmp_path):
++    candidate_local_path = tmp_path / "candidate_local.json"
++    local = json.loads(Path(case[2]["local_receipt"]["path"]).read_text())
++    local["platform"] = "different-platform"
++    _json(candidate_local_path, local)
++    leg = copy.deepcopy(case[2])
++    leg["local_receipt"] = receipt_reference(candidate_local_path)
++    assert "local host/platform differs" in _validate(case, leg)[0]
+diff --git a/src/tac/tests/test_candidate_seal.py b/src/tac/tests/test_candidate_seal.py
+index 19871f86b..e3e839e03 100644
+--- a/src/tac/tests/test_candidate_seal.py
++++ b/src/tac/tests/test_candidate_seal.py
+@@ -169,6 +169,8 @@ def _seal(tmp_path: Path, runtime: Path, **overrides) -> Path:
+         pointer_archive_sha256_at_seal=POINTER_SHA,
+         pointer_tolerance_abs=overrides.pop("tolerance", 0.0),
+     )
++    from tac.tests.test_decode_wall_clock import timing_fixture
++
+     document = build_seal(
+         candidate_id=overrides.pop("candidate_id", "sm3r_keep01"),
+         runtime_dir=runtime,
+@@ -177,6 +179,7 @@ def _seal(tmp_path: Path, runtime: Path, **overrides) -> Path:
+         public_entrypoint_smoke=overrides.pop(
+             "public_entrypoint_smoke", _public_smoke(runtime, runtime / "archive.zip")
+         ),
++        decode_wall_clock=timing_fixture(runtime, tmp_path / "timing"),
+         archive_member_name="0.bin",
+         retained_payload_paths=(str(retained),),
+         falsifiers=("net dS >= -3.5e-6 at n600 refutes the rate credit",),
+@@ -478,7 +481,7 @@ def test_a_vanished_retained_payload_refuses(tmp_path: Path) -> None:
+         ("receiver_pins", {"inflate.py": "abc"}),
+         ("retained_payload_paths", "/a/single/path/not/a/list"),
+         ("schema", None),
+-        ("schema", "candidate_seal.v2"),
++        ("schema", "candidate_seal.v99"),
+     ],
+ )
+ def test_a_wrongly_typed_field_refuses_instead_of_crashing(tmp_path: Path, field: str, value: object) -> None:
+@@ -552,6 +555,7 @@ def test_successor_names_both_runtime_digests_without_mutating_original(tmp_path
+     successor = build_seal(
+         candidate_id=original["candidate_id"], runtime_dir=runtime,
+         admit_bar=AdmitBar.from_dict(original["admit_bar"]), public_entrypoint_smoke=smoke,
++        decode_wall_clock=original["decode_wall_clock"],
+     )
+     successor["supersedes"] = original["seal_sha256"]
+     successor["already_scored"] = {"call_id": "fixture-call", "score": POINTER_SCORE}
+@@ -924,9 +928,13 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
+     monkeypatch.setattr(
+         make,
+         "validate_seal",
+-        lambda p, pointer_path=pointer: validate_seal(p, pointer_path=pointer_path),
++        lambda p, pointer_path=pointer, **kw: validate_seal(p, pointer_path=pointer_path, **kw),
+     )
+ 
++    from tac.tests.test_decode_wall_clock import timing_fixture
++
++    timing_path = tmp_path / "DECODE_TIMING.json"
++    timing_path.write_text(json.dumps(timing_fixture(runtime, tmp_path / "timing")))
+     out = tmp_path / "SEAL_produced.json"
+     rc = make.main(
+         [
+@@ -936,6 +944,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
+             "--admit-bar-net-ds", "-3.5e-6",
+             "--archive-member", "0.bin",
+             "--public-entrypoint-smoke", str(smoke_path),
++            "--decode-wall-clock", str(timing_path),
+             "--out", str(out),
+         ]
+     )
+@@ -958,6 +967,7 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
+                 "--admit-bar-net-ds", "-3.5e-6",
+                 "--verify-archive-sha", "b" * 64,
+                 "--public-entrypoint-smoke", str(smoke_path),
++            "--decode-wall-clock", str(timing_path),
+                 "--out", str(tmp_path / "SEAL_rejected.json"),
+             ]
+         )
+@@ -1082,6 +1092,10 @@ def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Pa
+         make, "read_pointer_state", lambda axis="contest_cuda": make_pointer_state(pointer, axis)
+     )
+ 
++    from tac.tests.test_decode_wall_clock import timing_fixture
++
++    timing_path = tmp_path / "DECODE_TIMING.json"
++    timing_path.write_text(json.dumps(timing_fixture(runtime, tmp_path / "timing")))
+     out = tmp_path / "SEAL_should_not_exist.json"
+     rc = make.main(
+         [
+@@ -1091,6 +1105,7 @@ def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Pa
+             "--admit-bar-net-ds", "-3.5e-6",
+             "--archive-member", "0.bin",
+             "--public-entrypoint-smoke", str(smoke_path),
++            "--decode-wall-clock", str(timing_path),
+             "--out", str(out),
+         ]
+     )
+diff --git a/tools/make_candidate_seal.py b/tools/make_candidate_seal.py
+index e7fc03701..671b6453c 100644
+--- a/tools/make_candidate_seal.py
++++ b/tools/make_candidate_seal.py
+@@ -57,6 +57,9 @@ from tac.candidate_seal import (  # noqa: E402
+     validate_seal,
+     write_seal,
+ )
++from tac.decode_wall_clock import (  # noqa: E402
++    inherit_decode_wall_clock,
++)
+ 
+ DEFAULT_ADMIT_RULE = (
+     "net dS = dS_rate + 100*(d_seg_new - d_seg_base) "
+@@ -92,6 +95,14 @@ def build_parser() -> argparse.ArgumentParser:
+         help="JSON receipt block (or JSON document containing that block) with candidate/frontier "
+         "public_path_probes and inflate_sh_smokes",
+     )
++    timing = ap.add_mutually_exclusive_group(required=True)
++    timing.add_argument(
++        "--decode-wall-clock", help="JSON containing the measured decode_wall_clock leg",
++    )
++    timing.add_argument(
++        "--inherit-decode-wall-clock",
++        help="pointer's measured leg; revalidates identical receiver code and timing before inheritance",
++    )
+     ap.add_argument("--retained-path", action="append", default=[], help="retained payload custody (repeatable)")
+     ap.add_argument("--falsifier", action="append", default=[], help="pre-registered falsifier (repeatable)")
+     ap.add_argument("--admit-bar-net-ds", required=True, type=float, help="the net dS threshold to admit")
+@@ -204,6 +215,20 @@ def main(argv: list[str] | None = None) -> int:
+             return 4
+ 
+         pointer = read_pointer_state(axis=args.pointer_axis)
++        if args.inherit_decode_wall_clock:
++            decode_wall_clock = inherit_decode_wall_clock(
++                source_leg_path=Path(args.inherit_decode_wall_clock),
++                runtime_dir=runtime_dir, archive_path=archive_path,
++                pointer_archive_sha256=str(pointer["pointer_archive_sha256"]),
++            )
++        else:
++            try:
++                timing_payload = json.loads(Path(args.decode_wall_clock).read_text())
++            except (OSError, ValueError) as exc:
++                raise SealContractError(f"cannot read --decode-wall-clock: {exc}") from exc
++            if not isinstance(timing_payload, dict):
++                raise SealContractError("--decode-wall-clock JSON must be an object")
++            decode_wall_clock = timing_payload.get("decode_wall_clock", timing_payload)
+         bar = AdmitBar(
+             rule=args.admit_bar_rule,
+             net_dS_threshold=args.admit_bar_net_ds,
+@@ -224,6 +249,7 @@ def main(argv: list[str] | None = None) -> int:
+             axis=args.axis,
+             admit_bar=bar,
+             public_entrypoint_smoke=public_entrypoint_smoke,
++            decode_wall_clock=decode_wall_clock,
+             receiver_relative_paths=receivers,
+             archive_member_name=args.archive_member,
+             retained_payload_paths=tuple(args.retained_path),
+@@ -238,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
+     write_seal(document, out_path)
+ 
+     # The producer does not get to declare its own output good. It runs the CONSUMER's gate.
+-    verdict = validate_seal(out_path)
++    verdict = validate_seal(out_path, require_decode_wall_clock=True)
+     if not verdict.ok:
+         out_path.unlink(missing_ok=True)
+         print(f"FATAL: the seal just written does not pass its own validator: {verdict.summary()}", file=sys.stderr)
+diff --git a/.omx/research/ddm_dwc1_20260910/ROOT_REVIEW.md b/.omx/research/ddm_dwc1_20260910/ROOT_REVIEW.md
+new file mode 100644
+index 000000000..5742a8bc6
+--- /dev/null
++++ b/.omx/research/ddm_dwc1_20260910/ROOT_REVIEW.md
+@@ -0,0 +1,45 @@
++# Root review receipts
++
++## Pass 1 — producer CLI and measurement runner
++
++Read the new producer argument path through build_seal and its consuming validator. The CLI
++requires exactly one measured/inherited leg and passes the same object to the seal builder.
++JSON/type failures are refused before writing a seal. The self-validator requires the leg.
++Read the actual public receiver shell, f26 decode stages, native checkpoint writer and final
++raw report: the timing runner invokes the unchanged copied shell, disables shared cache and
++alternate HPAC, retains token checkpoints and raw output, and records the advisory CPU switch.
++No scorer is imported or invoked by the child. Ruff passed and review_tracker marked both files.
++
++Found during launch: ps raises PermissionError rather than returning a nonzero subprocess
++status. Fixed before token decode, retaining the failed launch and prelaunch binding. Current
++runner records unavailable concurrency, never a fabricated zero. First meaningful timing run
++is fresh and has its own binding and launch receipt.
++
++## Pass 2 — resume, retention, authority and identity
++
++Reviewed producer CLI again after source API alignment: measured and inherited paths cannot
++bypass the same validator. Reviewed runner fresh-start scope and actual stage report. Any
++resumed run is explicitly labeled and is excluded by the timing contract's cold-start guard.
++A producer/HEAD change causes a safe resume refusal; it does not turn suffix time into full time.
++Two clean full outputs plus token fields consume 7,560,748,800 bytes, leaving 1,029,185,792 bytes
++before the 8 GiB ceiling. Observed checkpoint files are small compressed states; no retry with
++an interrupted large raw is authorized without additional reservation. Existing generic shell
++build scratch is automatically removed by its own trap. All materialized candidate payloads
++are retained on SSD. Ruff passed and both files received a second review_tracker mark.
++
++## Independent contract review findings
++
++- Receiver digest initially included archive bytes, defeating inheritance; fixed to separate
++  payload identity and normalize only explicit archive-pin literal spans.
++- Calibration initially bound only the remote archive; fixed to remeasure the remote-runtime
++  digest using the exact existing upload projection helper.
++- Inherited source lookup could mask a measured T4 failure with missing concurrency; adjusted
++  to load its paths without margin acceptance, then strictly validate the source.
++- Resumed suffix time needed explicit rejection; cold-start and resume guards added.
++- Ratio transfer across different local hosts needed refusal; requested same-host validation.
++- tc4's observed remote timeout must veto a deceptively optimistic CPU projection; a hashed
++  candidate T4 receipt now binds archive/runtime/hardware, timeout command and configured limit.
++
++Shared-assumption challenge: the charter assumed move41 would comfortably pass. The actual
++T4 decode receipt disproves that premise. The implementation preserves the failed result and
++sends MAIN an explicit decision order; it does not change the limit to save the hypothesis.
+diff --git a/.omx/research/ddm_dwc1_20260910/SEAL_REVIEW_PASSES.md b/.omx/research/ddm_dwc1_20260910/SEAL_REVIEW_PASSES.md
+new file mode 100644
+index 000000000..b562b961f
+--- /dev/null
++++ b/.omx/research/ddm_dwc1_20260910/SEAL_REVIEW_PASSES.md
+@@ -0,0 +1,31 @@
++# Decode wall-clock seal review
++
++Scope: `src/tac/decode_wall_clock.py`, `src/tac/candidate_seal.py`, and their two test modules. No score claim; synthetic contract fixtures are never timing measurements.
++
++## RECALL EVIDENCE
++
++Read charter plus MAIN addendum, common contract, PROGRAM, NO-FAKE canonical section, operating handoff, and hot state. Searched `.omx/research` content for `wall.clock|decode.*budget|1260`; additional seeds included `ddm_dc1_decode_budget_conditional_coding_20260816.md` references and `ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md`. Queried canonical-equations JSON for timing/decode terms; the first piped search ended early with a BrokenPipeError, so no completeness claim is made for that query. Root holds the complete equations recall artifact. No existing seal timing implementation was found in the candidate-seal source/test scope. The dual runtime-digest issue in the hot state changed the design: calibration reuses the worker's upload-projection algorithm rather than comparing unlike digests.
++
++## Findings repaired before clean passes
++
++- Archive bytes contaminated the proposed receiver identity. Receiver digest now excludes the counted `archive.zip` and normalizes only the AST literal value spans of the two top-level archive pins; it preserves all remaining shipped code bytes.
++- Archive equality alone did not bind the T4 calibration receiver. The validator now computes the worker upload projection from the calibration's retained local runtime and compares it to the source remote runtime field.
++- Unknown local concurrency could mask a measured remote overrun during inheritance. Source path discovery accepts unknown concurrency, then strict source validation propagates the actual T4 failure.
++- A resumed suffix could be mislabeled as full decode wall time. Local receipts require `cold_start: true`, reject resumed flags and nonzero checkpoint start.
++- tc4's failure must survive an optimistic tc3-based projection. Optional candidate T4 receipts validate raw completed/timeout evidence before considering projections. The actual retained tc4 timeout control was consumed successfully: lower bound 1800 seconds exceeds 1260.
++
++- Root fresh eyes found host transfer was unbound: candidate local host and optional platform/hardware fingerprint now must exactly match the calibration local identity, with executed mismatch controls. This correction reset the clean-pass counter before both final passes below.
++
++## Final clean review pass 1 — contract and provenance
++
++Re-read final receipt construction/validation and source bindings. Verified v1 absent remains readable, v2 absent refuses, builder refuses missing timing, raw receipts are content-hashed, frames are consecutive integers in 0..599, exactly four threads are required, and finite positive numbers are checked before arithmetic. Recomputed ratio direction T4/local and the 0.7*1800 rule. Matched actual tc3/tc4 worker upload digests to their remote receipts. Inspected non-quiescent rejection and the absence of any unmeasured normalization factor. No further defect found.
++
++Assumption challenged: code identity could imply timing identity for a new payload. It does not. The charter explicitly authorizes code-based inheritance; the receipt records this limitation, preserves the pointer archive, requires a valid direct measured source, and prohibits chaining or failed-source grandfathering.
++
++## Final clean review pass 2 — adversarial consumer behavior
++
++Re-read final seal integration, inheritance traversal, numeric/parser errors, timeout signatures, source drift, and fixture mutations. Confirmed timeout evidence binds command stage, configured timeout, archive, runtime, hardware, failure status, and retained bytes. Same-archive calibration cannot apply an old actual T4 time to changed candidate code. Rehashing invalid local fixture content also updates the calibration reference so malformed-field tests exercise fields rather than merely stale hashes. No further defect found.
++
++Assumption challenged: a loaded local timing can safely pass because it is slower. The charter requires quiesced or measured-normalized input. This implementation only accepts quiesced input; unknown or competing process counts are retained as rejected evidence. Supporting normalization remains outside this implementation; no estimated divisor is accepted.
++
++Validation: 93 tests passed across both modules; ruff passed on all four Python files. Tests are synthetic contract controls; empirical source validation is separately retained in `T4_RUNTIME_DIGEST_CROSSCHECK.json` and `TC4_TIMEOUT_VALIDATOR_CONTROL.json`.
+diff --git a/.omx/research/ddm_dwc1_20260910/T4_RUNTIME_DIGEST_CROSSCHECK.json b/.omx/research/ddm_dwc1_20260910/T4_RUNTIME_DIGEST_CROSSCHECK.json
+new file mode 100644
+index 000000000..47ff3b2fd
+--- /dev/null
++++ b/.omx/research/ddm_dwc1_20260910/T4_RUNTIME_DIGEST_CROSSCHECK.json
+@@ -0,0 +1,28 @@
++[
++  {
++    "role": "tc3",
++    "runtime": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/tc3/runtime",
++    "source_receipt": {
++      "path": "/Volumes/APDataStore/pact/ddm_tc3_t4_lane_predictor_tail_20260910/MODAL_REMOTE_RESULT.json",
++      "sha256": "6003c4be549ee32aa703e0c782bf816c57eaa4cf5cb7ccc1abf362c04402d012"
++    },
++    "expected": "9fd76419b5e27118d670d457481c72a2df6c68068101e7ea62477e8e763ad4c1",
++    "actual": "9fd76419b5e27118d670d457481c72a2df6c68068101e7ea62477e8e763ad4c1",
++    "match": true,
++    "score_claim": false,
++    "digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
++  },
++  {
++    "role": "tc4",
++    "runtime": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime",
++    "source_receipt": {
++      "path": "/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json",
++      "sha256": "566ac554e06b17f1f1f3f4adb02f151065438c2056d16f3feb4836c8effd0974"
++    },
++    "expected": "43cf992c5435be853451ce2b4152c27aa6f29a60a5582b7e575aacabab550ef5",
++    "actual": "43cf992c5435be853451ce2b4152c27aa6f29a60a5582b7e575aacabab550ef5",
++    "match": true,
++    "score_claim": false,
++    "digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest"
++  }
++]
+diff --git a/.omx/research/ddm_dwc1_20260910/TC4_TIMEOUT_VALIDATOR_CONTROL.json b/.omx/research/ddm_dwc1_20260910/TC4_TIMEOUT_VALIDATOR_CONTROL.json
+new file mode 100644
+index 000000000..4aea52c97
+--- /dev/null
++++ b/.omx/research/ddm_dwc1_20260910/TC4_TIMEOUT_VALIDATOR_CONTROL.json
+@@ -0,0 +1,12 @@
++{
++  "candidate_t4_receipt": {
++    "path": "/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json",
++    "sha256": "566ac554e06b17f1f1f3f4adb02f151065438c2056d16f3feb4836c8effd0974"
++  },
++  "runtime": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_runtime",
++  "measured_seconds": 1800.0,
++  "kind": "timeout_lower_bound",
++  "limit_seconds": 1260,
++  "over_margin": true,
++  "score_claim": false
++}

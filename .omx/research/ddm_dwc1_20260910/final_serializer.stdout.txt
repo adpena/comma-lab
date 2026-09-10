@@ -1,0 +1,35 @@
+[serializer-fallback 3199e9cb8] decode timing: backfill three receivers and refuse unmeasured sealed fires [no-triality] [p0-ledger-ok]
+ 39 files changed, 77239 insertions(+), 19 deletions(-)
+ create mode 100644 .omx/research/ddm_dwc1_20260910/COMPONENT_PRICE_TABLE.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/CUDA_DECLARATION.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/FINAL_REVIEW_POLICY.txt
+ create mode 100644 .omx/research/ddm_dwc1_20260910/FINAL_VALIDATION.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/MAIN_MARGIN_DECISION.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/MOVE40_BACKFILL.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/MOVE40_DEDUP_CERTIFICATE.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/MOVE40_DEDUP_RESULT.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/MOVE40_T4_EVIDENCE.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/PAYLOAD_DEDUP_CERTIFICATE.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/PAYLOAD_DEDUP_RESULT.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/PREFLIP_SOURCE_HASHES.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/RETAINED_ARTIFACTS.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/REVIEW_PRINCIPAL_BOOKKEEPING.md
+ create mode 100644 .omx/research/ddm_dwc1_20260910/RLC1_INHERITANCE_COORDINATION.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/SEAL_CALIBRATION_FIELD_REVIEW.md
+ create mode 100644 .omx/research/ddm_dwc1_20260910/SEAL_POST_EDIT_HASHES.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/SEAL_SEMANTIC_POST_EDIT_HASHES.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/SOURCE_BUNDLE_VERIFICATION.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/T4_RECEIPT_FINDINGS.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/TC3_BACKFILL.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/TC4_BACKFILL.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/corpus_recall.txt
+ create mode 100644 .omx/research/ddm_dwc1_20260910/equations_recall.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/final_ruff.txt
+ create mode 100644 .omx/research/ddm_dwc1_20260910/final_tests.txt
+ create mode 100644 .omx/research/ddm_dwc1_20260910/fire_guard_before.txt
+ create mode 100644 .omx/research/ddm_dwc1_20260910/source_tests.txt
+ create mode 100644 .omx/research/ddm_dwc1_20260910/storage_preflight.json
+ create mode 100644 .omx/research/ddm_dwc1_20260910/task_events.jsonl
+ create mode 100644 .omx/research/ddm_dwc1_decode_wall_clock_seal_leg_20260910.md
+ create mode 100644 experiments/ddm_dwc1_move40_timing.py
+ create mode 100644 tools/tests/test_fire_modal_decode_wall_clock.py

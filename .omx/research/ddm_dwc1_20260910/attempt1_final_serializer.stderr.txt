@@ -1,0 +1,42 @@
+[subagent-commit-serializer] git apply --cached failed (rc=1) — the patch is likely NOT cleanly based on HEAD. Regenerate it against HEAD and retry:
+.omx/research/ddm_dwc1_20260910/enforcement_landing.patch:76221: trailing whitespace.
+tools/tests/test_fire_modal_decode_wall_clock.py:39: 
+.omx/research/ddm_dwc1_20260910/enforcement_landing.patch:76222: trailing whitespace.
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.omx/research/ddm_dwc1_20260910/enforcement_landing.patch:76228: trailing whitespace.
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.omx/research/ddm_dwc1_20260910/enforcement_landing.patch:76273: trailing whitespace.
+tools/tests/test_fire_modal_decode_wall_clock.py:39: 
+.omx/research/ddm_dwc1_20260910/enforcement_landing.patch:76274: trailing whitespace.
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index
+error: dev/null: does not exist in index

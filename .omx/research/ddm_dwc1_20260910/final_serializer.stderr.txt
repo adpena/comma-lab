@@ -1,0 +1,10 @@
+[32m[preflight-hook] subset-selection: 7 staged .py in scope, no new silent subsets[0m
+[32m[preflight-hook] negative-verdict scope: 4 staged .md examined, no new unscoped negatives[0m
+[32m[preflight-hook] canonical-equation reference: 1 staged research memo(s) in scope, all cite a law or carry a waiver[0m
+[32m[preflight-hook] follow-on regrow: 4 staged .md, 313 added lines, no new cheap follow-ons[0m
+[32m[preflight-hook] guarded-constant: 7 staged .py examined (0 unexamined), no new frozen derivation outputs[0m
+[32m[preflight-hook] argparse help-render: 7 staged .py examined (0 unresolved), 0 findings[0m
+[32m[preflight-hook] staged secrets scan: 39 staged file(s), 0 findings[0m
+[33m[preflight-hook] preflight examined 0 gates this commit (fast --no-codebase mode). This hook is NOT gate coverage.[0m
+  Full developer gate set, through this hook: PREFLIGHT_SCOPE=dev git commit ...   (or standalone: .venv/bin/python -m tac.preflight --scope dev)
+[subagent-commit-serializer] OK head=3199e9cb8 label=ddm_dwc1 files=39 recorded=39 wait=0.0s commit=28.921s temp_index=YES

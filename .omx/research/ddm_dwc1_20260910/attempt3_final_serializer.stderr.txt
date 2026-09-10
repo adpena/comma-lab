@@ -1,0 +1,66 @@
+[32m[preflight-hook] subset-selection: 7 staged .py in scope, no new silent subsets[0m
+[32m[preflight-hook] negative-verdict scope: 3 staged .md examined, no new unscoped negatives[0m
+[32m[preflight-hook] canonical-equation reference: 1 staged research memo(s) in scope, all cite a law or carry a waiver[0m
+[32m[preflight-hook] follow-on regrow: 3 staged .md, 283 added lines, no new cheap follow-ons[0m
+[32m[preflight-hook] guarded-constant: 7 staged .py examined (0 unexamined), no new frozen derivation outputs[0m
+[32m[preflight-hook] argparse help-render: 7 staged .py examined (0 unresolved), 0 findings[0m
+[32m[preflight-hook] staged secrets scan: 37 staged file(s), 0 findings[0m
+[33m[preflight-hook] preflight examined 0 gates this commit (fast --no-codebase mode). This hook is NOT gate coverage.[0m
+  Full developer gate set, through this hook: PREFLIGHT_SCOPE=dev git commit ...   (or standalone: .venv/bin/python -m tac.preflight --scope dev)
+
+[31m[1m[review-gate] BLOCKED[0m
+  Entities: 82 checked, [32m39 compliant[0m, [31m43 violations[0m, [33m0 needs_fix[0m
+
+[31m  [STANDARD] src/tac/decode_wall_clock.py[0m
+    [POLICY] _require: needs 1 more approver(s) (have: none)
+    [POLICY] _number: needs 1 more approver(s) (have: none)
+    [POLICY] _read: needs 1 more approver(s) (have: none)
+    [POLICY] receipt_reference: needs 1 more approver(s) (have: none)
+    [POLICY] _receipt: needs 1 more approver(s) (have: none)
+    [POLICY] measure_receiver_digest: needs 1 more approver(s) (have: none)
+    [POLICY] _local: needs 1 more approver(s) (have: none)
+    [POLICY] _field: needs 1 more approver(s) (have: none)
+    [POLICY] measure_t4_runtime_digest: needs 1 more approver(s) (have: none)
+    [POLICY] _calibration: needs 1 more approver(s) (have: none)
+    [POLICY] _candidate_t4: needs 1 more approver(s) (have: none)
+    [POLICY] build_decode_wall_clock: needs 1 more approver(s) (have: none)
+    [POLICY] inherit_decode_wall_clock: needs 1 more approver(s) (have: none)
+    [POLICY] validate_decode_wall_clock: needs 1 more approver(s) (have: none)
+[31m  [STANDARD] src/tac/tests/test_decode_wall_clock.py[0m
+    [POLICY] _json: needs 1 more approver(s) (have: none)
+    [POLICY] timing_fixture: needs 1 more approver(s) (have: none)
+    [POLICY] case: needs 1 more approver(s) (have: none)
+    [POLICY] _validate: needs 1 more approver(s) (have: none)
+    [POLICY] test_real_receipt_arithmetic_passes: needs 1 more approver(s) (have: none)
+    [POLICY] test_bad_local_receipts_refuse_even_when_rehashed: needs 1 more approver(s) (have: none)
+    [POLICY] test_leg_cannot_forge_arithmetic_or_authority: needs 1 more approver(s) (have: none)
+    [POLICY] test_receipt_byte_drift_refuses: needs 1 more approver(s) (have: none)
+    [POLICY] test_candidate_runtime_drift_refuses: needs 1 more approver(s) (have: none)
+    [POLICY] test_only_pin_literals_normalized: needs 1 more approver(s) (have: none)
+    [POLICY] test_inheritance_requires_matching_pointer_and_real_source: needs 1 more approver(s) (have: none)
+    [POLICY] test_legacy_seal_readable_but_fire_requires_leg: needs 1 more approver(s) (have: none)
+    [POLICY] test_malformed_leg_returns_refusal_not_exception: needs 1 more approver(s) (have: none)
+    [POLICY] test_actual_t4_failure_refuses_even_unknown_concurrency: needs 1 more approver(s) (have: none)
+    [POLICY] test_below_margin_loaded_measurement_still_refuses: needs 1 more approver(s) (have: none)
+    [POLICY] test_calibration_ratio_cannot_use_unrelated_t4_archive: needs 1 more approver(s) (have: none)
+    [POLICY] test_calibration_same_archive_wrong_runtime_refuses: needs 1 more approver(s) (have: none)
+    [POLICY] test_inherited_source_cannot_be_forged_or_chained: needs 1 more approver(s) (have: none)
+    [POLICY] test_build_seal_refuses_missing_timing: needs 1 more approver(s) (have: none)
+    [POLICY] _timeout_receipt: needs 1 more approver(s) (have: none)
+    [POLICY] test_observed_timeout_overrides_optimistic_projection: needs 1 more approver(s) (have: none)
+    [POLICY] test_timeout_cannot_attach_to_unrelated_candidate: needs 1 more approver(s) (have: none)
+    [POLICY] test_noninflate_timeout_is_not_decode_evidence: needs 1 more approver(s) (have: none)
+    [POLICY] test_candidate_host_cannot_borrow_another_hosts_ratio: needs 1 more approver(s) (have: none)
+    [POLICY] test_optional_platform_identity_cannot_drift: needs 1 more approver(s) (have: none)
+    [POLICY] test_evaluation_seconds_cannot_masquerade_as_decode: needs 1 more approver(s) (have: none)
+    [POLICY] test_unsupported_whole_eval_scope_refuses: needs 1 more approver(s) (have: none)
+    [POLICY] test_failed_or_malformed_t4_source_cannot_calibrate: needs 1 more approver(s) (have: none)
+    [POLICY] test_calibration_identity_fields_cannot_be_redirected: needs 1 more approver(s) (have: none)
+
+[31m[1mCommit blocked by review policy.[0m
+  Fix issues:    python tools/review_tracker.py mark-file <file> --status reviewed
+  Check policy:  python tools/review_tracker.py policy-check <file>
+  Override:      REVIEW_GATE_OVERRIDE=1 git commit ...
+  Disable:       REVIEW_GATE_ENABLED=0 git commit ...
+
+[subagent-commit-serializer] git commit failed (rc=1). Lock released; next waiter (if any) will proceed.

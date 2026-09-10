@@ -1,0 +1,17 @@
+{
+  "schema": "ddm_dwc1.consumer_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": ".omx/research/ddm_dwc1_20260910/MAIN_LANDING_ORDER.json",
+  "fire_trigger": "harvest verified landing.bundle after preserving concurrent MAIN changes",
+  "action": "Integrate the source commit then the enforcement commit in one batch; the fire refusal lands last. Retain failed backfills; no concurrency waiver or passing inheritance is authorized.",
+  "ordered_commits": [
+    "7cc51955bbb190fcb0168b8425038007126156f6",
+    "3199e9cb824fd9cf308afc862a487c3cb5736ea3"
+  ],
+  "verification": ".omx/research/ddm_dwc1_20260910/LANDING_BUNDLE_VERIFICATION.json",
+  "bundle": ".omx/research/ddm_dwc1_20260910/landing.bundle",
+  "patch": ".omx/research/ddm_dwc1_20260910/landing.patch",
+  "admission_blocker": "All three full n600 proxies completed; move40 has actual T4 margin but local concurrent-process count is unavailable, so its leg does not strictly pass. This supersedes the earlier RLC1 coordination queued-run current_state.",
+  "score_claim": false
+}

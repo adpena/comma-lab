@@ -1,0 +1,9 @@
+{
+  "isolated_git_dir": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/source_serializer/20260910T073211.269679Z-93351/verified.git",
+  "worktree_read_from": "/Users/adpena/Projects/pact",
+  "base_source_commit": "7cc51955bbb190fcb0168b8425038007126156f6",
+  "hooks_path": "/Users/adpena/Projects/pact/.git/hooks",
+  "shared_head_at_setup": "47695081bdd79b4c86a6e615860a1656578b3538",
+  "shared_index_before": "",
+  "purpose": "Second serializer landing chained after source fallback, writes only isolated Git metadata. Shared Git/index untouched."
+}
