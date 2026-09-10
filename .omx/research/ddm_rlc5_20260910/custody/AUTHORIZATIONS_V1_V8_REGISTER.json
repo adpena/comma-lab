@@ -1,0 +1,445 @@
+{
+  "schema": "candidate_first_measurement_authorizations_register.v1",
+  "observed_at_utc": "2026-09-10T22:31:45.098506+00:00",
+  "axis": "host custody / scorer-free",
+  "append_only": true,
+  "authorization_count": 8,
+  "unique_nonce_count": 6,
+  "state_semantics": "reserved-consumed includes older authorizations whose shared nonce was reserved by another version; completed means terminal HARVESTED, not candidate_seal.v3. unconsumed-superseded is not permission to reuse.",
+  "authorizations": [
+    {
+      "version": 1,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION.json",
+        "bytes": 1689,
+        "sha256": "3226416cd522dc49f652971adfa9756e2849e9369d13799a5a85fe2c4c6bdc01"
+      },
+      "state": "unconsumed-superseded",
+      "nonce_reusable": false,
+      "authorization_nonce": "791384cdd81dd1c62f01c92a70728e9f32a38b3188734614f0ebe6ba2cfb3a1e",
+      "authorization_digest": "a418155b74b7f153cfce1dba903a958023b25d1c50cc1b6d13283efd79e15de3",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement",
+      "outcome": "No nonce reservation exists; superseded by v2.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+        "bytes": 13773,
+        "sha256": "88204b883d622a6a66081e24ec817fb165e2751b4a8783b74b0968b48d2f8238"
+      },
+      "nonce_record": null,
+      "nonce_record_exists": false,
+      "nonce_record_state": null,
+      "reservation_matches_this_authorization_digest": false,
+      "reservation_matches_this_output_dir": false,
+      "consumed_by_authorization_version": null,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_162840366b4a4caa9a9c4719d401ee6e.json",
+          "bytes": 279,
+          "sha256": "d071c1d8a47b13425bc726e28564863251bff49fd0d507ab4bd8c5577475fea2"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_53fc1dccd0ad4cc89b4adff68e7a3ffb.json",
+          "bytes": 324,
+          "sha256": "93f79bf1b891bd332f61672c3e6bc1f1b18a635c655b9bd13af00eb79f3cfd52"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_60f955fb53934ed4b650d61beb4cf2b0.json",
+          "bytes": 259,
+          "sha256": "d19d7dc994621ab86f956c18be1a3a933c353db715589130edb923b2c6b67037"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_e370ec54521f44719dc38806c66e6b8d.json",
+          "bytes": 324,
+          "sha256": "6069643e3bb6cf33409cc3da5a6e325c694f411fabad5e2eaeedf1dd0ecf75ec"
+        }
+      ]
+    },
+    {
+      "version": 2,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v2.json",
+        "bytes": 1692,
+        "sha256": "d666b1e1d49a6cf1514493a0a301ace2c6f6dfe3304450516360eeab15123711"
+      },
+      "state": "reserved-consumed",
+      "nonce_reusable": false,
+      "authorization_nonce": "1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a",
+      "authorization_digest": "be4b23a2185cd10af6251f291444e654326b15f5ead69849f2eb567fbf72bad0",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement",
+      "outcome": "Nonce shared with v3/v4; v4 reserved it. This authorization digest/output did not produce that reservation.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v2.json",
+        "bytes": 14083,
+        "sha256": "8370bcf6401a40b9fdc79822cca96da626472ab56e5b8e7d347529b018f88041"
+      },
+      "nonce_record": {
+        "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a.json",
+        "bytes": 1013,
+        "sha256": "7dd074215b92742e41219f2d4782ee27f069daffc689123a2649eda20f3e4432"
+      },
+      "nonce_record_exists": true,
+      "nonce_record_state": "RESERVED",
+      "reservation_matches_this_authorization_digest": false,
+      "reservation_matches_this_output_dir": false,
+      "consumed_by_authorization_version": 4,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "reserved_output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2",
+      "call_id": null,
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_162840366b4a4caa9a9c4719d401ee6e.json",
+          "bytes": 279,
+          "sha256": "d071c1d8a47b13425bc726e28564863251bff49fd0d507ab4bd8c5577475fea2"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_53fc1dccd0ad4cc89b4adff68e7a3ffb.json",
+          "bytes": 324,
+          "sha256": "93f79bf1b891bd332f61672c3e6bc1f1b18a635c655b9bd13af00eb79f3cfd52"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_60f955fb53934ed4b650d61beb4cf2b0.json",
+          "bytes": 259,
+          "sha256": "d19d7dc994621ab86f956c18be1a3a933c353db715589130edb923b2c6b67037"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement/PREFIRE_REFUSAL_e370ec54521f44719dc38806c66e6b8d.json",
+          "bytes": 324,
+          "sha256": "6069643e3bb6cf33409cc3da5a6e325c694f411fabad5e2eaeedf1dd0ecf75ec"
+        }
+      ]
+    },
+    {
+      "version": 3,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v3.json",
+        "bytes": 1702,
+        "sha256": "c27b7c3190c0f0ee91f956c13038a87054670bc1f1f810889f733e85f6cc029c"
+      },
+      "state": "reserved-consumed",
+      "nonce_reusable": false,
+      "authorization_nonce": "1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a",
+      "authorization_digest": "ecb3221462e0a8b3de427e4cce596767a4027d35d6da3f276045cffee25e690b",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run1",
+      "outcome": "Run1 replay refusal before provider dispatch; shared nonce subsequently reserved by v4 for run2.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v2.json",
+        "bytes": 14083,
+        "sha256": "8370bcf6401a40b9fdc79822cca96da626472ab56e5b8e7d347529b018f88041"
+      },
+      "nonce_record": {
+        "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a.json",
+        "bytes": 1013,
+        "sha256": "7dd074215b92742e41219f2d4782ee27f069daffc689123a2649eda20f3e4432"
+      },
+      "nonce_record_exists": true,
+      "nonce_record_state": "RESERVED",
+      "reservation_matches_this_authorization_digest": false,
+      "reservation_matches_this_output_dir": false,
+      "consumed_by_authorization_version": 4,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "reserved_output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2",
+      "call_id": null,
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run1/PREFIRE_REFUSAL_8e5e583177e34b1b9e216eeda4df938a.json",
+          "bytes": 279,
+          "sha256": "6629b2d7b7aca9f2b62783e6b8621f3d2f07bb19d680e677bfe46c79723340b4"
+        }
+      ]
+    },
+    {
+      "version": 4,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v4.json",
+        "bytes": 1702,
+        "sha256": "2700c4a303f835c416b64013c2c894bd6d7dca0e5808f52a20f8db1571cfa4ec"
+      },
+      "state": "reserved-consumed",
+      "nonce_reusable": false,
+      "authorization_nonce": "1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a",
+      "authorization_digest": "90cea3409660ddfbbfb2a8a26c4afa6482929f9126f164ad50c5fac0ecef9b33",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2",
+      "outcome": "Run2 nonce reserved, then FIRE_MANIFEST axis validation refused before provider dispatch.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v2.json",
+        "bytes": 14083,
+        "sha256": "8370bcf6401a40b9fdc79822cca96da626472ab56e5b8e7d347529b018f88041"
+      },
+      "nonce_record": {
+        "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a.json",
+        "bytes": 1013,
+        "sha256": "7dd074215b92742e41219f2d4782ee27f069daffc689123a2649eda20f3e4432"
+      },
+      "nonce_record_exists": true,
+      "nonce_record_state": "RESERVED",
+      "reservation_matches_this_authorization_digest": true,
+      "reservation_matches_this_output_dir": true,
+      "consumed_by_authorization_version": 4,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "reserved_output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2",
+      "call_id": null,
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/FIRST_MEASUREMENT_CONSUMPTION.json",
+          "bytes": 1013,
+          "sha256": "7dd074215b92742e41219f2d4782ee27f069daffc689123a2649eda20f3e4432"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 3992,
+          "sha256": "181aea63ff6943887f92582dd3484a813619fafcfdcd83b1580d6ce5a64a8a41"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/PREFIRE_REFUSAL_cfeac757094a4fc590f2926803336c3f.json",
+          "bytes": 371,
+          "sha256": "c05026fea7ca634c0be8fa2d336288f0518d5e636ff182e11830daa26670c8fe"
+        }
+      ]
+    },
+    {
+      "version": 5,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v5.json",
+        "bytes": 1702,
+        "sha256": "eb0207337f438eaf5a7ee857cfb14291a482a6d4a4524e1679fb49ebbdbea9d1"
+      },
+      "state": "unconsumed-superseded",
+      "nonce_reusable": false,
+      "authorization_nonce": "bf34ec2efd259bed5c5501142fca041055711df931177c9b91e2964526be9a42",
+      "authorization_digest": "0377d9a2fcbf4ed8956ba4300a006d974caf5a09603c105a466ccb5714da5820",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3",
+      "outcome": "No nonce reservation exists; superseded by v6 using a fresh job and nonce for run3.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
+        "bytes": 14062,
+        "sha256": "955f765e559947079e5c64350eea19b93d595407719ed3a9926f820196d4079e"
+      },
+      "nonce_record": null,
+      "nonce_record_exists": false,
+      "nonce_record_state": null,
+      "reservation_matches_this_authorization_digest": false,
+      "reservation_matches_this_output_dir": false,
+      "consumed_by_authorization_version": null,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONSUMPTION.json",
+          "bytes": 1018,
+          "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 4011,
+          "sha256": "41c9b0c8692346f033646023f466350a65e3b61037f060c7594d6b23ff7abc05"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_RETENTION.json",
+          "bytes": 20506,
+          "sha256": "0ee7d745cc3611676f54ce3ea93146470a5aa30844f4f811b851290b8b2b6336"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+          "bytes": 80671,
+          "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_6b523667981d4cf89a91cf2fbf8232d2.json",
+          "bytes": 279,
+          "sha256": "375403d658f2150f4c6e03f72d6fd4701d22cced964f2ee872be18531ee099e8"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_edb1d0f428884b7aaad45eca49a038aa.json",
+          "bytes": 253,
+          "sha256": "aa2b0dfa4a44eae4b9edaa33d35f9e24e26dbb387f6be8e3d4ca9dff2df53d1a"
+        }
+      ]
+    },
+    {
+      "version": 6,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v6.json",
+        "bytes": 1707,
+        "sha256": "03c8a56d7f1ec53c89d0c96c5f3700d36d9a630f3ce46ba4a85b7827da1b12b7"
+      },
+      "state": "reserved-consumed",
+      "nonce_reusable": false,
+      "authorization_nonce": "9ced38b39888d5d3a767f36d67e241f44aef8c967d2f7294c7516727cd5337c1",
+      "authorization_digest": "59bb0b6a5089593af1f6da57394ea88c9fad198594345223cc286152e08777c5",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_run3_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3",
+      "outcome": "Run3 terminal worker runtime-tree mismatch failure; central nonce remains RESERVED; reconciliation does not repair it into success.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
+        "bytes": 14062,
+        "sha256": "955f765e559947079e5c64350eea19b93d595407719ed3a9926f820196d4079e"
+      },
+      "nonce_record": {
+        "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/9ced38b39888d5d3a767f36d67e241f44aef8c967d2f7294c7516727cd5337c1.json",
+        "bytes": 1018,
+        "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+      },
+      "nonce_record_exists": true,
+      "nonce_record_state": "RESERVED",
+      "reservation_matches_this_authorization_digest": true,
+      "reservation_matches_this_output_dir": true,
+      "consumed_by_authorization_version": 6,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "reserved_output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3",
+      "call_id": null,
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONSUMPTION.json",
+          "bytes": 1018,
+          "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 4011,
+          "sha256": "41c9b0c8692346f033646023f466350a65e3b61037f060c7594d6b23ff7abc05"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_RETENTION.json",
+          "bytes": 20506,
+          "sha256": "0ee7d745cc3611676f54ce3ea93146470a5aa30844f4f811b851290b8b2b6336"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+          "bytes": 80671,
+          "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_6b523667981d4cf89a91cf2fbf8232d2.json",
+          "bytes": 279,
+          "sha256": "375403d658f2150f4c6e03f72d6fd4701d22cced964f2ee872be18531ee099e8"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_edb1d0f428884b7aaad45eca49a038aa.json",
+          "bytes": 253,
+          "sha256": "aa2b0dfa4a44eae4b9edaa33d35f9e24e26dbb387f6be8e3d4ca9dff2df53d1a"
+        }
+      ]
+    },
+    {
+      "version": 7,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v7.json",
+        "bytes": 1707,
+        "sha256": "5bef68da161b151ab05321808e6ac2978f1fe8dfc71670b77a600f8ab3a3c0be"
+      },
+      "state": "completed",
+      "nonce_reusable": false,
+      "authorization_nonce": "2ca56bcc195e2749b44a4c2930953bce3cc8cd144877a73ad0780b6029f44c68",
+      "authorization_digest": "f7e229a17d05cd216faa943e6244b54a4f2cbcc39b6e43b29e9207ac81ca6b7e",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_run4_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4",
+      "outcome": "Run4 terminal success, retained corroboration only; stale intent v4 cannot complete v3 per pr17.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v4.json",
+        "bytes": 14075,
+        "sha256": "c92e8b4c7707d5560ba200af7d3cfbe949dc6011f3d3ffbf66d0be84783d6ef7"
+      },
+      "nonce_record": {
+        "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/2ca56bcc195e2749b44a4c2930953bce3cc8cd144877a73ad0780b6029f44c68.json",
+        "bytes": 1344,
+        "sha256": "fd13bd09270e543c1e54b4f00fb2978dcd1e350c1d3e4cd414be12a85ce4861c"
+      },
+      "nonce_record_exists": true,
+      "nonce_record_state": "HARVESTED",
+      "reservation_matches_this_authorization_digest": true,
+      "reservation_matches_this_output_dir": true,
+      "consumed_by_authorization_version": 7,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "reserved_output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4",
+      "call_id": "fc-01M26JVVPJX57J7YTYENQZXW6A",
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONSUMPTION.json",
+          "bytes": 1344,
+          "sha256": "fd13bd09270e543c1e54b4f00fb2978dcd1e350c1d3e4cd414be12a85ce4861c"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 4973,
+          "sha256": "2c579d9db53d42d1dca606ae14ac6791c80b022ee491b8b2ca56ab35b9ce81d1"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+          "bytes": 242556,
+          "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
+        }
+      ]
+    },
+    {
+      "version": 8,
+      "authorization": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v8.json",
+        "bytes": 1707,
+        "sha256": "d698d260864bf375e5ab18b4ba5bea0151d277b6a0d229254b1f695def449be6"
+      },
+      "state": "completed",
+      "nonce_reusable": false,
+      "authorization_nonce": "f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8",
+      "authorization_digest": "35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_run5_20260910",
+      "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5",
+      "outcome": "Run5 terminal success and HARVESTED nonce; v3 completion is separate and owned by MAIN.",
+      "intent": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+        "bytes": 16065,
+        "sha256": "e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0"
+      },
+      "nonce_record": {
+        "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8.json",
+        "bytes": 1344,
+        "sha256": "0a82b28fa0399ba85f32767d5cf20d3c55bb26b836725fe6308bdc913b7e29d7"
+      },
+      "nonce_record_exists": true,
+      "nonce_record_state": "HARVESTED",
+      "reservation_matches_this_authorization_digest": true,
+      "reservation_matches_this_output_dir": true,
+      "consumed_by_authorization_version": 8,
+      "state_basis": "state is a register category derived only from the pinned on-disk nonce record; completed means HARVESTED terminal lifecycle, never v3 completion",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "reserved_output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5",
+      "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+      "retained_control_files": [
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONSUMPTION.json",
+          "bytes": 1344,
+          "sha256": "0a82b28fa0399ba85f32767d5cf20d3c55bb26b836725fe6308bdc913b7e29d7"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 4973,
+          "sha256": "f0fe10b83a913fb59b92874d7fda8f276d4844038855f35ea9d1dc9059a50eec"
+        },
+        {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "bytes": 242556,
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        }
+      ]
+    }
+  ]
+}

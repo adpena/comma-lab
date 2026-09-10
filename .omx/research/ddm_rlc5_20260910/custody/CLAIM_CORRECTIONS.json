@@ -1,0 +1,49 @@
+{
+  "schema": "ddm_cust1.claim_corrections.v1",
+  "axis": "host custody / scorer-free",
+  "source_before": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CLAIMS_BEFORE.txt",
+    "bytes": 1581045,
+    "sha256": "fbf0d6db8f22da6d353427af5465abf22cc420d71f3a64e30095291935921fca"
+  },
+  "source_after": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CLAIMS_AFTER.txt",
+    "bytes": 1582067,
+    "sha256": "2de91d36514b03f464d702de1509e06458fe28fad150fb7cb69dea287a9a2502"
+  },
+  "existing_rows_preserved": true,
+  "new_rows": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+      "line_number_1based_at_capture": 9,
+      "row_bytes_without_newline": 517,
+      "row_sha256_without_newline": "be476faead0aded5b693e74423deca6c4de6ba86617cd428a99ea38937184fde",
+      "row_text": "| 2026-09-10T22:29:36Z | ddm_cust1 | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run4_20260910 |  | completed_retained_corroboration_non_promotable_no_v3_completion | Append-only correction of 2026-09-10T21:38:52Z pending_v3_completion: pr17 NO-GRACE rules run4 retained corroboration only; intent v4 stale. Call fc-01M26JVVPJX57J7YTYENQZXW6A and nonce remain terminal; MAIN run5 intent v5 is the separate completion route. custody/CLAIM_CORRECTIONS.json. |"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+      "line_number_1based_at_capture": 10,
+      "row_bytes_without_newline": 503,
+      "row_sha256_without_newline": "50034821d2a5e2e0dc5feb432bb014d4ee5aa363d57a83a689e34dc8bcffd4ec",
+      "row_text": "| 2026-09-10T22:29:35Z | ddm_cust1 | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_20260910 |  | refused_before_provider_dispatch_no_call_run1_run2_terminal | Append-only correction of 2026-09-10T20:08:11Z dispatched claim: run1 refused before provider dispatch; no call in retained run1 controls or canonical ledger. Shared job run2 also terminal without dispatch; its nonce stays reserved. Authority: pr17 and custody/CLAIM_CORRECTIONS.json. |"
+    }
+  ],
+  "old_rows": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CLAIMS_BEFORE.txt",
+      "line_number_1based_at_capture": 12,
+      "row_bytes_without_newline": 464,
+      "row_sha256_without_newline": "36665c882a10e7d86ad301a314da132095d13734c39d75ca88aafd51b0b8d376",
+      "row_text": "| 2026-09-10T21:38:52Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run4_20260910 | 2026-09-10T21:38:52Z | completed_harvested_exact_row_S_0.13724490417134017_pending_v3_completion | call fc-01M26JVVPJX57J7YTYENQZXW6A harvested: passed, T4, n600, d_seg 0.00010345, d_pose 4.59e-06, 180,406 B, S 0.13724490417134017 (\u22123.995e-5 vs move 43); completion to candidate_seal.v3 waits for ffi6 (pr16) |"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CLAIMS_BEFORE.txt",
+      "line_number_1based_at_capture": 21,
+      "row_bytes_without_newline": 329,
+      "row_sha256_without_newline": "f222b6ecae745c08e4ac69b30f59bec24072a5951acf973eaa43f08b7fcac40d",
+      "row_text": "| 2026-09-10T20:08:11Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_20260910 | 2026-09-10T20:48:11Z | dispatched | first-measurement (pr12 contract) of the rlc5 counted-rider candidate 180,406 B sha 04758c0d on move 43; intent digest cd400a30; one T4 dispatch |"
+    }
+  ],
+  "score_claim": false,
+  "promotion_eligible": false
+}

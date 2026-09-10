@@ -1,0 +1,25 @@
+{
+  "pointer": {
+    "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "bytes": 19596,
+    "sha256": "4a8dd35471a5b055b537f3bd2c849322bdc10f2b261c13842a16f590e6437b04"
+  },
+  "observed_at_utc": "2026-09-10T22:35:00.482157+00:00",
+  "line": "S 0.1372848557085275 @ 180,466 B [contest-CUDA T4 n600]",
+  "effective_frontier": {
+    "archive_sha256": "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e",
+    "axis": "contest_cuda",
+    "custody": "local_anchor_record; inspect lane policy before submission",
+    "evidence_grade": "contest-CUDA",
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_sj1_t4_token_predistortion_pass6_20260910",
+    "measured_at_utc": null,
+    "role": "competitive_score_to_beat",
+    "score": 0.1372848557085275,
+    "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+    "source": "our_local_frontier_contest_cuda",
+    "source_kind": "owned_or_banked_local_exact_anchor"
+  },
+  "archive_bytes": 180466,
+  "pointer_mutated_by_ddm_cust1": false
+}

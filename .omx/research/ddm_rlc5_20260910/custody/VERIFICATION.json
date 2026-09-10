@@ -1,0 +1,288 @@
+{
+  "axis": "host custody / scorer-free",
+  "observed_at_utc": "2026-09-10T22:33:13.825440+00:00",
+  "source_pin_checks": [
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cust1_first_measurement_custody_reconciliation_charter_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr17_run4_disposition_and_consumer_fix_freshness_policy_20260910.md",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RUN3_RECONCILIATION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/deploy/modal/call_id_ledger.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "unchanged": false
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v7.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v6.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v5.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v4.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v8.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v3.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v2.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v4.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v2.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json.REFUSED.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run1/PREFIRE_REFUSAL_8e5e583177e34b1b9e216eeda4df938a.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/FIRST_MEASUREMENT_CONTEXT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/PREFIRE_REFUSAL_cfeac757094a4fc590f2926803336c3f.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_RETENTION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_local_request.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_auth_eval_recover_summary.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRE_MANIFEST.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_edb1d0f428884b7aaad45eca49a038aa.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_auth_eval_spawn.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_preflight.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_validation.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_result.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONTEXT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_6b523667981d4cf89a91cf2fbf8232d2.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_call_id.txt",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRE_MANIFEST.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_auth_eval_spawn.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/launch_manifest.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_call_id.txt",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRE_MANIFEST.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_auth_eval_spawn.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/launch_manifest.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_call_id.txt",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/2ca56bcc195e2749b44a4c2930953bce3cc8cd144877a73ad0780b6029f44c68.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a.json",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/9ced38b39888d5d3a767f36d67e241f44aef8c967d2f7294c7516727cd5337c1.json",
+      "unchanged": true
+    }
+  ],
+  "concurrent_source_changes": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "before_sha256": "321c1003d257c5a4b336de4977549c0a29891bb01eeb757e3f4c5779e622a484",
+      "after_sha256": "92c238a719ad8bec6bf712ea31b64f590e7b519fa9b886062f13714303c9c2b5"
+    }
+  ],
+  "receipt_reference_rehash": "PASS",
+  "ledger_row_identity_rehash": "PASS",
+  "terminal_claim_rows_retained": "PASS",
+  "all_prior_claim_rows_preserved": "PASS",
+  "ledger_original_prefix_preserved": "PASS",
+  "new_reconciliation_ledger_events": 0,
+  "historical_record_edits_by_ddm_cust1": 0,
+  "index_at_verification": "",
+  "run3_completion_facts": "REFUSED: authorization not harvested",
+  "run5_completion_facts": "PASS",
+  "main_seal_three_reference_join": "PASS"
+}

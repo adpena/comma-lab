@@ -1,0 +1,16 @@
+{
+  "axis": "host custody / scorer-free",
+  "checks": [
+    {
+      "run": 3,
+      "verdict": "REFUSED",
+      "code": "FIRST_MEASUREMENT_RESULT_REFUSED",
+      "detail": "authorization not harvested"
+    },
+    {
+      "run": 5,
+      "verdict": "PASS"
+    }
+  ],
+  "completion_or_seal_creation_called": false
+}

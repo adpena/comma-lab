@@ -1,0 +1,336 @@
+{
+  "observed_at_utc": "2026-09-10T22:29:20.068357+00:00",
+  "git_head": "ba38e4a57d2c549ba69a2dea81541fe1d20c39ed",
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "bytes": 439297,
+      "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "bytes": 439297,
+      "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cust1_first_measurement_custody_reconciliation_charter_20260910.md",
+      "bytes": 3748,
+      "sha256": "e08de16de8c349b839526ba88c5beccba901b5f660d6d3d9a53193fbeec898d9"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr16_ratify_amendment3_content_only_first_measurement_digest_20260910.md",
+      "bytes": 24850,
+      "sha256": "cb678491cc6859f709828017d0ed76f35d7a4143855c5e56e42690a5a8b0cf15"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr17_run4_disposition_and_consumer_fix_freshness_policy_20260910.md",
+      "bytes": 25656,
+      "sha256": "ab2e0c89016b618ca6d27641edc30850e9d4ab56eeb7f8c4da539f1e9583b787"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RUN3_RECONCILIATION.json",
+      "bytes": 4601,
+      "sha256": "553d8c8baa8163df73280697fd4b12b25993fbe7a3541fe34ae1d6dcb16f69ed"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+      "bytes": 156270,
+      "sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/deploy/modal/call_id_ledger.py",
+      "bytes": 75583,
+      "sha256": "2edb975b53e1ac9a1e46474d51711c7fadf06820fb15fa11d63c2248bb4e9015"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/tools/claim_lane_dispatch.py",
+      "bytes": 46375,
+      "sha256": "f0e06b5be2e38c7aa759a5a09f919ee1c28b0e97836682a428f891ffc23d3071"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "bytes": 19686,
+      "sha256": "321c1003d257c5a4b336de4977549c0a29891bb01eeb757e3f4c5779e622a484"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v7.json",
+      "bytes": 1707,
+      "sha256": "5bef68da161b151ab05321808e6ac2978f1fe8dfc71670b77a600f8ab3a3c0be"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v6.json",
+      "bytes": 1707,
+      "sha256": "03c8a56d7f1ec53c89d0c96c5f3700d36d9a630f3ce46ba4a85b7827da1b12b7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v5.json",
+      "bytes": 1702,
+      "sha256": "eb0207337f438eaf5a7ee857cfb14291a482a6d4a4524e1679fb49ebbdbea9d1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v4.json",
+      "bytes": 1702,
+      "sha256": "2700c4a303f835c416b64013c2c894bd6d7dca0e5808f52a20f8db1571cfa4ec"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION.json",
+      "bytes": 1689,
+      "sha256": "3226416cd522dc49f652971adfa9756e2849e9369d13799a5a85fe2c4c6bdc01"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v8.json",
+      "bytes": 1707,
+      "sha256": "d698d260864bf375e5ab18b4ba5bea0151d277b6a0d229254b1f695def449be6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v3.json",
+      "bytes": 1702,
+      "sha256": "c27b7c3190c0f0ee91f956c13038a87054670bc1f1f810889f733e85f6cc029c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v2.json",
+      "bytes": 1692,
+      "sha256": "d666b1e1d49a6cf1514493a0a301ace2c6f6dfe3304450516360eeab15123711"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+      "bytes": 16065,
+      "sha256": "e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v4.json",
+      "bytes": 14075,
+      "sha256": "c92e8b4c7707d5560ba200af7d3cfbe949dc6011f3d3ffbf66d0be84783d6ef7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
+      "bytes": 14062,
+      "sha256": "955f765e559947079e5c64350eea19b93d595407719ed3a9926f820196d4079e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v2.json",
+      "bytes": 14083,
+      "sha256": "8370bcf6401a40b9fdc79822cca96da626472ab56e5b8e7d347529b018f88041"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+      "bytes": 13773,
+      "sha256": "88204b883d622a6a66081e24ec817fb165e2751b4a8783b74b0968b48d2f8238"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json.REFUSED.json",
+      "bytes": 687,
+      "sha256": "2550508a45237bcb6bc9e0fdc6b477c7875e29db630ef8746ffc273ce9ce79c9"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run1/PREFIRE_REFUSAL_8e5e583177e34b1b9e216eeda4df938a.json",
+      "bytes": 279,
+      "sha256": "6629b2d7b7aca9f2b62783e6b8621f3d2f07bb19d680e677bfe46c79723340b4"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "bytes": 1013,
+      "sha256": "7dd074215b92742e41219f2d4782ee27f069daffc689123a2649eda20f3e4432"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/FIRST_MEASUREMENT_CONTEXT.json",
+      "bytes": 3992,
+      "sha256": "181aea63ff6943887f92582dd3484a813619fafcfdcd83b1580d6ce5a64a8a41"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run2/PREFIRE_REFUSAL_cfeac757094a4fc590f2926803336c3f.json",
+      "bytes": 371,
+      "sha256": "c05026fea7ca634c0be8fa2d336288f0518d5e636ff182e11830daa26670c8fe"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_RETENTION.json",
+      "bytes": 20506,
+      "sha256": "0ee7d745cc3611676f54ce3ea93146470a5aa30844f4f811b851290b8b2b6336"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "bytes": 1018,
+      "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+      "bytes": 80671,
+      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_local_request.json",
+      "bytes": 6489,
+      "sha256": "8b9627b2f41f73041e46b0a8ff526a26df0925d7e37ffb0cf8a4a3ba44e9fbef"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
+      "bytes": 42595,
+      "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_auth_eval_recover_summary.json",
+      "bytes": 897,
+      "sha256": "0bbde0b98cd6d81e23217c21f3a5a844918f3f7ccfbd14c131bdd5bf73f78e4e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRE_MANIFEST.json",
+      "bytes": 4211,
+      "sha256": "c977344c9b2f25684953b02aa322da0ca8beb436bcd805972bbc08285e2df8df"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_edb1d0f428884b7aaad45eca49a038aa.json",
+      "bytes": 253,
+      "sha256": "aa2b0dfa4a44eae4b9edaa33d35f9e24e26dbb387f6be8e3d4ca9dff2df53d1a"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_auth_eval_spawn.json",
+      "bytes": 8834,
+      "sha256": "e07653995a4d2496b867e312eb011e61e030a20eb6bb30b62014403573877e94"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_preflight.json",
+      "bytes": 1793,
+      "sha256": "c12136bd0f93ae8dd826ee785ff7fbd8a644b2ae5d789f93f30bdf25f80e30f1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_validation.json",
+      "bytes": 2905,
+      "sha256": "cde2b53ef16a8b9f85ef60e827940d4e9d180e4dde2022cc67fb005ab501a2c6"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_result.json",
+      "bytes": 7308,
+      "sha256": "36e3cc64e547640af1195e9427cb85b127093e695430c879434153fa91f1f18b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/FIRST_MEASUREMENT_CONTEXT.json",
+      "bytes": 4011,
+      "sha256": "41c9b0c8692346f033646023f466350a65e3b61037f060c7594d6b23ff7abc05"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/PREFIRE_REFUSAL_6b523667981d4cf89a91cf2fbf8232d2.json",
+      "bytes": 279,
+      "sha256": "375403d658f2150f4c6e03f72d6fd4701d22cced964f2ee872be18531ee099e8"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_call_id.txt",
+      "bytes": 30,
+      "sha256": "903e64291baf8252c3ef53c734dc147b364f2a2c7ceddf39f10806ef3982b1d1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "bytes": 1344,
+      "sha256": "fd13bd09270e543c1e54b4f00fb2978dcd1e350c1d3e4cd414be12a85ce4861c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/MODAL_REMOTE_RESULT.json",
+      "bytes": 242556,
+      "sha256": "6a7267f4efe7ab54edc6e556030dbfa174d6d027e3cb6b008ad159cce51c0136"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_cuda_auth_eval_local_request.json",
+      "bytes": 7341,
+      "sha256": "3ceab17bc85841d42b65e209fc7d05099f4559bce5003556e8a21e0aee2dbe53"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRE_MANIFEST.json",
+      "bytes": 6104,
+      "sha256": "7239ff39dcefa6b682a4a5ecc5c32393e64eae770203e7b4b3019a489f1a3f5d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_auth_eval_spawn.json",
+      "bytes": 9718,
+      "sha256": "31d4282f8df8b65c67eb6fec39e16d6c2aa2a472381c267e6f54607187f933c2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/FIRST_MEASUREMENT_CONTEXT.json",
+      "bytes": 4973,
+      "sha256": "2c579d9db53d42d1dca606ae14ac6791c80b022ee491b8b2ca56ab35b9ce81d1"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/launch_manifest.json",
+      "bytes": 4747,
+      "sha256": "2257906f3000adb17b4ad3ffd0ecc3ca7f53a3c9976729b92345d9d047efcf80"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run4/modal_call_id.txt",
+      "bytes": 30,
+      "sha256": "96d6c07a3d5f318df837488d8ce80f951a2d2d0c5180a6b174d666aa8b02af97"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONSUMPTION.json",
+      "bytes": 1344,
+      "sha256": "0a82b28fa0399ba85f32767d5cf20d3c55bb26b836725fe6308bdc913b7e29d7"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+      "bytes": 242556,
+      "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+      "bytes": 7341,
+      "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRE_MANIFEST.json",
+      "bytes": 6104,
+      "sha256": "03cb2cfe428018df97e4a3a2d3c82460039303663d8d2ea35d8b78125492644b"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_auth_eval_spawn.json",
+      "bytes": 9718,
+      "sha256": "9ef64a8bd69dc74173dc925d309c074be4d4a44d5b581a41a6b9193afad690cd"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+      "bytes": 4973,
+      "sha256": "f0fe10b83a913fb59b92874d7fda8f276d4844038855f35ea9d1dc9059a50eec"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/launch_manifest.json",
+      "bytes": 4751,
+      "sha256": "ab41f9f1942a4e31f1860ae6e0568d4646bd8e5aa1a35bc04e45b4197265e3a4"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_call_id.txt",
+      "bytes": 30,
+      "sha256": "e4b830d9fbbe73c20938d1b0c65d9b13a4dd8de3745747cbfb665ba4c8adc527"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/2ca56bcc195e2749b44a4c2930953bce3cc8cd144877a73ad0780b6029f44c68.json",
+      "bytes": 1344,
+      "sha256": "fd13bd09270e543c1e54b4f00fb2978dcd1e350c1d3e4cd414be12a85ce4861c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8.json",
+      "bytes": 1344,
+      "sha256": "0a82b28fa0399ba85f32767d5cf20d3c55bb26b836725fe6308bdc913b7e29d7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/1ad3a6b1edc4f19058f925db2c2f9e8b4fde225819b48dbbb436d6c68b8afe3a.json",
+      "bytes": 1013,
+      "sha256": "7dd074215b92742e41219f2d4782ee27f069daffc689123a2649eda20f3e4432"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/9ced38b39888d5d3a767f36d67e241f44aef8c967d2f7294c7516727cd5337c1.json",
+      "bytes": 1018,
+      "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+    }
+  ]
+}

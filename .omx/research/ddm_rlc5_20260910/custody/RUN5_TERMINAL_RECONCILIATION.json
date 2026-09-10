@@ -1,0 +1,145 @@
+{
+  "schema": "candidate_first_measurement_terminal_reconciliation.v1",
+  "schema_basis": "pr16 Run3 and run4 custody section, prose field set; no reconciliation constructor or validator in candidate_seal.py. Success uses the same field set with terminal success.",
+  "run": "run5",
+  "reconciled_at_utc": "2026-09-10T22:30:47.538721+00:00",
+  "axis": "host custody / scorer-free",
+  "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+  "authorization": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v8.json",
+    "bytes": 1707,
+    "sha256": "d698d260864bf375e5ab18b4ba5bea0151d277b6a0d229254b1f695def449be6"
+  },
+  "authorization_sha256": "35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664",
+  "intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+    "bytes": 16065,
+    "sha256": "e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0"
+  },
+  "intent_sha256": "af30ba258ccb20f77288df9579aabff8ab44b86a192426122c26821ee009e4ad",
+  "authorization_nonce": "f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8",
+  "nonce_reusable": false,
+  "nonce_record": {
+    "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/f28b0d3ba5b61e354a3fd1157c357c2dab87b38c0c2f53accb0f80680bb76ff8.json",
+    "bytes": 1344,
+    "sha256": "0a82b28fa0399ba85f32767d5cf20d3c55bb26b836725fe6308bdc913b7e29d7"
+  },
+  "nonce_state": "HARVESTED",
+  "instance_job_id": "ddm_rlc5_first_measurement_t4_run5_20260910",
+  "lane_id": "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+  "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5",
+  "result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+    "bytes": 242556,
+    "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+  },
+  "provenance": {
+    "container": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+      "bytes": 242556,
+      "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+    },
+    "field_path": [
+      "artifacts",
+      "provenance.json"
+    ],
+    "encoding": "UTF-8 JSON string",
+    "decoded_bytes": 47591,
+    "decoded_sha256": "1350e45920dd293133e07d55a3e4466212b62e94395e5ed9737d544f7ca60763"
+  },
+  "terminal_provider_worker_outcome": {
+    "passed": true,
+    "returncode": 0,
+    "modal_elapsed_seconds": 1304.5876798040001,
+    "validation_errors": [],
+    "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+    "source": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+      "bytes": 242556,
+      "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+    }
+  },
+  "claim_closure": {
+    "terminal_row": {
+      "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+      "line_number_1based_at_capture": 11,
+      "row_bytes_without_newline": 617,
+      "row_sha256_without_newline": "7d0b2d0437a9d7aceae01bc8572d536c010df073d80e6d220de3407a6e818b17",
+      "row_text": "| 2026-09-10T22:28:40Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run5_20260910 | 2026-09-10T22:28:40Z | completed_contest_cuda_exact_eval_harvested | archive_sha256=04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e archive_bytes=180406 runtime_tree_sha256=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 call_id=fc-01M26NNV3WR2XXXV914S8BTDR4 score=0.1372449041713402 pose=4.59e-06 seg=0.00010345 n_samples=600 axis=contest_cuda gpu=Tesla T4 auto-closed by modal_harvest_poller at harvest (canonical terminal row) |"
+    },
+    "all_terminal_rows": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+        "line_number_1based_at_capture": 11,
+        "row_bytes_without_newline": 617,
+        "row_sha256_without_newline": "7d0b2d0437a9d7aceae01bc8572d536c010df073d80e6d220de3407a6e818b17",
+        "row_text": "| 2026-09-10T22:28:40Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run5_20260910 | 2026-09-10T22:28:40Z | completed_contest_cuda_exact_eval_harvested | archive_sha256=04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e archive_bytes=180406 runtime_tree_sha256=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 call_id=fc-01M26NNV3WR2XXXV914S8BTDR4 score=0.1372449041713402 pose=4.59e-06 seg=0.00010345 n_samples=600 axis=contest_cuda gpu=Tesla T4 auto-closed by modal_harvest_poller at harvest (canonical terminal row) |"
+      }
+    ],
+    "capture": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CLAIMS_AFTER.txt",
+      "bytes": 1582067,
+      "sha256": "2de91d36514b03f464d702de1509e06458fe28fad150fb7cb69dea287a9a2502"
+    },
+    "historical_wording_is_not_failure_cause_authority": false
+  },
+  "canonical_ledger_rows": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "line_number_1based_at_capture": 955,
+      "row_bytes_without_newline": 1503,
+      "row_sha256_without_newline": "7ae5c20b2a3887c354081201d1778fa7deb5854b8371c3a5fe8e893b708af095",
+      "row_text": "{\"agent\": \"MAIN\", \"archive_bytes\": null, \"archive_count\": 1, \"archive_sha256\": null, \"base_archive_sha256\": \"04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e\", \"call_id\": \"fc-01M26NNV3WR2XXXV914S8BTDR4\", \"composed_archive_sha256\": \"04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e\", \"cost_actual_usd\": null, \"dispatched_at_utc\": \"2026-09-10T22:05:41.415400Z\", \"elapsed_seconds\": null, \"event_type\": \"dispatched\", \"evidence_grade\": null, \"expected_axis\": \"contest_cuda\", \"expected_cost_usd\": null, \"first_measurement_authorization_sha256\": \"35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664\", \"gpu\": \"T4\", \"harvested_at_utc\": null, \"instance_job_id\": \"ddm_rlc5_first_measurement_t4_run5_20260910\", \"intent_file_bytes\": 16065, \"intent_file_sha256\": \"e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0\", \"label\": \"modal_auth_eval\", \"lane_id\": \"ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910\", \"max_seconds\": 4800, \"mounted_code_git_head\": \"b3f0a6ecdc50eb023c1cf9277c615ce31e11c284\", \"pair_group_id\": null, \"platform\": \"modal\", \"prefire_intent_sha256\": \"af30ba258ccb20f77288df9579aabff8ab44b86a192426122c26821ee009e4ad\", \"rc\": null, \"recipe\": \"experiments/modal_auth_eval.py\", \"schema_version\": 1, \"score\": null, \"score_axis\": null, \"session_id\": null, \"status\": \"dispatched\", \"subagent_id\": null, \"upstream_snapshot_sha256\": null, \"written_at_utc\": \"2026-09-10T22:05:41.415425Z\", \"written_host\": \"mac.lan\", \"written_pid\": 37617}",
+      "canonical_row_sha256": "92c767ed56e0263baed461de269d958f81528bf146927e977c67e3d2b8e6e915",
+      "identity": {
+        "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+        "event_type": "dispatched",
+        "written_at_utc": "2026-09-10T22:05:41.415425Z",
+        "written_pid": 37617
+      }
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "line_number_1based_at_capture": 956,
+      "row_bytes_without_newline": 1002,
+      "row_sha256_without_newline": "ca4e540825e2dcab616a1dc202fef4a2b51050c81935c4aec2da6283fab7f131",
+      "row_text": "{\"agent\": \"MAIN\", \"archive_bytes\": 180406, \"archive_sha256\": \"04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e\", \"call_id\": \"fc-01M26NNV3WR2XXXV914S8BTDR4\", \"cost_actual_usd\": null, \"dispatched_at_utc\": null, \"elapsed_seconds\": 1304.5876798040001, \"event_type\": \"harvested\", \"evidence_grade\": \"contest-CUDA\", \"expected_axis\": null, \"expected_cost_usd\": null, \"gpu\": \"Tesla T4\", \"harvest_result\": {\"result_path\": \"/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json\"}, \"harvested_at_utc\": \"2026-09-10T22:28:40.270608Z\", \"label\": null, \"lane_id\": \"ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910\", \"max_seconds\": null, \"mounted_code_git_head\": null, \"platform\": \"modal\", \"rc\": 0, \"recipe\": null, \"schema_version\": 1, \"score\": 0.1372449041713402, \"score_axis\": \"contest_cuda\", \"session_id\": null, \"status\": \"harvested\", \"subagent_id\": null, \"written_at_utc\": \"2026-09-10T22:28:40.270616Z\", \"written_host\": \"mac.lan\", \"written_pid\": 40072}",
+      "canonical_row_sha256": "4a42f78bffd4eb1dc29bd426aea5df77bceda214e67377d1cc4116b9abca5c4a",
+      "identity": {
+        "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+        "event_type": "harvested",
+        "written_at_utc": "2026-09-10T22:28:40.270616Z",
+        "written_pid": 40072
+      }
+    }
+  ],
+  "canonical_ledger_capture": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CALL_LEDGER_BEFORE.jsonl",
+    "bytes": 1751589,
+    "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "existing_records_edited": false,
+  "completed_seal": null,
+  "completion_owner": "MAIN",
+  "linked_ledger_event_type": "reconciled_terminal_success",
+  "retained_measurement": {
+    "avg_segnet_dist": 0.00010345,
+    "avg_posenet_dist": 4.59e-06,
+    "archive_size_bytes": 180406,
+    "original_uncompressed_size_bytes": 37545489,
+    "n_samples": 600,
+    "inflate_elapsed_seconds": 1232.418725255,
+    "evaluate_elapsed_seconds": 50.7263101110002,
+    "score_axis": "contest_cuda",
+    "score_recomputed_from_components": 0.13724490417134017,
+    "authority": "retained contest-CUDA T4 n600 result; not measured by ddm_cust1"
+  },
+  "outcome": "TERMINAL_WORKER_SUCCESS_CUSTODY_ONLY",
+  "completed_seal_search_scope": [
+    "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5"
+  ],
+  "completed_seal_status": "not found in named roots at reconciliation; no completion performed"
+}

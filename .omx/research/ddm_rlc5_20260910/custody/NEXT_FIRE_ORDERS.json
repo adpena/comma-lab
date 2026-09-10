@@ -1,0 +1,18 @@
+{
+  "schema": "ddm_cust1.fire_orders.v1",
+  "orders": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/LEDGER_EVENT_ATTEMPTS.json",
+      "fire_trigger": "MAIN authorizes and lands canonical support for the two reconciliation event types, then the pinned receipts and historical rows rehash exactly",
+      "action": "Append exactly one reconciled_terminal_failure for run3 and one reconciled_terminal_success for run5 through update_call_id_outcome using the retained request objects; include the run5 seal addendum reference. First check for an already-written identical event. Keep score null, score_claim=false, promotion_eligible=false and nonce_reusable=false; no dispatch or nonce transition.",
+      "source_boundary": "src/ and tools/ edits forbidden to ddm_cust1; no monkeypatch or alternative event taxonomy applied",
+      "requests": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/LEDGER_EVENT_ATTEMPTS.json",
+        "bytes": 3273,
+        "sha256": "e4d3bd50908e470d1fb11d7d6a34e0587e2c9b772d2960975393dfa137cfc8ea"
+      }
+    }
+  ]
+}

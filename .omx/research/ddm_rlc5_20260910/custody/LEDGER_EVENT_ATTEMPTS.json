@@ -1,0 +1,86 @@
+[
+  {
+    "written": false,
+    "error_type": "ValueError",
+    "error": "event_type must be one of ['dispatched', 'failed', 'harvested', 'manually_terminated', 'pre_spawn_fatal', 'stale'], got 'reconciled_terminal_failure'",
+    "request": {
+      "call_id": "fc-01M26G7JYMY39TVN1ET3JJV2YD",
+      "status": "failed",
+      "event_type": "reconciled_terminal_failure",
+      "rc": 1,
+      "agent": "codex",
+      "subagent_id": "ddm_cust1",
+      "lane_id": "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_run3_20260910",
+      "terminal_reconciliation": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RUN3_TERMINAL_RECONCILIATION.json",
+        "bytes": 10613,
+        "sha256": "505142d9313aa39f1c99c5adc3c6e2553315d7a4069a290c8b793421debe3dc7"
+      },
+      "nonce_reusable": false,
+      "score_claim": false,
+      "promotion_eligible": false
+    },
+    "ledger_before": {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "bytes": 1751589,
+      "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+    },
+    "ledger_after": {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "bytes": 1751589,
+      "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+    },
+    "supported_event_types": [
+      "dispatched",
+      "failed",
+      "harvested",
+      "manually_terminated",
+      "pre_spawn_fatal",
+      "stale"
+    ],
+    "observed_at_utc": "2026-09-10T22:31:06.732782+00:00"
+  },
+  {
+    "written": false,
+    "error_type": "ValueError",
+    "error": "event_type must be one of ['dispatched', 'failed', 'harvested', 'manually_terminated', 'pre_spawn_fatal', 'stale'], got 'reconciled_terminal_success'",
+    "request": {
+      "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+      "status": "harvested",
+      "event_type": "reconciled_terminal_success",
+      "rc": 0,
+      "agent": "codex",
+      "subagent_id": "ddm_cust1",
+      "lane_id": "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+      "instance_job_id": "ddm_rlc5_first_measurement_t4_run5_20260910",
+      "terminal_reconciliation": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RUN5_TERMINAL_RECONCILIATION.json",
+        "bytes": 10347,
+        "sha256": "bc2d80abef05f8b8ace04fe37f4192f25ebb975643ba8583d62a24149db45aec"
+      },
+      "nonce_reusable": false,
+      "score_claim": false,
+      "promotion_eligible": false
+    },
+    "ledger_before": {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "bytes": 1751589,
+      "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+    },
+    "ledger_after": {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "bytes": 1751589,
+      "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+    },
+    "supported_event_types": [
+      "dispatched",
+      "failed",
+      "harvested",
+      "manually_terminated",
+      "pre_spawn_fatal",
+      "stale"
+    ],
+    "observed_at_utc": "2026-09-10T22:31:06.734562+00:00"
+  }
+]

@@ -1,0 +1,148 @@
+{
+  "schema": "candidate_first_measurement_terminal_reconciliation.v1",
+  "schema_basis": "pr16 Run3 and run4 custody section, prose field set; no reconciliation constructor or validator in candidate_seal.py. Success uses the same field set with terminal success.",
+  "run": "run3",
+  "reconciled_at_utc": "2026-09-10T22:30:47.530127+00:00",
+  "axis": "host custody / scorer-free",
+  "call_id": "fc-01M26G7JYMY39TVN1ET3JJV2YD",
+  "authorization": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v6.json",
+    "bytes": 1707,
+    "sha256": "03c8a56d7f1ec53c89d0c96c5f3700d36d9a630f3ce46ba4a85b7827da1b12b7"
+  },
+  "authorization_sha256": "59bb0b6a5089593af1f6da57394ea88c9fad198594345223cc286152e08777c5",
+  "intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v3.json",
+    "bytes": 14062,
+    "sha256": "955f765e559947079e5c64350eea19b93d595407719ed3a9926f820196d4079e"
+  },
+  "intent_sha256": "a20132dda80bf2dc0bdf999ceb7c34486712b54f86150b0bd0c434470d9c5ed7",
+  "authorization_nonce": "9ced38b39888d5d3a767f36d67e241f44aef8c967d2f7294c7516727cd5337c1",
+  "nonce_reusable": false,
+  "nonce_record": {
+    "path": "/Users/adpena/Projects/pact/.omx/state/first_measurement_consumptions/9ced38b39888d5d3a767f36d67e241f44aef8c967d2f7294c7516727cd5337c1.json",
+    "bytes": 1018,
+    "sha256": "43061b751b0e51820c38d3ca2e8bc8b66f8be1495c6bbf61ce1e8b3e193cc23c"
+  },
+  "nonce_state": "RESERVED",
+  "instance_job_id": "ddm_rlc5_first_measurement_t4_run3_20260910",
+  "lane_id": "ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910",
+  "output_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3",
+  "result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+    "bytes": 80671,
+    "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+  },
+  "provenance": {
+    "container": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+      "bytes": 80671,
+      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+    },
+    "field_path": [
+      "artifacts",
+      "provenance.json"
+    ],
+    "encoding": "UTF-8 JSON string",
+    "decoded_bytes": 42595,
+    "decoded_sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405",
+    "standalone": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/provenance.json",
+      "bytes": 42595,
+      "sha256": "4cd0463214a90b8919489eabe77062df8720c5d8405faf2e3d5ef10ddbd74405"
+    }
+  },
+  "terminal_provider_worker_outcome": {
+    "passed": false,
+    "returncode": 1,
+    "modal_elapsed_seconds": 5.701878945000001,
+    "validation_errors": [
+      "contest_auth_eval.json was not produced"
+    ],
+    "call_id": "fc-01M26G7JYMY39TVN1ET3JJV2YD",
+    "source": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/MODAL_REMOTE_RESULT.json",
+      "bytes": 80671,
+      "sha256": "525a9bb57f5462410f321fabb57410c8e5e59bc2c57b3079176e15feb00f72f5"
+    },
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/pact/experiments/contest_auth_eval.py\", line 3571, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/workspace/pact/experiments/contest_auth_eval.py\", line 3377, in main\n    _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256)\n  File \"/workspace/pact/experiments/contest_auth_eval.py\", line 1955, in _validate_expected_runtime_tree\n    raise RuntimeError(\nRuntimeError: inflate runtime tree hash mismatch: expected=e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891 actual=baeb53afc8d1bb0c43bb2ce91fe1e09e845809b76fc3047bc8ed3397254155af\n"
+  },
+  "claim_closure": {
+    "terminal_row": {
+      "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+      "line_number_1based_at_capture": 18,
+      "row_bytes_without_newline": 476,
+      "row_sha256_without_newline": "0a8c78709da075924e0814fb281fad4fd1b0106e2cb130d776fb4038703ece67",
+      "row_text": "| 2026-09-10T20:39:22Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run3_20260910 | 2026-09-10T20:39:22Z | failed_remote_refused_first_measurement_requires_completed_seal_v3 | call fc-01M26G7JYMY39TVN1ET3JJV2YD: worker refused in 5.7 s (first_measurement_requires_completed_candidate_seal_v3); no metrics; ledger row landed in the source snapshot (dispatch cwd) \u2014 defect 7; remote acceptance \u2014 defect 8 |"
+    },
+    "all_terminal_rows": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+        "line_number_1based_at_capture": 18,
+        "row_bytes_without_newline": 476,
+        "row_sha256_without_newline": "0a8c78709da075924e0814fb281fad4fd1b0106e2cb130d776fb4038703ece67",
+        "row_text": "| 2026-09-10T20:39:22Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run3_20260910 | 2026-09-10T20:39:22Z | failed_remote_refused_first_measurement_requires_completed_seal_v3 | call fc-01M26G7JYMY39TVN1ET3JJV2YD: worker refused in 5.7 s (first_measurement_requires_completed_candidate_seal_v3); no metrics; ledger row landed in the source snapshot (dispatch cwd) \u2014 defect 7; remote acceptance \u2014 defect 8 |"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+        "line_number_1based_at_capture": 19,
+        "row_bytes_without_newline": 401,
+        "row_sha256_without_newline": "35f44ca636f351040fdbe6368a4b0ad288b9a26312450fca731808bb98f66b17",
+        "row_text": "| 2026-09-10T20:34:40Z | MAIN | ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910 | modal | ddm_rlc5_first_measurement_t4_run3_20260910 | 2026-09-10T20:34:40Z | failed_modal_auth_eval_no_score_claim | Modal auth eval recovered; passed=False; result_json=/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3/modal_cuda_auth_eval_result.json; posterior_update=skipped_not_passed |"
+      }
+    ],
+    "capture": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CLAIMS_AFTER.txt",
+      "bytes": 1582067,
+      "sha256": "2de91d36514b03f464d702de1509e06458fe28fad150fb7cb69dea287a9a2502"
+    },
+    "historical_wording_is_not_failure_cause_authority": true
+  },
+  "canonical_ledger_rows": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "line_number_1based_at_capture": 951,
+      "row_bytes_without_newline": 834,
+      "row_sha256_without_newline": "46f4f01d69e9e01526325a419f18049b23fbdec260a560cf18c19b68e75b2ad9",
+      "row_text": "{\"agent\": \"MAIN\", \"archive_bytes\": null, \"archive_sha256\": null, \"call_id\": \"fc-01M26G7JYMY39TVN1ET3JJV2YD\", \"cost_actual_usd\": null, \"dispatched_at_utc\": \"2026-09-10T20:30:31Z\", \"elapsed_seconds\": null, \"event_type\": \"dispatched\", \"evidence_grade\": null, \"expected_axis\": \"cuda\", \"expected_cost_usd\": null, \"gpu\": \"T4\", \"harvested_at_utc\": null, \"label\": \"ddm_rlc5_first_measurement_t4_run3_20260910\", \"lane_id\": \"ddm_rlc5_counted_rider_rebase_move43_first_measurement_20260910\", \"max_seconds\": null, \"mounted_code_git_head\": null, \"platform\": \"modal\", \"rc\": null, \"recipe\": null, \"schema_version\": 1, \"score\": null, \"score_axis\": null, \"session_id\": null, \"status\": \"dispatched\", \"subagent_id\": null, \"upstream_snapshot_sha256\": null, \"written_at_utc\": \"2026-09-10T20:41:00.845096Z\", \"written_host\": \"mac.lan\", \"written_pid\": 72683}",
+      "canonical_row_sha256": "6eabcf0f2ed0b827728b55bed3fd449ea02fbe0095fc6815cba7016cf80706c8",
+      "identity": {
+        "call_id": "fc-01M26G7JYMY39TVN1ET3JJV2YD",
+        "event_type": "dispatched",
+        "written_at_utc": "2026-09-10T20:41:00.845096Z",
+        "written_pid": 72683
+      }
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "line_number_1based_at_capture": 952,
+      "row_bytes_without_newline": 1075,
+      "row_sha256_without_newline": "1f6ba84d37ad52835f0777601ed74d19370b5e4062119b6ab0672dfac5150cf5",
+      "row_text": "{\"agent\": \"claude\", \"archive_bytes\": null, \"archive_sha256\": null, \"call_id\": \"fc-01M26G7JYMY39TVN1ET3JJV2YD\", \"cost_actual_usd\": null, \"dispatched_at_utc\": null, \"elapsed_seconds\": null, \"event_type\": \"failed\", \"evidence_grade\": null, \"expected_axis\": null, \"expected_cost_usd\": null, \"gpu\": null, \"harvest_result\": {\"elapsed_seconds\": 5.7, \"output_dir\": \"/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run3\", \"remote_error\": \"inflate runtime tree hash mismatch expected=e3d23719\\u2026 actual=baeb53af\\u2026 (first-measurement dispatch passed the candidate_seal runtime digest; worker checks the dependency-manifest digest)\", \"returncode\": 1, \"score_claim\": false}, \"harvested_at_utc\": \"2026-09-10T20:41:00.846694Z\", \"label\": null, \"lane_id\": null, \"max_seconds\": null, \"mounted_code_git_head\": null, \"platform\": \"modal\", \"rc\": null, \"recipe\": null, \"schema_version\": 1, \"score\": null, \"score_axis\": null, \"session_id\": null, \"status\": \"failed\", \"subagent_id\": null, \"written_at_utc\": \"2026-09-10T20:41:00.846700Z\", \"written_host\": \"mac.lan\", \"written_pid\": 72683}",
+      "canonical_row_sha256": "454846add3923a240d0c361a522c0a6c4ff1c75bd6228cbc73d0a701bec1d791",
+      "identity": {
+        "call_id": "fc-01M26G7JYMY39TVN1ET3JJV2YD",
+        "event_type": "failed",
+        "written_at_utc": "2026-09-10T20:41:00.846700Z",
+        "written_pid": 72683
+      }
+    }
+  ],
+  "canonical_ledger_capture": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/CALL_LEDGER_BEFORE.jsonl",
+    "bytes": 1751589,
+    "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "existing_records_edited": false,
+  "completed_seal": null,
+  "completion_owner": "MAIN",
+  "linked_ledger_event_type": "reconciled_terminal_failure",
+  "supersedes_for_custody_only": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/RUN3_RECONCILIATION.json",
+    "bytes": 4601,
+    "sha256": "553d8c8baa8163df73280697fd4b12b25993fbe7a3541fe34ae1d6dcb16f69ed"
+  },
+  "outcome": "TERMINAL_WORKER_FAILURE_NOT_A_SCORE"
+}

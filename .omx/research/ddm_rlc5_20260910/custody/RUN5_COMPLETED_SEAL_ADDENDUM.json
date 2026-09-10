@@ -1,0 +1,37 @@
+{
+  "schema": "candidate_first_measurement_terminal_reconciliation_seal_link.v1",
+  "observed_at_utc": "2026-09-10T22:32:39.825095+00:00",
+  "reconciliation": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RUN5_TERMINAL_RECONCILIATION.json",
+    "bytes": 10347,
+    "sha256": "bc2d80abef05f8b8ace04fe37f4192f25ebb975643ba8583d62a24149db45aec"
+  },
+  "completed_seal": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json",
+    "bytes": 16791,
+    "sha256": "8fd8077f7f495325d3a56b77a54610eff481259f7e6efa62f27beadbae95bcd5"
+  },
+  "call_id": "fc-01M26NNV3WR2XXXV914S8BTDR4",
+  "intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT_v5.json",
+    "bytes": 16065,
+    "sha256": "e9e2dd80b1d64f6250093e5559d3a6baab9ea7fd9ebb72c5122aa856acd092c0"
+  },
+  "authorization": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FIRST_MEASUREMENT_AUTHORIZATION_v8.json",
+    "bytes": 1707,
+    "sha256": "d698d260864bf375e5ab18b4ba5bea0151d277b6a0d229254b1f695def449be6"
+  },
+  "result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+    "bytes": 242556,
+    "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+  },
+  "seal_three_reference_join_verified": true,
+  "seal_creator": "MAIN",
+  "completion_performed_by_ddm_cust1": false,
+  "seal_full_validation_performed_by_ddm_cust1": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "nonce_reusable": false
+}

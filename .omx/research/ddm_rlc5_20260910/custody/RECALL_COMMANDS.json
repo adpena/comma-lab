@@ -1,0 +1,75 @@
+[
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "terminal.reconciliation|reconciled_terminal|nonce.*reus|first.measurement.*custody",
+      ".omx/research",
+      "--glob",
+      "!**/ddm_gdc2*/**",
+      "--glob",
+      "!**/custody/**",
+      "--glob",
+      "!**/serializer_fallbacks/**",
+      "--max-count",
+      "4"
+    ],
+    "returncode": 0,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RECALL_1.txt",
+    "bytes": 14575,
+    "sha256": "f97e4e0644e963f25b4fec1ec6e4a92b13f8df84c3616ae345f75d14002113c8"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "claim.closure|terminal.custody|nonce|first.measurement",
+      ".omx/research",
+      "--glob",
+      "CANONICAL_RESEARCH_INDEX*",
+      "--glob",
+      "sub015_DAG_*",
+      "--max-count",
+      "5"
+    ],
+    "returncode": 0,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RECALL_2.txt",
+    "bytes": 891,
+    "sha256": "2a892220a5fdc4370898271d80cd4f1dfdbed630350b836241fa48d933801755"
+  },
+  {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "terminal.reconciliation|first.measurement|nonce|claim.closure",
+      "docs",
+      ".omx/state",
+      "--glob",
+      "*design*",
+      "--glob",
+      "*SPEC*",
+      "--glob",
+      "*task*",
+      "--max-count",
+      "4"
+    ],
+    "returncode": 0,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RECALL_3.txt",
+    "bytes": 6890,
+    "sha256": "b8bf57da43bcc46afcac7d1ca1af2b9588abbb9d4df76714f5c43342d604be0b"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "returncode": 0,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/custody/RECALL_4.txt",
+    "bytes": 3703678,
+    "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+  }
+]
