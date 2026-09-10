@@ -1,0 +1,81 @@
+{
+  "full_byte_results": {
+    "bytes": 20695,
+    "path": ".omx/research/ddm_tc3_20260910/MEASURED_RESULTS.json",
+    "sha256": "78768d46daa1c9a7cb9324df6a7b933508286ab33872f86c4b58553a9a7014e0"
+  },
+  "generated_runtime_lint": {
+    "bytes": 10597,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/move39/RUFF_RUNTIME_BASELINE.json",
+    "sha256": "1ded8265edc37b58e8be7c8e3fd408b4f2d0445d312da93781af909911700a85"
+  },
+  "owned_source": [
+    {
+      "bytes": 15992,
+      "path": "experiments/ddm_tc3_trace.py",
+      "sha256": "1602a28c700ee1901b1ef2586d27fd00012b17191c66d98bfc3203684d567293"
+    },
+    {
+      "bytes": 11908,
+      "path": "experiments/ddm_tc3_geometry.py",
+      "sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57"
+    },
+    {
+      "bytes": 5968,
+      "path": "experiments/ddm_tc3_mixer.py",
+      "sha256": "fe5aa8b922711f1919935ea2a513eaa3dd449ddbbffdfe8b9213ffd1b3409f7d"
+    },
+    {
+      "bytes": 20173,
+      "path": "experiments/ddm_tc3_price.py",
+      "sha256": "0613a39c1d7ac87d94f1d34c4791819c74d672aad6af7a3ce1201658923090a8"
+    },
+    {
+      "bytes": 28885,
+      "path": "experiments/ddm_tc3_receiver.py",
+      "sha256": "b27900ebe52e6365844361f1931451461ac50dc4ef6536a70347dc4288561000"
+    },
+    {
+      "bytes": 3944,
+      "path": "experiments/test_ddm_tc3_geometry.py",
+      "sha256": "6de394343ab1ed8a329109ed885ca648306e5d08a4c06e18602c1c82453c30e3"
+    }
+  ],
+  "reviews": [
+    {
+      "bytes": 8655,
+      "path": ".omx/research/ddm_tc3_20260910/geometry_review.md",
+      "sha256": "1cea362474d6f1ecc428a7c6725c6a52860f45035a6084a45e543566948613b9"
+    },
+    {
+      "bytes": 9998,
+      "path": ".omx/research/ddm_tc3_20260910/measured_comparison_review.md",
+      "sha256": "a6b69117c1d41d0f9b627cff2d59d1cdf1d00c461d70e3d217794092ace47f4b"
+    },
+    {
+      "bytes": 6538,
+      "path": ".omx/research/ddm_tc3_20260910/mixer_price_review.md",
+      "sha256": "37fcfdccf63c5da90b09b48af08d0883293b895164ffff2159567292879d494a"
+    },
+    {
+      "bytes": 8666,
+      "path": ".omx/research/ddm_tc3_20260910/receiver_review.md",
+      "sha256": "5b2a3ba49fc2ecae6fcc5af6b82dc175a827fc4683533665b42670f068190db0"
+    }
+  ],
+  "ruff": {
+    "argv": [
+      ".venv/bin/ruff",
+      "check",
+      "experiments/ddm_tc3_trace.py",
+      "experiments/ddm_tc3_geometry.py",
+      "experiments/ddm_tc3_mixer.py",
+      "experiments/ddm_tc3_price.py",
+      "experiments/ddm_tc3_receiver.py",
+      "experiments/test_ddm_tc3_geometry.py"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "All checks passed!\n"
+  }
+}

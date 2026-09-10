@@ -1,0 +1,15 @@
+[
+  ".venv/bin/python",
+  "tools/subagent_commit_serializer.py",
+  "--message",
+  "tc3: retain current-field twin probability trace [no-triality] [p0-ledger-ok]\n\nCheckpoint: tools/subagent_checkpoint.py --subagent-id ddm_tc3; two visible reviews and Ruff passed. Scorer-free research_only=true; no scorer or fire.",
+  "--label",
+  "ddm_tc3",
+  "--no-co-author",
+  "--patch-file",
+  ".omx/research/ddm_tc3_20260910/trace_landing.patch",
+  "--expected-content-sha256",
+  "experiments/ddm_tc3_trace.py=1602a28c700ee1901b1ef2586d27fd00012b17191c66d98bfc3203684d567293",
+  "--fallback-receipt-dir",
+  ".omx/research/ddm_tc3_20260910/trace_serializer"
+]

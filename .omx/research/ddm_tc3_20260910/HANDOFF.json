@@ -1,0 +1,41 @@
+{
+  "schema": "ddm_tc3_reviewable_handoff.v1",
+  "memo": ".omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+  "current_field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+  "selected_variant": "A",
+  "archive": {
+    "bytes": 180154,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip",
+    "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936"
+  },
+  "archive_saved_bytes": 79,
+  "B_archive_saved_bytes": 37,
+  "B_verdict_scope": "tested FORMULATION operational stop",
+  "public_identity": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/PUBLIC_IDENTITY.json",
+    "bytes": 5374,
+    "sha256": "f0c0e8a9ecebc135cd164c28b6f3ee2df3bab2ce23285623e3b03ab602fc8a94"
+  },
+  "seal": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_A.seal.json",
+    "bytes": 17909,
+    "sha256": "34df0c69d0adce50a5bdf373a1c669bdd4dee34ef512e3a965734d09391e1fcd"
+  },
+  "seal_validation": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/SEAL_VALIDATION.json",
+    "bytes": 3570,
+    "sha256": "7528e88e7a30a4b758f7163e6941d048f3dc24abd0b01d0f9fd7d12cbbe14c04"
+  },
+  "main_fire_orders": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/handoff/FIRE_ORDERS.json",
+    "bytes": 540,
+    "sha256": "0c642d650741a77734bdc4dcd660ffb764da282e6a7b3c32132177c0a9a80709"
+  },
+  "score_claim": false,
+  "no_remote_dispatch": true,
+  "source_and_payload_retention": "all retained under owned SSD root; metadata manifest accounts for historical move39 and current move40",
+  "landing_intent": ".omx/research/ddm_tc3_20260910/landing.patch",
+  "landing_manifest": ".omx/research/ddm_tc3_20260910/landing_manifest.json",
+  "final_serializer_receipt": ".omx/research/ddm_tc3_20260910/FINAL_SERIALIZER_STATUS.json",
+  "landing_rule": "A verified fallback bundle is not a main landing; consume the actual final receipt."
+}

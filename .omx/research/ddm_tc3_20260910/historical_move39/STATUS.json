@@ -1,0 +1,31 @@
+{
+  "status": "HISTORICAL_MOVE39_NOT_SEAL_ELIGIBLE",
+  "reason": "Current pointer moved to40 during full public proof; all current results must be rebound. Historical SEAL_ARGV was prepared but never executed.",
+  "copies": [
+    {
+      "source": ".omx/research/ddm_tc3_20260910/MEASURED_RESULTS.json",
+      "copy": ".omx/research/ddm_tc3_20260910/historical_move39/MEASURED_RESULTS.json",
+      "bytes": 20695,
+      "sha256": "78768d46daa1c9a7cb9324df6a7b933508286ab33872f86c4b58553a9a7014e0"
+    },
+    {
+      "source": ".omx/research/ddm_tc3_20260910/VALIDATION.json",
+      "copy": ".omx/research/ddm_tc3_20260910/historical_move39/VALIDATION.json",
+      "bytes": 2628,
+      "sha256": "9bc9e5fdb40f1071723bb6e064b780fae093a8b947dfaf1e90d7cb0966c6bb7c"
+    },
+    {
+      "source": ".omx/research/ddm_tc3_20260910/SEAL_ARGV.json",
+      "copy": ".omx/research/ddm_tc3_20260910/historical_move39/SEAL_ARGV.json",
+      "bytes": 2676,
+      "sha256": "73b656e3c83c4d006a1d28dd0ee5c81473b9eb3da50e70f8fc186cc48539d021"
+    },
+    {
+      "source": ".omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+      "copy": ".omx/research/ddm_tc3_20260910/historical_move39/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+      "bytes": 13486,
+      "sha256": "df96ed01bf365a96ab5d6f9b9e3ab250b31f0664edd812edae1c79bad1bd0658"
+    }
+  ],
+  "score_claim": false
+}

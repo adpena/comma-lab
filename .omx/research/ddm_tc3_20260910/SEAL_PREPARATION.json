@@ -1,0 +1,12 @@
+{
+  "state": "EXECUTED_SUCCESS",
+  "argv_file": ".omx/research/ddm_tc3_20260910/SEAL_ARGV.json",
+  "receipt": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/SEAL_CREATION.json",
+  "seal": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_A.seal.json",
+    "bytes": 17909,
+    "sha256": "34df0c69d0adce50a5bdf373a1c669bdd4dee34ef512e3a965734d09391e1fcd"
+  },
+  "score_claim": false,
+  "remote_fire": false
+}

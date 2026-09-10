@@ -1,0 +1,414 @@
+{
+  "current_move": 40,
+  "worker_receipts": [
+    {
+      "stage": "launch_control2",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_control2/safe_run.json",
+        "bytes": 1528,
+        "sha256": "8f1136510fd8bd21630c9f2dd9c5a0cf01a9b814eb628297793f5950265aefe2"
+      },
+      "exit": 0,
+      "elapsed_seconds": 10.202,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "public",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "2",
+        "--proof-name",
+        "resume_control"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_control2/launch_manifest.json",
+        "bytes": 5020,
+        "sha256": "7d568b60a8371b2328e53fb6bff5a63410ecaf9d84c25d70585d6b56712c6ec7"
+      }
+    },
+    {
+      "stage": "launch_control2_recover",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_control2_recover/safe_run.json",
+        "bytes": 1546,
+        "sha256": "1db3bb075da2788664ea648725e8b3fd669f9625d73eb32823e191f601f30d91"
+      },
+      "exit": 0,
+      "elapsed_seconds": 0.52,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "public",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "2",
+        "--proof-name",
+        "resume_control"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_control2_recover/launch_manifest.json",
+        "bytes": 5126,
+        "sha256": "41b2613ffbf0d1c246b47bbc488b54dbef14df59ea7e2fef990ae67574a6848f"
+      }
+    },
+    {
+      "stage": "launch_encode_A",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_encode_A/safe_run.json",
+        "bytes": 1480,
+        "sha256": "a0241690dba8ea00c37e57f382e592772ce2488188078ffc222da61bb750d932"
+      },
+      "exit": 0,
+      "elapsed_seconds": 60.825,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_price.py",
+        "encode",
+        "--variant",
+        "A",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_encode_A/launch_manifest.json",
+        "bytes": 4812,
+        "sha256": "1eeb023357359b108d043f888ad3f9e97292b5c939452c1fa361af4e8951cb9d"
+      }
+    },
+    {
+      "stage": "launch_encode_B",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_encode_B/safe_run.json",
+        "bytes": 1480,
+        "sha256": "5157bc9e5a9140cecf43a48d2f767c89c41f19faedb3a0899dd358a6d6371156"
+      },
+      "exit": 0,
+      "elapsed_seconds": 75.003,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_price.py",
+        "encode",
+        "--variant",
+        "B",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_encode_B/launch_manifest.json",
+        "bytes": 4812,
+        "sha256": "e54aaf9f04deee22fc6ac123ca0783d396769ffce15e6960f738d4e069f88920"
+      }
+    },
+    {
+      "stage": "launch_fit_A",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_fit_A/safe_run.json",
+        "bytes": 1468,
+        "sha256": "6944725f6302e78d0c98e489e7166bd5e6547441ae4453ed34b85e309b503e54"
+      },
+      "exit": 0,
+      "elapsed_seconds": 23.189,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_price.py",
+        "fit",
+        "--variant",
+        "A",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_fit_A/launch_manifest.json",
+        "bytes": 4753,
+        "sha256": "55cdaf477c5a26b0d777bf63882e1ba7a6edda8f66af0f775af664611a1a3574"
+      }
+    },
+    {
+      "stage": "launch_fit_B",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_fit_B/safe_run.json",
+        "bytes": 1468,
+        "sha256": "6ce773d6715a9aac420a6824613f489500aa7c49ba8d3c2b358abfb20cbab61d"
+      },
+      "exit": 0,
+      "elapsed_seconds": 27.873,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_price.py",
+        "fit",
+        "--variant",
+        "B",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_fit_B/launch_manifest.json",
+        "bytes": 4753,
+        "sha256": "1d011d2fdcad2ebc451463253f7cf20fdddc05db2489cae4994bdce205ed9e4c"
+      }
+    },
+    {
+      "stage": "launch_prepare2",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_prepare2/safe_run.json",
+        "bytes": 1484,
+        "sha256": "e31533f3bd07dc570bfa5d2cabdc65246815231ca218f1ffb83d6bc1b604791f"
+      },
+      "exit": 0,
+      "elapsed_seconds": 4.24,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_price.py",
+        "prepare",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "2"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_prepare2/launch_manifest.json",
+        "bytes": 4841,
+        "sha256": "884ce48949b25e5391685000444d6f4cecf01f7f2768eeee040defd23465e397"
+      }
+    },
+    {
+      "stage": "launch_prepare600",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_prepare600/safe_run.json",
+        "bytes": 1494,
+        "sha256": "8347479afd136873ad2f91c1ace7ae83c80826211a9692086986c4b4bc4eaf44"
+      },
+      "exit": 0,
+      "elapsed_seconds": 904.62,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_price.py",
+        "prepare",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "600"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_prepare600/launch_manifest.json",
+        "bytes": 4876,
+        "sha256": "8bc33e5b29a62c5005ed6945f3f4184b0ab0f0c187b0bbf5cd30b3cc5bdec561"
+      }
+    },
+    {
+      "stage": "launch_public1",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_public1/safe_run.json",
+        "bytes": 1525,
+        "sha256": "5613851e48d02bffffb74bdbedaaa0160dcc031d7d9b727b880f6b4d99029372"
+      },
+      "exit": 0,
+      "elapsed_seconds": 8.731,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "public",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "1",
+        "--proof-name",
+        "public_identity"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_public1/launch_manifest.json",
+        "bytes": 5009,
+        "sha256": "337f78c0e99d961f329bb5328c0dff847077e6336db483a3d32c015dbfa1afb3"
+      }
+    },
+    {
+      "stage": "launch_public2",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_public2/safe_run.json",
+        "bytes": 1525,
+        "sha256": "f25481cb21e5a59dba22a88e835e0e5f2bc456f083cc93822e7b85abde642ffd"
+      },
+      "exit": 0,
+      "elapsed_seconds": 8.314,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "public",
+        "--stop-after",
+        "2",
+        "--proof-name",
+        "public_identity",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_public2/launch_manifest.json",
+        "bytes": 5005,
+        "sha256": "c8d9ecc51911bf962502c1c280b7a926dd4020a0fd69723ef5e635d138d8969d"
+      }
+    },
+    {
+      "stage": "launch_public600",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_public600/safe_run.json",
+        "bytes": 1536,
+        "sha256": "0dac3aa91e0be5d7bd31f053b036d7c9d3a3053a33d85a528754f23be82d8117"
+      },
+      "exit": 0,
+      "elapsed_seconds": 1255.326,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "public",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "600",
+        "--proof-name",
+        "public_identity"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_public600/launch_manifest.json",
+        "bytes": 5066,
+        "sha256": "1580bb78ead6f76bdb8e2fdfa3e1207cfe03a692a8203c8bd386c69b3c211609"
+      }
+    },
+    {
+      "stage": "launch_smoke",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_smoke/safe_run.json",
+        "bytes": 1447,
+        "sha256": "89f2a40ab79503cd3504e3dc62841bd5a8cc60f405d6ea19d5d740a37680a04e"
+      },
+      "exit": 0,
+      "elapsed_seconds": 19.008,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "smoke",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_smoke/launch_manifest.json",
+        "bytes": 4666,
+        "sha256": "bed7740920acf4053ab4f3d57b068931e2d132e2ee11bbda4d5a0b4ee89303ae"
+      }
+    },
+    {
+      "stage": "launch_stage",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_stage/safe_run.json",
+        "bytes": 1445,
+        "sha256": "0930042f60949e9a3e8f09f6d630cb90ed3a5d6f059203df5559f4f90d1e125f"
+      },
+      "exit": 0,
+      "elapsed_seconds": 1.17,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_receiver.py",
+        "stage",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_stage/launch_manifest.json",
+        "bytes": 4680,
+        "sha256": "e9bda8e6644cd04c9cafb07b4a2e98247c25a52dcc179d0915c5179eb06f936e"
+      }
+    },
+    {
+      "stage": "launch_trace1",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_trace1/safe_run.json",
+        "bytes": 1476,
+        "sha256": "7b22ef70d0f99ea6ee520a1f0ef37b5e8332a508cc117bfcc76e926ad23efa90"
+      },
+      "exit": 0,
+      "elapsed_seconds": 15.544,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_trace.py",
+        "trace",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "1"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_trace1/launch_manifest.json",
+        "bytes": 4806,
+        "sha256": "f779d4147571d1fbfd31e78e00dff250e764eecfb6c7f62b5a1886ac4b172ade"
+      }
+    },
+    {
+      "stage": "launch_trace2",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_trace2/safe_run.json",
+        "bytes": 1475,
+        "sha256": "8625ed7e58c00c36367a158ce2a93023a2a0c06cd46898da70daecaa01ad1217"
+      },
+      "exit": 0,
+      "elapsed_seconds": 5.716,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_trace.py",
+        "trace",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "2"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_trace2/launch_manifest.json",
+        "bytes": 4804,
+        "sha256": "3d91b3b65669e25a1f65d10f5b2f82a7d44c06afb9326a38871409deb5f6021c"
+      }
+    },
+    {
+      "stage": "launch_trace600",
+      "status_receipt": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_trace600/safe_run.json",
+        "bytes": 1488,
+        "sha256": "482ba95f1011125b750b6ef30f52a35f7a5518e41465aa462bda5eb4e5174bba"
+      },
+      "exit": 0,
+      "elapsed_seconds": 1462.893,
+      "argv": [
+        ".venv/bin/python",
+        "-B",
+        "experiments/ddm_tc3_move40_trace.py",
+        "trace",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40",
+        "--stop-after",
+        "600"
+      ],
+      "launcher_manifest": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/launch_trace600/launch_manifest.json",
+        "bytes": 4839,
+        "sha256": "08f434243a3db8ec8763fc902191f81390529c9b2accd227f1c1681ade6572ac"
+      }
+    }
+  ],
+  "all_governed_wrappers_exit_zero": true,
+  "scope": "16 current governed launch wrappers; specialized prefix and default-CUDA-gate children have expected nonzero outcomes documented by their controllers. RSS telemetry zero is not a reliable measurement. Historical move39 failed wrapper/recovery records remain separate.",
+  "score_claim": false
+}
