@@ -1,6 +1,6 @@
 {
   "schema": "ddm_dwc1.consumer_order.v1",
-  "disposition": "FOLDED-PENDING-RERUN",
+  "disposition": "SUPERSEDED-BY-T4-DIRECT",
   "owner": "MAIN",
   "consumer_store": ".omx/research/ddm_dwc1_20260910/MOVE40_QUIESCED_LEG.json",
   "consumes": [
@@ -81,5 +81,16 @@
     "memo": ".omx/research/ddm_pr10_second_family_review_quiesced_timing_rule_20260910.md",
     "consequence": "the quiesced/ratio lineage of attempts 1-2 is REFUSED as calibration authority (rule fixed after the runs; self-median hides a uniform pace shift; 38 % of wall uninstrumented); the direct T4 fact 990.053829427 s stands. Replacement rule adopted verbatim in src/tac/decode_timing_concurrency.py v2 (frozen+hashed before launch, 25 % whole-window incl. ancestors, aggregate 100x(P-4)=200, stage rates diagnostic only, 3 consecutive quiet settle samples, paused-process custody). Move 40's base and rlc1's candidate are re-measured under that frozen rule; the sidecar is replaced when the new base passes; no arm inherits the old sidecar (rp1 gated)."
   },
-  "reading_after_four_cold_runs": "797.1 / 785.1 / 783.1 / 784.8 s (spread 1.8 %), bit-identical raw each time; stage-rate diagnostics show <= 0.7 % excess. Every run overlapped a macOS dasd+syspolicyd burst (~95 % + up to 73 %, 3-5 min, recurring ~every 16 min) that the frozen quarter-core rule counts. A 13-min decode cannot fit between bursts by period alone; MAIN does not amend the rule itself \u2014 ddm_pr11 (sol xhigh) adjudicates on these receipts."
+  "reading_after_four_cold_runs": "797.1 / 785.1 / 783.1 / 784.8 s (spread 1.8 %), bit-identical raw each time; stage-rate diagnostics show <= 0.7 % excess. Every run overlapped a macOS dasd+syspolicyd burst (~95 % + up to 73 %, 3-5 min, recurring ~every 16 min) that the frozen quarter-core rule counts. A 13-min decode cannot fit between bursts by period alone; MAIN does not amend the rule itself \u2014 ddm_pr11 (sol xhigh) adjudicates on these receipts.",
+  "t4_direct_leg": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/move40_t4_direct_decode_wall_clock.json",
+    "sidecar": "/Volumes/VertigoDataTier/pact/ddm_sj1_compose39_price/SEAL_ddm_sj1_compose39_rp1_union_contest_cuda.json.decode_wall_clock.json",
+    "mode": "t4_direct",
+    "schema": "candidate_decode_wall_clock.v2",
+    "measured_t4_decode_seconds": 990.053829427,
+    "limit_seconds": 1260.0,
+    "authority": "ddm_pr11 T4-DIRECT contract (exact); cold n600 public entrypoint on Tesla T4, CUDA available, canonical contest path; no local denominator",
+    "inheritance": "rp1's candidate (receiver byte-identical except archive.zip + the two pins) inherits this leg; proven on the pointer tree: mode inherited, source_mode t4_direct, 990.054 s, no problems",
+    "folded_calibrated_sidecar_backup": "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/receipts/folded_calibrated_sidecar_e58adf1d_backup.json"
+  }
 }

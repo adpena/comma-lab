@@ -22,6 +22,20 @@ from tac.candidate_seal import (
 )
 
 DECODE_WALL_CLOCK_SCHEMA = "candidate_decode_wall_clock.v1"
+DECODE_WALL_CLOCK_SCHEMA_V2 = "candidate_decode_wall_clock.v2"  # ddm_pr11: mode "t4_direct"
+T4_HARDWARE_NAMES = {"nvidia-t4", "tesla t4", "nvidia tesla t4", "nvidia t4"}
+T4_CANONICAL_PATH = "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda"
+T4_DIRECT_FIELDS = {
+    "t4_seconds_field": ["artifacts", "contest_auth_eval.json", "inflate_elapsed_seconds"],
+    "t4_archive_sha256_field": ["expected_archive_sha256"],
+    "t4_runtime_sha256_field": ["expected_runtime_tree_sha256"],
+    "t4_hardware_field": ["artifacts", "modal_cuda_preflight.json", "torch_cuda_device_name"],
+    "t4_cuda_available_field": ["artifacts", "modal_cuda_preflight.json", "torch_cuda_available"],
+}
+T4_DIRECT_SCOPE = "cold_public_entrypoint_decode"
+INHERITANCE_SCOPE = "identical normalized receiver code; candidate payload-dependent time not remeasured"
+BOUNDED_BASIS = "bounded_host_baseline"
+ADMISSION_RULE_V3 = "decode_wall_clock.admission_rule.v3"
 LOCAL_SCHEMA = "decode_wall_clock.local.v1"
 CALIBRATION_SCHEMA = "decode_wall_clock.calibration.v1"
 LIMIT_SECONDS = 1260.0
@@ -135,8 +149,22 @@ def _local(ref: object, *, require_margin_basis: bool = True) -> tuple[dict, flo
     for value in load:
         _number(value, "load average", zero=True)
     if require_margin_basis:
-        _require(doc.get("margin_time_basis") == "quiesced" and count == 0,
-                 "margin timing must be quiesced; competing measurements need measured normalization")
+        basis = doc.get("margin_time_basis")
+        if basis == BOUNDED_BASIS:
+            _require(count == 0, "bounded host baseline needs competing_process_count == 0")
+            rule = concurrency.get("admission_rule")
+            _require(isinstance(rule, dict) and rule.get("schema") == ADMISSION_RULE_V3,
+                     "bounded host baseline is admissible only under admission_rule.v3")
+            digest = hashlib.sha256(json.dumps(rule, sort_keys=True).encode()).hexdigest()
+            _require(concurrency.get("admission_rule_sha256") == digest, "frozen admission rule hash mismatch")
+            allowance = concurrency.get("host_baseline_allowance")
+            _require(isinstance(allowance, dict) and allowance.get("valid") is True, "host baseline allowance not valid")
+            checks = allowance.get("checks")
+            _require(isinstance(checks, dict) and bool(checks) and all(v is True for v in checks.values()),
+                     "every host baseline allowance check must be true")
+        else:
+            _require(basis == "quiesced" and count == 0,
+                     "margin timing must be quiesced; competing measurements need measured normalization")
     for name in ("runtime_dir", "archive_path"):
         _require(isinstance(doc.get(name), str) and bool(doc[name]), f"{name} absent")
     root, archive = Path(doc["runtime_dir"]), Path(doc["archive_path"])
@@ -238,6 +266,83 @@ def _candidate_t4(ref: object, runtime_dir: Path, archive_sha: str) -> tuple[flo
     return seconds, "timeout_lower_bound"
 
 
+def _cold_public_report(doc: dict) -> dict:
+    """The receiver's own report line in the T4 stdout log proves a cold n600 public decode."""
+    log = _field(doc, ["artifacts", "contest_auth_eval.stdout.log"], "T4 stdout log")
+    _require(isinstance(log, str), "T4 stdout log must be text")
+    report = None
+    for line in log.splitlines():
+        if '"checkpoint_resume"' in line and "{" in line:
+            try:
+                report = json.loads(line[line.index("{"):])
+            except ValueError:
+                continue
+    _require(isinstance(report, dict), "cold receiver report absent from the T4 stdout log")
+    _require(report.get("pair_count") == 600, "cold receiver report must cover 600 pairs")
+    _require(report.get("checkpoint_resume") is False, "receiver report shows a checkpoint resume")
+    decoder = report.get("token_decoder")
+    _require(isinstance(decoder, dict) and decoder.get("checkpoint_resumed_from_frame") == 0,
+             "token decoder resumed from a checkpoint")
+    cache = report.get("token_cache")
+    _require(isinstance(cache, dict) and cache.get("status") == "DISABLED", "token cache was not disabled")
+    return report
+
+
+def _t4_direct(ref: object, runtime_dir: Path, archive_path: Path, leg: dict) -> tuple[float, dict]:
+    """ddm_pr11's t4_direct contract: a hash-bound completed cold public-entrypoint T4 decode of the
+    exact archive/runtime is the timing authority; no local denominator, no ratio."""
+    doc = _receipt(ref)
+    for key in ("local_receipt", "calibration_receipt", "cpu_to_t4_ratio", "local_600_seconds", "ratio_definition"):
+        _require(key not in leg, f"t4_direct legs carry no {key}")
+    for key, path in T4_DIRECT_FIELDS.items():
+        _require(leg.get(key) == path, f"{key} must name the canonical T4 source field")
+    _require(leg.get("t4_runtime_digest_definition") == "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+             "t4 runtime digest definition absent")
+    _require(leg.get("t4_timing_scope") == T4_DIRECT_SCOPE, "t4_direct timing scope must be the cold public entrypoint decode")
+    _require(leg.get("runtime_dir") == str(Path(runtime_dir).resolve()) and leg.get("archive_path") == str(Path(archive_path).resolve()),
+             "t4_direct leg names a different runtime/archive")
+    archive_sha = measure_archive_identity(archive_path).sha256
+    _require(leg.get("archive_sha256") == archive_sha, "t4_direct archive differs from the current archive")
+    _require(_field(doc, leg["t4_archive_sha256_field"], "T4 archive") == archive_sha, "T4 receipt archive differs from the leg")
+    runtime_sha = measure_t4_runtime_digest(runtime_dir)
+    _require(leg.get("t4_runtime_sha256") == runtime_sha, "t4_direct runtime projection differs from the current runtime")
+    _require(_field(doc, leg["t4_runtime_sha256_field"], "T4 runtime") == runtime_sha, "T4 receipt runtime differs from the leg")
+    _require(doc.get("passed") is True and type(doc.get("returncode")) is int and doc["returncode"] == 0,
+             "t4_direct requires a completed successful T4 result")
+    _require(doc.get("canonical_path") == T4_CANONICAL_PATH, "T4 receipt canonical path is not the contest CUDA path")
+    _require(doc.get("inflate_sh_rel") == "inflate.sh", "T4 receipt did not run inflate.sh")
+    hardware = _field(doc, leg["t4_hardware_field"], "T4 hardware")
+    _require(isinstance(hardware, str) and hardware.lower() in T4_HARDWARE_NAMES, "T4 receipt does not identify T4 hardware")
+    _require(_field(doc, leg["t4_cuda_available_field"], "T4 CUDA availability") is True, "T4 receipt reports CUDA unavailable")
+    _require(_field(doc, ["artifacts", "contest_auth_eval.json", "n_samples"], "T4 n_samples") == 600, "T4 receipt is not the 600-sample eval")
+    report = _cold_public_report(doc)
+    seconds = _number(_field(doc, leg["t4_seconds_field"], "T4 decode seconds"), "T4 decode seconds")
+    _require(_number(leg.get("measured_t4_decode_seconds"), "measured_t4_decode_seconds") == seconds
+             and _number(leg.get("projected_t4_decode_seconds"), "projected_t4_decode_seconds") == seconds,
+             "t4_direct seconds must equal the receipt's inflate_elapsed_seconds")
+    return seconds, {"cold_report_pairs": report.get("pair_count"), "t4_hardware": hardware}
+
+
+def build_t4_direct_leg(*, t4_receipt_path: Path, runtime_dir: Path, archive_path: Path) -> dict:
+    """Construct ddm_pr11's t4_direct leg from a retained completed T4 receipt; refuses on any drift."""
+    runtime_dir, archive_path = Path(runtime_dir).resolve(), Path(archive_path).resolve()
+    doc = _receipt(receipt_reference(t4_receipt_path))
+    seconds = _number(_field(doc, T4_DIRECT_FIELDS["t4_seconds_field"], "T4 decode seconds"), "T4 decode seconds")
+    leg = {"schema": DECODE_WALL_CLOCK_SCHEMA_V2, "mode": "t4_direct", "score_claim": False,
+           "candidate_t4_receipt": receipt_reference(t4_receipt_path),
+           "runtime_dir": str(runtime_dir), "archive_path": str(archive_path),
+           "archive_sha256": measure_archive_identity(archive_path).sha256,
+           "receiver_sha256": measure_receiver_digest(runtime_dir),
+           "t4_runtime_sha256": measure_t4_runtime_digest(runtime_dir),
+           "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+           **T4_DIRECT_FIELDS, "t4_timing_scope": T4_DIRECT_SCOPE,
+           "measured_t4_decode_seconds": seconds, "projected_t4_decode_seconds": seconds,
+           "limit_seconds": LIMIT_SECONDS}
+    problems, _ = validate_decode_wall_clock(leg, runtime_dir=runtime_dir, archive_path=archive_path)
+    _require(not problems, "; ".join(problems))
+    return leg
+
+
 def build_decode_wall_clock(*, local_receipt_path: Path, calibration_receipt_path: Path,
                             runtime_dir: Path, archive_path: Path, enforce_margin: bool = True,
                             candidate_t4_receipt_path: Path | None = None) -> dict:
@@ -270,8 +375,11 @@ def inherit_decode_wall_clock(*, source_leg_path: Path, runtime_dir: Path, archi
            "receiver_sha256": measure_receiver_digest(runtime_dir),
            "archive_sha256": measure_archive_identity(archive_path).sha256,
            "projected_t4_decode_seconds": source.get("projected_t4_decode_seconds"),
-           "limit_seconds": LIMIT_SECONDS,
-           "inheritance_scope": "identical receiver code; payload-dependent time is not remeasured"}
+           "limit_seconds": LIMIT_SECONDS, "source_mode": source.get("mode"),
+           "inheritance_scope": INHERITANCE_SCOPE}
+    if source.get("mode") == "t4_direct":
+        leg["source_t4_runtime_sha256"] = source.get("t4_runtime_sha256")
+        leg["candidate_t4_runtime_sha256"] = measure_t4_runtime_digest(runtime_dir)
     problems, _ = validate_decode_wall_clock(leg, runtime_dir=runtime_dir, archive_path=archive_path,
                                             pointer_archive_sha256=pointer_archive_sha256)
     _require(not problems, "; ".join(problems))
@@ -284,10 +392,20 @@ def validate_decode_wall_clock(leg: object, *, runtime_dir: Path, archive_path: 
     observed = {}
     try:
         _require(isinstance(leg, dict), "leg must be an object")
-        _require(leg.get("schema") == DECODE_WALL_CLOCK_SCHEMA, "unknown leg schema")
+        if leg.get("mode") == "t4_direct":
+            _require(leg.get("schema") == DECODE_WALL_CLOCK_SCHEMA_V2, "t4_direct legs use candidate_decode_wall_clock.v2")
+        else:
+            _require(leg.get("schema") == DECODE_WALL_CLOCK_SCHEMA, "unknown leg schema")
         _require(leg.get("score_claim") is False, "timing cannot claim score authority")
         _require(leg.get("receiver_sha256") == measure_receiver_digest(runtime_dir), "candidate receiver differs from measurement")
         _require(leg.get("archive_sha256") == measure_archive_identity(archive_path).sha256, "candidate archive differs from timing leg")
+        if leg.get("mode") == "t4_direct":
+            seconds, facts = _t4_direct(leg.get("candidate_t4_receipt"), runtime_dir, archive_path, leg)
+            observed.update(measured_t4_decode_seconds=seconds, measured_t4_kind="completed", **facts)
+            _require(leg.get("limit_seconds") == LIMIT_SECONDS, "margin limit must be 0.7 * 1800 seconds")
+            _require(seconds <= LIMIT_SECONDS, f"measured T4 decode {seconds:.6f}s exceeds {LIMIT_SECONDS}s")
+            observed.update(mode="t4_direct", projected_t4_decode_seconds=seconds, limit_seconds=LIMIT_SECONDS)
+            return [], observed
         if "candidate_t4_receipt" in leg:
             actual, kind = _candidate_t4(leg["candidate_t4_receipt"], runtime_dir, leg["archive_sha256"])
             observed.update(measured_t4_decode_seconds=actual, measured_t4_kind=kind)
@@ -302,15 +420,23 @@ def validate_decode_wall_clock(leg: object, *, runtime_dir: Path, archive_path: 
                 _require(actual <= LIMIT_SECONDS, f"measured T4 decode {actual:.6f}s exceeds {LIMIT_SECONDS}s")
         if leg.get("mode") == "inherited":
             source = _receipt(leg.get("source_leg"))
-            _require(source.get("mode") == "measured", "inheritance must point directly to a measured leg")
+            _require(source.get("mode") in {"measured", "t4_direct"},
+                     "inheritance must point directly to a measured or t4_direct leg (never to an inherited one)")
             _require(bool(pointer_archive_sha256) and leg.get("pointer_archive_sha256") == pointer_archive_sha256,
                      "inherited pointer identity absent or stale")
             _require(source.get("archive_sha256") == pointer_archive_sha256, "source measurement is not the pointer archive")
-            local, _ = _local(source.get("local_receipt"), require_margin_basis=False)
-            problems, _ = validate_decode_wall_clock(source, runtime_dir=Path(local["runtime_dir"]),
-                                                     archive_path=Path(local["archive_path"]))
+            if source.get("mode") == "t4_direct":
+                source_runtime, source_archive = Path(source["runtime_dir"]), Path(source["archive_path"])
+                _require(leg.get("source_t4_runtime_sha256") == source.get("t4_runtime_sha256"), "source T4 runtime identity absent")
+                _require(leg.get("candidate_t4_runtime_sha256") == measure_t4_runtime_digest(runtime_dir),
+                         "candidate T4 runtime identity absent or stale")
+            else:
+                local, _ = _local(source.get("local_receipt"), require_margin_basis=False)
+                source_runtime, source_archive = Path(local["runtime_dir"]), Path(local["archive_path"])
+            problems, _ = validate_decode_wall_clock(source, runtime_dir=source_runtime, archive_path=source_archive)
             _require(not problems, "invalid inherited source: " + "; ".join(problems))
             _require(source.get("receiver_sha256") == leg.get("receiver_sha256"), "inherited receiver code differs")
+            _require(leg.get("inheritance_scope") == INHERITANCE_SCOPE, "inheritance scope statement absent")
             projected = _number(source.get("projected_t4_decode_seconds"), "source projection")
         else:
             _require(leg.get("mode") == "measured", "unknown timing mode")
