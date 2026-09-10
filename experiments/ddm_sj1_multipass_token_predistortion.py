@@ -463,6 +463,55 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.05e-06,
         score_t4=0.13791730003757818,
     ),
+    #: MOVE 38 -- THIS ARM'S pass 5, PROMOTED.  Lane
+    #: ddm_sj1_t4_token_predistortion_pass5_20260909, call fc-01M24EG4R59D365KWRT7538XA8,
+    #: -2.700627e-05 S on +48 B: the 42-pair Lagrange subset of pass 5's 126-pair field
+    #: (80 of 237 cells for 47 of 229 tail bytes) plus its carrier re-solve.  VERIFIED at
+    #: source from the lane's own MODAL_REMOTE_RESULT.json.  The projection residual was
+    #: +7.734902e-06 and it is EXACTLY the sum of the two 8-dp print gaps -- zero
+    #: modelling error, because the seg leg was verified at zero-cell disagreement on the
+    #: shipped bytes before the fire.
+    PointerRow(
+        label="sj1_pass5_token_predistortion",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/candidate_pass5/candidate_runtime"
+        ),
+        archive_sha256=(
+            "eae99e0083129a911103bf691bdbf3763b9b7c0e3e365a6e3dc1cd2d2d4eec07"
+        ),
+        archive_bytes=180_436,
+        d_seg_t4=0.00010632,
+        d_pose_t4=5.06e-06,
+        score_t4=0.1378902937630636,
+    ),
+    #: MOVE 39 -- LIVE.  rp1's rate-directed token pre-distortion, lane
+    #: ddm_rp1_t4_rate_directed_predistortion_20260910, -2.21e-04 S on -250 B: 473
+    #: argmax-NEUTRAL token changes over 253 pairs, so d_seg returns to move 37's
+    #: 0.00010698 -- rp1's field repairs nothing and breaks nothing, it only makes the
+    #: field cheaper to code.  It SUPERSEDES this arm's move 38 as the pointer; the
+    #: pass-5 subset re-bases onto it by re-verification (282-pair union, 13 overlapping
+    #: pairs, ZERO position collisions measured).
+    #:
+    #: WHY THIS ROW HAD TO BE APPENDED BEFORE THE NEXT POSE LEG: with the table stale at
+    #: move 37, `pose --tag base` paired move 37's CARRIER with move 39's field renders
+    #: and read 1.0429e-04 against move 39's 4.89e-06 print -- 21.3x.  pm2's
+    #: pose_base_magnitude gate REFUSED it.  That is the stale-base genus
+    #: ([[pose_base_must_be_measured_on_the_pointers_own_configuration_on_the_arms_instrument_20260909]])
+    #: caught by a gate instead of by eyeballing a magnitude, which is the whole point of
+    #: the gate: at 2x instead of 21x it would have sealed.
+    PointerRow(
+        label="rp1_rate_directed_predistortion",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/candidate/candidate_runtime"
+        ),
+        archive_sha256=(
+            "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4"
+        ),
+        archive_bytes=180_186,
+        d_seg_t4=0.00010698,
+        d_pose_t4=4.89e-06,
+        score_t4=0.1376693148220904,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
