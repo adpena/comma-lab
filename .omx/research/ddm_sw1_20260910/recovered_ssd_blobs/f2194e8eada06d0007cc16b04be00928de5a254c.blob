@@ -1,0 +1,10 @@
+import json,sys
+from pathlib import Path
+root,work=map(Path,sys.argv[1:]);sys.path.insert(0,str(root))
+from runtime.f26_inflate import inflate_archive
+def observe(frame,event,arg):
+ if event=='call' and frame.f_code.co_name=='decode_production_tokens' and Path(frame.f_code.co_filename).resolve()==root/'runtime/residual_archive.py':
+  (work/'TOKEN_DECODE_ENTERED.json').write_text(json.dumps({'filename':frame.f_code.co_filename,'function':frame.f_code.co_name,'attempt':str(work),'runtime':str(root)}))
+  sys.setprofile(None)
+sys.setprofile(observe)
+inflate_archive(root/'archive.zip',work/'0.raw',renderer_dir=root/'cpr1',device_name='cpu',num_threads=4,checkpoint_dir=work/'.ckpt')

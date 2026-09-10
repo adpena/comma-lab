@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py selector \
+  --runtime "$STORE/runtime_afr1" \
+  --gt-cache /Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt \
+  --renderer /Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/archive.zip \
+  --tokens /Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8 \
+  --pairs-list $(seq 0 599 | tr '\n' ' ') \
+  --threads 4 --label selector_sweep_base_shipped_n600 \
+  --out "$STORE/retained/selector_sweep_base_shipped_n600.json"
+echo PR1_SELECTOR_BASE_DONE

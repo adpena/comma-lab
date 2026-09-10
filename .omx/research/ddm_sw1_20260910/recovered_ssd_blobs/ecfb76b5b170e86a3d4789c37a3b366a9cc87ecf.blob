@@ -1,0 +1,29 @@
+#!/bin/bash
+# ddm_ane2 STAGE 5 -- the REALIZED exact-argmax hybrid.
+#
+# ane1 priced this GO on pixel area (0.357% band, 89x headroom under a 3x bar)
+# and NO-GO on the 2026-07-13 lane's tile realization (4.27x the dense pass it
+# replaced).  This runs it: fp16 ANE dense pass, band from the FP16 margin, fp32
+# recompute on fixed-size crops through a real CoreML model, wall clock measured,
+# both denominators timed in the same run.  Run on the GENERATED decode, which is
+# the input the scorer actually reads.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+GEN=/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/identity_v1/out/0.raw
+mkdir -p $OUT/stage5
+
+for BAND in 0.4456 0.05; do
+  echo "=== hybrid band=$BAND tile=64 halo=32 ==="
+  $PY $EXP hybrid \
+    --fp16-package $OUT/stage3/segnet_ane_split_k0.mlpackage \
+    --fp32-dense-package $OUT/stage3/segnet_ane_split_k297.mlpackage \
+    --reference $OUT/reference_generated/reference_segnet.npz \
+    --raw "$GEN" --band $BAND --tile 64 --halo 32 --eval-pairs 40 --dense-reps 10 \
+    --out $OUT/stage5/hybrid_band${BAND}_t64_h32.json
+done
+
+echo "STAGE5 COMPLETE"

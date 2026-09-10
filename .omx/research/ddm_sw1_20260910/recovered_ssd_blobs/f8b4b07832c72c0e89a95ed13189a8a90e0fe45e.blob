@@ -1,0 +1,12 @@
+SUPERSEDED, retained as payload (never deleted).
+
+These 11 per-pair pose rows were measured against rc2's carrier (= pass 3's carrier).
+Pointer move 34 (ddm_pc2) replaced the carrier: all twelve basis scales set to 1.0 plus
+17 re-solved coordinates. The coefficient parametrisation itself changed, so both the
+base d_pose and the re-solve start point in these rows belong to a superseded object and
+they are NOT admissible for this arm's admission. They are kept because they are real
+measurements of a real body, and because the rc2-vs-pc2 comparison on the same pairs is
+itself a datum if anyone wants it.
+
+The seg side is unaffected: pc2 leaves the semantic section and the token tail
+byte-identical, so every rendered frame and all 39 repaired cells stand.

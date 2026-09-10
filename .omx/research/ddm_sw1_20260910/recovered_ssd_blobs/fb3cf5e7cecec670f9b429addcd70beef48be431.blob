@@ -1,0 +1,37 @@
+#!/bin/bash
+# ddm_cl3 rung launcher: one Metal training of tools/train_ddm_cl1_hpac_capacity.py
+# under the cl2_shipped_ladder law.  $1=rung name  $2=rate_lambda  $3=seed  $4=purpose
+set -euo pipefail
+RUNG="$1"; LAM="$2"; SEED="$3"; PURPOSE="$4"
+CL3=/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection
+CL2=/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder
+cd /Users/adpena/Projects/pact
+mkdir -p "$CL3/rungs/$RUNG/training" "$CL3/rungs/$RUNG/launch"
+exec .venv/bin/python tools/launch_detached_process.py \
+  --output-dir "$CL3/rungs/$RUNG/launch" \
+  --purpose "$PURPOSE" \
+  --done-receipt "ddm_cl3_train_${RUNG}" \
+  --receipt-supersede \
+  --derive-resource-budgets \
+  --measured-peak-rss-gib 1.757 \
+  --measured-thread-need 4 \
+  --walltime-cap-s 7200 \
+  --artifact-budget-gib 2.0 \
+  --env PYTHONHASHSEED=0 --env TAC_ADMISSION_ENFORCE=1 --env PYTORCH_ENABLE_MPS_FALLBACK=0 \
+  -- .venv/bin/python tools/train_ddm_cl1_hpac_capacity.py \
+    --profile cl2_shipped_ladder \
+    --cache "$CL2/inputs/tokens_null.pt" \
+    --init "$CL2/inputs/epoch_0634_ema_init.pt" \
+    --epochs 60 --batch-size 8 --eval-batch-size 4 --eval-every 2 \
+    --lr 0.003 --lr-exponent 0.0002 --lr-bits 0.01 --bit-eps 1e-6 \
+    --rate-lambda "$LAM" --qat-fraction 0.5 --init-bits 8.0 \
+    --channels 64 --patch 64 --delta 2 --frame-dim 8 \
+    --norm-mode none --activation relu --frame-scale \
+    --weight-bound 127 --activation-bound 127 --weight-scales --weight-exponent-min -6 \
+    --spm --target-mode raw --seed "$SEED" --ema-target-seed-fraction 0.01 \
+    --device mps \
+    --save "$CL3/rungs/$RUNG/training/model.pt" \
+    --out  "$CL3/rungs/$RUNG/training/trainer.json" \
+    --expected-cache-content-sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb \
+    --expected-init-sha256 ff2d3e45d88a97cc6ae170864d0d6d72fc34c617cf211e94ccff439f23d2afd9 \
+    --min-free-bytes 21474836480

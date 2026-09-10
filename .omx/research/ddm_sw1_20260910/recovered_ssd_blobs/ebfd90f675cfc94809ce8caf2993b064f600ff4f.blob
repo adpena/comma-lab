@@ -1,0 +1,34 @@
+#!/bin/bash
+# ddm_ane2 STAGE 8 -- the FINALIST row.
+#
+# At n120 on a generated decode the k=64 split measured 3.1323e-05 against a bar
+# of 3.3e-05: it passes by 5%.  Five percent at n120 is not a result, it is a
+# coin toss with a good attitude.  This re-measures the three rungs that matter
+# at n600 on the same decode, which is the sample the bar was written for.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+GEN=/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/identity_v1/out/0.raw
+mkdir -p $OUT/stage8
+
+echo "=== [1/3] n600 segnet reference on the generated decode ==="
+$PY $EXP reference --model segnet --raw "$GEN" --pairs 600 --threads 1 \
+  --out-dir $OUT/reference_generated_n600 --out $OUT/reference_generated_n600.json
+
+echo "=== [2/3] n600 finalist rungs: all-fp16, the k=64 knee, all-fp32 ==="
+$PY $EXP ladder --model segnet --enumerate-json $OUT/enumerate.json \
+  --reference $OUT/reference_generated_n600/reference_segnet.npz --raw "$GEN" \
+  --splits 0 64 297 --modes CPU_AND_NE CPU_ONLY --reps 20 \
+  --out-dir $OUT/stage8 --out $OUT/stage8/ladder_segnet_generated_n600.json
+
+echo "=== [3/3] n600 finalist: the profile-guided g13 set (18 ops) ==="
+$PY $EXP selective --model segnet --enumerate-json $OUT/enumerate.json \
+  --reference $OUT/reference_generated_n600/reference_segnet.npz --raw "$GEN" \
+  --fp32-set g13=243:261 g13stem=0:38,243:261 \
+  --modes CPU_AND_NE CPU_ONLY --reps 20 \
+  --out-dir $OUT/stage8 --out $OUT/stage8/targeted_segnet_generated_n600.json
+
+echo "STAGE8 COMPLETE"

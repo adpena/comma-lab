@@ -1,0 +1,30 @@
+#!/bin/bash
+# Waits for BOTH the main driver to finish (its .done receipt) and the warm cell's terminal
+# checkpoint to exist, then tops the warm sweep up to the full cadence and runs the analysis.
+# Sequenced after the driver so two sweeps never write the same cell concurrently.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+STORE=/Volumes/APDataStore/pact/ddm_md1_micro_macro
+WARM=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng1_warm_transition/runs/seed_20260902_warm_transition
+CFG=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/sealed_configs/seed_20260902_control_native100.json
+DRIVER_DONE=/Users/adpena/Projects/pact/.omx/tmp/codex_runs/md1_sweep.done
+WARM_END=$WARM/stage_01_fairform_finish/checkpoints/stage_01_end.pt
+
+until [ -f "$DRIVER_DONE" ]; do sleep 30; done
+echo "=== driver done $(date -u +%FT%TZ) ==="
+until [ -f "$WARM_END" ]; do sleep 30; done
+echo "=== warm terminal checkpoint present $(date -u +%FT%TZ) ==="
+
+$PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+    --cell warm_transition_seed_20260902 --run-root "$WARM" --config "$CFG" \
+    --store "$STORE" --threads 4 --walltime-budget-s 5400
+echo "warm topup rc=$? $(date -u +%FT%TZ)"
+
+for L in dali pyav; do
+  $PY experiments/ddm_md1_micro_to_macro.py --mode analyze --cell warm_transition_seed_20260902 --gt-lineage $L --store "$STORE"
+done
+$PY experiments/ddm_md1_micro_to_macro.py --mode compare --gt-lineage dali --store "$STORE"
+$PY experiments/ddm_md1_micro_to_macro.py --mode report --store "$STORE"
+$PY experiments/ddm_md1_micro_to_macro.py --mode tables --store "$STORE" > "$STORE/TABLES_all_dali.md"
+echo "=== warm analysis done $(date -u +%FT%TZ) ==="

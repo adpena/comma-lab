@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+DALI=/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt
+TOK=/Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8
+# (a) d_pose on THIS arm's instrument (carrier + selector, batch-1 renders, batch-8 pose)
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py measure \
+  --runtime "$STORE/runtime_afr1" --gt-cache "$DALI" \
+  --renderer "$STORE/retained/pr1_reflected_step600_semantic_section.bin" --tokens "$TOK" \
+  --pairs 600 --batch-size 8 --threads 4 --label reflected_step600_stale_carrier \
+  --out "$STORE/retained/measure_reflected_step600_stale_carrier_n600.json"
+# (b) realized d_seg (+ ft1-instrument d_pose and the B/H/W split) at n600
+.venv/bin/python -u experiments/ddm_ft1_verdict_bhw_pose.py \
+  --candidate "$STORE/retained/pr1_reflected_step600_checkpoint.pt" \
+  --gt-cache "$DALI" --pairs 600 --batch-size 4 --threads 4 \
+  --label pr1_reflected_step600_n600 \
+  --out "$STORE/retained/verdict_reflected_step600_n600.json"
+echo PR1_REFLECTED_DONE
