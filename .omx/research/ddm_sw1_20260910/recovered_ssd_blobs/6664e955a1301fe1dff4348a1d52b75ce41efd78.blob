@@ -1,0 +1,7 @@
+Live on the same object: sj1 (multi-pass token pre-distortion; pass 2a at 46 % flip repair on the first 93 pairs, ~4 h to finish, then jg5 admission +
+carrier re-solve + exact re-encode — the seg-debt pool, 30 KB-eq) and pc1 (pose-carrier efficiency: basis/coefficient precision, generated basis, learned
+rank-8 — the 22 KB carrier pool). bd1 (bidirectional temporal context) CLOSED at family scope: the label field is piecewise-constant over tens of pairs
+(P(32)/P(1) = 1.07–1.13), so the token stream is at its floor under any predictor that reads other frames' labels. Every later candidate re-prices on
+THIS object (178,249 B): the carrier and tail are byte-identical, so sj1's and pc1's byte deltas compose additively with rc1's coder. Named doors
+remaining: rc1 ITEM 1 (semi-static/depth-mixing prior on IHS1), the renderer width distillation at optimal form (pose in the loop + re-solve; wd2's
+w64 toy was INSTANCE scope), and the joint field+model escape.

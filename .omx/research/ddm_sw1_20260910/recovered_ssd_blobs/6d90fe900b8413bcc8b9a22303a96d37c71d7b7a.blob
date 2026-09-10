@@ -1,0 +1,123 @@
+# compress.py — the end-to-end rebuild, and its honest boundaries
+
+> **GENERATION-7 REFRESH (2026-09-02).** The shipped archive is AFR1,
+> `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25` at
+> 180,002 bytes. As of 2026-09-01 this entry point **expresses that archive
+> end-to-end**: its `AFR1_CHAIN` registry runs the five post-rc2 lossless
+> stages with the real landed tools, and two complete chain runs from the
+> retained pinned base each reproduced these exact bytes
+> (receipt `RESULT_pq2_e2e.json`; verification memo
+> `ddm_ce1_afr1_compress_chain_20260901.md` in the source repository).
+> Earlier packet generations shipped a `compress.py` that refused this SHA by
+> name because it could not express those stages; that refusal-era text is
+> superseded by the measurement above.
+
+This is the compression-side entry point for the submission. It is included because the
+challenge asks for one and because a submission you cannot inspect is a submission you
+cannot trust.
+
+## The honest headline
+
+`compress.py` **rebuilds the shipped `archive.zip` byte-identically** from pinned,
+sha-verified inputs. The AFR1 chain replays the five lossless post-processing stages that
+produced this archive from its base body, retains every intermediate archive, and refuses
+unless **two complete runs** both reproduce the pinned 180,002-byte archive exactly. There
+is no "close enough": a mismatch exits non-zero.
+
+The chain runs are deterministic by construction — the corrector is integer/rational
+arithmetic and the range coder is exact — and determinism is checked by measurement, not
+asserted: `build` writes a second archive from the same member and asserts the two are
+byte-identical.
+
+## What the chain replays, exactly
+
+The registered `AFR1_CHAIN` (`afr1_from_retained_rc2`) starts from the retained base
+archive `df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080`
+(180,456 bytes) and runs five lossless stages, each pinned to its expected output SHA-256:
+
+| Stage | What it does | Pinned output (prefix) |
+|---|---|---|
+| fx5 | fixed-point integer log-odds context-mixing re-encode | `4b54fccc` |
+| dx2 | group-conditioned token-context re-encode | `976f706d` |
+| gb1 | address-free tile-conditioned re-encode (tile48 × groupbin8) | `ec0dd68f` |
+| lb1 | banked-lossless joint collect (consumes the jt21 bank) | `5b856e66` |
+| afr1 | address-free tile48 × groupbin8 final re-encode | `cbb8d928` |
+
+Every stage is lossless: the decoded token field is unchanged, so the score delta across
+the chain is pure rate. The chain adds roughly 15–50 minutes of CPU time (dominated by two
+full 600-pair re-encodes); inflation is unchanged.
+
+## What is documented rather than re-run
+
+- **Stage A (training).** Training the checkpoint from raw video is days of GPU compute.
+  `compress.py provenance` emits the lineage instead: the stage scripts, their arguments,
+  the corrector module, and an input manifest with a sha256 for every input. Everything
+  downstream of the pinned inputs — the part that determines the archive bytes — is what
+  the chain re-runs and verifies.
+- **The content-deciding solve stages.** The base body's chain re-decided content before
+  the lossless stages ran: the segmentation token edit solve over 573 pairs
+  (`ddm_jg3_joint_solve.py`), the jg4 splice, the joint edit-admission waterfill
+  (`ddm_jg5_pose_resolve_on_edited_renders.py`, 455 of 573 admitted), and the pose-carrier
+  re-solve (`ddm_up3_carrier_splice.py::build_archive`, solver
+  `ddm_br1_pose_basis_reorientation.py::gn_solve_pair`). These ship as their own scripts
+  with receipts; the chain consumes their pinned output as its base input rather than
+  re-deciding content.
+- **Candidates outside the grammar.** A candidate whose rebuild would require re-deciding
+  content is named in `NOT_EXPRESSIBLE` and refused by name, with its real builders cited.
+  That refusal path still exists — it just no longer applies to the shipped archive.
+
+## Requirements
+
+- **Python 3.11+** (uses `hashlib.file_digest`). No third-party packages in this file: its
+  only imports outside the standard library are from the `tac` research package (below).
+- **It runs from the research repository, not from this submission directory.** It
+  resolves the repository layout for `tac` imports and shells out to the landed stage
+  tools. Copied into a bare submission directory it will not import.
+- Inputs are supplied by `--inputs-json` or environment variables; run
+  `python3 compress.py --chain afr1 --emit-inputs-template` to print the manifest,
+  including the expected sha256 of each pinned input (the retained rc2 base among them).
+  There are no local-path defaults.
+- Storage preflight: the chain refuses to start with less than 8 GiB free under `--store`.
+
+## Usage
+
+```bash
+# Print the AFR1 chain's input manifest with every pinned sha256. Works anywhere.
+python3 compress.py --chain afr1 --emit-inputs-template
+
+# The full AFR1 rebuild: five stages, every intermediate retained,
+# two complete runs required, final bytes asserted against the pinned SHA.
+python3 compress.py --stage chain --chain afr1 --chain-repeats 2 \
+    --store ./build --inputs-json inputs.json
+
+# 'all' selects the registered chain automatically when the expected archive has one.
+python3 compress.py --stage all --store ./build --inputs-json inputs.json \
+    --expected-archive-sha256 cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25 \
+    --expected-archive-bytes 180002
+```
+
+Stages: `provenance`, `encode`, `build`, `verify`, `decode`, `chain`, `all`. Which
+candidate is expected is resolved at run time (explicit flags, a sealed candidate runtime
+via `--candidate-runtime`, or the current frontier pointer) — never latched in the file.
+`--resume` continues bit-faithfully from a retained frame-boundary checkpoint.
+
+`decode` (stage C) proves the rebuilt archive's decoded token field reproduces its pinned
+sha256 through our internal receiver harness. Honest limitation: that harness resolves one
+source root from local custody, so it is a repository proof rather than a judge-runnable
+one. A judge does not need it — the shipped `inflate.sh` is the real decode path and is
+what the evaluator runs.
+
+## Axis
+
+`[macOS-CPU advisory / scorer-free EXACT byte measurement]`. This script measures bytes
+and byte-identity only. It makes no score claim: the score on the rebuilt bytes is
+whatever the contest evaluator returns on the contest hardware.
+
+## Known gaps
+
+1. **The expressibility registry is hand-maintained.** A future candidate outside the
+   grammar that nobody has registered falls through to a less precise message.
+2. **Stage C is repository-scoped** (above): the byte-identity decode proof needs local
+   custody; the judge-facing decode path is `inflate.sh`.
+3. **Test coverage is by execution.** The chain, refusal, and happy paths were verified by
+   running them (two complete chain runs, receipt retained), not by a unit-test suite.

@@ -1,0 +1,16 @@
+### Bounded CPU smoke — RESULT
+
+| check | result |
+|---|---|
+| **NO-OP DETECTOR** — continuous vs control step-1 live state | **DIFFERENT** (`8d16b4ce688ab2cd…` vs `27f514180db2b4cd…`) |
+| — and their re-encoded archives differ | yes |
+| **THE TRAINING PATH IS UNMOVED BY THIS LANDING** — control step-1 vs ng1's pre-telemetry cold reference | **BIT-IDENTICAL** (`27f514180db2b4cd…`) |
+| **DIFFERENTIAL** — all components at the control's τ = 0.15 with zero duals | **BIT-IDENTICAL** (`loss_total` 1.0765775442123413 both) |
+| — objective is not τ-blind | True (0.6592552661895752 at its own τ) |
+| — objective is not dual-blind | True (0.739250659942627 with the carried duals) |
+| τ reached the loop | control 0.15000000596046448, continuous 0.05000000074505806 |
+| **duals reached the loop** (falsifier 3, update 1) | control {"Lane": 9.003074571993031e-05, "Movable": 7.757623141134608e-05}; continuous {"Lane": 0.0051310126530447146, "Movable": 0.01740871996437369} |
+| first-update displacement ‖θ₁−θ₀‖₂ | control 0.05588674077623233, continuous 0.05588754892044407 |
+| peak RSS per arm | control 40.42 GiB, continuous 40.37 GiB |
+
+**Read the peak-RSS row against the projection:** arm 1 was projected at 42 GiB on the inference that ng2's 41.46 and ng3's 41.48 GiB were a SINGLE update's high-water rather than two arms summed. The measured per-arm peak above settles that for the lineage — if it is near 41.5 GiB the inference held; if it is near 20.7 GiB the peak really was a sum and every future split smoke may project half.

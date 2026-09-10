@@ -1,0 +1,57 @@
+#!/bin/bash
+# ddm_ft1 MAIN fire order — verified against each tool's real argparse.
+# Run from the repo root. Nothing here is fired by the ft1 arm itself.
+set -euo pipefail
+
+REPO=/Users/adpena/Projects/pact
+STORE=/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune
+RUN=$STORE/runs/aligned_dali_lr2e5_s1800
+RET=$STORE/retained
+DALI_GT=/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt
+
+# Pick the checkpoint with the LOWEST advisory quantized_exact_seg in $RUN/result.json.
+# Both periodic (step 600/1200) and the terminal stage checkpoint are preserved, and
+# every one of them carries the EMA shadow at its top-level state_dict.
+CKPT=${1:?usage: FIRE_ORDER.sh <checkpoint.pt> [label]}
+LABEL=${2:-ft1_best}
+
+cd "$REPO"
+
+# ---------------------------------------------------------------------------
+# FO-1  n600 advisory verdict of the candidate through the shipped receiver.
+#       ~33 min on CPU (3 n600 passes at ~1.14 s/pair/pass).
+#       GATE: export.size_preserved == true AND export.parse_back_max_abs_delta == 0.0
+#       HARVEST: delta.coupling_dpose_over_dseg  <- the number this arm exists for
+# ---------------------------------------------------------------------------
+OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 .venv/bin/python tools/safe_run.py \
+  --rss-mb 14000 --timeout 5400 --label ft1_verdict -- \
+  .venv/bin/python -u experiments/ddm_ft1_verdict_bhw_pose.py \
+    --candidate "$CKPT" \
+    --gt-cache "$DALI_GT" \
+    --pairs 600 --batch-size 4 --threads 4 \
+    --label "$LABEL" \
+    --out "$RET/verdict_${LABEL}.json"
+
+# ---------------------------------------------------------------------------
+# FO-2  terminal pose re-solve, ONLY if FO-1 shows realized d_seg DOWN.
+#       12 int12 coefficients x 600 pairs; 0 archive bytes; the shipped splice
+#       measured +45 B.  Expect at most 5.87-8.0x mean recovery (fcd2/jg5) and
+#       note there is NO per-pair admission lever for a renderer change.
+#
+#       GATE (DERIVED from the AFR1 receipt; supersedes the charter's 1.25e-4):
+#         sqrt(10*d_pose_new) < 0.00798123 + 100*|realized delta d_seg|
+#       i.e. d_pose <= 1.694e-05 at a 25% seg cut, 9.99e-06 at a 10% cut.
+# ---------------------------------------------------------------------------
+# .venv/bin/python experiments/ddm_up2_shipping_pose_solve.py solve \
+#   --pairs 600 --gt-cache "$DALI_GT" --axis contest_cuda --device cpu \
+#   --out "$RET/pose_resolve_${LABEL}.json"
+
+# ---------------------------------------------------------------------------
+# FO-3  splice + T4 buy, ONLY if FO-2 clears its gate.
+#       PROMOTE IFF exact S < 0.14797617125559104 on [contest-CUDA T4 n600].
+#       Do NOT add the charter's "AND d_pose <= 1.25e-4" conjunct: at this
+#       operating point that guard admits candidates whose pose term costs
+#       +0.02737 S, which is 5.44x the entire credit of a 25% seg cut.
+#       S < AFR1 is the whole gate.
+# ---------------------------------------------------------------------------
+# .venv/bin/python tools/fire_modal_auth_eval.py --seal <candidate archive.zip>

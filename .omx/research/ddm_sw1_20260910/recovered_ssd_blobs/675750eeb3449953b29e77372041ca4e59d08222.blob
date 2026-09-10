@@ -1,0 +1,41 @@
+import os, sys, json, time, resource
+os.environ.setdefault("OMP_NUM_THREADS","4")
+import torch; torch.set_num_threads(4)
+REPO="/Users/adpena/Projects/pact"; sys.path.insert(0,REPO)
+from pathlib import Path
+import numpy as np
+from experiments import ddm_qbt1_qbflow_trainer as qbt
+CFG=Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/sealed_configs/seed_20260902_control_native100.json")
+cfg=json.loads(CFG.read_text())
+print("initial_state", cfg["initial_state"]["path"])
+print("device", cfg.get("device"), "seed", cfg.get("seed"), "total_steps", cfg.get("total_steps"))
+dev=torch.device("cpu")
+posenet, segnet = qbt.load_differentiable_scorers(Path(REPO)/"upstream", device=dev)
+posenet.eval(); segnet.eval()
+model = qbt.load_initial_model(dev)
+init=torch.load(Path(cfg["initial_state"]["path"]), map_location="cpu", weights_only=False)
+model.load_state_dict({k:v.detach().clone().float() for k,v in init["state_dict"].items()}, strict=True)
+M0=Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902/control_native100/milestones/step_000000/realized")
+tot_diff=0; tot=0; rows=[]
+t0=time.time()
+for chunk in qbt.pair_chunks(qbt.SELECTION_IDS,16):
+    ids=torch.tensor(chunk,dtype=torch.long,device=dev)
+    with torch.no_grad():
+        out=model(ids,height=qbt.EVAL_H,width=qbt.EVAL_W)
+        cam=qbt.roundtrip_to_camera_uint8_ste(out["rgb_pair_01"])
+        pose6, logits = qbt.scorer_forward(cam,posenet,segnet)
+        am=logits.argmax(dim=1).to(torch.uint8).cpu().numpy()
+    for i,pid in enumerate(chunk):
+        z=np.load(M0/f"pair_{pid:04d}.npz")
+        ref=z["segnet_argmax_u8"]; tgt=z["target_argmax_u8"]
+        d=int((am[i]!=ref).sum()); tot_diff+=d; tot+=ref.size
+        rows.append((pid, d, float((am[i]!=tgt).mean()), float((ref!=tgt).mean())))
+print("elapsed %.1fs peak %.2f GiB"%(time.time()-t0, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**3)))
+print("CPU vs retained-MPS argmax disagreement sites: %d / %d = %.6e"%(tot_diff,tot,tot_diff/tot))
+for r in rows[:6]: print("pair %4d  cpu_vs_mps_sites=%7d  d_seg_cpu=%.8f  d_seg_mps=%.8f"%r)
+w=dict(zip(qbt.SELECTION_IDS,qbt.SELECTION_WEIGHTS))
+cpu_hat=sum(w[p]*a for p,_,a,_ in rows)/qbt.N
+mps_hat=sum(w[p]*b for p,_,_,b in rows)/qbt.N
+print("d_seg_hat CPU  = %.18f"%cpu_hat)
+print("d_seg_hat MPS  = %.18f  (recorded 0.002518335978190104)"%mps_hat)
+print("delta = %.6e  rel = %.4f%%"%(cpu_hat-mps_hat, 100*(cpu_hat-mps_hat)/mps_hat))

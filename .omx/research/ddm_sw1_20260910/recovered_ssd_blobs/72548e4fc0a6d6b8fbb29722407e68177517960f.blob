@@ -1,0 +1,17 @@
+# Aborted: ddm_cl3 lambda_2p0, second attempt (APFS tier, co-resident with md3 on Metal)
+
+Launched 2026-09-05T16:14:34Z (launcher counter 908, supervisor pid 19393, trainer pid 19417);
+stopped by ddm_cl3 at 16:16:42Z after 127.9 s (rc=143).
+
+REASON: MAIN issued a BINDING charter correction while this was running -- do NOT run a Metal
+(mps) trainer while md3's 49.6 GiB Metal cell is live.  The original charter line "a 2.4 GiB
+trainer is admitted beside it" was withdrawn: Metal working sets are not RSS, and at 16:12:53Z
+the memory watchdog logged a CRITICAL memory_pressure alarm (compressor 42.4 GiB, growing
+5.2 GiB/s) with a cl3 trainer and md3's cell both on the GPU.  ddm_cl3 now gates the first
+training launch on md3's terminal receipt (.omx/tmp/codex_runs/md3_different_init_DONE.json.done)
+and runs the rungs serially with nothing else on Metal.
+
+Epoch-0 telemetry here is byte-identical to the first (ExFAT) attempt -- bpp 0.00790358228417244,
+estimated model 17,947 B, estimated tokens 116,544 B -- which re-confirms fresh-vs-fresh MPS
+determinism across a relaunch and across volumes.  Nothing here is cited as evidence; it is
+retained only so no bytes are lost.

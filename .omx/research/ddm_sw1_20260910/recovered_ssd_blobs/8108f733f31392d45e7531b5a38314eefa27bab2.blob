@@ -1,0 +1,42 @@
+#!/bin/bash
+# ddm_ane2 STAGE 6 -- the TARGETED cure the sensitivity profiles name.
+#
+# PoseNet: 92.83% of the drift is born in ops 0:18 (the input normalisation).
+#          Hold exactly those at fp32.
+# SegNet:  the drift is distributed, but ops 243:261 carry 33.8% of it -- and
+#          that is precisely why the tail ladder's only knee is at k=64, which is
+#          the first rung whose fp32 tail contains that band.  Hold it alone,
+#          then with the two stem groups, on BOTH inputs.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+E=$OUT/enumerate.json
+GT=experiments/results/mlx_fleet_gt_cache/gt_n600.npz
+GEN=/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/identity_v1/out/0.raw
+mkdir -p $OUT/stage6
+
+echo "=== [1/3] posenet targeted cure, GT frames ==="
+$PY $EXP selective --model posenet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_posenet.npz --raw $GT \
+  --fp32-set g0=0:18 g0g2=0:18,36:54 g0g2g15=0:18,36:54,269:286 g0g12g15=0:18,216:234,269:286 \
+  --modes CPU_AND_NE --reps 20 --eval-pairs 120 \
+  --out-dir $OUT/stage6 --out $OUT/stage6/targeted_posenet_gt_n120.json
+
+echo "=== [2/3] segnet targeted cure, GT frames ==="
+$PY $EXP selective --model segnet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_segnet.npz --raw $GT \
+  --fp32-set g13=243:261 g13stem=0:38,243:261 g13hot=0:38,57:76,133:152,171:189,207:225,243:261 \
+  --modes CPU_AND_NE --reps 20 --eval-pairs 120 \
+  --out-dir $OUT/stage6 --out $OUT/stage6/targeted_segnet_gt_n120.json
+
+echo "=== [3/3] segnet targeted cure, GENERATED decode (the operational input) ==="
+$PY $EXP selective --model segnet --enumerate-json "$E" \
+  --reference $OUT/reference_generated/reference_segnet.npz --raw "$GEN" \
+  --fp32-set g13=243:261 g13stem=0:38,243:261 g13hot=0:38,57:76,133:152,171:189,207:225,243:261 \
+  --modes CPU_AND_NE --reps 20 \
+  --out-dir $OUT/stage6 --out $OUT/stage6/targeted_segnet_generated_n120.json
+
+echo "STAGE6 COMPLETE"

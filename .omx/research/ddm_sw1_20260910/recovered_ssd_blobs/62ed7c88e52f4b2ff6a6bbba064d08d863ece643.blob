@@ -1,0 +1,16 @@
+#!/bin/bash
+# Waits on the COLD sweep receipt (an artifact the sweep itself writes), then runs the whole
+# analysis chain and renders the memo tables.  $0, CPU, nice 19.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+STORE=/Volumes/APDataStore/pact/ddm_md1_micro_macro
+DONE=$STORE/SWEEP_RECEIPT_cold_control_seed_20260902.json
+until [ -f "$DONE" ]; do sleep 30; done
+echo "=== cold receipt present $(date -u +%FT%TZ) ==="
+$PY experiments/ddm_md1_micro_to_macro.py --mode analyze --cell cold_control_seed_20260902 --gt-lineage dali --store "$STORE"
+$PY experiments/ddm_md1_micro_to_macro.py --mode analyze --cell cold_control_seed_20260902 --gt-lineage pyav --store "$STORE"
+$PY experiments/ddm_md1_micro_to_macro.py --mode report --store "$STORE"
+$PY experiments/ddm_md1_micro_to_macro.py --mode tables --store "$STORE" > "$STORE/TABLES_cold_dali.md"
+echo "=== cold analysis done $(date -u +%FT%TZ) ==="
+wc -l "$STORE/TABLES_cold_dali.md"

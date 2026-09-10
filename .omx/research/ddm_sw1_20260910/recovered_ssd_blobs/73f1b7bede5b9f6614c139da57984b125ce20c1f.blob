@@ -1,0 +1,7 @@
+#!/bin/bash
+# Exactly how a fire script consumes the governor, replacing the inline vm_stat arithmetic.
+set -euo pipefail
+PEAK_GIB=${1:-41.5}
+.venv/bin/python tools/cell_admission.py admit --candidate-peak-gib "$PEAK_GIB" || {
+  rc=$?; echo "REFUSE: governor rc=$rc (2=refused, 3=unmeasurable)"; exit "$rc"; }
+echo "ADMITTED — proceed to claims + authorize + launch"

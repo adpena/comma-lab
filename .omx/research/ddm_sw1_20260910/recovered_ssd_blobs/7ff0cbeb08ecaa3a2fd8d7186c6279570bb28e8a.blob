@@ -1,0 +1,8 @@
+#!/bin/bash
+# Artifact-bound waiter: exits when the COLD sweep pass writes its receipt.  Launched through
+# tools/launch_detached_process.py so the fleet watcher fires exactly one notification.
+set -uo pipefail
+DONE=/Volumes/APDataStore/pact/ddm_md1_micro_macro/SWEEP_RECEIPT_cold_control_seed_20260902.json
+until [ -f "$DONE" ]; do sleep 30; done
+echo "COLD SWEEP RECEIPT PRESENT $(date -u +%FT%TZ)"
+wc -l /Volumes/APDataStore/pact/ddm_md1_micro_macro/sweep_rows_*.jsonl

@@ -1,0 +1,47 @@
+#!/bin/bash
+# ddm_fx5: wait for the decode to land, then write the decode-identity receipt.
+set -uo pipefail
+DONE=/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_fx5_decode_r1.done
+INFL=/Volumes/APDataStore/pact/ddm_fx5/decode_r1/inflated
+OUT=/Volumes/APDataStore/pact/ddm_fx5/retained/FX5_DECODE_IDENTITY.json
+for i in $(seq 1 720); do [ -f "$DONE" ] && break; sleep 10; done
+RAW="$INFL/0.raw"
+[ -f "$RAW" ] || RAW="$INFL/.f26_decode_checkpoints/render_cpu_in_progress.raw"
+RAW_SHA=$(shasum -a 256 "$RAW" | cut -d' ' -f1)
+RAW_B=$(stat -f%z "$RAW")
+TOK="$INFL/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+TOK_SHA=$(shasum -a 256 "$TOK" | cut -d' ' -f1)
+/Users/adpena/Projects/pact/.venv/bin/python - "$RAW" "$RAW_SHA" "$RAW_B" "$TOK_SHA" "$OUT" <<'PY'
+import json, sys, pathlib
+raw_path, raw_sha, raw_b, tok_sha, out = sys.argv[1:6]
+base_tok = "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb"
+base_raw = "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7"
+doc = {
+  "schema": "ddm_fx5_decode_identity.v1",
+  "axis": "[macOS-CPU advisory] n600 real-inflate decode identity; no scorer; score_claim false",
+  "score_claim": False,
+  "candidate_archive_sha256": "4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695b79841",
+  "candidate_archive_bytes": 180386,
+  "base_archive_sha256": "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080",
+  "base_archive_bytes": 180456,
+  "decoded_token_field": {
+      "sha256": tok_sha, "expected": base_tok, "identical": tok_sha == base_tok,
+      "note": "the decisive gate: encoder ran Python-19, receiver ran C-19"},
+  "raw_output": {
+      "path": raw_path, "sha256": raw_sha, "bytes": int(raw_b),
+      "expected_sha256": base_raw, "expected_bytes": 3662409600,
+      "identical": raw_sha == base_raw and int(raw_b) == 3662409600},
+  "native_corrector_bound": True,
+  "native_corrector_evidence":
+      "live decode process exported F26_CORRECTOR_NATIVE_LIBRARY=/var/folders/.../tmp.9xuizc1lpL/"
+      "f26_corrector_native.so, compiled by inflate.sh from this tree's 19-member .c; "
+      "native_free_corrector refuses to bind unless SHIPPED_CONFIG matches the compiled 19 families",
+  "host_note":
+      "the render stage stalled in uninterruptible I/O flushing 3.4 GB to a 99%-full SSD; "
+      "a host storage condition, not a candidate property",
+}
+doc["verdict"] = "DECODE_IDENTICAL" if (doc["decoded_token_field"]["identical"] and doc["raw_output"]["identical"]) \
+    else ("TOKEN_IDENTICAL_RAW_PENDING" if doc["decoded_token_field"]["identical"] else "REFUSED")
+pathlib.Path(out).write_text(json.dumps(doc, indent=2, sort_keys=True))
+print(json.dumps(doc, indent=2, sort_keys=True))
+PY

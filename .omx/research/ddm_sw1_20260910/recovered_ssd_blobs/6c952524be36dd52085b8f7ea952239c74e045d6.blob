@@ -1,0 +1,6 @@
+Rate-only: d_seg 0.00020139 and d_pose 6.14e-06 are IDENTICAL to cl2 by construction (lossless recode) and were confirmed on T4. This is not a model change
+and not evidence about any model's quality. It is 4.1 % of the sub-0.12 rate demand. `[contest-CPU]` stays RECORD-WITH-REASON (the 1,800 s inflate timeout;
++0.11 s does not change that). PR #140 still carries afr1's bytes (now four moves behind); a public update is the operator's decision. Order-1 contexts on
+these bodies are CLOSED at formulation scope (context dilution converted 10 B of ~1,139 B of first-order structure); a semi-static or depth-mixing prior
+is untested (rc1 ITEM 1). The seal contract validated custody on an archive the contest path could not decode — three apparatus ITEMs are registered
+(`ddm_seal_contract_gap_inflate_sh_smoke_directive_20260905.md`).
