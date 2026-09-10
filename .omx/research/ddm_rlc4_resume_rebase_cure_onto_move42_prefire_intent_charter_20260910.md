@@ -34,3 +34,22 @@ risk ceiling ≤ 1,260 s, all other intent gates PASS. Conditional at 180,178 B:
 ## Deliverable and final message: as rlc3's charter, plus the serializer rc of the final commit attempt and
 the bundle path. NO dispatch, NO authorization, NO completion (MAIN's). Checkpoint as `ddm_rlc4`. Frontier line
 `composition S 0.1374765052591843 @ 180,238 B [contest-CUDA T4 n600] (move 42)` unchanged.
+
+## OPTIMAL FORM
+- Reference form: rlc1's landed cure (ba0110e15) on move 42's tree + pr12's contract as landed (a47543199);
+  real coder, real n600 parse-back, real smokes — no ledger sums, no fixtures. Every delta vs rlc3's charter is
+  PROCESS only (the continue-on-denial rule); no scope or mechanism reduction.
+- Provenance pins: a47543199 (contract), `.omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json` (record its
+  sha), pr12 memo sha 50d00e3956dc7ae5…, rlc2 STOP memo sha 76ba13cf…, rlc3 charter
+  `.omx/research/ddm_rlc3_resume_rebase_cure_onto_move42_prefire_intent_charter_20260910.md` (record its sha),
+  trace script `experiments/ddm_rlc3_move42_trace.py` (d598ef3b6; record its sha), pointer move 42 d2803c214 /
+  archive f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f.
+
+## Prior negatives accounted (operator 2026-08-15)
+- rlc3: STOPPED at its first serializer commit (Git-object denial, rc 17) — cured above: commit LAST, continue on denial.
+- rlc2 STOP (cycle), ffi1/ffi2 STOPs (clauses) — resolved by the frozen contract; a refusal from the REAL producer
+  is the contract's first real control: report it exactly, do not patch the contract.
+- pr9 condition 1 (stale manifest) — regenerate from outside the tree.
+- rp1 r2 (flag vs constant) — bind base archive/tree by sha in every receipt; sj1's silent revert — the archive
+  must be move 42's bytes + rider, proven by raw identity.
+- dwc1 (gate with no door) — fixtures prove nothing; only the real intent + MAIN's real harvest do.
