@@ -1142,3 +1142,42 @@ eb1's arithmetic, converse direction and ball-volume upper bounds are valid — 
 **What this teaches, at the class level.** "No per-frame fitted table" was the test tc2/tc3/tc4 and MAIN applied; it is not sufficient — a fitted SCALAR (a class id, a row bound chosen by looking at the video) is content too. The first family (astra arms + MAIN) shipped it three times in one night and reviewed it as clean; the second family caught it on the first read of the runtime tree. Rule: every constant in receiver code carries a provenance line (a-priori generic, or counted), audited by the other family before a receiver change is fired.
 
 **Disposition.** (1) Move 41 and tc4's candidate are withdrawn from every packet candidate list; the operator-facing frontier line is move 40 until a rule-118-clean successor lands (the canonical pointer JSON has no disqualification field — cp1 adds one; until then it still lists 41). (2) Cure chartered: the class ids and row bounds move into the counted rider (a few bytes; most of the 79 B survives), the geometry goes fixed-point, tc4's maps run mask-selected to fit the 1,260 s margin; rebuild, revalidate through pr8's checklist, re-fire. (3) rp1's round-2 seal targets move 40's clean receiver. (4) The gestalt's Addendum 21 stands: the field under the three-leg admission moved the pointer four times today with a clean receiver; the receiver-code door is real (79 B measured) and re-enters only counted and timed.
+
+## Addendum 23 (MAIN, 2026-09-10 ~13:40Z) — move 42, and what the timing saga taught about authority
+
+**Move 42 = rp1 round 2: S 0.1374765052591843 @ 180,238 B [contest-CUDA T4 n600]** (d2803c214),
+−1.621e-4 vs move 40 (8.1× the bar), +8.7e-6 above the seal's projection (pose-print class, stated
+before the row). The mechanism is the composition law again, read from the other side: the
+rate-directed token pass did NOT pay on rate (+5 B; the first-order K-curve promised −1,756.6 B and
+the real coder charged +620 B on the full rebased field — the ranking is not a charge, memory
+`first_order_token_price_is_a_ranking_never_a_charge…`); the edits are the FIELD the carrier was
+re-solved on, and the re-solve landed pose below base (4.66e-6 vs 4.887e-6) with seg exactly 0 over
+117,964,800 cells. The gestalt's statement stands: the pointer moves when a leg CHANGES ITS OBJECT
+first (here the field), and the pose re-solve is the leg that then pays. Frame 0 measured inside the
+admission at 0.1× the bar and was not adopted. rp1 also caught, before any heavy step, that its
+n600 acceptance had been measured on move 37's field (a flag and a constant disagreeing silently),
+re-verified on move 40's field in minutes with a 1.0 control group, and lost 361 of 4,503 tokens to the
+base alone.
+
+**The timing saga (dwc1 → pr10 → pr11).** dwc1's decode-wall-clock leg was a gate with no door (no
+producer could write the quiesced count). MAIN's first instrument fixed its rule twice after seeing
+the data; pr10 (sol) refused that and wrote a conservative replacement; frozen and hashed, it then
+refused five cold runs of the move 40 receiver (783–797 s, bit-identical output) — two for our own
+tool activity, three for the PID-1 macOS maintenance pair `dasd`/`syspolicyd` and other Apple daemons
+whose measured effect on the decode pace was ≤ 0.7 %. pr11 (same family) adjudicated on the receipts:
+a bounded burst class for exactly that pair (v3, landed 6a857a1ec, frozen 25d0a778), and T4-DIRECT —
+the candidate's own completed cold n600 contest-T4 decode, hash-bound to the exact archive and runtime,
+is the timing authority with no local denominator; receiver-identical candidates inherit it. Move 40's
+leg is now `t4_direct` (990.054 s); move 42 inherited it and decoded on T4 in 978.1 s. Local
+calibration is SUSPENDED for receivers that cannot inherit (rlc1's cure): their authority is their own
+fire. Law: the second family owns its rule — freeze before the run, send receipts back, never loosen.
+
+**Doors from here (updated).** Seg: 100·d_seg = 0.010637 = 7.7 % of S, the largest lever; sj1 pass 6
+on the move 42 field (renderer boundary jitter at correct tokens). Receiver-code door: rlc1's cure
+(−60 B, counted rider) re-based onto move 42 by rlc2, timing by its own T4 fire. Rate: token flips do
+not pay under the real coder above K≈32 per pair; the lever is representation. Custody: vr8 audits the
+certified MOVEs after rp1 found five 1.83 GB overlays recorded MOVED with only ExFAT stubs (re-render
+reproduced sha 37ea3842…). Sub-0.12 gap: 0.01747651.
+
+verdict_scope: instance — move 42's row and the five move-40 timing runs on this host; the composition
+reading is the same law as Addendum 22, not a new one.
