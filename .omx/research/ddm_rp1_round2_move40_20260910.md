@@ -80,6 +80,43 @@ resolved pose is still above base (encoder written and round-tripped: the shippe
 +44), the three-column pose print (stale / carrier-resolved / frame-0-reselected), the twin
 re-encode of the selected subset against move 40's tail, and the seal.
 
-## 5. Frontier line
+## 5. Decode wall-clock — what this arm can honestly contribute to the budget gate
+
+tc4's row did not score: `inflate.sh` timed out at 1,800 s on the T4, so decode wall-clock is
+now a live gate. **This candidate does not change the receiver** — the stage step ASSERTS the
+staged tree differs from the pointer in exactly `['archive.zip', 'inflate.py']`, the second
+only in its two pins — so its decode work is the pointer's decode work.
+
+Four CPU parse-backs already measured on this same receiver lineage, all with
+`wall_clock_seconds` in their own receipts:
+
+| run | seconds | vs the 1,800 s budget |
+|---|---|---|
+| sj1 pass 2a | **2,101.7** | **OVER** |
+| sj1 pass 3 | 705.7 | under |
+| ddm_rp1 move 39 | 1,036.4 | under |
+| sj1 compose39 (move 40) | 1,047.8 | under |
+
+**Two cautions the budget field has to carry or it will lie.**
+
+1. **A 3× spread on one object.** 705.7 s and 2,101.7 s are the SAME receiver decoding
+   near-identical archives on the same machine. The variance is concurrent load — these runs
+   overlapped 4–6 other shards — not anything about the bytes. A single local timing is
+   therefore not a verdict: a budget field measured under contention refuses valid candidates,
+   and one measured on a quiet machine passes candidates that will not survive a loaded runner.
+   It needs the concurrent-process count beside the seconds, or a quiesced measurement.
+2. **It is the wrong device.** The contest budget is T4 CUDA. This receiver REFUSES the CPU
+   path on purpose — `inflate.sh` raises "requires CUDA inflation on linux-nvidia-t4; the
+   measured CPU path exceeded the 1,800-second contest budget" — which is exactly what this
+   arm's public smoke records as `REACHED_CUDA_GATE` for candidate and frontier alike. So a
+   macOS-CPU parse-back time is an advisory number on a different device, and quoting it
+   against the 1,800 s budget compares two things that are not the same measurement.
+
+What this arm will put in its seal notes is therefore the honest pair: its own parse-back
+seconds WITH the concurrent-shard count, and the paired candidate/frontier public-entrypoint
+outcomes showing both reach the same gate at the same time — never a bare number implying a
+contest-budget verdict this instrument cannot give.
+
+## 6. Frontier line
 
 `ddm_sj1 compose39+rp1 union S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40)
