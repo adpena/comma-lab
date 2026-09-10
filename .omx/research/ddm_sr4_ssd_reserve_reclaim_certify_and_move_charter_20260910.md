@@ -30,9 +30,8 @@ trees and their retained archives/raws EXCEPT to hardlink byte-identical raws wi
 the repo's `.omx/state`. No deletion of any file that lacks a certificate proving deterministic rebuild; no `rm -rf`.
 
 ## OPTIMAL FORM
-- Reference form: the vr8/sr2 certify-and-move machinery and the dwc1/rlc1 hardlink dedup certificates; scope = the two volumes.
-- Provenance pins: `.omx/research/ddm_rlc1_20260910/TWIN_RAW_DEDUP_CERTIFICATE.json` (record sha); `docs/meta_bug_class_catalog.md`
-  #419 row (record sha); `.omx/research/ddm_vr8_20260910/FE1_DISPOSITION.json` (record sha).
+- Reference form: the vr8/sr2 certify-and-move machinery and the dwc1/rlc1 hardlink dedup certificates; scope = the two SSD volumes; no mechanism delta (certify-or-block, hash the destination, never delete without a certificate).
+- Provenance pins (sha256 prefixes): `.omx/research/ddm_rlc1_20260910/TWIN_RAW_DEDUP_CERTIFICATE.json` 7d91733b0673e1f4…; `docs/meta_bug_class_catalog.md` a48c8bd13c6d4f6a… (#419 STRICT deletion guard); `.omx/research/ddm_vr8_20260910/FE1_DISPOSITION.json` 7be3defbd64d8135…; pointer move 43 commit 48109233e / archive 7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e.
 
 ## Prior negatives accounted (operator 2026-08-15)
 - vr7 deleted 11 moved payloads behind live redirects (27 GB) — hash the destination, never trust a MOVE label.
