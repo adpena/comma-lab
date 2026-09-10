@@ -105,14 +105,23 @@ def class_mismatch_table(target: np.ndarray, generated: np.ndarray) -> dict[str,
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--render", type=Path, default=TEACHER_PATH,
+                        help="generated field to code the exact residual from")
+    parser.add_argument("--render-sha256", type=str, default="",
+                        help="expected sha of --render; defaults to the K=8 teacher's sha")
+    parser.add_argument("--render-packet-bytes", type=int, default=TEACHER_PACKET_BYTES,
+                        help="the counted packet that produced --render")
     args = parser.parse_args(argv)
 
     started = time.monotonic()
     root: Path = args.output_dir
     root.mkdir(parents=True, exist_ok=True)
 
+    render_path: Path = args.render
+    expected = args.render_sha256 or (
+        TEACHER_SHA256 if render_path == TEACHER_PATH else sha256_file(render_path))
     target = load_verified(FIELD_PATH, FIELD_SHA256)
-    teacher = load_verified(TEACHER_PATH, TEACHER_SHA256)
+    teacher = load_verified(render_path, expected)
 
     table = class_mismatch_table(target, teacher)
     mismatches = table["total"]
@@ -153,8 +162,8 @@ def main(argv: list[str] | None = None) -> int:
         "research_only": True,
         "promotable": False,
         "field": file_fact(FIELD_PATH),
-        "teacher_render": file_fact(TEACHER_PATH),
-        "teacher_packet_bytes": TEACHER_PACKET_BYTES,
+        "teacher_render": file_fact(render_path),
+        "teacher_packet_bytes": args.render_packet_bytes,
         "mismatch_table": table,
         "residual_rows": rows,
         "best_order": best["order"],
@@ -168,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         - GF1_BYTES_PER_MISMATCH * mismatches,
         "real_packet_cap_at_exact_teacher_identity": REPLACEMENT_INTEGER_CAP
         - best["coded_bytes"],
-        "teacher_packet_plus_real_residual": TEACHER_PACKET_BYTES + best["coded_bytes"],
+        "teacher_packet_plus_real_residual": args.render_packet_bytes + best["coded_bytes"],
         "mismatch_budget_at_measured_rate_per_packet_bytes": {
             str(packet): math.floor((REPLACEMENT_INTEGER_CAP - packet) / measured_rate)
             for packet in (30_000, 40_000, 50_000, 60_000, 68_322)
