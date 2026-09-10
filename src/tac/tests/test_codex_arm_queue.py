@@ -1280,3 +1280,19 @@ def test_add_refuses_a_reused_arm_id_unless_deliberate(q, tmp_path):
         ".omx/research/ddm_eb1_buried_eureka_sweep_20260731.md",
         ".omx/research/charters/ddm_eb1_new_thing_20260910.md",
     ]
+
+
+def test_add_refuses_an_empty_or_skeletal_charter(q, tmp_path, monkeypatch, capsys):
+    # 2026-09-10: an arm was spawned on a 0-byte charter; the lint saw no build tokens.
+    charters = tmp_path / ".omx" / "research" / "charters"
+    charters.mkdir(parents=True)
+    empty = charters / "ddm_zq9_empty_20260910.md"
+    empty.write_text("")
+    monkeypatch.setattr(q, "_REPO", tmp_path)
+    monkeypatch.setattr(q, "charter_file_path", lambda prompt: (Path(prompt), None))
+    monkeypatch.setattr(q, "_is_managed_charter", lambda p: False)
+    args = type("A", (), {"name": "ddm_zq9_empty", "prompt": str(empty), "rank": 0,
+                          "owns_scorer": False, "note": "", "effort": "high", "model": None,
+                          "allow_id_reuse": False})()
+    assert q.cmd_add(args) == 6
+    assert "empty or skeletal" in capsys.readouterr().err

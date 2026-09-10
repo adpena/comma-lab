@@ -2276,6 +2276,9 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
     return problems
 
 
+#: The EMPTY class only (a 0-byte charter was spawned 2026-09-10); structure is the lint's job.
+MIN_CHARTER_BYTES = 1
+
 _ARM_ID_RE = re.compile(r"^ddm_([a-z]+[0-9]+[a-z]?)_")
 
 
@@ -2308,6 +2311,21 @@ def cmd_add(args) -> int:
         print(f"REFUSED {args.name}: {refusal}", file=sys.stderr)
         return 2
     assert prompt_file is not None
+    # An EMPTY or skeletal charter is not a charter (MAIN spawned an arm on a 0-byte
+    # file 2026-09-10 after an early-exit id check skipped the heredoc; the lint
+    # passed it because an empty file matches no build/race token). Refuse.
+    try:
+        charter_text = prompt_file.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        print(f"REFUSED {args.name}: charter unreadable: {exc}", file=sys.stderr)
+        return 2
+    if len(charter_text.strip()) < MIN_CHARTER_BYTES:
+        print(
+            f"REFUSED {args.name}: charter is empty or skeletal "
+            f"({len(charter_text.strip())} B; needs >= {MIN_CHARTER_BYTES} B of charter text)",
+            file=sys.stderr,
+        )
+        return 6
     collisions = arm_id_collisions(args.name, prompt_file)
     if collisions and not getattr(args, "allow_id_reuse", False):
         print(
