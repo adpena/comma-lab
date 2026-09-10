@@ -1,0 +1,52 @@
+#!/bin/bash
+# ddm_ane2 STAGE 2 -- the MIRROR of the split ladder plus its controls.
+#
+# The stage-1 ladder measured that an fp32 TAIL does not cure either scorer and
+# past k=32 makes PoseNet worse.  If the drift is born EARLY, the cure is the
+# mirror: hold the FIRST k ops at fp32 and leave the rest fp16 on the ANE.
+# `selective` takes arbitrary ordinal sets, so the mirror ladder needs no new
+# code path -- only a different set.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+E="$OUT/enumerate.json"
+RAW=experiments/results/mlx_fleet_gt_cache/gt_n600.npz
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+
+echo "=== [1/3] posenet HEAD-fp32 mirror ladder ==="
+$PY $EXP selective --model posenet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_posenet.npz --raw $RAW \
+  --fp32-set hd1=0:1 hd2=0:2 hd4=0:4 hd8=0:8 hd16=0:16 hd32=0:32 hd64=0:64 hd128=0:128 \
+  --modes CPU_AND_NE --reps 20 --eval-pairs 120 \
+  --out-dir $OUT/stage2 --out $OUT/stage2/mirror_posenet_n120.json
+
+echo "=== [2/3] segnet HEAD-fp32 mirror ladder + SE blocks ==="
+$PY $EXP selective --model segnet --enumerate-json "$E" \
+  --reference $OUT/reference/reference_segnet.npz --raw $RAW \
+  --fp32-set hd1=0:1 hd2=0:2 hd4=0:4 hd8=0:8 hd16=0:16 hd32=0:32 hd64=0:64 hd128=0:128 \
+  --modes CPU_AND_NE --reps 20 --eval-pairs 120 \
+  --out-dir $OUT/stage2 --out $OUT/stage2/mirror_segnet_n120.json
+
+echo "=== [3/5] compute-unit control on the all-fp32 endpoints ==="
+$PY $EXP units --model posenet --package $OUT/screen/posenet_ane_split_k286.mlpackage \
+  --reference $OUT/reference/reference_posenet.npz --raw $RAW \
+  --modes CPU_ONLY CPU_AND_NE ALL CPU_AND_GPU --eval-pairs 120 \
+  --out $OUT/stage2/units_posenet_fp32.json
+$PY $EXP units --model segnet --package $OUT/screen/segnet_ane_split_k297.mlpackage \
+  --reference $OUT/reference/reference_segnet.npz --raw $RAW \
+  --modes CPU_ONLY CPU_AND_NE ALL CPU_AND_GPU --eval-pairs 120 \
+  --out $OUT/stage2/units_segnet_fp32.json
+
+echo "=== [4/5] compute-unit control on the all-fp16 endpoints ==="
+$PY $EXP units --model posenet --package $OUT/screen/posenet_ane_split_k0.mlpackage \
+  --reference $OUT/reference/reference_posenet.npz --raw $RAW \
+  --modes CPU_ONLY CPU_AND_NE --eval-pairs 120 \
+  --out $OUT/stage2/units_posenet_fp16.json
+
+echo "=== [5/5] cast census over every stage-1 rung ==="
+$PY $EXP castcount --packages $OUT/screen/*.mlpackage \
+  --out $OUT/stage2/castcount.json
+
+echo "STAGE2 COMPLETE"

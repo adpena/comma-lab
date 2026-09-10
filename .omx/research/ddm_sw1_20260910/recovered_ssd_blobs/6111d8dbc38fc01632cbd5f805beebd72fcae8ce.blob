@@ -1,0 +1,27 @@
+#!/bin/bash
+# ddm_md3 STEP 2a — the FREE ceiling gate.  md1's instrument UNCHANGED, --max-step 0, once per
+# candidate STARTING STATE.  md1's sweep reads exactly one config field
+# (config["initial_state"]["path"], ddm_md1_micro_to_macro.py:431), so each probe config swaps only
+# the start and measures that start's step-0 WRONG POOL in one forward pass.
+# If starts far apart in weight space paint the same pool, the pool is data-anchored and no Metal
+# cell can move it.  $0, CPU only, single process, sequential.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+S=/Volumes/APDataStore/pact/ddm_md3_different_initialisation
+PROBE_STORE=$S/step0_probes
+# run_root only supplies available_steps(); with --max-step 0 no checkpoint is read from it.
+RUN=/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep/ng5_tau_band_x_continuous_objective/runs/seed_20260902_tau_band_x_continuous_objective_control_native100
+
+CANDS="r10_live r9_shadow r8_shadow r7_shadow r6_shadow r10_periodic_000033_shadow r10_periodic_001650_shadow r10_periodic_004950_shadow r10_periodic_009999_shadow root_init_seed_20260827 root_init_seed_20260905"
+
+for C in $CANDS; do
+  echo "=== md3 step0 probe: $C $(date -u +%FT%TZ) ==="
+  $PY experiments/ddm_md1_micro_to_macro.py --mode sweep \
+      --cell "md3_start_${C}" \
+      --run-root "$RUN" \
+      --config "$S/probe_configs/md3_${C}_probe.json" \
+      --store "$PROBE_STORE" --threads 4 --max-step 0
+  echo "probe $C rc=$? $(date -u +%FT%TZ)"
+done
+echo "=== md3 step0 probe driver done $(date -u +%FT%TZ) ==="

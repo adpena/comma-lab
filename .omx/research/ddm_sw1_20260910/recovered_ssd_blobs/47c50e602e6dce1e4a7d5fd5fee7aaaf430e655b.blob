@@ -1,0 +1,7 @@
+The pose carrier's 600 × 12 coefficients were re-quantized onto a lattice coarsened ×16 (from the shipped int12 range) and RE-SOLVED for every pair with the
+full n600 damped Gauss–Newton (`ddm_jg5.refine_pair`, the fs2 solver verbatim) against the frozen PoseNet on the shipped renders; the twelve basis atoms are
+bit-identical to the shipped carrier. This rung SUPERSEDES the ×8 rung (29th move) on the same coefficient block. The first rung where the pose leg turned:
+d_pose 5.58e-6 → 5.77e-6 (+3.4 %, +1.86e-4 S) against −790 B (−5.26e-4 S) — net −3.99e-4 S; the lattice law's knee is between ×8 and ×16 on the pose leg while
+the byte leg still pays. Token tail, model sections (rc1's adaptive coding) and basis are byte-identical to the 27th-move archive; only the carrier coefficient
+block moved. Seal `SEAL_ddm_pc1_lattice_x16_resolved_on_rc1.json`, admit bar derived from the 29th-move pointer; memo `ddm_pc1_pose_carrier_efficiency_20260905.md`;
+law `pose_carrier_basis_rate_fidelity_exchange_v1`.

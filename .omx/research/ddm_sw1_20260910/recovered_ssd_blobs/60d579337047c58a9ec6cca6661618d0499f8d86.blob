@@ -1,0 +1,140 @@
+"""ddm_rw1 probe: dump the live archive's semantic section geometry.
+
+Read-only against the live pointer tree.  research_only.
+"""
+from __future__ import annotations
+
+import json
+import struct
+import sys
+from pathlib import Path
+
+LIVE = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/"
+    "candidate_pass3/candidate_runtime"
+)
+sys.path.insert(0, str(LIVE))
+sys.path.insert(0, str(LIVE / "cpr1"))
+
+import brotli  # noqa: E402
+import torch  # noqa: E402
+
+from runtime.residual_archive import (  # noqa: E402
+    RX1_MAGIC,
+    RX1_MODEL_HEADER,
+    read_residual_archive,
+)
+
+import inflate as rend  # cpr1/inflate.py  # noqa: E402
+from rc1_adaptive_model_sections import (  # noqa: E402
+    SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC,
+)
+from rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic  # noqa: E402
+
+
+def main() -> None:
+    archive = LIVE / "archive.zip"
+    parts = read_residual_archive(archive)
+    import zipfile
+
+    outer = zipfile.ZipFile(archive).read("p")
+    hdr = RX1_MODEL_HEADER.unpack_from(outer)
+    (_magic, version, codec, table_mode, reserved, hpac_b, sem_b, car_b) = hdr
+
+    sem_body = parts.semantic_blob
+    out = {
+        "archive_bytes": archive.stat().st_size,
+        "outer_bytes": len(outer),
+        "rx1": {
+            "version": version,
+            "codec": codec,
+            "table_mode": table_mode,
+            "reserved": reserved,
+            "hpac_compressed_bytes": hpac_b,
+            "semantic_compressed_bytes": sem_b,
+            "carrier_compressed_bytes": car_b,
+        },
+        "semantic_body_bytes": len(sem_body),
+        "semantic_body_magic": sem_body[:4].decode("latin1"),
+    }
+    body = sem_body
+    if body.startswith(RC1_SEMANTIC_MAGIC):
+        tmpl = rend.SemanticTokenRenderer(96).state_dict()
+        restored = restore_rc1_semantic(body, tmpl)
+        out["rc1_restored_bytes"] = len(restored)
+        out["rc1_restored_magic"] = restored[:4].decode("latin1")
+        body = restored
+    if body.startswith(b"SM3R"):
+        version_b, mode, keep_percent, reserved_b = body[4:8]
+        out["sm3r"] = {
+            "version": version_b,
+            "mode": mode,
+            "keep_percent": keep_percent,
+            "reserved": reserved_b,
+            "selection_mask": struct.unpack_from("<H", body, 8)[0],
+        }
+        if mode == 6:
+            names = [
+                n for n, v in rend.SemanticTokenRenderer(96).state_dict().items()
+                if v.ndim >= 2
+            ]
+            depth_bytes = (len(names) + 1) // 2
+            packed = body[10 : 10 + depth_bytes]
+            depths = []
+            for byte in packed:
+                depths.append(byte & 0xF)
+                depths.append(byte >> 4)
+            out["sm3r"]["depths"] = dict(zip(names, depths[: len(names)], strict=True))
+
+    # geometry of the renderer
+    model = rend.SemanticTokenRenderer(96)
+    geom = {}
+    for name, value in model.state_dict().items():
+        geom[name] = {
+            "shape": list(value.shape),
+            "numel": int(value.numel()),
+            "ndim": int(value.ndim),
+        }
+    out["renderer_geometry"] = geom
+    total = sum(v["numel"] for v in geom.values())
+    out["renderer_total_params"] = total
+
+    # brotli re-compression of the CURRENT body at the shipped setting: recover q/lgwin
+    best = None
+    for q in (9, 10, 11):
+        for lgwin in (16, 18, 20, 22, 24):
+            enc = brotli.compress(sem_body, quality=q, lgwin=lgwin)
+            if best is None or len(enc) < best[0]:
+                best = (len(enc), q, lgwin)
+            if len(enc) == sem_b:
+                out.setdefault("recompress_matches", []).append(
+                    {"q": q, "lgwin": lgwin, "bytes": len(enc)}
+                )
+    out["recompress_best"] = {"bytes": best[0], "q": best[1], "lgwin": best[2]}
+
+    # decode the actual weights
+    from runtime.carrier_repack import split_frame0_selector_carrier
+    from runtime.carrier_repack import materialize_cpr1
+
+    carrier_blob, selector_blob = split_frame0_selector_carrier(parts.carrier_blob)
+    canonical_carrier = materialize_cpr1(carrier_blob, rend)
+    semantic_pose = (
+        struct.pack("<II", 40_252, len(canonical_carrier))
+        + bytes(40_252)
+        + canonical_carrier
+    )
+    _, basis, coefficients = rend.unpack_semantic_pose(semantic_pose)
+    out["carrier_shapes"] = {
+        "basis": list(basis.shape),
+        "coefficients": list(coefficients.shape),
+        "carrier_blob_bytes": len(parts.carrier_blob),
+        "canonical_carrier_bytes": len(canonical_carrier),
+        "selector_blob_bytes": len(selector_blob) if selector_blob else 0,
+    }
+    out["token_stream_bytes"] = len(parts.token_stream)
+    out["hpac_blob_bytes"] = len(parts.hpac_blob)
+    print(json.dumps(out, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

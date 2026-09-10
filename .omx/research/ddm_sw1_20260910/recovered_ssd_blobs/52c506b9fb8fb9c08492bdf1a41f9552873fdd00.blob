@@ -1,0 +1,45 @@
+#!/bin/bash
+# ddm_ane2 STAGE 9 -- the conversion-path defect, isolated inside one instrument.
+#
+# Stage 7 measured ane1's own fp32 package at self-MSE 2.448e-12 on THIS arm's
+# GT reference, against 3.835e-06 for this arm's all-fp32 ladder endpoint on the
+# same frames: 1.57 MILLION x, with the ComputeUnit request already ruled out.
+# The remaining difference is the conversion CALL.  This builds both endpoints
+# both ways -- FP16ComputePrecision(op_selector) and a plain compute_precision
+# enum -- and measures them, so the artifact is attributed rather than argued.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+PY=.venv_executorch_spike/bin/python
+export PYTHONPATH=src:upstream
+EXP=experiments/ddm_ane2_engineer_precision_drift.py
+GT=experiments/results/mlx_fleet_gt_cache/gt_n600.npz
+GEN=/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/identity_v1/out/0.raw
+mkdir -p $OUT/stage9
+
+echo "=== [1/3] posenet: selector vs plain, both precisions, GT ==="
+$PY $EXP refconvert --model posenet --enumerate-json $OUT/enumerate.json \
+  --reference $OUT/reference/reference_posenet.npz --raw $GT \
+  --precisions fp32 fp16 --compute-units CPU_ONLY --eval-pairs 120 \
+  --out $OUT/stage9/refconvert_posenet_gt.json
+
+echo "=== [2/3] segnet: selector vs plain, both precisions, GT ==="
+$PY $EXP refconvert --model segnet --enumerate-json $OUT/enumerate.json \
+  --reference $OUT/reference/reference_segnet.npz --raw $GT \
+  --precisions fp32 fp16 --compute-units CPU_ONLY --eval-pairs 120 \
+  --out $OUT/stage9/refconvert_segnet_gt.json
+
+echo "=== [3/3] segnet: selector vs plain on the GENERATED decode (where the bar is close) ==="
+$PY $EXP refconvert --model segnet --enumerate-json $OUT/enumerate.json \
+  --reference $OUT/reference_generated/reference_segnet.npz --raw "$GEN" \
+  --precisions fp32 --compute-units CPU_ONLY \
+  --out $OUT/stage9/refconvert_segnet_generated.json
+
+echo "=== cast + segment census on ane1's packages, for the structural diff ==="
+A=/Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/mlpackages
+$PY $EXP castcount --packages $A/posenet_b1_fp32.mlpackage $A/posenet_b1_fp16.mlpackage \
+  $A/segnet_b1_fp32.mlpackage $A/segnet_b1_fp16.mlpackage \
+  $OUT/stage9/posenet_refconv_selector_fp32.mlpackage $OUT/stage9/posenet_refconv_plain_fp32.mlpackage \
+  --out $OUT/stage9/castcount_ane1_vs_ane2.json
+
+echo "STAGE9 COMPLETE"

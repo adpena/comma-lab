@@ -1,0 +1,27 @@
+#!/bin/bash
+# ddm_ane2 STAGE 4 -- replay pr1's 39-point selector sweep on the ONE pose backend
+# that is admissible.
+#
+# ane1 replayed the sweep on `ane_fp16_screen` and measured it at CHANCE (4/39).
+# It never replayed `coreml_cpu_fp32`, the backend it recommended -- so the
+# recommendation was never tested on the thing the sweep actually does (RANK).
+# This closes that gap.  Same 39 pairs, same runtime, all 8 modes confirmed.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_ane2_precision
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+PAIRS="5 33 70 71 77 85 95 161 173 175 185 186 198 221 259 262 279 289 340 372 381 382 405 417 419 436 450 479 488 504 514 518 541 542 547 555 582 585 586"
+mkdir -p "$OUT/replay"
+PYTHONPATH=src .venv_executorch_spike/bin/python -u \
+  experiments/ddm_pr1_pose_resolve_on_renderer_change.py selector \
+  --runtime "$STORE/runtime_afr1" \
+  --gt-cache /Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt \
+  --renderer /Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/archive.zip \
+  --tokens /Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8 \
+  --pairs-list $PAIRS \
+  --threads 4 --label ane2_selector_replay_coreml_cpu_fp32_validate39 \
+  --scorer-backend coreml_cpu_fp32 \
+  --pose-mlpackage /Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/mlpackages/posenet_b1_fp32.mlpackage \
+  --confirm-all-modes \
+  --out "$OUT/replay/ane2_selector_replay_coreml_cpu_fp32_validate39.json"
+echo "STAGE4 COMPLETE"

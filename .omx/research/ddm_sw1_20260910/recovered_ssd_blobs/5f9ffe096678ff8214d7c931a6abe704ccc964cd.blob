@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+REPO=/Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_sd1_surrogate_decoupling
+RUNS=/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure/runs/seed_20260902
+for CELL in control_native100 treatment_zero_native; do
+  "$REPO/.venv/bin/python" "$REPO/experiments/ddm_sd1_surrogate_exact_map.py" \
+    --run-root "$RUNS/$CELL" \
+    --cell-id "$CELL" \
+    --steps 0 1000 2000 3000 4000 5000 \
+    --store "$STORE/measure" \
+    --retain-fields-pairs 4 \
+    --min-flips-for-spread 1000 \
+    --threads 4
+done

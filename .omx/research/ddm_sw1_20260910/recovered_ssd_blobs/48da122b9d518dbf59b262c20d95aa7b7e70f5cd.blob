@@ -1,0 +1,33 @@
+import json, sys, numpy as np, torch, importlib.util
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('wd4', 'experiments/ddm_wd4_warm_lineage_width.py')
+wd4 = importlib.util.module_from_spec(spec); spec.loader.exec_module(wd4)
+result = json.loads(Path('/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/RESULT.json').read_text())
+packet = Path(result['gate_candidate']['payloads']['packet']['path']).read_bytes()
+model = wd4.receiver.unpack_student(packet)
+dev = torch.device('mps'); torch.manual_seed(wd4.SEED); np.random.seed(wd4.SEED)
+torch.use_deterministic_algorithms(True)
+model.to(dev).train()
+tokens = wd4._load_tokens(); pid = wd4.stratified_pair_ids()[0]
+tok = tokens[pid:pid+1].long().to(dev); idx = torch.tensor([pid], device=dev)
+raw = np.memmap(wd4.FX5_RAW, mode='r', dtype=np.uint8, shape=(1200, wd4.receiver.CAMERA_H, wd4.receiver.CAMERA_W, 3))
+tc = torch.from_numpy(np.asarray(raw[2*pid+1]).copy()).permute(2,0,1)[None].float()
+tn = torch.nn.functional.interpolate(tc, size=(wd4.receiver.EVAL_H, wd4.receiver.EVAL_W), mode='bilinear', align_corners=False).to(dev)
+fq = wd4.receiver.fake_quantize_state(model)
+badq = [n for n,p in fq.items() if not torch.isfinite(p).all()]
+print('MPS fake-quant nonfinite:', badq or 'NONE', flush=True)
+out = torch.func.functional_call(model, fq, (tok, idx))
+print('MPS forward finite:', bool(torch.isfinite(out).all()), float(out.min()), float(out.max()), flush=True)
+loss = ((out - tn)/255.0).square().mean()
+print('MPS loss:', float(loss), flush=True)
+opt = torch.optim.AdamW(model.parameters(), lr=2e-7, weight_decay=0.0)
+opt.zero_grad(set_to_none=True); loss.backward()
+gbad = [n for n,p in model.named_parameters() if p.grad is not None and not torch.isfinite(p.grad).all()]
+print('MPS grad nonfinite:', gbad[:4] or 'NONE', flush=True)
+opt.step()
+pbad = [n for n,p in model.named_parameters() if not torch.isfinite(p).all()]
+print('MPS post-step param nonfinite:', pbad[:4] or 'NONE', flush=True)
+fq2 = wd4.receiver.fake_quantize_state(model)
+out2 = torch.func.functional_call(model, fq2, (tok, idx))
+loss2 = ((out2 - tn)/255.0).square().mean()
+print('MPS step-2 loss:', float(loss2), flush=True)

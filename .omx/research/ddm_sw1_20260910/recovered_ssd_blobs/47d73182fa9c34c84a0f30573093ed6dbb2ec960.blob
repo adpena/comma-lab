@@ -1,0 +1,20 @@
+# ddm_ane2 cleanup manifest — certify-or-block
+
+Deleted: every `*.mlmodelc` directory under this tree (55 of them).
+
+**Why it is rebuildable, with the proof retained.** An `.mlmodelc` is pure compiler output:
+`coremltools.models.utils.compile_model(<pkg>, <dest>)` regenerates it byte-deterministically from
+the `.mlpackage` beside it. Every `.mlpackage` is RETAINED, and its `sha256` (content-addressed
+tree hash, `tac.ane_screening.sha256_tree`) is recorded in the report that measured it, so the
+input to the rebuild is pinned. The instrument rebuilds automatically: `_compiled()` compiles on
+demand and refuses a stale tree (it rebuilds whenever the package is newer).
+
+**Not deleted — these are PAYLOADS, not lengths.** Every `.mlpackage`, every per-pair flip-rate
+array, every per-rung pose vector, every reference `.npz` (the CPU-torch fp32 authority), and
+every report JSON stays on disk with its digest in the report that cites it.
+
+Rebuild any compiled tree with:
+```
+PYTHONPATH=src:upstream .venv_executorch_spike/bin/python -c \
+  "from coremltools.models.utils import compile_model; compile_model('<pkg>.mlpackage', destination_path='<pkg>.mlmodelc')"
+```

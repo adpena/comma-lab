@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+STORE=/Volumes/APDataStore/pact/ddm_pr1_pose_resolve
+DALI=/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt
+TOK=/Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/inputs/tokens.u8
+BASE_R=/Volumes/VertigoDataTier/pact/ddm_g8s_single_run_reproof/store_v2/retained/archive.zip
+CAND_R=/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune/retained/ft1_step600_semantic_section.bin
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py measure \
+  --runtime "$STORE/runtime_afr1" --gt-cache "$DALI" --renderer "$BASE_R" --tokens "$TOK" \
+  --pairs 600 --batch-size 8 --threads 4 --label base_shipped_codes \
+  --out "$STORE/retained/measure_base_shipped_codes_n600.json"
+.venv/bin/python -u experiments/ddm_pr1_pose_resolve_on_renderer_change.py measure \
+  --runtime "$STORE/runtime_afr1" --gt-cache "$DALI" --renderer "$CAND_R" --tokens "$TOK" \
+  --pairs 600 --batch-size 8 --threads 4 --label cand_step600_stale_carrier \
+  --out "$STORE/retained/measure_cand_step600_stale_carrier_n600.json"
+echo PR1_MEASURES_PRE_DONE
