@@ -1,0 +1,94 @@
+{
+  "status": "BLOCKED_CHARTER_STOP_RULE",
+  "axis": "[macOS-CPU scorer-free patch preflight]",
+  "timestamp_utc": "2026-09-10T10:03:20.531074+00:00",
+  "head": "6515f94e3caa17da9b9b74492c648c05baef843f",
+  "patch_sha256": "ea104296ba676338472bb884b0356bb88c44e1da122d2eb68e4d6e645d2e6c92",
+  "patch_file_count": 21,
+  "go_file_present": false,
+  "additional_code_conflicts": [
+    "src/tac/candidate_seal.py:1413",
+    "experiments/ddm_vr3_certified_raw_reclaim.py:19"
+  ],
+  "existing_new_files": [
+    {
+      "path": ".omx/research/ddm_mv1_moved_manifest_resolution_20260910.md",
+      "identical_to_patch": true,
+      "patch_sha256": "29b152110e749a87aa67b8ccb4a2bcd897a54f7bd547df0b7f8ef7ec3a00b73c",
+      "current_sha256": "29b152110e749a87aa67b8ccb4a2bcd897a54f7bd547df0b7f8ef7ec3a00b73c"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/census.json",
+      "identical_to_patch": true,
+      "patch_sha256": "6f923b1cbde2d3e2e761b9f61545db8f0edd5407412846044ffe8188071f0d02",
+      "current_sha256": "6f923b1cbde2d3e2e761b9f61545db8f0edd5407412846044ffe8188071f0d02"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/ruff.json",
+      "identical_to_patch": true,
+      "patch_sha256": "d2d3d8bf8d244ace808b0e0f65ee9478e45b559242437e83ea50fab8fc8ce9d3",
+      "current_sha256": "d2d3d8bf8d244ace808b0e0f65ee9478e45b559242437e83ea50fab8fc8ce9d3"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/review_pass1.json",
+      "identical_to_patch": true,
+      "patch_sha256": "693054de35a7eb054fb03cb84e65df3b0067c517644396cf9a4a29625e6b6add",
+      "current_sha256": "693054de35a7eb054fb03cb84e65df3b0067c517644396cf9a4a29625e6b6add"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/review_pass2.json",
+      "identical_to_patch": true,
+      "patch_sha256": "9f99a9ca3cb483a1ce14cc846672c5d365a9a0508ecae23d38a9e3712e66a36d",
+      "current_sha256": "9f99a9ca3cb483a1ce14cc846672c5d365a9a0508ecae23d38a9e3712e66a36d"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/review_tracker_pass1.log",
+      "identical_to_patch": true,
+      "patch_sha256": "ffd415eed1e75c0c8580e618545d92edddb2302b87a428856fdc8d7c48e403b3",
+      "current_sha256": "ffd415eed1e75c0c8580e618545d92edddb2302b87a428856fdc8d7c48e403b3"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/review_tracker_pass2.log",
+      "identical_to_patch": true,
+      "patch_sha256": "4a1c970b73e6ca11355581d6b4cd72723d8afd04ccf80d26e8e37f4b3f2f4d10",
+      "current_sha256": "4a1c970b73e6ca11355581d6b4cd72723d8afd04ccf80d26e8e37f4b3f2f4d10"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/pytest.log",
+      "identical_to_patch": true,
+      "patch_sha256": "ae609ba9177e9d2077fbc554c74e71e6d93572671eb190adb36ea95cdb1dd67d",
+      "current_sha256": "ae609ba9177e9d2077fbc554c74e71e6d93572671eb190adb36ea95cdb1dd67d"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/final_real_resolution.json",
+      "identical_to_patch": true,
+      "patch_sha256": "b5789bbf42711413e17fd48a209f1620f891d25285c24cc9f88bb55fe8a9ad37",
+      "current_sha256": "b5789bbf42711413e17fd48a209f1620f891d25285c24cc9f88bb55fe8a9ad37"
+    },
+    {
+      "path": ".omx/research/ddm_mv1_20260910/equations_recall.json",
+      "identical_to_patch": true,
+      "patch_sha256": "bb00056c8616352daff16d6fd8303d9d694dc7d1b7846b1c24b0fe91eecf659b",
+      "current_sha256": "bb00056c8616352daff16d6fd8303d9d694dc7d1b7846b1c24b0fe91eecf659b"
+    }
+  ],
+  "patch_applied": false,
+  "catalog_number_claimed": null,
+  "commit_sha": null,
+  "tests": {
+    "passed": 0,
+    "failed": 0,
+    "status": "NOT_RUN_STOP_BEFORE_APPLY"
+  },
+  "ruff": "NOT_RUN",
+  "queue_marked_landed": false,
+  "followups": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mv2_20260910/BLOCKED.json",
+      "action": "Issue a revised landing charter or refreshed patch covering the candidate_seal and vr3 conflicts, preserving intervening changes.",
+      "fire_trigger": "MAIN harvests this blocker; recheck rp1 GO absence before any authorized landing."
+    }
+  ]
+}

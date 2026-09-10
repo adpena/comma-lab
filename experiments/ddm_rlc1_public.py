@@ -77,11 +77,13 @@ def main():
     parser.add_argument("--resume-from", type=Path, required=True)
     parser.add_argument("--threads", type=int, choices=(1, 4), required=True)
     parser.add_argument("--stop-after", type=int, default=600)
+    parser.add_argument("--generation", default="g2",
+                        help="attempt generation suffix; a new generation re-times the CURRENT tree cold (g3 = after the 2026-09-10 manifest refresh)")
     args = parser.parse_args()
     if args.resume_from.resolve() != ROOT.resolve() or not 0 < args.stop_after <= 600:
         raise ValueError("wrong public proof root/boundary")
     runtime = ROOT / "candidate_runtime"
-    work = ROOT / f"public_threads{args.threads}_g2"
+    work = ROOT / f"public_threads{args.threads}_{args.generation}"
     for name in ("data", "output", "scratch", "frame_checkpoints"):
         (work / name).mkdir(parents=True, exist_ok=True)
     archive = fact(runtime / "archive.zip")
@@ -103,7 +105,13 @@ def main():
             raise ValueError("completed raw custody drift")
         print(json.dumps(result), flush=True)
         return
-    used = sum(p.stat().st_size for p in ROOT.rglob("*") if p.is_file())
+    seen, used = set(), 0  # count hardlinked payloads once (device, inode), as the dwc1 store does
+    for p in ROOT.rglob("*"):
+        if p.is_file():
+            st = p.stat()
+            if (st.st_dev, st.st_ino) not in seen:
+                seen.add((st.st_dev, st.st_ino))
+                used += st.st_size
     existing_raw = work / "output/0.raw"
     if existing_raw.exists():
         raise ValueError("raw without completed receipt: preserve; recover receipt without rerendering")

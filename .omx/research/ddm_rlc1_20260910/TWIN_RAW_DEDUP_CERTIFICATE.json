@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_rlc1.twin_raw_dedup_certificate.v1",
+  "what": "public_threads1_g2/output/0.raw and public_threads4_g2/output/0.raw replaced by hardlinks to the byte-identical retained move 40 raw (dwc1 store)",
+  "sha256": "c5a7986cf3f16360a0ef5f197ad4b5cc4cdf4c143f0c8a4319460476fc986ea5",
+  "bytes": 3662409600,
+  "inode": 4936445,
+  "reason": "the rlc1 producer's 8 GiB store cap counted three identical 3.66 GB raws; unique-inode accounting (producer patched) admits the g3 timing run; no payload path lost, every path still serves the same bytes",
+  "verified_sha256_before_link": true,
+  "utc": "2026-09-10T10:06:42Z",
+  "other_retained_copies": [
+    "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_dwc1_decode_wall_clock/move40_quiesced2/output/0.raw"
+  ]
+}

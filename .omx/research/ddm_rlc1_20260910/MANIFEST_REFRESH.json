@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_rlc1.manifest_refresh.v1",
+  "reason": "pr9 condition 1: MANIFEST.sha256 carried move 40's hashes for inflate.py, inflate.sh, runtime/residual_archive.py and no rows for the three added RLC1 modules; refreshed to the exact tree (49 files; archive.zip and the manifest itself excluded as before)",
+  "stale_manifest_copy": ".omx/research/ddm_rlc1_20260910/MANIFEST.sha256.stale_move40_hashes",
+  "stale_manifest_sha256": "795469939275bbbd1cb624fff85f252b3a3c3b5a1bbd5dab592517b34c9ea3c9",
+  "new_manifest_sha256": "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4",
+  "runtime_digest_before": "32d5e269c310ecec35f7a13349f842e9562daf586e6ce4d3d6553e4f54f9b846",
+  "runtime_digest_after": "191086a8868aad5470fee491dcec124d113cda34f10992515138066db737fae5",
+  "shasum_c_failures_after": 0,
+  "utc": "2026-09-10T10:02:17Z",
+  "score_claim": false,
+  "note": "manifest-only refresh (pr9: does not reopen the rule-118 judgment); every downstream receipt binds the new runtime digest",
+  "manifest_lines": 49,
+  "correction": "first regeneration hashed its own in-progress output file (50 lines, 3 failures); regenerated from a temp file outside the tree"
+}
