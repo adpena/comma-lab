@@ -54,21 +54,50 @@ eight retained residual orders and three physical coders, with exact-closure pro
 Retained: `…/ddm_gdc2_categorical_coolchic_k8_distill/teacher_residual_probe/` (RESULT.json,
 eight `residual.raw`, 24 coded payloads plus deterministic repeats).
 
-### The sparse-addressing law this exposes (DERIVED from three measured points on the same field)
+## Finding 2 (MEASURED) — the exact-residual law R(M) on this field, over three decades
 
-| render | mismatches | real residual B | B/mismatch |
-|---|---:|---:|---:|
-| GF1 / HG1 | 1,331,953 | 387,465 (transferred rate x count) | 0.2909 |
-| GDC1 K=6 | 234,295 | 105,628 | 0.4508 |
-| GDC1 K=8 | 88,304 | 60,520 | 0.6854 |
+The same eight-order race was run against every retained GDC1 render, so the residual rate is now a
+measured curve on the move-43 field rather than a transferred constant. Every row proves exact field
+closure. K=6 reproduced GDC1's own 105,628 B (GDC1 raced three orders, this raced eight, same winner)
+— an independent cross-check of the residual coder.
 
-`R ∝ M^b` with `b = 0.748` on the first segment and `b = 0.571` on the second: the residual is
-strongly sublinear in the mismatch count, so **a better generator pays MORE per remaining error**.
-Halving a student's mismatches buys only about a third of its residual bytes back. Any successor that
-budgets residual by a per-mismatch rate borrowed from a coarser render will under-charge itself; the
-rate must be re-measured at the operating mismatch count. (Same genus as
-`[[binding-instruction-numbers-expire-and-nobody-rederives-them]]` and
-`[[cross-regime constant transfer]].`)
+| render | mismatches M | real residual R (B) | B/mismatch | winning order | its packet | packet+R | **packet cap at this M** |
+|---|---:|---:|---:|---|---:|---:|---:|
+| K=4 | 673,602 | 174,680 | 0.2593 | tile64_time | 133,426 | 308,106 | −80,670 |
+| K=6 | 234,295 | 105,628 | 0.4508 | tile64_time | 223,494 | 329,122 | −11,618 |
+| **K=8 (teacher)** | **88,304** | **60,520** | **0.6854** | tile64_time | 306,042 | 366,562 | **33,490** |
+| K=12 | 9,311 | 11,772 | 1.2643 | frame_raster | 421,886 | 433,658 | 82,238 |
+| K=16 | 561 | 1,238 | 2.2068 | frame_raster | 459,394 | 460,632 | 92,772 |
+
+Local log-log exponents of `R ∝ M^b`, in order of decreasing M: **0.4763 · 0.5708 · 0.7278 · 0.8017**.
+The residual is strongly sublinear and *stiffening*: **a better generator pays more per remaining
+error**, and the marginal return on accuracy keeps falling. Halving a student's mismatches near the
+teacher's operating point buys back only about a third of its residual bytes. Any successor that
+budgets residual with a rate borrowed from a coarser render under-charges itself — GF1's 0.2909
+corresponds to a render around 6.7e5 mismatches, not to the K=8 operating point where the truth is
+2.36x higher. (Same genus as `[[binding-instruction-numbers-expire-and-nobody-rederives-them]]` and
+`[[cross-regime constant transfer]]`; the winning order even switches from `tile64_time` to
+`frame_raster` below ~1e4 mismatches, so the order roster must be re-raced too.)
+
+### The admissible frontier this defines for every successor
+
+The gate is one curve in the `(mismatches, packet bytes)` plane:
+`packet <= 94,010 - R(M)`, with `R(M)` measured above. Reading it off:
+
+| operating mismatch count M | admissible packet |
+|---:|---:|
+| 0 (exact program, no residual) | 94,010 B |
+| 561 | 92,772 B |
+| 9,311 | 82,238 B |
+| 88,304 (the teacher) | 33,490 B |
+| 234,295 | infeasible |
+
+The move-43 archive already describes the same 117,964,800 token cells exactly in a **119,969 B**
+replaceable tail. So the whole GDC1/GDC2 door reduces to one sentence: **describe this token field
+exactly in at most 94,010 B, i.e. beat the shipped tail by 21.6%** — either as one exact program, or
+as a program plus its exact residual anywhere on the curve above. The near-exact corner (M ~ 1e3, up
+to ~92.8 kB of program) is far more forgiving than the teacher's corner (M ~ 8.8e4, only 33.5 kB), and
+no arm before this one had the curve to aim at.
 
 ## Construction as built (GDC1 governed spec, verbatim where it is fixed)
 
