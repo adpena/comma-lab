@@ -1788,6 +1788,68 @@ and (2) the representation-level boundary door that §25b and the ddm_bnd1 chart
 
 ---
 
+## 28. The FRAME-0 round — the pointer-INDEPENDENT prefix, MEASURED
+
+Operator directive 2026-09-09, verbatim: *"And frame 0"*. SegNet scores only the LAST frame
+of each pair, so frame 0 is a **pose-only degree of freedom**: changing which selector mode
+builds it costs ZERO seg by construction. §27a's 84 discarded pairs were discarded for pose
+damage the seg yield did not cover, which is exactly the debt this lever addresses.
+
+**Object, named precisely** (MAIN's rule that every line say which field and which pointer):
+the sweep runs on the **FULL 126-pair pass-5 field's renders** — not the 42-pair admitted
+subset, because on the admitted candidate the 84 dropped pairs carry the SHIPPED plane and
+their pass-5 edit is not present to be compensated — against the **move-37 pointer's own
+carrier and renderer** (`670d38d0…`, shipped carrier codes). Instrument
+`experiments/ddm_pr1_pose_resolve_on_renderer_change.py selector`, `cpu_torch` fp32,
+84 pairs × 8 modes in 193.9 s. Receipt
+`/Volumes/VertigoDataTier/pact/ddm_sj1_pass5_price/frame0/SELECTOR_SWEEP_dropped84.json`.
+
+| | measured |
+|---|---:|
+| dropped pairs swept | 84 |
+| **pairs whose best mode beats their shipped mode** | **74 (88.1%)** |
+| …of those, at ≥1% gain | 74 (all of them) |
+| …at **≥10× d_pose reduction** | **27** |
+| newly-active pairs (shipped mode is the default 0) | 72 |
+| shipped-mode histogram | mode 0: 81, modes 3/5/7: one each |
+| best-mode histogram | 0:9 1:13 2:11 3:12 4:11 5:8 6:9 7:11 |
+| `n600_mean_gain_if_shipped` | **4.474916e-05** |
+
+The shipped selector is mode 0 on 81 of these 84 pairs and the best mode is spread almost
+uniformly across all eight — so this is not a case of one dominant alternative: the frame-0
+optimum is genuinely per-pair, and the shipped configuration is the default rather than a
+choice. The largest single case in the swept set is pair 12, whose shipped mode reads
+5.386258e-04 against mode 2's 8.152926e-06 — a **66.1×** reduction on one pair.
+
+### What this does NOT yet say
+
+Two caveats the instrument carries itself, and neither is discharged here:
+
+1. **Batch shape.** A single-pair evaluation is batch 1 by construction. Within a pair the
+   shipped-vs-best comparison is same-shape and the GAIN is valid, but composing those gains
+   against a batch-8 population mean is a CROSS-SHAPE step (jg5 §4b measured this forward
+   moving with the batch shape). Any adopted set must be re-measured at the declared batch
+   shape before it is scored.
+2. **Bytes.** The selector blob is a sparse combinatorial-rank encoding
+   (`runtime/frame0_selector.py`): 7 header bytes + ⌈log2 C(600,k)⌉ bits of rank + 3k bits of
+   labels. Going from the shipped k=5 (14 B) to k=15 costs about +12 B, and **the exact cost
+   of any chosen set must be measured by encoding it, never assumed.**
+
+So the honest statement is: **74 of the 84 pairs have a strictly better frame-0 mode on this
+instrument, 27 of them by an order of magnitude, and the reason those pairs were dropped is
+the debt this lever pays.** Whether they are RECOVERED — whether the re-selection plus a
+carrier re-solve moves enough of them across the Lagrange threshold once its own bytes are
+charged — is the next round's measurement, not this one's.
+
+**The prefix stops here, deliberately.** Everything above is pointer-independent in the sense
+that matters: it ranks modes on renders. The steps that follow — carrier re-solve against
+the FINAL pointer, the three-column pose leg (stale / carrier-resolved /
+frame-0-reselected+resolved) for both the full field and the subset, the recovered-pair
+count, and a seal if the admission clears — are pointer-bound and wait for move 38 to land
+or not.
+
+---
+
 *(Section 22+ — the pass-4 T4 row and whatever follows it — are
 appended as each lands. Nothing is written here before it is measured.)*
 
