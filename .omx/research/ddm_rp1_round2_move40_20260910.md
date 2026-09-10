@@ -203,6 +203,34 @@ archive ≤ 153,743.0 B. At round 1's measured selected-realization ratio 0.2663
 1,944.0 B first-order projects to ≈ 518 B, i.e. **≈ −3.45e-04 S, about 2.0 % of the corner** —
 and the rebase can only take from that. This pass is a step down the rate axis, not a door.
 
+## 8b. PRE-REGISTERED REBASE STOP RULE AND FALSIFIERS (written before the rebase ran)
+
+Commit order is the receipt: none of the numbers below exist yet.
+
+**Stop rule on the rebase's own output.**
+
+| condition | verdict |
+|---|---|
+| `context_identical_transfer_fraction` < 1.0 | **STOP.** Pairs whose two base planes are identical must transfer every token. If they do not, the INSTRUMENT moved between the acceptance and the rebase, and neither run is a measurement. Report, do not narrow. |
+| kept first-order ≥ 700 B | continue the full chain |
+| 200 B ≤ kept < 700 B | continue; at ratio 0.2663 this is ≥ 53 B real ≈ −3.5e-05 S, still above the −2e-05 bar, but the pose leg now decides |
+| kept < 200 B | continue ONLY if the resolved pose is at or below base; otherwise the pass cannot clear the bar and the rebase itself is the finding |
+| kept < 75 B | **ABANDON** the chain. Report the base-mismatch law and the recovered floor; do not spend a T4 row on it |
+
+**Falsifiers, pre-registered for the seal.**
+
+1. Pairs whose base plane is unchanged between the two bodies transfer at fraction **1.0**.
+2. Every accepted edit's base symbol equals the `sym` the rank priced it against (refuses in-loop, per edit).
+3. The merged field differs from the move-40 base at exactly `tokens_kept` positions — no collision, no no-op edit.
+4. `field_move40.u8` and sj1's `compose39/field_composed.npz` are identical on all 600 planes (they cannot be compared by sha; the pose leg rides one and the rate leg the other).
+5. NULL BUILD: this arm's own control body, re-packed into the pointer's member, reproduces move 40's member byte for byte.
+6. Twin encodes of the same field emit byte-identical streams, so any byte delta is a measurement and not run-to-run variance.
+7. The staged tree differs from the pointer in exactly `['archive.zip', 'inflate.py']`, the second only in its two pins — which is what makes move 40's decode-wall-clock leg inheritable.
+8. Seg identity on the parse-back: 0 differing cells over 117,964,800, and the candidate's local flip count equals the base decode's local count (delta exactly 0 — the absolute local number is advisory and is NOT the T4 number).
+9. The pose base, measured here on the pointer's own carrier codes, lands inside pm2's [1/3, 3]× band of the pointer's 4.89e-06 print.
+10. The admission consumes the RESOLVED pose; stale is printed beside it and is never an input.
+11. The shipped archive's bytes come from a REAL encode of the selected subset; the ledger-sum prediction is reported beside it with its gap (sj1 measured +19.6 B / +0.0108 % on its own subset — the sum ranks, it under-charges).
+
 ## 9. Frontier line
 
 `ddm_sj1 compose39+rp1 union S 0.13763861019288715 @ 180,233 B [contest-CUDA T4 n600]` (move 40)
