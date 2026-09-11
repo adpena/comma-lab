@@ -64,7 +64,7 @@ FIELD_SHA = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
 #: Free-space floor, matched to the 40 GiB fail-closed reserve the sister HPAC
 #: producers hold.  Never lowered: a refusal here is the guard working.
 RESERVE_BYTES = 40 << 30
-TREATMENTS = ("control",)
+TREATMENTS = ("control", "past_dil2", "past_dil3")
 
 
 class PriceError(RuntimeError):
@@ -106,19 +106,75 @@ def build_geometry(runtime: Path, work: Path) -> dict:
     return {"source": fact(source), "library": fact(target), "argv": command}
 
 
-def treatment_body(tag: str, shipped_body: bytes, work: Path) -> bytes:
+#: A shape rung's receiver constant.  conv_past's dilation lives ENTIRELY in the
+#: receiver: the packer's topology carries no dilation and the serialized rows are the
+#: masked taps, so a dilated prior's IHS1 bytes have exactly the shipped structure.
+#: That is what makes this a pure shape rung -- and what makes it a receiver change.
+TREATMENT_PAST_DILATION = {"control": 1, "past_dil2": 2, "past_dil3": 3}
+
+
+def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path | None) -> bytes:
     """Return the IHS1 body this treatment ships.
 
     ``control`` returns the shipped bytes unchanged, which is what makes the archive
-    reproduction a real falsifier.  Shape rungs supply a repacked body built from a
-    retrained checkpoint; each is added here with its own explicit construction.
+    reproduction a real falsifier.  A shape rung packs its own retrained terminal
+    checkpoint through the landed IHS1 packer -- the same call cl2's ladder used -- so
+    no serialization is re-implemented here either.
     """
     if tag == "control":
         return shipped_body
-    raise PriceError(f"no body constructor is registered for treatment {tag}")
+    if checkpoint is None:
+        raise PriceError(f"treatment {tag} requires --checkpoint")
+    from experiments import ddm_rx2_mc36_identity_race as rx2
+
+    packed = rx2._pack_terminal_ihs1(checkpoint, work / "model")
+    body = Path(packed["raw"]["path"]).read_bytes()
+    if len(body) != len(shipped_body):
+        # The rung moves taps without adding any, so the packed LAYOUT must match the
+        # shipped one exactly; only the depths and values may differ.  A length change
+        # means the topology moved and the rung is no longer a shape rung.
+        raise PriceError(
+            f"packed body is {len(body)} B against the shipped {len(shipped_body)} B: "
+            "a shape rung must not change the stored value count"
+        )
+    return body
 
 
-def prepare(tag: str):
+def patch_receiver_dilation(runtime: Path, dilation: int) -> dict:
+    """Set conv_past's dilation in this arm's runtime COPY -- a receiver change.
+
+    The receptive field ships as receiver code, not as archive bytes, so a shape rung
+    is a receiver change by construction and routes to the first-measurement chain.
+    Only a generic integer constant moves; no video-derived value enters the code.
+    """
+    target = runtime / "cpr1/inflate.py"
+    before = fact(target)
+    text = target.read_text()
+    anchor = "HPAC_LOGIT_PRECISION = 8"
+    if anchor not in text or "HPAC_PAST_DILATION" in text:
+        raise PriceError("receiver patch anchor is absent or already applied")
+    text = text.replace(
+        anchor,
+        anchor + "\n# ddm_hpr1 shape rung: dilation of conv_past, the prior's temporal tap set.\n"
+        f"HPAC_PAST_DILATION = {dilation}",
+        1,
+    )
+    call = "    deserialize_integer_model(model, raw)\n    return model.to(device)"
+    if text.count(call) != 1:
+        raise PriceError("receiver load_hpac anchor is not unique")
+    text = text.replace(
+        call,
+        "    model.conv_past.dilation = HPAC_PAST_DILATION\n"
+        "    model.conv_past.padding = HPAC_PAST_DILATION\n" + call,
+        1,
+    )
+    target.chmod(0o644)
+    target.write_text(text)
+    after = fact(target)
+    return {"file": "cpr1/inflate.py", "before": before, "after": after, "dilation": dilation}
+
+
+def prepare(tag: str, checkpoint: Path | None = None):
     """Copy the sealed move-45 tree into this arm's store and bind every input."""
     import brotli
     import torch
@@ -138,6 +194,8 @@ def prepare(tag: str):
             sources[str(destination.relative_to(runtime))] = retain(destination, src.read_bytes())
     if sources["archive.zip"]["sha256"] != POINTER45_SHA:
         raise PriceError("copied archive is not the move-45 archive")
+    dilation = TREATMENT_PAST_DILATION[tag]
+    receiver_patch = None if dilation == 1 else patch_receiver_dilation(runtime, dilation)
     rx, renderer, code_dir = landed.io.load_runtime(runtime)
     from runtime import ihs2
     from runtime import rc3_shared_mixer as rc3
@@ -146,7 +204,7 @@ def prepare(tag: str):
     layout = ihs2.layout_from_runtime(renderer)
     counts = list(layout.row_counts)
     shipped_body = rx.materialize_ihs1(parts.hpac_blob, renderer)
-    body = treatment_body(tag, shipped_body, work)
+    body = treatment_body(tag, shipped_body, work, checkpoint)
     retain(work / "retained/hpac.ihs1", body)
     if (body == shipped_body) != (tag == "control"):
         raise PriceError("treatment is a no-op, or the control body changed")
@@ -180,6 +238,10 @@ def prepare(tag: str):
         work / "INPUTS.json",
         {
             "tag": tag,
+            "past_dilation": dilation,
+            "receiver_patch": receiver_patch,
+            "receiver_change": receiver_patch is not None,
+            "checkpoint": None if checkpoint is None else fact(checkpoint),
             "base_archive": sources["archive.zip"],
             "base_archive_expected": {"sha256": POINTER45_SHA, "bytes": POINTER45_BYTES},
             "source_files": sources,
@@ -201,11 +263,11 @@ def prepare(tag: str):
     return work, runtime, rx, renderer, code_dir, altered, member, binding
 
 
-def encode(tag: str) -> dict:
+def encode(tag: str, checkpoint: Path | None = None) -> dict:
     """Run the shipping RLC1 causal loop with known-symbol twin arithmetic encoders."""
     import torch
 
-    work, runtime, rx, renderer, code_dir, parts, member, binding = prepare(tag)
+    work, runtime, rx, renderer, code_dir, parts, member, binding = prepare(tag, checkpoint)
     torch.set_num_threads(1)
     torch.set_num_interop_threads(1)
     torch.manual_seed(20260911)
@@ -350,6 +412,7 @@ def main() -> int:
     parser.add_argument("--treatment", choices=TREATMENTS, required=True)
     parser.add_argument("--resume-from", type=Path, required=True)
     parser.add_argument("--store-root", choices=tuple(STORE_ROOTS), default="vertigo")
+    parser.add_argument("--checkpoint", type=Path, help="terminal EMA QAT checkpoint for a shape rung")
     args = parser.parse_args()
     global ROOT
     ROOT = STORE_ROOTS[args.store_root]
@@ -362,7 +425,7 @@ def main() -> int:
         proof = json.loads(control_price.read_text())
         if proof["twins"][0]["sha256"] != POINTER45_SHA:
             raise PriceError("live-loop control required before any treatment price")
-    print(json.dumps(encode(args.treatment)), flush=True)
+    print(json.dumps(encode(args.treatment, args.checkpoint)), flush=True)
     return 0
 
 
