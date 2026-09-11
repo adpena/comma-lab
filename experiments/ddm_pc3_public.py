@@ -435,6 +435,168 @@ def public(args) -> dict[str, Any]:
     return result
 
 
+def _public_path_probe(runtime_root: Path, timeout_s: float) -> dict[str, Any]:
+    """Run the receiver's own ``f26_inflate.inflate_archive`` on CPU, this body's way.
+
+    ``ddm_pc2``'s probe is the landed shape and its reasoning is unchanged: ``bash
+    inflate.sh`` cannot COMPLETE without CUDA, so the leg that proves the archive PARSES
+    is the function ``inflate.py`` calls, and reaching the token decode means the
+    container framing, the RX1 riders, the metadata restore, the renderer load and the
+    semantic unpack all passed.  One thing is added, because this body needs it: pc2's
+    probe builds ``rc64_backend.so`` only, and move 44's receiver also requires
+    ``RLC1_GEOMETRY_LIBRARY`` -- ``inflate.sh:75-76`` builds and exports it.  Without it
+    the probe dies with ``KeyError('RLC1_GEOMETRY_LIBRARY')`` on BOTH the candidate and
+    the pointer tree, which is how this was found: the control failed identically, so the
+    defect was the probe's and not the candidate's.  Both libraries are built here from
+    the tree's OWN C with the same flags ``inflate.sh`` uses.
+    """
+    import tempfile
+
+    runtime_root = Path(runtime_root).resolve()
+    script = (
+        "import json, sys, time\n"
+        "from pathlib import Path\n"
+        "root = Path(sys.argv[1])\n"
+        "sys.path.insert(0, str(root))\n"
+        "from runtime.f26_inflate import inflate_archive, InflationError\n"
+        "out = Path(sys.argv[2])\n"
+        "started = time.time()\n"
+        "try:\n"
+        "    inflate_archive(root / 'archive.zip', out / '0.raw',\n"
+        "                    renderer_dir=root / 'cpr1', device_name='cpu',\n"
+        "                    num_threads=4, checkpoint_dir=out / '.ckpt')\n"
+        "    print(json.dumps({'outcome': 'COMPLETED', 'seconds': time.time()-started}))\n"
+        "except InflationError as error:\n"
+        "    print(json.dumps({'outcome': 'INFLATION_ERROR', 'error': str(error),\n"
+        "                      'seconds': time.time()-started}))\n"
+        "except Exception as error:\n"
+        "    print(json.dumps({'outcome': type(error).__name__, 'error': str(error),\n"
+        "                      'seconds': time.time()-started}))\n"
+    )
+    builds = {
+        "CPR1_RC64_LIBRARY": (
+            runtime_root / "runtime" / "entropy" / "rc64_backend.c",
+            ["-O3", "-std=c11", "-shared", "-fPIC"],
+        ),
+        "RLC1_GEOMETRY_LIBRARY": (
+            runtime_root / "runtime" / "rlc1_geometry.c",
+            ["-O3", "-std=c11", "-shared", "-fPIC"],
+        ),
+    }
+    with tempfile.TemporaryDirectory() as scratch:
+        environment = dict(os.environ)
+        for variable, (source, flags) in builds.items():
+            library = Path(scratch) / (source.stem + ".so")
+            subprocess.run(
+                ["/usr/bin/cc", *flags, str(source), "-o", str(library)],
+                check=True, capture_output=True,
+            )
+            environment[variable] = str(library)
+        environment["F26_TOKEN_DECODER"] = "python"
+        work = Path(scratch) / "work"
+        work.mkdir()
+        started = time.time()
+        try:
+            done = subprocess.run(
+                [sys.executable, "-c", script, str(runtime_root), str(work)],
+                capture_output=True, text=True, timeout=timeout_s, env=environment,
+            )
+            payload = json.loads((done.stdout or "").strip().splitlines()[-1])
+            payload["stderr_tail"] = (done.stderr or "").strip().splitlines()[-6:]
+            payload.setdefault("exception_class", None)
+            payload.setdefault("exception_message", "")
+            return payload
+        except subprocess.TimeoutExpired:
+            # A timeout IS the pass condition: the decode reached the token stage and was
+            # cut there. The whole decode cannot finish inside a smoke bound by design.
+            return {
+                "outcome": "REACHED_TOKEN_DECODE",
+                "seconds": time.time() - started,
+                "note": "cut at the probe bound inside the token decode",
+                "exception_class": None,
+                "exception_message": "",
+                "stderr_tail": [],
+            }
+        except (ValueError, IndexError) as error:
+            return {
+                "outcome": "PROBE_OUTPUT_UNPARSEABLE",
+                "seconds": time.time() - started,
+                "error": str(error),
+                "exception_class": type(error).__name__,
+                "exception_message": str(error),
+                "stderr_tail": [],
+            }
+
+
+def smoke(args) -> dict[str, Any]:
+    """The seal's required smoke PAIR, on the candidate AND the pointer trees.
+
+    The two probes are ``ddm_pc2``'s, imported rather than re-typed.  They are the landed
+    pair for a carrier candidate on this body and they encode two facts about this host
+    that a re-derivation would get wrong: ``bash inflate.sh`` cannot COMPLETE without CUDA,
+    so REACHING that refusal is the pass condition (it proves the C toolchain, the Brotli
+    gate, the file-list loop and ``_verify_input``'s two pinned constants -- exactly what a
+    re-pinned candidate could get wrong); and the probes must run at a fraction of the
+    declared bound, because a timed-out probe records ``timeout + epsilon`` and the
+    validator refuses ``seconds > public_path_probe_seconds``.
+
+    The frontier leg is the POINTER's tree, not pc2's, so the control is this candidate's
+    own base.
+    """
+    import ddm_pc2_carrier_kwidth_rankcut as pc2
+
+    candidate = Path(args.out_dir) / "candidate_runtime"
+    frontier = Path(args.frontier_runtime)
+    bound = float(args.bound_seconds)
+    probe_timeout = 0.8 * bound
+    probes = {
+        ("public_path_probes", "candidate"): _public_path_probe(
+            candidate, timeout_s=probe_timeout
+        ),
+        ("public_path_probes", "frontier"): _public_path_probe(
+            frontier, timeout_s=probe_timeout
+        ),
+        ("inflate_sh_smokes", "candidate"): pc2._inflate_sh_smoke(
+            candidate, timeout_s=probe_timeout
+        ),
+        ("inflate_sh_smokes", "frontier"): pc2._inflate_sh_smoke(
+            frontier, timeout_s=probe_timeout
+        ),
+    }
+    trees = {"candidate": candidate, "frontier": frontier}
+    block: dict[str, Any] = {
+        "schema": "candidate_public_entrypoint_smoke.v1",
+        "public_path_probe_seconds": bound,
+        "public_path_probes": {},
+        "inflate_sh_smokes": {},
+    }
+    for (group, role), probe in probes.items():
+        block[group][role] = pc2._smoke_receipt(trees[role], probe)
+    out = Path(args.out_dir) / "smoke"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "public_entrypoint_smoke.json").write_text(json.dumps(block, indent=2))
+
+    # Check the block with the VALIDATOR'S OWN checker, never a second reading of the
+    # contract: a block validated against a local paraphrase of the rules is worse than
+    # an unvalidated one. The private name is deliberate -- a rename fails closed.
+    from tac.candidate_seal import _public_smoke_problems
+
+    problems, observed = _public_smoke_problems(
+        block,
+        candidate_runtime_dir=candidate,
+        candidate_archive_path=candidate / "archive.zip",
+        pointer_archive_sha256=args.pointer_archive_sha256,
+    )
+    record(
+        out / "public_entrypoint_smoke_validation.json",
+        {"problems": problems, "observed": observed, "score_claim": False},
+    )
+    if problems:
+        raise Pc3PublicError(f"smoke block refused by the seal validator: {problems}")
+    print(json.dumps({"smoke_problems": problems}))
+    return block
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="mode", required=True)
@@ -454,6 +616,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     proof.add_argument("--blas-threads", type=int, default=4)
     proof.set_defaults(func=public)
+
+    smokes = sub.add_parser("smoke", help="the seal's candidate+frontier smoke pair")
+    smokes.add_argument("--out-dir", type=Path, required=True)
+    smokes.add_argument("--frontier-runtime", type=Path, default=pc3.MOVE44_TREE)
+    smokes.add_argument(
+        "--pointer-archive-sha256", default=pc3.MOVE44_ARCHIVE_SHA256
+    )
+    smokes.add_argument("--bound-seconds", type=float, default=180.0)
+    smokes.set_defaults(func=smoke)
 
     args = parser.parse_args(argv)
     args.func(args)
