@@ -320,6 +320,41 @@ legacy digest differing by the archive pin alone. Move 45's retained raw is `2b7
 identical to move 44's, read from pc3's own `RESULT.json`, which is exactly what "the carrier member
 moved and the frames did not" means. The cold n600 parse-back against it is running on APDataStore.
 
+## The seal is BLOCKED, and not by anything this candidate did
+
+pr18 clears the receiver row (below), but a second row does not clear, and it is worth reporting
+carefully because **it blocks every move-46 candidate, pc3's rebase included, not just this one.**
+
+`make_candidate_seal.py` passes the LIVE pointer's `pointer_archive_sha256` into
+`inherit_decode_wall_clock`. The inheritance chain is:
+
+| move | archive | leg mode |
+|---|---|---|
+| 44 | `04758c0d…` | **`t4_direct`** — a real cold T4 decode, 1232.418725255 s |
+| 45 | `145e02e2…` | `inherited`, from move 44's t4_direct |
+| 46 | `a0de607d…` (this candidate) | none available |
+
+Two doors, both measured rather than argued:
+
+- **Move 45's leg as the source: forbidden by contract text** — "inheritance must point directly to a
+  measured or t4_direct leg (never to an inherited one)".
+- **Move 44's t4_direct leg as the source: REFUSED** — `source measurement is not the pointer
+  archive`. The control that makes that refusal legible: the SAME leg with
+  `pointer_archive_sha256` set to move 44 **PASSES** at 1232.418725255 s. So the refusal is about the
+  POINTER, not about this candidate's tree.
+
+No `t4_direct` leg exists anywhere for archive `145e02e2…`. Move 45 sealed validly because the
+pointer was then move 44, so its source leg WAS the pointer archive. The contract tolerates
+inheriting timing measured on a different archive once; it does not tolerate doing it twice, and
+that is a defensible place to stop rather than a bug to route around.
+
+Three resolutions, all MAIN's to choose and none taken here: fire a real `t4_direct` decode for move
+45 and restore a measured anchor; seal with `--first-fire-intent` and complete it from the fired
+measurement; or amend the contract to follow the inheritance CHAIN to its terminating measurement
+when every link shares one receiver behavior digest — a contract change, therefore a second family's
+call. Receipt: `.omx/research/ddm_ntb2_20260911/TIMING_INHERITANCE_CHAIN_BREAK.json`. Nothing was
+patched.
+
 ## pr18 is LIVE on main, and it clears this candidate — a second family confirms the rule
 
 MAIN said a pr18 arm was landing the versioned receiver digest and to expect a refusal until it did.
