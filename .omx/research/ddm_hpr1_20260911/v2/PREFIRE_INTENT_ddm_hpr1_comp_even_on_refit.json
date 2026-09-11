@@ -1,0 +1,295 @@
+{
+  "schema": "candidate_prefire_intent.v1",
+  "state": "PREFIRE_FIRST_MEASUREMENT_ONLY",
+  "candidate_id": "ddm_hpr1_comp_even_on_refit",
+  "created_at_utc": "2026-09-11T22:18:02.650404+00:00",
+  "created_by": "candidate-prefire-producer",
+  "producer_source_commit": "c8ad0569f9e17a2b5570ce9799d218fb38377686",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "timing_clearance": false,
+  "contract": {
+    "adjudication_memo": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+      "bytes": 42309,
+      "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+    },
+    "implementation_commit": "a475431997d0e0c66563448524e44c2ca8ddb384",
+    "implementation_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+      "bytes": 2072,
+      "sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d"
+    },
+    "implementation_manifest_sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d",
+    "amendment": {
+      "schema": "prefire_contract_consumer_fix.v1",
+      "fix_batch_id": "pr19_identity_class_envelope_consumers_20260911",
+      "previous_row_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+      "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+      "definition_change": false,
+      "consumer_fixes": [
+        {
+          "fix_id": "pr19-cold-report-work-facts",
+          "scope": "tac.candidate_seal._pf_cold_work_facts and _pf_candidate_cold_report; tac.decode_wall_clock.t4_direct_cold_report",
+          "reason": "the risk gate had no way to read the receiver's own work-bearing fields, so it could only compare wall clocks. The decoded token plane is the one identity that crosses the device boundary (MEASURED a92e7d902a449896... in both the T4 and the local cold reports of this class).",
+          "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+          "tests": [
+            "src/tac/tests/test_decode_wall_clock_t4_direct.py::test_pr19_t4_direct_cold_report_exposes_the_work_facts",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_candidate_cold_report_that_names_another_archive"
+          ]
+        },
+        {
+          "fix_id": "pr19-identity-class-projection",
+          "scope": "tac.candidate_seal.validate_prefire_risk mode dispatch and _validate_prefire_risk_identity_class",
+          "reason": "the local ratio spreads 2.83x across cold n600 windows of ONE identity class and its max(0, r-1) clamp is one-sided, so it inflated the projection and refused output-lossless rate-only candidates; the projection now comes from real T4 measurements of the same receiver and token plane.",
+          "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_risk_passes_without_a_local_ratio_projection",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_risk_validates_through_the_full_intent",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_passes_on_the_real_move48_candidate",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_shape_refusals"
+          ]
+        },
+        {
+          "fix_id": "pr19-local-ratio-as-hard-timeout-stress-test",
+          "scope": "the calculation block of _validate_prefire_risk_identity_class",
+          "reason": "the observed local delta is retained, not discarded: it must now prove the candidate cannot reach the 1800 s hard timeout even if the whole delta is real work. The 1260 s policy limit is unchanged and is applied to a real measured T4 number.",
+          "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_keeps_the_1260_policy_limit_and_adds_an_1800_stress_refusal",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_warm_or_foreign_local_diagnostic"
+          ]
+        },
+        {
+          "fix_id": "pr19-timing-chain-refusals-pinned",
+          "scope": "regression guard only; tac.decode_wall_clock inheritance is UNCHANGED",
+          "reason": "adjudication (B) is REFUSED, so the two clauses that admit at most one inherited row per measured leg are load-bearing contract text and are now pinned on the real move-44/46/47/48 host trees, with the control that the same leg still inherits while it IS the pointer.",
+          "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+          "tests": [
+            "src/tac/tests/test_decode_wall_clock_t4_direct.py::test_pr19_chain_inheritance_stays_refused_on_the_real_trees",
+            "src/tac/tests/test_decode_wall_clock_t4_direct.py::test_t4_direct_leg_builds_validates_and_inherits"
+          ]
+        },
+        {
+          "fix_id": "pr19-work-domination-and-receiver-identity",
+          "scope": "the leg loop and delta block of _validate_prefire_risk_identity_class",
+          "reason": "a shared receiver does not pin decode work; the mode additionally requires an identical token plane, a dominating leg on coded bits and archive bytes, and a delta manifest with zero differing rows, so tc4 still holds (a receiver change keeps completed_t4_receiver_delta and its own measurement).",
+          "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_leg_that_decoded_a_different_token_plane",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_candidate_that_consumes_more_coded_bits",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_candidate_archive_larger_than_the_dominating_leg",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_real_receiver_change"
+          ]
+        }
+      ],
+      "implementation_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR19.json",
+        "bytes": 2251,
+        "sha256": "c50370e76cc54162a4850db7a6736b5e63a2a99556cb0ffcd60ab0b6c527e753"
+      },
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_risk_gate_identity_class_and_chain_inheritance_20260911.md",
+        "bytes": 16089,
+        "sha256": "1a7e363f1ed546552a6272f8ae79fc200715686fb77382db5e70dc0a692f7c82"
+      },
+      "score_claim": false
+    },
+    "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+    "latest_row_sha256": "d9553f662a04428f630a090c06e24267c08aeefc85afceb4d3b4d11f1ea47e7f"
+  },
+  "candidate": {
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+      "bytes": 179111,
+      "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+    },
+    "runtime": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+      "sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 51,
+      "total_bytes": 1008470
+    },
+    "normalized_receiver": {
+      "digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+      "sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf"
+    },
+    "receiver_pins": [
+      {
+        "relative_path": "inflate.py",
+        "bytes": 2735,
+        "sha256": "87af970b2e8156ac879cd4006b23da9516f8fe2837de9c446390f29baf228937"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 3380,
+        "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+      }
+    ],
+    "archive_member": null
+  },
+  "admit_bar": {
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold",
+    "net_dS_threshold": -2e-05,
+    "pointer_axis": "contest_cuda",
+    "pointer_score_at_intent": 0.13654774984742127,
+    "pointer_archive_sha256_at_intent": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+    "pointer_tolerance_abs": 0.0,
+    "require_pointer_archive_identity": true,
+    "rate_only_precheck": {
+      "raw_identity_required": true,
+      "normalizer_bytes": 37545489,
+      "derived_net_dS": -0.0001651330203742985,
+      "passed": true
+    }
+  },
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+        "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+        "seconds": 3.2070999145507812,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/archive.zip",
+        "archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime",
+        "seconds": 2.7954788208007812,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "90e0bdcbf6ba87a736112051ea90ba153f71b5f1b446bb5bb5d007424b5a1cd6"
+      }
+    },
+    "public_path_probe_seconds": 180.0,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+        "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+        "seconds": 144.03473210334778,
+        "stderr_tail": [],
+        "tree_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/archive.zip",
+        "archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime",
+        "seconds": 144.02711606025696,
+        "stderr_tail": [],
+        "tree_sha256": "90e0bdcbf6ba87a736112051ea90ba153f71b5f1b446bb5bb5d007424b5a1cd6"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "evidence": {
+    "candidate_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/CANDIDATE_MANIFEST.json",
+      "bytes": 10163,
+      "sha256": "5c905926a60fd16e11edc7c717820cf558a065c3b8b5fd326c42275aa50775a8"
+    },
+    "manifest_validation": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/MANIFEST_VALIDATION.json",
+      "bytes": 1128,
+      "sha256": "3e481b4b2e9a82f844f3f2b3ffb7fd723ff778e32c918ef4c83f101db367e0bb"
+    },
+    "twin_encode": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/TWIN_ENCODE.json",
+      "bytes": 1275,
+      "sha256": "bb48b589813af75b553ccf3e5fd0b4283bc06e9bd478951b601928faf076b15a"
+    },
+    "archive_parseback": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/ARCHIVE_PARSEBACK.json",
+      "bytes": 757,
+      "sha256": "930abdc6bb8e533a7f3d8b485c4784caa22f3f5f3f556de0e204b45de6c8f0c5"
+    },
+    "raw_identity_n600": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/RAW_IDENTITY_N600.json",
+      "bytes": 1859,
+      "sha256": "bb5feede67b46ba417006345c817677a059ed9f870974097d1732c3582ab2345"
+    },
+    "literal_census": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/LITERAL_CENSUS.json",
+      "bytes": 33965,
+      "sha256": "4ebfaf6249bfdc218ff73af5c792a9bc879e4b331786340048742a8e5033cf00"
+    },
+    "retention_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/RETENTION_MANIFEST.json",
+      "bytes": 1794,
+      "sha256": "4d96266f4c39e02420298dae8d57a7d6315a8f53048843c2b808c2587cc46ad2"
+    },
+    "timing_risk": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/TIMING_RISK.json",
+      "bytes": 4007,
+      "sha256": "9f403544762ff2fad97287c80b326c9b1175e724d1130d4732e9ee2113a59538"
+    }
+  },
+  "dispatch_policy": {
+    "axis": "contest_cuda",
+    "gpu": "T4",
+    "scorer_device": "cuda",
+    "inflate_device": "auto",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "modal_function_timeout_seconds": 4800,
+    "poller_deadline_seconds": 5400,
+    "n_samples": 600,
+    "cold_required": true,
+    "checkpoint_resume_required": false,
+    "token_cache_status_required": "DISABLED",
+    "source_snapshot_required": true,
+    "claim_policy": "require_active",
+    "max_paid_dispatches": 1,
+    "currency": "USD",
+    "maximum_total_cost_usd_exclusive": 5.0,
+    "cost_preflight_max_age_seconds": 86400
+  },
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin0.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin1.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/PRICE.json"
+  ],
+  "falsifiers": [
+    "The cold literal inflate.sh output must carry all 600 pairs with no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 47's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc. This row edits the arithmetic coder's PRIOR only, so a single differing byte falsifies the whole distortion argument, not merely this candidate.",
+    "The candidate archive must be at most 179,111 bytes and the rate-only net dS must be strictly below -2e-5 against move 47's 179,359 bytes at unchanged distortion. Measured: 179,111 B, -248 B, -1.651330203742985e-04 -- 8.3x the bar.",
+    "Reassembling move 47's OWN members through this arm's assembly path must reproduce d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9 at 179,359 bytes in both twins, or the -248 B belongs to the rebuild and not to the even-rounding composed on the refit prior.",
+    "The scoped receiver delta against the pointer tree must be EMPTY at prefire risk digest 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw MANIFEST.sha256 stays in every custody check and is validated separately. A non-empty delta means this candidate changes the receiver and cannot inherit any decode timing.",
+    "Risk ceiling 1232.418725255 s must not exceed the 1260 s policy limit, and the demoted local-ratio stress test 1477.6098406913195 s must stay under the 1800 s hard timeout. Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess. Only MAIN may authorize, fire and complete; this intent confers no timing and no score authority, and pointer or contract drift refuses rather than rebases."
+  ],
+  "intent_sha256": "9abf79c0808d35c13798b0679529518d7845c66c2d470be91f40ed5dc1de7c98"
+}
