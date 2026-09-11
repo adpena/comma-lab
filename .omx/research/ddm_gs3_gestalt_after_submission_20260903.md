@@ -1401,3 +1401,26 @@ the renderer's; it is the partition's, and the pointer buys it with ~140 KB of t
 closed. So the open question is the rate of a partition the scorer accepts — which is the seg-debt pool, the pre-distortion line that
 produced moves 30–43, and the non-tail levers ntb2 is measuring now. The successor-object bet under the GO cost one day and returned a
 validated corrector, a pre-burn gate, and a sharper statement of the problem. That is the correct price for it.
+
+## Addendum 38 (MAIN, 2026-09-11 ~17:30Z) — two rate candidates, one weird bet closed on the rule's own text, and a manifest row that quietly closed the seal's inherit path
+
+The day's ledger under the GO now reads: two live candidates and three formulation-scope closures. The candidates are both rate cuts
+at identical decode, which is the cheapest kind of move and the kind the cross said the born object could not supply. pc3 refit the
+shipped pose-carrier predictor over its closed legal schema at bit-identical codes and found ten of twelve biases parked at the ±16
+clamp — a clipped fit, never a rate-optimised one — for −160 B (`.omx/research/ddm_pc3_…`, archive 145e02e2…, cold n600 raw
+byte-identical to move 44's). ntb2 rounded 2,320 of 4,800 frame-embed values to even and shrank the HPAC prior 603 B against a
+358 B growth of the tail it conditions, −245 B net, and the lever is output-lossless by construction because the prior is built from
+the same bytes at both ends (archive 432e8f09…, projected S 0.13708). ntb2 also gave the renderer its first PoseNet measurement at
+3-bit depth: every byte-saving layer moves 87–98 % of the frame by 3–13 grey levels and pays 100–1,900× the bar on pose; sd1's
+"winners" were winners of a seg-only objective. The weird bet, gpp1, is closed twice on the same day the operator asked for weird:
+a free public RAFT prior on the receiver's own rendered frames has an oracle marginal of 8,171 B against the 25,899 B demand, but the
+real causal coder realizes 3 B of it (inside container-break noise), inference runs 302 s against a 27.6 s allowance, and the rule's
+own text counts neural-network weights by artifact type, not provenance — 4 MB of weights would cost 2.67 S. The successor gpp2 exists
+on paper with two hard preconditions and no launch. The apparatus finding is the one that will matter longest: the receiver behavior
+digest hashes MANIFEST.sha256 raw, the manifest lists inflate.py's raw hash, and that hash changes with every archive pin, so the
+normal inherit path refuses every honest successor and passed earlier ones only because their manifests were stale (pr9's condition 1).
+Two candidates hit the same wall within hours of each other; pr18 is landing pr14's owed amendment through the contract's own
+amendment path while pc3 proceeds on the intent chain that already excludes the row. Sequencing is by readiness: first sealed fires
+as move 45, the other rebases and fires as move 46. Net for the gestalt: the successor-object family and the free-prior family both
+closed at formulation scope on numbers, the coded-token object is the vehicle, and its rate is moving by clipped fits and
+mis-rounded priors that nobody had priced — the same lesson as moves 30–44, found again in two new sections.
