@@ -1475,3 +1475,18 @@ the model rows, the size, or the values; none moved a tap. hpr1 now prices that 
 decoded field proven identical and cl2's secant as the prior against it. If shape does not pay either, the honest gestalt statement
 becomes: the coded-token object's rate is closed at the measured level on every axis the store can name, and −25 KB needs an object
 the store does not yet describe. That statement would itself be the day's most valuable result, and it is one measurement away.
+
+## Addendum 42 (MAIN, 2026-09-11 ~17:55Z) — sr5: the reserve restored by exercised certificates, and three storage laws measured on the way
+
+Both SSD tiers sat at their fail-closed reserves this afternoon while two candidates needed cold decodes, and the two proven cures
+were the wrong shape: moving between tiers nets nothing (sr4 had already offloaded 31 GiB of one onto the other) and the local disk
+is not a tier by the operator's rule. sr5 (`.omx/research/ddm_sr5_certified_rebuildable_deletion_20260911.md`) freed 25.7 true GiB on
+Vertigo by deleting 1,684 files from one closed August store under a per-file certificate whose rebuild was actually re-run and
+sha-matched before each unlink, with a negative control that refused a wrong derivation and a restore proven from a sidecar on a file
+already gone. Zero refusals across 28.2 GiB, and nothing uncertified touched: rbf1 and mxo3 were verified closed and left whole
+because a cheaper class met the target. The laws it measured matter beyond today. A manifest whose hash field says
+"SKIPPED_LARGE_STREAMED" is not a certificate (ntb2's 3.78 GB cold store was correctly refused for exactly that). A sampled
+prefilter chooses what to hash and never decides equality (full hashes falsified one of its two projected duplicate groups; the
+other released 3.4 GiB losslessly by hardlink). And `df -h` on this host prints gigabytes under a "Gi" label, which is why MAIN's
+reserve arithmetic had been optimistic by 7 %: the gates use true GiB, so read `df -k` when a reserve is close. The apparatus finding
+is the same one the day keeps producing in different coats: custody is a hash that was checked, never a label that was written.
