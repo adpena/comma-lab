@@ -161,7 +161,7 @@ def adopt_root(candidate: Path) -> Path:
     """
     global ROOT
     resolved = candidate.resolve()
-    if resolved.parent != ROOT_TIER.resolve() or not resolved.name.startswith(ROOT_PREFIX):
+    if resolved.parent != ROOT_TIER or not resolved.name.startswith(ROOT_PREFIX):
         raise Mxo2Error(
             f"--resume-from must name a {ROOT_TIER}/{ROOT_PREFIX}* root owned by this screen"
         )
