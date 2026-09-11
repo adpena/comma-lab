@@ -81,7 +81,16 @@ def compare_bytes(left: Path, right: Path) -> bool:
 
 
 def stage_runtime(treatment: str) -> Path:
-    """move 44's receiver tree with ONLY the treatment's archive.zip swapped in."""
+    """move 44's receiver tree with ONLY the treatment's archive.zip and its pin swapped in.
+
+    `inflate.py` carries `ARCHIVE_SHA256`/`ARCHIVE_BYTES` as a self-check on the artifact it
+    was promoted with, so a new archive cannot decode until they name it. Those two
+    assignments are NOT a receiver change and this is not an opinion: the campaign's own
+    `tac.decode_wall_clock.measure_receiver_digest` "normaliz[es] only the values of explicit
+    archive pin assignments", and this function REFUSES unless the receiver digest of the
+    staged tree equals move 44's. That equality is what lets the seal inherit move 44's
+    t4_direct decode-wall-clock instead of owing a first measurement.
+    """
     runtime = ROOT / treatment / "candidate_runtime"
     source = control.ROOT / "source_runtime"
     if runtime.exists():
@@ -91,6 +100,19 @@ def stage_runtime(treatment: str) -> Path:
     if not archive.is_file():
         raise SystemExit(f"no priced archive for {treatment}: {archive}")
     shutil.copy2(archive, runtime / "archive.zip")
+    sha = landed.fact(runtime / "archive.zip")["sha256"]
+    size = (runtime / "archive.zip").stat().st_size
+    inflate = runtime / "inflate.py"
+    text = inflate.read_text()
+    for name, value in (("ARCHIVE_SHA256", f'"{sha}"'), ("ARCHIVE_BYTES", str(size))):
+        marker = f"{name} = "
+        if text.count(marker) != 1:
+            raise SystemExit(f"{name} is not a single explicit assignment in inflate.py")
+        head, rest = text.split(marker, 1)
+        text = head + marker + value + rest[rest.index("\n") :]
+    inflate.write_text(text)
+    if measure_receiver_digest(runtime) != measure_receiver_digest(source):
+        raise SystemExit("RECEIVER CHANGED beyond the archive pin; a first measurement is owed")
     return runtime
 
 
