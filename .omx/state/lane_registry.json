@@ -99084,6 +99084,2056 @@
         }
       },
       "notes": "RE-STAGED, PUBLICATION STILL REFUSED. research_only=true; new_score_claim=false; $0; the pointer did not move, nothing was pushed or hosted. The staged swap now sits on move 47's bytes (d1fab05d..., 179,359 B, S 0.13654774984742127 [contest-CUDA T4 n600]) instead of move 44's three-moves-stale bytes. Strict --contest-final is 91/93 PASS, 2 FAIL, rc 1; BOTH failures are known and neither is closed by assumption: submission_runtime_imports_within_allowlist (a receiver edit -- operator + MAIN) and hosted_archive_manifest_supplied (cannot honestly exist before hosting). REACTIVATION: three QUEUED-WITH-A-FIRE-ORDER items -- host + fetch-back + hosted manifest, then a full strict PASS; the receiver-hygiene decision on the experiments fallback imports; and a README refresh off move 47's numbers with the manifest rebound. STANDING RULE: any further pointer move means RE-STAGE, never repoint, this fixed move-47 packet. The staging trees under submissions/_staging_move*_pr140_swap/ hold archive copies and are deliberately left UNTRACKED."
+    },
+    {
+      "id": "ddm_rlc1_rule118_cure_move40_20260910",
+      "name": "ddm_rlc1: counted fixed-point rule-118 receiver cure on move 40",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rlc1_rule118_cure_20260910.md -- 60 B saving, public outputs byte-identical to move 40"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BLOCKED ON TIMING EVIDENCE; NOT SEALED. The rebuilt candidate saves 60 B and both complete public outputs match move 40 byte for byte; the timing validator refuses the receipts because whole-host concurrency is unavailable. No Modal call, scorer run, exact score or frontier promotion. This is the CURE for the pr8 rule-118 blocker: the video-selected constants move out of free code into a COUNTED 19-byte rider with fixed-point geometry. REACTIVATION: a quiesced-host timing receipt the validator accepts, or the admitted daemon-burst rule (pr10/pr11). Anti-pattern: fitted_scalar_in_receiver_code_is_counted_content_v1."
+    },
+    {
+      "id": "ddm_rlc2_rebase_cure_onto_move42_20260910",
+      "name": "ddm_rlc2: re-base the rule-118 cure onto move 42",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STOP at the pre-fire seal contract gap, BEFORE rebase materialization, as the charter's Read-first clause expressly required. No candidate, real encode, raw-identity proof or seal exists. This is a CONTRACT REFUSAL, not a result against the counted-rider mechanism -- do not read it as a negative on rlc1's cure. REACTIVATION: the frozen pre-fire intent contract (pr12/ffi1-ffi3) landing, which it did, and which rlc3/rlc4 then consumed."
+    },
+    {
+      "id": "ddm_rlc3_resume_rebase_prefire_intent_20260910",
+      "name": "ddm_rlc3: resume the move-42 rebase under the frozen pre-fire contract",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PARTIAL / BLOCKED_GIT_OBJECT_WRITE_BEFORE_CANDIDATE_PRODUCTION. No candidate or intent was produced. The serializer returned rc 17, retained source commit fa74b3399649185d06cd029d046b417a14a030c0 in its fallback bundle, and did not land it in shared HEAD. A filesystem/source-custody blocker, NOT a contract refusal and NOT a candidate negative. REACTIVATION: MAIN lands the bundle (it did, d598ef3b6) and the work resumes as rlc4. Genus: codex arms cannot write git objects."
+    },
+    {
+      "id": "ddm_rlc4_real_move42_cure_prefire_intent_20260910",
+      "name": "ddm_rlc4: the real move-42 cure, refused on manifest-bound receiver identity",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_20260910.md -- real 180,178 B candidate, -60 B, raw-identical to move 42"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STOP -- PREFIRE_RISK_EVIDENCE_REFUSED: receiver risk endpoints differ. The real candidate is 180,178 B, saves 60 B, and its complete cold public output is byte-identical to move 42. The unchanged producer passed every non-timing check and then refused the timing-risk endpoints with ZERO executable bytes changed. This is the frozen contract's FIRST real producer, and the refusal found a real defect in the contract, not in the candidate: anti-pattern derived_listing_inside_identity_digest_v1, cured by pr14 (scope) and pr18 (implementation). REACTIVATION: re-emit the intent against measure_receiver_behavior_digest.v2."
+    },
+    {
+      "id": "ddm_pr8_receiver_code_compliance_review_20260910",
+      "name": "ddm_pr8: second-family receiver-code compliance review, moves 41 and 42-candidate",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "fitted_scalars_in_receiver_code_are_content_move_41_retracted_rule_118_20260910"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "REVIEW COMPLETE -- P0 RULE-118 BLOCKER; PR/SUBMISSION SWAP REFUSED. Move 41's receiver hard-codes LANE_CLASS = 1 and the row band 128-319, both chosen from a census of the scored video: a fitted SCALAR is content, and 'no per-frame fitted table' is not compliance. Also found: inflate 1,336.7 s against the 1,260 s seal margin, a float64 geometry branch, and no contest-CPU receipt. The exact row stands at S 0.13758600733559048; the ARCHIVE does not qualify, so the pointer retracted to move 40. Anti-pattern registered: fitted_scalar_in_receiver_code_is_counted_content_v1. REACTIVATION: the door is real (79 B measured) and re-enters COUNTED -- rlc1's 19-byte rider."
+    },
+    {
+      "id": "ddm_pr10_quiesced_decode_timing_rule_review_20260910",
+      "name": "ddm_pr10: second-family review of the quiesced decode-timing rule",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "REVIEW COMPLETE. Adjudicates the rule that a decode-timing receipt must be taken on a quiesced host, on retained-receipt re-derivation; scorer-free, score_claim=false. Feeds the timing-admission chain rlc1 was blocked by. REACTIVATION: superseded only by a further second-family amendment to the timing rule."
+    },
+    {
+      "id": "ddm_pr11_timing_admission_daemon_bursts_20260910",
+      "name": "ddm_pr11: adjudication of timing admission on macOS daemon bursts",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "REVIEW COMPLETE. Decides whether a macOS daemon burst during a timing run invalidates the receipt, on retained-receipt re-derivation across the macOS-CPU advisory and contest-CUDA T4 axes. This is the adjudication rlc1's blocked receipts needed. REACTIVATION: a burst class the retained receipts do not cover."
+    },
+    {
+      "id": "ddm_pr12_first_fire_intent_contract_20260910",
+      "name": "ddm_pr12: adjudication of the first-fire intent contract",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "CONTRACT SPECIFICATION LANDED (implemented and FROZEN by ffi1-ffi3 at commit a47543199; receipt ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json). Requires a candidate's normalized receiver digest to equal the timed reference's for timing-risk inheritance -- the requirement that rlc4 then refused on, correctly, and that pr14 scoped. REACTIVATION: any amendment to PREFIRE_INTENT_SCHEMA, which is a second-family decision."
+    },
+    {
+      "id": "ddm_pr13_ratify_prefire_contract_clarifications_20260910",
+      "name": "ddm_pr13: second-family ratification of the pre-fire contract clarifications",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "RATIFIED, read-only, on source and retained bytes. research_only=true; promotion_eligible=false. REACTIVATION: a clarification the ratified text does not cover."
+    },
+    {
+      "id": "ddm_pr14_manifest_in_normalized_receiver_digest_20260910",
+      "name": "ddm_pr14: adjudication of MANIFEST.sha256 in the normalized receiver digest",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "derived_hash_listing_inside_an_identity_digest_couples_identity_to_raw_pins_scope_the_exclusion_20260910"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "AMENDMENT SPECIFIED AND SCOPED. The normalizer strips archive pins from inflate.py, but MANIFEST.sha256 lists the RAW file hashes, so the pins re-entered the digest through a derived file and two behaviourally identical trees refused each other. The cure is SCOPE: exclude the listing from a NEW versioned timing-risk/behavior digest only; every custody and identity check keeps it. Widening the exclusion into the custody digest is the recorded dead-end. Implemented by ffi4, cured on main by pr18. Anti-pattern: derived_listing_inside_identity_digest_v1. REACTIVATION: a new identity comparison whose file list has not been audited listing-by-listing."
+    },
+    {
+      "id": "ddm_pr15_ratify_fire_tool_fix_amendment1_20260910",
+      "name": "ddm_pr15: ratification of the fire-tool repair and first-real-dispatch findings",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "RATIFIED, read-only code and retained-artifact inspection. research_only=true; promotion_eligible=false. REACTIVATION: a further fire-tool change."
+    },
+    {
+      "id": "ddm_pr16_ratify_amendment3_content_only_digest_20260910",
+      "name": "ddm_pr16: ratification of amendment[3] and the run3->run4 custody chain",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "RATIFIED. Content-only first-measurement digest with preserved tree custody; the run3->run4 chain checked end to end. The controlling correction it forced: run3 already passed the normal upload projection, not the intent seal hash -- its retained extraction root changed the path-dependent tree digest. REACTIVATION: a custody chain the ratified amendment does not cover."
+    },
+    {
+      "id": "ddm_pr17_run4_disposition_and_freshness_policy_20260910",
+      "name": "ddm_pr17: run4 disposition and consumer-fix freshness policy",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "POLICY LANDED, audit cutoff 2026-09-10T22:22:09Z, scorer-free revalidation of retained authority receipts. Sets the NO-GRACE rule: appending to the frozen contract invalidates in-flight intents, which is why ntb2 had to re-emit before firing. REACTIVATION: a freshness class the policy does not name."
+    },
+    {
+      "id": "ddm_ffi1_prefire_intent_contract_20260910",
+      "name": "ddm_ffi1: implement the pre-fire intent contract",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STOP -- BLOCKED_CONTRACT_AMBIGUITY at an ambiguous intent-reference digest. Implementation NOT landed; contract NOT frozen. Source inspection only. This is the ambiguity pr12's text did not resolve, not an implementation failure. REACTIVATION: the disambiguation, which ffi2/ffi3 carried."
+    },
+    {
+      "id": "ddm_ffi2_prefire_intent_contract_20260910",
+      "name": "ddm_ffi2: implement the pre-fire intent contract (resume)",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STOP -- BLOCKED_CONTRACT_AMBIGUITY on reference-custody scope inside unchanged T4 legs. Implementation NOT landed; contract NOT frozen. Two consecutive STOPs on the SAME contract is the signal that the text, not the implementer, was underdetermined. REACTIVATION: ffi3's bounded charter, which fixed the scope before implementing."
+    },
+    {
+      "id": "ddm_ffi3_prefire_intent_contract_20260910",
+      "name": "ddm_ffi3: bounded pre-fire intent implementation",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ffi3_implement_prefire_intent_contract_20260910.md -- contract frozen at a47543199, 345 tests on the host"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTED as one code-and-test serializer unit under a BOUNDED charter after two ambiguity STOPs; the contract was frozen at commit a47543199 (receipt ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json, 345 tests on the host). REACTIVATION: a contract amendment, which must come from a second family."
+    },
+    {
+      "id": "ddm_ffi4_prefire_intent_contract_20260910",
+      "name": "ddm_ffi4: scoped pre-fire timing-risk receiver amendment (pr14)",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ffi4_implement_pr14_scoped_risk_digest_amendment_20260910.md -- 135 passed, six new named tests, ruff clean"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTED AND MEASURED: pr14's literal scoped amendment in the two authorized Python files; 135 passed, Ruff clean, exactly six new named test functions. This is the implementation half of derived_listing_inside_identity_digest_v1. REACTIVATION: the cure landed on main as pr18; a further scope change needs a second family."
+    },
+    {
+      "id": "ddm_ffi5_prefire_intent_contract_20260910",
+      "name": "ddm_ffi5: corrected first-measurement consumer amendment[3]",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ffi5_first_measurement_consumer_fixes_amendment3_20260910.md -- 146 required / 181 expanded passed, five Python files, two review passes each"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTED, TESTED AND REVIEWED in the working tree; MAIN must land. 146 required / 181 expanded passed (one sandbox-blocked socket test recorded separately); Ruff clean; two review passes per each of five Python files. The single serializer attempt returned rc 17 and its bundle is OBSOLETE -- it preceded MAIN's CHARTER_CORRECTION.md, which replaced fix 1 with content-only validation and preserved tree custody. The original charter's first diagnosis was DISPROVED by retained bytes. REACTIVATION: MAIN lands the final sources, not the obsolete bundle."
+    },
+    {
+      "id": "ddm_ffi6_prefire_intent_contract_20260910",
+      "name": "ddm_ffi6: completion custody and typed consumer fixes",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ffi6_completion_custody_and_consumer_fix_rows_20260910.md -- implementation and host validation complete"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTATION AND HOST VALIDATION COMPLETE; serializer disposition recorded separately in ddm_ffi6_20260910/SERIALIZER_RESULT.json. No exact pointer move, real completion, seal write, authorization or fire. A consumer repair, not score progress -- the arm says so itself. REACTIVATION: a consumer the typed fixes do not cover."
+    },
+    {
+      "id": "ddm_cust1_first_measurement_custody_reconciliation_20260910",
+      "name": "ddm_cust1: first-measurement custody reconciliation",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PARTIAL. Receipts and corrective claims are complete; the two required linked ledger events are BLOCKED by the canonical helper's event whitelist. No exact score measured, no pointer moved. The arm closes a bounded custody arm with an explicit implementation handoff and refuses to claim every charter gap is closed -- that refusal is the useful part. REACTIVATION: widen the canonical helper's event whitelist, then append the two linked events."
+    },
+    {
+      "id": "ddm_cpx1_checker_cuda_only_refusal_adjudication_20260910",
+      "name": "ddm_cpx1: checker CUDA-only refusal adjudication path",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STOP: the retained CPU refusal does not bind move 43 -- it binds a different archive and a different content-only runtime digest, so a genuine submission_policy_adjudication.v1 cannot be produced from this packet's passed checks. The charter's conditional STOP applied BEFORE implementation. A blocked handoff, not the requested checker cure; no parser, checker, receiver or raw receipt changed. REACTIVATION: a CPU refusal bound to the archive actually being adjudicated -- which cpx2 then produced."
+    },
+    {
+      "id": "ddm_cpx2_checker_cure_move43_20260910",
+      "name": "ddm_cpx2: move-43 CPU refusal adjudicated; strict packet 91/93",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cpx2_checker_cuda_only_refusal_adjudication_path_20260910.md -- 85/93 to 91/93 on the real staged packet"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTED AND EXERCISED on the real staged move-43 packet. MEASURED [macOS-CPU checker diagnostic]: 85/93 -> 91/93 PASS; strict rc 1 remains. Exactly the six chartered failures changed to PASS; import hygiene and the missing hosted manifest remain FAILED. The exact frontier did not move. REACTIVATION: the two residual failures are hosting and import hygiene, both outside the checker."
+    },
+    {
+      "id": "ddm_cpx3_checker_custody_move44_20260910",
+      "name": "ddm_cpx3: move-44 checker custody complete; strict packet 91/93",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_cpx3_checker_move44_guard_form_and_first_measurement_custody_20260910.md -- 81/93 to 91/93 on the real staged packet"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTED. MEASURED [macOS-CPU checker diagnostic]: 81/93 -> 91/93 PASS; strict rc 1 remains. The seven CPU-refusal/policy checks and three dispatch-custody checks pass on the ACTUAL staged move-44 packet, using swp3's exact recorded argv and environment. Import hygiene and hosting remain failed. REACTIVATION: hosting the archive, which is an operator action, not a checker one."
+    },
+    {
+      "id": "ddm_swp2_pr140_swap_packet_move43_20260910",
+      "name": "ddm_swp2: move-43 PR #140 swap packet staged, nothing published",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STAGED, PUBLICATION REFUSED: 85 PASS / 8 FAIL / 93 strict checks, rc 1. The CPU declaration/refusal form the charter explicitly requested is rejected by the current checker. A concrete handoff, not a release-ready one-command confirm. Nothing pushed, hosted, dispatched or edited on PR #140. REACTIVATION: cpx2's checker cure raised the same packet to 91/93; publication still needs hosting and import hygiene."
+    },
+    {
+      "id": "ddm_swp3_pr140_swap_packet_move44_20260910",
+      "name": "ddm_swp3: move-44 PR #140 swap packet prepared, publication refused",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PREPARED, RELEASE REFUSED: 81/93 PASS, 12 FAIL, strict rc 1 -- WORSE than swp2/cpx2's 91/93 on the older packet, which is the finding. Everything staged lives under submissions/_staging_move44_pr140_swap/; only shippable/ is the receiver/upload tree and internal evidence must never be copied into the public PR. REACTIVATION: cpx3 carried the same packet to 91/93; publication waits on hosting."
+    },
+    {
+      "id": "ddm_sr4_ssd_reserve_reclaim_20260910",
+      "name": "ddm_sr4: SSD reserves restored with retained payload custody",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_sr4_ssd_reserve_reclaim_20260910.md -- reserves restored, custody audit VERIFIED"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STORAGE COMPLETE, final custody audit VERIFIED. Axis [macOS filesystem custody, scorer-free]. Git landing recorded separately in ddm_sr4_20260910/SERIALIZER_RESULT.json; the pre-serializer memo makes NO main-commit claim, which is the right shape. REACTIVATION: a reserve breach, or a store whose rebuild path the four-binding certificate cannot execute (sr5's law)."
+    },
+    {
+      "id": "ddm_gdc1_generator_door_20260910",
+      "name": "ddm_gdc1: generator door construction -- ordered scanline partition program",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc1_generator_door_construction_design_20260910.md -- 329,122 B full-n600 vs the 94,010 B door"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc1_generator_door_construction_design_20260910.md -- 329,122 B full-n600 vs the 94,010 B door"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FORMULATION-NO-GO. Best full-n600 point K=6: 223,494 B program + 105,628 B real coded residual = 329,122 B, which is 235,112 B over the door. The arm's LASTING contribution is the DOOR itself: it re-derived the charter's stale 137,986 B cap to a strict 154,507 B archive cap, a 25,959 B rate demand at move 43, a 119,969 B replaceable tail envelope and a 94,010 B program-plus-correction gate -- the gate gdc2, gdc3 and gdc4 were then all priced against. REACTIVATION: a program with a smaller FIELD DESCRIPTION intercept; NOT a better residual coder on this one. DSL: Gdc1OrderedScanlineProgram."
+    },
+    {
+      "id": "ddm_gdc2_generator_door_20260910",
+      "name": "ddm_gdc2: categorical Cool-Chic distillation of the K=8 scanline teacher",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc2_categorical_coolchic_k8_distill_20260910.md -- 540,681 B = 5.75x the gate"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc2_categorical_coolchic_k8_distill_20260910.md -- 540,681 B = 5.75x the gate"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FORMULATION-NO-GO -- the widest miss of the four doors. Best construction packet + R_exact = 540,681 B against the 94,010 B gate, 5.75x over. VERDICT SCOPE: the GDC1 governed Cool-Chic form at the specified latent budget; a different latent budget or a non-categorical head is NOT closed by this row. REACTIVATION: a latent budget or head form outside the governed one, priced the same way. DSL: Gdc2CategoricalCoolChicDistill."
+    },
+    {
+      "id": "ddm_gdc3_generator_door_20260910",
+      "name": "ddm_gdc3: anisotropic key-row ribbon against the measured geometry law",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc3_next_construction_against_the_geometry_law_20260910.md -- 453,163 B = 4.82x the door"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc3_next_construction_against_the_geometry_law_20260910.md -- 453,163 B = 4.82x the door"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FORMULATION-NO-GO, and instructive about why. Best of four full-n600 schedules (uniform2): 227,551 B counted packet, 634,370 mismatches, 225,612 B real exact residual, 453,163 B total -- 4.820370x the 94,010 B door, with the PACKET ALONE at 2.4205x it. The falsifier did exactly what its geometry claimed (100% of errors boundary-adjacent, the cheapest measured residual class) and the field-description INTERCEPT dominated anyway. That is the transferable finding. REACTIVATION: a construction that attacks the intercept, not the error geometry. DSL: Gdc3AnisotropicKeyRowRibbon."
+    },
+    {
+      "id": "ddm_gdc4_generator_door_20260910",
+      "name": "ddm_gdc4: run-native endpoint generator, priced at its own oracle",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc4_run_native_endpoint_generator_20260910.md -- all three screens falsified; best member 2.50x over"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_gdc4_run_native_endpoint_generator_20260910.md -- all three screens falsified; best member 2.50x over"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FORMULATION-NO-GO, REFUSED BEFORE THE BURN by its own arithmetic. All three pre-registered early-stop screens are falsified on the real n600 field -- packet <= 60,000 B, mismatches <= 65,000, >= 90% of errors long-and-boundary-adjacent -- and the family's BEST POSSIBLE member misses the 94,010 B door by 2.50x. Correction this arm carries forward: it reported COMPUTED code lengths, never serialized prices; do not read them as physical payload. REACTIVATION: a screen set the measured field does not falsify. DSL: Gdc4RunNativeEndpointGenerator."
+    },
+    {
+      "id": "ddm_ls1_lane_conditioned_surprise_atlas_20260910",
+      "name": "ddm_ls1: Lane-conditioned surprise atlas on the shipped move-44 field",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ls1_lane_conditioned_surprise_atlas_on_the_shipped_field_20260911.md -- oracle ladder, n600, independent verification PASS"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ls1_lane_conditioned_surprise_atlas_on_the_shipped_field_20260911.md -- 117,964,800 symbols of the SHIPPED move-44 field"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "lane_surprise_atlas_closes_the_token_tail_rate_corner_at_the_measured_level_20260911"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEASURED, CLOSED AT THE MEASURED LEVEL. All 117,964,800 decoded symbols match the shipped field; the instrument reconciles to the physical stream within 0.000584353% (falsifier +/-0.5%, PASSED). Lane is 691,677 symbols = 0.586342% of area carrying 33.478517% of stream surprise. Oracle ladder (Miller-Madow, tables granted FREE) against the 25,899 B demand: tc1_joint 8,218.071 B (17,680.929 short), receiver_lane 17,534.216 B (8,364.784 short), granted_previous_row_lane 24,863.638 B (1,035.362 short -- and that rung uses previous-row geometry a decoder does NOT have). The explicit Lane override map alone is 594,003 B, more than the whole incumbent tail. REACTIVATION: an information set the ladder never measured that a receiver CAN compute. Law: lane_surprise_atlas_oracle_ladder_v1. DSL: Ls1LaneConditionedSurpriseAtlas."
+    },
+    {
+      "id": "ddm_ls2_full_resolution_lane_probability_bound_20260910",
+      "name": "ddm_ls2: full-resolution Lane probability correction, charged",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ls2_full_resolution_lane_probability_bound_20260911.md -- two charged families, all 600 pairs"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ls2_full_resolution_lane_probability_bound_20260911.md -- actual shipped RC64 frequency conversion over 117,964,800 symbols"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEASURED; REFUSED_CANDIDATE_FIRE -- TIMING ADMISSION ABSENT, not a negative gain. Both declared families are positive after their own parameter charge: separate 266.162261 B (23 B of parameters), joint 385.550480 B (18 B) = 1.4887% of the 25,899 B demand. Held out on a seeded 120-pair split the joint returns 67.049582 B, 49.049582 B after the entire parameter charge. The separate model's gain is a ROAD gain that makes Lane WORSE (-88.535929 B signed gross). Receiver state is 101,600 B against an 18-byte payload, and live move-44 T4 inflate already sits at 1232.418725255 s against a 1260 s gate. REACTIVATION: a NATIVE receiver with a MEASURED decode wall-clock inside the gate -- the one leg this arm lacked. Law: lane_surprise_atlas_oracle_ladder_v1."
+    },
+    {
+      "id": "ddm_ntb1_non_tail_bytes_price_and_resolve_20260910",
+      "name": "ddm_ntb1: non-tail census and lossless prices",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_ntb1_non_tail_bytes_price_and_resolve_20260911.md -- 13 formats, 26 real encodes, no lossless winner"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PARTIAL -- and the arm says so rather than claiming closure. The census and bounded lossless roster are COMPLETE: no lossless winner exists among 13 tested formats (26 real encodes, independently reproduced). HPAC pruning with a model-dependent tail re-encode was NOT implemented or measured; renderer precision cuts with seg re-solve and n600 Seg/Pose were NOT run because the common contract assigned no scorer slot. Those are LIVE OBLIGATIONS, not negative verdicts -- do not mark the charter COMPLETE. The competitive pointer did not move. REACTIVATION: a scorer slot for the two unrun lossy legs."
+    },
+    {
+      "id": "ddm_mxo1_free_decode_time_online_context_mixing_20260910",
+      "name": "ddm_mxo1: free decode-time online context mixing on the shipped stream",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_mxo1_free_decode_time_online_context_mixing_20260911.md -- three learners, full n600 RC64 replay"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_mxo1_free_decode_time_online_context_mixing_20260911.md -- 368 realized RC64 bytes on the shipped move-44 stream"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "COMPLETE, scorer-free, no candidate fired -- CLOSED BY THRESHOLD, not by failure. The best of three original post-shipping-prior learners saved 368 realized RC64 bytes on the full n600 stream: 1.42% of the 25,899 B demand, below the charter's own 3,000 B receiver-delta fire threshold and slightly below ls2's 386 B linear screen. The byte counts are PHYSICAL RC64 stream sizes; the runtime projections are NOT T4 measurements. That two independent corrector families land within 5% of each other says the ceiling belongs to the OBJECT, not to a learner. REACTIVATION: a learner class outside the three tested, or a receiver-delta trigger the operator lowers deliberately. DSL: Mxo1FreeDecodeTimeContextMixer."
+    },
+    {
+      "id": "ddm_mxo2_low_rank_stacker_over_premix_20260910",
+      "name": "ddm_mxo2: low-rank stacker over pre-mix family outputs (resumed as mxo3)",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "RESUMED AS ddm_mxo3 AND CLOSED THERE. GREP HAZARD, recorded so nobody repeats it: the result memo is filed under MXO2's name -- .omx/research/ddm_mxo2_low_rank_stacker_over_premix_family_outputs_screen_20260911.md (sha 33f5828d85d32d1c2b2cfcddc417539f2e96e4ff68a86e53952cd92eaa5faa17) -- while its own title says 'ddm_mxo3 (resuming ddm_mxo2)'. A name-based search for either arm finds only half the story. Verdict (MEASURED, n600): rank 2 +9.280 B, rank 4 -9.944 B, rank 8 -7.469 B against a 3,000 B fire trigger; the best is 323x short. The sister lane row is ddm_mxo3_premix_low_rank_stacker_screen_20260911. REACTIVATION: see that row."
+    },
+    {
+      "id": "ddm_obx1_successor_object_under_the_cross_20260910",
+      "name": "ddm_obx1: successor object under the cross -- design selection",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_obx1_successor_object_under_the_cross_design_20260911.md -- retained-byte falsifier over all 600 pairs"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "COMPLETE -- DESIGN SELECTED; DIRECT Q8 FALSIFIER REFUSED; BURN REQUIRES OPERATOR GO. The retained-byte falsifier rejects the direct construction: QBT2B r10 measures d_seg 0.06325725979275174, d_pose 0.52944848959797, distortion 8.626700750101595 over all 600 pairs, and adding a decoded int8 RGB correction on the exact shipped Lane-edge support makes BOTH axes worse (d_seg 0.11243711683485243, d_pose 1.1038073466877865, distortion 14.566071306836974). Axis [macOS-CPU advisory]; score_claim=false; pointer unmoved. REACTIVATION: operator GO for the selected design's burn -- the refusal is of the DIRECT correction, not of the design."
+    },
+    {
+      "id": "ddm_vr5_generalized_certified_raw_reclaim_20260910",
+      "name": "ddm_vr5: generalized certified raw reclaim",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PLANNED AND JOURNALLED; the apply journals are retained (ddm_vr5_apply_journal_20260909.jsonl, the all-refused attempt-1 journal, and the bz2d attempt-2 journal). REACTIVATION: the reclaim family continued as vr6/vr7/vr8; vr7's apply is the one that deleted 11 moved payloads behind live redirects, so read this row with that one."
+    },
+    {
+      "id": "ddm_vr6_tonights_reclaim_20260910",
+      "name": "ddm_vr6: tonight's reclaim is BLOCKED; no deletion batch",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BLOCKED -- no deletion batch was executed. Axis [filesystem bytes measured; scorer-free]; score_claim=false. A refusal is the correct output when the certificate cannot be exercised; the bytes stayed. REACTIVATION: a certifiable batch under the four-binding rule."
+    },
+    {
+      "id": "ddm_vr7_certified_deletion_plan_20260910",
+      "name": "ddm_vr7: certified deletion plan (the apply that deleted moved payloads)",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "moved_labels_are_not_custody_vr7_deleted_moved_payloads_behind_live_redirects_20260910"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PLAN PRODUCED AND APPLIED, AND THE APPLY WAS WRONG in a way worth keeping visible: it deleted 11 MOVED payloads behind live redirects -- a moved LABEL is not custody, and the destination must be hashed. vr8 recovered all 11. Catalog #419 covers the class. REACTIVATION: any deletion plan must hash the DESTINATION, not trust the move label."
+    },
+    {
+      "id": "ddm_vr8_moved_payload_recovery_and_enforcement_20260910",
+      "name": "ddm_vr8: MOVE destinations deleted later -- recovery and custody enforcement",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_vr8_moved_payloads_exfat_stub_audit_20260910.md -- 11/11 payloads (27,468,072,000 B) restored and hash-verified"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "moved_labels_are_not_custody_vr7_deleted_moved_payloads_behind_live_redirects_20260910"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "RECOVERY VERIFIED; MAIN LANDING STILL REQUIRED. All 11/11 missing payloads (27,468,072,000 B) were restored at the original destination and match the recorded hashes. Axis [macOS-CPU byte/custody apparatus]; research_only=true. The four retained censuses (initial/final destination, final claim, reclaim row) and the copy/render recovery ledgers are the evidence. REACTIVATION: the enforcement half needs MAIN to land it."
+    },
+    {
+      "id": "ddm_eb1_conditional_partition_covering_bounds_20260910",
+      "name": "ddm_eb1: conditional partition covering bounds",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_eb1_entropy_lower_bound_boundary_description_20260910.md -- certified minimax bounds at D = 12,540"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_eb1_entropy_lower_bound_boundary_description_20260910.md -- n600 profile orbits on the real field"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEASURED; THE REQUESTED UNIVERSAL VERDICT IS UNDERDETERMINED, and the arm says so. At the charter's D = 12,540 cells the certified conditional minimax lower bounds are 1,404.5 B for class C (independent paired topology-preserving boundary swaps) and 2,100.25 B for class N (every observed-label permutation within interchangeable boundary sites). These are BIT-EQUIVALENT LOWER BOUNDS, not encoded payload lengths, and they establish neither near-optimality nor a large achievable saving for this archive. Exact frontier delta: zero. REACTIVATION: a counting argument over the full same-profile class F, whose size is explicitly not asserted to be known. Law: partition_description_rate_distortion_lower_bound_v1."
+    },
+    {
+      "id": "ddm_eb2_conditional_partition_bound_20260910",
+      "name": "ddm_eb2: high cell agreement does not make the temporal residual cheap",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_eb2_conditional_partition_bound_20260910.md -- three real coder measurements"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/ddm_eb2_conditional_partition_bound_20260910.md -- pose-warp 542,248 B / persistence 536,997 B / from-scratch 357,123 B"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "receiver_holds_no_partition_and_no_pose_side_information_is_the_decoded_token_plane_20260910"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEASURED, CLOSED. The tested pose-warp residual costs 542,248 B; persistence costs 536,997 B; the SAME coder describes the partition from scratch in 357,123 B. All three are real. So a temporal predictor that agrees with its target on most cells still loses to describing the partition outright -- high agreement is not cheapness. REACTIVATION: a residual representation outside the two tested, priced by the same coder. Law: partition_description_rate_distortion_lower_bound_v1."
+    },
+    {
+      "id": "ddm_mv1_moved_manifest_resolution_patch_20260910",
+      "name": "ddm_mv1: moved-manifest resolution -- the patch and its custody",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_mv1_moved_manifest_resolution_20260910.md -- resolution + gate, landing manifest retained"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PRODUCED; landing deferred to mv2/mv3. The resolution wires tac.artifact_moved.resolve through every bare cross-arm artifact read (jg2, rp1, sj1 pass5, vr3, candidate_seal) plus a new gate. NOTE, so a reader is not misled: mv1's staged/ tree is a COPY of tracked repo files and is deliberately untracked, and wire.py is an in-place mutator FOR that tree -- it cannot run without it, and the real effect landed through mv2/mv3. REACTIVATION: a cross-arm read the gate does not cover."
+    },
+    {
+      "id": "ddm_mv2_land_mv1_moved_manifest_patch_20260910",
+      "name": "ddm_mv2: land mv1's moved-manifest patch",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDING ATTEMPT; apply check and recall retained. The charter is the durable artifact; the patch context did not apply cleanly, which is why mv3 followed with a context rebase. REACTIVATION: superseded by mv3."
+    },
+    {
+      "id": "ddm_mv3_land_mv1_patch_with_context_rebase_20260910",
+      "name": "ddm_mv3: land mv1's patch with a context rebase",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "LANDING ATTEMPT with a rebased context; baseline and task events retained. REACTIVATION: the moved-manifest resolution is live on main; this row exists so the mv1 -> mv2 -> mv3 chain is legible rather than looking like three unrelated arms."
+    },
+    {
+      "id": "ddm_sw1_screening_census_and_ssd_code_disposition_20260910",
+      "name": "ddm_sw1: screening census and SSD-authored-code disposition",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_sw1_screening_census_and_ssd_code_disposition_20260910.md -- 93/375 warnings to 0/375, all hash-bound"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "COMPLETE AND LANDED. The live census moved from 93 warnings among 375 charters to 0/375, and every one of the 93 was an INDIVIDUALLY hash-bound historical_finished_before_law exemption -- 72 queue-backed charters with pre-law terminal receipts (71 final messages, one owning memo) and 21 non-queue charters with pre-law committed owning memos. No row required a bulk exemption, a rule weakening, or a declaration edit to a still-spawnable charter. That distinction is the whole value of the row. REACTIVATION: a new charter class the screening gate does not recognise."
+    },
+    {
+      "id": "ddm_pk1_pr140_swap_packet_move40_20260910",
+      "name": "ddm_pk1: move-40 PR #140 staging packet, nothing published",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "STAGED, STRICT COMPLIANCE REFUSED (70 PASS / 6 FAIL / 76 checks, rc=1). The byte-exact staging copy and report are retained; every refusal is retained WITHOUT waiver, which is the right default. A reviewable staging packet, not a release-ready one-command swap. REACTIVATION: publication remains queued to MAIN/operator; swp2/swp3/cpx2/cpx3 carried the same work forward on later moves."
+    },
+    {
+      "id": "ddm_hb1_admission_rule_v3_host_baseline_burst_20260910",
+      "name": "ddm_hb1: admission rule v3 -- host baseline and burst",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "CHARTERED AND EXERCISED; the durable output is the receipt set (bundle verification, pytest and ruff receipts, recall), not a result memo -- a ddm_hb1_*_20260910.md result memo does NOT exist, and a name-based search will therefore find only the charter. This row records that so the next reader does not conclude the arm never ran. REACTIVATION: the timing-admission rule it feeds was adjudicated by pr10/pr11."
+    },
+    {
+      "id": "ddm_cd3_ssd_authored_code_custody_gate_20260910",
+      "name": "ddm_cd3: SSD authored-code custody and owner-process gate proposal",
+      "phase": 8.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "THE ZERO-DEBT TARGET IS NOT ACHIEVED, stated plainly. The single serializer attempt returned rc=17; the source bytes and the proposed gate are retained for MAIN to land. No SSD source, live tree, raw, payload, archive or upstream file was modified; no production reclaim gate ran and no deletion was attempted. Axis [macOS-CPU filesystem/custody apparatus]; the tests are apparatus fixtures, not scientific samples. REACTIVATION: MAIN lands the gate; the 33 SSD-only code blobs the consolidation monitor still counts are this row's open debt."
+    },
+    {
+      "id": "ddm_dwc1_decode_wall_clock_seal_leg_20260910",
+      "name": "ddm_dwc1: decode timing belongs in the seal",
+      "phase": 8.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/ddm_dwc1_decode_wall_clock_seal_leg_20260910.md -- three full600 proxy runs + 32-stratum benchmark"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "receiver_change_needs_a_measured_decode_wall_clock_tc4_timed_out_at_1800s_on_t4_20260910"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "IMPLEMENTED AND MEASURED; strict passing calibration BLOCKED by unavailable process-count evidence. All three full600 proxy runs and the 32-stratum map benchmark completed. The retained T4 evidence is the decisive part: it is what put a MEASURED decode wall-clock into the seal, which is the leg every later move inherits or measures. REACTIVATION: process-count evidence on a quiesced host (pr10/pr11 adjudicated the rule)."
     }
   ],
   "level_rules": {
@@ -99093,5 +101143,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-11T21:03:48Z"
+  "updated_at": "2026-09-11T21:33:35Z"
 }
