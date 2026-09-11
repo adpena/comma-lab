@@ -64,7 +64,7 @@ FIELD_SHA = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
 #: Free-space floor, matched to the 40 GiB fail-closed reserve the sister HPAC
 #: producers hold.  Never lowered: a refusal here is the guard working.
 RESERVE_BYTES = 40 << 30
-TREATMENTS = ("control", "past_dil2", "past_dil3", "cone_dil2", "cone_dil3")
+TREATMENTS = ("control", "retrain", "past_dil2", "past_dil3", "cone_dil2", "cone_dil3")
 
 
 class PriceError(RuntimeError):
@@ -110,13 +110,21 @@ def build_geometry(runtime: Path, work: Path) -> dict:
 #: receiver: the packer's topology carries no dilation and the serialized rows are the
 #: masked taps, so a dilated prior's IHS1 bytes have exactly the shipped structure.
 #: That is what makes this a pure shape rung -- and what makes it a receiver change.
-TREATMENT_PAST_DILATION = {"control": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1}
+#: ``retrain`` is the SHAPE CONTROL: the shipped geometry, retrained under the same law
+#: from the same warm start.  It is the only treatment here that is NOT a receiver
+#: change, so if it wins it takes the normal seal path -- which is why it must be priced
+#: before any shape rung is proposed as the candidate.
+TREATMENT_PAST_DILATION = {
+    "control": 1, "retrain": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1
+}
 #: conv_a's spacing.  The receiver reaches conv_a's taps through geometry-general code in
 #: BOTH the optimized torch path (``hpac_inference._conv_a_features`` builds its gather
 #: from ``sparse.a_offsets`` with a bounds check) and the native export
 #: (``f26_hpac_native.c`` reads ``a_offsets`` off the module), so this axis costs ONE
 #: receiver constant and nothing in C.
-TREATMENT_CONE_DILATION = {"control": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3}
+TREATMENT_CONE_DILATION = {
+    "control": 1, "retrain": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3
+}
 
 
 def assert_layout_held(body: bytes, shipped_body: bytes, counts: list[int]) -> dict:
