@@ -1,0 +1,19 @@
+{
+  "experiments/ddm_rlc1_geometry.c": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5",
+  "experiments/ddm_rlc1_geometry.py": "c6fc46dd647725bd3fa256c7e712e255e135bd1928e93f70bad53c0ef56c451f",
+  "experiments/ddm_rlc1_mixer.py": "8e8961f1602694ed637ec020f2207e30bab3ce1a693f23877c82ac21d5ae7e1c",
+  "experiments/ddm_rlc1_public.py": "a317c5485b922c03f57aaa93e10095f51d5d16da99db63f4e95d2c06f366d345",
+  "experiments/ddm_rlc1_reference.py": "1b074e2bdb1a80d0f8e257483e20855a0dbab8456cf773baa414a11d45bb024b",
+  "experiments/ddm_rlc1_reference_controls.py": "c432011d1a19363782f33011b9cfe57014dc104f70de45d07a0ff3208e02b2e6",
+  "experiments/ddm_rlc1_run.py": "253627d6f77e5b6845d97658cf0c6cb65e8fa91f2b6e0c818849095aacba2e2e",
+  "experiments/ddm_rlc1_smoke.py": "03ef01eab8a74166241e20dc8d3e3114a482d2fe5bbf12146bca11b9a1038aa5",
+  ".omx/research/ddm_rlc1_20260910/reference_review.md": "96817809c450b5fdb890677b819ffd70dba67b21f17878ee5b0e68c35ee5567a",
+  ".omx/research/ddm_rlc1_20260910/receiver_review.md": "d5c3865e9dc0e8b76ee26152abb441309de72c06e903dd39aca1c92517a1ca9e",
+  ".omx/research/ddm_rlc1_20260910/embedded_constants_audit.txt": "783ff06c6abe5614182ddbca979a9b203641508d1e935712f19c50a9bf30cd6e",
+  ".omx/research/ddm_rlc1_20260910/embedded_constants_audit.json": "753e4ef7de0a4cabd5dbd336ec94c4c8973aaf137a8632d73e8107ea25520774",
+  ".omx/research/ddm_rlc1_20260910/archive_payload_manifest.json": "b6d886d33b709de8966c5c61ac570f8f2dc36d702a88e8ae0a2d30609b35cdea",
+  ".omx/research/ddm_rlc1_20260910/binary_source_audit.md": "44719e812c940e5598047984e0efe7b512dd83941713ba72c060e57051f86ee8",
+  ".omx/research/ddm_rlc1_20260910/rebuild_instructions.md": "383418e73f328c2bc63d22ffbca9320a7a9f3a6c0803eff9cd50618873959ef0",
+  ".omx/research/ddm_rlc1_20260910/python_reference_equivalence_test.py": "d908e1c55160c78f33b7b8b297c3f3410e054a9ffad85fd8a746ce00d8bba08b",
+  ".omx/research/ddm_rlc1_rule118_cure_20260910.md": "a34a367461f9d06dfebfab78278490fd40b59f1b7eddcf66f06b8621c421c47e"
+}

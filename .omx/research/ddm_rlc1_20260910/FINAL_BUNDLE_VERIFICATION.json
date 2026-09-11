@@ -1,0 +1,15 @@
+{
+  "verified_files": 34,
+  "exact_file_set": true,
+  "all_blob_hashes_match_current_files": true,
+  "fallback_commit": "c24a0d7b02e118861997880a38085ac3649c422c",
+  "base_head": "fd22cf1af936398071635cf615c8d6131528124e",
+  "bundle_ref": "refs/heads/serializer-fallback",
+  "bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc1_20260910/landing.bundle",
+  "bundle_sha256": "c776067c78e84461916e47faf02191aee2d51032e0a5925c05cd5470882730f1",
+  "patch": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc1_20260910/landing.patch",
+  "patch_sha256": "6375eaad084ef4136783509e994d767dba33c76511fc5354e48effd8288665e9",
+  "shared_index_empty": true,
+  "main_landed": false,
+  "score_claim": false
+}

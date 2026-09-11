@@ -1,0 +1,32 @@
+{
+  "equations": {
+    "returncode": 0,
+    "entries": 483,
+    "query": "MOVED.json|artifact_moved|ddm_mv1|ddm_vr7",
+    "matches": []
+  },
+  "index_design_ledger": {
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "MOVED.json|moved.manifest|ddm_mv1|ddm_vr7",
+      ".omx/research",
+      "docs",
+      ".omx/state/canonical_task_status.jsonl",
+      "--glob",
+      "CANONICAL_RESEARCH_INDEX*",
+      "--glob",
+      "sub015_DAG_*",
+      "--glob",
+      "*SPEC*",
+      "--glob",
+      "canonical_task_status.jsonl",
+      "--max-count",
+      "3"
+    ],
+    "returncode": 0,
+    "stdout": ".omx/state/canonical_task_status.jsonl:853:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_mv1\",\"event_notes\":\"QUEUED-WITH-A-FIRE-ORDER; owner=MAIN; consumer_store=.omx/research/ddm_mv1_20260910/FINAL_HANDOFF.json; fire_trigger=rp1/tc3/vr6 affected stages quiescent and main serializer writable; score_claim=false. No extra dispatch authorized.\",\"event_timestamp_utc\":\"2026-09-10T03:58:02.311259Z\",\"event_type\":\"registered\",\"owner\":\"MAIN\",\"predicted_cost_usd\":null,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_mv1_20260910\",\"source_design_memo\":\".omx/research/ddm_mv1_moved_manifest_resolution_20260910.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_mv1_install_20260910\",\"test_status\":\"pending\",\"title\":\"Install reviewed MOVED reader patch after live stages exit\",\"written_at_utc\":\"2026-09-10T03:58:02.311259Z\",\"written_host\":\"mac.lan\",\"written_pid\":72634}\n.omx/state/canonical_task_status.jsonl:854:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_mv1\",\"event_notes\":\"QUEUED-WITH-A-FIRE-ORDER; owner=MAIN; consumer_store=.omx/research/ddm_mv1_20260910/census.json; fire_trigger=after helper patch install; strict flip fires only at measured zero; score_claim=false. No extra dispatch authorized.\",\"event_timestamp_utc\":\"2026-09-10T03:58:02.328280Z\",\"event_type\":\"registered\",\"owner\":\"MAIN\",\"predicted_cost_usd\":null,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_mv1_20260910\",\"source_design_memo\":\".omx/research/ddm_mv1_moved_manifest_resolution_20260910.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_mv1_catalog417_migration_20260910\",\"test_status\":\"pending\",\"title\":\"Route scoped sibling reader census migration and strict flip\",\"written_at_utc\":\"2026-09-10T03:58:02.328280Z\",\"written_host\":\"mac.lan\",\"written_pid\":72634}\n.omx/state/canonical_task_status.jsonl:855:{\"actual_delta_s\":null,\"blockers\":[],\"commit_shas\":[],\"completed_at_utc\":null,\"event_actor\":\"ddm_mv1\",\"event_notes\":\"QUEUED-WITH-A-FIRE-ORDER; owner=tc3 via MAIN; consumer_store=/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/; fire_trigger=next source rebind and public receiver stage boundary; score_claim=false. No extra dispatch authorized.\",\"event_timestamp_utc\":\"2026-09-10T03:58:02.345447Z\",\"event_type\":\"registered\",\"owner\":\"tc3 via MAIN\",\"predicted_cost_usd\":null,\"predicted_delta_s_band\":null,\"schema_version\":\"canonical_task_status_v1_20260518\",\"session_id\":\"ddm_mv1_20260910\",\"source_design_memo\":\".omx/research/ddm_mv1_moved_manifest_resolution_20260910.md\",\"started_at_utc\":null,\"status\":\"pending\",\"task_id\":\"ddm_mv1_tc3_public600_consumption_20260910\",\"test_status\":\"pending\",\"title\":\"Use resolver on next normally authorized public600 stage\",\"written_at_utc\":\"2026-09-10T03:58:02.345447Z\",\"written_host\":\"mac.lan\",\"written_pid\":72634}\n",
+    "stderr": ""
+  }
+}
