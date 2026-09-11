@@ -1,0 +1,80 @@
+{
+  "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "cold_store": "superseded move-44 attempts and renderer checkpoints are MOVED to /Volumes/APDataStore/pact/ddm_ntb2_coldstore/ with per-file manifests",
+  "nothing_deleted": true,
+  "payloads": [
+    {
+      "bytes": 180001,
+      "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+      "sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720"
+    },
+    {
+      "bytes": 179901,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin0.bin",
+      "sha256": "c3998180c9e59d6be124a513d0aa5651551e6f3e6a7d5e24181bf07ac4141a15"
+    },
+    {
+      "bytes": 179901,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin1.bin",
+      "sha256": "c3998180c9e59d6be124a513d0aa5651551e6f3e6a7d5e24181bf07ac4141a15"
+    },
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/output/0.raw",
+      "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+    },
+    {
+      "bytes": 16835,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/hpac_v3/frame_even/PRICE.json",
+      "sha256": "ceb25bca2eec94ec2e304e08dd8d1f419b8d6f79df90ec0bf49c2f21429b1ac4"
+    },
+    {
+      "bytes": 2009,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/REBASE.json",
+      "sha256": "fed2e35550be0e77bc261a0d398d13f427a538dbcf503a69a380311c584d9384"
+    },
+    {
+      "bytes": 770,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/ARCHIVE_PARSEBACK.json",
+      "sha256": "4cf28a581576ae9c79cb3eb7e189d819ce78403019a9a7c4689dc5e7a42533a7"
+    },
+    {
+      "bytes": 9955,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/CANDIDATE_MANIFEST.json",
+      "sha256": "f2809a9e2778b633a6e135ccad770bead614ae7ba7feff3e900806297ee0595b"
+    },
+    {
+      "bytes": 1097,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/MANIFEST_VALIDATION.json",
+      "sha256": "b04cbf36cca17a0bbc124fd29b1121613572db937bbdfbc4606f9b2e86dbe3e9"
+    },
+    {
+      "bytes": 1291,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/TWIN_ENCODE.json",
+      "sha256": "4c8b9c44350e6401706b8f83df1be22fe0003db9b6848ea782d7c0eb75c3b1d6"
+    },
+    {
+      "bytes": 1782,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/RAW_IDENTITY_N600.json",
+      "sha256": "891b5aba4aa676b1ba31caae198e220716d012d70d814b767af7eb02d540d4a2"
+    },
+    {
+      "bytes": 33611,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/LITERAL_CENSUS.json",
+      "sha256": "352bcf238fdaf304a7ac0c3f3c5379ea212e0b663255cf44054e0a428e7e6bae"
+    },
+    {
+      "bytes": 1588,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/ENCODER_EXECUTION_0.json",
+      "sha256": "39b7008f6ae9079a49ad0e27421ca2a378f90ed760410967e69850c822db5a9c"
+    },
+    {
+      "bytes": 1588,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/ENCODER_EXECUTION_1.json",
+      "sha256": "536dd59fbf53360bef4db2438b81ccc709187d829f075a31bd6764a083c2c290"
+    }
+  ],
+  "receiver_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df",
+  "runtime_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+  "score_claim": false
+}

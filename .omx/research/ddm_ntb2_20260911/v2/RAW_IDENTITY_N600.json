@@ -1,0 +1,40 @@
+{
+  "actual_public_result": {
+    "bytes": 2811,
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/RESULT.json",
+    "sha256": "cafa4dfcfcdb0df311d21b91e566bd0240ca16398b83c19c6476ea38014c996c"
+  },
+  "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "bytes_compared": 3662409600,
+  "candidate_public_stdout": {
+    "bytes": 5825,
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/attempts/attempt_0000/run.log",
+    "sha256": "2ec40be3dc6eddec8c02185dbde959d4fd0ee93767df857c87970da7388623b0"
+  },
+  "candidate_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "checkpoint_resume": false,
+  "command": [
+    "bash",
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/inflate.sh",
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/data",
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/output",
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/file_list.txt"
+  ],
+  "entrypoint": "inflate.sh",
+  "n_samples": 600,
+  "pair_count": 600,
+  "pointer_archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "pointer_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "receiver_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df",
+  "runtime_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+  "score_claim": false,
+  "token_cache_status": "DISABLED"
+}

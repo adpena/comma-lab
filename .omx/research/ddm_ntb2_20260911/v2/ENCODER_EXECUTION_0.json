@@ -1,0 +1,33 @@
+{
+  "archive_bytes": 180001,
+  "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "experiments/ddm_ntb2_rebase45.py",
+    "--treatment",
+    "frame_even"
+  ],
+  "completed": true,
+  "consumed_hpac_section": {
+    "bytes": 11308,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/hpac_v3/frame_even/retained/hpac.twin0.br",
+    "sha256": "fe7bd30afbccd39dc711ff98de90f8bcb441ce16a9a0c6f14582d3c89dba29b6"
+  },
+  "consumed_tail_rider": {
+    "bytes": 120171,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/hpac_v3/frame_even/retained/tail.twin0.rider",
+    "sha256": "6c0f816db6e8e8a73b9cc1580eafff18ebc0259f556e5084f79f641b3990732d"
+  },
+  "execution_id": "ddm_ntb2_frame_even_hpac_prior_assembly_0",
+  "execution_scope": "one full assembly of move 45's members with THIS twin's own retained HPAC section (hpac.twin0.br) and re-encoded tail rider (tail.twin0.rider), read out of the 600-frame RLC1 encode run that produced them and never copied from the other twin",
+  "finished_at_utc": "2026-09-11T19:23:41.011398+00:00",
+  "n_samples": 600,
+  "payload": {
+    "bytes": 179901,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin0.bin",
+    "sha256": "c3998180c9e59d6be124a513d0aa5651551e6f3e6a7d5e24181bf07ac4141a15"
+  },
+  "producer_source_commit": "d1f1657399f3536919f4207dc99c52a33469ee5b",
+  "score_claim": false,
+  "started_at_utc": "2026-09-11T19:23:41.011284+00:00"
+}

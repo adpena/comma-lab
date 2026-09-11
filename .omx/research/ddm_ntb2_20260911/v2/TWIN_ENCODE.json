@@ -1,0 +1,32 @@
+{
+  "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "executions": [
+    {
+      "bytes": 1588,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/ENCODER_EXECUTION_0.json",
+      "sha256": "39b7008f6ae9079a49ad0e27421ca2a378f90ed760410967e69850c822db5a9c"
+    },
+    {
+      "bytes": 1588,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/ENCODER_EXECUTION_1.json",
+      "sha256": "536dd59fbf53360bef4db2438b81ccc709187d829f075a31bd6764a083c2c290"
+    }
+  ],
+  "n_samples": 600,
+  "payloads": [
+    {
+      "bytes": 179901,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin0.bin",
+      "sha256": "c3998180c9e59d6be124a513d0aa5651551e6f3e6a7d5e24181bf07ac4141a15"
+    },
+    {
+      "bytes": 179901,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin1.bin",
+      "sha256": "c3998180c9e59d6be124a513d0aa5651551e6f3e6a7d5e24181bf07ac4141a15"
+    }
+  ],
+  "receiver_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df",
+  "runtime_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+  "score_claim": false,
+  "twin_identity": true
+}

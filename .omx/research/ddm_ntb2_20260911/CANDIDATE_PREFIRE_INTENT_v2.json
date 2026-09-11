@@ -1,0 +1,254 @@
+{
+  "schema": "candidate_prefire_intent.v1",
+  "state": "PREFIRE_FIRST_MEASUREMENT_ONLY",
+  "candidate_id": "ddm_ntb2_frame_even_hpac_prior_move45",
+  "created_at_utc": "2026-09-11T19:23:57.153007+00:00",
+  "created_by": "candidate-prefire-producer",
+  "producer_source_commit": "d1f1657399f3536919f4207dc99c52a33469ee5b",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "timing_clearance": false,
+  "contract": {
+    "adjudication_memo": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr12_adjudicate_first_fire_intent_contract_20260910.md",
+      "bytes": 42309,
+      "sha256": "50d00e3956dc7ae5d3b15379d2ae6f8704119817b0b58f50aa30413b97eacadc"
+    },
+    "implementation_commit": "a475431997d0e0c66563448524e44c2ca8ddb384",
+    "implementation_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi3_20260910/PREFIRE_IMPLEMENTATION_MANIFEST.json",
+      "bytes": 2072,
+      "sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d"
+    },
+    "implementation_manifest_sha256": "cd1eb91c4fbe59e572c4d4e1fd5773cf7c114d8f6717b8b16fd1f0b3dbe9145d",
+    "amendment": {
+      "schema": "prefire_contract_consumer_fix.v1",
+      "fix_batch_id": "main_first_measurement_litter_parity_20260911",
+      "previous_row_sha256": "d23787f0746897c9c95050d2031f1b0811a9fed8dc8e35620dfb5cf8300eff6a",
+      "definition_parent_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+      "definition_change": false,
+      "consumer_fixes": [
+        {
+          "fix_id": "main-first-measurement-litter-skip-parity",
+          "scope": "tools/fire_modal_auth_eval.py _first_measurement_main runtime upload validation",
+          "reason": "the first-measurement path validated the RAW tree while --seal validates the tree minus the sanitize stage's macOS metadata litter, so an ExFAT-staged runtime dir refused a valid intent (ntb2 move 46: 94 AppleDouble stubs, receipt PREFIRE_REFUSAL_953c56d8...). MEASURED: every one of those paths already returns a runtime_digest_skip_reason, and the intent's pinned runtime sha bdd370bcb0b005d0 re-measures byte-identically with them present, so no custody statement moved; validate_tree still runs every other file through validate_runtime_upload_file.",
+          "causal_commit": "d1ed3674b45d1b04d02ef1bdf07dae3a1d7ac4ab",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_dry_run_consumes_nothing_and_explicit_argv",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_first_measurement_manifest_is_axis_tagged_and_writable"
+          ]
+        }
+      ],
+      "implementation_commit": "79a50df080a6b67bcc6d0bc63b63d237fd4ac6f8",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR18_FIRE_LITTER.json",
+        "bytes": 2251,
+        "sha256": "da2e30092a6de84a0aa195cb2c19e3beadadf700a3efd795f47ee7094b868677"
+      },
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/CONSUMER_FIX_fire_tool_litter_parity_20260911.md",
+        "bytes": 4949,
+        "sha256": "a40392a73f92ef5b391ab57380a49c62612b526b628a62d0441f7e39a0f3253d"
+      },
+      "score_claim": false
+    },
+    "definition_parent_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+    "latest_row_sha256": "a841f9c187d1a718c7f3cc74b5b29c443aa824e38d756a7f8d41a9e57cf58a36"
+  },
+  "candidate": {
+    "archive": {
+      "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+      "bytes": 180001,
+      "sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720"
+    },
+    "runtime": {
+      "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+      "sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 51,
+      "total_bytes": 1009360
+    },
+    "normalized_receiver": {
+      "digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+      "sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df"
+    },
+    "receiver_pins": [
+      {
+        "relative_path": "inflate.py",
+        "bytes": 2735,
+        "sha256": "ea4d73c1aa9886561121e16fd8914e8e769e9b314e823851bfc5a34dc9e5c948"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 3380,
+        "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+      }
+    ],
+    "archive_member": null
+  },
+  "admit_bar": {
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold",
+    "net_dS_threshold": -2e-05,
+    "pointer_axis": "contest_cuda",
+    "pointer_score_at_intent": 0.1371383667388406,
+    "pointer_archive_sha256_at_intent": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+    "pointer_tolerance_abs": 0.0,
+    "require_pointer_archive_identity": true,
+    "rate_only_precheck": {
+      "raw_identity_required": true,
+      "normalizer_bytes": 37545489,
+      "derived_net_dS": -0.000163135443514932,
+      "passed": true
+    }
+  },
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+        "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+        "seconds": 3.5695948600769043,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45/archive.zip",
+        "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45",
+        "seconds": 3.4958789348602295,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5"
+      }
+    },
+    "public_path_probe_seconds": 180.0,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+        "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+        "seconds": 144.03426098823547,
+        "stderr_tail": [],
+        "tree_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45/archive.zip",
+        "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45",
+        "seconds": 144.05965399742126,
+        "stderr_tail": [],
+        "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "evidence": {
+    "candidate_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/CANDIDATE_MANIFEST.json",
+      "bytes": 9955,
+      "sha256": "f2809a9e2778b633a6e135ccad770bead614ae7ba7feff3e900806297ee0595b"
+    },
+    "manifest_validation": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/MANIFEST_VALIDATION.json",
+      "bytes": 1097,
+      "sha256": "b04cbf36cca17a0bbc124fd29b1121613572db937bbdfbc4606f9b2e86dbe3e9"
+    },
+    "twin_encode": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/TWIN_ENCODE.json",
+      "bytes": 1291,
+      "sha256": "4c8b9c44350e6401706b8f83df1be22fe0003db9b6848ea782d7c0eb75c3b1d6"
+    },
+    "archive_parseback": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/ARCHIVE_PARSEBACK.json",
+      "bytes": 770,
+      "sha256": "4cf28a581576ae9c79cb3eb7e189d819ce78403019a9a7c4689dc5e7a42533a7"
+    },
+    "raw_identity_n600": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/RAW_IDENTITY_N600.json",
+      "bytes": 1782,
+      "sha256": "891b5aba4aa676b1ba31caae198e220716d012d70d814b767af7eb02d540d4a2"
+    },
+    "literal_census": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/LITERAL_CENSUS.json",
+      "bytes": 33611,
+      "sha256": "352bcf238fdaf304a7ac0c3f3c5379ea212e0b663255cf44054e0a428e7e6bae"
+    },
+    "retention_manifest": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/RETENTION_MANIFEST.json",
+      "bytes": 3600,
+      "sha256": "38a52dafb92522a8872a4aa135e33dbcf4c5b0b1fc5641b3dcc67e34edb1023a"
+    },
+    "timing_risk": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/v2/TIMING_RISK.json",
+      "bytes": 2845,
+      "sha256": "396e7116b7e2b8e2a30dabb4fd632c97165f2301b9c935d0f328690363fd0bbe"
+    }
+  },
+  "dispatch_policy": {
+    "axis": "contest_cuda",
+    "gpu": "T4",
+    "scorer_device": "cuda",
+    "inflate_device": "auto",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "modal_function_timeout_seconds": 4800,
+    "poller_deadline_seconds": 5400,
+    "n_samples": 600,
+    "cold_required": true,
+    "checkpoint_resume_required": false,
+    "token_cache_status_required": "DISABLED",
+    "source_snapshot_required": true,
+    "claim_policy": "require_active",
+    "max_paid_dispatches": 1,
+    "currency": "USD",
+    "maximum_total_cost_usd_exclusive": 5.0,
+    "cost_preflight_max_age_seconds": 86400
+  },
+  "retained_payload_paths": [
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin0.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin1.bin",
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/hpac_v3/frame_even/PRICE.json"
+  ],
+  "falsifiers": [
+    "Cold literal inflate.sh output must carry all 600 pairs with the token cache DISABLED and no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 45's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the entire distortion claim is that a change to the arithmetic coder's PRIOR cannot move a decoded symbol.",
+    "The candidate archive must be at most 180,226 bytes; rate-only net dS must be strictly below -2e-5 against move 45's 180,246 bytes at unchanged distortion. Measured: 180,001 B, -245 B, -1.63135443514932e-04.",
+    "Reassembling move 45's OWN members by this arm's assembly path must reproduce 145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a at 180,246 bytes in both twins, or the -245 B is the rebuild's and not the frame_even edit's.",
+    "move 45's hpac, tail and semantic members must be byte-identical to move 44's, or the reused 600-frame RLC1 encode is not an encode of this pointer's objects and every price here is void.",
+    "The scoped timing-risk receiver delta must be EMPTY at digest 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw MANIFEST.sha256 stays in every custody check and is validated separately.",
+    "Risk ceiling must not exceed 1260 seconds. Only MAIN may authorize this intent, fire the first measurement, and complete the seal; this intent confers no timing and no score authority.",
+    "Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, a crash, or a subprocess attempt closes this real-door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer."
+  ],
+  "intent_sha256": "ac01d06fbe2e8cf98b73b2fd7a3a50f47d1827bf8189468759fbf27d5479f43e"
+}
