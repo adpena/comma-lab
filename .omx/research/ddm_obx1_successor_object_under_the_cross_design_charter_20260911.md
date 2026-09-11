@@ -1,4 +1,4 @@
-# ddm_ob1 — design the SUCCESSOR OBJECT under the cross's criterion ($0 falsifiers on retained renders; no burn) — charter, MAIN 2026-09-11
+# ddm_obx1 — design the SUCCESSOR OBJECT under the cross's criterion ($0 falsifiers on retained renders; no burn) — charter, MAIN 2026-09-11
 
 ## Where the evidence stands (all MEASURED)
 Pointer move 44: S 0.1372449041713402 @ 180,406 B [contest-CUDA T4 n600]; d_seg 0.00010345, d_pose 4.59e-06; rate 0.12013. Sub-0.12 needs
@@ -26,9 +26,9 @@ there, not a schedule; pc1/pc2: a counted carrier buys a positioned subspace; ls
    distortion an ideal Lane carrier would buy; price the carrier's positioned subspace with the real coder (pc2) at that support. Report
    `rate + distortion` against the cross's target and the shortfall of each term. If the falsifier needs a scorer run, it is a $0 local
    advisory row (never a score claim); if it needs training, write the governed spec and STOP.
-4. Memo `.omx/research/ddm_ob1_successor_object_under_the_cross_design_20260911.md`: inventory, three designs, the falsifier result,
+4. Memo `.omx/research/ddm_obx1_successor_object_under_the_cross_design_20260911.md`: inventory, three designs, the falsifier result,
    and the next charter (the burn spec, for the operator's GO). Serializer commit LAST (two review passes per .py; `REVIEW_GATE_OVERRIDE=1`
-   for .md); rc 17 is NOT a stop. Checkpoint as `ddm_ob1` and mark it COMPLETE at the end.
+   for .md); rc 17 is NOT a stop. Checkpoint as `ddm_obx1` and mark it COMPLETE at the end.
 
 ## Boundaries
 No training burns, no Modal, no candidate archive, no score claims; local CPU scorer rows are [macOS-CPU advisory] only; read-only on
