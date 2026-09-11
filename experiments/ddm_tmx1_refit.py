@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import sys
 import time
@@ -153,6 +154,7 @@ class Objective:
         self.truth = np.ascontiguousarray(truth, dtype=np.int64)
         self.index = np.arange(len(truth))
         self.step = base.Q * base.SCALE
+        self.stride = 1
         self.calls = 0
 
     def stages(self, weights):
@@ -179,6 +181,28 @@ class Objective:
         inactive = ~np.any(extra, axis=1) | (w5[a1, 0] == 0)
         result[inactive] = mixed[inactive]
         return mixed, f1, result
+
+    def per_symbol_bits(self, weights) -> np.ndarray:
+        """Per sampled symbol, the coder's ideal bits -- the objective before it is summed."""
+        result = self.stages(weights)[2]
+        final = coder_frequencies(result)
+        return -np.log2(final[self.index, self.truth].astype(np.float64) / TOTAL)
+
+    def paired(self, challenger, incumbent) -> dict:
+        """The PAIRED delta between two weight vectors, with its own standard error.
+
+        The absolute level of a stride-scaled sample estimate is noisy; the DIFFERENCE
+        between two vectors scored on the SAME symbols is not, and that is the quantity
+        a refit verdict actually rests on.  Reporting it without its standard error would
+        let a difference inside the instrument's resolution read as a result.
+        """
+        difference = self.per_symbol_bits(challenger) - self.per_symbol_bits(incumbent)
+        stride = self.stride
+        total = float(difference.sum()) * stride
+        error = stride * math.sqrt(len(difference)) * float(difference.std(ddof=1))
+        return {"delta_bits": total, "delta_bytes": total / 8.0,
+                "standard_error_bytes": error / 8.0,
+                "t": total / error if error > 0 else 0.0}
 
     def __call__(self, weights) -> float:
         w35 = np.asarray(weights, dtype=np.int64)[:35].reshape(K, F)
@@ -333,7 +357,9 @@ def main() -> int:
     odd = np.flatnonzero((frames & 1) == 1)
 
     def make(subset):
-        return Objective(base, phi[subset], freq[subset], arg[subset], lane[subset], truth[subset])
+        objective = Objective(base, phi[subset], freq[subset], arg[subset], lane[subset], truth[subset])
+        objective.stride = stride
+        return objective
 
     full = make(slice(None))
     on_even, on_odd = make(even), make(odd)
@@ -342,19 +368,28 @@ def main() -> int:
     search_all = make(np.arange(len(truth))[::thin])
     shipped_bits = {"all": full(shipped), "even": on_even(shipped), "odd": on_odd(shipped)}
 
-    # THE OFFLINE CASCADE'S OWN CONTROL.  Scaled by the sampling stride, the surrogate's
-    # bits under the SHIPPED weights must reproduce the EXACT in-loop ideal bits the
-    # control encode accumulated from the same rows the arithmetic coder was fed.  A
-    # structural error anywhere in the replay -- a context, a table, a stage order --
-    # shows up here, and nothing downstream is admissible if it does not agree.
+    # THE OFFLINE CASCADE'S OWN CONTROL -- with a tolerance DERIVED from the estimator's
+    # own noise rather than picked.
+    #
+    # My first version demanded the stride-scaled replay land within 1 % of the loop's
+    # exact bits.  It fired at 2.15 %, and the diagnosis is the lesson: the per-symbol bit
+    # cost on this field is violently heavy-tailed (class 1 costs 0.47 bits a symbol,
+    # class 2 costs 0.0018), so a 1-in-32 sample carries a standard error near 1 % ALL BY
+    # ITSELF.  A 1 % bar on a 1 %-SE estimator fires about half the time whatever the code
+    # does -- it tests the sample, not the replay.  The bar is now three standard errors,
+    # computed HERE from the sample the control is drawn from, and the SE is reported
+    # beside the gap so a reader can see the instrument's resolution.
     exact = float(price["exact_ideal_bits"]["total"])
-    replay = shipped_bits["all"] * stride
-    agreement = abs(replay - exact) / exact
-    if agreement > 0.01:
-        raise FitError(
-            f"OFFLINE_CASCADE_CONTROL_FAILED: replayed {replay:.1f} bits against the loop's "
-            f"exact {exact:.1f} ({agreement:.4%}); the refit is not admissible"
-        )
+    per_sample = full.per_symbol_bits(shipped)
+    replay = float(per_sample.sum()) * stride
+    se_absolute = stride * math.sqrt(len(per_sample)) * float(per_sample.std(ddof=1))
+    control = {
+        "replayed_bits": replay, "exact_bits": exact, "gap_bits": replay - exact,
+        "standard_error_bits": se_absolute, "gap_in_standard_errors": (replay - exact) / se_absolute,
+        "rule": "|replay - exact| < 3 standard errors of the stride-scaled sample estimate",
+    }
+    if abs(replay - exact) > 3.0 * se_absolute:
+        raise FitError(f"OFFLINE_CASCADE_CONTROL_FAILED: {control}")
 
     results, logs = {}, {}
     for name, fit_search, held in (("even", search_even, on_odd), ("odd", search_odd, on_even)):
@@ -395,9 +430,10 @@ def main() -> int:
         "final_weights_sha256": hashlib.sha256(payload).hexdigest(),
         "final_bits": final_bits,
         "exact_shipped_stream_bits": exact,
-        "offline_cascade_control": {"replayed_bits": replay, "exact_bits": exact,
-                                    "relative_gap": agreement,
-                                    "rule": "stride-scaled surrogate must match the loop's exact bits"},
+        "offline_cascade_control": control,
+        "in_sample_paired": full.paired(final, shipped),
+        "held_out_paired": {name: (on_odd if name == "even" else on_even).paired(
+            np.asarray(results[name]["weights"], dtype=np.int64), shipped) for name in ("even", "odd")},
         "in_sample_delta_bytes_estimate": (final_bits["all"] - shipped_bits["all"]) / 8.0 * stride,
         "held_out_delta_bytes_estimate": held_delta / 8.0 * stride,
         "objective_calls": {"full": full.calls, "even": on_even.calls, "odd": on_odd.calls},
