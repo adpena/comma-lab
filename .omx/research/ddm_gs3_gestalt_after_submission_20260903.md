@@ -1525,3 +1525,20 @@ field is owed a refit before any structural rung on it is priced; pc3 measured t
 chain a measured leg; the retrained control rebases onto it as move 47 by normal seal; the two edits touch the same object and do
 not add. MAIN's relative-significance review of the arm's DO-NOT-FIRE verdict on the dilated rung is at
 `.omx/research/ddm_hpr1_20260911/MAIN_R1_VERDICT_REVIEW_20260911.md`: dominance, not magnitude; verdict scope INSTANCE.
+
+## Addendum 45 (MAIN, 2026-09-11 ~20:05Z) — pointer move 46: an output-lossless prior, a measured leg, and eleven doors
+
+Move 46 is S 0.1369752312953257 at 180,001 B [contest-CUDA T4 n600] (commit 7d4159ee5), −1.6314e-4 against move 45, the second
+pointer move of the day and the first whose T4 decode is a measurement rather than an inheritance: 1,140.8 s, inside the 1,260 s
+guard and faster than the inherited 1,232 s that moves 44 and 45 carried, exactly as a 603 B smaller model predicts. The lever is
+ntb2's: round 2,320 of the HPAC prior's 4,800 frame-embedding values to even, and the prior shrinks more than the tail it conditions
+grows, with the decoded field and the cold n600 raw byte-identical to the pointer's, so the distortion claim is a receipt and the
+projection was exact to 3e-17. The chain that carried it is the story. Eleven doors refused before the fire, and every one was a real
+defect on the pass path rather than a contract fault: seven receipt-shape gates ntb2 walked, a path-case split in its own receipts,
+the tool's litter-validation parity (an ExFAT-staged tree's AppleDouble stubs, which no custody statement counts, refused a valid
+intent until the first-measurement path was made to sanitize exactly as the seal path does, with the fix landed through the frozen
+contract's own consumer-fix row), a `timeout` wrapper that broke the tool's async Modal query and read as "cloud state unknown",
+and, before all of them, the discovery that an inherited timing leg cannot be inherited twice. The pre-fire risk gate was settled
+by a matched concurrent pair after two sequential windows disagreed by 20.9 % on identical bytes; the arm did not choose the
+friendlier base. What the move leaves behind: a measured leg every successor can inherit on the normal path, and hpr1's retrained
+control (−887 B, receiver unchanged) already staged to be move 47 by that path.
