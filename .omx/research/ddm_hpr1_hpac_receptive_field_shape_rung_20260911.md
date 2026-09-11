@@ -263,8 +263,32 @@ field** — which the shipped prior has never had, since its weights descend fro
 the field moved at move 32 (sj1's token pre-distortion) [DERIVED from the store, not measured here].
 
 That would matter more than R1 itself: **a pure retrain is NOT a receiver change**, so it takes the
-normal seal path with no first-measurement chain and no three-file patch. A successor must price the
-control before treating R1 as the candidate.
+normal seal path with no first-measurement chain and no three-file patch.
+
+**The control landed, and it changes the reading. MEASURED:**
+
+| terminal, epoch 60 | token estimate | model estimate | joint estimate |
+|---|---:|---:|---:|
+| CONTROL (shipped geometry) | **121,791 B** | 18,924 B | **140,715 B** |
+| R1 (dilation 2) | 122,900 B | 18,955 B | 141,855 B |
+
+and, from its own packed body (`price/retrain/INPUTS.json`, `receiver_change: false`):
+
+| model leg | CONTROL | R1 | shipped |
+|---|---:|---:|---:|
+| `hpac` member | 12,262 B (+351) | 12,274 B (+363) | 11,911 B |
+| mean row depth | **5.890 bits** | **5.888 bits** | 4.116 bits |
+
+**The depth inflation is identical across the two geometries to within 0.002 bits.** That settles the
+§4a confound by measurement: the +1,150-ish B of body growth is a 60-epoch TRAINING BUDGET effect,
+not a shape effect. Both retrained priors sit ~1.77 bits/value above the shipped prior's 634+60-epoch
+QAT compression, whatever their geometry.
+
+**So R1's naive secant of −1.2066 is computed against a model leg that shape did not cause.** The
+shape-attributable legs are R1 minus the CONTROL, not R1 minus move 45: Δmodel(shape) = 12,274 −
+12,262 = **+12 B**, and Δtail(shape) is R1's stream minus the control's — which the control's encode,
+now running, measures exactly. The estimator says the control's tokens are ~1,109 B BELOW R1's, which
+would make Δtail(shape) POSITIVE and the shape rung a LOSS against its own control.
 
 ## 5. What is owed
 
