@@ -1,0 +1,14 @@
+.......FF......F........................................................ [ 78%]
+....................                                                     [100%]
+=================================== FAILURES ===================================
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: PermissionError: [Errno 1] Operation not permitted: 'ps'
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: PermissionError: [Errno 1] Operation not permitted: 'ps'
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: PermissionError: [Errno 1] Operation not permitted: 'ps'
+=========================== short test summary info ============================
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_read_process_table_sees_this_process
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_paused_process_custody_records_identity_and_transitions
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_run_producer_freezes_the_rule_before_the_producer_starts
+3 failed, 89 passed in 3.27s

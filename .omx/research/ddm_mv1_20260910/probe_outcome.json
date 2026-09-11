@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "event_type": "adjudicated",
+  "probe_id": "ddm_mv1_real_moved_resolution_20260910",
+  "substrate": "artifact_moved_custody",
+  "recipe_path": null,
+  "probe_kind": "apparatus_custody",
+  "verdict": "PARTIAL",
+  "metric_name": "real_moved_payload_verified_bytes",
+  "metric_value": 3662409600.0,
+  "threshold": null,
+  "threshold_token": null,
+  "evidence_path": ".omx/research/ddm_mv1_20260910/final_real_resolution.json",
+  "next_action": "MAIN consumes reviewed patch at quiescent stage boundary; remaining census is in explicit queued task rows",
+  "reactivation_criteria": [
+    "next_action_satisfied: MAIN consumes reviewed patch at quiescent stage boundary; remaining census is in explicit queued task rows"
+  ],
+  "reactivation_criteria_derivation_provenance": "auto_derived_from_next_action_at_register_probe_outcome_per_meta_finding_a_v1",
+  "blocker_status": "advisory",
+  "dispatched_at_utc": null,
+  "adjudicated_at_utc": "2026-09-10T03:58:02.346441Z",
+  "expires_at_utc": "2026-09-17T03:58:02.346441Z",
+  "staleness_window_days": 7,
+  "agent": "ddm_mv1",
+  "subagent_id": "ddm_mv1",
+  "session_id": null,
+  "notes": "score_claim=false; no scoring or payload move; 171 tests pass, two existing skips; helper verified on actual rp1 raw; not installed into live source",
+  "written_at_utc": "2026-09-10T03:58:02.346464Z",
+  "written_pid": 72634,
+  "written_host": "mac.lan",
+  "axis_tag": "[macOS-CPU / scorer-free custody]",
+  "score_claim": false
+}

@@ -1,0 +1,5 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: src/tac/decode_timing_concurrency.py: failed to insert into database
+error: unable to index file 'src/tac/decode_timing_concurrency.py'
+fatal: updating files failed

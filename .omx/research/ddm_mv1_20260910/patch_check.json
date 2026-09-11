@@ -1,0 +1,6 @@
+{
+  "scope": "Isolated exact HEAD file fixtures; no shared index",
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+}

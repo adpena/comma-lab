@@ -1,0 +1,12 @@
+{
+  "head": "ab8e7a3b49d09b52dc02f7f3fd364eb7832f0eed",
+  "files": [
+    "src/tac/preflight.py",
+    "src/tac/candidate_seal.py",
+    "experiments/ddm_jg2_tail_reencode.py",
+    "experiments/ddm_vr3_certified_raw_reclaim.py",
+    "experiments/ddm_rp1_rate_rank.py",
+    "experiments/ddm_sj1_pass5_price.py",
+    "docs/meta_bug_class_catalog.md"
+  ]
+}

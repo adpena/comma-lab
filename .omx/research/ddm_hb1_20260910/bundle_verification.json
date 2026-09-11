@@ -1,0 +1,107 @@
+{
+  "status": "VERIFIED_BUNDLE_NOT_LANDED",
+  "commit": "7877e4f634cce60017387a14117566c5280ce36b",
+  "base_head": "22c3007fe5d7f2f4834cec48a8aec94285a4651d",
+  "files": [
+    {
+      "content_sha256": "87c4f4d4dc34367e8175cc38840ce054466fce5bb0d42aea1dbd2336a92f2dfd",
+      "path": "src/tac/decode_timing_concurrency.py",
+      "commit_blob_sha256": "87c4f4d4dc34367e8175cc38840ce054466fce5bb0d42aea1dbd2336a92f2dfd",
+      "working_tree_sha256": "87c4f4d4dc34367e8175cc38840ce054466fce5bb0d42aea1dbd2336a92f2dfd",
+      "matches": true
+    },
+    {
+      "content_sha256": "046044321e5faccf68d189069f784cd908493ae78752a2fe6db7f15cd43b4284",
+      "path": "src/tac/tests/test_decode_timing_concurrency.py",
+      "commit_blob_sha256": "046044321e5faccf68d189069f784cd908493ae78752a2fe6db7f15cd43b4284",
+      "working_tree_sha256": "046044321e5faccf68d189069f784cd908493ae78752a2fe6db7f15cd43b4284",
+      "matches": true
+    },
+    {
+      "content_sha256": "99edff9eda50b52bba06e83fe73f98f9eb70511cf81a5a04c2790fc7929c93f8",
+      "path": "tools/quiesced_decode_timing.py",
+      "commit_blob_sha256": "99edff9eda50b52bba06e83fe73f98f9eb70511cf81a5a04c2790fc7929c93f8",
+      "working_tree_sha256": "99edff9eda50b52bba06e83fe73f98f9eb70511cf81a5a04c2790fc7929c93f8",
+      "matches": true
+    },
+    {
+      "content_sha256": "0cd1e4a743ede4dbf4b207b9a0a66423837a20aab46849f30b3c3d92654c65ff",
+      "path": ".omx/research/ddm_hb1_20260910/HANDOFF.md",
+      "commit_blob_sha256": "0cd1e4a743ede4dbf4b207b9a0a66423837a20aab46849f30b3c3d92654c65ff",
+      "working_tree_sha256": "0cd1e4a743ede4dbf4b207b9a0a66423837a20aab46849f30b3c3d92654c65ff",
+      "matches": true
+    },
+    {
+      "content_sha256": "200c3dff1b6cd48f0f09950ede350b8f545859167156a0718227d59c03733ca9",
+      "path": ".omx/research/ddm_hb1_20260910/reviews.md",
+      "commit_blob_sha256": "200c3dff1b6cd48f0f09950ede350b8f545859167156a0718227d59c03733ca9",
+      "working_tree_sha256": "200c3dff1b6cd48f0f09950ede350b8f545859167156a0718227d59c03733ca9",
+      "matches": true
+    },
+    {
+      "content_sha256": "0258c8ba0c3c9c4f4be00bb0e66141806ac4209db7d6ec7a5b672f7766957dd8",
+      "path": ".omx/research/ddm_hb1_20260910/source_pins.json",
+      "commit_blob_sha256": "0258c8ba0c3c9c4f4be00bb0e66141806ac4209db7d6ec7a5b672f7766957dd8",
+      "working_tree_sha256": "0258c8ba0c3c9c4f4be00bb0e66141806ac4209db7d6ec7a5b672f7766957dd8",
+      "matches": true
+    },
+    {
+      "content_sha256": "8439847beafdef32b9c072bfdfb2d9f44ff0136c28cff0bd74755eeb53fb467c",
+      "path": ".omx/research/ddm_hb1_20260910/counterfactual_results.json",
+      "commit_blob_sha256": "8439847beafdef32b9c072bfdfb2d9f44ff0136c28cff0bd74755eeb53fb467c",
+      "working_tree_sha256": "8439847beafdef32b9c072bfdfb2d9f44ff0136c28cff0bd74755eeb53fb467c",
+      "matches": true
+    },
+    {
+      "content_sha256": "48e6cfc050fbdf067cb5d1995b8353bfedfc72bbb29df0b034aa4a61493e64e5",
+      "path": ".omx/research/ddm_hb1_20260910/host_freeze_blocker.json",
+      "commit_blob_sha256": "48e6cfc050fbdf067cb5d1995b8353bfedfc72bbb29df0b034aa4a61493e64e5",
+      "working_tree_sha256": "48e6cfc050fbdf067cb5d1995b8353bfedfc72bbb29df0b034aa4a61493e64e5",
+      "matches": true
+    },
+    {
+      "content_sha256": "4fa481d7ddc1b32dcde7532b98d6406fe227f1bfef0d5510875b401a9a8a837b",
+      "path": ".omx/research/ddm_hb1_20260910/pytest_full_final.txt",
+      "commit_blob_sha256": "4fa481d7ddc1b32dcde7532b98d6406fe227f1bfef0d5510875b401a9a8a837b",
+      "working_tree_sha256": "4fa481d7ddc1b32dcde7532b98d6406fe227f1bfef0d5510875b401a9a8a837b",
+      "matches": true
+    },
+    {
+      "content_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "path": ".omx/research/ddm_hb1_20260910/ruff.txt",
+      "commit_blob_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "working_tree_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "matches": true
+    },
+    {
+      "content_sha256": "585d942d23b55571947e5f94386992219881cc3cb9189ffc889ec55fcbae07d3",
+      "path": ".omx/research/ddm_hb1_20260910/recall_research.txt",
+      "commit_blob_sha256": "585d942d23b55571947e5f94386992219881cc3cb9189ffc889ec55fcbae07d3",
+      "working_tree_sha256": "585d942d23b55571947e5f94386992219881cc3cb9189ffc889ec55fcbae07d3",
+      "matches": true
+    },
+    {
+      "content_sha256": "eceffadbe16455871d22d1589f4d39d40b53b10a35871d5dcd43efd13be52945",
+      "path": ".omx/research/ddm_hb1_20260910/recall_design_tasks.txt",
+      "commit_blob_sha256": "eceffadbe16455871d22d1589f4d39d40b53b10a35871d5dcd43efd13be52945",
+      "working_tree_sha256": "eceffadbe16455871d22d1589f4d39d40b53b10a35871d5dcd43efd13be52945",
+      "matches": true
+    },
+    {
+      "content_sha256": "9f7f51dd8683e7f3eb7f4e23c5241763620d6a5f00268e45b6d74f337f081ed6",
+      "path": ".omx/research/ddm_hb1_20260910/recall_equations.json",
+      "commit_blob_sha256": "9f7f51dd8683e7f3eb7f4e23c5241763620d6a5f00268e45b6d74f337f081ed6",
+      "working_tree_sha256": "9f7f51dd8683e7f3eb7f4e23c5241763620d6a5f00268e45b6d74f337f081ed6",
+      "matches": true
+    }
+  ],
+  "exact_changed_file_set": true,
+  "no_coauthor_trailer": true,
+  "index_unchanged": true,
+  "bundle_sha256": "60a1bced8e0111ea4115a9ab19cd109be54a23029315cd0f149d7a9e428798cc",
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_hb1_20260910/serializer/20260910T125557.742416Z-96738/intended-commit.bundle",
+  "verification_git_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_hb1_20260910/bundle_verify.git",
+  "main_head": "22c3007fe5d7f2f4834cec48a8aec94285a4651d",
+  "blocked_host_freeze": true,
+  "score_claim": false
+}

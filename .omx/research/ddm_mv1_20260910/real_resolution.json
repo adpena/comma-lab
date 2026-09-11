@@ -1,0 +1,50 @@
+{
+  "axis": "[macOS-CPU / scorer-free custody verification]",
+  "score_claim": false,
+  "logical_file_fact": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw",
+    "bytes": 3662409600,
+    "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8"
+  },
+  "resolved": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+  "resolution_receipts": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+      "bytes": 3662409600,
+      "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8",
+      "identity": [
+        "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+        16777242,
+        7955627,
+        3662409600,
+        1789002163050000000,
+        1789002163050000000
+      ],
+      "cached": false,
+      "manifests": [
+        "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw.MOVED.json"
+      ]
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+      "bytes": 3662409600,
+      "sha256": "fd4b08e6aa0e967cc1453b9363c5f5ad243cb3bb57417f0f383cdb4bbfbfb2e8",
+      "identity": [
+        "/Volumes/APDataStore/pact/ddm_rp1_round1_bulk/parseback_0.raw",
+        16777242,
+        7955627,
+        3662409600,
+        1789002163050000000,
+        1789002163050000000
+      ],
+      "cached": true,
+      "manifests": [
+        "/Volumes/VertigoDataTier/pact/ddm_rp1_rate_directed_predistortion/parseback/0.raw.MOVED.json"
+      ]
+    }
+  ],
+  "elapsed_seconds": 93.77142366699991,
+  "tc3_public600_rerun": false,
+  "digest_definitions_changed": false,
+  "live_tree_writes": false
+}

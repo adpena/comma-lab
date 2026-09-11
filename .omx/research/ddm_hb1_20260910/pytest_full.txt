@@ -1,0 +1,22 @@
+.......FF......F.F...................................................... [ 78%]
+....................                                                     [100%]
+=================================== FAILURES ===================================
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: PermissionError: [Errno 1] Operation not permitted: 'ps'
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: PermissionError: [Errno 1] Operation not permitted: 'ps'
+E   PermissionError: [Errno 1] Operation not permitted: 'ps'
+/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13/subprocess.py:1991: PermissionError: [Errno 1] Operation not permitted: 'ps'
+E   AssertionError: assert {'threshold_p...': 200.0, ...} == {'schema': 'd...u': 25.0, ...}
+      
+      Omitting 11 identical items, use -vv to show
+      Differing items:
+      {'definition': 'ordinary competitor = pcpu >= threshold_pcpu for every process outside producer tree, monitor tree, an...with zero unwaived competitors; a later allowance failure refuses the final receipt. Stage rates are diagnostic only.'} != {'definition': 'ordinary competitor = pcpu >= threshold_pcpu for every process outside producer tree, monitor tree, an...with zero unwaived competitors; a later allowance failure refuses the final receipt. Stage rates are diagnostic only.'}
+      Use -v to get more diff
+/Users/adpena/Projects/pact/src/tac/tests/test_decode_timing_concurrency.py:404: AssertionError: assert {'threshold_p...': 200.0, ...} == {'schema': 'd...u': 25.0, ...}
+=========================== short test summary info ============================
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_read_process_table_sees_this_process
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_paused_process_custody_records_identity_and_transitions
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_run_producer_freezes_the_rule_before_the_producer_starts
+FAILED src/tac/tests/test_decode_timing_concurrency.py::test_v3_frozen_object_is_exact_pr11_json
+4 failed, 88 passed in 3.27s

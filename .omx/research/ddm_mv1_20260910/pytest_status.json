@@ -1,0 +1,1 @@
+{"argv": ["-q", "/Users/adpena/Projects/pact/.omx/research/ddm_mv1_20260910/staged/src/tac/tests/test_artifact_moved.py", "src/tac/tests/test_candidate_seal.py", "experiments/tests/test_ddm_vr3_certified_raw_reclaim.py", "experiments/tests/test_ddm_vr5_certified_raw_reclaim.py", "--tb=short"], "returncode": 3}
