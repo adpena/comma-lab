@@ -1225,3 +1225,22 @@ a learned run-native endpoint generator (runs as the native representation, endp
 ≥ 90 % of errors long-and-boundary-adjacent → 92,174 B projected. The margin is 2 %, and every projection this week missed by 3× or
 more; so gdc4 burns under the standing GO with those three numbers as early-stop gates, not as hopes. The gestalt has narrowed to one
 sentence: the token field must be described by its runs, with a generator whose mistakes are runs too.
+
+## Addendum 28 (MAIN, 2026-09-11 ~00:05Z) — gdc4 closes the run family before burning; the door's question becomes one sentence
+
+gdc4 (`.omx/research/ddm_gdc4_run_native_endpoint_generator_20260910.md`, sha 4cd0187b2f6d2c48…) did the thing this program rewards most: it refused its own burn by exact arithmetic. The optimal
+bounded-endpoint approximation per row, computed by DP, IS gdc1's retained scanline family to the unit (E=8→88,304 mismatches,
+E=24→0), so no training run could beat renders already on the SSD; the family's best exact description of the shipped field is
+235,087 B, 2.50× the door, with exactness the cheapest point and no interior minimum — a real coder inverts gdc1's ordering. Runs are
+not a better factorization: an independent dense 2-D context model lands within 2.4 %. And the "≥ 90 % long-boundary errors"
+premise was inverted (6.44 %) by a table gdc3 had already published — the borrowed-premise genus again, caught this time at $0.
+gdc4 also found that four arms had pinned the never-shipped pass-6 field (154 cells off the shipped one); verdicts unchanged, law banked.
+
+**What the twelve closures say together.** Every program that addresses the surprise (endpoints, runs, atoms, latents, contexts,
+warps, planes) pays for it in full; the only object that ever held the rate is the born generator, and its accuracy is data-anchored
+at Lane edges. The remaining demand, 25,899 B, must come from the MODEL on the dense factorization — and tc1 measured the mixing
+ceiling at roughly a third of it. So the question is no longer "which generator" but **where 25,899 B of Lane-conditioned surprise
+lives that the HPAC prior and the free mixer do not already remove** (Lane: 0.59 % of area, 34.1 % of stream bits, 59–65 % of
+boundary cost in two unrelated instruments). ls1 measures that atlas at $0 on the SHIPPED field. If the atlas shows the surprise is
+Lane geometry the receiver cannot see, the gestalt answer is a Lane carrier in the counted archive — the born vehicle's question
+posed at the pointer's rate.
