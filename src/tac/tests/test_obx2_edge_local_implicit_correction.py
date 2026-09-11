@@ -58,6 +58,7 @@ def test_rung_specification_covers_every_default_rung_and_refuses_unknown() -> N
             "scorer_plane_grid",
             "scorer_plane_render_noise",
             "uniform_noise",
+            "geometric_shift",
         }
     for bad in ("grid_not_a_size", "grid_384", "grid_0x512", "grid_384x512x2", "sp_x", "sp_0x1", "sp384_render_noise_", "sp384_render_noise_x"):
         with pytest.raises(obx2.OBX2Error):
@@ -291,3 +292,19 @@ def test_render_noise_rung_perturbs_only_the_render_and_is_seeded() -> None:
     assert torch.equal(first, second)
     assert not torch.equal(first, clean)
     assert float(first.min()) >= 0.0 and float(first.max()) <= 255.0
+
+
+def test_geometric_shift_rung_moves_only_frame_one_and_scales_with_the_shift() -> None:
+    teacher, raw = _teacher()
+    small = obx2.apply_rung(teacher, obx2.rung_specification("shift_025"), pair_ids=[0], gt_chunk=_gt())[0]
+    large = obx2.apply_rung(teacher, obx2.rung_specification("shift_200"), pair_ids=[0], gt_chunk=_gt())[0]
+    want = torch.from_numpy(np.transpose(raw, (0, 1, 4, 2, 3)).copy()).float()
+    assert torch.equal(small[:, 0], want[:, 0])
+    assert torch.equal(large[:, 0], want[:, 0])
+    assert not torch.equal(small[:, 1], want[:, 1])
+    small_error = float((small[:, 1] - want[:, 1]).abs().mean())
+    large_error = float((large[:, 1] - want[:, 1]).abs().mean())
+    assert large_error > small_error > 0.0
+    assert obx2.rung_specification("shift_100")["shift_pixels"] == pytest.approx(1.0)
+    with pytest.raises(obx2.OBX2Error):
+        obx2.rung_specification("shift_x")

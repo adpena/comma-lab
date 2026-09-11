@@ -397,6 +397,21 @@ def rung_specification(name: str) -> dict[str, Any]:
             "amplitude_lsb": _positive_int(name.removeprefix("noise_"), name),
             "support": "all_camera_pixels",
         }
+    if name.startswith("shift_"):
+        hundredths = _positive_int(name.removeprefix("shift_"), name)
+        return {
+            "name": name,
+            "kind": "geometric_shift",
+            "family": "pose_geometry",
+            "shift_pixels": hundredths / 100.0,
+            "axis": "horizontal, frame 1 only",
+            "note": (
+                "a PURE geometric perturbation of frame 1, to be read against photometric rungs of "
+                "EQUAL scorer-plane RMSE; if d_pose responds far more to the shift than to photometric "
+                "noise of the same RMSE, Pose is geometry-bound and a counted se(3) warp is the right "
+                "cure, and if the responses are comparable that hypothesis is closed"
+            ),
+        }
     if name.startswith("interior_noise_"):
         return {
             "name": name,
@@ -481,6 +496,19 @@ def apply_rung(
             {"scorer_plane_residual_rmse_history": history},
             {},
         )
+    if kind == "geometric_shift":
+        shift = float(spec["shift_pixels"])
+        pair = teacher.reshape(batch, 2, CHANNELS, CAMERA_H, CAMERA_W).clone()
+        moving = pair[:, 1]
+        theta = torch.zeros((batch, 2, 3), dtype=torch.float32)
+        theta[:, 0, 0] = 1.0
+        theta[:, 1, 1] = 1.0
+        # grid_sample coordinates are normalized to [-1, 1] across the width.
+        theta[:, 0, 2] = 2.0 * shift / (CAMERA_W - 1)
+        grid = F.affine_grid(theta, moving.shape, align_corners=True)
+        shifted = F.grid_sample(moving, grid, mode="bilinear", padding_mode="border", align_corners=True)
+        pair[:, 1] = shifted.round().clamp(0.0, 255.0)
+        return pair, {"shift_pixels": shift}, {}
     if kind == "uniform_noise":
         amplitude = int(spec["amplitude_lsb"])
         if amplitude < 1:
@@ -854,6 +882,10 @@ DEFAULT_RUNGS = (
     "noise_4",
     "noise_8",
     "interior_noise_16",
+    "shift_025",
+    "shift_050",
+    "shift_100",
+    "shift_200",
 )
 
 
