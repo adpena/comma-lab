@@ -1424,3 +1424,22 @@ amendment path while pc3 proceeds on the intent chain that already excludes the 
 as move 45, the other rebases and fires as move 46. Net for the gestalt: the successor-object family and the free-prior family both
 closed at formulation scope on numbers, the coded-token object is the vehicle, and its rate is moving by clipped fits and
 mis-rounded priors that nobody had priced — the same lesson as moves 30–44, found again in two new sections.
+
+## Addendum 39 (MAIN, 2026-09-11 16:40Z) — pointer move 45: the first move whose apparatus was built the same day it was used
+
+Move 45 is S 0.1371383667388406 at 180,246 B [contest-CUDA T4 n600] (commit 01f2b66ad), −1.0654e-4 against move 44, with d_seg
+0.00010345 and d_pose 4.59e-6 exactly move 44's because the cold n600 decode is byte-identical across every raw byte. The lever is
+pc3's: the shipped pose-carrier predictor was a clipped fit with ten of twelve biases parked at the ±16 clamp, and an exhaustive refit
+over the closed legal schema at bit-identical codes removes 160 B while `decode_cap1` reconstructs the same canonical carrier. The
+CPU-axis sibling refused by design in 10.5 s (call fc-01M28MCY…, receiver declaration linux-nvidia-t4), which is the declaration
+plus refusal receipt the packet carries, as for move 44. What makes this move different from the twenty-one before it is the path
+it took. At 14:50Z the candidate could not be sealed: the receiver identity digest hashed a derived listing whose contents change with
+every archive pin, and the normal inherit path had passed earlier moves only because their manifests were stale. pr18 landed the
+behavior digest through the contract's own amendment path at 10:47Z-relative-to-the-arm (commits 5d2632ee4, f1b9a0dbb, 301 tests),
+ntb2 measured that its own candidate cleared it, pc3 sealed on the normal path at 15:5xZ, MAIN fired at 15:59Z, the harvest landed
+at 16:31Z, and the packet applied at 16:33Z. Three refused CPU sibling attempts before the harvest were the single-flight law working
+(one Modal job at a time), retained as receipts and not overridden. Two more facts for the gestalt: the projection was exact to float
+rounding, as every rate-only move has been, and the rate corner's binding number re-derives at this move to a cap of 154,347 B at held
+distortion 0.01712, so the demand is now −25,899 + 160 = −25,739 B. ntb2's output-lossless HPAC prior (−245 B) rebases onto this
+pointer next. The day under the GO: two closures by measurement (design A, free boundary treatment), one closure on the rule's text
+(free prior), one apparatus amendment, one pointer move, and a second candidate queued behind it.
