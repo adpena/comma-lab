@@ -144,9 +144,14 @@ def run(treatment: str, timeout: int) -> dict:
         TC1_RECEIVER_CHECKPOINT_DIR=str(work / "frame_checkpoints"),
         TC1_RECEIVER_STOP_AFTER="600",
         F26_TOKEN_DECODER="python",
-        CC=str(REPO / "experiments/ddm_rlc4_native_cache.py"),
-        RLC4_NATIVE_CACHE=str(work / "retained_native"),
     )
+    # rlc4 wrapped CC in a compile CACHE keyed to ITS run root, which refuses a request
+    # from any other arm's tree ("unrecognized owned compile request") and additionally
+    # requires the compile destination to land under TMPDIR -- which pc3 MEASURED macOS
+    # mktemp to ignore. Dropping the shim lets `inflate.sh` invoke the real compiler
+    # exactly as the contest would, which is more faithful, not less; the only thing lost
+    # is compile reuse across resumed attempts.
+    env.pop("CC", None)
     # These would let a stale library or a cached decode stand in for the real one.
     for key in (
         "CPR1_RC64_LIBRARY",
