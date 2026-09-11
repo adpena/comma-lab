@@ -1564,3 +1564,22 @@ staleness against the current field before pricing anything structural.
 the 4.0e-4 its memo restated (25 % looser); the measured render floor 0.00231 is 7.22× over the real gate, not 5.77×. cons1 also
 found the memo's "registered" pose law had no registry row — built, tested, cited, invisible — and registered it with its nine n600
 anchors: the built-but-unwired class caught one call short of the consumer. Consolidation moved no pointer; it is means.
+
+## Addendum 47 (MAIN, 2026-09-11 host ~23:25Z) — pointer move 48: the composition lands, the day closes at four moves, and the contract came out stronger than it went in
+
+Move 48 is S 0.13638261682704697 at 179,111 B [contest-CUDA T4 n600] (commit a3777a2b2), −1.6513e-4 against move 47, realized
+equal to its projection, with a measured T4 leg of 1,023.3 s that is faster than move 46's 1,140.8 s: the +28 % local token-decode
+delta pr19 measured on this host did not exist on the T4, and hpr1's matched concurrent pair, which had the candidate faster, had the
+sign right. That is the local-instrument lesson closed with a number. The lever is move 46's even-rounding re-applied on move 47's
+refit prior, and its value did not depend on the prior being stale (−245 B on the old prior, −248 B on the refit), while the step-4
+variant loses by 58 B and a `q` re-solve on the refit prior costs 9,440 B held out because the refit had already moved `q` closer to
+its optimum. The day under the GO closes at four pointer moves, −8.62e-4 in total, every one rate-only at unchanged distortion, every
+one an object the campaign had stopped looking at. The apparatus grew by two contract amendments landed through the contract's own
+path (pr18's behavior digest; pr19's identity-class risk envelope, with transitive inheritance refused on the plain ground that a
+chain buys no dispatch), one tool parity fix, a storage tier restored twice by exercised certificates, and a reserve whose number is
+now known to be a boot-swap floor copied onto disks that hold no swap. Thirteen doors refused on the move-46 and move-48 chains, and
+every one was a defect on the pass path rather than a contract fault; the arms declined to route around any of them, including one
+risk receipt whose shape the project had rejected an hour earlier. What remains on the coded-token object is the staleness ledger:
+the tail mixer's 60 B of state fit to the move-32 field (tmx1, priced now, bounded at tens of bytes), then the renderer's provenance
+and a quantization-aware refit, then the temporal tap sets measured against the retrained control. Demand at held distortion is
+−24,604 B; today bought 1,295 B of it. The store's own recall says no door on the books reaches the rest.
