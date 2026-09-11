@@ -31,7 +31,18 @@ Custody: `/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/R
 Small projection: `.omx/research/ddm_ntb2_20260911/ENCODER_REPRODUCTION.json`.
 Launcher receipt and full stdout remain under `launch_control/` in the same SSD store.
 
-## HPAC structural table — not yet measured
+## HPAC structural table — in flight
+
+**The HPAC lever is OUTPUT-lossless, and that is the whole reason it is the cleaner of the two.**
+The HPAC section is the arithmetic coder's PRIOR. Encoder and decoder both build it from the same
+shipped bytes, so pruning a coordinate changes the code LENGTHS and never the decoded symbols: the
+token stream parses back identically, the render is bit-identical, and d_seg and d_pose are unchanged
+by construction rather than by measurement. A treatment is therefore priced entirely by one number —
+(HPAC bytes + re-encoded tail bytes) — and a negative joint delta is a pure rate win needing no
+scorer, no re-solve and no distortion budget at all. This is why the tail MUST be re-encoded with
+the RLC1-aware encoder for every treatment, and why reproducing the shipped tail byte-identically
+first (above) was the precondition and not a formality.
+
 
 The fresh producer is `experiments/ddm_ntb2_hpac.py`. Its control recomputes the
 causal probabilities through the actual shipping receiver loop. Only the arithmetic
@@ -43,10 +54,15 @@ candidate identity proof.
 
 | Treatment | Counted coordinates | HPAC B | Tail B | Joint delta B | Status |
 |---|---|---:|---:|---:|---|
-| control | unchanged | — | — | — | live causal-loop control in progress |
-| drop_row1 | lowest mean-absolute nonzero integer-weight row; stable row-index ties | — | — | — | not launched |
-| drop_row4 | four lowest such rows | — | — | — | not launched |
-| frame_even | 600×8 stored int8 frame embedding rounded to even integer values | — | — | — | not launched |
+| control | unchanged | — | — | — | RUNNING (pid 3483), frame 475 of 600 at 09:14 |
+| drop_row1 | lowest mean-absolute nonzero integer-weight row; stable row-index ties | — | — | — | RUNNING (pid 37970), frame 200 of 600 |
+| drop_row4 | four lowest such rows | — | — | — | RUNNING (pid 38007), frame 200 of 600 |
+| frame_even | 600×8 stored int8 frame embedding rounded to even integer values | — | — | — | RUNNING (pid 38033), frame 200 of 600 |
+
+All four survived the codex arm's death because the launcher detaches; they resumed nothing and lost
+nothing. Each writes `hpac_v3/<treatment>/PRICE.json` with `hpac_bytes`, `token_stream_bytes`,
+`delta_bytes` and twin identity; the control additionally REFUSES unless its own twins reproduce
+move 44's archive byte-identically, which is what makes any treatment price admissible.
 
 No negative verdict or gain attaches to any unmeasured cell. Actual layer and row
 indices are written into each treatment's INPUTS.json before its encode. Dropping a
