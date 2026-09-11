@@ -389,6 +389,33 @@ owed** — provided the cold parse-back returns byte-identical raw. Per MAIN, no
 or the manifest was patched to reach this; the amendment was already there and the candidate simply
 meets it.
 
+### The exact seal command, and where the 27.6 s slack comes from
+
+Move 44's `t4_direct` leg is
+`.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json`
+— archive `04758c0d…`, `runtime_dir` `ddm_rlc5_cure_on_move43/candidate_runtime` (present on this
+host, which the inheritance needs), `projected_t4_decode_seconds` **1232.418725255** against the
+policy limit of 1260 s. **That is where the charter's 27.6 s slack comes from: 1260 − 1232.419.**
+It is a derived number, not a quoted one.
+
+This candidate spends none of it. The HPAC section is 603 B SMALLER, so materializing the prior is
+marginally cheaper; the arithmetic decoder performs the same 117,964,800 symbol decodes against a
+slightly different prior, and the tail is 358 B longer. No new work is added at decode time, and the
+inheritance scope — "identical normalized receiver code; candidate payload-dependent time not
+remeasured" — is exactly the claim being made.
+
+```
+PYTHONPATH=<repo> .venv/bin/python tools/make_candidate_seal.py \
+  --candidate-id ntb2_frame_even --axis contest_cuda \
+  --runtime-dir /Volumes/APDataStore/pact/ddm_ntb2_public_proof/frame_even/candidate_runtime \
+  --inherit-decode-wall-clock .omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json \
+  --twin-encode-receipt <hpac_v3/frame_even/PRICE.json> \
+  --archive-parseback-receipt <public proof RESULT.json> \
+  --raw-identity-receipt <public proof RESULT.json> \
+  --candidate-manifest ... --manifest-validation ... --literal-census ... \
+  --retention-manifest ... --falsifier ... --out <SEAL path>
+```
+
 ## Tier pressure, and what it cost
 
 `/Volumes/VertigoDataTier` reached 40 GiB — exactly the reserve the HPAC producers refuse below —
