@@ -1460,3 +1460,18 @@ comfortably (27–57 ns/symbol), which is what makes this a closure of the famil
 context-mixing corner of the token tail is now closed from both sides on this object — ls1/ls2 from the context side (the atlas's
 oracle is 1,035 B short of the demand) and mxo3 from the mixing side (no stacker over the existing families pays). What remains on
 the tail is what the pre-distortion line already exploits: changing the field the scorer does not read, not coding the field better.
+
+## Addendum 41 (MAIN, 2026-09-11 ~17:20Z) — the store's own answer to "what is left": one unpriced door, and it is a shape
+
+With four families closed in a day, MAIN asked the store rather than itself. A read-only recall over the gestalt, the DAG, every
+charter with an OPTIMAL FORM block, and the memories, ranked every door by measured evidence with a successor check per door. The
+answer is sober: nothing on the books reaches the −25,739 B demand at held distortion. The seg-debt pool has no door on move 45's
+field because no pair has been re-rendered since move 43 and the repair family exhausts per object. Growing the HPAC prior was closed
+by cl2 and cl3 (secant +0.446; λ a local optimum both ways), a closure ntb2 had not recalled when it wrote "not closed". The renderer
+sits at its rate-distortion knee. obx1's designs B and C die on the same generator by the render-floor criterion design A just
+measured. The pose corner's whole remaining reach is bounded at 707 B. What remains unpriced by anyone is the one thing cl2 named
+and no arm touched: the receptive field's SHAPE. Every arm since 09-05 that worked the mixer changed the context set, the stacking,
+the model rows, the size, or the values; none moved a tap. hpr1 now prices that rung by the real coder on the real stream, with the
+decoded field proven identical and cl2's secant as the prior against it. If shape does not pay either, the honest gestalt statement
+becomes: the coded-token object's rate is closed at the measured level on every axis the store can name, and −25 KB needs an object
+the store does not yet describe. That statement would itself be the day's most valuable result, and it is one measurement away.
