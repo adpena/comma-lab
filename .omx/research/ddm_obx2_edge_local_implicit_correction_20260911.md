@@ -190,6 +190,28 @@ is wrong on 2.7% — the path repairs about two thirds. The same holds for the p
 is wrong on 1.64e-4 and its seg leg is 1.03e-4. So the path is a smoother in both directions, and the
 decomposition measures the NET at each pixel, which is the quantity that matters.
 
+**8b. The residual is NOT the pointer's boundary jitter — a third of it is region-level. MEASURED n600.**
+The lattice arm's w2 epoch-30 object, scored on all 600 pairs through the shipping receiver:
+
+| quantity | value |
+|---|---:|
+| archive | **122,778 B** — byte gate **FAIL by 778 B** |
+| `d_seg` | 0.02271701389 |
+| `d_pose` | 0.01138376106 |
+| distortion | **2.609099686** — Seg leg 2.2717, Pose leg 0.337398; **FAIL by 65×** |
+
+Its 2,679,808 misclassified pixels, binned by hop count to the nearest GT class change:
+
+| distance | 0 | 1 | 2 | 3 | 4 | >4 |
+|---|---:|---:|---:|---:|---:|---:|
+| share | 0.377 | 0.133 | 0.070 | 0.042 | 0.033 | **0.345** |
+
+**51.0% sits within one cell of a boundary and 34.5% sits more than four cells in.** Set that beside
+the store's reading of the pointer's own residual — *"99.58% are one-pixel boundary displacements"* —
+and the two objects have qualitatively different debts. The pointer's is jitter at a correct
+partition; a third of this object's is a region wearing the wrong class, which no edge-local
+mechanism reaches and which agrees with the 83% partition-level share above.
+
 **9. The lattice's own bytes: the epoch-30 object is 778 B OVER the gate.**
 Packet 122,668 B / archive **122,778 B** against the 122,000 B gate. The lattice section alone codes
 to **16,133 B** (18,826 B raw) — above the ~15,400 B the budget left — because the trained codes are
