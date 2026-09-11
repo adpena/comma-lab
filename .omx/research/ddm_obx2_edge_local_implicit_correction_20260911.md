@@ -70,7 +70,26 @@ rung it would have produced a false structural refusal of the whole architecture
 of `sp_384x512` read 0.01475 against the n600 value of 0.0324 — **2.2× optimistic** — so no prefix
 here is a verdict, in either direction.
 
-**4. The photometric-distillation route is closed by arithmetic — the object must be a witness.**
+**4. The photometric-distillation route — CORRECTED TWICE; read this before the original claim below.**
+The original reading inverted a single power law relating `d_pose` to scorer-plane RMSE. An eighth
+measured rung showed that relation is **not a function of RMSE at all**: `sp384_render_noise_4` at
+RMSE **2.300** measures `d_pose` 0.0120593 while `grid_384x512` at RMSE **4.544** — twice the error —
+measures 0.011817, **less**. What Pose responds to is the error's STRUCTURE.
+
+Split by structure the two families are clean: smooth resampling-like error `p = 1.7439` (four points,
+within 13%), independent per-pixel noise `p = 2.8125` (three points, within 9%), and **noise is 3.23×
+more damaging at equal RMSE**. The pooled fit's worst residual grew 5% → 13% → 29% → **67%** as points
+accumulated, because it was averaging two physics.
+
+What survives: both families' fitted crossings of the Pose budget sit at **0.253 LSB (smooth)** and
+**0.391 LSB (noise)** — still near-lossless, so the closure's DIRECTION holds. What does not survive:
+the tight measured bracket I quoted twice, `[0.1992, 0.7604]`, **mixed families** — its upper end is a
+noise rung, and a trained generator's error is structured, not white. The correct smooth-family
+bracket is **`[0.1992, 4.5440]`**, which is loose because no smooth rung was measured between them.
+So this closure now rests on a fit, not on a tight measurement, and tightening it needs a smooth
+construction in that gap.
+
+The original claim, retained for the record:
 DERIVED from three measured n600 points, and pre-registered for further confirmation by the queued
 `sp384_render_noise_*` rungs. At distortion `< 0.04` with the measured `d_seg ~ 1.1e-4`
 (0.011 of the budget), the Pose budget is `d_pose < 8.4e-5`. Fitting
