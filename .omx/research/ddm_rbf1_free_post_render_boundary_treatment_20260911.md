@@ -396,6 +396,17 @@ This is bundle custody, not a main-worktree landing. Exact argv/stdout/rc are
 in `ddm_rbf1_20260911/CODE_SERIALIZER.json`; the next unit has its own
 `RESIDUAL_SERIALIZER.json`. No unrelated staged-index work was manipulated.
 
+**Two landing notes, recorded rather than tidied away.** (a) Commit `7d16ee091`
+carries the placeholder message "probe research": a harness call that was meant to
+be a dry run to isolate a secrets-scan refusal actually landed the two research
+files. The content is correct and reviewed; only the message is wrong, and it is
+superseded by the message on the commit that carries this paragraph. (b) The same
+refusal was a `generic-api-key` false positive inside the `.omx/state/` diff, not a
+real secret. Those files are NOT committed by this arm: per CLAUDE.md's research
+state rule, raw `.omx/state/*.jsonl` is live state, and the lane-registry gate
+marks, the probe-outcome row and the dispatch claims are durable on disk where
+their consumers read them. No `TAC_SECRETS_WAIVE` was used.
+
 Triality hooks are deliberately N/A while `research_only=true`: no measured
 action is yet available for the sensitivity map, Pareto allocator, bit
 allocator, autopilot or posterior. The token-correct/edge-distance census is
