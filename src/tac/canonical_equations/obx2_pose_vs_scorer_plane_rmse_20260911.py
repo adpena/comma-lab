@@ -22,8 +22,13 @@ Split by structure, each family is a clean power law:
   * NOISE (independent per-pixel: the `sp384_render_noise_*` rungs) —
     `C = 1.111e-3`, `p = 2.8125`, three points all within 10%.
 
-At the same RMSE 2.30 independent noise is **3.23x** more damaging than smooth
-error.  The single "law" I reported earlier was a mixture of two physics, which
+Two rungs land at essentially the SAME RMSE and settle this without any fit:
+`grid_384x512` (smooth, RMSE 4.544) measures `d_pose` 0.011817, while
+`sp384_render_noise_8` (noise, RMSE **4.340** — 4.5% LOWER) measures 0.111126.
+**Independent noise does 9.40x the Pose damage at matched magnitude.**  For a
+successor generator this is a design constraint, not a curiosity: its render
+error must be SMOOTH, because high-frequency error is an order of magnitude more
+expensive per unit of RMSE.  The single "law" I reported earlier was a mixture of two physics, which
 is why its residual grew from 5% to 13% to 29% to 67% as points accumulated.
 
 What this does to the closure.  Both families' FITTED crossings of the Pose
@@ -89,6 +94,7 @@ MEASURED_POINTS: tuple[tuple[str, float, float], ...] = (
     ("sp384_render_noise_1", 0.7604, 5.43636e-4),
     ("sp384_render_noise_2", 1.278, 2.02857e-3),
     ("sp384_render_noise_4", 2.300, 1.20593e-2),
+    ("sp384_render_noise_8", 4.340, 1.11126e-1),
     ("grid_384x512", 4.544, 0.011817),
     ("sp_192x256", 8.670, 0.0391067),
 )
@@ -102,12 +108,29 @@ MEASURED_POINTS: tuple[tuple[str, float, float], ...] = (
 SMOOTH_COEFFICIENT = 8.72421e-4
 SMOOTH_EXPONENT = 1.7439
 SMOOTH_WORST_RELATIVE_ERROR = 0.127
-NOISE_COEFFICIENT = 1.11052e-3
-NOISE_EXPONENT = 2.8125
-NOISE_WORST_RELATIVE_ERROR = 0.094
-NOISE_PENALTY_AT_EQUAL_RMSE = 3.23
+NOISE_COEFFICIENT = 1.08333e-3
+NOISE_EXPONENT = 3.0663
+NOISE_WORST_RELATIVE_ERROR = 0.155
+# MODEL-FREE, the cleanest statement the ladder produced: two measured n600 rows
+# at essentially the same scorer-plane RMSE, one smooth and one noise.
+MATCHED_RMSE_COMPARISON = {
+    "smooth_rung": "grid_384x512",
+    "smooth_scorer_plane_rmse": 4.544,
+    "smooth_d_pose": 0.011817,
+    "noise_rung": "sp384_render_noise_8",
+    "noise_scorer_plane_rmse": 4.340,
+    "noise_d_pose": 0.111126,
+    "noise_penalty": 9.40,
+    "note": "the noise rung has 4.5% LOWER RMSE and 9.40x the Pose damage",
+}
+NOISE_PENALTY_AT_EQUAL_RMSE = 9.40
 SMOOTH_RUNGS = ("sp_384x512", "sp_640x852", "grid_384x512", "sp_192x256")
-NOISE_RUNGS = ("sp384_render_noise_1", "sp384_render_noise_2", "sp384_render_noise_4")
+NOISE_RUNGS = (
+    "sp384_render_noise_1",
+    "sp384_render_noise_2",
+    "sp384_render_noise_4",
+    "sp384_render_noise_8",
+)
 WORST_RELATIVE_ERROR = 0.667  # the POOLED fit on eight points, retained to show why pooling fails
 
 # The gate this law is used against (OBX2 burn spec "Exact admission arithmetic").
@@ -281,8 +304,8 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
         equation_id=EQUATION_ID,
         name="OBX2 PoseNet distortion versus scorer-plane RMSE",
         one_line_summary=(
-            "d_pose is NON-MONOTONIC in scorer-plane RMSE: split by structure, smooth error fits "
-            "p=1.744 and independent noise p=2.813, and noise is 3.23x worse at equal RMSE."
+            "d_pose is NON-MONOTONIC in scorer-plane RMSE: at matched RMSE (4.340 vs 4.544) "
+            "independent noise does 9.40x the Pose damage of smooth resampling error."
         ),
         latex_form=r"d_{pose}(r) \approx d_{pose}^{floor} + C\,r^{p},\quad C = 9.339\times10^{-4},\ p = 1.751",
         python_callable_module_path=(
@@ -306,6 +329,7 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
                 "rungs": list(NOISE_RUNGS),
             },
             "noise_penalty_at_equal_rmse": NOISE_PENALTY_AT_EQUAL_RMSE,
+            "matched_rmse_comparison": MATCHED_RMSE_COMPARISON,
             "pooled_worst_relative_error": WORST_RELATIVE_ERROR,
             "status": (
                 "the pooled relation is NON-MONOTONIC in RMSE; fit and quote by error structure"
@@ -343,6 +367,7 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
 __all__ = [
     "DISTORTION_GATE",
     "EQUATION_ID",
+    "MATCHED_RMSE_COMPARISON",
     "MEASURED_POINTS",
     "POSE_FLOOR",
     "POWER_LAW_COEFFICIENT",

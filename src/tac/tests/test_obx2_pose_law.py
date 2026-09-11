@@ -13,7 +13,7 @@ from tac.canonical_equations import obx2_pose_vs_scorer_plane_rmse_20260911 as l
 def test_each_family_reproduces_its_own_measured_points() -> None:
     for structure, rungs, bound in (
         ("smooth", law.SMOOTH_RUNGS, 0.13),
-        ("noise", law.NOISE_RUNGS, 0.10),
+        ("noise", law.NOISE_RUNGS, 0.16),
     ):
         for name, rmse, measured in law.MEASURED_POINTS:
             if name not in rungs:
@@ -35,6 +35,17 @@ def test_the_relation_is_not_a_function_of_rmse_alone() -> None:
     # and noise is materially worse at equal RMSE
     at_equal = noisy_pose / law.predict_d_pose_by_structure(noisy_rmse, "smooth")
     assert at_equal > 2.0
+
+
+def test_the_matched_rmse_comparison_needs_no_fit_at_all() -> None:
+    comparison = law.MATCHED_RMSE_COMPARISON
+    points = {name: (rmse, d_pose) for name, rmse, d_pose in law.MEASURED_POINTS}
+    smooth_rmse, smooth_pose = points[comparison["smooth_rung"]]
+    noise_rmse, noise_pose = points[comparison["noise_rung"]]
+    # the noise rung carries LOWER RMSE and far higher d_pose: no model involved
+    assert noise_rmse < smooth_rmse
+    assert noise_pose / smooth_pose == pytest.approx(comparison["noise_penalty"], rel=0.01)
+    assert comparison["noise_penalty"] > 9.0
 
 
 def test_law_floors_at_the_pointer_own_d_pose_and_rises_monotonically() -> None:
@@ -128,6 +139,7 @@ def test_pooling_the_families_is_worse_than_fitting_them_apart() -> None:
     assert law.WORST_RELATIVE_ERROR > law.SMOOTH_WORST_RELATIVE_ERROR
     assert law.WORST_RELATIVE_ERROR > law.NOISE_WORST_RELATIVE_ERROR
     assert law.NOISE_EXPONENT > law.SMOOTH_EXPONENT
+    assert law.NOISE_PENALTY_AT_EQUAL_RMSE > 9.0
 
 
 def test_the_measured_bracket_needs_no_model_and_contains_the_fit() -> None:
