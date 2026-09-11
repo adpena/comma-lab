@@ -1118,6 +1118,108 @@ def cmd_project(args) -> int:
 
 
 # --------------------------------------------------------------------------------------
+# mode=halfstep -- what a per-dimension lattice halving ACTUALLY buys, from the shipped point
+# --------------------------------------------------------------------------------------
+#
+# ``mode=project`` rounds the CONTINUOUS optimum onto each rung's lattice, and on this body
+# that estimator is useless in a way worth writing down: every projected rung, including
+# one on a lattice 16x finer than the shipped one, scored an ORDER OF MAGNITUDE worse than
+# the shipped codes.  The continuous optimum is not robust.  Two ``round`` calls sit inside
+# the render, so the objective is rough at the scale of a lattice step, and the continuous
+# solution sits on a knife edge that no lattice lands on.
+#
+# So the rung must be realised the way it would actually be built: as a REFINEMENT OF THE
+# SHIPPED POINT, not of the continuous one.  A dimension-j halving lets that coordinate
+# take half-integer values; the new points it reaches near the shipped fixed point are
+# +-0.5 and +-1.5 steps (+-1, +-2 are the integer neighbours the shipped point is already a
+# ``refine_pair`` fixed point against).  Evaluating those four is the rung's realised
+# first-order gain, per dimension, per pair, on the real renderer and the real scorer.
+
+
+HALF_STEP_OFFSETS = (-1.5, -0.5, 0.5, 1.5)
+
+
+def cmd_halfstep(args) -> int:
+    import ddm_up2_shipping_pose_solve as up2
+
+    set_threads(args.threads)
+    inst, meta = build_instrument(verify_raw=False)
+    scales = np.asarray(inst.state.coefficient_scales, dtype=np.float64).reshape(-1)
+    codes = np.asarray(inst.state.codes, dtype=np.int32)
+    shipped = codes.astype(np.float64) * scales[None]
+    dimensions = int(up2.CARRIER_DIM)
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    rows_path = args.out_dir / f"halfstep_rows_{args.shard_index}.jsonl"
+    pairs = shard_of(np.arange(N_PAIRS, dtype=np.int64), args.shard_index, args.shard_count)
+    done = load_done(rows_path) if args.resume else {}
+    started = time.time()
+    completed = 0
+    with rows_path.open("a") as stream:
+        for position, pair in enumerate(pairs.tolist()):
+            if pair in done:
+                continue
+            block = [shipped[pair]]
+            labels = []
+            for dim in range(dimensions):
+                for offset in HALF_STEP_OFFSETS:
+                    trial = shipped[pair].copy()
+                    trial[dim] += offset * scales[dim]
+                    block.append(trial)
+                    labels.append((dim, offset))
+            values = evaluate_coefficients(inst, pair, np.stack(block))
+            control = float(values[0])
+            best = {}
+            for (dim, offset), value in zip(labels, values[1:], strict=True):
+                if dim not in best or value < best[dim][0]:
+                    best[dim] = (float(value), offset)
+            row = {
+                "pair": int(pair),
+                "control_d_pose": control,
+                "per_dimension_best": {
+                    str(dim): {"d_pose": best[dim][0], "offset_in_steps": best[dim][1],
+                               "gain": control - best[dim][0]}
+                    for dim in range(dimensions)
+                },
+                "best_single_dimension_gain": max(
+                    control - best[dim][0] for dim in range(dimensions)
+                ),
+            }
+            stream.write(json.dumps(row) + "\n")
+            stream.flush()
+            completed += 1
+            if args.progress and completed % 10 == 0:
+                elapsed = time.time() - started
+                print(
+                    f"  halfstep shard {args.shard_index}: {position + 1}/{len(pairs)} "
+                    f"({elapsed / completed:.2f} s/pair)",
+                    flush=True,
+                )
+    summary = {
+        "schema": "ddm_pc3_halfstep_shard.v1",
+        "shard_index": args.shard_index,
+        "shard_count": args.shard_count,
+        "pairs": pairs.tolist(),
+        "completed_this_run": completed,
+        "rows_path": str(rows_path),
+        "offsets_in_lattice_steps": list(HALF_STEP_OFFSETS),
+        "what_this_measures": (
+            "the realised first-order gain of a per-dimension lattice halving, starting "
+            "from the SHIPPED point rather than from the continuous optimum"
+        ),
+        "elapsed_seconds": time.time() - started,
+        "instrument": meta,
+        "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet, DALI-lineage GT]",
+        "score_claim": False,
+    }
+    (args.out_dir / f"HALFSTEP_SHARD_{args.shard_index}.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True)
+    )
+    print(json.dumps({k: summary[k] for k in ("shard_index", "completed_this_run")}))
+    return 0
+
+
+# --------------------------------------------------------------------------------------
 # mode=report -- the curve
 # --------------------------------------------------------------------------------------
 
@@ -1301,6 +1403,17 @@ def build_parser() -> argparse.ArgumentParser:
     project.add_argument("--threads", type=int, default=6)
     project.add_argument("--progress", action="store_true")
     project.set_defaults(func=cmd_project)
+
+    half = sub.add_parser(
+        "halfstep", help="realised per-dimension halving gain, from the SHIPPED point"
+    )
+    half.add_argument("--out-dir", type=Path, required=True)
+    half.add_argument("--shard-index", type=int, default=0)
+    half.add_argument("--shard-count", type=int, default=1)
+    half.add_argument("--threads", type=int, default=2)
+    half.add_argument("--resume", action="store_true")
+    half.add_argument("--progress", action="store_true")
+    half.set_defaults(func=cmd_halfstep)
 
     report = sub.add_parser("report", help="assemble the ceiling into the curve")
     report.add_argument("--base", type=Path, required=True)
