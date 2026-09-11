@@ -1,0 +1,163 @@
+# SPDX-License-Identifier: MIT
+"""Behaviour tests for the OBX2 base+lattice trainer.
+
+These run on synthetic lattices and small grids so they stay fast; the pinned
+born packet and the frozen scorers are exercised by the governed stages, not
+here.  The load-bearing check is that the torch training twin and the NumPy
+receiver compute the SAME lattice, because the receiver is the verdict authority
+and the twin is what the gradients see.
+"""
+
+from __future__ import annotations
+
+import math
+import sys
+from pathlib import Path
+
+import numpy as np
+import pytest
+import torch
+
+REPO = Path(__file__).resolve().parents[3]
+for _root in (REPO, REPO / "src"):
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
+
+from experiments import ddm_obx2_trainer as tr  # noqa: E402
+from tac import obx2_lattice_packet as lat  # noqa: E402
+
+
+def _small_spec() -> lat.LatticeSpec:
+    return lat.LatticeSpec(
+        levels=((5, 3, 4), (9, 6, 8)),
+        channels=3,
+        bits=(8, 8),
+        gate_kind=1,
+        quantizer_kind=0,
+        entropy_model=0,
+        condition_channels=tr.CONDITION_CHANNELS,
+        hidden=5,
+        outputs=tr.OUTPUTS,
+    )
+
+
+def _trained_lattice(spec: lat.LatticeSpec, *, seed: int = 4) -> tr.LatticeTorch:
+    lattice = tr.LatticeTorch(spec, seed=seed)
+    generator = torch.Generator().manual_seed(seed)
+    with torch.no_grad():
+        for grid in lattice.grids:
+            grid.copy_(torch.randn(grid.shape, generator=generator) * 0.2)
+        lattice.out_w.copy_(torch.randn(lattice.out_w.shape, generator=generator) * 0.3)
+        lattice.out_b.copy_(torch.randn(lattice.out_b.shape, generator=generator) * 0.1)
+        lattice.hidden_b.copy_(torch.randn(lattice.hidden_b.shape, generator=generator) * 0.1)
+    return lattice
+
+
+def test_axis_weights_bracket_and_clamp_every_coordinate() -> None:
+    coordinate = torch.tensor([-2.0, -1.0, 0.0, 1.0, 5.0])
+    low, high, fraction = tr._axis_weights(coordinate, 5)
+    assert low.tolist() == [0, 0, 2, 4, 4]
+    assert high.tolist() == [1, 1, 3, 4, 4]
+    assert torch.all(fraction >= 0.0) and torch.all(fraction <= 1.0)
+
+
+def test_torch_lattice_sampler_matches_the_numpy_receiver() -> None:
+    spec = _small_spec()
+    lattice = _trained_lattice(spec)
+    codes, scales, fusion = lattice.export()
+    grids = lat.lattice_grids(spec, codes, scales)
+    rng = np.random.default_rng(9)
+    points = 37
+    t = rng.uniform(-1.0, 1.0, points).astype(np.float32)
+    y = rng.uniform(-1.0, 1.0, points).astype(np.float32)
+    x = rng.uniform(-1.0, 1.0, points).astype(np.float32)
+    condition = rng.standard_normal((points, spec.condition_channels)).astype(np.float32)
+    want = lat.query_lattice_numpy(spec, grids, fusion, t=t, y=y, x=x, condition=condition)
+    with torch.no_grad():
+        got = lattice(
+            t=torch.from_numpy(t),
+            y=torch.from_numpy(y),
+            x=torch.from_numpy(x),
+            condition=torch.from_numpy(condition),
+        ).numpy()
+    assert got.shape == want.shape
+    assert float(np.abs(got - want).max()) < 2.0e-5
+
+
+def test_quantized_export_round_trips_through_the_packet() -> None:
+    spec = _small_spec()
+    lattice = _trained_lattice(spec)
+    codes, scales, fusion = lattice.export()
+    raw = lat.encode_lattice_section(spec, codes=codes, scales=scales, fusion=fusion)
+    got_spec, got_codes, got_scales, got_fusion = lat.decode_lattice_section(raw)
+    assert got_spec == spec
+    for want, have in zip(codes, got_codes, strict=True):
+        assert np.array_equal(want.reshape(-1), have.reshape(-1))
+    assert got_scales == pytest.approx(scales)
+    assert float(got_fusion["gate_tau"][0]) == pytest.approx(tr.DEFAULT_GATE_TAU)
+
+
+def test_quantize_ste_is_the_identity_in_value_and_passes_gradient_through() -> None:
+    values = torch.tensor([0.0, 0.4, -0.9, 1.0], requires_grad=True)
+    scale = tr.symmetric_scale(values, 8)
+    quantized = tr.quantize_ste(values, scale, 8)
+    quantized.sum().backward()
+    assert torch.allclose(values.grad, torch.ones_like(values))
+    assert float((quantized - values).detach().abs().max()) <= float(scale)
+
+
+def test_symmetric_scale_never_returns_zero() -> None:
+    assert float(tr.symmetric_scale(torch.zeros(4), 8)) > 0.0
+    assert float(tr.symmetric_scale(torch.tensor([2.0, -3.0]), 8)) == pytest.approx(3.0 / 127.0)
+
+
+def test_condition_matches_the_receiver_gate_and_layout() -> None:
+    signed = torch.tensor([[[0.0, 2.0, 1.0], [0.4, 3.0, 5.0]]])
+    tau = torch.tensor([0.5])
+    condition, gate = tr.condition_from_interfaces(signed, tau)
+    want_gate = lat.interface_gate(signed.numpy(), 0.5)
+    assert condition.shape[-1] == signed.shape[-1] + 1
+    assert np.allclose(gate.numpy(), want_gate, atol=1e-6)
+    assert np.allclose(condition.numpy()[..., :-1], np.tanh(signed.numpy()), atol=1e-6)
+    assert np.allclose(condition.numpy()[..., -1], want_gate, atol=1e-6)
+
+
+def test_operating_point_pose_weight_is_the_exact_contest_derivative() -> None:
+    for d_pose in (1.0e-3, 4.59e-6, 1.0e-5):
+        want = 5.0 / math.sqrt(10.0 * d_pose)
+        assert tr.operating_point_pose_weight(d_pose) == pytest.approx(want)
+    assert tr.operating_point_pose_weight(0.0) > 0.0
+
+
+def test_pair_order_is_a_seeded_permutation_of_the_full_population() -> None:
+    first = tr.pair_order(11, 0)
+    again = tr.pair_order(11, 0)
+    later = tr.pair_order(11, 1)
+    assert sorted(first) == list(range(tr.N))
+    assert first == again
+    assert first != later
+
+
+def test_default_spec_fits_the_declared_byte_budget() -> None:
+    spec = tr.default_spec()
+    total_codes = sum(spec.codes_per_level())
+    assert total_codes == 15_840
+    # Measured 7.11 bits per code on the first trained geometry; the budget is
+    # the 122,000 B gate minus the born model, latents, config, metadata, frame.
+    assert total_codes * 7.11 / 8.0 < 15_400
+
+
+def test_lattice_spec_refuses_a_render_contract_mismatch() -> None:
+    bad = lat.LatticeSpec(
+        levels=((4, 2, 2),),
+        channels=2,
+        bits=(8,),
+        gate_kind=1,
+        quantizer_kind=0,
+        entropy_model=0,
+        condition_channels=tr.CONDITION_CHANNELS,
+        hidden=4,
+        outputs=tr.OUTPUTS + 1,
+    )
+    with pytest.raises(tr.OBX2TrainerError):
+        tr.LatticeTorch(bad, seed=1)
