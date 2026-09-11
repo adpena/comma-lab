@@ -530,6 +530,12 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
     q_hits = np.zeros((2, Q_BINS), dtype=np.int64)
     q_shipped_bits = np.zeros((2, Q_BINS), dtype=np.float64)
     q_conf_sum = np.zeros((2, Q_BINS), dtype=np.float64)
+    # The shipped BINARY surprise of the calibration event, accumulated exactly rather
+    # than reconstructed from a bin mean: -log2(confidence) where the argmax was right and
+    # -log2(1 - confidence) where it was wrong. This is the baseline a recalibration has to
+    # beat, and binning it after the fact would have made the baseline approximate while
+    # the challenger stayed exact -- a comparison tilted by construction.
+    q_binary_bits = np.zeros((2, Q_BINS), dtype=np.float64)
 
     def known_symbols(self, probabilities):
         positions = observed["positions"]
@@ -549,6 +555,12 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
             np.add.at(q_hits[fold], binned, correct.astype(np.int64))
             np.add.at(q_shipped_bits[fold], binned, -np.log2(coded))
             np.add.at(q_conf_sum[fold], binned, confidence)
+            safe = np.clip(confidence, 1e-12, 1.0 - 1e-12)
+            np.add.at(
+                q_binary_bits[fold],
+                binned,
+                np.where(correct, -np.log2(safe), -np.log2(1.0 - safe)),
+            )
         for encoder in twins:
             encoder.encode(symbols, probabilities)
         observed["positions"] = None
@@ -592,6 +604,7 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
                 "hits": q_hits,
                 "shipped_bits": q_shipped_bits,
                 "confidence_sum": q_conf_sum,
+                "binary_bits": q_binary_bits,
             },
         )
         record(
@@ -604,6 +617,11 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
                 "bin_axis": "the coded row's own confidence, its maximum probability, in 64 equal bins",
                 "outcome": "whether the row's argmax was the symbol actually coded",
                 "shipped_bits_definition": "sum of -log2(probability the row gave the coded symbol)",
+                "binary_bits_definition": (
+                    "the shipped BINARY surprise of the calibration event, accumulated exactly: "
+                    "-log2(confidence) where the argmax was right, -log2(1 - confidence) where it "
+                    "was wrong. This is the baseline the held-out recalibration must beat."
+                ),
                 "prior": "the treatment's own HPAC prior",
                 "score_claim": False,
             },

@@ -1,0 +1,57 @@
+{
+  "consumers_that_route_through_it": [
+    {
+      "invoked_here": false,
+      "quoted": "Runs before every other stage and before any subprocess: a refused seal must cost nothing, least of all a paid call",
+      "tool": "tools/fire_modal_auth_eval.py",
+      "where": "STAGE 0 SEAL, validate_seal(..., require_decode_wall_clock=True)",
+      "why_not": "firing is MAIN's and every Modal call in this campaign routes through this tool; reading its Stage 0 call site and exercising the gate it calls proves the door without this arm touching the firing path"
+    },
+    {
+      "invoked_here": true,
+      "observed": "--decode-wall-clock <intent>: rc 3, seal_written False; --inherit-decode-wall-clock <intent>: rc 3, seal_written False",
+      "tool": "tools/make_candidate_seal.py",
+      "where": "re-validates its own output through the same gate"
+    }
+  ],
+  "emitter_paths_also_refuse": [
+    {
+      "path": "--decode-wall-clock <intent>",
+      "reached_the_object": true,
+      "returncode": 3,
+      "seal_written": false,
+      "stderr": "FATAL: cannot seal this candidate: decode wall-clock refused: decode_wall_clock: unknown leg schema"
+    },
+    {
+      "path": "--inherit-decode-wall-clock <intent>",
+      "reached_the_object": true,
+      "returncode": 3,
+      "seal_written": false,
+      "stderr": "FATAL: cannot seal this candidate: decode_wall_clock: decode_wall_clock: inheritance must point directly to a measured or t4_direct leg (never to an inherited one)"
+    }
+  ],
+  "intent": {
+    "bytes": 17667,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/PREFIRE_INTENT_ddm_hpr1_comp_even_on_refit.json",
+    "sha256": "dfc8ba66384f82fd9d6d13b3054884d8f8d0aa2c1e98fd914e71f0a00f65a793"
+  },
+  "measured_utc": "2026-09-11T22:33:41.809142+00:00",
+  "note": "a BARE seal invocation is refused by argparse before the object is ever read, which would pass this control for the wrong reason; the full normal-seal argument set is used so the intent actually reaches the schema check",
+  "passed": true,
+  "question": "do BOTH configurations of the shared gate every normal seal path routes through refuse the intent object with exactly PREFIRE_INTENT_SCHEMA_REFUSED, before any consumer subprocess, and do both normal-seal emitter paths refuse without writing a seal?",
+  "schema": "ddm_hpr1_real_door_control.v1",
+  "score_claim": false,
+  "shared_gate": {
+    "callable": "tac.candidate_seal.validate_seal",
+    "problems_by_configuration": {
+      "verdict": [
+        "candidate_prefire_intent.v1 is not a completed seal"
+      ],
+      "verdict_with_decode_wall_clock_required": [
+        "candidate_prefire_intent.v1 is not a completed seal"
+      ]
+    },
+    "verdict": "PREFIRE_INTENT_SCHEMA_REFUSED",
+    "verdict_with_decode_wall_clock_required": "PREFIRE_INTENT_SCHEMA_REFUSED"
+  }
+}

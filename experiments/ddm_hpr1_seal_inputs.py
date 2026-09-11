@@ -666,9 +666,134 @@ def identity_risk(candidate: Path, out: Path, base_diagnostic: Path,
     }
 
 
+def real_door(intent: Path, out: Path, candidate: Path, timeout_seconds: float) -> dict:
+    """Measure whether the normal seal paths actually REFUSE this intent object.
+
+    A pre-registered falsifier is worth only as much as the door it names. This opens the
+    door: it puts the intent in front of the SHARED GATE every normal seal path routes
+    through -- `tac.candidate_seal.validate_seal`, called at `tools/fire_modal_auth_eval.py`
+    STAGE 0 before any subprocess and again by `tools/make_candidate_seal.py` when it
+    re-reads its own output -- in BOTH of the gate's configurations, and then runs the two
+    normal-seal EMITTER paths against the same object with a full argument set.
+
+    The full argument set matters: a bare invocation is refused by argparse first, which
+    would pass this control for the wrong reason -- the object would never reach the schema
+    check at all. The firing path itself is NOT invoked here; firing is MAIN's, and reading
+    its Stage 0 call site plus exercising the gate it calls proves the same door.
+    """
+    import subprocess
+
+    from tac.candidate_seal import validate_seal
+
+    verdicts, problems = {}, {}
+    for label, require in (("verdict", False), ("verdict_with_decode_wall_clock_required", True)):
+        result = validate_seal(intent, require_decode_wall_clock=require)
+        verdicts[label] = result.verdict
+        # Per configuration, not setdefault: keeping only the first call's problems would
+        # hide a case where the two configurations refuse for DIFFERENT reasons, which is
+        # exactly the thing this control exists to notice.
+        problems[label] = list(result.problems)
+    verdicts["problems_by_configuration"] = problems
+
+    emitter = []
+    for flag in ("--decode-wall-clock", "--inherit-decode-wall-clock"):
+        target = out / f"REAL_DOOR_SEAL_MUST_NOT_EXIST{flag}.json"
+        argv = [
+            str(REPO / ".venv/bin/python"), "tools/make_candidate_seal.py",
+            "--candidate-id", "ddm_hpr1_real_door_control",
+            "--runtime-dir", str(candidate), "--axis", "contest_cuda",
+            "--pointer-axis", "contest_cuda",
+            # Without this, argparse refuses at rc 2 before the object is ever READ, and
+            # the control would score a refusal it did not earn. MEASURED: the first run
+            # of this control did exactly that on both emitter legs, twice in a row -- the
+            # normal seal requires candidate_id, runtime_dir, axis, public_entrypoint_smoke
+            # and admit_bar_net_ds (tools/make_candidate_seal.py, "is required for a normal
+            # seal"), and the object is not read until all five are present.
+            "--public-entrypoint-smoke", str(out / "PUBLIC_SMOKE.json"),
+            "--admit-bar-net-ds", "-2e-5",
+            flag, str(intent), "--out", str(target),
+        ]
+        try:
+            run = subprocess.run(argv, capture_output=True, text=True, cwd=REPO,
+                                 timeout=timeout_seconds, check=False)
+            returncode, stderr = run.returncode, (run.stderr or "").strip().splitlines()
+        except subprocess.TimeoutExpired:
+            returncode, stderr = "TIMEOUT", [f"exceeded {timeout_seconds}s"]
+        line = stderr[-1] if stderr else ""
+        emitter.append({
+            "path": f"{flag} <intent>",
+            "returncode": returncode,
+            "seal_written": target.exists(),
+            "stderr": line,
+            # A non-zero exit is NOT by itself a refusal of this object: argparse exits 2
+            # before reading anything. The leg counts only if the refusal came from the
+            # contract, which means the object was actually opened and judged.
+            "reached_the_object": returncode not in (0, 2)
+            and not line.startswith("make_candidate_seal.py: error:"),
+        })
+        if target.exists():
+            raise SealInputsError(f"a normal seal path WROTE a seal from the intent: {target}")
+
+    passed = (
+        verdicts["verdict"] == "PREFIRE_INTENT_SCHEMA_REFUSED"
+        and verdicts["verdict_with_decode_wall_clock_required"] == "PREFIRE_INTENT_SCHEMA_REFUSED"
+        and all(row["reached_the_object"] and not row["seal_written"] for row in emitter)
+    )
+    document = {
+        "schema": "ddm_hpr1_real_door_control.v1",
+        "question": (
+            "do BOTH configurations of the shared gate every normal seal path routes through "
+            "refuse the intent object with exactly PREFIRE_INTENT_SCHEMA_REFUSED, before any "
+            "consumer subprocess, and do both normal-seal emitter paths refuse without writing "
+            "a seal?"
+        ),
+        "intent": prefire_file_reference(intent),
+        "shared_gate": {"callable": "tac.candidate_seal.validate_seal", **verdicts},
+        "emitter_paths_also_refuse": emitter,
+        "consumers_that_route_through_it": [
+            {
+                "tool": "tools/fire_modal_auth_eval.py",
+                "where": "STAGE 0 SEAL, validate_seal(..., require_decode_wall_clock=True)",
+                "quoted": (
+                    "Runs before every other stage and before any subprocess: a refused seal "
+                    "must cost nothing, least of all a paid call"
+                ),
+                "invoked_here": False,
+                "why_not": (
+                    "firing is MAIN's and every Modal call in this campaign routes through this "
+                    "tool; reading its Stage 0 call site and exercising the gate it calls proves "
+                    "the door without this arm touching the firing path"
+                ),
+            },
+            {
+                "tool": "tools/make_candidate_seal.py",
+                "where": "re-validates its own output through the same gate",
+                "invoked_here": True,
+                "observed": "; ".join(
+                    f"{row['path']}: rc {row['returncode']}, seal_written {row['seal_written']}"
+                    for row in emitter
+                ),
+            },
+        ],
+        "note": (
+            "a BARE seal invocation is refused by argparse before the object is ever read, which "
+            "would pass this control for the wrong reason; the full normal-seal argument set is "
+            "used so the intent actually reaches the schema check"
+        ),
+        "measured_utc": utc_now(),
+        "passed": passed,
+        "score_claim": False,
+    }
+    write(out / "REAL_DOOR_CONTROL.json", document)
+    if not passed:
+        raise SealInputsError(f"the real-door control did NOT pass: {document}")
+    return document
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("receipts", "smoke", "identity_risk"), default="receipts")
+    parser.add_argument("--mode", choices=("receipts", "smoke", "identity_risk", "real_door"),
+                        default="receipts")
     parser.add_argument("--cold-log", type=Path)
     parser.add_argument("--base-diagnostic", type=Path)
     parser.add_argument("--candidate-diagnostic", type=Path, action="append", default=[])
@@ -684,6 +809,7 @@ def main(argv=None) -> int:
     parser.add_argument("--retention", type=Path)
     parser.add_argument("--expected-archive-sha256")
     parser.add_argument("--candidate-id")
+    parser.add_argument("--intent", type=Path)
     args = parser.parse_args(argv)
     if str(args.out_dir).startswith("/Volumes/APDataStore"):
         raise SealInputsError("APDataStore is not this producer's tier")
@@ -694,6 +820,13 @@ def main(argv=None) -> int:
             args.candidate_runtime.resolve(), args.out_dir.resolve(),
             args.base_diagnostic.resolve(), [p.resolve() for p in args.candidate_diagnostic],
             args.cold_log.resolve()), indent=1, sort_keys=True))
+        return 0
+    if args.mode == "real_door":
+        if args.intent is None:
+            raise SealInputsError("real_door needs --intent")
+        print(json.dumps(real_door(args.intent.resolve(), args.out_dir.resolve(),
+                                   args.candidate_runtime.resolve(), args.bound_seconds),
+                         indent=1, sort_keys=True))
         return 0
     if args.mode == "smoke":
         if args.frontier_runtime is None:
