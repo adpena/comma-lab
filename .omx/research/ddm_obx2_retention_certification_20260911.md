@@ -68,9 +68,6 @@ promotion or score claim attaches to any of them.
 | `SEG_SLOPE_FALSIFIER_a1.json` | 4,166 | `1ddd834197e73aa9` | the same data under amendment A1 |
 | `SEG_SLOPE_lattice.json` | 2,533 | `c7c49e5a10c60aed` | the surviving arm's re-fit |
 
- covers the first ladder; the pose ladder and camera ladder wrote their rungs
-into the same per-rung directories and their run logs under , all retained.
-
 `STAGE_2A_RESULT.json` covers the first ladder; the pose ladder and the camera ladder wrote their rungs into the same per-rung directories, and all three ladders' run logs, manifests and done receipts are under `runs/`.
 
 The two pre-amendment falsifier receipts are kept deliberately: the first verdict is reported as it
