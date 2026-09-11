@@ -992,6 +992,132 @@ def cmd_ceiling(args) -> int:
 
 
 # --------------------------------------------------------------------------------------
+# mode=project -- turn the ceiling into the REALIZED curve, one evaluation per rung
+# --------------------------------------------------------------------------------------
+#
+# The ceiling is the lattice-free floor.  A rung that actually ships has to land on a
+# lattice, so the realized number is what the continuous optimum becomes when it is
+# ROUNDED onto that rung's lattice and re-scored through the real renderer.  That is one
+# evaluation per pair per rung -- minutes, not hours -- and it brackets every rung from
+# both sides: the ceiling above it, this projection below it.  (Below, because the
+# projection of the continuous optimum need not be the BEST point of that lattice; only a
+# full re-solve on the rung can close the bracket, and it is only worth paying for when
+# the bracket still straddles break-even.)
+#
+# The ``shipped`` rung is not filler.  The shipped codes are a ``refine_pair`` fixed point
+# under the +-1/+-2 SINGLE-coordinate polish (pc2 ITEM 1: 40 rounds moved 17 of 7,200
+# coordinates), but the continuous optimum's rounding is a MULTI-coordinate move, so it
+# can land somewhere the polish could not reach.  If it scores better, that is a pose gain
+# at ZERO bytes and zero receiver change.
+
+
+def lattice_menu(dimensions: int, halvings: tuple[int, ...]) -> list[tuple[str, np.ndarray]]:
+    """The rungs: global refinements, then one refined dimension at a time.
+
+    Per-DIMENSION rungs exist because the coefficient scales are twelve independent
+    float32 words in the archive and CAP1 carries an independent Rice ``k`` per
+    dimension, so a halving can be bought one dimension at a time.  That is a 12x finer
+    granularity on the COST axis than a global halving, and on move 44 it is the only
+    granularity whose cheapest step is small enough to be interesting.
+    """
+    menu: list[tuple[str, np.ndarray]] = [
+        ("shipped", np.ones(dimensions, dtype=np.float64))
+    ]
+    for halving in halvings:
+        menu.append(
+            (f"global_div{2 ** halving}", np.full(dimensions, 0.5**halving))
+        )
+    for dim in range(dimensions):
+        factors = np.ones(dimensions, dtype=np.float64)
+        factors[dim] = 0.5
+        menu.append((f"dim{dim}_div2", factors))
+    return menu
+
+
+def cmd_project(args) -> int:
+    import ddm_up2_shipping_pose_solve as up2
+
+    set_threads(args.threads)
+    inst, meta = build_instrument(verify_raw=False)
+    scales = np.asarray(inst.state.coefficient_scales, dtype=np.float64).reshape(-1)
+    codes = np.asarray(inst.state.codes, dtype=np.int32)
+    shipped_coefficients = codes.astype(np.float64) * scales[None]
+
+    rows: dict[int, dict[str, Any]] = {}
+    for path in args.rows:
+        rows.update(load_done(Path(path)))
+    pairs = sorted(rows)
+    if not pairs:
+        raise Pc3Error(f"no ceiling rows at {args.rows}")
+
+    menu = lattice_menu(up2.CARRIER_DIM, tuple(args.halvings))
+    labels = [label for label, _factors in menu]
+    realized = np.zeros((N_PAIRS, len(menu)), dtype=np.float64)
+    control = np.zeros(N_PAIRS, dtype=np.float64)
+    max_abs_code = np.zeros((N_PAIRS, len(menu)), dtype=np.int64)
+    started = time.time()
+
+    for position, pair in enumerate(pairs):
+        continuous = np.asarray(rows[pair]["coefficients"], dtype=np.float64)
+        block = [shipped_coefficients[pair]]
+        for _label, factors in menu:
+            step = scales * factors
+            integers = np.rint(continuous / step)
+            max_abs_code[pair, len(block) - 1] = int(np.abs(integers).max())
+            block.append(integers * step)
+        values = evaluate_coefficients(inst, pair, np.stack(block))
+        control[pair] = values[0]
+        realized[pair] = values[1:]
+        if args.progress and (position + 1) % 25 == 0:
+            elapsed = time.time() - started
+            print(
+                f"  projected {position + 1}/{len(pairs)} "
+                f"({elapsed / (position + 1):.2f} s/pair)",
+                flush=True,
+            )
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    np.save(args.out_dir / "projected_per_pair.npy", realized)
+    np.save(args.out_dir / "projection_control_per_pair.npy", control)
+    base = np.load(args.base)
+    summary = {
+        "schema": "ddm_pc3_projection.v1",
+        "pairs_measured": len(pairs),
+        "labels": labels,
+        "base_d_pose_mean": float(base.mean()),
+        "control_d_pose_mean_on_measured_pairs": float(control[pairs].mean()),
+        "base_d_pose_mean_on_measured_pairs": float(base[pairs].mean()),
+        "rungs": [
+            {
+                "rung": label,
+                "d_pose_mean_measured_pairs": float(realized[pairs, index].mean()),
+                "gain_vs_control": float(
+                    control[pairs].mean() - realized[pairs, index].mean()
+                ),
+                "max_abs_code": int(max_abs_code[pairs, index].max()),
+                "int12_headroom_ok": bool(max_abs_code[pairs, index].max() <= 2047),
+            }
+            for index, label in enumerate(labels)
+        ],
+        "note": (
+            "gain_vs_control differences INSIDE one batch shape; the control is the "
+            "shipped coefficients evaluated in the same batch as the rungs, so the "
+            "batch-shape offset cancels"
+        ),
+        "elapsed_seconds": time.time() - started,
+        "instrument": meta,
+        "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet, DALI-lineage GT]",
+        "score_claim": False,
+        "promotable": False,
+    }
+    (args.out_dir / "PROJECTION.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True)
+    )
+    print(json.dumps({k: summary[k] for k in ("pairs_measured", "rungs")}, indent=1))
+    return 0
+
+
+# --------------------------------------------------------------------------------------
 # mode=report -- the curve
 # --------------------------------------------------------------------------------------
 
@@ -1164,6 +1290,17 @@ def build_parser() -> argparse.ArgumentParser:
     reach.add_argument("--resume", action="store_true")
     reach.add_argument("--progress", action="store_true")
     reach.set_defaults(func=cmd_reach)
+
+    project = sub.add_parser(
+        "project", help="realized d_pose of the ceiling rounded onto each rung's lattice"
+    )
+    project.add_argument("--rows", nargs="+", required=True)
+    project.add_argument("--base", type=Path, required=True)
+    project.add_argument("--out-dir", type=Path, required=True)
+    project.add_argument("--halvings", type=int, nargs="+", default=[1, 2, 3, 4])
+    project.add_argument("--threads", type=int, default=6)
+    project.add_argument("--progress", action="store_true")
+    project.set_defaults(func=cmd_project)
 
     report = sub.add_parser("report", help="assemble the ceiling into the curve")
     report.add_argument("--base", type=Path, required=True)
