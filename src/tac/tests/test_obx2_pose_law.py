@@ -10,11 +10,31 @@ import pytest
 from tac.canonical_equations import obx2_pose_vs_scorer_plane_rmse_20260911 as law
 
 
-def test_law_reproduces_every_measured_n600_point_within_six_percent() -> None:
-    for name, rmse, measured in law.MEASURED_POINTS:
-        predicted = law.predict_d_pose(rmse)
-        assert predicted > 0.0, name
-        assert abs(predicted / measured - 1.0) < 0.30, name
+def test_each_family_reproduces_its_own_measured_points() -> None:
+    for structure, rungs, bound in (
+        ("smooth", law.SMOOTH_RUNGS, 0.13),
+        ("noise", law.NOISE_RUNGS, 0.10),
+    ):
+        for name, rmse, measured in law.MEASURED_POINTS:
+            if name not in rungs:
+                continue
+            predicted = law.predict_d_pose_by_structure(rmse, structure)
+            assert abs(predicted / measured - 1.0) < bound, (structure, name)
+    with pytest.raises(ValueError):
+        law.predict_d_pose_by_structure(1.0, "mystery")
+
+
+def test_the_relation_is_not_a_function_of_rmse_alone() -> None:
+    # The finding that forced the family split: more RMSE, less d_pose.
+    assert law.is_monotonic_in_rmse() is False
+    points = {name: (rmse, d_pose) for name, rmse, d_pose in law.MEASURED_POINTS}
+    noisy_rmse, noisy_pose = points["sp384_render_noise_4"]
+    smooth_rmse, smooth_pose = points["grid_384x512"]
+    assert smooth_rmse > noisy_rmse
+    assert smooth_pose < noisy_pose
+    # and noise is materially worse at equal RMSE
+    at_equal = noisy_pose / law.predict_d_pose_by_structure(noisy_rmse, "smooth")
+    assert at_equal > 2.0
 
 
 def test_law_floors_at_the_pointer_own_d_pose_and_rises_monotonically() -> None:
@@ -96,16 +116,18 @@ def test_canonical_equation_builds_with_every_measured_anchor() -> None:
     equation = law.build_obx2_pose_vs_scorer_plane_rmse_v1()
     assert equation.equation_id == law.EQUATION_ID
     assert len(equation.empirical_anchors) == len(law.MEASURED_POINTS)
-    worst = equation.predicted_vs_empirical_residual["worst_relative_error_over_seven_n600_points"]
-    assert 0.0 < worst < 0.30
+    residuals = equation.predicted_vs_empirical_residual
+    assert residuals["pooled_worst_relative_error"] > residuals["smooth_family_worst_relative_error"]
+    assert residuals["pooled_worst_relative_error"] > residuals["noise_family_worst_relative_error"]
+    assert residuals["smooth_family_worst_relative_error"] < 0.15
+    assert equation.domain_of_validity["monotonic_in_rmse"] is False
     assert equation.domain_of_validity["scorer_plane_rmse_range"] == [0.0, 8.67]
 
 
-def test_the_fit_is_labelled_an_interpolant_because_its_local_exponent_wanders() -> None:
-    # If one power law governed this, the local exponents would agree.  They do
-    # not, which is why the bracket is the claim and the fit is a convenience.
-    assert max(law.LOCAL_EXPONENTS) / min(law.LOCAL_EXPONENTS) > 4.0
-    assert law.WORST_RELATIVE_ERROR > 0.2
+def test_pooling_the_families_is_worse_than_fitting_them_apart() -> None:
+    assert law.WORST_RELATIVE_ERROR > law.SMOOTH_WORST_RELATIVE_ERROR
+    assert law.WORST_RELATIVE_ERROR > law.NOISE_WORST_RELATIVE_ERROR
+    assert law.NOISE_EXPONENT > law.SMOOTH_EXPONENT
 
 
 def test_the_measured_bracket_needs_no_model_and_contains_the_fit() -> None:
@@ -113,9 +135,9 @@ def test_the_measured_bracket_needs_no_model_and_contains_the_fit() -> None:
     inside, outside = law.measured_bracket(budget)
     assert inside is not None and outside is not None
     assert inside < outside
-    assert inside <= law.admissible_scorer_plane_rmse(budget) <= outside
-    # every rung in the bracket is near-lossless
-    assert 100.0 * outside / law.SCORER_PLANE_RMSE_FULL_SCALE < 0.35
+    # The pooled bracket mixes families: its upper end is a NOISE rung, which is
+    # the wrong reference for a trained generator's structured error.
+    assert outside in {rmse for name, rmse, _ in law.MEASURED_POINTS if name in law.NOISE_RUNGS}
     # a budget nothing reaches has no inside rung
     assert law.measured_bracket(1.0e-12)[0] is None
 

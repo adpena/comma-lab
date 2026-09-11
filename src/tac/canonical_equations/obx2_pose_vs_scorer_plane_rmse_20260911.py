@@ -9,14 +9,32 @@ plane the scorer actually reads:
 
     d_pose(r) = d_pose_floor + C * r ** p
 
-with `d_pose_floor` the pointer's own measured `d_pose` at `r = 0`.  CORRECTION, 2026-09-11.  I described this as a law holding "within 5%" on four
-points and "within 13%" on six.  On SEVEN the worst residual is **29%**, and the
-local exponent between consecutive measured points wanders from 0.555 to 2.548 —
-a factor of 4.6.  A single power law is a SUMMARY of these points, not a law
-governing them, and the fitted crossing is an interpolation with roughly 30%
-uncertainty.  The primary claim is therefore the MEASURED BRACKET: the highest
-rung whose `d_pose` stays inside the budget and the lowest rung that breaks it.
-The fit is retained as an interpolant and is labelled as one.
+with `d_pose_floor` the pointer's own measured `d_pose` at `r = 0`.  SECOND CORRECTION, 2026-09-11, and the one that matters.  An eighth rung showed
+the relation is **NOT A FUNCTION OF SCORER-PLANE RMSE AT ALL**: it is
+NON-MONOTONIC.  `sp384_render_noise_4` at RMSE 2.300 measures `d_pose` 0.0120593
+while `grid_384x512` at RMSE **4.544** — twice the error — measures 0.011817,
+LESS.  What `d_pose` responds to is the error's STRUCTURE, not its magnitude.
+
+Split by structure, each family is a clean power law:
+
+  * SMOOTH (resampling-like: the `sp_*` and `grid_*` constructions) —
+    `C = 8.724e-4`, `p = 1.7439`, four points all within 13%.
+  * NOISE (independent per-pixel: the `sp384_render_noise_*` rungs) —
+    `C = 1.111e-3`, `p = 2.8125`, three points all within 10%.
+
+At the same RMSE 2.30 independent noise is **3.23x** more damaging than smooth
+error.  The single "law" I reported earlier was a mixture of two physics, which
+is why its residual grew from 5% to 13% to 29% to 67% as points accumulated.
+
+What this does to the closure.  Both families' FITTED crossings of the Pose
+budget sit close together — 0.253 LSB (smooth) and 0.391 LSB (noise) — so the
+"near-lossless" reading survives on the fits.  But the MEASURED bracket I
+previously quoted, [0.1992, 0.7604], mixed families: its upper end is a NOISE
+rung, and a trained generator's error is structured, not white.  The correct
+smooth-family bracket is **[0.1992, 4.5440]** — loose, because no smooth rung
+was measured between them.  So the closure rests on the smooth fit, not on a
+tight measured bracket, and tightening it needs a smooth construction in that
+gap.  Stated plainly because I asserted the tight bracket twice.
 
 Why this equation exists.  The OBX2 burn gate is `distortion < 0.04` at
 `<= 122,000 B`.  With the measured `d_seg` of a scorer-plane-matched render
@@ -40,6 +58,7 @@ with a value derived from the live object's own measured `d_pose`.
 
 from __future__ import annotations
 
+import itertools
 import math
 from typing import Any
 
@@ -69,6 +88,7 @@ MEASURED_POINTS: tuple[tuple[str, float, float], ...] = (
     ("sp_640x852", 0.1992, 5.04831e-5),
     ("sp384_render_noise_1", 0.7604, 5.43636e-4),
     ("sp384_render_noise_2", 1.278, 2.02857e-3),
+    ("sp384_render_noise_4", 2.300, 1.20593e-2),
     ("grid_384x512", 4.544, 0.011817),
     ("sp_192x256", 8.670, 0.0391067),
 )
@@ -78,17 +98,58 @@ MEASURED_POINTS: tuple[tuple[str, float, float], ...] = (
 # 1.853.  It wanders by 4.6x.  The fit is an INTERPOLANT with 29% worst
 # residual, not a law, and the honest primary claim is the measured bracket
 # below rather than any single exponent.
-LOCAL_EXPONENTS = (0.555, 1.839, 2.548, 1.391, 1.853)
-WORST_RELATIVE_ERROR = 0.290
-SMALL_REGIME_MAX_RMSE = 1.0
+# Split by error STRUCTURE, because the pooled relation is non-monotonic.
+SMOOTH_COEFFICIENT = 8.72421e-4
+SMOOTH_EXPONENT = 1.7439
+SMOOTH_WORST_RELATIVE_ERROR = 0.127
+NOISE_COEFFICIENT = 1.11052e-3
+NOISE_EXPONENT = 2.8125
+NOISE_WORST_RELATIVE_ERROR = 0.094
+NOISE_PENALTY_AT_EQUAL_RMSE = 3.23
+SMOOTH_RUNGS = ("sp_384x512", "sp_640x852", "grid_384x512", "sp_192x256")
+NOISE_RUNGS = ("sp384_render_noise_1", "sp384_render_noise_2", "sp384_render_noise_4")
+WORST_RELATIVE_ERROR = 0.667  # the POOLED fit on eight points, retained to show why pooling fails
 
 # The gate this law is used against (OBX2 burn spec "Exact admission arithmetic").
 DISTORTION_GATE = 0.04
 SCORER_PLANE_RMSE_FULL_SCALE = 255.0
 
 
+def predict_d_pose_by_structure(scorer_plane_rmse: float, structure: str) -> float:
+    """Predicted `d_pose` for an error of a named STRUCTURE at a given RMSE.
+
+    Use this, not the pooled fit: the pooled relation is non-monotonic because
+    independent noise and smooth resampling error of the same magnitude do
+    different amounts of damage.
+    """
+
+    rmse = float(scorer_plane_rmse)
+    if rmse < 0.0 or not math.isfinite(rmse):
+        raise ValueError("scorer-plane RMSE must be finite and non-negative")
+    if structure == "smooth":
+        coefficient, exponent = SMOOTH_COEFFICIENT, SMOOTH_EXPONENT
+    elif structure == "noise":
+        coefficient, exponent = NOISE_COEFFICIENT, NOISE_EXPONENT
+    else:
+        raise ValueError("structure must be 'smooth' or 'noise'")
+    if rmse == 0.0:
+        return POSE_FLOOR
+    return POSE_FLOOR + coefficient * rmse**exponent
+
+
+def is_monotonic_in_rmse() -> bool:
+    """Whether `d_pose` rises with RMSE across all measured rungs.  It does not."""
+
+    ordered = sorted(MEASURED_POINTS, key=lambda row: row[1])
+    return all(a[2] <= b[2] for a, b in itertools.pairwise(ordered))
+
+
 def predict_d_pose(scorer_plane_rmse: float) -> float:
-    """Predicted `d_pose` at a scorer-plane RMSE, in uint8 units."""
+    """POOLED interpolant, retained for continuity.  Prefer the structure-aware form.
+
+    The pooled relation mixes two physics and is non-monotonic across them; its
+    worst residual is 29% against 13% and 9% for the two families fitted apart.
+    """
 
     rmse = float(scorer_plane_rmse)
     if rmse < 0.0 or not math.isfinite(rmse):
@@ -220,8 +281,8 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
         equation_id=EQUATION_ID,
         name="OBX2 PoseNet distortion versus scorer-plane RMSE",
         one_line_summary=(
-            "seven n600 points bracket the gate crossing between spRMSE 0.1992 and 0.7604; the "
-            "power-law interpolant summarizes them to 29% and places it near 0.245 uint8 LSB."
+            "d_pose is NON-MONOTONIC in scorer-plane RMSE: split by structure, smooth error fits "
+            "p=1.744 and independent noise p=2.813, and noise is 3.23x worse at equal RMSE."
         ),
         latex_form=r"d_{pose}(r) \approx d_{pose}^{floor} + C\,r^{p},\quad C = 9.339\times10^{-4},\ p = 1.751",
         python_callable_module_path=(
@@ -231,9 +292,24 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
             "vehicle": ["qbf_coordinate_generator", "move_44_decoded_bytes"],
             "measurement_axis": ["macOS-CPU advisory"],
             "scorer_plane_rmse_range": [0.0, 8.67],
-            "local_exponents_between_consecutive_points": list(LOCAL_EXPONENTS),
-            "worst_relative_error": WORST_RELATIVE_ERROR,
-            "status": "interpolant, not a law: the local exponent varies 4.6x across the measured range",
+            "monotonic_in_rmse": is_monotonic_in_rmse(),
+            "smooth_family": {
+                "coefficient": SMOOTH_COEFFICIENT,
+                "exponent": SMOOTH_EXPONENT,
+                "worst_relative_error": SMOOTH_WORST_RELATIVE_ERROR,
+                "rungs": list(SMOOTH_RUNGS),
+            },
+            "noise_family": {
+                "coefficient": NOISE_COEFFICIENT,
+                "exponent": NOISE_EXPONENT,
+                "worst_relative_error": NOISE_WORST_RELATIVE_ERROR,
+                "rungs": list(NOISE_RUNGS),
+            },
+            "noise_penalty_at_equal_rmse": NOISE_PENALTY_AT_EQUAL_RMSE,
+            "pooled_worst_relative_error": WORST_RELATIVE_ERROR,
+            "status": (
+                "the pooled relation is NON-MONOTONIC in RMSE; fit and quote by error structure"
+            ),
             "note": (
                 "fitted on deterministic constructions of ONE video's decoded bytes; a single "
                 "power law summarizes them to 29% and no better, so claims should rest on the "
@@ -243,7 +319,11 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
         units_in={"scorer_plane_rmse": "uint8_levels_rms_in_the_384x512_scorer_plane"},
         units_out={"d_pose": "mean_squared_error_over_600x6_posenet_values"},
         empirical_anchors=anchors,
-        predicted_vs_empirical_residual={"worst_relative_error_over_seven_n600_points": worst_ratio},
+        predicted_vs_empirical_residual={
+            "pooled_worst_relative_error": worst_ratio,
+            "smooth_family_worst_relative_error": SMOOTH_WORST_RELATIVE_ERROR,
+            "noise_family_worst_relative_error": NOISE_WORST_RELATIVE_ERROR,
+        },
         last_calibration_utc="2026-09-11T00:00:00Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
@@ -263,18 +343,18 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
 __all__ = [
     "DISTORTION_GATE",
     "EQUATION_ID",
-    "LOCAL_EXPONENTS",
     "MEASURED_POINTS",
     "POSE_FLOOR",
     "POWER_LAW_COEFFICIENT",
     "POWER_LAW_EXPONENT",
-    "SMALL_REGIME_MAX_RMSE",
     "WORST_RELATIVE_ERROR",
     "admissible_scorer_plane_rmse",
     "build_obx2_pose_vs_scorer_plane_rmse_v1",
     "derive_pose_weight",
+    "is_monotonic_in_rmse",
     "measured_bracket",
     "pose_budget_at_distortion_gate",
     "pose_weight_at_operating_point",
     "predict_d_pose",
+    "predict_d_pose_by_structure",
 ]
