@@ -26,7 +26,8 @@ import platform
 import sys
 import tarfile
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -63,9 +64,13 @@ QBT2B_PACKET_SHA256 = "607abebda2708f00daab79aac7bc6839d314096e6ed5693b642525487
 OUTPUT_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_obx2_edge_local_implicit_correction")
 
 # Declared initial lattice geometry.  `(T, H, W)` per level with `channels`
-# features each.  Level 2 is the per-pair level: it replaces the born object's
-# 28-value per-pair latent with 4*channels values per pair.
-DEFAULT_LEVELS = ((60, 12, 16), (15, 24, 32), (600, 2, 2))
+# features each; level 2 is the per-pair level.  Sized from a MEASURED coder
+# result, not a guess: one trained epoch on the first geometry produced 101,760
+# codes that a real Brotli q11 race coded at 90,415 B (7.11 bits per code), far
+# past the budget.  Holding the born model (79,688 B), latents (26,130 B),
+# config (488 B), metadata (20 B) and framing, a 122,000 B packet leaves about
+# 15,400 B for the lattice, so the geometry below is 15,840 codes.
+DEFAULT_LEVELS = ((30, 6, 8), (10, 12, 16), (600, 1, 1))
 DEFAULT_CHANNELS = 4
 DEFAULT_BITS = (8, 8, 8)
 DEFAULT_HIDDEN = 24
@@ -139,6 +144,15 @@ def condition_from_interfaces(signed: torch.Tensor, gate_tau: torch.Tensor) -> t
     return condition, gate
 
 
+def _axis_weights(coordinate: torch.Tensor, size: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Low index, high index, and interpolation weight for one lattice axis."""
+
+    position = ((coordinate + 1.0) * 0.5 * (size - 1)).clamp(0.0, float(size - 1))
+    low = position.floor()
+    high = torch.clamp(low + 1.0, max=float(size - 1))
+    return low.long(), high.long(), position - low
+
+
 class LatticeTorch(nn.Module):
     """Differentiable twin of the counted OBX2 lattice section."""
 
@@ -176,21 +190,29 @@ class LatticeTorch(nn.Module):
         return grids, scales
 
     def sample(self, grids: Sequence[torch.Tensor], t: torch.Tensor, y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-        """Trilinear sample of every level at normalized [-1,1] coordinates."""
+        """Trilinear sample of every level at normalized [-1,1] coordinates.
+
+        Written as eight explicit gathers rather than `grid_sample` for two
+        measured reasons: `aten::grid_sampler_3d_backward` has no MPS kernel, so
+        the gradient device would be lost; and this form is the same arithmetic,
+        in the same order, as `tac.obx2_lattice_packet.trilinear_sample`, which
+        keeps the training twin structurally identical to the receiver.
+        """
 
         features = []
         for grid in grids:
             depth, height, width, channels = grid.shape
-            volume = grid.permute(3, 0, 1, 2).unsqueeze(0)
-            sample_grid = torch.stack((x, y, t), dim=-1).reshape(1, 1, 1, -1, 3)
-            sampled = F.grid_sample(
-                volume,
-                sample_grid,
-                mode="bilinear",
-                padding_mode="border",
-                align_corners=True,
-            )
-            features.append(sampled.reshape(channels, -1).transpose(0, 1))
+            flat = grid.reshape(depth * height * width, channels)
+            (t0, t1, ft) = _axis_weights(t, depth)
+            (y0, y1, fy) = _axis_weights(y, height)
+            (x0, x1, fx) = _axis_weights(x, width)
+            sampled = torch.zeros((t.shape[0], channels), dtype=grid.dtype, device=grid.device)
+            for ti, wt in ((t0, 1.0 - ft), (t1, ft)):
+                for yi, wy in ((y0, 1.0 - fy), (y1, fy)):
+                    for xi, wx in ((x0, 1.0 - fx), (x1, fx)):
+                        index = (ti * height + yi) * width + xi
+                        sampled = sampled + flat.index_select(0, index) * (wt * wy * wx).unsqueeze(-1)
+            features.append(sampled)
         return torch.cat(features, dim=-1)
 
     def forward(
@@ -372,12 +394,351 @@ def receiver_render(packet: bytes, pair_ids: Sequence[int], *, height: int = EVA
     return out
 
 
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+
+
+def parallel_receiver_render(packet: bytes, pair_ids: Sequence[int], *, workers: int) -> np.ndarray:
+    """Run the NumPy verdict receiver over many pairs across processes."""
+
+    if workers <= 1 or len(pair_ids) <= 1:
+        return receiver_render(packet, pair_ids)
+    chunks = [list(pair_ids[index::workers]) for index in range(workers)]
+    chunks = [chunk for chunk in chunks if chunk]
+    with ProcessPoolExecutor(max_workers=len(chunks)) as pool:
+        futures = {pool.submit(receiver_render, packet, chunk): chunk for chunk in chunks}
+        rendered: dict[int, np.ndarray] = {}
+        for future in futures:
+            chunk = futures[future]
+            result = future.result()
+            for offset, pair_id in enumerate(chunk):
+                rendered[int(pair_id)] = result[offset]
+    return np.stack([rendered[int(pair_id)] for pair_id in pair_ids])
+
+
+def teacher_render(stage2a_root: Path, pair_ids: Sequence[int]) -> np.ndarray:
+    """Retained scorer-plane-matched 384x512 render: the Stage-2 distillation target."""
+
+    wanted = {int(pair_id) for pair_id in pair_ids}
+    collected: dict[int, np.ndarray] = {}
+    for path in sorted((stage2a_root / "stage_2a" / "sp_384x512").glob("pairs_*.npz")):
+        stem = path.stem.removeprefix("pairs_")
+        first, last = (int(value) for value in stem.split("_"))
+        if not wanted & set(range(first, last + 1)):
+            continue
+        with np.load(path, allow_pickle=False) as payload:
+            ids = np.asarray(payload["pair_ids_i64"], dtype=np.int64)
+            render = np.asarray(payload["render_u8"], dtype=np.uint8)
+        for offset, pair_id in enumerate(ids.tolist()):
+            if int(pair_id) in wanted:
+                collected[int(pair_id)] = render[offset]
+    missing = sorted(wanted - set(collected))
+    if missing:
+        raise OBX2TrainerError(f"retained sp_384x512 teacher render is missing pairs: {missing[:8]}")
+    return np.stack([collected[int(pair_id)] for pair_id in pair_ids]).astype(np.float32) / 255.0
+
+
+def operating_point_pose_weight(d_pose: float) -> float:
+    """Exact contest derivative of sqrt(10*d_pose) at the current operating point."""
+
+    return 5.0 / math.sqrt(10.0 * max(d_pose, 1.0e-9))
+
+
+def stage_checkpoint_path(output: Path, stage: str, tag: str) -> Path:
+    return output / "checkpoints" / f"obx2_{stage}_{tag}.pt"
+
+
+def save_stage_checkpoint(
+    path: Path,
+    *,
+    module: OBX2Module,
+    ema: Any,
+    optimizer: torch.optim.Optimizer,
+    config: Mapping[str, Any],
+    step: int,
+    history: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Atomic, byte-close-loadable checkpoint; the EMA shadow is the authority."""
+
+    payload = {
+        "schema": "ddm_obx2_checkpoint.v1",
+        "step": int(step),
+        "config": dict(config),
+        "model_state": {name: value.detach().cpu() for name, value in module.state_dict().items()},
+        "ema_state": {name: value.detach().cpu() for name, value in ema.shadow.items()},
+        "optimizer_state": optimizer.state_dict(),
+        "torch_rng_state": torch.get_rng_state(),
+        "numpy_rng_state": np.random.get_state(),
+        "history": [dict(row) for row in history],
+        "lattice_levels": [list(level) for level in module.lattice.spec.levels],
+        "lattice_bits": list(module.lattice.spec.bits),
+        "written_at_utc": datetime.now(UTC).isoformat(),
+    }
+    return qbt1.atomic_torch(path, payload)
+
+
+def load_stage_checkpoint(path: Path, module: OBX2Module, optimizer: torch.optim.Optimizer, ema: Any) -> dict[str, Any]:
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    if payload.get("schema") != "ddm_obx2_checkpoint.v1":
+        raise OBX2TrainerError(f"checkpoint schema differs: {path}")
+    module.load_state_dict(payload["model_state"])
+    optimizer.load_state_dict(payload["optimizer_state"])
+    for name, value in payload["ema_state"].items():
+        ema.shadow[name] = value.clone()
+    torch.set_rng_state(payload["torch_rng_state"])
+    np.random.set_state(payload["numpy_rng_state"])
+    return payload
+
+
+def ema_module(module: OBX2Module, ema: Any, spec: lat.LatticeSpec, *, seed: int) -> OBX2Module:
+    """A detached copy of the EMA shadow: the object that is byte-closed and scored."""
+
+    shadow = build_module(born_packet(), spec, seed=seed)
+    state = {name: value.detach().cpu().clone() for name, value in module.state_dict().items()}
+    for name, value in ema.shadow.items():
+        state[name] = value.detach().cpu().clone()
+    shadow.load_state_dict(state)
+    shadow.eval()
+    return shadow
+
+
+def pair_order(seed: int, epoch: int) -> list[int]:
+    generator = np.random.default_rng(seed * 1_000_003 + epoch)
+    order = np.arange(N)
+    generator.shuffle(order)
+    return order.tolist()
+
+
+def score_parsed_object(
+    packet: bytes,
+    *,
+    pair_ids: Sequence[int],
+    gt: np.ndarray,
+    pose_target: np.ndarray,
+    workers: int,
+    render_chunk: int = 50,
+) -> dict[str, Any]:
+    """Authority advisory row: render the PARSED packet, score on the frozen CPU scorers."""
+
+    from tac.scorer import load_differentiable_scorers
+
+    posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=torch.device("cpu"))
+    posenet.eval()
+    segnet.eval()
+    seg_errors = 0
+    seg_pixels = 0
+    pose_square = 0.0
+    pose_values = 0
+    started = time.time()
+    render_seconds = 0.0
+    for start in range(0, len(pair_ids), render_chunk):
+        chunk = list(pair_ids[start : start + render_chunk])
+        render_started = time.time()
+        render = parallel_receiver_render(packet, chunk, workers=workers)
+        render_seconds += time.time() - render_started
+        with torch.no_grad():
+            camera = qbt1.roundtrip_to_camera_uint8_ste(torch.from_numpy(render))
+            pose6, logits = qbt1.scorer_forward(camera, posenet, segnet)
+            argmax = logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
+            pose = pose6.cpu().numpy().astype(np.float64)
+        target = np.asarray(gt[chunk], dtype=np.uint8)
+        seg_errors += int((argmax != target).sum())
+        seg_pixels += int(target.size)
+        pose_square += float(np.square(pose - np.asarray(pose_target[chunk], dtype=np.float64)).sum())
+        pose_values += int(pose.size)
+    d_seg = seg_errors / seg_pixels
+    d_pose = pose_square / pose_values
+    distortion = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
+    rate = 25.0 * len(packet) / RATE_DENOMINATOR
+    return {
+        "axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotable": False,
+        "pairs": len(pair_ids),
+        "seg_errors": seg_errors,
+        "seg_pixels": seg_pixels,
+        "d_seg": d_seg,
+        "pose_squared_error_sum": pose_square,
+        "pose_values": pose_values,
+        "d_pose": d_pose,
+        "distortion": distortion,
+        "packet_bytes": len(packet),
+        "rate_at_packet_bytes": rate,
+        "advisory_score_at_packet_bytes": rate + distortion,
+        "passes_distortion_gate": distortion < DISTORTION_GATE,
+        "passes_packet_byte_gate": len(packet) <= PACKET_BYTE_GATE,
+        "render_seconds": render_seconds,
+        "total_seconds": time.time() - started,
+    }
+
+
+def run_training(
+    output: Path,
+    *,
+    stage: str,
+    device_name: str,
+    epochs: int,
+    chunk_pairs: int,
+    learning_rate: float,
+    seed: int,
+    lattice_enabled: bool,
+    resume_from: Path | None,
+    workers: int,
+    stage2a_root: Path,
+    save_every_epochs: int,
+    pose_weight_d_pose: float,
+    validate_pairs: int,
+) -> dict[str, Any]:
+    """One governed training stage over the complete 600-pair population."""
+
+    if stage not in ("distill", "joint"):
+        raise OBX2TrainerError(f"unsupported training stage: {stage}")
+    from experiments import ddm_qbz1_descent_rate_configuration as qbz1
+    from tac.scorer import load_differentiable_scorers
+    from tac.training import EMA
+
+    device = torch.device(device_name)
+    torch.manual_seed(seed)
+    np.random.seed(seed % (2**32))
+    spec = default_spec()
+    module = build_module(born_packet(), spec, seed=seed).to(device)
+    module.train()
+    if not lattice_enabled:
+        for parameter in module.lattice.parameters():
+            parameter.requires_grad_(False)
+    trainable = [parameter for parameter in module.parameters() if parameter.requires_grad]
+    optimizer = torch.optim.AdamW(trainable, lr=learning_rate)
+    ema = EMA(module, decay=0.997)
+    history: list[dict[str, Any]] = []
+    start_epoch = 0
+    if resume_from is not None and resume_from.is_file():
+        payload = load_stage_checkpoint(resume_from, module, optimizer, ema)
+        history = list(payload.get("history", []))
+        start_epoch = int(payload.get("step", 0))
+        module.to(device)
+
+    gt = np.load(qbz1.GT_ARGMAX, mmap_mode="r", allow_pickle=False)
+    pose_target = np.load(qbz1.GT_POSE6, mmap_mode="r", allow_pickle=False)
+    posenet = segnet = None
+    if stage == "joint":
+        posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=device)
+        posenet.eval()
+        segnet.eval()
+    pose_weight = operating_point_pose_weight(pose_weight_d_pose)
+    config = {
+        "stage": stage,
+        "device": device_name,
+        "epochs": epochs,
+        "chunk_pairs": chunk_pairs,
+        "learning_rate": learning_rate,
+        "seed": seed,
+        "lattice_enabled": lattice_enabled,
+        "pose_weight": pose_weight,
+        "pose_weight_operating_point_d_pose": pose_weight_d_pose,
+        "lattice_spec": spec.describe(),
+        "ema_decay": 0.997,
+    }
+    started = time.time()
+    for epoch in range(start_epoch, epochs):
+        order = pair_order(seed, epoch)
+        epoch_loss = 0.0
+        batches = 0
+        tau = qbt1.tau_for_step(epoch, max(1, epochs))
+        for index in range(0, N, chunk_pairs):
+            ids = order[index : index + chunk_pairs]
+            pair_ids = torch.tensor(ids, dtype=torch.long, device=device)
+            outputs = module(pair_ids)
+            if stage == "distill":
+                target = torch.from_numpy(teacher_render(stage2a_root, ids)).to(device)
+                loss = F.mse_loss(outputs["rgb_pair_01"], target)
+            else:
+                camera = qbt1.roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
+                pose6, logits = qbt1.scorer_forward(camera, posenet, segnet)
+                target_seg = torch.from_numpy(np.asarray(gt[ids], dtype=np.int64)).to(device)
+                target_pose = torch.from_numpy(np.asarray(pose_target[ids], dtype=np.float32)).to(device)
+                seg_loss = qbt1.expected_flip_margin_loss(logits, target_seg, tau)
+                pose_loss = F.mse_loss(pose6, target_pose)
+                loss = 100.0 * seg_loss + pose_weight * pose_loss
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            optimizer.step()
+            ema.update(module)
+            epoch_loss += float(loss.detach())
+            batches += 1
+        row = {
+            "epoch": epoch,
+            "mean_loss": epoch_loss / max(1, batches),
+            "tau": tau,
+            "elapsed_seconds": time.time() - started,
+            "axis": "[training-surrogate, not a score]",
+        }
+        history.append(row)
+        print(json.dumps(row), flush=True)
+        if (epoch + 1) % max(1, save_every_epochs) == 0 or epoch + 1 == epochs:
+            save_stage_checkpoint(
+                stage_checkpoint_path(output, stage, f"epoch_{epoch + 1:05d}"),
+                module=module,
+                ema=ema,
+                optimizer=optimizer,
+                config=config,
+                step=epoch + 1,
+                history=history,
+            )
+
+    shadow = ema_module(module, ema, spec, seed=seed)
+    packet, accounting = build_packet(shadow)
+    repeat, _ = build_packet(shadow)
+    if repeat != packet:
+        raise OBX2TrainerError("terminal packet encoder is nondeterministic")
+    packet_path = output / "candidates" / f"obx2_{stage}_terminal.packet"
+    qbt1.atomic_bytes(packet_path, packet)
+    validation = score_parsed_object(
+        packet,
+        pair_ids=list(range(min(validate_pairs, N))),
+        gt=gt,
+        pose_target=pose_target,
+        workers=workers,
+    )
+    receipt = {
+        "schema": "ddm_obx2_training_stage.v1",
+        "created_at_utc": datetime.now(UTC).isoformat(),
+        "axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotable": False,
+        "research_only": True,
+        "config": config,
+        "packet_accounting": accounting,
+        "packet_path": str(packet_path),
+        "deterministic_repeat": True,
+        "validation": validation,
+        "history_tail": history[-10:],
+        "elapsed_seconds": time.time() - started,
+        "host": {"platform": platform.platform(), "python": platform.python_version()},
+    }
+    qbt1.atomic_json(output / f"STAGE_{stage.upper()}_RESULT.json", receipt)
+    return receipt
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="OBX2 base+lattice trainer")
-    parser.add_argument("stage", choices=("stage1",))
+    parser.add_argument("stage", choices=("stage1", "distill", "joint"))
     parser.add_argument("--output", type=Path, default=OUTPUT_ROOT)
     parser.add_argument("--seed", type=int, default=20260911)
     parser.add_argument("--parity-pairs", type=int, default=8)
+    parser.add_argument("--device", default="mps")
+    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--chunk-pairs", type=int, default=4)
+    parser.add_argument("--learning-rate", type=float, default=3.0e-4)
+    parser.add_argument("--no-lattice", action="store_true", help="freeze the lattice: the base-only A/B control")
+    parser.add_argument("--resume-from", type=Path, default=None)
+    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--stage2a-root", type=Path, default=OUTPUT_ROOT)
+    parser.add_argument("--save-every-epochs", type=int, default=5)
+    parser.add_argument("--pose-weight-operating-point", type=float, default=1.0e-3)
+    parser.add_argument("--validate-pairs", type=int, default=N)
+    parser.add_argument("--launch-authorized", action="store_true")
     return parser
 
 
@@ -484,7 +845,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         )
         return 0
-    raise OBX2TrainerError(f"unsupported stage: {args.stage}")
+    if not args.launch_authorized:
+        raise OBX2TrainerError("n600 training requires explicit --launch-authorized")
+    receipt = run_training(
+        args.output,
+        stage=args.stage,
+        device_name=args.device,
+        epochs=args.epochs,
+        chunk_pairs=args.chunk_pairs,
+        learning_rate=args.learning_rate,
+        seed=args.seed,
+        lattice_enabled=not args.no_lattice,
+        resume_from=args.resume_from,
+        workers=args.workers,
+        stage2a_root=args.stage2a_root,
+        save_every_epochs=args.save_every_epochs,
+        pose_weight_d_pose=args.pose_weight_operating_point,
+        validate_pairs=args.validate_pairs,
+    )
+    print(json.dumps({"stage": args.stage, "validation": receipt["validation"],
+                      "packet_bytes": receipt["packet_accounting"]["packet_bytes"]}, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
