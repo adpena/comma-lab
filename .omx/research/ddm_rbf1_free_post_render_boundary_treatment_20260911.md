@@ -136,17 +136,33 @@ re-expresses all four operators at the band only and is proven **BYTE-IDENTICAL*
 to the producer on real retained frames for all four modes
 (`experiments/tests/test_ddm_rbf1_band_local.py`, 7 tests).
 
-| Treatment | full-frame n600 s (MEASURED) | band/full speedup (MEASURED, paired) | band-local n600 s (composed) | projected T4 s | fits 27.581 s |
+Two paired sessions, both measuring the full-frame producer and the band-local
+re-expression on the same real frames in the same session. The later one ran on a
+lighter host (load 27, 4 threads, seed 7, 5 pairs) and is the primary reading; its
+full-frame ssaa (314.7 s) and sdf (168.9 s) agree with the independent n600 render
+totals (311.4 / 179.2) to within 1–6%, which is the cross-check that licenses it.
+
+| Treatment | full-frame n600 s | band-local n600 s | speedup | projected T4 s | fits 27.581 s |
 |---|---:|---:|---:|---:|---|
-| Guided | 1034.0 | 4.28x | 241.6 | 236.3 | no, 8.6x over |
-| SSAA | 311.4 | 20.44x | 15.2 | 14.9 | **yes** |
-| SDF | 179.2 | 8.24x | 21.7 | 21.3 | **yes** |
-| Guided→SSAA→SDF | 1536.6 | 7.69x | 199.8 | 195.4 | no, 7.1x over |
+| Guided | 250.3 | 58.2 | 4.30x | 56.9 | no, 2.1x over |
+| SSAA | 314.7 | 9.0 | 34.97x | **8.8** | **yes** |
+| SDF | 168.9 | 20.9 | 8.08x | **20.4** | **yes** |
+| Guided→SSAA→SDF | 733.0 | 96.0 | 7.63x | 93.9 | no, 3.4x over |
+
+The earlier contended session (load 39, 2 threads) measured band-local n600 of
+guided 134.2, ssaa 39.8, sdf 54.0, composition 249.1 s, and the n600 render itself
+measured full-frame totals of baseline 749.8, guided 1034.0, ssaa 311.4, sdf 179.2,
+composition 1536.6 s. ssaa and sdf agree across all three readings; guided and the
+composition do not, because their cost is memory-bandwidth bound (five full-frame
+box filters per class) and they suffer disproportionately under fleet contention.
+The conclusion is the same in every reading: **the two cheap operators fit and the
+two expensive ones do not.**
 
 Only frame_1 is semantically re-rendered in this vehicle, so a receiver treats 600
 frames, not 1,200. The T4 column applies ddm_mxo1's same-receiver 0.978071 factor;
-it is a projection, not a T4 run. Receipts: `retained/pricing/BAND_LOCAL_PRICE_v1.json`,
-`retained/pricing/WALLCLOCK_TABLE_v1.json`.
+it is a projection, not a T4 run. Receipts:
+`retained/pricing/BAND_LOCAL_PRICE_v2.json` (primary),
+`retained/pricing/BAND_LOCAL_PRICE_v1.json`, `retained/pricing/WALLCLOCK_TABLE_v1.json`.
 
 **So wall-clock does not close the family.** Two of the three operators fit inside
 the strict slack. What closes it is measured below.
@@ -260,6 +276,95 @@ magnitude, and they would still owe the quadratic pose tax on top. That gap, not
 an implementation defect, is what closes the family.
 
 ## Fresh n600 treatment table
+
+The governed job `score_launch` (pid 10979, counter 1527, slot receipt
+`retained/SCORER_SLOT.json`) runs the frozen CPU scorer over all five modes in
+five-pair resumable chunks and writes `retained/RESULT.json` at the end. **At the
+time of writing it is at 90/600 pairs.** The rows below are the RUNNING AGGREGATE
+over those 90 pairs — a declared CONTIGUOUS PREFIX, so per the prefix-bias law it
+is SCOPE, not the verdict, and its pose column is biased HARD (pose prefixes
+measure 2.54–4.21x harder than the population). The verdict row is `RESULT.json`.
+
+| Mode | seg errors | d_seg | d_pose | B | H | H/B | ΔS_seg | ΔS_pose | ΔS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 1,623 | 9.1722e-05 | 1.7265e-05 | 0 | 0 | — | +0.000000 | +0.000000 | **+0.000000** |
+| Guided | 6,907 | 3.9034e-04 | 8.4911e-03 | 370 | 5,654 | 15.28 | +0.029862 | +6.253779 | **+6.283641** |
+| SSAA | 2,616 | 1.4784e-04 | 7.8137e-04 | 99 | 1,092 | 11.03 | +0.005612 | +0.563922 | **+0.569533** |
+| SDF | 2,451 | 1.3852e-04 | 9.6638e-04 | 72 | 900 | 12.50 | +0.004679 | +0.700461 | **+0.705140** |
+| Guided→SSAA→SDF | 7,403 | 4.1837e-04 | 1.5824e-02 | 385 | 6,165 | 16.01 | +0.032665 | +11.665767 | **+11.698432** |
+
+The bar is ΔS < −2e-05. The best mode is **+0.5695**, which is **28,477 bars on the
+wrong side**, and the composition is the worst row in the arm. No mode is within
+four orders of magnitude of the bar, and the ordering, the harm/benefit ratios and
+the pose domination all agree with the 24-pair seeded-RANDOM amplitude family, so
+the prefix is not carrying the result.
+
+**The fresh residual reproduction runs alongside it and reproduces the cached
+census with an independent frozen-CPU scorer.** At 90 pairs: 1,623 errors, of which
+**82.50%** have the stored token equal to GT (cached n600: 83.67%), **99.26%** sit
+within Chebyshev 1 of a token class edge (cached: 99.29%), and **96.00%** have the
+GT class present in the predicted 3x3 (cached: 94.70%). That is the charter's
+deliverable 1 falsifier passing on a fresh scorer, not an inherited argmax.
+
+
+## Where a pixel actuator IS affordable in pose — the spatial law
+
+The pose tax is not spatially uniform, and a successor should not price it as if it
+were. Applying the same guided tau = 8 band edit one token class at a time
+(5 seeded-random pairs, seed 11; baseline d_pose 5.1845e-06, 92 seg errors):
+
+| class band | mean edited px | Δd_pose | ΔS_pose | ΔS_seg | pose S per 1,000 px |
+|---|---:|---:|---:|---:|---:|
+| Road | 11,010 | 1.030e-03 | +0.760432 | +0.003662 | 0.0691 |
+| Lane | 4,654 | 5.987e-05 | +0.044186 | +0.003764 | **0.0095** |
+| Undrivable | 2,814 | 4.799e-04 | +0.354196 | +0.002035 | 0.1259 |
+| Movable | 1,092 | 4.997e-05 | +0.036881 | +0.000712 | 0.0338 |
+| MyCar | 2,634 | 1.483e-05 | +0.010944 | +0.000407 | **0.0042** |
+
+**The pose tax per edited pixel varies 30x across class bands.** It concentrates in
+Road and Undrivable — precisely the ground plane and the horizon, the structures
+that carry the ego-motion geometry — and is 16–30x cheaper on the static ego hood
+(MyCar) and on Lane markings. PoseNet is not sensitive to the frame; it is
+sensitive to the geometry in it.
+
+**But ΔS_seg is positive in every band, including the cheap ones**, and the Lane
+band is the sharpest case in the whole arm: it carries 44% of the residual
+(Road↔Lane is 5,365 of 12,196 errors) and it is the second-cheapest band in pose,
+yet it shows the LARGEST seg harm of any band (+0.003764) from only 4,654 edited
+pixels. The spatial escape does not rescue the family. What it does is tell the
+next actuator where it may live: **pose is affordable only inside MyCar and Lane,
+and any successor must be seg-positive by construction, not merely pose-cheap.**
+Widen this 5-pair arm to a seeded RANDOM n≥120 before routing on it.
+Receipt: `ddm_rbf1_20260911/POSE_SPATIAL_v1.json`.
+
+## The counted extension is closed too, by the same arithmetic
+
+Rule 118 forbids a fitted scalar in FREE receiver code, but a fitted byte in the
+COUNTED archive costs only 25/37,545,489 = 6.66e-07 S, so "ship a selector that
+says where to treat" is the natural next move and deserves its price, not a
+hand-wave.
+
+- **An oracle per-pixel selector is nearly affordable and still does not pay.**
+  Naming 12,196 positions out of 2,287,200 token-edge pixels costs
+  `n·H(k/n)` = 109,640 bits = **13,705 B = 0.009126 S**, against a benefit CEILING
+  of **0.010339 S** (fixing every error with zero harm, i.e. the entire seg term).
+  The margin is 61 bars before any of the treatment's real behaviour is charged.
+- **The actuator, not the addressing, is what fails.** At tau = 8 on 24 pairs the
+  operator fixes **5.12%** of errors and harms **0.309%** of correct edge pixels.
+  Break-even at that fix rate needs a harm rate of **0.0286%** — the measured rate
+  is **10.8x too high**. A selector cannot lower the harm rate; it can only stop
+  treating, which forfeits the benefit in the same proportion.
+- **And the pose tax survives selection.** Treating even the 12,196 scored-plane
+  error positions means editing roughly 61,000 camera pixels (6% of the frame, at
+  the 5:1 camera-to-token expansion), which by the measured law costs
+  `0.0024·6^1.16·8²` ≈ **1.3 S** in pose alone.
+- A coarse **per-pair on/off selector** is almost free (600 bits = 75 B =
+  4.99e-05 S), but it has nothing to select: the harm/benefit ratio is 9.9–20.0
+  essentially uniformly, so there is no pair in which treating is net positive.
+
+So the closure is not "we could not find where to treat." It is that the actuator
+is simultaneously too weak on seg (5% fix rate) and too expensive on pose
+(quadratic OOD tax) for any addressing scheme to rescue.
 
 ## Equations leg
 

@@ -1,0 +1,20 @@
+{
+  "schema": "ddm_rbf1_pose_spatial.v1",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "scope": "SEEDED RANDOM SUBSET of 5 pairs (seed 11) -- SCOPE reduction, no n600 verdict",
+  "written_utc": "2026-09-11T14:42:00Z",
+  "question": "Is PoseNet's sensitivity to a band edit spatially uniform, or is there a region where a free pixel actuator is affordable in pose?",
+  "method": "guided at tau=8, band-local, restricted to the camera band pixels whose own token class is c, one class at a time. Frozen CPU scorer on the retained renders. baseline d_pose 5.1845e-06, baseline seg errors 92.",
+  "class_order_note": "canonical comma10k order 0=Road 1=Lane 2=Undrivable 3=Movable 4=MyCar, per CLAUDE.md; never the luma sort",
+  "rows": [
+    {"class": 0, "name": "Road",       "mean_band_px": 11010, "d_pose_excess": 1.0304e-03, "delta_S_pose": 0.760432, "seg_errors": 128, "delta_S_seg": 0.003662, "pose_S_per_1000_px": 0.06907},
+    {"class": 1, "name": "Lane",       "mean_band_px": 4654,  "d_pose_excess": 5.9872e-05, "delta_S_pose": 0.044186, "seg_errors": 129, "delta_S_seg": 0.003764, "pose_S_per_1000_px": 0.00950},
+    {"class": 2, "name": "Undrivable", "mean_band_px": 2814,  "d_pose_excess": 4.7993e-04, "delta_S_pose": 0.354196, "seg_errors": 112, "delta_S_seg": 0.002035, "pose_S_per_1000_px": 0.12587},
+    {"class": 3, "name": "Movable",    "mean_band_px": 1092,  "d_pose_excess": 4.9973e-05, "delta_S_pose": 0.036881, "seg_errors": 99,  "delta_S_seg": 0.000712, "pose_S_per_1000_px": 0.03377},
+    {"class": 4, "name": "MyCar",      "mean_band_px": 2634,  "d_pose_excess": 1.4829e-05, "delta_S_pose": 0.010944, "seg_errors": 96,  "delta_S_seg": 0.000407, "pose_S_per_1000_px": 0.00415}
+  ],
+  "finding": "The pose tax per edited pixel varies 30x across class bands. It is concentrated in Road (0.0691 S per 1000 px) and Undrivable (0.1259) -- exactly the regions that carry the ego-motion geometry -- and is 16x to 30x lower on the static ego hood MyCar (0.0042) and on Lane markings (0.0095). PoseNet is not uniformly sensitive to the frame; it is sensitive to the ground plane and the horizon.",
+  "but": "delta_S_seg is POSITIVE in every band, including the cheap ones. The Lane band is the sharpest case: it carries 44% of the residual (Road<->Lane is 5,365 of 12,196 errors) and is pose-cheap, yet it shows the LARGEST seg harm of any band (+0.003764) from only 4,654 edited pixels. So the spatial escape does not rescue this family either.",
+  "handoff": "For any successor building a receiver-side pixel actuator on this vehicle: the pose channel is affordable only inside the MyCar and Lane bands, and a Road or Undrivable edit is 7x to 30x more expensive per pixel. But the seg channel is harmful in EVERY band, so a successor actuator must be seg-positive BY CONSTRUCTION, not merely pose-cheap. Widen this 5-pair arm to a seeded RANDOM n>=120 before routing on it."
+}
