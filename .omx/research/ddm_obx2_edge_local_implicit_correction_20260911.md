@@ -369,11 +369,22 @@ uniform horizontal translation, read against photometric error of EQUAL scorer-p
 |---|---:|---:|---:|---:|---:|
 | `shift_025` | 0.25 | 1.034 | 0.00155795 | **1.676×** | 1.293× |
 | `shift_050` | 0.50 | 2.070 | 0.00509686 | **1.640×** | 0.505× |
+| `shift_100` | 1.00 | 4.119 | 0.0130311 | **1.265×** | 0.157× |
 
-The shift family's own exponent in scorer-plane RMSE is **1.7105**, against the smooth family's
-**1.7439** and the noise family's 3.0663. So **a uniform geometric displacement is, to PoseNet,
-smooth photometric error with a constant 1.66× offset** — same scaling law, modest constant. At
-spRMSE 2.07 it is even *less* damaging than independent noise of the same magnitude (0.505×).
+The shift family's own exponent in scorer-plane RMSE starts at **1.7105** — the smooth family's
+1.7439 — and then **falls to 1.3651**. The response SATURATES, and the reason is physical: a uniform
+translation is itself a legitimate ego-motion, so PoseNet absorbs part of it into its own estimate
+rather than reporting it as error. That is worth carrying: any future geometric test on this
+instrument should perturb a mode PoseNet CANNOT absorb, or it measures absorption rather than
+sensitivity.
+
+So a uniform geometric displacement is, to PoseNet, smooth photometric error with a **declining**
+offset of 1.68 → 1.64 → 1.27, and by 1 px it is 0.157× — six times *less* damaging than independent
+noise of the same magnitude.
+
+One cost that does NOT saturate: the shift's own `d_seg` runs 0.000225 → 0.000437 → **0.001187**,
+and at 1 px it is **2.97× the seg ceiling by itself** — SegNet reads the last frame, so displacing
+frame 1 damages Seg directly.
 
 Set that against the scale this instrument shows for a real structure effect: **9.40×** (noise vs
 smooth at matched RMSE). 1.66× is not that. On the pre-registered rule — *"comparable responses close
