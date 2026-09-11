@@ -133,10 +133,18 @@ Same sign as the temporal axis: at held tap count, a SPREAD cone carries more. T
 the temporal case, both measured: (i) the MDL net of every spatial set is NEGATIVE (the four base taps
 already carry most spatial information, so extra spatial context does not repay its parameters),
 whereas every temporal set's net is POSITIVE — **the unexploited information is on the temporal axis**;
-(ii) `conv_a` at dilation > 1 also crosses a hard-coded receiver constant
-(`cpr1/hpac_integer_sparse._conv_a` pads `(3,3,3,3)` and offsets by `+3`, i.e. dilation-1 reach is
-baked in), so a spatial rung costs a second receiver edit. **R6 (`conv_a` dilation) is pre-registered
-with a NEGATIVE predicted sign and left unfired by this arm, with that constant named as its cost.**
+(ii) `conv_a` reaches its taps through geometry-general code, so a spatial rung is CHEAPER than a
+temporal one, not dearer. **I first recorded the opposite and it was wrong — the correction belongs in
+the record.** `cpr1/hpac_integer_sparse._conv_a` does hard-code `F.pad(inputs, (3,3,3,3))` and a `+3`
+offset, i.e. dilation-1 reach, but `residual_archive.py:679` calls `optimize_sparse_evaluator(sparse)`
+UNCONDITIONALLY before the decode loop, and that rebinds `selected_logits` to
+`hpac_inference._selected_logits`, whose `_conv_a_features` builds its gather from `sparse.a_offsets`
+with a general bounds check and no padding. The native export is general too
+(`f26_hpac_native.c:957`: `hidden_row = source_row - model->a_offsets[tap*2]`, bounds-checked, with
+the offsets read off the module). The pad-3 routine is dead in the shipped path. **R6 (`conv_a`
+dilation) therefore needs ONE edit — set `model.conv_a.dilation` in `cpr1/inflate.py` — and nothing
+in C. It is pre-registered with a NEGATIVE predicted sign and left unfired by this arm for
+wall-clock, and it is the cheapest unfired rung on the board.**
 
 `delta` (the causal partition) was examined and NOT pre-registered as a rung: delta 2→1 removes two
 `conv_a` taps (23→21, −472 raw B, a size change, not a shape change) and delta 2→3 multiplies the
