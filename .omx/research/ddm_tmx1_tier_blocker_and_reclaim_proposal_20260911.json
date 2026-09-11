@@ -1,0 +1,80 @@
+{
+  "arithmetic": {
+    "free_after_this_reclaim_gib": 38.73,
+    "reserve_gib": 40.0,
+    "verdict": "a reclaim of this one payload does NOT restore the 40 GiB floor; MAIN needs a larger reclaim or a ruling on the reserve"
+  },
+  "axis": "[macOS-CPU advisory; storage measurement, scorer-free]",
+  "candidate": {
+    "bytes": 3662409600,
+    "duplicate_of": "the pointer's retained move-47 cold-decode raw, named in ddm_tmx1's own charter as 'raw must equal 2b762eba...'; byte-identical",
+    "gib": 3.41,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/diagnostics/pair_base/output/0.raw",
+    "precedent": "ddm_hpr1 certified and reclaimed exactly this class once already -- /Volumes/VertigoDataTier/pact/ddm_hpr1/CERTIFIED_RECLAIM.json",
+    "rebuild_command": "re-run the sister arm's diagnostic decode: experiments/ddm_pc3_public.py diagnostic --runtime <move-47 promoted tree> (cold, F26_TOKEN_DECODER=python); the raw is deterministic by the decode contract",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc",
+    "surviving_receipts_that_preserve_the_claim": [
+      "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/RESULT.json (raw_byte_identical_to_pointer: true)",
+      "the committed move-47 seal's RAW_IDENTITY_N600 input",
+      "the landed move-47 pointer row in .omx/state/canonical_frontier_pointer.json"
+    ],
+    "verified_by": "streamed shasum -a 256 by ddm_tmx1, 2026-09-11"
+  },
+  "explicitly_NOT_a_candidate": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/diagnostics/pair_candidate/output/0.raw",
+    "reason": "hpr1 states in its own memo that the composition row is unsealed and its bytes are live evidence"
+  },
+  "owner_of_the_decision": "MAIN (the payload is in a sister arm's directory; ddm_tmx1 may not write there)",
+  "reserve_derivation_offered_not_applied": {
+    "action_taken": "NONE. Changing a reserve in the minute after it refuses is the forbidden shape; the derivation is handed to MAIN.",
+    "ddm_tmx1_worst_case_footprint_bytes": 210000000,
+    "finding": "40 GiB is nowhere derived; hpr1's own comment says only 'matched to the sister HPAC producers'",
+    "note": "4 treatments x (runtime copy ~1.5 MB + 24 encoder stages x ~1.1 MB + archives/streams ~1 MB) plus one ~90 MB fit trace",
+    "repo_reserve_values_in_use": {
+      "16GiB": [
+        "ddm_gpp1",
+        "ddm_ls1",
+        "ddm_mxo2"
+      ],
+      "1GiB": [
+        "ddm_jbp1"
+      ],
+      "20GiB": [
+        "ddm_mp3"
+      ],
+      "32GiB": [
+        "ddm_js1"
+      ],
+      "40GiB": [
+        "ddm_hpr1 rail/public/inputs",
+        "ddm_tmx1 rail"
+      ],
+      "4GiB": [
+        "ddm_afr1",
+        "ddm_afc1"
+      ],
+      "8GiB": [
+        "ddm_db1",
+        "ddm_dc1s",
+        "ddm_df1",
+        "ddm_bl1",
+        "ddm_bhw2",
+        "ddm_ld1"
+      ]
+    }
+  },
+  "schema": "ddm_tmx1_reclaim_proposal.v1",
+  "score_claim": false,
+  "tier_state_measured": {
+    "df_free_gib": 35.32,
+    "diskutil_capacity_not_allocated_bytes": 37921574912,
+    "instruments": [
+      "df -k",
+      "diskutil apfs list disk5",
+      "tmutil listlocalsnapshots"
+    ],
+    "local_snapshots": "none (tmutil listlocalsnapshots)"
+  },
+  "why": "Vertigo stands at 35.32 GiB free against the 40 GiB fail-closed reserve that ddm_hpr1's rail, ddm_hpr1_public, ddm_hpr1_shape_inputs and ddm_tmx1's rail all carry. At free below the reserve EVERY write refuses regardless of size -- a 3 KB source copy was refused and verified as such. This is a tier-level condition, not a footprint one.",
+  "written_at_utc": "2026-09-11T22:09:55Z"
+}
