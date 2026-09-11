@@ -290,6 +290,53 @@ shape-attributable legs are R1 minus the CONTROL, not R1 minus move 45: Δmodel(
 now running, measures exactly. The estimator says the control's tokens are ~1,109 B BELOW R1's, which
 would make Δtail(shape) POSITIVE and the shape rung a LOSS against its own control.
 
+### 4e. THE VERDICT — the shape rung is FALSIFIED, and the control is a −887 B candidate
+
+Both encodes are complete on the same rail, same 600 frames, real coder, real receiver loop, twins
+agreeing, decoded field equal to the shipped field sha in both cases.
+
+| | `hpac` | RLC1 stream | **archive** | Δ vs move 45 | ΔS | receiver change |
+|---|---:|---:|---:|---:|---:|---|
+| move 45 | 11,911 | 119,749 | 180,246 | — | — | — |
+| **R1 `past_dil2`** | 12,274 | 119,311 | 180,171 | **−75 B** | −4.994e-5 | **YES** (3 edits) |
+| **CONTROL `retrain`** | 12,262 | **118,511** | **179,359** | **−887 B** | **−5.906e-4** | **NO** |
+
+`retrain` sha256 `d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9`;
+`past_dil2` sha256 `581c636c365c0a5ad09b3d756285e0b7bfd856ef75d9eaf931105934fcd86ecb`.
+
+**The shape leg, isolated against its own control:**
+
+| leg | value |
+|---|---:|
+| Δmodel(shape) = 12,274 − 12,262 | **+12 B** |
+| Δtail(shape) = 119,311 − 118,511 | **+800 B** |
+| **ΔB(shape)** | **+812 B** |
+| ΔS(shape) | **+5.407e-4** |
+
+**R1's pre-registered NEGATIVE sign is FALSIFIED at the exact-byte level.** Dilating `conv_past` to
+stride 2 costs **+812 B** against the identically-trained shipped geometry. R1's −75 B against move 45
+was the retrain's −887 B minus the shape's +812 B. The window atlas ranked `d2_c00` first by −3,625
+ranking bytes and the real coder reversed the sign; the pre-registered falsifier written in §2b fires,
+and **the conditional-information set statistic is refuted as a rung predictor on this object.** The
+gap it could not see is that the neural prior's 64 channels already de-correlate the compact window's
+redundancy, so the redundancy the statistic priced was not the prior's to buy — spreading the taps
+only moved them further from where the information is densest. Verdict scope: FORMULATION — one
+statistic, one geometry family, one 60-epoch budget; the shape paradigm is not closed, but no shape
+rung may cite this statistic as a predictor again without a re-derivation.
+
+**And the control is the real find.** `retrain` is the shipped geometry's prior re-fit to the CURRENT
+token field under cl2's own law — a pure model-bytes change under the shipped receiver code, with
+`receiver_change: false`. It is **−887 B / ΔS −5.906e-4**, projecting
+**S = 0.1365477498474212**, and it clears the charter's −2e-5 fire bar by **30×**, at 25× the 34.8 B
+container-break noise floor. Distortion is unchanged by construction (the decoded field is the shipped
+field, byte for byte) and the semantic and carrier members are asserted untouched. Decode time is
+unchanged — the geometry did not move.
+
+**Why nobody had this.** The shipped prior's weights descend from cl2's λ=1.0 fit at move 26, and the
+token field has moved since (sj1's pre-distortion at move 32 and after). The prior has been coding a
+field it was never fit to. The −887 B is the cost of that staleness, and it was hiding in plain sight
+as *the control* of a shape experiment. [The lineage is DERIVED from the store; the −887 B is MEASURED.]
+
 ## 5. What is owed
 
 R1's Δtail and exact archive bytes (encode running: 600 frames, real coder, real receiver loop), the
