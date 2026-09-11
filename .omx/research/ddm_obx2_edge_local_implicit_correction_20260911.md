@@ -3,7 +3,7 @@
 <!-- FORMALIZATION_PENDING: process/landing record for an in-flight governed burn; the canonical equations it would register are the gate arithmetic already registered under the contest objective, and no new law is claimed until the burn produces a terminal parsed row. -->
 
 Date: 2026-09-11
-Status: `IN FLIGHT — STAGES 0, 1 PASSED; STAGE 2a AND THE BASE-ONLY CONTROL RUNNING`
+Status: `IN FLIGHT — STAGES 0, 1, 7-HARNESS BUILT AND PASSING; THREE GOVERNED RUNS LIVE`
 Measurement axis: `[macOS-CPU advisory]`
 Score claim: false
 Promotion eligible: false
@@ -13,7 +13,7 @@ Custody root: `/Volumes/VertigoDataTier/pact/ddm_obx2_edge_local_implicit_correc
 
 ## Verdict so far
 
-Three measured results have already changed what this burn is about.
+Four measured results and one derivation have already changed what this burn is about.
 
 **1. The born object's 8.6267 is a training-coverage number, not a capacity number.**
 Recomputed from the retained OBX1 per-pair rows (n600, $0, no new compute):
@@ -68,14 +68,35 @@ had Stage 2a used only that rung it would have produced a false structural refus
 architecture. And the 4-pair smoke of `sp_384x512` read 0.01475 against the n600 value of 0.0324 —
 **2.2× optimistic** — so no prefix here is a verdict, in either direction.
 
+**4. The photometric-distillation route is closed by arithmetic — the object must be a witness.**
+DERIVED, from two measured points, and pre-registered for confirmation by the queued
+`sp384_render_noise_*` rungs. At distortion `< 0.04` with the measured `d_seg ~ 1.1e-4`
+(0.011 of the budget), the Pose budget is `d_pose < 8.4e-5`. Fitting `d_pose = 4.59e-6 + k * spRMSE^2`
+through `teacher` (0, 4.59e-6) and `sp_384x512` (0.160, 4.52e-5) gives `k = 1.59e-3`, so the
+admissible scorer-plane RMSE is about **0.22 of one uint8 LSB** — near-lossless. No 122,000 B object
+encodes 1,200 frames of 384×512 at that fidelity.
+
+The consequence is not that the burn fails. It is that **matching the teacher photometrically is the
+wrong objective**: the constraint is on PoseNet's six outputs, not on the image, and the set of
+pose-equivalent images is vastly larger than a neighbourhood of the teacher. Both live training runs
+are therefore JOINT SCORER DESCENT, not Stage-2 teacher distillation. This is the
+evaluator-equivalent-witness paradigm arriving as arithmetic rather than as doctrine.
+
+A supporting measured fact points the same way: uniform noise applied ONLY outside the GT argmax
+boundary band still drove `d_pose` to 2.82 on a 4-pair smoke. **Pose damage is not edge-local**, so a
+purely edge-gated correction cannot reach the term that binds — which is why the `interface_blend`
+gate (D13) exists.
+
 ## What is implemented and proven
 
 | stage | result | receipt |
 |---|---|---|
 | Stage 0 — storage and identity | PASS. Every frozen pin matched; two-runs-plus-reserve projection admitted against 78.8 GiB free on Vertigo. | `checkpoints/stage_00_identity.json` |
 | Stage 1 — receiver parity | PASS. A zero lattice is the born object **exactly** (max abs 0.0) through the parsed packet. Encoder repeats byte-identically. torch twin vs the float64 NumPy receiver: relative-L2 parity **0.9999908**, max abs 0.00124, 0.022% of rounded uint8 values disagree. Zero-lattice packet **108,826 B**, 13,174 B under the gate. | `checkpoints/stage_01_receiver_parity.json` |
-| Stage 2a — gate pricing (declared) | RUNNING, n600, 16 rungs; 3 complete (rows 2 and 3 above), including the decisive `sp_384x512`. | `STAGE_2A_RESULT.json` when complete |
-| base-only n600 control | RUNNING, 200 epochs, MPS. | `base_only/STAGE_JOINT_RESULT.json` |
+| Stage 2a — gate pricing (declared) | RUNNING, n600, 16 rungs; 3 complete (rows 2 and 3 above), including the decisive `sp_384x512`. The queued `sp384_render_noise_*` rungs confirm or refute derivation 4. | `STAGE_2A_RESULT.json` when complete |
+| base-only n600 control | RUNNING, 200 epochs, MPS, joint scorer descent, lattice frozen. Loss 13.30 → 4.65 by epoch 17. | `base_only/STAGE_JOINT_RESULT.json` |
+| base+lattice n600 | RUNNING, identical config with the lattice live: the A/B that isolates the lattice's marginal contribution. | `lattice/STAGE_JOINT_RESULT.json` |
+| Stage 7 — public timing harness | BUILT. Decodes the exact archive twice, requires byte-identical output inside 1,260 s. Not yet run on a candidate. | `STAGE_7_TIMING_<receiver>.json` |
 
 Implementation: `src/tac/obx2_lattice_packet.py` (grammar + NumPy reference receiver, 41 tests),
 `experiments/ddm_obx2_edge_local_implicit_correction.py` (Stages 0/2a, 21 tests),
@@ -116,6 +137,15 @@ Every one of these is a change or an addition the burn spec left open. None is s
   `aten::grid_sampler_3d_backward` has no MPS kernel, so `grid_sample` costs the gradient device; the
   gather form is the same arithmetic in the same order as the NumPy receiver, and it takes an n600
   epoch from **32.4 min on CPU to 1.2 min on MPS (27×)**.
+- **D12 — the rate term is charged on `archive.zip`, not the packet.** The builder emits the
+  deterministic archive alongside the packet, proves the archive builder repeats and that its receiver
+  returns the exact packet it was built from, and every advisory row's rate comes from the archive it
+  would ship.
+- **D13 — the `interface_blend` gate (kind 2).** The head emits a near and a far correction and blends
+  them with the same recomputed gate, so the lattice keeps its edge-local half AND gains global reach.
+  Reason: measured — Pose binds, and Pose damage is not edge-local. Cost: 6 more counted head outputs.
+  Both gate kinds pass Stage-1 receiver parity. Implemented and ready; the first two arms run kind 1 so
+  the A/B stays clean.
 - **D11 — the lattice geometry is sized from a real coder result.** The first geometry's 101,760 codes
   coded at **7.11 bits/code** (90,415 B) in a real Brotli q11 / zlib 9 / LZMA2-extreme race — six times
   past budget. The default is now 15,840 codes against the ~15,400 B the packet actually leaves.
@@ -131,6 +161,10 @@ Every one of these is a change or an addition the burn spec left open. None is s
   receiver; validation measures the shipping torch path on all 600 and keeps the portable NumPy path
   as an explicit cross-check. Which receiver ships is a Stage-7 decision, and the object must be
   scored through the one that does.
+- **The governor refused an over-declared launch, and it was right.** The parallel lattice arm was
+  refused (`rc=5`, projected 122.5 GiB over a 116.0 GiB ceiling) because I declared 24 GiB of peak RSS.
+  The MEASURED training-child RSS is **1.01 GiB**. Relaunched with an 8 GiB declaration and 4
+  cross-check workers. Recorded because the error was mine, not the gate's.
 - **MPS training is not bitwise reproducible across hosts.** The shipped artifact is deterministic and
   hashed, and the run is resumable from disk, but the training trajectory on MPS is not bit-identical.
   Declared, not hidden.
@@ -152,13 +186,21 @@ contest evaluation, no candidate archive.
 # Stage 2a gate-pricing ladder (resumes per (rung, chunk) from retained checkpoints)
 .venv/bin/python experiments/ddm_obx2_edge_local_implicit_correction.py stage2a --launch-authorized
 
+# base+lattice n600 arm (identical, without --no-lattice; --gate-kind 2 for the declared blend lever)
 # base-only n600 control (resume from the newest stage-encoded checkpoint)
 .venv/bin/python experiments/ddm_obx2_trainer.py joint --launch-authorized --no-lattice \
   --device mps --epochs 200 --chunk-pairs 4 --learning-rate 3e-4 \
   --pose-weight-operating-point 1.1e-3 --save-every-epochs 10 --workers 8 --validate-pairs 600 \
   --output /Volumes/VertigoDataTier/pact/ddm_obx2_edge_local_implicit_correction/base_only \
   --resume-from <newest checkpoints/obx2_joint_epoch_*.pt>
+
+# public timing on any terminal candidate
+.venv/bin/python experiments/ddm_obx2_trainer.py stage7 \
+  --archive <.../candidates/obx2_joint_terminal.archive.zip> --receiver torch
 ```
+
+Live governed runs at hand-back: `stage2a` (pid 82411), `joint_base_only` (pid 20844),
+`joint_lattice_r2` (pid 45160). Done receipts land in `.omx/tmp/codex_runs/<name>.done.done`.
 
 The frontier is unchanged: **composition S 0.1372449041713402 @ 180,406 B [contest-CUDA T4 n600]
 (move 44)**.
