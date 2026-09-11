@@ -176,6 +176,31 @@ Every one of these is a change or an addition the burn spec left open. None is s
   latents (26,130 B) are paid for. Whether that buys the 10× Seg and 6.9× Pose that result 1 demands
   is the burn's open question.
 
+## Live hypothesis: pose belongs to geometry, not to a photometric correction
+
+Recorded, scoped, and NOT pursued without its falsifier firing first.
+
+Every measurement in this burn puts Pose in the binding seat and says the damage is not edge-local:
+the render grid costs 261× on Pose against 3.9× on Seg; noise applied only away from the argmax
+boundary still drives `d_pose` to 2.82; and the admissible scorer-plane RMSE is 0.238 of one LSB. A
+photometric correction lattice — even the blended one (D13) — is being asked to fix a term whose
+error may not be photometric at all.
+
+PoseNet estimates a six-degree-of-freedom twist from the APPARENT MOTION between a pair's two frames.
+A coordinate generator renders both frames independently from one latent and a frame index; nothing in
+its form makes the pair geometrically consistent. The structural alternative is to render frame 0 and
+PRODUCE frame 1 by an explicit counted warp of it — the `se(3)` ego-screw the unified level-set
+reading already names, where the same twist that moves the partition IS the pose. That is six counted
+numbers per pair (3,600 values for the whole video), not a photometric field. It is joint, in the
+forward pass, and counted — not the post-hoc stored sidecar family that earlier work found walled.
+
+**The `$0` falsifier that must fire first**, because the hypothesis is worthless if PoseNet is not
+reading geometry: perturb the teacher's frame 1 by a pure sub-pixel geometric shift at several
+magnitudes and measure `d_pose` against the same photometric-RMSE budget as the existing rungs. If a
+one-pixel shift moves `d_pose` far more than photometric noise of equal RMSE, Pose is geometry-bound
+and the warp is the right cure. If the two responses are comparable, Pose is photometry-bound, the
+warp buys nothing, and this hypothesis is closed before any of it is built.
+
 ## Custody
 
 Retained under `/Volumes/VertigoDataTier/pact/ddm_obx2_edge_local_implicit_correction/`:
