@@ -360,6 +360,27 @@ Every one of these is a change or an addition the burn spec left open. None is s
   latents (26,130 B) are paid for. Whether that buys the 10× Seg and 6.9× Pose that result 1 demands
   is the burn's open question.
 
+## The se(3) falsifier: two rungs in, and they point one way
+
+MEASURED n600, two of four rungs (`shift_100` and `shift_200` running). Frame 1 displaced by a
+uniform horizontal translation, read against photometric error of EQUAL scorer-plane RMSE:
+
+| rung | px | spRMSE | `d_pose` | vs SMOOTH at same RMSE | vs NOISE at same RMSE |
+|---|---:|---:|---:|---:|---:|
+| `shift_025` | 0.25 | 1.034 | 0.00155795 | **1.676×** | 1.293× |
+| `shift_050` | 0.50 | 2.070 | 0.00509686 | **1.640×** | 0.505× |
+
+The shift family's own exponent in scorer-plane RMSE is **1.7105**, against the smooth family's
+**1.7439** and the noise family's 3.0663. So **a uniform geometric displacement is, to PoseNet,
+smooth photometric error with a constant 1.66× offset** — same scaling law, modest constant. At
+spRMSE 2.07 it is even *less* damaging than independent noise of the same magnitude (0.505×).
+
+Set that against the scale this instrument shows for a real structure effect: **9.40×** (noise vs
+smooth at matched RMSE). 1.66× is not that. On the pre-registered rule — *"comparable responses close
+the hypothesis"* — two rungs read comparable, and a counted `se(3)` warp would buy at most that
+constant rather than a qualitative change. The verdict waits on the remaining two rungs, and it
+carries the scope limit recorded below.
+
 ## Live hypothesis: pose belongs to geometry, not to a photometric correction
 
 Recorded, scoped, and NOT pursued without its falsifier firing first.
