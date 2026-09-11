@@ -1490,3 +1490,19 @@ prefilter chooses what to hash and never decides equality (full hashes falsified
 other released 3.4 GiB losslessly by hardlink). And `df -h` on this host prints gigabytes under a "Gi" label, which is why MAIN's
 reserve arithmetic had been optimistic by 7 %: the gates use true GiB, so read `df -k` when a reserve is close. The apparatus finding
 is the same one the day keeps producing in different coats: custody is a hash that was checked, never a label that was written.
+
+## Addendum 43 (MAIN, 2026-09-11 ~19:50Z) — pc3 closes the pose corner on this carrier, and prices expire at every pointer move
+
+The day's second pc3 result is a closure with a number attached. At n600, with every stop on physics, the continuous optimum inside
+the shipped twelve-dimensional span is worth 349.9 B (CI 284.7–415.5) for the entire lattice family — the n=135 provisionals had been
+1.4–1.7× too generous — and the gain is anti-concentrated: the twenty hardest pairs carry 63 % of the base and 21 % of the gain, and
+twenty pairs gain nothing from infinite precision. That bound closes the global rungs on cost; the realized half-step rungs close the
+per-dimension ones the bound could not reach, every one of them netting positive with the rate cost 4.4× the pose credit at best.
+Two findings outlive the closure. First, the continuous optimum is a knife edge: projected onto any lattice, even sixteen times finer
+than shipped, the pose leg scores an order of magnitude WORSE than the shipped point, because two rounds sit inside the render and the
+shipped point was found by the solver, not by projection. Second, and the one every future charter must carry: rung prices expire at a
+pointer move. On move 45 every capacity rung is dearer than on move 44 — the cheapest per-dimension halving went from 54 to 75 B and
+the global halving from 808 to 914 B — because move 45 put the predictor at the schema's minimum, so a halving can no longer hide part
+of its cost inside a predictor that was leaving 164 B on the table. A capacity rung priced on a body whose coder is not yet optimal is
+priced too low; cl3's substitutes law, now measured on the predictor axis. The pose corner on this carrier is closed at formulation
+scope with 349.9 B as its number; it reopens only for a different carrier format or a different basin, and this basin is narrow.
