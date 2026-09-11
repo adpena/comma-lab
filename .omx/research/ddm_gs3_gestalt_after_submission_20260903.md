@@ -1506,3 +1506,22 @@ the global halving from 808 to 914 B — because move 45 put the predictor at th
 of its cost inside a predictor that was leaving 164 B on the table. A capacity rung priced on a body whose coder is not yet optimal is
 priced too low; cl3's substitutes law, now measured on the predictor axis. The pose corner on this carrier is closed at formulation
 scope with 349.9 B as its number; it reopens only for a different carrier format or a different basin, and this basin is narrow.
+
+## Addendum 44 (MAIN, 2026-09-11 ~19:35Z) — hpr1: the shape rung is falsified at exact bytes, and its control is the largest rate move since the pre-distortion line
+
+The one unpriced door the store could name was priced today, and the answer inverted the charter. hpr1
+(`.omx/research/ddm_hpr1_hpac_receptive_field_shape_rung_20260911.md`) reconstructed the HPAC prior's receptive field from the
+shipped receiver (four causal neighbourhoods; not one shape bit ships, so every shape rung is a receiver change in three files),
+pre-registered six rungs from a geometry-blind window atlas over 112 million observations, and priced the first by the real coder on
+the real stream with the decoded field proven identical. Dilating the past-plane window costs 812 B once isolated against its own
+control: the joint-information statistic that predicted −3,625 B is refuted as a rung predictor on this object, and the atlas says
+the unexploited information sits on the temporal axis, not the spatial one. The control is the finding. Retraining the shipped
+prior's mixer in its shipped geometry for sixty epochs, warm-started from itself under cl2's law, prices −887 B at 179,359 B with no
+receiver change and no distortion change: 3.45 % of the remaining gap in one output-lossless edit, thirty times the fire bar. Why
+nobody had it is the law that outlives the number: the shipped prior descends from cl2's move-26 fit and the token field moved at
+move 32; for thirteen moves the coder's model has been fit to a field that no longer exists. Every model section fit to an older
+field is owed a refit before any structural rung on it is priced; pc3 measured the same law from the other side this afternoon
+(rung prices expire at a pointer move). Sequencing: ntb2's rounding (−245 B) is the move-46 measurement now on the T4 and gives the
+chain a measured leg; the retrained control rebases onto it as move 47 by normal seal; the two edits touch the same object and do
+not add. MAIN's relative-significance review of the arm's DO-NOT-FIRE verdict on the dilated rung is at
+`.omx/research/ddm_hpr1_20260911/MAIN_R1_VERDICT_REVIEW_20260911.md`: dominance, not magnitude; verdict scope INSTANCE.
