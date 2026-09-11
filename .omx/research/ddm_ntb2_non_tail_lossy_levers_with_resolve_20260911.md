@@ -61,10 +61,17 @@ candidate identity proof.
 
 | Treatment | Counted coordinates | HPAC B | Tail B | Joint delta B | Status |
 |---|---|---:|---:|---:|---|
-| control | unchanged | — | — | — | RUNNING (pid 3483), frame 475 of 600 at 09:14 |
-| drop_row1 | lowest mean-absolute nonzero integer-weight row; stable row-index ties | — | — | — | RUNNING (pid 37970), frame 200 of 600 |
-| drop_row4 | four lowest such rows | — | — | — | RUNNING (pid 38007), frame 200 of 600 |
-| frame_even | 600×8 stored int8 frame embedding rounded to even integer values | — | — | — | RUNNING (pid 38033), frame 200 of 600 |
+| control | unchanged | 11,911 | 119,749 | **0** | **PASSED** — both twins 180,406 B sha `04758c0dfb8d94eb…`, byte-identical to move 44 |
+| drop_row1 | lowest mean-absolute nonzero integer-weight row; stable row-index ties | — | — | — | RUNNING (pid 37970), frame 375 of 600 |
+| drop_row4 | four lowest such rows | — | — | — | RUNNING (pid 38007), frame 375 of 600 |
+| frame_even | 600×8 stored int8 frame embedding rounded to even integer values | — | — | — | RUNNING (pid 38033), frame 375 of 600 |
+
+**The control PASSED at 09:38.** Recomputing every causal probability through the actual shipping
+receiver loop, then re-encoding all 600 frames with the landed native arithmetic encoder, reproduces
+move 44's archive BYTE-IDENTICALLY in both twins: HPAC 11,911 B, tail 119,749 B, archive 180,406 B,
+sha `04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e`, joint delta 0. That is the
+gate the producer refuses on (`LIVE_LOOP_CONTROL_FAILED`), so the three treatment prices are now
+admissible as true joint prices rather than as encoder artefacts.
 
 All four survived the codex arm's death because the launcher detaches; they resumed nothing and lost
 nothing. Each writes `hpac_v3/<treatment>/PRICE.json` with `hpac_bytes`, `token_stream_bytes`,
