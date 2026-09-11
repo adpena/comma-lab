@@ -1339,3 +1339,10 @@ produced a false structural refusal (0.1187) — the prefix-and-plane genus agai
 scorer-plane RMSE near 0.22 of one LSB, so no 122 KB object matches the teacher photometrically: the object must be a pose-equivalent
 WITNESS, which is what both live runs are (joint scorer descent, not distillation). One porting item stands between a passing object and a
 T4 row: the portable NumPy receiver is 2.06× over the 1,260 s budget (torch 187–334 s).
+
+**Correction to Addendum 34 (MAIN, same hour).** "One porting item stands between a passing object and a T4 row" is wrong;
+obx2 cured it before handback. The shipping receiver is torch-CPU on the parsed packet (187–334 s for n600, generic free
+code under rule 118); the float64 NumPy receiver at 2,593 s is the cross-check only. The real consequence is different and
+sharper: the two receivers disagree on 0.093 % of rounded uint8 values (max abs 0.0075), so the object must be validated
+and scored through the receiver that ships, never through the other. Nothing stands between a passing object and a T4 row
+except the object passing.
