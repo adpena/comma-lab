@@ -1,0 +1,37 @@
+{
+ "axis": "[macOS-CPU advisory, jg1 instrument] INSTRUMENT FALSIFIER",
+ "base_archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+ "pairs": [
+  18,
+  255,
+  396,
+  437
+ ],
+ "passed": true,
+ "producer": {
+  "bytes": 6987,
+  "path": "/Users/adpena/Projects/pact/experiments/ddm_ntb2_renderer_screen.py",
+  "sha256": "d3c34387dc90b2cff5199bdfcfe0c7b2105f1abd4b333f68b77e9a622c100198"
+ },
+ "schema": "ddm_ntb2_forward_model_control.v1",
+ "score_claim": false,
+ "shipped_raw": {
+  "bytes": 3662409600,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+  "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+ },
+ "token_field": {
+  "bytes": 117964800,
+  "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/trace_input/field.u8",
+  "sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
+ },
+ "verdict": {
+  "byte_exact": true,
+  "max_abs_delta": 0,
+  "note": "cpr1/inflate.py:312 uses semantic_batch=1 on cpu; ddm_up2 sec.6 measured batch 8 as byte-changing on this half, so batch 1 is required for identity",
+  "pairs": 4,
+  "pixels_changed": 0,
+  "pixels_compared": 12208032,
+  "semantic_batch": 1
+ }
+}

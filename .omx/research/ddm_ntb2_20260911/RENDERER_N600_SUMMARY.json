@@ -1,0 +1,44 @@
+{
+ "axis": "[macOS-CPU advisory, jg1/up2 instrument, DALI GT lineage]",
+ "control": {
+  "archive_bytes": 180406,
+  "d_pose": 4.586732867899564e-06,
+  "d_seg": 0.00010338677300347222,
+  "elapsed_seconds": 2397.5721201896667
+ },
+ "method": "per-leg DELTA against this producer's own control, applied at move 44's contest-CUDA operating point",
+ "rows": [
+  {
+   "archive_bytes": 180407,
+   "archive_sha256": "28966cd09b3048d8e3d746c7e89a6a58edcf49e3e64ab511dc7c6ebe9b6f5955",
+   "d_pose": 1.3522146996793737e-05,
+   "d_seg": 0.00010616726345486109,
+   "delta_bytes": 1,
+   "delta_d_pose": 8.935414128894173e-06,
+   "delta_d_seg": 2.7804904513888763e-06,
+   "pose_leg_delta_at_move44_base": 0.00485492752178658,
+   "rate_delta": 6.658589531221714e-07,
+   "seg_leg_delta": 0.00027804904513888763,
+   "total_delta_s": 0.00513364242587859,
+   "total_delta_s_with_full_pose_forgiveness": 0.0002787149040920098,
+   "treatment": "blocks.1.film.weight"
+  },
+  {
+   "archive_bytes": 180421,
+   "archive_sha256": "14d6ac779aab69ee840ae65b187df9b754e56436b31bed22eb317bd0f402cf3a",
+   "d_pose": 5.079955568877283e-06,
+   "d_seg": 0.00010427686903211807,
+   "delta_bytes": 15,
+   "delta_d_pose": 4.932227009777195e-07,
+   "delta_d_seg": 8.900960286458505e-07,
+   "pose_leg_delta_at_move44_base": 0.0003547184189131875,
+   "rate_delta": 9.98788429683257e-06,
+   "seg_leg_delta": 8.900960286458505e-05,
+   "total_delta_s": 0.00045371590607460514,
+   "total_delta_s_with_full_pose_forgiveness": 9.899748716141763e-05,
+   "treatment": "blocks.3.film.weight"
+  }
+ ],
+ "schema": "ddm_ntb2_renderer_n600_summary.v1",
+ "score_claim": false
+}

@@ -1,0 +1,7 @@
+{
+  "failure": "numpy int64-to-uint8 in-place OR refused before encoding; no measurement produced",
+  "before_sha256": "68d3546e7beb1dfa85acc5cc5f7202b851c8feed7d3a2249d53ddc3ed649603e",
+  "after_sha256": "ae743c502ecce77a3b395147b8ed5feca8d87fe816cf8b139575f23c448b731f",
+  "source": "experiments/ddm_ntb2_hpac.py",
+  "guard": "validate nibble domain, then explicitly cast to uint8; real source identity control required"
+}

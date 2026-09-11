@@ -1,0 +1,347 @@
+[
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": 0,
+    "delta_s": null,
+    "layer": "control",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29862,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180406,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/control/archive.twin0.zip",
+        "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+      },
+      {
+        "bytes": 180406,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/control/archive.twin1.zip",
+        "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -16,
+    "delta_s": null,
+    "layer": "token_embed.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29846,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180390,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/token_embed.weight/archive.twin0.zip",
+        "sha256": "4ec401a631993616f5c6d3eb33941faaec2ca42724e779f4f85b2700d22b4a6e"
+      },
+      {
+        "bytes": 180390,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/token_embed.weight/archive.twin1.zip",
+        "sha256": "4ec401a631993616f5c6d3eb33941faaec2ca42724e779f4f85b2700d22b4a6e"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -1409,
+    "delta_s": null,
+    "layer": "coord_mix.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 28453,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 178997,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/coord_mix.weight/archive.twin0.zip",
+        "sha256": "11584c893f65b40bf5ca495951f7be8e85419030ba04f5dbc6472f44f5ae910d"
+      },
+      {
+        "bytes": 178997,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/coord_mix.weight/archive.twin1.zip",
+        "sha256": "11584c893f65b40bf5ca495951f7be8e85419030ba04f5dbc6472f44f5ae910d"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -85,
+    "delta_s": null,
+    "layer": "blocks.0.dw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29777,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180321,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.0.dw.weight/archive.twin0.zip",
+        "sha256": "531dfe259072dc06ab393b4533765b6f51a7265bc07ba40bc4264d258dfe52fd"
+      },
+      {
+        "bytes": 180321,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.0.dw.weight/archive.twin1.zip",
+        "sha256": "531dfe259072dc06ab393b4533765b6f51a7265bc07ba40bc4264d258dfe52fd"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -1337,
+    "delta_s": null,
+    "layer": "blocks.0.pw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 28525,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 179069,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.0.pw.weight/archive.twin0.zip",
+        "sha256": "084fa125407769b55b257f413b2f5fb9ad6f82f27a557ac550bb7f3983fad8b7"
+      },
+      {
+        "bytes": 179069,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.0.pw.weight/archive.twin1.zip",
+        "sha256": "084fa125407769b55b257f413b2f5fb9ad6f82f27a557ac550bb7f3983fad8b7"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -77,
+    "delta_s": null,
+    "layer": "blocks.1.dw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29785,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180329,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.1.dw.weight/archive.twin0.zip",
+        "sha256": "adbd9016c64c25a9ac31935eb184b3dfae69e5bfd272e56df94bc9b8d45cf57d"
+      },
+      {
+        "bytes": 180329,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.1.dw.weight/archive.twin1.zip",
+        "sha256": "adbd9016c64c25a9ac31935eb184b3dfae69e5bfd272e56df94bc9b8d45cf57d"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -1390,
+    "delta_s": null,
+    "layer": "blocks.1.pw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 28472,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 179016,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.1.pw.weight/archive.twin0.zip",
+        "sha256": "395a9e37ab244c02136ab72f94e0f3da3f644badb06716376028223b27c62a6f"
+      },
+      {
+        "bytes": 179016,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.1.pw.weight/archive.twin1.zip",
+        "sha256": "395a9e37ab244c02136ab72f94e0f3da3f644badb06716376028223b27c62a6f"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": 1,
+    "delta_s": null,
+    "layer": "blocks.1.film.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29863,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180407,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.1.film.weight/archive.twin0.zip",
+        "sha256": "28966cd09b3048d8e3d746c7e89a6a58edcf49e3e64ab511dc7c6ebe9b6f5955"
+      },
+      {
+        "bytes": 180407,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.1.film.weight/archive.twin1.zip",
+        "sha256": "28966cd09b3048d8e3d746c7e89a6a58edcf49e3e64ab511dc7c6ebe9b6f5955"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -72,
+    "delta_s": null,
+    "layer": "blocks.2.dw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29790,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180334,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.2.dw.weight/archive.twin0.zip",
+        "sha256": "334475e191f8f1bc88a05c2df69d594258a3b42c97ffc7bc1ed7dee919ac9e4f"
+      },
+      {
+        "bytes": 180334,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.2.dw.weight/archive.twin1.zip",
+        "sha256": "334475e191f8f1bc88a05c2df69d594258a3b42c97ffc7bc1ed7dee919ac9e4f"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -1386,
+    "delta_s": null,
+    "layer": "blocks.2.pw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 28476,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 179020,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.2.pw.weight/archive.twin0.zip",
+        "sha256": "8bd01352c4bb4b37dacc06c5cec0dd918e385b618fd0d14417b4180e93b4f90b"
+      },
+      {
+        "bytes": 179020,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.2.pw.weight/archive.twin1.zip",
+        "sha256": "8bd01352c4bb4b37dacc06c5cec0dd918e385b618fd0d14417b4180e93b4f90b"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": 17,
+    "delta_s": null,
+    "layer": "blocks.2.film.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29879,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180423,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.2.film.weight/archive.twin0.zip",
+        "sha256": "67575b10c1ce018f3018c8c932a3fb12893f6ebb3a270699d3b90b420e53ed65"
+      },
+      {
+        "bytes": 180423,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.2.film.weight/archive.twin1.zip",
+        "sha256": "67575b10c1ce018f3018c8c932a3fb12893f6ebb3a270699d3b90b420e53ed65"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -110,
+    "delta_s": null,
+    "layer": "blocks.3.dw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29752,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180296,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.3.dw.weight/archive.twin0.zip",
+        "sha256": "6ffd343f6d283193446fadb123072ea3b230899f35a35360c9508b705f8c02c6"
+      },
+      {
+        "bytes": 180296,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.3.dw.weight/archive.twin1.zip",
+        "sha256": "6ffd343f6d283193446fadb123072ea3b230899f35a35360c9508b705f8c02c6"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -1352,
+    "delta_s": null,
+    "layer": "blocks.3.pw.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 28510,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 179054,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.3.pw.weight/archive.twin0.zip",
+        "sha256": "3461fcdcfb8fac2b27ecc6bcb44a198ff36d8e115b3b88653ec60706053bd0eb"
+      },
+      {
+        "bytes": 179054,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.3.pw.weight/archive.twin1.zip",
+        "sha256": "3461fcdcfb8fac2b27ecc6bcb44a198ff36d8e115b3b88653ec60706053bd0eb"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": 15,
+    "delta_s": null,
+    "layer": "blocks.3.film.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29877,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180421,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.3.film.weight/archive.twin0.zip",
+        "sha256": "14d6ac779aab69ee840ae65b187df9b754e56436b31bed22eb317bd0f402cf3a"
+      },
+      {
+        "bytes": 180421,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/blocks.3.film.weight/archive.twin1.zip",
+        "sha256": "14d6ac779aab69ee840ae65b187df9b754e56436b31bed22eb317bd0f402cf3a"
+      }
+    ]
+  },
+  {
+    "d_pose": null,
+    "d_seg": null,
+    "delta_bytes_before_resolve": -336,
+    "delta_s": null,
+    "layer": "head.weight",
+    "resolved": false,
+    "score_claim": false,
+    "semantic_bytes": 29526,
+    "status": "INITIAL_PACKET_ONLY",
+    "twins": [
+      {
+        "bytes": 180070,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/head.weight/archive.twin0.zip",
+        "sha256": "1d3ce1f353422612639b800591f9e88722d309506be9f87d63ca3e7e51ccab07"
+      },
+      {
+        "bytes": 180070,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_seeds/head.weight/archive.twin1.zip",
+        "sha256": "1d3ce1f353422612639b800591f9e88722d309506be9f87d63ca3e7e51ccab07"
+      }
+    ]
+  }
+]

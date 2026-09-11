@@ -1,0 +1,40 @@
+{
+  "base_archive": {
+    "bytes": 180406,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/source_runtime/archive.zip",
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+  },
+  "twins": [
+    {
+      "bytes": 180406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/retained/archive.twin0.zip",
+      "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    },
+    {
+      "bytes": 180406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/retained/archive.twin1.zip",
+      "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    }
+  ],
+  "source_rider_byte_identical": true,
+  "full_archive_byte_identical": true,
+  "n": 600,
+  "score_claim": false,
+  "streams": [
+    {
+      "bytes": 119749,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/encode/twin0.rc64",
+      "sha256": "c499972a33dac497412c18839b632a8e1bbf75d518528039db0e2aca80c8eb13"
+    },
+    {
+      "bytes": 119749,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/encode/twin1.rc64",
+      "sha256": "c499972a33dac497412c18839b632a8e1bbf75d518528039db0e2aca80c8eb13"
+    },
+    {
+      "bytes": 119833,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/encode/twin2.rc64",
+      "sha256": "4b8fc5997982577eb2749567eec48aa4c9ca820af7961135898950af4fb89e30"
+    }
+  ]
+}

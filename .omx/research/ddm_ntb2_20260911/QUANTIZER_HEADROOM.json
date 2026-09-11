@@ -1,0 +1,181 @@
+{
+ "axis": "[weight-space proxy] headroom only",
+ "base_archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+ "clip_ratios": [
+  0.3,
+  0.32,
+  0.34,
+  0.36,
+  0.38,
+  0.4,
+  0.42,
+  0.44,
+  0.46,
+  0.48,
+  0.5,
+  0.52,
+  0.54,
+  0.56,
+  0.58,
+  0.6,
+  0.62,
+  0.64,
+  0.66,
+  0.68,
+  0.7,
+  0.72,
+  0.74,
+  0.76,
+  0.78,
+  0.8,
+  0.82,
+  0.84,
+  0.86,
+  0.88,
+  0.9,
+  0.92,
+  0.94,
+  0.96,
+  0.98,
+  1.0
+ ],
+ "producer": {
+  "bytes": 5310,
+  "path": "/Users/adpena/Projects/pact/experiments/ddm_ntb2_quantizer_headroom.py",
+  "sha256": "41f8aa244eb03b81eeee73556840fe9c07beaaaa5fa4136aba3570a5ac2e4096"
+ },
+ "promotion_eligible": false,
+ "rows": [
+  {
+   "numel": 480,
+   "rel_err_q3_best_clip": 0.2063774773937029,
+   "rel_err_q3_maxabs": 0.14445214818443491,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 0.69994143745088,
+   "tensor": "token_embed.weight"
+  },
+  {
+   "numel": 4800,
+   "rel_err_q3_best_clip": 0.10630508861075129,
+   "rel_err_q3_maxabs": 0.0,
+   "rel_err_q4_maxabs": 0.10715174094240515,
+   "scale_rule_gain": 0.0,
+   "tensor": "frame_embed.weight"
+  },
+  {
+   "numel": 9600,
+   "rel_err_q3_best_clip": 0.23194640872046338,
+   "rel_err_q3_maxabs": 0.35778261670698114,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.5425227692926806,
+   "tensor": "coord_mix.weight"
+  },
+  {
+   "numel": 864,
+   "rel_err_q3_best_clip": 0.13019149666525656,
+   "rel_err_q3_maxabs": 0.14318169100368866,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0997775943219394,
+   "tensor": "blocks.0.dw.weight"
+  },
+  {
+   "numel": 9216,
+   "rel_err_q3_best_clip": 0.19397952314077607,
+   "rel_err_q3_maxabs": 0.25387571720487984,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.3087758599171084,
+   "tensor": "blocks.0.pw.weight"
+  },
+  {
+   "numel": 1536,
+   "rel_err_q3_best_clip": 0.0,
+   "rel_err_q3_maxabs": 0.0,
+   "rel_err_q4_maxabs": 0.06233205005385827,
+   "scale_rule_gain": null,
+   "tensor": "blocks.0.film.weight"
+  },
+  {
+   "numel": 864,
+   "rel_err_q3_best_clip": 0.13405120139342594,
+   "rel_err_q3_maxabs": 0.14553799064502818,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0856895658688632,
+   "tensor": "blocks.1.dw.weight"
+  },
+  {
+   "numel": 9216,
+   "rel_err_q3_best_clip": 0.19887572965694839,
+   "rel_err_q3_maxabs": 0.25704083937715483,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.2924696232191761,
+   "tensor": "blocks.1.pw.weight"
+  },
+  {
+   "numel": 1536,
+   "rel_err_q3_best_clip": 0.10902406237699412,
+   "rel_err_q3_maxabs": 0.1129388519972135,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0359075742993544,
+   "tensor": "blocks.1.film.weight"
+  },
+  {
+   "numel": 864,
+   "rel_err_q3_best_clip": 0.12561446682135183,
+   "rel_err_q3_maxabs": 0.13584664736611948,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0814570232529013,
+   "tensor": "blocks.2.dw.weight"
+  },
+  {
+   "numel": 9216,
+   "rel_err_q3_best_clip": 0.21753803069831354,
+   "rel_err_q3_maxabs": 0.2652175296715945,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.2191777631719207,
+   "tensor": "blocks.2.pw.weight"
+  },
+  {
+   "numel": 1536,
+   "rel_err_q3_best_clip": 0.0970513847013267,
+   "rel_err_q3_maxabs": 0.1055967233486688,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0880496313745567,
+   "tensor": "blocks.2.film.weight"
+  },
+  {
+   "numel": 864,
+   "rel_err_q3_best_clip": 0.1266508848721807,
+   "rel_err_q3_maxabs": 0.137786086185045,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0879204383301564,
+   "tensor": "blocks.3.dw.weight"
+  },
+  {
+   "numel": 9216,
+   "rel_err_q3_best_clip": 0.21342792500921132,
+   "rel_err_q3_maxabs": 0.2603759623598123,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.219971390100779,
+   "tensor": "blocks.3.pw.weight"
+  },
+  {
+   "numel": 1536,
+   "rel_err_q3_best_clip": 0.14140353536423889,
+   "rel_err_q3_maxabs": 0.14311957101642644,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 1.0121357337195795,
+   "tensor": "blocks.3.film.weight"
+  },
+  {
+   "numel": 2592,
+   "rel_err_q3_best_clip": 0.18650338821671827,
+   "rel_err_q3_maxabs": 0.4120670469796043,
+   "rel_err_q4_maxabs": 0.0,
+   "scale_rule_gain": 2.2094346430895904,
+   "tensor": "head.weight"
+  }
+ ],
+ "schema": "ddm_ntb2_quantizer_headroom.v1",
+ "score_claim": false,
+ "status": "PROXY -- bounds the scale-rule headroom; never a distortion or score row"
+}

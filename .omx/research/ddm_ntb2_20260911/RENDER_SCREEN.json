@@ -1,0 +1,219 @@
+{
+ "axis": "[macOS-CPU advisory, jg1 instrument] SCREEN ONLY",
+ "base_archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+ "elapsed_seconds": 360.4494149684906,
+ "pair_selection": "seeded random sample, seed 20260911, never a prefix",
+ "pairs": [
+  18,
+  255,
+  396,
+  437
+ ],
+ "producer": {
+  "bytes": 4557,
+  "path": "/Users/adpena/Projects/pact/experiments/ddm_ntb2_renderer_screen.py",
+  "sha256": "90ea1f4728834953a4bdfba6c9316ee77dd97f348b76f44b391290dd4ba4414e"
+ },
+ "promotion_eligible": false,
+ "rows": [
+  {
+   "archive_bytes": 180423,
+   "delta_bytes_vs_move44": 17,
+   "layer": "blocks.2.film.weight",
+   "max_abs_pixel_delta": 1,
+   "mean_abs_pixel_delta": 0.0014028469125900063,
+   "per_pair_mean_abs": [
+    0.00033813803895664757,
+    0.0024577261920676486,
+    0.0021805316368764434,
+    0.0006349917824592858
+   ],
+   "pixels_changed_fraction": 0.0014028469125900063
+  },
+  {
+   "archive_bytes": 180421,
+   "delta_bytes_vs_move44": 15,
+   "layer": "blocks.3.film.weight",
+   "max_abs_pixel_delta": 1,
+   "mean_abs_pixel_delta": 0.0078107593427015915,
+   "per_pair_mean_abs": [
+    0.006595002372208723,
+    0.004432164004812569,
+    0.009146765015032726,
+    0.01106910597875235
+   ],
+   "pixels_changed_fraction": 0.0078107593427015915
+  },
+  {
+   "archive_bytes": 180407,
+   "delta_bytes_vs_move44": 1,
+   "layer": "blocks.1.film.weight",
+   "max_abs_pixel_delta": 2,
+   "mean_abs_pixel_delta": 0.04303429086686535,
+   "per_pair_mean_abs": [
+    0.03485049842595432,
+    0.07424685649578901,
+    0.033893751261464586,
+    0.029146057284253516
+   ],
+   "pixels_changed_fraction": 0.04302781971737951
+  },
+  {
+   "archive_bytes": 180296,
+   "delta_bytes_vs_move44": -110,
+   "layer": "blocks.3.dw.weight",
+   "max_abs_pixel_delta": 39,
+   "mean_abs_pixel_delta": 3.2276742066206903,
+   "per_pair_mean_abs": [
+    2.940935606983992,
+    3.4282495327666243,
+    3.3316134820092214,
+    3.2098982047229234
+   ],
+   "pixels_changed_fraction": 0.8723053805887796
+  },
+  {
+   "archive_bytes": 180334,
+   "delta_bytes_vs_move44": -72,
+   "layer": "blocks.2.dw.weight",
+   "max_abs_pixel_delta": 47,
+   "mean_abs_pixel_delta": 3.9015347436835026,
+   "per_pair_mean_abs": [
+    3.7106475474507277,
+    4.21691751790952,
+    3.967470596407349,
+    3.711103312966414
+   ],
+   "pixels_changed_fraction": 0.8889403304316371
+  },
+  {
+   "archive_bytes": 179020,
+   "delta_bytes_vs_move44": -1386,
+   "layer": "blocks.2.pw.weight",
+   "max_abs_pixel_delta": 74,
+   "mean_abs_pixel_delta": 4.493655570365477,
+   "per_pair_mean_abs": [
+    4.437902521880677,
+    4.584753054382557,
+    4.463785809211509,
+    4.488180895987166
+   ],
+   "pixels_changed_fraction": 0.9096292506441661
+  },
+  {
+   "archive_bytes": 179054,
+   "delta_bytes_vs_move44": -1352,
+   "layer": "blocks.3.pw.weight",
+   "max_abs_pixel_delta": 60,
+   "mean_abs_pixel_delta": 6.499193973279231,
+   "per_pair_mean_abs": [
+    6.259080251427912,
+    6.731731371608462,
+    6.585664257760793,
+    6.420300012319758
+   ],
+   "pixels_changed_fraction": 0.9376970833628221
+  },
+  {
+   "archive_bytes": 179016,
+   "delta_bytes_vs_move44": -1390,
+   "layer": "blocks.1.pw.weight",
+   "max_abs_pixel_delta": 109,
+   "mean_abs_pixel_delta": 7.756865070471637,
+   "per_pair_mean_abs": [
+    7.55276427846847,
+    8.110175989053763,
+    7.6610752658577566,
+    7.703444748506557
+   ],
+   "pixels_changed_fraction": 0.9488335220615411
+  },
+  {
+   "archive_bytes": 180321,
+   "delta_bytes_vs_move44": -85,
+   "layer": "blocks.0.dw.weight",
+   "max_abs_pixel_delta": 79,
+   "mean_abs_pixel_delta": 8.566475169789856,
+   "per_pair_mean_abs": [
+    8.499250984925334,
+    8.79948610881754,
+    8.583047292143402,
+    8.38411629327315
+   ],
+   "pixels_changed_fraction": 0.9518453916241373
+  },
+  {
+   "archive_bytes": 179069,
+   "delta_bytes_vs_move44": -1337,
+   "layer": "blocks.0.pw.weight",
+   "max_abs_pixel_delta": 110,
+   "mean_abs_pixel_delta": 11.45078518798116,
+   "per_pair_mean_abs": [
+    10.968151131976063,
+    12.112650097902758,
+    11.813362874540303,
+    10.908976647505511
+   ],
+   "pixels_changed_fraction": 0.9587604291993992
+  },
+  {
+   "archive_bytes": 180329,
+   "delta_bytes_vs_move44": -77,
+   "layer": "blocks.1.dw.weight",
+   "max_abs_pixel_delta": 90,
+   "mean_abs_pixel_delta": 12.682296540507103,
+   "per_pair_mean_abs": [
+    12.792183375666118,
+    12.588001735251021,
+    12.713295312463138,
+    12.635705738648129
+   ],
+   "pixels_changed_fraction": 0.9762500622540963
+  },
+  {
+   "archive_bytes": 180390,
+   "delta_bytes_vs_move44": -16,
+   "layer": "token_embed.weight",
+   "max_abs_pixel_delta": 127,
+   "mean_abs_pixel_delta": 14.473746792275774,
+   "per_pair_mean_abs": [
+    14.25778667683702,
+    14.767486848003019,
+    14.490913523162456,
+    14.3788001211006
+   ],
+   "pixels_changed_fraction": 0.9711048431065712
+  },
+  {
+   "archive_bytes": 180070,
+   "delta_bytes_vs_move44": -336,
+   "layer": "head.weight",
+   "max_abs_pixel_delta": 194,
+   "mean_abs_pixel_delta": 23.330262486205804,
+   "per_pair_mean_abs": [
+    22.80398052691867,
+    23.93406373770973,
+    23.4793476950257,
+    23.103657985169107
+   ],
+   "pixels_changed_fraction": 0.9863328503726071
+  },
+  {
+   "archive_bytes": 178997,
+   "delta_bytes_vs_move44": -1409,
+   "layer": "coord_mix.weight",
+   "max_abs_pixel_delta": 219,
+   "mean_abs_pixel_delta": 39.14606989889935,
+   "per_pair_mean_abs": [
+    37.73772414751206,
+    40.40164213199965,
+    39.2216190127942,
+    39.223294303291475
+   ],
+   "pixels_changed_fraction": 0.9898515993404997
+  }
+ ],
+ "schema": "ddm_ntb2_renderer_screen.v1",
+ "score_claim": false,
+ "status": "SCREEN ONLY -- an ordering, never a d_seg/d_pose/score row"
+}

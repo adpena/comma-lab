@@ -1,0 +1,65 @@
+{
+ "any_winner": true,
+ "axis": "[macOS-CPU advisory; exact bytes, output-lossless by construction]",
+ "control": {
+  "delta_bytes": 0,
+  "hpac_bytes": 11911,
+  "n": 600,
+  "token_stream_bytes": 119749,
+  "twins": [
+   [
+    180406,
+    "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+   ],
+   [
+    180406,
+    "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+   ]
+  ]
+ },
+ "control_byte_identical": true,
+ "note": "HPAC is the coder PRIOR: decoded symbols and therefore d_seg/d_pose are unchanged; the joint delta is the whole price",
+ "rows": [
+  {
+   "archive_bytes": 180424,
+   "archive_sha256": "b1df64e96c32a986edcb569ac0a98c424f8dfdea5b8e6d6ccf52b05d986b14f5",
+   "delta_hpac_bytes": 23,
+   "delta_s": 1.1985461156199085e-05,
+   "delta_tail_bytes": -5,
+   "hpac_bytes": 11934,
+   "joint_delta_bytes": 18,
+   "token_stream_bytes": 119744,
+   "treatment": "drop_row1",
+   "twins_identical": true,
+   "wins": false
+  },
+  {
+   "archive_bytes": 180432,
+   "archive_sha256": "906938ba6380c6268895495a8dc7c5157341287123f84d02e97ea9c1f8ffbe0a",
+   "delta_hpac_bytes": 30,
+   "delta_s": 1.7312332781176455e-05,
+   "delta_tail_bytes": -4,
+   "hpac_bytes": 11941,
+   "joint_delta_bytes": 26,
+   "token_stream_bytes": 119745,
+   "treatment": "drop_row4",
+   "twins_identical": true,
+   "wins": false
+  },
+  {
+   "archive_bytes": 180161,
+   "archive_sha256": "432e8f09853a907665d87d44f3ed5eda6c4eebc5783ac23e5452d486371d4db6",
+   "delta_hpac_bytes": -603,
+   "delta_s": -0.000163135443514932,
+   "delta_tail_bytes": 358,
+   "hpac_bytes": 11308,
+   "joint_delta_bytes": -245,
+   "token_stream_bytes": 120107,
+   "treatment": "frame_even",
+   "twins_identical": true,
+   "wins": true
+  }
+ ],
+ "schema": "ddm_ntb2_hpac_joint_table.v1",
+ "score_claim": false
+}

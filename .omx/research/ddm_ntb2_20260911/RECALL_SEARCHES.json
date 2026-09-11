@@ -1,0 +1,35 @@
+[
+  {
+    "query": "HPAC.*prun|structural.*HPAC|renderer.*precision|renderer.*3.bit|model.*joint.*tail",
+    "paths": [
+      ".omx/research",
+      "docs"
+    ],
+    "rc": 0,
+    "lines": 210
+  },
+  {
+    "query": "joint_model_tail|section_coding_axis_closure|renderer_edge_layer|model_section_edit_container",
+    "paths": [
+      ".omx/research"
+    ],
+    "rc": 0,
+    "lines": 318
+  },
+  {
+    "query": "HPAC|renderer.*precision|structural.*prun",
+    "paths": [
+      ".omx/state/canonical_task_status.jsonl"
+    ],
+    "rc": 0,
+    "lines": 5
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "rc": 0
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "bytes": 11911,
+  "ck2": true,
+  "identical_to_shipped": false,
+  "lgwin": 22,
+  "payload": {
+    "bytes": 11911,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/retained/grid/position_sibling_lr0/ck1_q10_w22.br",
+    "sha256": "aadf679f982cf2546554913a00f2c94ffd0161a0ebeac07eaaf96f422a1f1598"
+  },
+  "q": 10,
+  "shippable": true,
+  "slug": "position_sibling_lr0"
+}
