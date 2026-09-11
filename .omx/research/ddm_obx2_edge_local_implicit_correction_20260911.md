@@ -42,23 +42,31 @@ Scoring move 44's retained decoded bytes over all 600 pairs:
 0.036% apart on distortion. Advisory rows from this instrument are tight at this operating point.
 This is the denominator control the burn spec asked for.
 
-**3. The QBF 384×512 render grid does not refuse the gate — but the naive construction does.**
+**3. The QBF 384×512 render grid does not refuse the gate. MEASURED on n600.**
 A `[0,255]` render on the QBF grid, back-projected so its camera image matches the teacher in the
 scorer's own plane, is an ACHIEVABLE construction, so its distortion upper-bounds the minimum
-distortion of any renderer on that grid. On a 4-pair smoke (not a verdict; the n600 rung is running):
+distortion of any renderer on that grid. Complete 600-pair rungs:
 
-| rung | distortion | camera RMSE | scorer-plane RMSE |
-|---|---:|---:|---:|
-| teacher (identity) | 0.01151 | 0 | 0 |
-| `sp_874x1164` (control) | 0.01151 | 0 | 0 |
-| **`sp_384x512`** | **0.01475** | 1.43 | 0.087 |
-| `grid_384x512` (area down, bicubic up) | 0.11871 | 3.84 | — |
-| `sp_192x256` | 0.69671 | 7.94 | 8.71 |
+| rung | d_seg | d_pose | distortion | scorer-plane RMSE | passes 0.04 |
+|---|---:|---:|---:|---:|---|
+| `teacher` (identity) | 0.000103412 | 4.58687e-6 | 0.0171139 | 0 | yes |
+| `sp_874x1164` (control) | 0.000103412 | 4.58687e-6 | 0.0171139 | 0 | yes |
+| **`sp_384x512`** | 0.000111576 | 4.52317e-5 | **0.0324253** | 0.160 | **yes** |
 
-The naive area-downsample construction is **8× worse** than the scorer-plane-matched one on the same
-grid. Had Stage 2a used only the naive rung it would have produced a false structural refusal of the
-whole architecture. The grid cliff sits between 384 and 192: at 192×256 the back-projection stalls at
-8.7 RMSE because the operator is no longer invertible there.
+**The render grid is cleared.** A renderer on the QBF 384×512 grid reaches distortion 0.0324 over all
+600 pairs, inside the gate with 0.0076 of margin. At the 122,000 B packet gate that is
+`0.0812348 + 0.0324253 = 0.1136601`, sub-0.12 by 0.0063. The cost of the grid is almost entirely
+**Pose**: d_seg barely moves (1.034e-4 → 1.116e-4) while d_pose rises **9.86×**
+(4.587e-6 → 4.523e-5), contributing 0.02127 of the 0.03243.
+
+The burn's question is therefore now exact: **can 122,000 B encode a render close enough to the
+`sp_384x512` field?** Not whether the architecture's output space is rich enough — it is.
+
+Two supporting cautions, both measured. The naive `grid_384x512` construction (area down, bicubic up)
+scored 0.1187 on a 4-pair smoke, **8× worse** than the scorer-plane-matched render on the same grid;
+had Stage 2a used only that rung it would have produced a false structural refusal of the whole
+architecture. And the 4-pair smoke of `sp_384x512` read 0.01475 against the n600 value of 0.0324 —
+**2.2× optimistic** — so no prefix here is a verdict, in either direction.
 
 ## What is implemented and proven
 
@@ -66,7 +74,7 @@ whole architecture. The grid cliff sits between 384 and 192: at 192×256 the bac
 |---|---|---|
 | Stage 0 — storage and identity | PASS. Every frozen pin matched; two-runs-plus-reserve projection admitted against 78.8 GiB free on Vertigo. | `checkpoints/stage_00_identity.json` |
 | Stage 1 — receiver parity | PASS. A zero lattice is the born object **exactly** (max abs 0.0) through the parsed packet. Encoder repeats byte-identically. torch twin vs the float64 NumPy receiver: relative-L2 parity **0.9999908**, max abs 0.00124, 0.022% of rounded uint8 values disagree. Zero-lattice packet **108,826 B**, 13,174 B under the gate. | `checkpoints/stage_01_receiver_parity.json` |
-| Stage 2a — gate pricing (declared) | RUNNING, n600, 16 rungs. `teacher` rung complete (row 2 above). | `STAGE_2A_RESULT.json` when complete |
+| Stage 2a — gate pricing (declared) | RUNNING, n600, 16 rungs; 3 complete (rows 2 and 3 above), including the decisive `sp_384x512`. | `STAGE_2A_RESULT.json` when complete |
 | base-only n600 control | RUNNING, 200 epochs, MPS. | `base_only/STAGE_JOINT_RESULT.json` |
 
 Implementation: `src/tac/obx2_lattice_packet.py` (grammar + NumPy reference receiver, 41 tests),
@@ -114,11 +122,15 @@ Every one of these is a change or an addition the burn spec left open. None is s
 
 ## Measured risks that are not yet closed
 
-- **Public decode time.** The portable float64 NumPy receiver costs **4.32 s/pair → 2,593 s for n600**,
-  which is **2.06× the 1,260 s budget**, before the lattice. The born QBF receiver alone already
-  exceeds the budget in its reference form. Named cures, none measured yet: float32, batching over
-  pairs, or a generic torch-CPU receiver (all free code under rule 118). Stage 7 is a real gate and
-  this is the leading candidate to fail it.
+- **Public decode time — CURED, with a named consequence.** The portable float64 NumPy receiver costs
+  **4.32 s/pair → 2,593 s for n600**, **2.06× the 1,260 s budget**, before the lattice. The same
+  arithmetic in torch-CPU on the PARSED packet costs **0.311-0.557 s/pair → 187-334 s**, comfortably
+  inside it, and is generic free code under rule 118. The consequence is that the two receivers are
+  not interchangeable: on a trained lattice they disagree on **0.093% of rounded uint8 values**
+  (max abs 0.0075 in [0,1] render space, relative-L2 parity 0.99996). Every advisory row now names its
+  receiver; validation measures the shipping torch path on all 600 and keeps the portable NumPy path
+  as an explicit cross-check. Which receiver ships is a Stage-7 decision, and the object must be
+  scored through the one that does.
 - **MPS training is not bitwise reproducible across hosts.** The shipped artifact is deterministic and
   hashed, and the run is resumable from disk, but the training trajectory on MPS is not bit-identical.
   Declared, not hidden.
