@@ -1,0 +1,40 @@
+{
+  "actual_public_result": {
+    "bytes": 4831,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/RESULT.json",
+    "sha256": "9a6173ea7b4a1ce722c56b7a553ef698b3cd440bfbbde351738c9ad74dc6fd90"
+  },
+  "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "bytes_compared": 3662409600,
+  "candidate_public_stdout": {
+    "bytes": 5844,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/attempts/attempt_0000/run.log",
+    "sha256": "5f2acd3715e1e5a5a7b4edab2921ba97fd097966e68a3ae1f88c1ae3077ad353"
+  },
+  "candidate_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "checkpoint_resume": false,
+  "command": [
+    "bash",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/inflate.sh",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/data",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/file_list.txt"
+  ],
+  "entrypoint": "inflate.sh",
+  "n_samples": 600,
+  "pair_count": 600,
+  "pointer_archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+  "pointer_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "receiver_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+  "runtime_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+  "score_claim": false,
+  "token_cache_status": "DISABLED"
+}

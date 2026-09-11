@@ -1,0 +1,71 @@
+{
+  "payloads": [
+    {
+      "bytes": 180246,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+      "sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
+    },
+    {
+      "bytes": 180146,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin0.member",
+      "sha256": "a8ed6761ff98f45e5faaeb9684f3cfa1203e81d57f9e7b7b3f785f0d575206e7"
+    },
+    {
+      "bytes": 180146,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin1.member",
+      "sha256": "a8ed6761ff98f45e5faaeb9684f3cfa1203e81d57f9e7b7b3f785f0d575206e7"
+    },
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw",
+      "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+    },
+    {
+      "bytes": 869,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/ARCHIVE_PARSEBACK.json",
+      "sha256": "9cfbbcdf8cba1c483fdb0af2bfee366436b39a7d6dd83c9a97ebbcd4a6e21c45"
+    },
+    {
+      "bytes": 18751,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/refit/refit_cap1_carrier.bin",
+      "sha256": "f5a53f3943214f8876010a694966a037e6cc8a4748a18b11c0a6f1ed8385f9e0"
+    },
+    {
+      "bytes": 3035,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/refit/PREDICTOR_REFIT.json",
+      "sha256": "40dd7531b818dca02ad12bf7b9f7fc35f65c4d98323262050e8196922f83350a"
+    },
+    {
+      "bytes": 180246,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/refit/candidate_archive.zip",
+      "sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
+    },
+    {
+      "bytes": 1293,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/seal_inputs/RECEIVER_DIGEST_ROW_DIFF.json",
+      "sha256": "0160ddfff979c72d59cc7887b634497f9d5ff4307e4c6b63ac81729c28be20f9"
+    },
+    {
+      "bytes": 4928,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/base/pose_base_move44.npy",
+      "sha256": "ac2b611c3383cb73de0fd547ab2117fad1a2562545a4fc5595a399c92171d97b"
+    },
+    {
+      "bytes": 6814,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/rate/CARRIER_RATE.json",
+      "sha256": "13d63fcd506644a6a6e64dfbbe97cbb54ec175b5139a4c303bd2c66f06b57ae8"
+    },
+    {
+      "bytes": 4831,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/RESULT.json",
+      "sha256": "9a6173ea7b4a1ce722c56b7a553ef698b3cd440bfbbde351738c9ad74dc6fd90"
+    },
+    {
+      "bytes": 3768,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/smoke/public_entrypoint_smoke.json",
+      "sha256": "73e341ba9366cd865fe72f5f4193416fd1fb497e979b60149f5833254d48df4a"
+    }
+  ],
+  "policy": "every payload this candidate materialized is retained on the SSD tier; nothing measured was discarded",
+  "score_claim": false
+}

@@ -1,0 +1,17 @@
+{
+  "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "member": {
+    "bytes": 180146,
+    "name": "p",
+    "sha256": "a8ed6761ff98f45e5faaeb9684f3cfa1203e81d57f9e7b7b3f785f0d575206e7"
+  },
+  "parse_method": "read_archive_member_identity on the shipped archive; up3.build_archive also parses the finished bytes back through the receiver and refuses unless they decode to exactly the candidate codes",
+  "receiver_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+  "runtime_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 180406,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+  }
+}

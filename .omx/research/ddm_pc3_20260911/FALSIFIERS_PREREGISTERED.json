@@ -1,0 +1,16 @@
+{
+  "base_archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+  "created_at_utc": "2026-09-11T15:13:27.653207+00:00",
+  "falsifiers": [
+    "Cold literal inflate.sh output must contain all 600 pairs, token cache DISABLED, no checkpoint resume, and every one of the 3,662,409,600 raw bytes equal to move 44's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the whole claim is that d_seg and d_pose cannot move.",
+    "The candidate archive must be at most 180,386 bytes; rate-only net dS must be strictly below -2e-5 against move 44's 180,406 bytes at unchanged distortion.",
+    "Two independently executed encodes must retain distinct byte-identical member payloads, and rebuilding the body from its OWN predictor must reproduce move 44's archive sha 04758c0d exactly, or the -160 B is the rebuild's and not the refit's.",
+    "decode_cap1 must reconstruct the byte-identical canonical CPR1 from the refit carrier; any difference means the renderer sees different bytes and the distortion legs move.",
+    "The scoped timing-risk receiver digest must equal 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows with ZERO differing rows; the raw MANIFEST.sha256 remains in every custody check.",
+    "Risk ceiling must not exceed 1260 seconds. Only MAIN may authorize a committed intent and measure actual T4 decode and exact score; no timing or score authority is conferred by this intent.",
+    "Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, a crash, or a subprocess attempt closes this real door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer."
+  ],
+  "owner": "ddm_pc3",
+  "score_claim": false
+}

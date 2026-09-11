@@ -1,0 +1,14 @@
+{
+  "_pf_evidence": {
+    "passed": true,
+    "refusal": null
+  },
+  "authority": false,
+  "schema": "ddm_pc3_receipt_dry_validation.v1",
+  "score_claim": false,
+  "validate_prefire_risk": {
+    "passed": true,
+    "refusal": null
+  },
+  "what": "a DRY check of the only two validators that read this arm's receipts -- tac.candidate_seal._pf_evidence and validate_prefire_risk -- on a stub carrying exactly the fields they read. It is NOT an intent, it is not written as one, and it confers nothing: no contract, no pointer, no authorization, no timing clearance. Its only purpose is to locate the emitter refusal, by showing which gates the ddm_pc3 receipts already satisfy and which gate does not read them at all."
+}

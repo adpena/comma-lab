@@ -1,0 +1,29 @@
+{
+  "axis": "[exact digest arithmetic]",
+  "candidate_runtime": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+  "consequence": "tac.decode_wall_clock.inherit_decode_wall_clock refuses with 'inherited receiver code differs'; MEASURED refusal, not predicted",
+  "differing_row_detail": {
+    "MANIFEST.sha256": {
+      "candidate": [
+        4648,
+        "55bdbfd268a86f202bdbfca19f20db910253f8bc20b1c22b41b3e2353175b454"
+      ],
+      "pointer": [
+        4570,
+        "c65d2e74dc2c52357676526510f59fd92c3ee5088882e790fcd0ad6b3f9a6ca0"
+      ]
+    }
+  },
+  "differing_rows": [
+    "MANIFEST.sha256"
+  ],
+  "digest_definition": "tac.decode_wall_clock.measure_receiver_digest (replicated row-for-row: same skip rules, same ARCHIVE_PIN normalization)",
+  "every_other_row_identical": true,
+  "inflate_py_row_identical_after_pin_normalization": true,
+  "pointer_runtime": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+  "purpose": "the exact input for the OWED pr14 amendment: which normalized receiver-digest rows differ between the pointer tree and a candidate whose receiver CODE is byte-identical",
+  "rows_candidate": 50,
+  "rows_pointer": 50,
+  "schema": "ddm_pc3_receiver_digest_row_diff.v1",
+  "score_claim": false
+}

@@ -1,0 +1,31 @@
+{
+  "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "executions": [
+    {
+      "bytes": 1291,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/ENCODER_EXECUTION_0.json",
+      "sha256": "d8ac1135309ea3211fdfdbd95cc1fde2e97b0e5233f37a7ec0a16a90cb800ebf"
+    },
+    {
+      "bytes": 1291,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/ENCODER_EXECUTION_1.json",
+      "sha256": "d3292a00c4f0aa78f8f69034a9bf73c559a3583c9b0d75eec108fdb6a528d3b8"
+    }
+  ],
+  "n_samples": 600,
+  "payloads": [
+    {
+      "bytes": 180146,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin0.member",
+      "sha256": "a8ed6761ff98f45e5faaeb9684f3cfa1203e81d57f9e7b7b3f785f0d575206e7"
+    },
+    {
+      "bytes": 180146,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin1.member",
+      "sha256": "a8ed6761ff98f45e5faaeb9684f3cfa1203e81d57f9e7b7b3f785f0d575206e7"
+    }
+  ],
+  "receiver_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+  "runtime_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+  "score_claim": false
+}

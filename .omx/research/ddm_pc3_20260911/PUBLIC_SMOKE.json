@@ -1,0 +1,70 @@
+{
+  "schema": "candidate_public_entrypoint_smoke.v1",
+  "public_path_probe_seconds": 180.0,
+  "public_path_probes": {
+    "candidate": {
+      "outcome": "REACHED_TOKEN_DECODE",
+      "seconds": 144.04764699935913,
+      "note": "cut at the probe bound inside the token decode",
+      "exception_class": null,
+      "exception_message": "",
+      "stderr_tail": [],
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+      "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
+    },
+    "frontier": {
+      "outcome": "REACHED_TOKEN_DECODE",
+      "seconds": 144.04040908813477,
+      "note": "cut at the probe bound inside the token decode",
+      "exception_class": null,
+      "exception_message": "",
+      "stderr_tail": [],
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+      "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+      "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    }
+  },
+  "inflate_sh_smokes": {
+    "candidate": {
+      "outcome": "REACHED_CUDA_GATE",
+      "returncode": 1,
+      "seconds": 6.317754030227661,
+      "exception_class": "RuntimeError",
+      "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+      "stderr_tail": [
+        "    ~~~~^^",
+        "  File \"/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/inflate.py\", line 58, in main",
+        "    raise RuntimeError(",
+        "    ...<2 lines>...",
+        "    )",
+        "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+      ],
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+      "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+      "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
+    },
+    "frontier": {
+      "outcome": "REACHED_CUDA_GATE",
+      "returncode": 1,
+      "seconds": 6.399761915206909,
+      "exception_class": "RuntimeError",
+      "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+      "stderr_tail": [
+        "    ~~~~^^",
+        "  File \"/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/inflate.py\", line 58, in main",
+        "    raise RuntimeError(",
+        "    ...<2 lines>...",
+        "    )",
+        "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+      ],
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+      "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669",
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+      "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+    }
+  }
+}

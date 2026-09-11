@@ -1,0 +1,16 @@
+{
+  "all_hashes_passed": true,
+  "all_runtime_dependencies_listed": true,
+  "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "manifest": {
+    "bytes": 9545,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/CANDIDATE_MANIFEST.json",
+    "sha256": "45d9a3ffef4bb54b4fffbe6f7a5494114dd58a80c0b68bebd0d5739dfbbcfe48"
+  },
+  "mismatched_rows": [],
+  "receiver_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+  "rehash_failures": [],
+  "runtime_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+  "score_claim": false,
+  "verification_method": "every declared row re-hashed from disk AND compared against tac.candidate_seal.measure_runtime_digest's own file map; the validator is written OUTSIDE the candidate tree, which the intent contract requires"
+}

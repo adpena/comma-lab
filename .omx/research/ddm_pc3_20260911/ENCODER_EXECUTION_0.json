@@ -1,0 +1,28 @@
+{
+  "archive_bytes": 180246,
+  "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "/Users/adpena/Projects/pact/experiments/ddm_pc3_intent_inputs.py",
+    "twin",
+    "--source-runtime",
+    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+    "--retained-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained",
+    "--out-dir",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911"
+  ],
+  "completed": true,
+  "execution_id": "ddm_pc3_independent_cap1_refit_encode_0",
+  "execution_scope": "one full n600 up3.build_archive run with its own predictor refit input and its own container search; the member bytes are read out of THIS run's archive, never copied from the other run",
+  "finished_at_utc": "2026-09-11T15:11:14.535554+00:00",
+  "n_samples": 600,
+  "payload": {
+    "bytes": 180146,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin0.member",
+    "sha256": "a8ed6761ff98f45e5faaeb9684f3cfa1203e81d57f9e7b7b3f785f0d575206e7"
+  },
+  "producer_source_commit": "c533538a86d428f147854d78a442620ecd5a1d1b",
+  "score_claim": false,
+  "started_at_utc": "2026-09-11T15:11:13.242272+00:00"
+}

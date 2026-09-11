@@ -1,0 +1,189 @@
+{
+  "admit_bar": {
+    "derivation": {
+      "pointer_archive_sha256_at_seal": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.1372449041713402,
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    },
+    "net_dS_threshold": -2e-05,
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold"
+  },
+  "archive": {
+    "bytes": 180246,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+    "sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
+  },
+  "axis": "contest_cuda",
+  "candidate_id": "ddm_pc3_cap1_predictor_refit_move44",
+  "decode_wall_clock": {
+    "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+    "candidate_t4_runtime_sha256": "2d4dd13352b50a27f3d1b423261665c0f90e250781f07c2fefe86c46656dc967",
+    "inheritance_scope": "identical normalized receiver code; candidate payload-dependent time not remeasured",
+    "limit_seconds": 1260.0,
+    "mode": "inherited",
+    "pointer_archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+    "projected_t4_decode_seconds": 1232.418725255,
+    "receiver_identity_comparison": {
+      "behavior_digests_equal": true,
+      "candidate_behavior_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+      "candidate_legacy_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+      "candidate_manifest_validation": {
+        "archive_listed": true,
+        "covered_file_count": 49,
+        "excluded_from_behavior_digest": true,
+        "listed_file_count": 50,
+        "listing_sha256": "55bdbfd268a86f202bdbfca19f20db910253f8bc20b1c22b41b3e2353175b454",
+        "present": true,
+        "relative_path": "MANIFEST.sha256",
+        "schema": "receiver_manifest_validation.v1"
+      },
+      "candidate_stored_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+      "comparison_digest_definition": "tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
+      "excluded_relative_paths": [
+        "MANIFEST.sha256"
+      ],
+      "legacy_digests_equal": false,
+      "schema": "receiver_identity_comparison.v1",
+      "score_claim": false,
+      "source_behavior_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+      "source_legacy_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+      "source_manifest_validation": {
+        "archive_listed": false,
+        "covered_file_count": 49,
+        "excluded_from_behavior_digest": true,
+        "listed_file_count": 49,
+        "listing_sha256": "c65d2e74dc2c52357676526510f59fd92c3ee5088882e790fcd0ad6b3f9a6ca0",
+        "present": true,
+        "relative_path": "MANIFEST.sha256",
+        "schema": "receiver_manifest_validation.v1"
+      },
+      "source_stored_digest_definition": "tac.decode_wall_clock.measure_receiver_digest"
+    },
+    "receiver_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+    "schema": "candidate_decode_wall_clock.v1",
+    "score_claim": false,
+    "source_leg": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json",
+      "sha256": "c708f817cacfa6f180a85560dfb77d01b5bb10e784d8eb6e816a6dbb5c17b191"
+    },
+    "source_mode": "t4_direct",
+    "source_t4_runtime_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891"
+  },
+  "falsifiers": [
+    "Cold literal inflate.sh output must contain all 600 pairs, token cache DISABLED, no checkpoint resume, and every one of the 3,662,409,600 raw bytes equal to move 44's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the whole claim is that d_seg and d_pose cannot move.",
+    "The candidate archive must be at most 180,386 bytes; rate-only net dS must be strictly below -2e-5 against move 44's 180,406 bytes at unchanged distortion.",
+    "Two independently executed encodes must retain distinct byte-identical member payloads, and rebuilding the body from its OWN predictor must reproduce move 44's archive sha 04758c0d exactly, or the -160 B is the rebuild's and not the refit's.",
+    "decode_cap1 must reconstruct the byte-identical canonical CPR1 from the refit carrier; any difference means the renderer sees different bytes and the distortion legs move.",
+    "The scoped timing-risk receiver digest must equal 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows with ZERO differing rows; the raw MANIFEST.sha256 remains in every custody check.",
+    "Risk ceiling must not exceed 1260 seconds. Only MAIN may authorize a committed intent and measure actual T4 decode and exact score; no timing or score authority is conferred by this intent.",
+    "Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, a crash, or a subprocess attempt closes this real door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer."
+  ],
+  "notes": "",
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+        "seconds": 6.317754030227661,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+        "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "seconds": 6.399761915206909,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+      }
+    },
+    "public_path_probe_seconds": 180.0,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+        "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+        "seconds": 144.04764699935913,
+        "stderr_tail": [],
+        "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+        "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "seconds": 144.04040908813477,
+        "stderr_tail": [],
+        "tree_sha256": "f4c6c250cb1d806d6cafbc4d6cfed82f8f59d95fe432db1925637571b624c669"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "receiver_pins": [
+    {
+      "bytes": 2735,
+      "relative_path": "inflate.py",
+      "sha256": "914cc84f731fdc50ab848c839219783f429876e99c4069184bba442d18fc49ae"
+    },
+    {
+      "bytes": 3380,
+      "relative_path": "inflate.sh",
+      "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+    }
+  ],
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin0.member",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin1.member",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/ARCHIVE_PARSEBACK.json"
+  ],
+  "runtime": {
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+    "sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+    "total_bytes": 1009683
+  },
+  "schema": "candidate_seal.v2",
+  "seal_sha256": "243df60413c5a6a6be0bf0ec062731178cfc78200824e794ba4e5d4a58f304b1",
+  "sealed_at_utc": "2026-09-11T15:52:42.660398+00:00",
+  "sealed_by": "MAIN"
+}

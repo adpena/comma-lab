@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_INTENT_SCHEMA_REFUSED",
+  "detail": "nonempty falsifiers required",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-11T15:42:44.997874+00:00"
+}

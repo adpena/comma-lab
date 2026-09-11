@@ -1,0 +1,205 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/make_candidate_seal.py",
+    "--first-fire-intent",
+    "--candidate-id",
+    "ddm_pc3_cap1_predictor_refit_move44",
+    "--runtime-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+    "--axis",
+    "contest_cuda",
+    "--public-entrypoint-smoke",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/PUBLIC_SMOKE.json",
+    "--candidate-manifest",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/CANDIDATE_MANIFEST.json",
+    "--manifest-validation",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/MANIFEST_VALIDATION.json",
+    "--twin-encode-receipt",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/TWIN_ENCODE.json",
+    "--archive-parseback-receipt",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/ARCHIVE_PARSEBACK.json",
+    "--raw-identity-receipt",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/RAW_IDENTITY_N600.json",
+    "--literal-census",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/LITERAL_CENSUS.json",
+    "--retention-manifest",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/RETENTION_MANIFEST.json",
+    "--timing-risk-evidence",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/TIMING_RISK.json",
+    "--admit-bar-net-ds",
+    "-2e-5",
+    "--pointer-axis",
+    "contest_cuda",
+    "--retained-path",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime/archive.zip",
+    "--retained-path",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin0.member",
+    "--retained-path",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/retained/twin1.member",
+    "--retained-path",
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw",
+    "--retained-path",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/ARCHIVE_PARSEBACK.json",
+    "--falsifier",
+    "Cold literal inflate.sh output must contain all 600 pairs, token cache DISABLED, no checkpoint resume, and every one of the 3,662,409,600 raw bytes equal to move 44's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the whole claim is that d_seg and d_pose cannot move.",
+    "--falsifier",
+    "The candidate archive must be at most 180,386 bytes; rate-only net dS must be strictly below -2e-5 against move 44's 180,406 bytes at unchanged distortion.",
+    "--falsifier",
+    "Two independently executed encodes must retain distinct byte-identical member payloads, and rebuilding the body from its OWN predictor must reproduce move 44's archive sha 04758c0d exactly, or the -160 B is the rebuild's and not the refit's.",
+    "--falsifier",
+    "decode_cap1 must reconstruct the byte-identical canonical CPR1 from the refit carrier; any difference means the renderer sees different bytes and the distortion legs move.",
+    "--falsifier",
+    "The scoped timing-risk receiver digest must equal 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows with ZERO differing rows; the raw MANIFEST.sha256 remains in every custody check.",
+    "--falsifier",
+    "Risk ceiling must not exceed 1260 seconds. Only MAIN may authorize a committed intent and measure actual T4 decode and exact score; no timing or score authority is conferred by this intent.",
+    "--falsifier",
+    "Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, a crash, or a subprocess attempt closes this real door control.",
+    "--falsifier",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer.",
+    "--out",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_pc3_20260911/CANDIDATE_PREFIRE_INTENT.json"
+  ],
+  "diagnosis": "src/tac/candidate_seal.py has UNCOMMITTED working-tree changes belonging to a sister arm's in-flight pr18 amendment (PREFIRE_CONTRACT_AMENDMENT_ID_PR18 = ddm_pr18_manifest_excluded_from_receiver_behavior_digest, 47 insertions / 13 deletions vs HEAD). The refusal is about the CONTRACT IMPLEMENTATION's custody, not about any receipt this arm produced: every ddm_pc3 receipt validated before this gate, and the gate that fired reads no ddm_pc3 file at all.",
+  "dirty_contract_files": [
+    "src/tac/candidate_seal.py",
+    "src/tac/decode_wall_clock.py"
+  ],
+  "frozen_implementation_files": [
+    {
+      "frozen_sha256": "d0c9fc519b004ba8f250d80ffac9d5f48c8abc3dce256462be4d88665c8071a7",
+      "git_status": "",
+      "head_blob_sha256": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29",
+      "live_equals_head_blob": true,
+      "live_sha256": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29",
+      "path": "experiments/modal_auth_eval.py"
+    },
+    {
+      "frozen_sha256": "4c0baadd883717a693c77825adb207941d9c63796a53d90e930229b5c6144efb",
+      "git_status": "M src/tac/candidate_seal.py",
+      "head_blob_sha256": "7645c73e533561f001376f94fc3ef7205601a1e3ad053ee55cae7a13a0573ebb",
+      "live_equals_head_blob": false,
+      "live_sha256": "707b5207579cdcc45035e6b6b633b4bacc93d2349ccb5a5be96d6a787e64391f",
+      "path": "src/tac/candidate_seal.py"
+    },
+    {
+      "frozen_sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5",
+      "git_status": "",
+      "head_blob_sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5",
+      "live_equals_head_blob": true,
+      "live_sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5",
+      "path": "src/tac/checkpoint_maturity.py"
+    },
+    {
+      "frozen_sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff",
+      "git_status": "M src/tac/decode_wall_clock.py",
+      "head_blob_sha256": "f1ce9122a0114e13481eb1f3fe8ba3951b5c0f1549ec49538994393acceb89ff",
+      "live_equals_head_blob": false,
+      "live_sha256": "ce1f8c7b486098d9662c4706ddec4cdd94cc84f39c53ad986845651f91009a46",
+      "path": "src/tac/decode_wall_clock.py"
+    },
+    {
+      "frozen_sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1",
+      "git_status": "",
+      "head_blob_sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1",
+      "live_equals_head_blob": true,
+      "live_sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1",
+      "path": "src/tac/deploy/modal/auth_eval.py"
+    },
+    {
+      "frozen_sha256": "2edb975b53e1ac9a1e46474d51711c7fadf06820fb15fa11d63c2248bb4e9015",
+      "git_status": "",
+      "head_blob_sha256": "1fdc2e847f27af82ad1f05815614cb993eb0cf9f4158b23516f61c65ac0fa6ae",
+      "live_equals_head_blob": true,
+      "live_sha256": "1fdc2e847f27af82ad1f05815614cb993eb0cf9f4158b23516f61c65ac0fa6ae",
+      "path": "src/tac/deploy/modal/call_id_ledger.py"
+    },
+    {
+      "frozen_sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d",
+      "git_status": "",
+      "head_blob_sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d",
+      "live_equals_head_blob": true,
+      "live_sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d",
+      "path": "src/tac/deploy/modal/result_json.py"
+    },
+    {
+      "frozen_sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d",
+      "git_status": "",
+      "head_blob_sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d",
+      "live_equals_head_blob": true,
+      "live_sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d",
+      "path": "src/tac/deploy/modal/single_flight.py"
+    },
+    {
+      "frozen_sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5",
+      "git_status": "",
+      "head_blob_sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5",
+      "live_equals_head_blob": true,
+      "live_sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5",
+      "path": "src/tac/git_custody_read.py"
+    },
+    {
+      "frozen_sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290",
+      "git_status": "",
+      "head_blob_sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290",
+      "live_equals_head_blob": true,
+      "live_sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290",
+      "path": "src/tac/modal_source_snapshot.py"
+    },
+    {
+      "frozen_sha256": "96bab07767e5e7e3f6243c30be3a58e58b232b1111b0088e97367cca2e0c4174",
+      "git_status": "",
+      "head_blob_sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
+      "live_equals_head_blob": true,
+      "live_sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851",
+      "path": "tools/authorize_candidate_first_measurement.py"
+    },
+    {
+      "frozen_sha256": "22771b01138df50782d7edefd47bf6cac486252bbd187d02429c7c7254d0084c",
+      "git_status": "",
+      "head_blob_sha256": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703",
+      "live_equals_head_blob": true,
+      "live_sha256": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703",
+      "path": "tools/fire_modal_auth_eval.py"
+    },
+    {
+      "frozen_sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa",
+      "git_status": "",
+      "head_blob_sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa",
+      "live_equals_head_blob": true,
+      "live_sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa",
+      "path": "tools/launch_detached_process.py"
+    },
+    {
+      "frozen_sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791",
+      "git_status": "",
+      "head_blob_sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791",
+      "live_equals_head_blob": true,
+      "live_sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791",
+      "path": "tools/make_candidate_seal.py"
+    },
+    {
+      "frozen_sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f",
+      "git_status": "",
+      "head_blob_sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f",
+      "live_equals_head_blob": true,
+      "live_sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f",
+      "path": "tools/modal_harvest_poller.py"
+    }
+  ],
+  "gate": "_pf_contract -> _pf_blob(repo, 'HEAD', frozen_path) and the frozen implementation manifest: the contract refuses unless every contract implementation file equals its committed blob",
+  "intent_written": false,
+  "not_satisfiable_from_this_candidate": true,
+  "refusal_text": "PREFIRE_CONTRACT_DRIFT_REFUSED: live file differs from committed blob: /Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+  "returncode": 3,
+  "schema": "ddm_pc3_intent_emitter_refusal.v1",
+  "score_claim": false,
+  "stderr": "PREFIRE_CONTRACT_DRIFT_REFUSED: live file differs from committed blob: /Users/adpena/Projects/pact/src/tac/candidate_seal.py",
+  "stdout": "",
+  "what": "tools/make_candidate_seal.py --first-fire-intent, exact recorded argv, refused",
+  "what_this_arm_did_not_do": [
+    "did not edit, commit, stash or revert another arm's work in progress",
+    "did not patch contract code",
+    "did not relax or bypass the gate"
+  ]
+}
