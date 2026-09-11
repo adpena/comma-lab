@@ -95,6 +95,25 @@ def sha256_file(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def shipped_files(root: Path):
+    """Every file the receiver tree actually ships.
+
+    APDataStore is ExFAT, so `shutil.copytree` leaves AppleDouble `._*` stubs beside every
+    entry. They are filesystem metadata, never receiver content, and they must not reach
+    the manifest, the census, or the moved-file guard -- the same stub genus that bites
+    arm bundles.
+    """
+    for path in sorted(root.rglob("*")):
+        if (
+            path.is_file()
+            and not path.name.startswith("._")
+            and path.name != ".DS_Store"
+            and "__pycache__" not in path.parts
+            and path.suffix != ".pyc"
+        ):
+            yield path
+
+
 def regenerate_manifest(root: Path) -> bytes:
     """Rebuild `MANIFEST.sha256` the way the promoted tree's own was built.
 
@@ -105,11 +124,8 @@ def regenerate_manifest(root: Path) -> bytes:
     """
     rows = "".join(
         f"{sha256_file(path)}  {path.relative_to(root)}\n"
-        for path in sorted(root.rglob("*"))
-        if path.is_file()
-        and path.name not in ("MANIFEST.sha256", "archive.zip")
-        and "__pycache__" not in path.parts
-        and path.suffix != ".pyc"
+        for path in shipped_files(root)
+        if path.name not in ("MANIFEST.sha256", "archive.zip")
     )
     return rows.encode()
 
@@ -140,7 +156,9 @@ def stage_runtime(treatment: str) -> Path:
         return runtime
     if runtime.exists():
         shutil.rmtree(runtime)
-    shutil.copytree(source, runtime, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(
+        source, runtime, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "._*", ".DS_Store")
+    )
     archive = hpac.ROOT / treatment / "retained/archive.twin0.zip"
     if not archive.is_file():
         raise SystemExit(f"no priced archive for {treatment}: {archive}")
@@ -159,11 +177,8 @@ def stage_runtime(treatment: str) -> Path:
     (runtime / "MANIFEST.sha256").write_bytes(regenerate_manifest(runtime))
     moved = sorted(
         path.relative_to(runtime).as_posix()
-        for path in runtime.rglob("*")
-        if path.is_file()
-        and "__pycache__" not in path.parts
-        and path.suffix != ".pyc"
-        and (
+        for path in shipped_files(runtime)
+        if (
             not (source / path.relative_to(runtime)).is_file()
             or path.read_bytes() != (source / path.relative_to(runtime)).read_bytes()
         )
