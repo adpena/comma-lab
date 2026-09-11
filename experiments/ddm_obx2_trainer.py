@@ -535,8 +535,15 @@ def operating_point_pose_weight(d_pose: float) -> float:
     return 5.0 / math.sqrt(10.0 * max(d_pose, 1.0e-9))
 
 
-def stage_checkpoint_path(output: Path, stage: str, tag: str) -> Path:
-    return output / "checkpoints" / f"obx2_{stage}_{tag}.pt"
+def stage_checkpoint_path(output: Path, stage: str, tag: str, *, stage_tag: str = "") -> Path:
+    """Stage-encoded checkpoint path; a stage tag keeps a re-aimed stage distinct.
+
+    A stage that re-derives its loss weights writes under its own tag so the
+    earlier stage's checkpoints are preserved rather than continued over.
+    """
+
+    prefix = f"obx2_{stage}" if not stage_tag else f"obx2_{stage}_{stage_tag}"
+    return output / "checkpoints" / f"{prefix}_{tag}.pt"
 
 
 def save_stage_checkpoint(
@@ -736,6 +743,8 @@ def run_training(
     validate_pairs: int,
     cross_check_pairs: int = 40,
     gate_kind: int = DEFAULT_GATE_KIND,
+    stage_tag: str = "",
+    pose_weight_derivation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One governed training stage over the complete 600-pair population."""
 
@@ -757,9 +766,14 @@ def run_training(
     trainable = [parameter for parameter in module.parameters() if parameter.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=learning_rate)
     ema = EMA(module, decay=0.997)
-    pose_weight = operating_point_pose_weight(pose_weight_d_pose)
+    if pose_weight_derivation is not None:
+        pose_weight = float(pose_weight_derivation["pose_weight"])
+        pose_weight_d_pose = float(pose_weight_derivation["operating_point_d_pose"])
+    else:
+        pose_weight = operating_point_pose_weight(pose_weight_d_pose)
     config = {
         "stage": stage,
+        "stage_tag": stage_tag,
         "device": device_name,
         "epochs": epochs,
         "chunk_pairs": chunk_pairs,
@@ -771,6 +785,7 @@ def run_training(
         "pose_weight_operating_point_d_pose": pose_weight_d_pose,
         "lattice_spec": spec.describe(),
         "ema_decay": 0.997,
+        "pose_weight_derivation": pose_weight_derivation,
     }
     history: list[dict[str, Any]] = []
     start_epoch = 0
@@ -837,7 +852,7 @@ def run_training(
         print(json.dumps(row), flush=True)
         if (epoch + 1) % max(1, save_every_epochs) == 0 or epoch + 1 == epochs:
             save_stage_checkpoint(
-                stage_checkpoint_path(output, stage, f"epoch_{epoch + 1:05d}"),
+                stage_checkpoint_path(output, stage, f"epoch_{epoch + 1:05d}", stage_tag=stage_tag),
                 module=module,
                 ema=ema,
                 optimizer=optimizer,
@@ -851,11 +866,12 @@ def run_training(
     repeat, _, repeat_archive = build_packet(shadow)
     if repeat != packet or repeat_archive != archive:
         raise OBX2TrainerError("terminal packet or archive encoder is nondeterministic")
-    packet_path = output / "candidates" / f"obx2_{stage}_terminal.packet"
+    terminal_stem = f"obx2_{stage}{'_' + stage_tag if stage_tag else ''}_terminal"
+    packet_path = output / "candidates" / f"{terminal_stem}.packet"
     qbt1.atomic_bytes(packet_path, packet)
-    archive_path = output / "candidates" / f"obx2_{stage}_terminal.archive.zip"
+    archive_path = output / "candidates" / f"{terminal_stem}.archive.zip"
     qbt1.atomic_bytes(archive_path, archive)
-    qbt1.atomic_bytes(output / "candidates" / f"obx2_{stage}_terminal.archive.repeat.zip", repeat_archive)
+    qbt1.atomic_bytes(output / "candidates" / f"{terminal_stem}.archive.repeat.zip", repeat_archive)
     validation = score_parsed_object(
         packet,
         pair_ids=list(range(min(validate_pairs, N))),
@@ -892,7 +908,7 @@ def run_training(
         "elapsed_seconds": time.time() - started,
         "host": {"platform": platform.platform(), "python": platform.python_version()},
     }
-    qbt1.atomic_json(output / f"STAGE_{stage.upper()}_RESULT.json", receipt)
+    qbt1.atomic_json(output / f"STAGE_{stage.upper()}{'_' + stage_tag.upper() if stage_tag else ''}_RESULT.json", receipt)
     return receipt
 
 
@@ -1024,6 +1040,40 @@ def score_checkpoint(
     return receipt
 
 
+def derive_pose_weight_from_row(row_path: Path) -> dict[str, Any]:
+    """Derive the pose weight from a measured n600 row, pinning every input.
+
+    The weight is the contest Pose term's own derivative at the operating point
+    the LIVE object actually occupies, not a constant chosen in advance.
+    """
+
+    from tac.canonical_equations.obx2_pose_vs_scorer_plane_rmse_20260911 import derive_pose_weight
+
+    payload = json.loads(row_path.read_text())
+    if payload.get("schema") != "ddm_obx2_checkpoint_score.v1":
+        raise OBX2TrainerError(f"pose-weight row schema differs: {row_path}")
+    validation = payload["validation"]
+    archive_path = Path(payload["packet_accounting"].get("archive_path", ""))
+    archive_sha = payload["packet_accounting"].get("archive_sha256", "")
+    derived = derive_pose_weight(
+        d_pose=float(validation["d_pose"]),
+        d_seg=float(validation["d_seg"]),
+        source_artifact=str(row_path),
+        source_sha256=str(archive_sha),
+        receiver=str(validation["receiver"]),
+        pair_denominator=int(validation["pairs"]),
+    )
+    derived["source_checkpoint"] = payload["checkpoint"]["path"]
+    derived["source_step"] = payload["checkpoint"]["step"]
+    derived["source_archive_bytes"] = payload["packet_accounting"]["archive_bytes"]
+    derived["superseded_constant"] = payload["checkpoint"]["config"].get("pose_weight")
+    if derived["superseded_constant"]:
+        derived["constant_overweight_factor"] = float(derived["superseded_constant"]) / derived["pose_weight"]
+    if archive_path.name:
+        derived["source_archive_path"] = str(archive_path)
+    return derived
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="OBX2 base+lattice trainer")
     parser.add_argument("stage", choices=("stage1", "distill", "joint", "stage7", "score"))
@@ -1040,6 +1090,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stage2a-root", type=Path, default=OUTPUT_ROOT)
     parser.add_argument("--save-every-epochs", type=int, default=5)
     parser.add_argument("--pose-weight-operating-point", type=float, default=1.0e-3)
+    parser.add_argument(
+        "--pose-weight-from-row",
+        type=Path,
+        default=None,
+        help="a CHECKPOINT_SCORE json: derive the pose weight from ITS measured operating point",
+    )
+    parser.add_argument("--stage-tag", default="", help="keeps a re-aimed stage's checkpoints distinct")
     parser.add_argument("--validate-pairs", type=int, default=N)
     parser.add_argument("--cross-check-pairs", type=int, default=40)
     parser.add_argument("--gate-kind", type=int, default=DEFAULT_GATE_KIND, choices=(0, 1, 2))
@@ -1179,9 +1236,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if not args.launch_authorized:
         raise OBX2TrainerError("n600 training requires explicit --launch-authorized")
+    derivation = None
+    if args.pose_weight_from_row is not None:
+        derivation = derive_pose_weight_from_row(args.pose_weight_from_row)
+        print(json.dumps({"pose_weight_derivation": derivation}, indent=2), flush=True)
     receipt = run_training(
         args.output,
         stage=args.stage,
+        stage_tag=args.stage_tag,
+        pose_weight_derivation=derivation,
         device_name=args.device,
         epochs=args.epochs,
         chunk_pairs=args.chunk_pairs,
