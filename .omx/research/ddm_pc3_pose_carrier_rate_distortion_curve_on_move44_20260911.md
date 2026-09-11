@@ -281,6 +281,42 @@ Producers: `experiments/ddm_pc3_pose_carrier_curve.py` (base / ceiling / reach /
 build), `experiments/ddm_pc3_public.py` (stage / cold public proof / smoke),
 `experiments/ddm_pc3_ceiling_shards.sh`.
 
+## 8b. AFTER MOVE 45 — the rung prices RE-DERIVED, and why they went UP
+
+Move 45 landed this arm's candidate (commit `01f2b66ad`; **S 0.1371383667388406 @ 180,246 B
+[contest-CUDA T4 n600]**, archive `145e02e2…`; the CPU sibling refused by design). Binding numbers
+expire at a pointer move, and §3's rung table was priced on move 44's carrier — on the SUB-OPTIMAL
+predictor this arm then replaced. Re-measured on move 45's own carrier, same pricer, same byte-exact
+positive control:
+
+| rung | move 44 ΔB | **move 45 ΔB** | ΔS at move 45 | break-even d_pose | required reduction |
+|---|---:|---:|---:|---|---:|
+| cheapest per-dimension ÷2 | +54 (dim 3) | **+75** (dims 0,1,2,5,6,7,11) | +4.994e-05 | 4.519369e-06 | **1.47 %** |
+| dearest per-dimension ÷2 | +76 (dim 9) | **+81** (dim 10) | +5.393e-05 | 4.513999e-06 | 1.59 % |
+| global ÷2 | +808 | **+914** | +6.086e-04 | 3.799452e-06 | 17.16 % |
+| global ÷4 | +1,697 | **+1,833** | +1.221e-03 | 3.082521e-06 | 32.80 % |
+
+**Every rung got dearer, and the reason is the move this arm just landed.** A lattice halving has to
+pay for the extra magnitude it puts in the Rice residuals; on move 44 part of that cost was hidden
+inside a predictor that was leaving 164 B on the table, so the halving looked cheaper than it was.
+With the predictor at the schema's minimum there is nothing left to hide behind. This is cl3's
+substitutes law — *coder quality and capacity-change cost are substitutes* — measured on a new axis:
+the PREDICTOR rather than the entropy coder. Practical consequence: **a capacity rung priced on a
+body whose coder is not yet optimal is priced too low**, and a candidate admitted on that price can
+fail once the coder is fixed.
+
+Two controls came free with the re-pricing:
+
+- On move 45 the exhaustive fit **recovers the shipped predictor exactly** (`control_refit_recovers_shipped_predictor: true`),
+  which is an independent confirmation that the landed predictor is the schema's minimum, not merely
+  better than what it replaced. Each rung is therefore priced WITH its own refit — the pricing that
+  is hardest on the rung, not easiest.
+- **The ceiling transfers across the pointer move, measured not assumed.** `CEILING_TRANSFER_CONTROL.json`:
+  the carrier STATE loaded from move 44's tree and from move 45's is identical in every field —
+  codes, coefficient scales, raw basis, normalized basis, selector choices, compensation flag. So a
+  continuous optimum solved against move 44's state IS move 45's optimum, and every ceiling row and
+  projected rung carries across without re-solving.
+
 ## 9. How to finish the ceiling (it is running and resumable)
 
 Nine strided shards, each resuming from its own rows file; killing them costs only the pair each was on. Resume with:
