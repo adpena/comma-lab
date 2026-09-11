@@ -35,13 +35,70 @@ from experiments import ddm_ntb2_renderer_score as score
 AXIS = "[macOS-CPU advisory, jg1 instrument] SCREEN ONLY"
 
 
+def forward_model_control(args) -> int:
+    """Re-render move 44's own tokens through its own renderer and diff the SHIPPED decode.
+
+    Without this, "the renderer moved the render by N levels" is a statement about a
+    look-alike forward model. `jg1.forward_model_control` is the receiver's own path and
+    the shipped `0.raw` is what the public decode actually produced.
+    """
+    import torch
+
+    torch.set_num_threads(args.threads)
+    tree = control.ROOT / "source_runtime"
+    base_sha = score.sha256_file(tree / "archive.zip")
+    if base_sha != control.BASE_SHA:
+        raise SystemExit(f"base runtime archive moved: {base_sha}")
+    rng = np.random.default_rng(args.seed)
+    pairs = np.sort(rng.choice(jg1.N_PAIRS, size=args.pairs, replace=False)).astype(np.int64)
+    tokens = jg1.load_tokens(score.TOKEN_FIELD)
+    semantic = jg1.load_semantic_renderer(
+        archive_path=tree / "archive.zip", runtime_dir=tree / "runtime"
+    )
+    verdict = jg1.forward_model_control(
+        tokens,
+        pairs,
+        semantic=semantic,
+        raw_path=args.forward_model_control,
+        verify_raw_sha=False,
+    )
+    result = {
+        "schema": "ddm_ntb2_forward_model_control.v1",
+        "axis": AXIS.replace("SCREEN ONLY", "INSTRUMENT FALSIFIER"),
+        "score_claim": False,
+        "base_archive_sha256": base_sha,
+        "shipped_raw": score.fact(args.forward_model_control),
+        "token_field": score.fact(score.TOKEN_FIELD),
+        "pairs": [int(p) for p in pairs],
+        "producer": score.fact(Path(__file__)),
+        "verdict": verdict,
+        "passed": verdict["pixels_changed"] == 0,
+    }
+    score.retain(score.STORE / "FORWARD_MODEL_CONTROL.json", (json.dumps(result, indent=1, sort_keys=True) + "\n").encode())
+    print(json.dumps(result, indent=1, sort_keys=True), flush=True)
+    return 0 if result["passed"] else 3
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pairs", type=int, default=4)
     parser.add_argument("--threads", type=int, default=2)
     parser.add_argument("--seed", type=int, default=20260911)
     parser.add_argument("--out", type=Path, default=score.STORE / "SCREEN.json")
+    parser.add_argument(
+        "--forward-model-control",
+        type=Path,
+        default=None,
+        help=(
+            "instead of screening, ask the falsifier that makes every renderer row on this "
+            "arm mean something: does re-rendering move 44's OWN tokens through move 44's "
+            "OWN renderer reproduce the frames the shipped receiver actually decoded, byte "
+            "for byte? Pass move 44's retained public 0.raw."
+        ),
+    )
     args = parser.parse_args(argv)
+    if args.forward_model_control is not None:
+        return forward_model_control(args)
 
     import torch
 
