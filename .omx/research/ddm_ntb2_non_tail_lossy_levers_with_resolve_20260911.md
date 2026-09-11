@@ -5,10 +5,10 @@
 **STATE (Opus continuation, 2026-09-11 09:35).** The landed RLC1 encoder reproduction is COMPLETE
 and byte-identical. **Lever 2, the renderer precision cuts, is COMPLETE and closes NEGATIVE on every
 door** — with the first PoseNet measurement any renderer depth cell has ever received, on any object.
-**Lever 1, the structural HPAC prunings, is STILL ENCODING** (four detached processes that survived
-the codex arm's death; ETA about 11:15). No composition exists yet, therefore no seal and no
-candidate. No frontier move, no Modal dispatch, and no score claim. This file is a crash-resumable
-record.
+**Lever 1, the structural HPAC prunings, HAS A WINNER**: `frame_even` at a joint −245 B, output-lossless,
+projected S 0.1370817687278253. Its cold public parse-back is running; until that returns
+byte-identical raw there is no seal. No frontier move, no Modal dispatch, and no score claim. This
+file is a crash-resumable record.
 
 Also fixed here: the "re-solve blocked pending a clarification" state the codex arm left. It is
 resolved in §Renderer, by ordering rather than by asking — and the resolution is that no token was
@@ -284,6 +284,37 @@ So no re-solve of any strength flips any row's sign, and the token plane never h
 The tokens on this arm are byte-identical to move 44's throughout.
 
 ### Verdict scope
+## The candidate — built, staged, and parsing back
+
+**Candidate `ntb2_frame_even`: 180,161 B, sha
+`432e8f09853a907665d87d44f3ed5eda6c4eebc5783ac23e5452d486371d4db6`, joint −245 B against move 44,
+ΔS −1.63135443514932e-04, projected S 0.1370817687278253 at unchanged distortion.**
+
+Composition is a one-element composition: `frame_even` is the only treatment that nets negative, so
+there is nothing to compose it WITH and no union to measure. Its twin encodes already agree.
+
+**The receiver is UNCHANGED, and that is measured, not asserted.** `inflate.py` carries
+`ARCHIVE_SHA256` / `ARCHIVE_BYTES` as a self-check on the artifact it was promoted with, so a new
+archive cannot decode until they name it — the first parse-back attempt died on exactly that
+(`archive.zip does not match the promoted F26 artifact`). Rewriting those two assignments is not a
+receiver change by the campaign's own definition: `tac.decode_wall_clock.measure_receiver_digest`
+"normaliz[es] only the values of explicit archive pin assignments". `ddm_ntb2_public.stage_runtime`
+therefore rewrites the pin and then REFUSES unless the staged tree's receiver digest equals move
+44's — **MEASURED equal** (`9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890`). So
+the seal is a NORMAL seal inheriting move 44's `t4_direct` decode wall clock; no first measurement
+is owed. Decode-time risk against the strict 27.6 s T4 slack is one-sided in our favour: the model
+section is 603 B SMALLER and the coder's work per symbol is unchanged.
+
+**In flight at the end of this unit:**
+
+| job | launch dir | done receipt | what it settles |
+|---|---|---|---|
+| cold n600 public parse-back of the candidate | `launch_public_fe4` | `ntb2_public_frame_even` | the real `inflate.sh` decodes it, and the raw is byte-identical to move 44's retained `0.raw` — which for a prior-only change IS the d_seg/d_pose proof |
+| `frame_quad` encode | `launch_frame_quad` | `ntb2_frame_quad` | where the coarsening trade turns: step 2 bought −603 HPAC B for +358 tail B, and the step is that trade's free parameter |
+
+Nothing is sealed and nothing is claimed until the parse-back's `raw_byte_identical_to_move44` is
+true. If it is false, the candidate is dead and every byte stays retained.
+
 ## What this arm establishes for the campaign
 
 The non-tail census ntb1 measured is 60,497 B: ZIP 100 / RX1M 14 / HPAC 11,911 / renderer 29,862 /
