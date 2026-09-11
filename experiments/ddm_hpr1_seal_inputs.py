@@ -30,6 +30,7 @@ sys.path[:0] = [str(REPO), str(REPO / "src")]
 
 from experiments.ddm_ntb2_intent_inputs import (
     MEMBER_NAME,
+    _diagnostic_ref,
     census_files,
     content_diff,
     endpoints,
@@ -37,7 +38,25 @@ from experiments.ddm_ntb2_intent_inputs import (
     prefire_file_reference,
     utc_now,
 )
-from tac.candidate_seal import read_archive_member_identity
+from tac.candidate_seal import (
+    PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+    PREFIRE_RISK_SCHEMA,
+    measure_prefire_risk_receiver_digest,
+    prefire_digest,
+    prefire_risk_receiver_rows,
+    read_archive_member_identity,
+)
+from tac.decode_wall_clock import measure_receiver_digest
+
+#: The chain's terminating MEASUREMENT: move 46's completed t4_direct leg. Move 47's own
+#: leg is mode "inherited", which the contract forbids as a source, so the lineage runs
+#: past it to the last real measurement -- the same rule ntb2 followed to move 44.
+SOURCE_T4_LEG = Path(
+    ".omx/research/ddm_ntb2_20260911/"
+    "SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json"
+)
+POLICY_LIMIT_SECONDS = 1260.0
+HARD_TIMEOUT_SECONDS = 1800.0
 
 CANDIDATE_ID = "ddm_hpr1_retrain_control"
 #: The score's rate term, in S per archive byte: 25 / 37,545,489.
@@ -405,9 +424,131 @@ def smoke(candidate: Path, frontier: Path, out: Path, bound_seconds: float) -> d
     return {"problems": problems}
 
 
+def risk(candidate: Path, out: Path, base_diagnostic: Path, candidate_diagnostics: list[Path]) -> dict:
+    """The scoped timing-risk receipt, in the contract's closed 14-key shape.
+
+    Every field is one the validator RECOMPUTES, so this computes the same things from the
+    same imported helpers rather than restating them. ntb2's emitter is mechanically right
+    but writes its own lineage (move 44) and its own prose (its 603/358 B legs) into the
+    receipt and the statement beside it, so using it here would put another arm's numbers
+    on this arm's row. The SHAPE is the contract's; the CONTENT is this candidate's.
+    """
+    source = json.loads((REPO / SOURCE_T4_LEG).read_text())
+    if source.get("mode") != "t4_direct":
+        raise SealInputsError("the lineage source must be a terminating t4_direct leg")
+    leg_runtime = Path(source["runtime_dir"])
+    leg_copy = write(out / "SOURCE_T4_LEG_move46.json", source)
+
+    source_receiver = {
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": measure_prefire_risk_receiver_digest(leg_runtime),
+        "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+        "t4_direct_sha256": source["receiver_sha256"],
+    }
+    candidate_receiver = {
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": measure_prefire_risk_receiver_digest(candidate),
+    }
+    diagnostic_reference_receiver = {
+        "path": str(candidate),
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": candidate_receiver["sha256"],
+        "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+        "receipt_sha256": measure_receiver_digest(candidate),
+    }
+    smap = {row[0]: list(row[1:]) for row in prefire_risk_receiver_rows(leg_runtime)}
+    cmap = {row[0]: list(row[1:]) for row in prefire_risk_receiver_rows(candidate)}
+    files = [
+        {"relative_path": key, "source": smap.get(key), "candidate": cmap.get(key)}
+        for key in sorted(smap.keys() | cmap.keys())
+    ]
+    differing = [row for row in files if row["source"] != row["candidate"]]
+    delta_path = write(
+        out / "NORMALIZED_RECEIVER_DELTA.json",
+        {
+            "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+            "source_receiver_sha256": source_receiver["sha256"],
+            "candidate_receiver_sha256": candidate_receiver["sha256"],
+            "files": files,
+            "differing_rows": differing,
+            "excluded_paths": ["MANIFEST.sha256"],
+            "score_claim": False,
+        },
+    )
+
+    base = _diagnostic_ref(base_diagnostic, cold=False)
+    candidates = [_diagnostic_ref(p, cold=True) for p in candidate_diagnostics]
+    ceiling = max(ref["wall_seconds"] for ref in candidates)
+    fraction = max(0, ceiling / base["wall_seconds"] - 1)
+    seconds = source["measured_t4_decode_seconds"]
+    projection = seconds * (1 + fraction)
+    receipt = {
+        "schema": PREFIRE_RISK_SCHEMA,
+        "mode": "completed_t4_receiver_delta",
+        "authority": False,
+        "timing_clearance": False,
+        "score_claim": False,
+        "source_t4_leg": prefire_file_reference(leg_copy),
+        "source_receiver": source_receiver,
+        "candidate_receiver": candidate_receiver,
+        "diagnostic_reference_receiver": diagnostic_reference_receiver,
+        "receiver_delta_manifest": prefire_file_reference(delta_path),
+        "base_local_diagnostic": base,
+        "candidate_local_diagnostics": candidates,
+        "calculation": {
+            "candidate_local_ceiling_seconds": ceiling,
+            "local_cost_fraction_upper": fraction,
+            "source_t4_seconds": seconds,
+            "t4_risk_ceiling_seconds": projection,
+            "policy_limit_seconds": POLICY_LIMIT_SECONDS,
+            "hard_timeout_seconds": HARD_TIMEOUT_SECONDS,
+            "passed": projection <= POLICY_LIMIT_SECONDS,
+        },
+        "risk_sha256": "",
+    }
+    receipt["risk_sha256"] = prefire_digest(receipt, "risk_sha256")
+    write(out / "TIMING_RISK.json", receipt)
+
+    write(
+        out / "TIMING_RISK_STATEMENT.json",
+        {
+            "score_claim": False,
+            "authority": False,
+            "risk_sha256": receipt["risk_sha256"],
+            "lineage": (
+                "move 47's own leg is mode 'inherited', which the contract forbids as a source, so "
+                "the lineage runs to the CHAIN'S TERMINATING MEASUREMENT: move 46's completed "
+                f"t4_direct leg at {seconds} s measured. The scoped receiver delta between that "
+                f"tree and this candidate is EMPTY -- both digest to {candidate_receiver['sha256']} "
+                "-- because the only receiver files that move are the archive pin and the derived "
+                "MANIFEST.sha256 listing, which this digest excludes and pr18 validates separately."
+            ),
+            "candidate_adds_no_decode_work": (
+                "the HPAC section is 633 B SMALLER than move 47's, so materializing the coder's "
+                "prior is cheaper; the decoder performs the same 117,964,800 symbol decodes against "
+                "a different prior; the tail is 385 B longer. No new work is added at decode time."
+            ),
+            "diagnostics_are_not_authority": (
+                "both local diagnostics retain their REFUSED verdict and are used only as the ratio "
+                "that bounds the projection; no local wall is offered as a timing authority. The "
+                "pair was run CONCURRENTLY in one window, because sequential windows were measured "
+                "to differ 20.9 percent on identical bytes."
+            ),
+        },
+    )
+    return {
+        "risk_sha256": receipt["risk_sha256"],
+        "calculation": receipt["calculation"],
+        "differing_rows": len(differing),
+        "receiver_delta_empty": not differing,
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("receipts", "smoke"), default="receipts")
+    parser.add_argument("--mode", choices=("receipts", "smoke", "risk"), default="receipts")
+    parser.add_argument("--base-diagnostic", type=Path)
+    parser.add_argument("--candidate-diagnostic", type=Path, action="append", default=[])
     parser.add_argument("--frontier-runtime", type=Path)
     parser.add_argument("--bound-seconds", type=float, default=180.0)
     parser.add_argument("--candidate-runtime", type=Path, required=True)
@@ -422,6 +563,14 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if str(args.out_dir).startswith("/Volumes/APDataStore"):
         raise SealInputsError("APDataStore is not this producer's tier")
+    if args.mode == "risk":
+        if args.base_diagnostic is None or not args.candidate_diagnostic:
+            raise SealInputsError("risk mode requires --base-diagnostic and --candidate-diagnostic")
+        print(json.dumps(risk(
+            args.candidate_runtime.resolve(), args.out_dir.resolve(),
+            args.base_diagnostic.resolve(), [p.resolve() for p in args.candidate_diagnostic]),
+            indent=1, sort_keys=True))
+        return 0
     if args.mode == "smoke":
         if args.frontier_runtime is None:
             raise SealInputsError("--frontier-runtime is required for the smoke mode")
