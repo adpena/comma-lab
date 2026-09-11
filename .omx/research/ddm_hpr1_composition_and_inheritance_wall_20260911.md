@@ -132,7 +132,60 @@ argmax-correct rate is **0.99802843** — a calibration error of **−1.21e-06**
 to six decimal places on the refit prior. Recalibrating it costs **51× more** than it cost on the old
 prior, which is what "already calibrated, and now more so" looks like. **Closed.**
 
-## 4. One storage decision, certified not silent
+## 4. The first-measurement intent — BUILT to the last step, then BLOCKED by pr19's own landing
+
+MAIN chose resolution (2): fire the composition as a first-measurement row. Everything that path needs
+is built, committed and validated **except the intent document itself**, which two blockers stop — both
+created by `pr19` landing (`a9fd12704`, 17:00) while this arm was assembling the intent.
+
+**Blocker 1 — the frozen contract's amendment in force predates pr19's code.** Emission refuses with:
+
+```
+PREFIRE_CONTRACT_DRIFT_REFUSED: live file differs from committed blob:
+/Users/adpena/Projects/pact/src/tac/candidate_seal.py
+```
+
+The amendment in force is `79a50df080a6b67bcc6d0bc63b63d237fd4ac6f8`. Of its 15 implementation rows,
+**two now drift**, and `a9fd12704` is the only commit that touched either since:
+
+| path | contract / owner blob | LIVE |
+|---|---|---|
+| `src/tac/candidate_seal.py` | `707b520757…` | `d47fed27d6…` |
+| `src/tac/decode_wall_clock.py` | `ce1f8c7b48…` | `e8040dfa2d…` |
+
+MAIN's note said pr19 "will HOLD its frozen-file append until move 48 completes, so your intent will
+not be invalidated mid-flight." **The hold protects an intent already EMITTED; it does not let a new
+one be emitted.** `_pf_blob` compares the LIVE file against the owner commit, so with pr19's code
+landed and its append held, no new intent can be created at all. That ordering is MAIN's to sequence.
+
+**Blocker 2 — and this one matters more: my risk receipt is in the mode pr19 just superseded.**
+`TIMING_RISK.json` is `mode: completed_t4_receiver_delta`, projecting
+`source_t4_seconds × (1 + local_cost_fraction_upper)` with **fraction 0**. pr19 landed
+`PREFIRE_RISK_IDENTITY_CLASS_MODE = "measured_t4_identity_class_envelope"`, in which the ceiling is the
+**MAX of real T4 decodes of the candidate's identity class** and the local ratio is re-aimed as a
+**hard-timeout stress test against 1800 s** — precisely because, in pr19's own words, *"fraction 0
+would deny a real unattributed +28.4 % token-stage delta"* and the local instrument *"spreads 2.83×
+across cold n600 windows of ONE class."*
+
+**My matched pair is exactly the shape pr19 rejects.** Base 1,376.139 s, candidate 1,284.923 s — the
+candidate measured FASTER, so the fraction clamped to 0 and the projection collapsed to the source's
+own 1,140.805 s. Under the old rule that passes; under pr19's it is the disallowed case. **So I did
+not emit an intent on it, and would not have even if the blob check had passed.** A row whose timing
+argument the project adjudicated unsound an hour earlier is not a row.
+
+**What the new mode needs, and what exists.** `identity_class_legs` wants real T4 decodes of the class
+(same receiver, same decoded token plane, candidate dominated on coded bits and archive bytes). This
+candidate IS dominated — 179,111 B < 179,359 (move 47) < 180,001 (move 46), stream 118,896 <
+120,107 — the receiver digest is `9f6e7168…` across all of them, and the decoded plane is the one raw
+`2b762eba…`. But **only ONE real T4 decode leg exists for the class**: move 46's t4_direct at
+1,140.805 s. Move 47's T4 receipt carries score, archive and runtime pins and **no decode-timing
+field**, so it is not a second leg. Whether one leg constitutes an envelope is pr19's call, not mine.
+
+**Built, committed and holding:** 18 receipts under `.omx/research/ddm_hpr1_20260911/v2/` in one path
+case, smokes `[]`, receiver delta EMPTY (0 rows), candidate parse-back byte-identical, matched
+concurrent diagnostic pair retained. The intent is one command away from whichever shape pr19 settles.
+
+## 5. One storage decision, certified not silent
 
 The 40 GiB Vertigo reserve fired on the q-collection launch. **I did not lower it.** Instead I
 certified and reclaimed ONE payload: move 47's own cold-decode raw, which was a byte-for-byte
