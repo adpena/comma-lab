@@ -1542,3 +1542,20 @@ and, before all of them, the discovery that an inherited timing leg cannot be in
 by a matched concurrent pair after two sequential windows disagreed by 20.9 % on identical bytes; the arm did not choose the
 friendlier base. What the move leaves behind: a measured leg every successor can inherit on the normal path, and hpr1's retrained
 control (−887 B, receiver unchanged) already staged to be move 47 by that path.
+
+## Addendum 46 (MAIN, 2026-09-11 ~20:50Z) — pointer move 47: the refit lands, and the day's three moves are one lesson told three ways
+
+Move 47 is S 0.13654774984742127 at 179,359 B [contest-CUDA T4 n600] (commit 40518b844), −4.2748e-4 against move 46, with the
+realized score equal to the projection to the last digit and the same raw as moves 45 and 46. hpr1's retrained HPAC prior, sixty
+epochs in the shipped geometry warm-started from the shipped weights, grows the model by 351 B and shrinks the tail it conditions by
+1,238 B; it inherited move 46's measured T4 leg on the normal path, which is what move 46's first-measurement chain was for. The day
+under the GO closes at three pointer moves, −6.97e-4 in total (0.13724490 → 0.13654775), every one rate-only with distortion
+untouched, and every one the same finding in a different section: pc3 found a clipped predictor fit (ten of twelve biases at the
+clamp), ntb2 found a prior whose values were mis-rounded for the coder, hpr1 found a prior fit to a field that had moved thirteen
+moves earlier. None was a new mechanism. Each was an object the campaign had stopped looking at because its family had a closure
+memo, and each was found by an arm told to price something else. The demand re-derived at this move is −24,852 B at held
+distortion; three moves bought 1,047 B of it. Four families closed at formulation scope on the same day (obx2 design A, rbf1, gpp1,
+mxo3), the pose corner closed at n600 (pc3), the store's recall says no door on the books reaches the demand, and the storage tiers
+were restored by exercised certificates. Standing question carried into tomorrow, unchanged in kind but sharper in number: the
+coded-token object's remaining rate lives in objects fit to older states of itself. The next arm audits every counted section for
+staleness against the current field before pricing anything structural.
