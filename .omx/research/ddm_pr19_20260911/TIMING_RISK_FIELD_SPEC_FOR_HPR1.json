@@ -1,0 +1,168 @@
+{
+ "schema": "ddm_pr19_timing_risk_field_spec.v1",
+ "for": "hpr1's move-48 TIMING_RISK evidence object (intent evidence key 'timing_risk')",
+ "mode": "measured_t4_identity_class_envelope",
+ "definition": "tac.candidate_seal.validate_prefire_risk.identity_class_envelope.v1",
+ "validator": "tac.candidate_seal.validate_prefire_risk (dispatches on 'mode')",
+ "frozen_last_row_sha256": "d9553f662a04428f630a090c06e24267c08aeefc85afceb4d3b4d11f1ea47e7f",
+ "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+ "exact_top_level_key_set": [
+  "authority",
+  "base_local_diagnostic",
+  "calculation",
+  "candidate_local_diagnostics",
+  "candidate_receiver",
+  "candidate_work_facts",
+  "definition",
+  "diagnostic_reference_receiver",
+  "identity_class_legs",
+  "mode",
+  "receiver_delta_manifest",
+  "risk_sha256",
+  "schema",
+  "score_claim",
+  "source_receiver",
+  "source_t4_leg",
+  "timing_clearance"
+ ],
+ "fields": {
+  "schema": "candidate_prefire_timing_risk.v1 (unchanged)",
+  "mode": "measured_t4_identity_class_envelope",
+  "definition": "tac.candidate_seal.validate_prefire_risk.identity_class_envelope.v1",
+  "authority / timing_clearance / score_claim": "all literal false",
+  "risk_sha256": "prefire_digest(risk, 'risk_sha256')",
+  "identity_class_legs": {
+   "what": "list of file references (path/bytes/sha256) to COMPLETED t4_direct legs; >=1, no duplicate paths",
+   "each leg must": [
+    "validate through validate_decode_wall_clock on its own runtime_dir/archive_path",
+    "share the candidate's prefire risk receiver digest",
+    "report the candidate's decoded_token_sha256 in its T4 cold report",
+    "carry measured_t4_decode_seconds <= 1260.0"
+   ],
+   "use for move 48": [
+    {
+     "move": 44,
+     "path": "<repo>/.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json",
+     "archive_sha256_prefix": "04758c0dfb8d",
+     "measured_t4_decode_seconds": 1232.418725255
+    },
+    {
+     "move": 46,
+     "path": "<repo>/.omx/research/ddm_ntb2_20260911/SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json",
+     "archive_sha256_prefix": "a0de607df2ff",
+     "measured_t4_decode_seconds": 1140.8051148040001
+    }
+   ]
+  },
+  "source_t4_leg": {
+   "what": "the DOMINATING leg's file reference; must be one of identity_class_legs by exact reference equality",
+   "for move 48": "move 46's leg (960,913 bits >= 951,228 and 180,001 B >= 179,111 B); move 44's leg also dominates and may be used instead"
+  },
+  "candidate_work_facts": {
+   "what": "exactly the five facts re-derived from the candidate's OWN cold n600 report (the log pinned by evidence.raw_identity_n600.candidate_public_stdout)",
+   "keys": [
+    "archive_sha256",
+    "archive_bytes",
+    "raw_sha256",
+    "decoded_token_sha256",
+    "decoder_bit_position"
+   ],
+   "measured for move 48": {
+    "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+    "archive_bytes": 179111,
+    "raw_sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc",
+    "decoded_token_sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8",
+    "decoder_bit_position": 951228
+   },
+   "gate re-derives": "the report must name the candidate archive (sha + bytes) and the retained candidate raw sha"
+  },
+  "source_receiver": {
+   "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+   "sha256": "measure_prefire_risk_receiver_digest(dominating leg runtime_dir)",
+   "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+   "t4_direct_sha256": "the dominating leg's own receiver_sha256"
+  },
+  "candidate_receiver": {
+   "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+   "sha256": "measure_prefire_risk_receiver_digest(candidate runtime) = 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+  },
+  "diagnostic_reference_receiver": {
+   "path": "the tree the candidate diagnostics ran on",
+   "sha256": "must equal the candidate receiver digest",
+   "receipt_sha256": "measure_receiver_digest(that tree) (legacy digest)"
+  },
+  "receiver_delta_manifest": {
+   "what": "file ref to the COMPLETE normalized delta between the dominating leg's runtime and the candidate runtime",
+   "must": "carry every relative_path with source == candidate (ZERO differing rows) and both endpoint digests equal to the candidate receiver digest",
+   "measured for move 48": "49 rows, 0 differing"
+  },
+  "base_local_diagnostic": {
+   "what": "file ref + {wall_seconds, authority: false} to a cold n600 local receipt",
+   "receipt must carry": [
+    "wall_seconds (matching the ref)",
+    "runtime_dir whose risk digest equals the candidate's",
+    "archive_sha256 that is a declared class archive OR the pointer archive at intent",
+    "cold_start true, checkpoint_resume false, frames == list(range(600))",
+    "score_claim false"
+   ],
+   "for move 48": {
+    "tree": "ddm_hpr1/public/retrain_control/candidate_runtime",
+    "wall_seconds": 819.6933833750081
+   }
+  },
+  "candidate_local_diagnostics": {
+   "what": "list (>=1) of the same shape, plus cold: true and n_samples: 600",
+   "extra requirement": "receipt archive_sha256 == the candidate archive sha",
+   "for move 48": {
+    "tree": "ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+    "wall_seconds": 982.7723198329913
+   }
+  },
+  "calculation": {
+   "keys": [
+    "class_max_t4_seconds",
+    "dominating_leg_t4_seconds",
+    "hard_timeout_seconds",
+    "hard_timeout_stress_seconds",
+    "local_cost_fraction_observed",
+    "local_ratio_role",
+    "passed",
+    "policy_limit_seconds",
+    "t4_risk_ceiling_seconds"
+   ],
+   "arithmetic": {
+    "t4_risk_ceiling_seconds": "max(measured_t4_decode_seconds over identity_class_legs)",
+    "local_cost_fraction_observed": "max(0.0, max(candidate diagnostic wall) / base diagnostic wall - 1)",
+    "hard_timeout_stress_seconds": "t4_risk_ceiling_seconds * (1 + local_cost_fraction_observed)",
+    "local_ratio_role": "hard_timeout_stress_test",
+    "policy_limit_seconds": 1260.0,
+    "hard_timeout_seconds": 1800.0,
+    "passed": true
+   },
+   "pass conditions": [
+    "t4_risk_ceiling_seconds <= 1260.0",
+    "hard_timeout_stress_seconds <= 1800.0"
+   ],
+   "measured for move 48": {
+    "class_max_t4_seconds": 1232.418725255,
+    "dominating_leg_t4_seconds": 1140.8051148040001,
+    "local_cost_fraction_observed": 0.1989511441296763,
+    "local_ratio_role": "hard_timeout_stress_test",
+    "t4_risk_ceiling_seconds": 1232.418725255,
+    "hard_timeout_stress_seconds": 1477.6098406913195,
+    "policy_limit_seconds": 1260.0,
+    "hard_timeout_seconds": 1800.0,
+    "passed": true
+   }
+  }
+ },
+ "dry_run": {
+  "entry_point": "tac.candidate_seal.validate_prefire_risk",
+  "result": "ACCEPTED",
+  "risk_sha256": "d0e9ca237000d001137c63602cefde36abc60ebc47b07d31c3c761277b6750f8",
+  "note": "the wrapper receipts under dry_move48/ are a ddm_pr19 rehearsal built from the arm's retained measurements; hpr1 emits its own diagnostic receipts and delta manifest \u2014 the gate re-derives the delta from the two trees, so only the CONTENT must match."
+ },
+ "score_claim": false,
+ "authority": false,
+ "timing_clearance": false
+}

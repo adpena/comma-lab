@@ -1,0 +1,84 @@
+{
+ "schema": "candidate_prefire_timing_risk.v1",
+ "mode": "measured_t4_identity_class_envelope",
+ "authority": false,
+ "timing_clearance": false,
+ "definition": "tac.candidate_seal.validate_prefire_risk.identity_class_envelope.v1",
+ "source_t4_leg": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json",
+  "bytes": 4741,
+  "sha256": "686d845f442e65621cf46eb14023c6a5ac4f606bc9de5df01dbc89e8f139e9d6"
+ },
+ "identity_class_legs": [
+  {
+   "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json",
+   "bytes": 4733,
+   "sha256": "c708f817cacfa6f180a85560dfb77d01b5bb10e784d8eb6e816a6dbb5c17b191"
+  },
+  {
+   "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json",
+   "bytes": 4741,
+   "sha256": "686d845f442e65621cf46eb14023c6a5ac4f606bc9de5df01dbc89e8f139e9d6"
+  }
+ ],
+ "candidate_work_facts": {
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "archive_bytes": 179111,
+  "raw_sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc",
+  "decoded_token_sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8",
+  "decoder_bit_position": 951228
+ },
+ "source_receiver": {
+  "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+  "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+  "t4_direct_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df"
+ },
+ "candidate_receiver": {
+  "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+  "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+ },
+ "diagnostic_reference_receiver": {
+  "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+  "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+  "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+  "receipt_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf"
+ },
+ "receiver_delta_manifest": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/dry_move48/RECEIVER_DELTA_MANIFEST.json",
+  "bytes": 13249,
+  "sha256": "4e1c459050e4453faf77f604a82709e1ef8dac71efb2ccf77169244849aaf41f"
+ },
+ "base_local_diagnostic": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/dry_move48/BASE_LOCAL_DIAGNOSTIC.json",
+  "bytes": 4547,
+  "sha256": "b0510efa5671d140f3ed1a07f091061ef3f6072e1aea4c832cb75c6e17590bd5",
+  "wall_seconds": 819.6933833750081,
+  "authority": false
+ },
+ "candidate_local_diagnostics": [
+  {
+   "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/dry_move48/CANDIDATE_LOCAL_DIAGNOSTIC.json",
+   "bytes": 4550,
+   "sha256": "75bdba9b1028326a17ebf1e5f8c5a3c87b5d72bd4bd93ae7de762eb836738c8e",
+   "wall_seconds": 982.7723198329913,
+   "authority": false,
+   "cold": true,
+   "n_samples": 600
+  }
+ ],
+ "score_claim": false,
+ "calculation": {
+  "class_max_t4_seconds": 1232.418725255,
+  "dominating_leg_t4_seconds": 1140.8051148040001,
+  "local_cost_fraction_observed": 0.1989511441296763,
+  "local_ratio_role": "hard_timeout_stress_test",
+  "t4_risk_ceiling_seconds": 1232.418725255,
+  "hard_timeout_stress_seconds": 1477.6098406913195,
+  "policy_limit_seconds": 1260.0,
+  "hard_timeout_seconds": 1800.0,
+  "passed": true
+ },
+ "risk_sha256": "d0e9ca237000d001137c63602cefde36abc60ebc47b07d31c3c761277b6750f8"
+}
