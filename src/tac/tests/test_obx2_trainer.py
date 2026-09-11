@@ -284,3 +284,45 @@ def test_resume_restores_the_ema_shadow_onto_the_module_device(tmp_path: Path) -
             assert shadow.device == live[name].device, name
     # the invariant the bug broke: one update after a resume must not raise
     fresh_ema.update(fresh)
+
+
+def test_seg_error_locality_separates_boundary_jitter_from_a_region_error() -> None:
+    target = np.zeros((40, 40), dtype=np.uint8)
+    target[:, 20:] = 1
+    # one wrong pixel ON the class boundary
+    jitter = target.copy()
+    jitter[10, 19] = 1
+    histogram = tr.seg_error_distance_histogram(jitter, target)
+    assert histogram[0] == 1
+    assert sum(v for k, v in histogram.items() if k > 0) == 0
+    # a wrong block deep inside one region
+    region = target.copy()
+    region[2:8, 2:8] = 1
+    histogram = tr.seg_error_distance_histogram(region, target)
+    assert histogram[0] == 0
+    assert histogram[tr.SEG_LOCALITY_MAX_DISTANCE + 1] > 0
+    summary = tr.summarize_locality(histogram, sum(histogram.values()))
+    assert summary["boundary_local_fraction_within_1_cell"] == 0.0
+    assert summary["region_level_fraction_beyond_4_cells"] > 0.0
+
+
+def test_seg_error_locality_totals_match_the_error_count_or_refuse() -> None:
+    target = np.zeros((16, 16), dtype=np.uint8)
+    target[:, 8:] = 2
+    got = target.copy()
+    got[0, 0] = 1
+    got[5, 7] = 2
+    histogram = tr.seg_error_distance_histogram(got, target)
+    assert sum(histogram.values()) == int((got != target).sum())
+    summary = tr.summarize_locality(histogram, sum(histogram.values()))
+    assert summary["total_seg_errors"] == sum(histogram.values())
+    assert sum(summary["fractions_by_distance"].values()) == pytest.approx(1.0)
+    with pytest.raises(tr.OBX2TrainerError):
+        tr.summarize_locality(histogram, sum(histogram.values()) + 1)
+
+
+def test_seg_error_locality_refuses_a_shape_mismatch() -> None:
+    with pytest.raises(tr.OBX2TrainerError):
+        tr.seg_error_distance_histogram(np.zeros((4, 4), np.uint8), np.zeros((4, 5), np.uint8))
+    with pytest.raises(tr.OBX2TrainerError):
+        tr.seg_error_distance_histogram(np.zeros((2, 4, 4), np.uint8), np.zeros((2, 4, 4), np.uint8))

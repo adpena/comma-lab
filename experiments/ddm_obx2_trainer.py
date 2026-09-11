@@ -645,6 +645,66 @@ def pair_order(seed: int, epoch: int) -> list[int]:
     return order.tolist()
 
 
+SEG_LOCALITY_MAX_DISTANCE = 4
+
+
+def seg_error_distance_histogram(argmax: np.ndarray, target: np.ndarray) -> dict[int, int]:
+    """Misclassified pixels binned by their distance to a GT argmax boundary.
+
+    The cure for a seg leg depends on where the error lives.  Error at distance 0
+    or 1 is boundary jitter: the partition is right and its edge is a cell off.
+    Error further in is region-level: a whole area is the wrong class, which no
+    edge-local mechanism reaches.  Distance is the four-neighbour chessboard
+    hop-count to the nearest GT class change, capped, with everything beyond the
+    cap collected in one `SEG_LOCALITY_MAX_DISTANCE + 1` bin.
+    """
+
+    if argmax.shape != target.shape or argmax.ndim != 2:
+        raise OBX2TrainerError("seg locality needs one pair's 2-D argmax and target")
+    boundary = np.zeros(target.shape, dtype=bool)
+    boundary[1:] |= target[1:] != target[:-1]
+    boundary[:-1] |= target[1:] != target[:-1]
+    boundary[:, 1:] |= target[:, 1:] != target[:, :-1]
+    boundary[:, :-1] |= target[:, 1:] != target[:, :-1]
+    wrong = argmax != target
+    histogram: dict[int, int] = {}
+    reached = boundary.copy()
+    remaining = wrong & ~reached
+    histogram[0] = int((wrong & reached).sum())
+    for distance in range(1, SEG_LOCALITY_MAX_DISTANCE + 1):
+        grown = reached.copy()
+        grown[1:] |= reached[:-1]
+        grown[:-1] |= reached[1:]
+        grown[:, 1:] |= reached[:, :-1]
+        grown[:, :-1] |= reached[:, 1:]
+        shell = grown & ~reached
+        histogram[distance] = int((remaining & shell).sum())
+        remaining = remaining & ~shell
+        reached = grown
+    histogram[SEG_LOCALITY_MAX_DISTANCE + 1] = int(remaining.sum())
+    return histogram
+
+
+def summarize_locality(histogram: Mapping[int, int], seg_errors: int) -> dict[str, Any]:
+    """Where the seg errors live, as counts and as fractions of all seg errors."""
+
+    total = sum(int(v) for v in histogram.values())
+    if seg_errors and total != seg_errors:
+        raise OBX2TrainerError(f"seg locality total {total} differs from the seg error count {seg_errors}")
+    fractions = {str(k): (int(v) / total if total else 0.0) for k, v in sorted(histogram.items())}
+    boundary_local = sum(int(v) for k, v in histogram.items() if int(k) <= 1)
+    return {
+        "counts_by_distance": {str(k): int(v) for k, v in sorted(histogram.items())},
+        "fractions_by_distance": fractions,
+        "boundary_local_fraction_within_1_cell": (boundary_local / total) if total else 0.0,
+        "region_level_fraction_beyond_4_cells": (
+            int(histogram.get(SEG_LOCALITY_MAX_DISTANCE + 1, 0)) / total if total else 0.0
+        ),
+        "distance_definition": "four-neighbour hop count to the nearest GT argmax class change",
+        "total_seg_errors": total,
+    }
+
+
 def score_parsed_object(
     packet: bytes,
     *,
@@ -656,6 +716,7 @@ def score_parsed_object(
     scorer_batch: int = 8,
     receiver: str = "torch",
     archive_bytes: bytes | None = None,
+    retain_root: Path | None = None,
 ) -> dict[str, Any]:
     """Authority advisory row: render the PARSED packet, score on the frozen CPU scorers.
 
@@ -676,6 +737,9 @@ def score_parsed_object(
     seg_pixels = 0
     pose_square = 0.0
     pose_values = 0
+    locality: dict[int, int] = {}
+    if retain_root is not None:
+        retain_root.mkdir(parents=True, exist_ok=True)
     started = time.time()
     render_seconds = 0.0
     for start in range(0, len(pair_ids), render_chunk):
@@ -702,6 +766,18 @@ def score_parsed_object(
             seg_pixels += int(target.size)
             pose_square += float(np.square(pose - np.asarray(pose_target[pairs], dtype=np.float64)).sum())
             pose_values += int(pose.size)
+            for offset_index in range(len(pairs)):
+                histogram = seg_error_distance_histogram(argmax[offset_index], target[offset_index])
+                for distance, count in histogram.items():
+                    locality[distance] = locality.get(distance, 0) + count
+            if retain_root is not None:
+                qbt1.atomic_npz(
+                    retain_root / f"scored_{pairs[0]:04d}_{pairs[-1]:04d}.npz",
+                    pair_ids_i64=np.asarray(pairs, dtype=np.int64),
+                    segnet_argmax_u8=argmax,
+                    posenet_pose6_f32=pose.astype("<f4"),
+                    target_argmax_u8=target,
+                )
     d_seg = seg_errors / seg_pixels
     d_pose = pose_square / pose_values
     distortion = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
@@ -727,6 +803,7 @@ def score_parsed_object(
         "advisory_score_at_scored_bytes": rate + distortion,
         "passes_distortion_gate": distortion < DISTORTION_GATE,
         "passes_byte_gate": scored_bytes <= PACKET_BYTE_GATE,
+        "seg_error_locality": summarize_locality(locality, seg_errors),
         "render_seconds": render_seconds,
         "total_seconds": time.time() - started,
     }
@@ -980,6 +1057,7 @@ def score_checkpoint(
     workers: int,
     validate_pairs: int,
     cross_check_pairs: int,
+    zero_lattice: bool = False,
 ) -> dict[str, Any]:
     """Byte-close an existing stage checkpoint and score the parsed object on n600.
 
@@ -1007,11 +1085,18 @@ def score_checkpoint(
     ema = EMA(module, decay=0.997)
     load_stage_checkpoint(checkpoint, module, optimizer, ema)
     shadow = ema_module(module, ema, spec, seed=seed)
+    if zero_lattice:
+        # The ablation that attributes the seg leg to its author: with the head
+        # zeroed the lattice emits exactly nothing, so whatever the object still
+        # achieves is the base generator's work, not the correction's.
+        with torch.no_grad():
+            shadow.lattice.out_w.zero_()
+            shadow.lattice.out_b.zero_()
     packet, accounting, archive = build_packet(shadow)
     repeat, _, repeat_archive = build_packet(shadow)
     if repeat != packet or repeat_archive != archive:
         raise OBX2TrainerError("checkpoint packet or archive encoder is nondeterministic")
-    stem = f"{checkpoint.parent.parent.name}_{checkpoint.stem}"
+    stem = f"{checkpoint.parent.parent.name}_{checkpoint.stem}" + ("_zerolattice" if zero_lattice else "")
     qbt1.atomic_bytes(output / "candidates" / f"{stem}.packet", packet)
     qbt1.atomic_bytes(output / "candidates" / f"{stem}.archive.zip", archive)
 
@@ -1025,6 +1110,7 @@ def score_checkpoint(
         workers=workers,
         receiver="torch",
         archive_bytes=archive,
+        retain_root=output / "scored" / stem,
     )
     cross_check = None
     if cross_check_pairs > 0:
@@ -1057,6 +1143,7 @@ def score_checkpoint(
         "promotable": False,
         "research_only": True,
         "checkpoint": {"path": str(checkpoint), "step": int(payload.get("step", 0)), "config": saved},
+        "zero_lattice_ablation": bool(zero_lattice),
         "packet_accounting": accounting,
         "validation": validation,
         "portable_receiver_cross_check": cross_check,
@@ -1128,6 +1215,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--gate-kind", type=int, default=DEFAULT_GATE_KIND, choices=(0, 1, 2))
     parser.add_argument("--archive", type=Path, default=None)
     parser.add_argument("--checkpoint", type=Path, default=None)
+    parser.add_argument(
+        "--zero-lattice",
+        action="store_true",
+        help="ablation: zero the lattice head so the row attributes the legs to the base generator",
+    )
     parser.add_argument("--receiver", default="torch", choices=("torch", "numpy"))
     parser.add_argument("--launch-authorized", action="store_true")
     return parser
@@ -1246,10 +1338,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             workers=args.workers,
             validate_pairs=args.validate_pairs,
             cross_check_pairs=args.cross_check_pairs,
+            zero_lattice=args.zero_lattice,
         )
         print(json.dumps({"stage": "score", "step": receipt["checkpoint"]["step"],
                           "packet_accounting": {k: receipt["packet_accounting"][k] for k in
                                                 ("packet_bytes", "archive_bytes", "archive_byte_headroom")},
+                          "zero_lattice_ablation": receipt["zero_lattice_ablation"],
                           "validation": receipt["validation"]}, indent=2))
         return 0
     if args.stage == "stage7":
