@@ -2,10 +2,17 @@
 
 `[no-triality] [p0-ledger-ok]` · research_only=true · score_claim=false.
 
-**IN PROGRESS.** The landed RLC1 encoder reproduction is COMPLETE. Structural HPAC
-prices, renderer precision/re-solve measurements, and composition are not complete.
-No frontier move, seal, public cold n600 render, scorer measurement, or Modal dispatch
-has been claimed. This file is a crash-resumable interim record, not a completion receipt.
+**STATE (Opus continuation, 2026-09-11 09:35).** The landed RLC1 encoder reproduction is COMPLETE
+and byte-identical. **Lever 2, the renderer precision cuts, is COMPLETE and closes NEGATIVE on every
+door** — with the first PoseNet measurement any renderer depth cell has ever received, on any object.
+**Lever 1, the structural HPAC prunings, is STILL ENCODING** (four detached processes that survived
+the codex arm's death; ETA about 11:15). No composition exists yet, therefore no seal and no
+candidate. No frontier move, no Modal dispatch, and no score claim. This file is a crash-resumable
+record.
+
+Also fixed here: the "re-solve blocked pending a clarification" state the codex arm left. It is
+resolved in §Renderer, by ordering rather than by asking — and the resolution is that no token was
+touched and none had to be.
 
 ## Encoder reproduction — MEASURED
 
@@ -233,20 +240,22 @@ move only 0.0014–0.043 grey levels, so the door had to be opened rather than a
 
 **SD1's objective was the semantic leg alone.** Its own record says so: `"pose_status":
 "NOT_MEASURED; full score unavailable"`. No renderer depth cell, on any object, had ever been
-measured against PoseNet before this arm. Measured here at a matched 100-pair prefix against this
-producer's own control (same pairs, same instrument):
+measured against PoseNet before this arm. Measured here at **full n600** against this producer's own
+control (same pairs, same instrument, same GT), receipt
+`renderer_score/N600_SUMMARY.json`:
 
-| Layer → 3-bit | ΔB | Δd_seg | seg leg | Δd_pose | pose leg at move 44's base | rate | **total** |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| blocks.1.film.weight | **+1** | +2.3905e-06 | +0.000239 | +5.0454e-06 | +0.003041 | +0.0000007 | **+0.003281 S** |
-| blocks.3.film.weight | **+15** | +6.6121e-07 | +0.000066 | +4.4089e-07 | +0.000318 | +0.0000100 | **+0.000394 S** |
+| Layer → 3-bit | ΔB | Δd_seg | seg leg | Δd_pose | pose leg at move 44's base | rate | **total** | with pose fully forgiven |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| blocks.1.film.weight | **+1** | +2.7805e-06 | +0.000278 | +8.9354e-06 | +0.004855 | +0.0000007 | **+0.005134 S** | +0.000279 S |
+| blocks.3.film.weight | **+15** | +8.9010e-07 | +0.000089 | +4.9322e-07 | +0.000355 | +0.0000100 | **+0.000454 S** | +0.000099 S |
 
-Both LOSE, both are pose-dominated (93% and 81% of the loss), and both also cost bytes on this
-object because mode-6 row-prune already keeps only 1% of the FiLM rows, so re-quantizing what is
-left buys nothing and the depth-table and scale overhead dominates. **The ancestor's four q3
-"winners" were winners of a seg-only objective; with pose measured they are not winners.** That,
-and not a sweep, is why the shipped depth table was never a score optimum — `blocks.0.film.weight`
-in particular was substituted into the shipped 3-bit set by a bytes argument after SD1 had
+Archive shas `28966cd0…` (180,407 B) and `14d6ac77…` (180,421 B). Both LOSE, both are
+pose-dominated (95 % and 78 % of the loss), and both also COST bytes on this object, because
+mode-6 row-prune already keeps only 1 % of the FiLM rows: re-quantizing what is left buys
+nothing and the depth-table and scale overhead dominates. **The ancestor's four q3 "winners"
+were winners of a seg-only objective; with pose measured they are not winners.** That, and not
+a sweep, is why the shipped depth table was never a score optimum — `blocks.0.film.weight` in
+particular was substituted into the shipped 3-bit set by a bytes argument after SD1 had already
 measured it at `semantic_leg_delta_s = +4.92e-05`, a loss.
 
 ### The re-solve, answered without running one
@@ -257,8 +266,8 @@ upper bound to every row:
 
 - `coord_mix` keeps a seg-leg floor of **+0.02438 S** against a 0.000938 S gain — 26x over, on seg
   alone, with pose fully forgiven.
-- `blocks.1.film` keeps **+0.000239 S** of seg plus its byte cost, against a gain of zero (it grows
-  the archive); `blocks.3.film` keeps **+0.000076 S**. Both stay net-positive.
+- `blocks.1.film` keeps **+0.000279 S** and `blocks.3.film` **+0.000099 S** at full n600, against a
+  rate gain of zero — both GROW the archive. Both stay net-positive.
 
 So no re-solve of any strength flips any row's sign, and the token plane never had to be touched.
 The tokens on this arm are byte-identical to move 44's throughout.
