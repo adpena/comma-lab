@@ -315,35 +315,49 @@ section is 603 B SMALLER and the coder's work per symbol is unchanged.
 Nothing is sealed and nothing is claimed until the parse-back's `raw_byte_identical_to_move44` is
 true. If it is false, the candidate is dead and every byte stays retained.
 
-## The seal's timing row — a refusal isolated to one cause, by control
+## The seal's timing row — and a CORRECTION I owe, because my first reading was on the wrong object
 
-MAIN warned that `--inherit-decode-wall-clock` would likely refuse this tree, and pc3 had measured
-a manifest row differing 49-of-50. On THIS tree the diagnosis is different and sharper, and it was
-obtained by controls rather than by a row count. This arm's tree has no `MANIFEST.sha256` at all.
+MAIN warned that `--inherit-decode-wall-clock` would refuse this tree because
+`measure_receiver_digest` hashes `MANIFEST.sha256` raw and that manifest lists `inflate.py`'s RAW
+hash, which moves with the archive pin. My first measurement appeared to contradict that: receiver
+digest EQUAL (`9f6e7168…`), t4 runtime digest DIFFERING. **That reading was wrong, and the reason is
+worth more than the reading was.**
 
-| digest | move 44 | candidate | equal |
-|---|---|---|---:|
-| `measure_receiver_digest` | `9f6e7168…` | `9f6e7168…` | **yes** |
-| `measure_t4_runtime_digest` (Modal upload projection) | `e3d23719…` | `8f02b95c…` | **no** |
+`ddm_ntb2`'s `control/source_runtime` — the tree every producer on this arm copies from, inherited
+from the codex arm — **does not contain `MANIFEST.sha256`**, while move 44's actually promoted tree
+(`ddm_rlc5_cure_on_move43/candidate_runtime`) does. So my "equal" was an equality between two trees
+that BOTH lack the file. Measured on the real promoted tree:
 
-`e3d23719…` is exactly the pointer's own `runtime_tree_sha256`, so the measurement is on the right
-object. Three controls, each a copy of move 44's tree with ONE thing changed:
+| digest | promoted tree (has MANIFEST.sha256) | ntb2's copy (lacks it) | pointer |
+|---|---|---|---|
+| `measure_receiver_digest` | `7e6da183…` | `9f6e7168…` | rlc5's receipts record `7e6da183…` |
+| `measure_t4_runtime_digest` | `e3d23719…` | `e3d23719…` | `runtime_tree_sha256 = e3d23719…` |
 
-1. **Path coupling — REFUTED.** The manifest's `runtime_root` row and the `files` rows'
-   `repo_relative_path` carry absolute paths, which made path coupling the obvious suspect. A
-   byte-identical copy of move 44's tree at a DIFFERENT absolute path digests to `e3d23719…`,
-   IDENTICAL. Those rows do not reach the digest. Hypothesis dropped.
-2. **Archive only — no effect.** The candidate's `archive.zip` in move 44's tree, pins untouched,
-   digests to `e3d23719…`, IDENTICAL. The archive is correctly excluded.
-3. **Pin only — ISOLATED.** The two `inflate.py` pin constants set to the candidate's, archive left
-   as move 44's, digests to `8f02b95c…` — which is the candidate's digest **exactly**.
+So `MANIFEST.sha256` is INSIDE the receiver digest and OUTSIDE the t4 runtime digest. **MAIN's row is
+real and my tree was simply not the shipped object.** Both digests move on the archive pin, by two
+different routes: the receiver digest through the manifest's listing of `inflate.py`, the t4 digest
+through `inflate.py`'s bytes directly.
 
-**So the refusal is about the archive pin and about nothing else this candidate touches.**
-`measure_receiver_digest` normalizes those two assignments and passes; `measure_t4_runtime_digest`
-does not and refuses. That is pr14's owed amendment, and this is a stronger statement of it than a
-row count: the same two-constant edit, applied to move 44's OWN archive, reproduces the candidate's
-digest byte for byte. Per MAIN, no contract code and no manifest was patched to get past it.
-Receipt: `.omx/research/ddm_ntb2_20260911/T4_RUNTIME_DIGEST_ISOLATION.json`.
+The controls below were run against ntb2's copy, so they still hold for what they claim — the t4
+digest's behaviour — and one of them is the reason the correction was findable at all:
+
+1. **Path coupling — REFUTED.** A byte-identical copy of the tree at a DIFFERENT absolute path
+   digests to `e3d23719…`, IDENTICAL, even though the manifest's `runtime_root` row and the `files`
+   rows' `repo_relative_path` do carry absolute paths. Those rows do not reach the digest.
+2. **Archive only — no effect.** The candidate's `archive.zip` with move 44's pins digests to
+   `e3d23719…`, IDENTICAL. The archive is correctly excluded.
+3. **Pin only — ISOLATED.** The two `inflate.py` pin constants alone, on move 44's own archive,
+   digest to `8f02b95c…` — the candidate's digest EXACTLY.
+
+So for the t4 row the cause is the pin and nothing else this candidate touches. Receipt:
+`.omx/research/ddm_ntb2_20260911/T4_RUNTIME_DIGEST_ISOLATION.json`.
+
+**What the correction costs and does not cost.** `MANIFEST.sha256` is a dependency listing; neither
+`inflate.sh` nor `inflate.py` reads it (grepped), so it is NOT load-bearing for the decode and the
+running cold parse-back and its raw-identity proof stand on their own. What it DOES mean is that the
+candidate runtime must be staged from the PROMOTED tree with the manifest regenerated before any
+seal, and that this arm's `stage_runtime` digest-equality assertion was comparing the wrong pair. It
+asserted something true of the object it held; it did not assert what I said it asserted.
 
 ## Tier pressure, and what it cost
 

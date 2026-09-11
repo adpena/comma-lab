@@ -1,4 +1,18 @@
 {
+ "CORRECTION_2026_09_11": {
+  "measured_on_ntb2_copy": {
+   "measure_receiver_digest": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+   "measure_t4_runtime_digest": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891"
+  },
+  "measured_on_the_promoted_tree": {
+   "measure_receiver_digest": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+   "measure_t4_runtime_digest": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891"
+  },
+  "not_load_bearing_for_decode": "neither inflate.sh nor inflate.py references MANIFEST.sha256 (grepped), so the running cold parse-back and its raw-identity proof are unaffected",
+  "owed": "stage the candidate runtime from the PROMOTED tree and regenerate MANIFEST.sha256 before any seal; ntb2's stage_runtime equality assertion compared the wrong pair",
+  "therefore": "MANIFEST.sha256 is INSIDE measure_receiver_digest and OUTSIDE measure_t4_runtime_digest. MAIN's warned row is real. Both digests move on the archive pin by different routes: the receiver digest through the manifest's listing of inflate.py (line 10), the t4 digest through inflate.py's bytes directly.",
+  "what_was_wrong": "the receiver-digest EQUALITY row above was measured between ntb2's control/source_runtime and a candidate staged from it, and NEITHER contains MANIFEST.sha256, which move 44's actually promoted tree (ddm_rlc5_cure_on_move43/candidate_runtime) does"
+ },
  "axis": "[macOS-CPU advisory; digest arithmetic, scorer-free]",
  "conclusion": "measure_receiver_digest normalizes the archive pins and passes; measure_t4_runtime_digest does not normalize them and refuses. The refusal is about the pin, not about anything this candidate changed in the receiver. This is pr14's owed amendment, isolated by a two-cell control rather than by a row count: the same two-constant edit applied to move 44's OWN archive reproduces the candidate's digest byte for byte.",
  "controls": [
