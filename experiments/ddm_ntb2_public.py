@@ -54,7 +54,12 @@ def retain(path: Path, payload: bytes) -> dict:
     """
     if not path.resolve().is_relative_to(ROOT.resolve()):
         raise ValueError("write outside the public-proof store")
-    if shutil.disk_usage(ROOT.parent).free < (40 << 30) + len(payload):
+    # A RECEIPT is kilobytes and is written AFTER the multi-gigabyte decode it describes.
+    # Guarding it with the same 40 GiB reserve that gates the decode would throw away a
+    # completed multi-hour proof to save 3 KB, so the bulk gate lives at the decode
+    # (RAW_BYTES + RESERVE_BYTES, checked before a byte is written) and this one only
+    # refuses when the tier is genuinely out of room.
+    if shutil.disk_usage(ROOT.parent).free < (1 << 30) + len(payload):
         raise RuntimeError("STORAGE_BLOCK: keep all existing evidence")
     path.parent.mkdir(parents=True, exist_ok=True)
     landed.io.persist_immutable_bytes(path, payload, label="ntb2 public proof receipt")
@@ -140,8 +145,25 @@ def run(treatment: str, timeout: int) -> dict:
         "score_claim": False,
     }
     inputs = work / "INPUTS.json"
-    if inputs.exists() and json.loads(inputs.read_text()) != binding:
-        raise SystemExit("public proof source/config drift")
+    # Drift is about the OBJECT under proof, not about this file: a producer edit between a
+    # crash and its resume must not invalidate a decode already half-done, while a different
+    # archive, runtime, receiver, base or source raw must.
+    identity_keys = (
+        "treatment",
+        "runtime_sha256",
+        "receiver_sha256",
+        "archive",
+        "base_archive_sha256",
+        "source_raw_sha256",
+    )
+    if inputs.exists():
+        prior_binding = json.loads(inputs.read_text())
+        if {k: prior_binding.get(k) for k in identity_keys} != {k: binding[k] for k in identity_keys}:
+            raise SystemExit("public proof source/config drift")
+        binding["producer_history"] = sorted(
+            {prior_binding["producer"]["sha256"], binding["producer"]["sha256"]}
+            | set(prior_binding.get("producer_history", []))
+        )
     record(inputs, binding)
 
     done = work / "RESULT.json"
