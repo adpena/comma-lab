@@ -1,5 +1,16 @@
 {
  "bytes_moved": 708197883,
+ "certification": {
+  "bytes_rehashed": 708197883,
+  "corrects": "sr5's refusal: SKIPPED_LARGE_STREAMED in a hash field, and rows claiming supersession by a RESULT.json that a stopped run never produced",
+  "every_row_hashed": true,
+  "method": "hashlib.sha256 streamed in 4 MiB blocks; no size threshold, no skipping",
+  "missing_payloads": [],
+  "placeholder_hashes_remaining": 0,
+  "rows": 12,
+  "rows_whose_hash_changed": 0
+ },
+ "certified_at_utc": "2026-09-11T17:34:34Z",
  "destination_tier": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints",
  "files_moved": 12,
  "moved_at_utc": "2026-09-11T15:29:13Z",
@@ -8,6 +19,7 @@
  "rows": [
   {
    "bytes": 71812,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.film.weight/LATEST.json",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -15,13 +27,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.film.weight/checkpoints/LATEST.json",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.film.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "rebuildable_because": "superseded by the run's own RESULT.json and argmax_plane.npz, both retained on the live tier",
    "run_completed": true,
    "sha256": "d4912c3a0e502adbf7ad9e2eca5ce5fc9ee10692bf1c620b12ccba0080b4b424",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.1.film.weight"
   },
   {
    "bytes": 117994108,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.film.weight/LATEST.npz",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -29,13 +43,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.film.weight/checkpoints/LATEST.npz",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.film.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "rebuildable_because": "superseded by the run's own RESULT.json and argmax_plane.npz, both retained on the live tier",
    "run_completed": true,
    "sha256": "b54fb739f6315981c705e17d1ca93112d2d27ad958a15b511dfbd2d9efa84137",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.1.film.weight"
   },
   {
    "bytes": 7239,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.pw.weight/LATEST.json",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -43,13 +59,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.pw.weight/checkpoints/LATEST.json",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.pw.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "rebuildable_because": "resume checkpoint of a run this arm STOPPED on a refutation bound; it has NO RESULT.json and is NOT superseded by one. Its scientific content -- the per-pair d_seg/d_pose rows and the per-chunk render shas -- is in the retained LATEST.json on the live tier, and the npz is the recomputable resume state",
    "run_completed": false,
    "sha256": "33406bf799081b2cdb4eaa57beb3592a7e711a8908c854ce76a187a7a2180cd9",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.1.pw.weight"
   },
   {
    "bytes": 117994108,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.pw.weight/LATEST.npz",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -57,13 +75,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.pw.weight/checkpoints/LATEST.npz",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.pw.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "rebuildable_because": "resume checkpoint of a run this arm STOPPED on a refutation bound; it has NO RESULT.json and is NOT superseded by one. Its scientific content -- the per-pair d_seg/d_pose rows and the per-chunk render shas -- is in the retained LATEST.json on the live tier, and the npz is the recomputable resume state",
    "run_completed": false,
    "sha256": "6f4a420f9e2b6546e145f84d4fa9bad4aed83ac5afdab6e992375f7f502f4f2e",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.1.pw.weight"
   },
   {
    "bytes": 7301,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.2.pw.weight/LATEST.json",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -71,13 +91,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.2.pw.weight/checkpoints/LATEST.json",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.2.pw.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "rebuildable_because": "resume checkpoint of a run this arm STOPPED on a refutation bound; it has NO RESULT.json and is NOT superseded by one. Its scientific content -- the per-pair d_seg/d_pose rows and the per-chunk render shas -- is in the retained LATEST.json on the live tier, and the npz is the recomputable resume state",
    "run_completed": false,
    "sha256": "3958d61394274666d3a225b0829ad492cbf7217c73d18fdb57b1446770e159be",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.2.pw.weight"
   },
   {
    "bytes": 117994108,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.2.pw.weight/LATEST.npz",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -85,13 +107,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.2.pw.weight/checkpoints/LATEST.npz",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.2.pw.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "rebuildable_because": "resume checkpoint of a run this arm STOPPED on a refutation bound; it has NO RESULT.json and is NOT superseded by one. Its scientific content -- the per-pair d_seg/d_pose rows and the per-chunk render shas -- is in the retained LATEST.json on the live tier, and the npz is the recomputable resume state",
    "run_completed": false,
    "sha256": "9ee16038c0d16a06223391b810e4f62b39db032b4c816b4bbbe324bd77259ca3",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.2.pw.weight"
   },
   {
    "bytes": 71834,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.3.film.weight/LATEST.json",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -99,13 +123,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.3.film.weight/checkpoints/LATEST.json",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.3.film.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "rebuildable_because": "superseded by the run's own RESULT.json and argmax_plane.npz, both retained on the live tier",
    "run_completed": true,
    "sha256": "17beba41230bdbeecfdbec56acc0801794220a9d033d760504a2c63b026b40c3",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.3.film.weight"
   },
   {
    "bytes": 117994108,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.3.film.weight/LATEST.npz",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -113,13 +139,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.3.film.weight/checkpoints/LATEST.npz",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.3.film.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "rebuildable_because": "superseded by the run's own RESULT.json and argmax_plane.npz, both retained on the live tier",
    "run_completed": true,
    "sha256": "b8a4f6ce371e96701ceedf37ad01b748e70c0b4946b209c249d1accccd34d8f5",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "blocks.3.film.weight"
   },
   {
    "bytes": 72537,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/control/LATEST.json",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -127,13 +155,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/control/checkpoints/LATEST.json",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment control --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "rebuildable_because": "superseded by the run's own RESULT.json and argmax_plane.npz, both retained on the live tier",
    "run_completed": true,
    "sha256": "27deea99d11ac193cd277a41924aab78e561d6110fc2ed01e265563ee52ea99f",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "control"
   },
   {
    "bytes": 117994108,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/control/LATEST.npz",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -141,13 +171,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/control/checkpoints/LATEST.npz",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment control --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "rebuildable_because": "superseded by the run's own RESULT.json and argmax_plane.npz, both retained on the live tier",
    "run_completed": true,
    "sha256": "6e7b6698cf8eb67c5b60763d889b31e9da9c23a4615b2d01b3a8c89ca1303bad",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "control"
   },
   {
    "bytes": 2512,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/coord_mix.weight/LATEST.json",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -155,13 +187,15 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/coord_mix.weight/checkpoints/LATEST.json",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment coord_mix.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "rebuildable_because": "resume checkpoint of a run this arm STOPPED on a refutation bound; it has NO RESULT.json and is NOT superseded by one. Its scientific content -- the per-pair d_seg/d_pose rows and the per-chunk render shas -- is in the retained LATEST.json on the live tier, and the npz is the recomputable resume state",
    "run_completed": false,
    "sha256": "94639baa1d97b3dfc911f5d13866b95725fd39b2c40bd68678d9e22d995fe349",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "coord_mix.weight"
   },
   {
    "bytes": 117994108,
+   "certified": true,
    "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/coord_mix.weight/LATEST.npz",
    "false_authority_flags": {
     "promotion_eligible": false,
@@ -169,9 +203,10 @@
    },
    "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/coord_mix.weight/checkpoints/LATEST.npz",
    "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment coord_mix.weight --threads 2 --chunk 5 --no-resume",
-   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "rebuildable_because": "resume checkpoint of a run this arm STOPPED on a refutation bound; it has NO RESULT.json and is NOT superseded by one. Its scientific content -- the per-pair d_seg/d_pose rows and the per-chunk render shas -- is in the retained LATEST.json on the live tier, and the npz is the recomputable resume state",
    "run_completed": false,
    "sha256": "d993113e25483067ab14545412e3ee5ec01eee88043ee7ac5390f92e817c1aa3",
+   "sha256_scope": "the payload AS IT SITS IN THE COLD STORE, streamed in full",
    "treatment": "coord_mix.weight"
   }
  ],

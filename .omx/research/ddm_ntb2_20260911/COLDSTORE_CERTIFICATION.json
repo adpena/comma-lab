@@ -1,0 +1,47 @@
+{
+ "applied": true,
+ "manifests": [
+  {
+   "certification": {
+    "bytes_rehashed": 708197883,
+    "corrects": "sr5's refusal: SKIPPED_LARGE_STREAMED in a hash field, and rows claiming supersession by a RESULT.json that a stopped run never produced",
+    "every_row_hashed": true,
+    "method": "hashlib.sha256 streamed in 4 MiB blocks; no size threshold, no skipping",
+    "missing_payloads": [],
+    "placeholder_hashes_remaining": 0,
+    "rows": 12,
+    "rows_whose_hash_changed": 0
+   },
+   "manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/COLDSTORE_MANIFEST.json",
+   "revalidation": {
+    "manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/COLDSTORE_MANIFEST.json",
+    "mismatches": [],
+    "passed": true,
+    "rows": 12
+   }
+  },
+  {
+   "certification": {
+    "bytes_rehashed": 3811106548,
+    "corrects": "sr5's refusal: SKIPPED_LARGE_STREAMED in a hash field, and rows claiming supersession by a RESULT.json that a stopped run never produced",
+    "every_row_hashed": true,
+    "method": "hashlib.sha256 streamed in 4 MiB blocks; no size threshold, no skipping",
+    "missing_payloads": [],
+    "placeholder_hashes_remaining": 0,
+    "rows": 66,
+    "rows_whose_hash_changed": 0
+   },
+   "manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/COLDSTORE_MANIFEST_PUBLIC_ATTEMPTS.json",
+   "revalidation": {
+    "manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/COLDSTORE_MANIFEST_PUBLIC_ATTEMPTS.json",
+    "mismatches": [],
+    "passed": true,
+    "rows": 66
+   }
+  }
+ ],
+ "schema": "ddm_ntb2_coldstore_certification.v1",
+ "score_claim": false,
+ "total_bytes_rehashed": 4519304431,
+ "total_rows": 78
+}
