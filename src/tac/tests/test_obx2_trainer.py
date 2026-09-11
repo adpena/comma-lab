@@ -174,13 +174,17 @@ def test_prequantized_receiver_lattice_does_not_requantize() -> None:
             parameter.copy_(torch.from_numpy(np.ascontiguousarray(grid)))
     used, _ = receiver.quantized_grids()
     for have, want in zip(used, grids, strict=True):
-        assert np.array_equal(have.numpy(), want)
+        assert np.array_equal(have.detach().numpy(), want)
+    # The training lattice, given the SAME dequantized values, runs them through
+    # the straight-through quantizer again; that second pass is what the
+    # receiver must not do.
     training_copy = tr.LatticeTorch(spec, seed=0)
     with torch.no_grad():
         for parameter, grid in zip(training_copy.grids, grids, strict=True):
             parameter.copy_(torch.from_numpy(np.ascontiguousarray(grid)))
     requantized, _ = training_copy.quantized_grids()
-    assert all(tensor.requires_grad or True for tensor in requantized)
+    for tensor, want in zip(requantized, grids, strict=True):
+        assert tensor.shape == want.shape
 
 
 def test_score_parsed_object_refuses_an_unknown_receiver() -> None:
