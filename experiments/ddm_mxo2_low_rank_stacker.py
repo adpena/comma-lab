@@ -39,7 +39,7 @@ from experiments import ddm_jg2_tail_reencode as jg2
 from experiments.ddm_ls1_shipped_surprise import ARCHIVE_SHA, FIELD, FIELD_SHA, fact
 from experiments.ddm_tc1_mixer_codec import frequencies
 
-ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker")
+ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker_v2")
 SOURCE = Path("/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime")
 LS1 = ROOT.parent / "ddm_ls1"
 N, H, W, K, TOTAL = 600, 384, 512, 5, 1 << 31
@@ -275,6 +275,31 @@ def bind_surface_api(library: ctypes.CDLL) -> None:
     library.f26_corrector_mxo2_surface.restype = ctypes.c_int
 
 
+def build_geometry(runtime_root: Path) -> dict[str, object]:
+    source = runtime_root / "runtime/rlc1_geometry.c"
+    library = ROOT / "native_receiver/geometry.dylib"
+    command = [
+        os.environ.get("CC", "cc"), "-O3", "-std=c11", "-shared", "-fPIC",
+        "-ffp-contract=off", "-fno-fast-math", str(source), "-o", str(library),
+    ]
+    receipt_path = ROOT / "native_receiver/geometry.json"
+    expected_source = fact(source)
+    if library.exists():
+        receipt = json.loads(receipt_path.read_text())
+        if receipt != {"argv": command, "source": expected_source, "library": fact(library)}:
+            raise Mxo2Error("native geometry build drift")
+    else:
+        guard(1 << 20)
+        library.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        atomic_bytes(library.parent / "geometry.build.log", (result.stdout + result.stderr).encode())
+        result.check_returncode()
+        receipt = {"argv": command, "source": expected_source, "library": fact(library)}
+        save_json(receipt_path, receipt, immutable=True)
+    os.environ["RLC1_GEOMETRY_LIBRARY"] = str(library)
+    return receipt
+
+
 def surface_resume_frame() -> int:
     latest = ROOT / "receiver_checkpoints/LATEST.json"
     return 0 if not latest.exists() else int(json.loads(latest.read_text())["frame"])
@@ -307,6 +332,7 @@ def extract_surface() -> dict[str, object]:
 
     runtime_root = ROOT / "runtime_copy"
     builds = build_libraries(runtime_root, ROOT / "native_receiver")
+    builds.append(build_geometry(runtime_root))
     os.environ["TC1_RECEIVER_CHECKPOINT_DIR"] = str(ROOT / "receiver_checkpoints")
     os.environ["TC1_RECEIVER_STOP_AFTER"] = str(N)
     residual, renderer, code_dir = jg2.load_runtime(runtime_root)
