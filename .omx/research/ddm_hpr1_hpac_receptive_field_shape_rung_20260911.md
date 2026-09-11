@@ -190,14 +190,41 @@ Interleaved A/B/A/B on the same host, on the module the shipping loader builds f
 **Neither pre-registered rung is a timing blocker.** The 600-frame figure is a PROJECTION; a decode
 budget's authority is a full public decode.
 
-## 4. What is owed
+## 4. R1 — the exact price
 
-The per-rung price table (Δmodel, Δtail, ΔB exact, secant vs cl2's +0.446, ns/symbol against the
-27.581 s slack, receiver-change verdict) and the fire verdict. R1's 60-epoch retrain is running on
-Metal under the shipped `cl2` law from a warm start that is the shipped prior itself, so the CONTROL
-and the rung differ only in geometry.
+R1's 60-epoch retrain under cl2's law, warm-started from the shipped prior itself, is COMPLETE.
+`train/dil2/result.json` terminal epoch 60.
 
-## 5. Apparatus landed
+### 4a. The MODEL leg — MEASURED exactly
+
+`price/past_dil2/INPUTS.json`:
+
+| quantity | R1 | move 45 | Δ |
+|---|---:|---:|---:|
+| IHS1 body | 18,959 B | 17,770 B | +1,189 B |
+| **`hpac` archive member** | **12,274 B** | **11,911 B** | **Δmodel = +363 B** |
+| rows | 517 | 517 | 0 |
+| stored values | 20,416 | 20,416 | **0 — the rung moved taps and added none** |
+| mean row depth | 5.888 bits | 4.116 bits | +1.772 |
+
+The layout invariant holds exactly: same rows, same per-row counts. **Δmodel = +363 B, well inside
+cl2's +1,500 B bar.** For the joint to be negative the rung must buy Δtail < −363 B, i.e. a secant
+Δtail/Δmodel < −1 — the same break-even cl2 measured at **+0.446** for capacity.
+
+**A confound I must name before the tail lands.** The shipped prior's depths average 4.116 bits after
+634 + 60 epochs of QAT; R1's average 5.888 after 60. Most of the +1,189 B body growth is plausibly
+UNDER-TRAINING, not geometry — a dilated `conv_past` inherits weights meant for a different spacing
+and has 60 epochs to re-fit them and re-compress their depths. The shape-CONTROL (shipped geometry,
+identical init, identical 60-epoch law) is running to separate the two; without it the model leg
+cannot be attributed to shape, and I will not attribute it.
+
+## 5. What is owed
+
+R1's Δtail and exact archive bytes (encode running: 600 frames, real coder, real receiver loop), the
+secant against cl2's +0.446, the shape-CONTROL's separation of shape from training budget, and the
+fire verdict. R2/R6 and the two offset rungs stay pre-registered and unfired.
+
+## 6. Apparatus landed
 
 - `tools/train_ddm_cl1_hpac_capacity.py` gains ONE additive profile, `hpr1_shape_rungs`: cl2's config
   dict byte-for-byte, with TWO free geometry axes, `--past-dilation` {1,2} and `--conv-a-dilation`
@@ -215,7 +242,7 @@ and the rung differ only in geometry.
 **A successor inherits a launchable board, not prose:** every rung above is one trainer command plus
 one `--treatment` on a rail that already reproduces move 45 byte-identically.
 
-## 6. Boundaries honoured
+## 7. Boundaries honoured
 
 $0 spent. No Modal, no scorer run, no candidate claim, no pointer touch. `upstream/`, the PR tree, the
 sealed promoted tree and the sister arms' directories (`ddm_ntb2_*`, `ddm_pc3_*`, `ddm_sr5`) were read
