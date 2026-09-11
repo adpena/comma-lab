@@ -1,0 +1,336 @@
+{
+  "schema": "candidate_seal.v3",
+  "candidate_id": "ddm_ntb2_frame_even_hpac_prior_move45",
+  "sealed_at_utc": "2026-09-11T19:51:50.507123+00:00",
+  "sealed_by": "MAIN",
+  "axis": "contest_cuda",
+  "archive": {
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+    "sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+    "bytes": 180001
+  },
+  "runtime": {
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+    "sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 51,
+    "total_bytes": 1009360
+  },
+  "receiver_pins": [
+    {
+      "relative_path": "inflate.py",
+      "bytes": 2735,
+      "sha256": "ea4d73c1aa9886561121e16fd8914e8e769e9b314e823851bfc5a34dc9e5c948"
+    },
+    {
+      "relative_path": "inflate.sh",
+      "bytes": 3380,
+      "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+    }
+  ],
+  "admit_bar": {
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold",
+    "net_dS_threshold": -2e-05,
+    "derivation": {
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.1371383667388406,
+      "pointer_archive_sha256_at_seal": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    }
+  },
+  "public_entrypoint_smoke": {
+    "inflate_sh_smokes": {
+      "candidate": {
+        "archive_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+        "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+        "seconds": 3.5695948600769043,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45/archive.zip",
+        "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+        "exception_class": "RuntimeError",
+        "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+        "outcome": "REACHED_CUDA_GATE",
+        "returncode": 1,
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45",
+        "seconds": 3.4958789348602295,
+        "stderr_tail": [
+          "    ~~~~^^",
+          "  File \"/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45/inflate.py\", line 58, in main",
+          "    raise RuntimeError(",
+          "    ...<2 lines>...",
+          "    )",
+          "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+        ],
+        "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest"
+      }
+    },
+    "public_path_probe_seconds": 180.0,
+    "public_path_probes": {
+      "candidate": {
+        "archive_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+        "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+        "seconds": 144.03426098823547,
+        "stderr_tail": [],
+        "tree_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest"
+      },
+      "frontier": {
+        "archive_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45/archive.zip",
+        "archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+        "exception_class": null,
+        "exception_message": "",
+        "note": "cut at the probe bound inside the token decode",
+        "outcome": "REACHED_TOKEN_DECODE",
+        "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/promoted_runtime_move45",
+        "seconds": 144.05965399742126,
+        "stderr_tail": [],
+        "tree_sha256": "b16d8923863920b98d9e51b98a61bb64af5741fa29c1a2e854f06017ce9d69e5",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest"
+      }
+    },
+    "schema": "candidate_public_entrypoint_smoke.v1"
+  },
+  "decode_wall_clock": {
+    "schema": "candidate_decode_wall_clock.v2",
+    "mode": "t4_direct",
+    "score_claim": false,
+    "candidate_t4_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/MODAL_REMOTE_RESULT.json",
+      "sha256": "19eac2eee6fe8b1e04bbf5f9086608f70a81c970d2b2e146e24d42197355d28c"
+    },
+    "runtime_dir": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+    "archive_path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+    "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+    "receiver_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df",
+    "t4_runtime_sha256": "8874e8b5e6c6bc99e7b72cae645ca3fcfb127e566a6b2d30db6bd67b478e16cc",
+    "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+    "t4_seconds_field": [
+      "artifacts",
+      "contest_auth_eval.json",
+      "inflate_elapsed_seconds"
+    ],
+    "t4_archive_sha256_field": [
+      "expected_archive_sha256"
+    ],
+    "t4_runtime_sha256_field": [
+      "expected_runtime_tree_sha256"
+    ],
+    "t4_hardware_field": [
+      "artifacts",
+      "modal_cuda_preflight.json",
+      "torch_cuda_device_name"
+    ],
+    "t4_cuda_available_field": [
+      "artifacts",
+      "modal_cuda_preflight.json",
+      "torch_cuda_available"
+    ],
+    "t4_timing_scope": "cold_public_entrypoint_decode",
+    "measured_t4_decode_seconds": 1140.8051148040001,
+    "projected_t4_decode_seconds": 1140.8051148040001,
+    "limit_seconds": 1260.0,
+    "first_measurement_runtime_custody": {
+      "schema": "first_measurement_runtime_custody.v1",
+      "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+      "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+      "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+      "expected_runtime_content_tree_sha256": "ca323b933d030ace8973b63b35b59bd2345648a65fac8c253388dbc11257b35a",
+      "worker_runtime_content_tree_sha256": "ca323b933d030ace8973b63b35b59bd2345648a65fac8c253388dbc11257b35a",
+      "runtime_files_sha256": "f7b2ea50a2eb896037a157accc3578531535eb78b91afea87d150fb42a043318",
+      "runtime_file_count": 48,
+      "normal_projected_runtime_tree_sha256": "8874e8b5e6c6bc99e7b72cae645ca3fcfb127e566a6b2d30db6bd67b478e16cc",
+      "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/e64042faa14b785b44fcf088b010adfaf87583564fedc66601271a584ef70100/out/submission_dir",
+      "retained_runtime_tree_sha256": "8f88285006d19f18050a96c871bb56dafdc0e5fcc34507fe6d17b6d5560d9851",
+      "sources": {
+        "context": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/FIRST_MEASUREMENT_CONTEXT.json",
+            "bytes": 4975,
+            "sha256": "2c8993603f5b1640d5c59e0ef9d9f2d13c0dfd3c66a758505bfa604eea6ca553"
+          },
+          "field_path": [
+            "expected_runtime_content_tree_sha256"
+          ]
+        },
+        "request": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/modal_cuda_auth_eval_local_request.json",
+            "bytes": 7235,
+            "sha256": "e58e54cd6352d1d98a36eec0bd8182deddd47a7f36523216c5a478320632389e"
+          },
+          "field_path": [
+            "expected_runtime_content_tree_sha256"
+          ]
+        },
+        "result": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/MODAL_REMOTE_RESULT.json",
+            "bytes": 242307,
+            "sha256": "19eac2eee6fe8b1e04bbf5f9086608f70a81c970d2b2e146e24d42197355d28c"
+          },
+          "field_path": [
+            "expected_runtime_content_tree_sha256"
+          ]
+        },
+        "argv": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/modal_cuda_auth_eval_local_request.json",
+            "bytes": 7235,
+            "sha256": "e58e54cd6352d1d98a36eec0bd8182deddd47a7f36523216c5a478320632389e"
+          },
+          "field_path": [
+            "exact_argv"
+          ],
+          "flag": "--expected-runtime-content-tree-sha256"
+        },
+        "provenance": {
+          "file": {
+            "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/MODAL_REMOTE_RESULT.json",
+            "bytes": 242307,
+            "sha256": "19eac2eee6fe8b1e04bbf5f9086608f70a81c970d2b2e146e24d42197355d28c"
+          },
+          "field_path": [
+            "artifacts",
+            "provenance.json"
+          ],
+          "manifest_field_path": [
+            "inflate_runtime_manifest"
+          ]
+        }
+      }
+    }
+  },
+  "retained_payload_paths": [
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin0.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/rebase45/frame_even/member.twin1.bin",
+    "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/output/0.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/hpac_v3/frame_even/PRICE.json"
+  ],
+  "falsifiers": [
+    "Cold literal inflate.sh output must carry all 600 pairs with the token cache DISABLED and no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 45's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the entire distortion claim is that a change to the arithmetic coder's PRIOR cannot move a decoded symbol.",
+    "The candidate archive must be at most 180,226 bytes; rate-only net dS must be strictly below -2e-5 against move 45's 180,246 bytes at unchanged distortion. Measured: 180,001 B, -245 B, -1.63135443514932e-04.",
+    "Reassembling move 45's OWN members by this arm's assembly path must reproduce 145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a at 180,246 bytes in both twins, or the -245 B is the rebuild's and not the frame_even edit's.",
+    "move 45's hpac, tail and semantic members must be byte-identical to move 44's, or the reused 600-frame RLC1 encode is not an encode of this pointer's objects and every price here is void.",
+    "The scoped timing-risk receiver delta must be EMPTY at digest 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw MANIFEST.sha256 stays in every custody check and is validated separately.",
+    "Risk ceiling must not exceed 1260 seconds. Only MAIN may authorize this intent, fire the first measurement, and complete the seal; this intent confers no timing and no score authority.",
+    "Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, a crash, or a subprocess attempt closes this real-door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer."
+  ],
+  "notes": "",
+  "seal_sha256": "0ba0b3831c2c6b05e712b8685cc8302316b5873daed56efd31e6de71c60ee7ea",
+  "decode_wall_clock_reference": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json",
+    "bytes": 4741,
+    "sha256": "686d845f442e65621cf46eb14023c6a5ac4f606bc9de5df01dbc89e8f139e9d6"
+  },
+  "prefire_intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/CANDIDATE_PREFIRE_INTENT_v2.json",
+    "bytes": 14257,
+    "sha256": "7f60c65ad9057da5d52dd591027bcf0b9d9fef9f93c490ff1e4db43908d008d8"
+  },
+  "first_measurement_authorization": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/FIRST_MEASUREMENT_AUTHORIZATION_v2.json",
+    "bytes": 1728,
+    "sha256": "96960396ac83021b1821a92dd3704a33316d5f6252bafc1f74e769f411b58d46"
+  },
+  "first_measurement_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/MODAL_REMOTE_RESULT.json",
+    "bytes": 242307,
+    "sha256": "19eac2eee6fe8b1e04bbf5f9086608f70a81c970d2b2e146e24d42197355d28c"
+  },
+  "prefire_intent_sha256": "ac01d06fbe2e8cf98b73b2fd7a3a50f47d1827bf8189468759fbf27d5479f43e",
+  "first_measurement_runtime_custody": {
+    "schema": "first_measurement_runtime_custody.v1",
+    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+    "expected_runtime_content_tree_sha256": "ca323b933d030ace8973b63b35b59bd2345648a65fac8c253388dbc11257b35a",
+    "worker_runtime_content_tree_sha256": "ca323b933d030ace8973b63b35b59bd2345648a65fac8c253388dbc11257b35a",
+    "runtime_files_sha256": "f7b2ea50a2eb896037a157accc3578531535eb78b91afea87d150fb42a043318",
+    "runtime_file_count": 48,
+    "normal_projected_runtime_tree_sha256": "8874e8b5e6c6bc99e7b72cae645ca3fcfb127e566a6b2d30db6bd67b478e16cc",
+    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/e64042faa14b785b44fcf088b010adfaf87583564fedc66601271a584ef70100/out/submission_dir",
+    "retained_runtime_tree_sha256": "8f88285006d19f18050a96c871bb56dafdc0e5fcc34507fe6d17b6d5560d9851",
+    "sources": {
+      "context": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 4975,
+          "sha256": "2c8993603f5b1640d5c59e0ef9d9f2d13c0dfd3c66a758505bfa604eea6ca553"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "request": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/modal_cuda_auth_eval_local_request.json",
+          "bytes": 7235,
+          "sha256": "e58e54cd6352d1d98a36eec0bd8182deddd47a7f36523216c5a478320632389e"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "result": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/MODAL_REMOTE_RESULT.json",
+          "bytes": 242307,
+          "sha256": "19eac2eee6fe8b1e04bbf5f9086608f70a81c970d2b2e146e24d42197355d28c"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "argv": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/modal_cuda_auth_eval_local_request.json",
+          "bytes": 7235,
+          "sha256": "e58e54cd6352d1d98a36eec0bd8182deddd47a7f36523216c5a478320632389e"
+        },
+        "field_path": [
+          "exact_argv"
+        ],
+        "flag": "--expected-runtime-content-tree-sha256"
+      },
+      "provenance": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_first_measurement/run2/MODAL_REMOTE_RESULT.json",
+          "bytes": 242307,
+          "sha256": "19eac2eee6fe8b1e04bbf5f9086608f70a81c970d2b2e146e24d42197355d28c"
+        },
+        "field_path": [
+          "artifacts",
+          "provenance.json"
+        ],
+        "manifest_field_path": [
+          "inflate_runtime_manifest"
+        ]
+      }
+    }
+  }
+}
