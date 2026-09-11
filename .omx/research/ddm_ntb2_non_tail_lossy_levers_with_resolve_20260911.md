@@ -359,6 +359,36 @@ candidate runtime must be staged from the PROMOTED tree with the manifest regene
 seal, and that this arm's `stage_runtime` digest-equality assertion was comparing the wrong pair. It
 asserted something true of the object it held; it did not assert what I said it asserted.
 
+## pr18 is LIVE on main, and it clears this candidate — a second family confirms the rule
+
+MAIN said a pr18 arm was landing the versioned receiver digest and to expect a refusal until it did.
+It is already on `main`, and this arm is the second family to exercise it:
+
+`tac.decode_wall_clock.RECEIVER_DERIVED_LISTING == "MANIFEST.sha256"`, and `receiver_identity()`
+returns both a `behavior_sha256` (the listing excluded) and a `legacy_sha256` (it included).
+Measured, promoted tree vs this candidate:
+
+| digest | promoted (move 44) | candidate | equal |
+|---|---|---|---:|
+| `behavior_sha256` | `9f6e7168…` | `9f6e7168…` | **YES** |
+| `legacy_sha256` | `7e6da183…` | `106a9e66…` | no |
+
+And that resolves my correction above in a satisfying way: the `9f6e7168…` I first measured on the
+manifest-LESS trees is exactly the BEHAVIOR digest, because excluding `MANIFEST.sha256` from a tree
+that has it gives the same answer as a tree that lacks it. My first reading was right about the
+number and wrong about why.
+
+Reading the inheritance block settles the rest without running it. In `inherited` mode the source
+leg is re-validated against **its own** `runtime_dir`/`archive_path` (move 44's tree), not against
+the candidate's, so the `t4_direct runtime projection` row is never asked of my tree; the candidate
+is checked only for self-consistency (`candidate_t4_runtime_sha256 == measure_t4_runtime_digest`);
+and the one cross-tree test is `behavior_digests_equal`, which my candidate PASSES.
+
+**So this is a NORMAL seal with `--inherit-decode-wall-clock` and no first-measurement intent is
+owed** — provided the cold parse-back returns byte-identical raw. Per MAIN, nothing in the contract
+or the manifest was patched to reach this; the amendment was already there and the candidate simply
+meets it.
+
 ## Tier pressure, and what it cost
 
 `/Volumes/VertigoDataTier` reached 40 GiB — exactly the reserve the HPAC producers refuse below —
