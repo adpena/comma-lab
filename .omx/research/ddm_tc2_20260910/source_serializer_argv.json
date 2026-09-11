@@ -1,0 +1,15 @@
+[
+  ".venv/bin/python",
+  "tools/subagent_commit_serializer.py",
+  "--message",
+  "tc2: retain causal lane-context counts on the pinned move37 field [no-triality] [p0-ledger-ok]\n\nCheckpoint: tools/subagent_checkpoint.py --subagent-id ddm_tc2, steps1-2. Two source review passes and Ruff passed. No scorer or score claim.",
+  "--patch-file",
+  ".omx/research/ddm_tc2_20260910/source_landing.patch",
+  "--expected-content-sha256",
+  "experiments/ddm_tc2_lane_context.py=1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7",
+  "--fallback-receipt-dir",
+  ".omx/research/ddm_tc2_20260910/source_serializer",
+  "--no-co-author",
+  "--timeout-seconds",
+  "60"
+]

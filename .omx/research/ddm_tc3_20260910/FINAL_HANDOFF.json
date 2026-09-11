@@ -1,0 +1,96 @@
+{
+  "schema": "ddm_tc3_final_handoff.v1",
+  "charter_local_work_complete": true,
+  "measured_archive_saved_bytes": 79,
+  "B_actual_archive_saved_bytes": 37,
+  "B_verdict": "tested FORMULATION operational stop",
+  "seal": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_A.seal.json",
+    "bytes": 17909,
+    "sha256": "34df0c69d0adce50a5bdf373a1c669bdd4dee34ef512e3a965734d09391e1fcd"
+  },
+  "archive": {
+    "bytes": 180154,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip",
+    "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936"
+  },
+  "full_public_identity": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/PUBLIC_IDENTITY.json",
+    "bytes": 5374,
+    "sha256": "f0c0e8a9ecebc135cd164c28b6f3ee2df3bab2ce23285623e3b03ab602fc8a94"
+  },
+  "final_seal_validation": {
+    "path": ".omx/research/ddm_tc3_20260910/FINAL_REVALIDATION.json",
+    "bytes": 3628,
+    "sha256": "2a8c8f8a5c605271d198426239c2786b78a8b31bd187bfe21b1120e03432ceeb"
+  },
+  "serializer": {
+    "path": ".omx/research/ddm_tc3_20260910/FINAL_SERIALIZER_STATUS.json",
+    "bytes": 1609,
+    "sha256": "0a5a069497f4c5e9df8bd10cd7db9c48918de32b48f3fe62bc5caf2917645546"
+  },
+  "bundle_verification": {
+    "path": ".omx/research/ddm_tc3_20260910/BUNDLE_VERIFICATION.json",
+    "bytes": 19797,
+    "sha256": "2f92a92c2488fa1c8d2c2acdd45f5e108a5fb9b51b121d5a85133b32a6436739"
+  },
+  "fallback_commit": "77bb58469953a58f34b8bc6c1cba18d78b439db8",
+  "main_landing": false,
+  "no_scorer_or_remote_fire": true,
+  "projected_score": 0.13758600733559048,
+  "score_claim": false,
+  "live_frontier": {
+    "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180233,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "27fc92e8ee156d01ffe65ceb2e141ac0c98a0ccd7b9096d12aa18919fcb28a39",
+      "source_receipt_sha256": "cd6d5ef5243e26fa1868100a2bbb34efe0d6446b4a7fb9bd1eab7f309f5d3d00"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_sj1_t4_compose39_rp1_union_20260910",
+    "measured_at_utc": null,
+    "score": 0.13763861019288715,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_sj1_t4_compose39_rp1_union_20260910.json"
+  },
+  "next_actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "fire_order": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/handoff/exact_eval/FIRE_ORDER.json",
+        "bytes": 3430,
+        "sha256": "3991905e323d026a67524b59d1bcba32218e8a3f244d6bc88c7b9197f1a29336"
+      }
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "fire_order": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/handoff/landing/FIRE_ORDER.json",
+        "bytes": 1031,
+        "sha256": "e391582d21691e009e4e915044ad1313a5ca80297e4361a5580731a123bab524"
+      }
+    }
+  ],
+  "post_serialization_receipts": "FINAL_SERIALIZER_STATUS, BUNDLE_VERIFICATION, FINAL_REVALIDATION, FINAL_CANONICAL_EVENT and this final handoff were necessarily written after bundling and remain retained evidence outside the39-file intended commit. The39 frozen intent files still match their manifest.",
+  "final_canonical_note": {
+    "path": ".omx/research/ddm_tc3_20260910/FINAL_CANONICAL_EVENT.json",
+    "bytes": 1680,
+    "sha256": "4b35ef409c4236fe64f318835995bc13333c860b322253c85edffe8a91928c09"
+  },
+  "memo": {
+    "path": ".omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+    "bytes": 17983,
+    "sha256": "123274bc80fa8723c412af0f7643c4011295d9a5031d14e7bf0c7e5ed21fd0f3"
+  }
+}

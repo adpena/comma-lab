@@ -1,0 +1,167 @@
+{
+  "schema": "ddm_tc4_handoff.v1",
+  "owner": "ddm_tc4",
+  "charter_status": "COMPLETE_WITH_AUTHORIZED_GIT_FALLBACK",
+  "primary_task": {
+    "task_id": "ddm_tc4_causal_context_map_slate_20260910::PRICING_AND_SEAL",
+    "source_design_memo": ".omx/research/charters/ddm_tc4_further_causal_context_maps_for_the_tail_mixer_priced_by_real_encode_20260910.md",
+    "title": "Price five causal mixer maps and seal an admitted composite",
+    "status": "completed",
+    "owner": "ddm_tc4",
+    "event_type": "completion",
+    "event_timestamp_utc": "2026-09-10T06:36:48.677812Z",
+    "event_actor": "codex",
+    "written_at_utc": "2026-09-10T06:36:48.677812Z",
+    "written_pid": 47951,
+    "written_host": "mac.lan",
+    "schema_version": "canonical_task_status_v1_20260518",
+    "predicted_cost_usd": null,
+    "predicted_delta_s_band": null,
+    "actual_delta_s": null,
+    "commit_shas": [],
+    "test_status": "green",
+    "blockers": [],
+    "started_at_utc": "2026-09-10T05:48:18.231950Z",
+    "completed_at_utc": "2026-09-10T06:36:48.677812Z",
+    "event_notes": "Charter pricing/seal complete:5 real n600 twin standalone maps; mask19 composite133B net,32B interaction miss,archive180021B; literal public600 label/raw byte identity and SEAL_VALID. All payloads retained. Serializer object writes refused; verified44-file patch and HEAD-ref bundle at .omx/research/ddm_tc4_20260910/LANDING_RECEIPT.json. Fallback is not shared HEAD. MAIN_LANDING and MAIN_EXACT_EVAL canonical tasks remain queued with explicit fire orders. No scorer ran and exact frontier unmoved.",
+    "session_id": "ddm_tc4_20260910"
+  },
+  "measured": {
+    "standalone_saved_bytes": [
+      96,
+      42,
+      11,
+      10,
+      27
+    ],
+    "composite_saved_bytes": 133,
+    "interaction_miss_bytes": 32,
+    "selected_archive_bytes": 180021,
+    "selected_archive_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+    "full_public_field_identity": true,
+    "full_public_raw_identity": true,
+    "raw_bytes": 3662409600,
+    "axis": "[exact bytes and macOS-CPU advisory public output identity,n600]"
+  },
+  "seal_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_mask19.seal.json",
+  "seal_validation": "SEAL VALID: ddm_tc4_mask19_context_slate_move41_20260910 [contest_cuda] \u2014 archive, runtime digest, receiver pins and admit bar all re-derived from disk and agree",
+  "landing_receipt": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/LANDING_RECEIPT.json",
+  "main_orders": [
+    {
+      "task_id": "ddm_tc4_causal_context_map_slate_20260910::MAIN_LANDING",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "action": "Land only reviewed TC4 owned paths from the final verified HEAD-ref bundle/landing.patch through the serializer; replay the scoped equation/task records through their locked APIs if needed. Preserve unrelated work and staged index.",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/landing/FIRE_ORDER.json",
+      "fire_trigger": "Final verified landing bundle and manifest exist; MAIN has Git object-write access. Verify all intended blob hashes and current-worktree compatibility before landing.",
+      "result_store": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/landing/RESULT.json",
+      "preconditions": [
+        "Two final source review passes and Ruff pass",
+        "Final landing bundle HEAD verifies and post-edit manifest matches",
+        "Do not claim serializer fallback commit is shared HEAD"
+      ],
+      "score_claim": false,
+      "verified_bundle": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.bundle",
+        "bytes": 119094,
+        "sha256": "35671a5b62fe0fa63de71048943df4447907c12bb022bd3348292dd9d74a6946"
+      },
+      "verified_patch": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.patch",
+        "bytes": 443791,
+        "sha256": "011202101d08a21021a53de9546491e98cef481b7c72feca028bb1ce90be7fcf"
+      },
+      "intended_commit": "85daca5b517d77b280108484b63faeb64db2b802",
+      "landing_receipt": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/LANDING_RECEIPT.json"
+    },
+    {
+      "task_id": "ddm_tc4_causal_context_map_slate_20260910::MAIN_EXACT_EVAL",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "action": "Validate the final mask19 seal against the live pointer and staged runtime, claim an unused fleet lane, then fire exact upstream/evaluate.py n600 on contest-CUDA T4 through tools/fire_modal_auth_eval.py. Apply current paired-axis policy, storage and budget checks at fire time. Recompute score from components and compose both report-8dp bounds before any promotion.",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/exact_eval/FIRE_ORDER.json",
+      "fire_trigger": "Literal public n600 output identity and structured smoke pass; final seal validates; MAIN owns the available scorer/dispatch slot; base is still move41. If pointer/archive/field changed, refuse this fire and explicitly rebind and re-price before resealing.",
+      "result_store": "/Volumes/APDataStore/pact/ddm_tc4_t4_context_slate_20260910/MODAL_REMOTE_RESULT.json",
+      "seal_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/candidate_mask19.seal.json",
+      "archive_sha256": "65ffcd5fff5c366b26a0fa0131ce074b01e81dac85e7840a5d7c1c7b307af8b5",
+      "archive_bytes": 180021,
+      "source_archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "field_sha256": "b50da438e65b62d5d6f4ca1e151463d097feafd102bbd11d3e0556f849fa4ab5",
+      "measured_rate_saved_bytes": 133,
+      "conditional_rate_only_score_projection": 0.13749744809482523,
+      "score_claim": false
+    }
+  ],
+  "live_frontier": {
+    "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180154,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "9fd76419b5e27118d670d457481c72a2df6c68068101e7ea62477e8e763ad4c1",
+      "source_receipt_sha256": "6003c4be549ee32aa703e0c782bf816c57eaa4cf5cb7ccc1abf362c04402d012"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
+    "measured_at_utc": null,
+    "score": 0.13758600733559048,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_tc3_t4_lane_predictor_tail_20260910.json"
+  },
+  "score_claim": false,
+  "no_scorer_ran": true,
+  "all_arm_compute_jobs_finished": true,
+  "retention_summary": {
+    "schema": "ddm_tc4_retention_census.v1",
+    "root": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate",
+    "payload_count": 2166,
+    "payload_bytes": 4592784866,
+    "whole_arm_census_bytes": 4606219033,
+    "arm_cap_bytes": 6442450944,
+    "volume_free_bytes": 63354601472,
+    "source_provenance": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/PROVENANCE.json",
+    "commands_and_resume_states": "Per-stage launch manifests and completed stage/frame receipts retained under move41 and parent historical-control directories.",
+    "retention_policy": "Keep every candidate and twin. No deletion or move performed. Storage guards refuse new writes at cap or free-space reserve. Public raw/field hashes reused from just-completed whole-file identity proof; all other listed files streamed.",
+    "score_claim": false,
+    "manifest_path": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/RETENTION_MANIFEST.json",
+    "manifest_sha256": "a9611ad6522a56bb2a42d088cdd077531bb7f224672205760441257f95c4546a"
+  },
+  "live_hypotheses": [
+    {
+      "lead": "The sealed133B rate saving transfers to the exact contest-CUDA evaluator without distortion change.",
+      "why_plausible": "Complete same-host public output bytes match the pinned exact-scored source; code and all new weights are properly bound.",
+      "owner": "MAIN",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/exact_eval/FIRE_ORDER.json"
+    }
+  ],
+  "dead_ends": [
+    {
+      "scope": "INSTANCE",
+      "path": "Map3/map4 admission in this slate",
+      "reason": "11B/10B miss20B bar."
+    },
+    {
+      "scope": "INSTANCE",
+      "path": "Add standalone gains as compositeprice",
+      "reason": "Real composite loses32B relative to165B standalone sum."
+    },
+    {
+      "scope": "INSTANCE",
+      "path": "One-thread public CPU probe",
+      "reason": "Inherited public entrypoint requires4threads; failed before token decode."
+    },
+    {
+      "scope": "INSTANCE",
+      "path": "Initial equation provenance tuple",
+      "reason": "Withdrawn; corrected appended anchor binds actual archivepath and hash, preserving history."
+    }
+  ]
+}

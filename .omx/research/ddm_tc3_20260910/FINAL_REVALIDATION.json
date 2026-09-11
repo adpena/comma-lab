@@ -1,0 +1,78 @@
+{
+  "validated_at_utc": "2026-09-10T04:52:18.895438+00:00",
+  "verdict": "SEAL_VALID",
+  "ok": true,
+  "seal_path": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_A.seal.json",
+  "candidate_id": "ddm_tc3_A_lane_predictor_move40_20260910",
+  "axis": "contest_cuda",
+  "problems": [],
+  "observed": {
+    "archive": {
+      "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+      "bytes": 180154,
+      "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip"
+    },
+    "archive_member": {
+      "sha256": "f0291f979fdc2b1cfbddfb6b9c40df968fb6b5559f70f337c3fbf20ad6e8f75e",
+      "bytes": 180054
+    },
+    "runtime": {
+      "sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+      "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+      "file_count": 49,
+      "total_bytes": 1008425
+    },
+    "public_entrypoint_smoke": {
+      "public_path_probes.candidate.runtime": {
+        "sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "file_count": 49,
+        "total_bytes": 1008425
+      },
+      "public_path_probes.candidate.archive": {
+        "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+        "bytes": 180154,
+        "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip"
+      },
+      "public_path_probes.frontier.runtime": {
+        "sha256": "ee804b2c6c6db3e98308cab26d67022833b2a4257f20289738629754b229d8be",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "file_count": 47,
+        "total_bytes": 989874
+      },
+      "public_path_probes.frontier.archive": {
+        "sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+        "bytes": 180233,
+        "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/source_runtime/archive.zip"
+      },
+      "inflate_sh_smokes.candidate.runtime": {
+        "sha256": "5ff52ed675be24db04a32b83f2097d48881fc7c2959864eef0356f6c6446a4c8",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "file_count": 49,
+        "total_bytes": 1008425
+      },
+      "inflate_sh_smokes.candidate.archive": {
+        "sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+        "bytes": 180154,
+        "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/candidate_runtime/archive.zip"
+      },
+      "inflate_sh_smokes.frontier.runtime": {
+        "sha256": "ee804b2c6c6db3e98308cab26d67022833b2a4257f20289738629754b229d8be",
+        "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+        "file_count": 47,
+        "total_bytes": 989874
+      },
+      "inflate_sh_smokes.frontier.archive": {
+        "sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857",
+        "bytes": 180233,
+        "source": "measured:/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/move40/source_runtime/archive.zip"
+      }
+    },
+    "pointer": {
+      "pointer_axis": "contest_cuda",
+      "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "pointer_score": 0.13763861019288715,
+      "pointer_archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+    }
+  }
+}

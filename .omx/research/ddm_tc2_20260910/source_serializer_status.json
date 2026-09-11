@@ -1,0 +1,6 @@
+{
+  "returncode": 17,
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_apply_cached bundle=/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/source_serializer/20260910T015307.724909Z-56996/intended-commit.bundle format_patch=/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/source_serializer/20260910T015307.724909Z-56996/intended-commit.format-patch receipt=/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/source_serializer/20260910T015307.724909Z-56996/receipts.jsonl fallback_commit=75fb5caabe564a1c46119616904082de71c7ffba\n",
+  "stderr": "[subagent-commit-serializer] git apply --cached failed (rc=128) \u2014 the patch is likely NOT cleanly based on HEAD. Regenerate it against HEAD and retry:\nerror: unable to create temporary file: Operation not permitted\nerror: unable to create backing store for newly created file experiments/ddm_tc2_lane_context.py\n",
+  "source_sha256": "1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7"
+}

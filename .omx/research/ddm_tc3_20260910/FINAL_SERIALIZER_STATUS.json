@@ -1,0 +1,41 @@
+{
+  "schema": "ddm_tc3_final_serializer_status.v1",
+  "returncode": 17,
+  "elapsed_seconds": 1.9170222079992527,
+  "argv": {
+    "path": ".omx/research/ddm_tc3_20260910/FINAL_SERIALIZER_ARGV.json",
+    "bytes": 6626,
+    "sha256": "6c68c664f525c1ea088e56c95144f6b331de704c85dac7f740144ccb7102916d"
+  },
+  "log": {
+    "path": ".omx/research/ddm_tc3_20260910/FINAL_SERIALIZER.log",
+    "bytes": 846,
+    "sha256": "00a3958dbad08d35633802612f5bf48bb626dfe7839d3c530088080b1498d735"
+  },
+  "patch": {
+    "path": ".omx/research/ddm_tc3_20260910/landing.patch",
+    "bytes": 730226,
+    "sha256": "164109c63faccd048df44bf28a988357c0627a6488d3d628a9a8b08c3b3a7877"
+  },
+  "manifest": {
+    "path": ".omx/research/ddm_tc3_20260910/landing_manifest.json",
+    "bytes": 7794,
+    "sha256": "318c553824a647f5f6ed093aacdc5c3a5bc65992b48c936bb3ce19194ceadada"
+  },
+  "main_landing": false,
+  "fallback_verification": "verified39of39 exact blobs and exact changed-file census",
+  "score_claim": false,
+  "fallback_commit": "77bb58469953a58f34b8bc6c1cba18d78b439db8",
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.bundle",
+    "bytes": 139741,
+    "sha256": "ca7db8174110a1e86516f34914d6a824868a9f6aa36c01c949a1a2a3b1549919"
+  },
+  "verification_receipt": {
+    "path": ".omx/research/ddm_tc3_20260910/BUNDLE_VERIFICATION.json",
+    "bytes": 19797,
+    "sha256": "2f92a92c2488fa1c8d2c2acdd45f5e108a5fb9b51b121d5a85133b32a6436739"
+  },
+  "typed_status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "shared_index_unchanged": true
+}

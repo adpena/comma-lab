@@ -1,0 +1,790 @@
+{
+  "schema": "ddm_tc4_final_landing_custody.v1",
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "serializer_returncode": 17,
+  "git_write_block": "Shared Git object creation refused: Operation not permitted. No approval path available; charter-authorized fallback used.",
+  "base_head": "03efa6682b8dd2ab727f4b7f4beb1069776a9801",
+  "intended_commit": "85daca5b517d77b280108484b63faeb64db2b802",
+  "shared_head_at_verification": "03efa6682b8dd2ab727f4b7f4beb1069776a9801",
+  "shared_head_landed": false,
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.bundle",
+    "bytes": 119094,
+    "sha256": "35671a5b62fe0fa63de71048943df4447907c12bb022bd3348292dd9d74a6946"
+  },
+  "patch": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.patch",
+    "bytes": 443791,
+    "sha256": "011202101d08a21021a53de9546491e98cef481b7c72feca028bb1ce90be7fcf"
+  },
+  "bundle_refs": "85daca5b517d77b280108484b63faeb64db2b802 HEAD",
+  "bundle_verification_stdout": "The bundle contains this ref:\n85daca5b517d77b280108484b63faeb64db2b802 HEAD\nThe bundle requires this ref:\n03efa6682b8dd2ab727f4b7f4beb1069776a9801 \nThe bundle uses this hash algorithm: sha1",
+  "verified_intended_file_count": 44,
+  "intended_files": [
+    {
+      "path": ".omx/research/ddm_tc4_20260910/EQUATION_ANCHOR.json",
+      "bytes": 6995,
+      "sha256": "404a883969a472d30d904f3d66a61cc392a7323e631541b57726e06084a1d3a5"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/FINAL_PROOF.json",
+      "bytes": 3009,
+      "sha256": "0c34312f61e94dd4e76fb5c907ea6d003c53dd20e82ad4f52ef1de48f200b44d"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/FIRE_ORDERS.json",
+      "bytes": 29216,
+      "sha256": "acf31700c1cef7501f6d75e5db5b63e8f2747eba0acb597bc18b0ea51e2e89a5"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/PRICING_RESULTS.json",
+      "bytes": 33547,
+      "sha256": "c97188b4111cb944cb935ad4c8a96f4bda6a773ca45df59a95e7242e4def8061"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/PROTOCOL.md",
+      "bytes": 5223,
+      "sha256": "fa15fc98a2c8577c7330e5d264c6e9e951805f66aa54d173f710f1cfa02a77cb"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/PROVENANCE.json",
+      "bytes": 2309,
+      "sha256": "7f75d33ae45a6f148657dd7de4deb372343b13276c39e0b5d9ba26751845a1b8"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/PUBLIC_IDENTITY.json",
+      "bytes": 22682,
+      "sha256": "767a51c700056ee438243c87e1f158376bb48dffae9e3cc1a21d5842ccd84441"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/PUBLIC_SMOKE.json",
+      "bytes": 10837,
+      "sha256": "7d3bbb654844a636fd11645c97cbb7e3855dac1d784ddd7c6734ec4c10e77d98"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/PUBLIC_SMOKE_VALIDATOR.json",
+      "bytes": 2224,
+      "sha256": "b0e561f57103790f3a849c4e725edd8e6c6d199515c64eddd562e181e7794c43"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/RESUME_CONTROL.json",
+      "bytes": 688,
+      "sha256": "0dc35696ffde96e1af38e0209e678210ed612b2254257e02f4b26f32b7181ce2"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/RETENTION_SUMMARY.json",
+      "bytes": 1016,
+      "sha256": "855a72eba037cac5146629be48c894ff6a75194d8a412f92180cbde00496834f"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/REVIEWED_SOURCE_FACTS.json",
+      "bytes": 780,
+      "sha256": "11ee79515fc17da24b758de8ad4d986102c417049786a8fd204adb35ddc6c15a"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/RUFF_FINAL.json",
+      "bytes": 1165,
+      "sha256": "437b0d5e391e495d8a221f8200e92ae6001906c7c75aff12c1bb162169742086"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/SEAL_PRODUCER_RESULT.json",
+      "bytes": 4375,
+      "sha256": "7085b8b19a6e866d87a8c76b8870ea56760352affc219806a676eb31c4f87326"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/SOURCE_BUNDLE_VERIFICATION.json",
+      "bytes": 692,
+      "sha256": "99026a2a5dce6ef3780e01a91efe668f84b22e3dcd10d0a92401d7ad841d3aab"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/SOURCE_SERIALIZER_ARGV.json",
+      "bytes": 1732,
+      "sha256": "9fe2c7bdd65f2f9233a3c4ee835b766e5d69511e1643663e3639bc7a2eb27055"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/SOURCE_SERIALIZER_STATUS.json",
+      "bytes": 19,
+      "sha256": "cabb09873e1690db84391a07a65f47dcac04a299405133c90ab1609bc7c43257"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/TASK_API_EXISTING_WARNINGS.json",
+      "bytes": 11432,
+      "sha256": "935df8bcf711651c0a9fe86e25e2641b88b913429261455c46d7f3f12fd18f0c"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/TASK_START.json",
+      "bytes": 1045,
+      "sha256": "f9d89d1da8929d7f78f9db783b0bf8265906ab90fbe5ccbdbba1bc9c52e66a2b"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/candidate_mask19.seal.json",
+      "bytes": 16494,
+      "sha256": "eb932e46a17ef09df720a82f62da9fa437230edc62d57b2c1b1a8215eaba341e"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/fast_context_review_and_controls.md",
+      "bytes": 5122,
+      "sha256": "1d34d8a6b386c43bc7c90b40faad913b72cb62293c5fcd0f82992d9ad9dc158c"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/fast_parent_review.md",
+      "bytes": 1570,
+      "sha256": "433605fa3ccf380fee90ef9c3f2a362c17b13ecac10920afaad369806dc12797"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/handoff_review.md",
+      "bytes": 2983,
+      "sha256": "2bbd121c5e76e1465d81d434065df4b84af0c9e97dc3047ad9bff29bc34e8998"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/recall_search.json",
+      "bytes": 150946,
+      "sha256": "98f86475b018c8c6f1fa71aa48f53430ce6004f1a58e759c8075e597ef950f08"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/receiver_review_pass1.md",
+      "bytes": 1857,
+      "sha256": "50d3936d9893750dc4b3437303319fe6f3ef9a06c093ac8974102e36527ef7b1"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/receiver_review_pass2.md",
+      "bytes": 1387,
+      "sha256": "5afad4a04a3fce930ee5378b1b44d3f0e7459a420379f982cfbdcccaa6a5c1d2"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/receiver_review_pass3.md",
+      "bytes": 1506,
+      "sha256": "5cb25b6fedd50e4a0a6ca8b63c1afa84490e4448d4f0ac852f2e1362eae74f4d"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/receiver_review_pass4.md",
+      "bytes": 1803,
+      "sha256": "1d0490a994708fc74dd1beafcccf4c76da66967acc69e62aabb38d3719b0a219"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/receiver_review_pass5.md",
+      "bytes": 1334,
+      "sha256": "57354e68f901b5be43167bc6bb58ffaf034d7b772244face19e9335fbb075c6b"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/review_pass1.md",
+      "bytes": 5569,
+      "sha256": "c441005ae673a28f6e62b86b48e4a4dacd3871a8e7ed6161922fff5f11d4ddc5"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/review_pass2.md",
+      "bytes": 2447,
+      "sha256": "c22734841f62970b80b56478199e2c0e5aaf2c5e23b215b6bc2ae63aeef6bf02"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/review_pass3.md",
+      "bytes": 1880,
+      "sha256": "3330a0610d5d29343ff1e77e751b10c928fcf5c1831fc0619557628d9ded9b92"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/review_pass4.md",
+      "bytes": 2306,
+      "sha256": "1d7efc1c74a21f72d2b8f19323ff907f05af0259aa552a23c2c04fed3529d455"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/run_composite.sh",
+      "bytes": 336,
+      "sha256": "195366a7ae63255858fa5e5220b270ceebaad5d434d2919af476234eb196d6a4"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/run_receiver_controls.sh",
+      "bytes": 654,
+      "sha256": "16e4da0577aae31c307cd64fc28296215171946414ed91a995b3ec2a7d57a909"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/run_slate.sh",
+      "bytes": 382,
+      "sha256": "8d8b9b6704130dc74824a439aac494520303743ce161c5f919dfeda5c778e824"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/source_serializer_stderr.txt",
+      "bytes": 308,
+      "sha256": "8380feef5163c6337045b0ebac04de38a9c83a6bb7aed65e8c9d74a991cc83b2"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_20260910/source_serializer_stdout.txt",
+      "bytes": 509,
+      "sha256": "6ffa029e641a93f04c7b31b94dc41fa6b12a5b96f2c45650d159d610487713d0"
+    },
+    {
+      "path": ".omx/research/ddm_tc4_causal_context_map_slate_20260910.md",
+      "bytes": 21208,
+      "sha256": "aedac78fe92ea72705da5f19f08818b6eaf2a35420adde198cf3091d5ce4f4be"
+    },
+    {
+      "path": "experiments/ddm_tc4_fast.py",
+      "bytes": 11290,
+      "sha256": "6b2ecc39ae32590ef44a638197f6d7d4201316d88dd947b98b4b3787e5fd5197"
+    },
+    {
+      "path": "experiments/ddm_tc4_maps.py",
+      "bytes": 7807,
+      "sha256": "669b852c6a350e8fd4b8b0befe06d5316ff38af2d55983c4b4ce4ad6603be8d7"
+    },
+    {
+      "path": "experiments/ddm_tc4_price.py",
+      "bytes": 23419,
+      "sha256": "0e9d0e377bb8492675540a8eda29223b1dee6963800f7821656612dfad113d0d"
+    },
+    {
+      "path": "experiments/ddm_tc4_receiver.py",
+      "bytes": 19643,
+      "sha256": "057e6deb8e600df9569b3acda8ae4f8cec9621ed09e98ec928e5e99b3493d73c"
+    },
+    {
+      "path": "experiments/ddm_tc4_validate_maps.py",
+      "bytes": 3824,
+      "sha256": "e832ebe688f7c0ce763e150c2d6da4f6c5e7f797b62b45da475dde5ee94f6851"
+    }
+  ],
+  "source_only_fallback_disposition": "FOLDED into this complete final unit",
+  "serializer_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/final_serializer/20260910T063427.297162Z-46338/receipts.jsonl",
+    "bytes": 9718,
+    "sha256": "a5605324f010bfd549e79bc3caa33d3965c1e12386c622df64ad03ea692091fb"
+  },
+  "index_custody": {
+    "returncode": 17,
+    "index_sha256_before": "c7054e7a57db52818a90a0024960d3aca6e20ef844d1e9f5dbeb33f32a76171f",
+    "index_sha256_after": "c7054e7a57db52818a90a0024960d3aca6e20ef844d1e9f5dbeb33f32a76171f",
+    "shared_index_unchanged": true
+  },
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "fetch",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/final_serializer/20260910T063427.297162Z-46338/intended-commit.bundle",
+        "refs/heads/serializer-fallback:refs/heads/landing"
+      ],
+      "returncode": 0,
+      "stderr": "From /Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/final_serializer/20260910T063427.297162Z-46338/intended-commit.bundle\n * [new branch]          serializer-fallback -> landing\n"
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "symbolic-ref",
+        "HEAD",
+        "refs/heads/landing"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "bundle",
+        "create",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.bundle",
+        "HEAD",
+        "^03efa6682b8dd2ab727f4b7f4beb1069776a9801"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "bundle",
+        "verify",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.bundle"
+      ],
+      "returncode": 0,
+      "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.bundle is okay\n"
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "bundle",
+        "list-heads",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_tc4_20260910/landing.bundle"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/EQUATION_ANCHOR.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/FINAL_PROOF.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/FIRE_ORDERS.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/PRICING_RESULTS.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/PROTOCOL.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/PROVENANCE.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/PUBLIC_IDENTITY.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/PUBLIC_SMOKE.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/PUBLIC_SMOKE_VALIDATOR.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/RESUME_CONTROL.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/RETENTION_SUMMARY.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/REVIEWED_SOURCE_FACTS.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/RUFF_FINAL.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/SEAL_PRODUCER_RESULT.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/SOURCE_BUNDLE_VERIFICATION.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/SOURCE_SERIALIZER_ARGV.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/SOURCE_SERIALIZER_STATUS.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/TASK_API_EXISTING_WARNINGS.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/TASK_START.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/candidate_mask19.seal.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/fast_context_review_and_controls.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/fast_parent_review.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/handoff_review.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/recall_search.json"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/receiver_review_pass1.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/receiver_review_pass2.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/receiver_review_pass3.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/receiver_review_pass4.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/receiver_review_pass5.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/review_pass1.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/review_pass2.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/review_pass3.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/review_pass4.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/run_composite.sh"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/run_receiver_controls.sh"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/run_slate.sh"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/source_serializer_stderr.txt"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_20260910/source_serializer_stdout.txt"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:.omx/research/ddm_tc4_causal_context_map_slate_20260910.md"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:experiments/ddm_tc4_fast.py"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:experiments/ddm_tc4_maps.py"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:experiments/ddm_tc4_price.py"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:experiments/ddm_tc4_receiver.py"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "HEAD:experiments/ddm_tc4_validate_maps.py"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir=/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/bundle_verifier.git",
+        "show",
+        "-s",
+        "--format=%B",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stderr": ""
+    }
+  ],
+  "commit_message": "tc4: retain133B causal-context composite with public n600 identity [no-triality] [p0-ledger-ok]\n\nFive maps priced by real twins; mandatory composite interaction miss32B. Full literal public output identity and seal pass. Two final source reviews plus Ruff; no scorer or new exact-score claim. Checkpoint ddm_tc4 step6.\n\n# CHECKPOINT_DISCIPLINE_WAIVED:keeper-arm 'ddm_tc4' landing; resume custody = keeper apparatus (charter + done-receipt + persisted final message), not commit-body checkpoints (auto-appended by the serializer)",
+  "main_consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc4_context_slate/move41/handoff/landing/FIRE_ORDER.json",
+  "score_claim": false
+}

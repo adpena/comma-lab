@@ -1,0 +1,4 @@
+{
+  "SUBAGENT_LABEL": "ddm_tc2",
+  "reason": "Identify this arm to its own checkpoint guard; no overrides"
+}

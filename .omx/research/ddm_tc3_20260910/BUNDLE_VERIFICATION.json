@@ -1,0 +1,381 @@
+{
+  "schema": "ddm_tc3_fallback_verification.v1",
+  "fallback_commit": "77bb58469953a58f34b8bc6c1cba18d78b439db8",
+  "base_head": "96d75bd9a800253ee2a7cbb983cdefe8a36781e8",
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.bundle",
+  "bundle_sha256": "ca7db8174110a1e86516f34914d6a824868a9f6aa36c01c949a1a2a3b1549919",
+  "bundle_verified": true,
+  "isolated_verification_git": "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/landing_verification_77bb584699.git",
+  "all_file_hashes_match": true,
+  "file_count": 39,
+  "files": [
+    {
+      "path": ".omx/research/ddm_tc3_20260910/CANONICAL_REPLAY.json",
+      "expected_sha256": "4a0c07d7e399e9b7629aeae6c4197f8885b60a3dad9e1a3e655a74d1e531c04c",
+      "bundled_sha256": "4a0c07d7e399e9b7629aeae6c4197f8885b60a3dad9e1a3e655a74d1e531c04c",
+      "bytes": 51118
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/CURRENT_RUN_RECEIPTS.json",
+      "expected_sha256": "79e19b06f2189eed4a014d70788cb6aa0a33b27fbd723e0ad4cb89edeb564ae5",
+      "bundled_sha256": "79e19b06f2189eed4a014d70788cb6aa0a33b27fbd723e0ad4cb89edeb564ae5",
+      "bytes": 15120
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/HANDOFF.json",
+      "expected_sha256": "9ff4d6068eee8a203b7a651f0962fe26fcda71060b859d08dc7367f0f0a55de4",
+      "bundled_sha256": "9ff4d6068eee8a203b7a651f0962fe26fcda71060b859d08dc7367f0f0a55de4",
+      "bytes": 2116
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/MEASURED_RESULTS.json",
+      "expected_sha256": "b58be4810e244e7e4f1ce9e7e3a7975516261fed0c168239d493a355aa474527",
+      "bundled_sha256": "b58be4810e244e7e4f1ce9e7e3a7975516261fed0c168239d493a355aa474527",
+      "bytes": 260995
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/REVIEW_CUSTODY.json",
+      "expected_sha256": "04be7f066758f02e59e21dd2303ec02b2f4800dac0e57dd37a36933791ae802b",
+      "bundled_sha256": "04be7f066758f02e59e21dd2303ec02b2f4800dac0e57dd37a36933791ae802b",
+      "bytes": 54083
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/SEAL_ARGV.json",
+      "expected_sha256": "7e967230b418b93428fa3a6081f24395f709c8ec23991663ce856dbec8ac2584",
+      "bundled_sha256": "7e967230b418b93428fa3a6081f24395f709c8ec23991663ce856dbec8ac2584",
+      "bytes": 3971
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/SEAL_PREPARATION.json",
+      "expected_sha256": "29fdbd3e8044b9ab04ae3b55d92f6d9c99e1af9b5aff7f37ea8dfde59f014ae1",
+      "bundled_sha256": "29fdbd3e8044b9ab04ae3b55d92f6d9c99e1af9b5aff7f37ea8dfde59f014ae1",
+      "bytes": 494
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/VALIDATION.json",
+      "expected_sha256": "81494ead27cd950ec11a3200a61999e8e5952f730051f1bfafd93f60be2abf8a",
+      "bundled_sha256": "81494ead27cd950ec11a3200a61999e8e5952f730051f1bfafd93f60be2abf8a",
+      "bytes": 5099
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/geometry_review.md",
+      "expected_sha256": "1cea362474d6f1ecc428a7c6725c6a52860f45035a6084a45e543566948613b9",
+      "bundled_sha256": "1cea362474d6f1ecc428a7c6725c6a52860f45035a6084a45e543566948613b9",
+      "bytes": 8655
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/historical_move39/MEASURED_RESULTS.json",
+      "expected_sha256": "78768d46daa1c9a7cb9324df6a7b933508286ab33872f86c4b58553a9a7014e0",
+      "bundled_sha256": "78768d46daa1c9a7cb9324df6a7b933508286ab33872f86c4b58553a9a7014e0",
+      "bytes": 20695
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/historical_move39/SEAL_ARGV.json",
+      "expected_sha256": "73b656e3c83c4d006a1d28dd0ee5c81473b9eb3da50e70f8fc186cc48539d021",
+      "bundled_sha256": "73b656e3c83c4d006a1d28dd0ee5c81473b9eb3da50e70f8fc186cc48539d021",
+      "bytes": 2676
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/historical_move39/STATUS.json",
+      "expected_sha256": "3cc5257b20095b5bc7dd16073a73f2038552474401e73e02517c371f79822f27",
+      "bundled_sha256": "3cc5257b20095b5bc7dd16073a73f2038552474401e73e02517c371f79822f27",
+      "bytes": 1376
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/historical_move39/VALIDATION.json",
+      "expected_sha256": "9bc9e5fdb40f1071723bb6e064b780fae093a8b947dfaf1e90d7cb0966c6bb7c",
+      "bundled_sha256": "9bc9e5fdb40f1071723bb6e064b780fae093a8b947dfaf1e90d7cb0966c6bb7c",
+      "bytes": 2628
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/historical_move39/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+      "expected_sha256": "df96ed01bf365a96ab5d6f9b9e3ab250b31f0664edd812edae1c79bad1bd0658",
+      "bundled_sha256": "df96ed01bf365a96ab5d6f9b9e3ab250b31f0664edd812edae1c79bad1bd0658",
+      "bytes": 13486
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/measured_comparison_review.md",
+      "expected_sha256": "a6b69117c1d41d0f9b627cff2d59d1cdf1d00c461d70e3d217794092ace47f4b",
+      "bundled_sha256": "a6b69117c1d41d0f9b627cff2d59d1cdf1d00c461d70e3d217794092ace47f4b",
+      "bytes": 9998
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/mixer_price_review.md",
+      "expected_sha256": "37fcfdccf63c5da90b09b48af08d0883293b895164ffff2159567292879d494a",
+      "bundled_sha256": "37fcfdccf63c5da90b09b48af08d0883293b895164ffff2159567292879d494a",
+      "bytes": 6538
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/move40_final_consistency_review.md",
+      "expected_sha256": "a7744cef1b516e21fa580023bc427dc2aaf55d8b092126567dc8ff19f1a898ba",
+      "bundled_sha256": "a7744cef1b516e21fa580023bc427dc2aaf55d8b092126567dc8ff19f1a898ba",
+      "bytes": 4071
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/move40_live_binding_audit.md",
+      "expected_sha256": "6b156c7e4bda4370a2f5055370f2207d5988b4b17cbeb0177cbe0f95097a9ac3",
+      "bundled_sha256": "6b156c7e4bda4370a2f5055370f2207d5988b4b17cbeb0177cbe0f95097a9ac3",
+      "bytes": 6651
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/move40_measured_comparison_review.md",
+      "expected_sha256": "91945ec3f3cb8d8d9effce627cd3aebfdb390fee0c3ae18909e5bc18416c67fe",
+      "bundled_sha256": "91945ec3f3cb8d8d9effce627cd3aebfdb390fee0c3ae18909e5bc18416c67fe",
+      "bytes": 10689
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/move40_memo_seal_review.md",
+      "expected_sha256": "8361ea59a261a5211f852ad73257e8d1f4e9d2dfd1507a2d979cd2bcf0b4e8e3",
+      "bundled_sha256": "8361ea59a261a5211f852ad73257e8d1f4e9d2dfd1507a2d979cd2bcf0b4e8e3",
+      "bytes": 6421
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/move40_review.md",
+      "expected_sha256": "9371656c21ffd9119c6fe67db6e7805958cc74f8ed3e2ca6604d45ec206cef02",
+      "bundled_sha256": "9371656c21ffd9119c6fe67db6e7805958cc74f8ed3e2ca6604d45ec206cef02",
+      "bytes": 9551
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/native_trace_state_review.md",
+      "expected_sha256": "9365257bfbe93bc83884bec82eea1a23ac14ce9e88b7f3038e22543f1975bc82",
+      "bundled_sha256": "9365257bfbe93bc83884bec82eea1a23ac14ce9e88b7f3038e22543f1975bc82",
+      "bytes": 6716
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/receiver_review.md",
+      "expected_sha256": "5b2a3ba49fc2ecae6fcc5af6b82dc175a827fc4683533665b42670f068190db0",
+      "bundled_sha256": "5b2a3ba49fc2ecae6fcc5af6b82dc175a827fc4683533665b42670f068190db0",
+      "bytes": 8666
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/recovery_review.md",
+      "expected_sha256": "1752ed8a6160f6655aa2d45bdb9f4bc4554a4ea9fcef4b4b38d06ca00b4512fe",
+      "bundled_sha256": "1752ed8a6160f6655aa2d45bdb9f4bc4554a4ea9fcef4b4b38d06ca00b4512fe",
+      "bytes": 6478
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/trace_serializer.log",
+      "expected_sha256": "009f644368cbc44610acc433c3534b57bd7cbf02f5962bd6bbd4975fc180d7c3",
+      "bundled_sha256": "009f644368cbc44610acc433c3534b57bd7cbf02f5962bd6bbd4975fc180d7c3",
+      "bytes": 822
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/trace_serializer_argv.json",
+      "expected_sha256": "89f5b45215fa82425a88497a8d4eeea63ca73900d338c11d724ff60abaf98466",
+      "bundled_sha256": "89f5b45215fa82425a88497a8d4eeea63ca73900d338c11d724ff60abaf98466",
+      "bytes": 650
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/trace_serializer_status.json",
+      "expected_sha256": "38a922e1c79a622b56eb2f56e85fd64e8ea251cfdbe9adb7db084ea71eab3363",
+      "bundled_sha256": "38a922e1c79a622b56eb2f56e85fd64e8ea251cfdbe9adb7db084ea71eab3363",
+      "bytes": 104
+    },
+    {
+      "path": ".omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+      "expected_sha256": "123274bc80fa8723c412af0f7643c4011295d9a5031d14e7bf0c7e5ed21fd0f3",
+      "bundled_sha256": "123274bc80fa8723c412af0f7643c4011295d9a5031d14e7bf0c7e5ed21fd0f3",
+      "bytes": 17983
+    },
+    {
+      "path": "experiments/ddm_tc3_geometry.py",
+      "expected_sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57",
+      "bundled_sha256": "ede05dae071706e38d9022fba609caac1d254d2b2b9a62c469df9d0e153a0e57",
+      "bytes": 11908
+    },
+    {
+      "path": "experiments/ddm_tc3_mixer.py",
+      "expected_sha256": "fe5aa8b922711f1919935ea2a513eaa3dd449ddbbffdfe8b9213ffd1b3409f7d",
+      "bundled_sha256": "fe5aa8b922711f1919935ea2a513eaa3dd449ddbbffdfe8b9213ffd1b3409f7d",
+      "bytes": 5968
+    },
+    {
+      "path": "experiments/ddm_tc3_move40_price.py",
+      "expected_sha256": "08d10b13029545d5aadbbec68cb9a32c5655081f05a8347ad1f5caee58552868",
+      "bundled_sha256": "08d10b13029545d5aadbbec68cb9a32c5655081f05a8347ad1f5caee58552868",
+      "bytes": 20180
+    },
+    {
+      "path": "experiments/ddm_tc3_move40_receiver.py",
+      "expected_sha256": "a0d403ffb71a3fbfa1abe2169787ef547753c4317ca497f46de11e0c82b71f34",
+      "bundled_sha256": "a0d403ffb71a3fbfa1abe2169787ef547753c4317ca497f46de11e0c82b71f34",
+      "bytes": 29144
+    },
+    {
+      "path": "experiments/ddm_tc3_move40_trace.py",
+      "expected_sha256": "1b3fe73a64cde250bc409af937939a504517a2b124d40593ba1c3c2ec980b0b1",
+      "bundled_sha256": "1b3fe73a64cde250bc409af937939a504517a2b124d40593ba1c3c2ec980b0b1",
+      "bytes": 18147
+    },
+    {
+      "path": "experiments/ddm_tc3_price.py",
+      "expected_sha256": "0613a39c1d7ac87d94f1d34c4791819c74d672aad6af7a3ce1201658923090a8",
+      "bundled_sha256": "0613a39c1d7ac87d94f1d34c4791819c74d672aad6af7a3ce1201658923090a8",
+      "bytes": 20173
+    },
+    {
+      "path": "experiments/ddm_tc3_receiver.py",
+      "expected_sha256": "b27900ebe52e6365844361f1931451461ac50dc4ef6536a70347dc4288561000",
+      "bundled_sha256": "b27900ebe52e6365844361f1931451461ac50dc4ef6536a70347dc4288561000",
+      "bytes": 28885
+    },
+    {
+      "path": "experiments/ddm_tc3_recover_public_receipt.py",
+      "expected_sha256": "fd88972a72812ca9611c2b0730c91e76ff73d57df63a7148e74fa634fae3bf08",
+      "bundled_sha256": "fd88972a72812ca9611c2b0730c91e76ff73d57df63a7148e74fa634fae3bf08",
+      "bytes": 5476
+    },
+    {
+      "path": "experiments/ddm_tc3_trace.py",
+      "expected_sha256": "1602a28c700ee1901b1ef2586d27fd00012b17191c66d98bfc3203684d567293",
+      "bundled_sha256": "1602a28c700ee1901b1ef2586d27fd00012b17191c66d98bfc3203684d567293",
+      "bytes": 15992
+    },
+    {
+      "path": "experiments/test_ddm_tc3_geometry.py",
+      "expected_sha256": "6de394343ab1ed8a329109ed885ca648306e5d08a4c06e18602c1c82453c30e3",
+      "bundled_sha256": "6de394343ab1ed8a329109ed885ca648306e5d08a4c06e18602c1c82453c30e3",
+      "bytes": 3944
+    },
+    {
+      "path": ".omx/research/ddm_tc3_20260910/landing_manifest.json",
+      "expected_sha256": "318c553824a647f5f6ed093aacdc5c3a5bc65992b48c936bb3ce19194ceadada",
+      "bundled_sha256": "318c553824a647f5f6ed093aacdc5c3a5bc65992b48c936bb3ce19194ceadada",
+      "bytes": 7794
+    }
+  ],
+  "exact_changed_path_census": [
+    ".omx/research/ddm_tc3_20260910/CANONICAL_REPLAY.json",
+    ".omx/research/ddm_tc3_20260910/CURRENT_RUN_RECEIPTS.json",
+    ".omx/research/ddm_tc3_20260910/HANDOFF.json",
+    ".omx/research/ddm_tc3_20260910/MEASURED_RESULTS.json",
+    ".omx/research/ddm_tc3_20260910/REVIEW_CUSTODY.json",
+    ".omx/research/ddm_tc3_20260910/SEAL_ARGV.json",
+    ".omx/research/ddm_tc3_20260910/SEAL_PREPARATION.json",
+    ".omx/research/ddm_tc3_20260910/VALIDATION.json",
+    ".omx/research/ddm_tc3_20260910/geometry_review.md",
+    ".omx/research/ddm_tc3_20260910/historical_move39/MEASURED_RESULTS.json",
+    ".omx/research/ddm_tc3_20260910/historical_move39/SEAL_ARGV.json",
+    ".omx/research/ddm_tc3_20260910/historical_move39/STATUS.json",
+    ".omx/research/ddm_tc3_20260910/historical_move39/VALIDATION.json",
+    ".omx/research/ddm_tc3_20260910/historical_move39/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+    ".omx/research/ddm_tc3_20260910/landing_manifest.json",
+    ".omx/research/ddm_tc3_20260910/measured_comparison_review.md",
+    ".omx/research/ddm_tc3_20260910/mixer_price_review.md",
+    ".omx/research/ddm_tc3_20260910/move40_final_consistency_review.md",
+    ".omx/research/ddm_tc3_20260910/move40_live_binding_audit.md",
+    ".omx/research/ddm_tc3_20260910/move40_measured_comparison_review.md",
+    ".omx/research/ddm_tc3_20260910/move40_memo_seal_review.md",
+    ".omx/research/ddm_tc3_20260910/move40_review.md",
+    ".omx/research/ddm_tc3_20260910/native_trace_state_review.md",
+    ".omx/research/ddm_tc3_20260910/receiver_review.md",
+    ".omx/research/ddm_tc3_20260910/recovery_review.md",
+    ".omx/research/ddm_tc3_20260910/trace_serializer.log",
+    ".omx/research/ddm_tc3_20260910/trace_serializer_argv.json",
+    ".omx/research/ddm_tc3_20260910/trace_serializer_status.json",
+    ".omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md",
+    "experiments/ddm_tc3_geometry.py",
+    "experiments/ddm_tc3_mixer.py",
+    "experiments/ddm_tc3_move40_price.py",
+    "experiments/ddm_tc3_move40_receiver.py",
+    "experiments/ddm_tc3_move40_trace.py",
+    "experiments/ddm_tc3_price.py",
+    "experiments/ddm_tc3_receiver.py",
+    "experiments/ddm_tc3_recover_public_receipt.py",
+    "experiments/ddm_tc3_trace.py",
+    "experiments/test_ddm_tc3_geometry.py"
+  ],
+  "commit_message_exact": true,
+  "no_attribution_trailer": true,
+  "shared_index_sha256_unchanged": true,
+  "shared_staged_paths_unchanged": true,
+  "main_head_after": "96d75bd9a800253ee2a7cbb983cdefe8a36781e8",
+  "main_landing": false,
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "bundle",
+        "verify",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.bundle"
+      ],
+      "returncode": 0,
+      "stdout": "The bundle contains this ref:\n77bb58469953a58f34b8bc6c1cba18d78b439db8 refs/heads/serializer-fallback\nThe bundle requires this ref:\n96d75bd9a800253ee2a7cbb983cdefe8a36781e8 \nThe bundle uses this hash algorithm: sha1\n",
+      "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.bundle is okay\n"
+    },
+    {
+      "argv": [
+        "git",
+        "init",
+        "--bare",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/landing_verification_77bb584699.git"
+      ],
+      "returncode": 0,
+      "stdout": "Initialized empty Git repository in /Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/landing_verification_77bb584699.git/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/landing_verification_77bb584699.git",
+        "bundle",
+        "unbundle",
+        "/Users/adpena/Projects/pact/.omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.bundle"
+      ],
+      "returncode": 0,
+      "stdout": "77bb58469953a58f34b8bc6c1cba18d78b439db8 refs/heads/serializer-fallback\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/landing_verification_77bb584699.git",
+        "diff-tree",
+        "--no-commit-id",
+        "--name-only",
+        "-r",
+        "77bb58469953a58f34b8bc6c1cba18d78b439db8"
+      ],
+      "returncode": 0,
+      "stdout": ".omx/research/ddm_tc3_20260910/CANONICAL_REPLAY.json\n.omx/research/ddm_tc3_20260910/CURRENT_RUN_RECEIPTS.json\n.omx/research/ddm_tc3_20260910/HANDOFF.json\n.omx/research/ddm_tc3_20260910/MEASURED_RESULTS.json\n.omx/research/ddm_tc3_20260910/REVIEW_CUSTODY.json\n.omx/research/ddm_tc3_20260910/SEAL_ARGV.json\n.omx/research/ddm_tc3_20260910/SEAL_PREPARATION.json\n.omx/research/ddm_tc3_20260910/VALIDATION.json\n.omx/research/ddm_tc3_20260910/geometry_review.md\n.omx/research/ddm_tc3_20260910/historical_move39/MEASURED_RESULTS.json\n.omx/research/ddm_tc3_20260910/historical_move39/SEAL_ARGV.json\n.omx/research/ddm_tc3_20260910/historical_move39/STATUS.json\n.omx/research/ddm_tc3_20260910/historical_move39/VALIDATION.json\n.omx/research/ddm_tc3_20260910/historical_move39/ddm_tc3_lane_predictor_receiver_seal_20260910.md\n.omx/research/ddm_tc3_20260910/landing_manifest.json\n.omx/research/ddm_tc3_20260910/measured_comparison_review.md\n.omx/research/ddm_tc3_20260910/mixer_price_review.md\n.omx/research/ddm_tc3_20260910/move40_final_consistency_review.md\n.omx/research/ddm_tc3_20260910/move40_live_binding_audit.md\n.omx/research/ddm_tc3_20260910/move40_measured_comparison_review.md\n.omx/research/ddm_tc3_20260910/move40_memo_seal_review.md\n.omx/research/ddm_tc3_20260910/move40_review.md\n.omx/research/ddm_tc3_20260910/native_trace_state_review.md\n.omx/research/ddm_tc3_20260910/receiver_review.md\n.omx/research/ddm_tc3_20260910/recovery_review.md\n.omx/research/ddm_tc3_20260910/trace_serializer.log\n.omx/research/ddm_tc3_20260910/trace_serializer_argv.json\n.omx/research/ddm_tc3_20260910/trace_serializer_status.json\n.omx/research/ddm_tc3_lane_predictor_receiver_seal_20260910.md\nexperiments/ddm_tc3_geometry.py\nexperiments/ddm_tc3_mixer.py\nexperiments/ddm_tc3_move40_price.py\nexperiments/ddm_tc3_move40_receiver.py\nexperiments/ddm_tc3_move40_trace.py\nexperiments/ddm_tc3_price.py\nexperiments/ddm_tc3_receiver.py\nexperiments/ddm_tc3_recover_public_receipt.py\nexperiments/ddm_tc3_trace.py\nexperiments/test_ddm_tc3_geometry.py\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "--git-dir",
+        "/Volumes/VertigoDataTier/pact/ddm_tc3_lane_predictor_seal/rebase_move40/landing_verification_77bb584699.git",
+        "cat-file",
+        "commit",
+        "77bb58469953a58f34b8bc6c1cba18d78b439db8"
+      ],
+      "returncode": 0,
+      "stdout": "tree 9c06ce65bb82ae1affcb542ceb0bfd80826c7bce\nparent 96d75bd9a800253ee2a7cbb983cdefe8a36781e8\nauthor Alejandro Pe\u00f1a <adpena@gmail.com> 1789015754 -0500\ncommitter Alejandro Pe\u00f1a <adpena@gmail.com> 1789015754 -0500\n\ntc3: seal move40 causal lane receiver and close tested run tracking [no-triality] [p0-ledger-ok]\n\nA retains79 actual archive bytes with full public n600 same-host output identity; B37B triggers the charter formulation stop. MAIN exact evaluation remains queued; no score claim. Two visible Python reviews and Ruff passed. Checkpoint: tools/subagent_checkpoint.py --subagent-id ddm_tc3.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stdout": "96d75bd9a800253ee2a7cbb983cdefe8a36781e8\n",
+      "stderr": ""
+    }
+  ],
+  "score_claim": false
+}

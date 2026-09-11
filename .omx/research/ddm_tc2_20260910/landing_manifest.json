@@ -1,0 +1,135 @@
+{
+  "base_head": "d6dabdf082a316374141fc0463c29edecbac7a48",
+  "files": [
+    {
+      "bytes": 24036,
+      "path": "experiments/ddm_tc2_lane_context.py",
+      "sha256": "1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 7118,
+      "path": "experiments/ddm_tc2_result.py",
+      "sha256": "d91708c0d1086cf8c1fe048246c7cca5bf069110d588142af897f36e062a4b82",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 14088,
+      "path": "experiments/ddm_tc2_codec.py",
+      "sha256": "b07505176b33bd0d9ca3068bfd57820caf86fa2f417d25f8ed7c7942710a37df",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 18347,
+      "path": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "sha256": "8b0599ce76cebacfb97f48334efc3c8c85f3bae425398a0d83e40d0383f2f507",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 5967,
+      "path": ".omx/research/charters/ddm_tc2_better_causal_lane_predictor_build_20260910.md",
+      "sha256": "0519ab63bffcbedc42380505cd4d16bf0d378fd1f975226ffc8d9ccbcb7b539a",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 621,
+      "path": ".omx/research/ddm_tc2_20260910/fit_run.sh",
+      "sha256": "db79171bb7852a7cdf885e3365b914443030867f9eeb8232dc5afb185851928f",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 18225,
+      "path": ".omx/research/ddm_tc2_20260910/reviews.json",
+      "sha256": "21c7a5a1ddf563dc181421d56c3909127ec0782dae56e4978ec6dbcb14f21264",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 2889,
+      "path": ".omx/research/ddm_tc2_20260910/RESULT.json",
+      "sha256": "f14fa3212dd8cb92d932a04c7241e6e5e9d2b76ef446f1436d0e3363d63dd89e",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 2335,
+      "path": ".omx/research/ddm_tc2_20260910/encode_result.json",
+      "sha256": "0e6964188ae8787da40d0817f0f2700619410afe4af43e91ae5f4e0dbf37a536",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 1931,
+      "path": ".omx/research/ddm_tc2_20260910/decode_result.json",
+      "sha256": "771c5b1d189249eb494a2f20ec7cca38ef47c6cbbb1a7857df3669184565fa8a",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 12212,
+      "path": ".omx/research/ddm_tc2_20260910/equation_registration.json",
+      "sha256": "7397ef8eafabb1242c59150875c6607220df8c4edc0a4b9051ac1c0b79451c70",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 9358,
+      "path": ".omx/research/ddm_tc2_20260910/equation_events.jsonl",
+      "sha256": "71dcf9cf300257f16c2f46fcbc24b1c736660e103ad1fd9a11f5a0f16f2b16e8",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 3343,
+      "path": ".omx/research/ddm_tc2_20260910/FIRE_ORDERS.json",
+      "sha256": "3de397f07d93e0b6138353e44131f60ae52aabb03c4fc3b4d88f4cbbf072cad0",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 11682,
+      "path": ".omx/research/ddm_tc2_20260910/task_events.json",
+      "sha256": "0de5f6aa0d1b34372483679818aa2e1120c2b472fc9f1b43b474b7febfb93b9b",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 1305,
+      "path": ".omx/research/ddm_tc2_20260910/LANE_ROAD_BAND_ENTROPY.json",
+      "sha256": "8418c95ce3ebd64efce1864de859d5560df7074e64d42f7f168b6b931ab823ac",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 17945,
+      "path": ".omx/research/ddm_tc2_20260910/live_frontier.json",
+      "sha256": "4d0dd93cbd025da8f6f582e4355474cd34bc25dc926f87f66a030268bbe6cf1d",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 1293,
+      "path": ".omx/research/ddm_tc2_20260910/lane_registration.json",
+      "sha256": "f2c6f2d6aeca3cc22651a2b3759a5659570d3821f05f4fd84730e1fd80367fae",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 1145,
+      "path": ".omx/research/ddm_tc2_20260910/retained_manifest.json",
+      "sha256": "9c0da92d0b0b5d270595ceebd1c1aae19261c573f6b343e6367847507b6c888f",
+      "source": "owned final file"
+    },
+    {
+      "bytes": 8282058,
+      "path": ".omx/state/canonical_equations_registry.jsonl",
+      "sha256": "62450a0cc645e45b5cfad565be804dc5b8a45e0a476f7fa28de4da50d4c11057",
+      "source": "HEAD plus only owned append events; shared worktree ignored"
+    },
+    {
+      "bytes": 938511,
+      "path": ".omx/state/canonical_task_status.jsonl",
+      "sha256": "db27227a48efca3adff4cd9c9d8ec090608a5093a93e80675b684e5a2451ca9a",
+      "source": "HEAD plus only owned append events; shared worktree ignored"
+    }
+  ],
+  "lane_registry_policy": "Only owned lane_registration.json is landed; current lane was changed through lane API. MAIN replays that one row if absent, without absorbing the shared registry.",
+  "patch": {
+    "bytes": 232960,
+    "path": ".omx/research/ddm_tc2_20260910/landing.patch",
+    "sha256": "b74f643f7514de5df6809d16ed22d25100b31e49735deb31a0c4beb2a15668e4"
+  },
+  "post_edit_hash_scope": "Exact intended temp-index blobs; all owned source hashes equal their post-edit working-tree hashes.",
+  "replaces_rejected_attempt": "3eb15f2ef5ccc88f9b58df0fc4170baeb6521378",
+  "shared_index_sha256_before": "49e0ef8d9188a9d7f73e8c3b84b93d0ce291f49cd3bd89fd16eadb32e599a30f",
+  "staged_names_before": []
+}
