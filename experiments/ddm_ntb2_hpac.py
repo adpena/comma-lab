@@ -1,0 +1,339 @@
+"""Structural HPAC treatments with RLC1 tail twins through the actual receiver loop.
+
+Research only. Encoder substitution returns known source symbols at the receiver's
+arithmetic-decode call; all probability generation and adaptation remain the
+shipping implementation. This is NOT a public decode proof. A separate unmodified
+public decode must establish that the resulting archive restores the same field.
+Every payload and restart state stays on SSD. No scorer or Modal dispatch.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+REPO = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(REPO), str(REPO / "src")]
+for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[key] = "1"
+
+import numpy as np
+
+from experiments import ddm_ntb2_control as control
+from experiments import ddm_rlc1_run as landed
+from experiments.ddm_rc1_model_section_adaptive_recode import ck2_interleave
+from experiments.ddm_tc1_public_proof import build_libraries
+
+ROOT = control.ROOT.parent / "hpac_v3"
+TREATMENTS = ("control", "drop_row1", "drop_row4", "frame_even", "frame_quad")
+
+
+def fact(path):
+    return landed.fact(Path(path))
+
+
+def retain(path, payload):
+    if not path.resolve().is_relative_to(ROOT.resolve()):
+        raise ValueError("write outside HPAC store")
+    if shutil.disk_usage(ROOT.parent).free < (40 << 30) + len(payload):
+        raise RuntimeError("STORAGE_BLOCK: keep all existing evidence")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    landed.io.persist_immutable_bytes(path, payload, label="ntb2 retained payload")
+    return fact(path)
+
+
+def record(path, value):
+    retain(path, (json.dumps(value, sort_keys=True, indent=2) + "\n").encode())
+    return value
+
+
+def prepare(tag):
+    """Construct format-preserving integer treatments with the shipping RC3 coder."""
+    import brotli
+    import torch
+
+    proof = control.ROOT / "REPRODUCTION.json"
+    if not proof.exists() or not json.loads(proof.read_text())["full_archive_byte_identical"]:
+        raise ValueError("CONTROL_REQUIRED: do not price before shipped encoder reproduction")
+    pointer = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
+    if pointer["our_local_frontier_contest_cuda"]["archive_sha256"] != control.BASE_SHA:
+        raise ValueError("POINTER_MOVED")
+    work = ROOT / tag
+    runtime = work / "runtime_copy"
+    sources = {}
+    for src in sorted((control.ROOT / "source_runtime").rglob("*")):
+        if src.is_file() and "__pycache__" not in src.parts and src.suffix != ".pyc":
+            dst = runtime / src.relative_to(control.ROOT / "source_runtime")
+            sources[str(dst.relative_to(runtime))] = retain(dst, src.read_bytes())
+    rx, renderer, code_dir = landed.io.load_runtime(runtime)
+    from runtime import ihs2
+    from runtime import rc2_hpac_semistatic_mixing as rc2
+    from runtime import rc3_shared_mixer as rc3
+
+    parts = rx.read_residual_archive(runtime / "archive.zip")
+    layout = ihs2.layout_from_runtime(renderer)
+    counts = list(layout.row_counts)
+    original = rx.materialize_ihs1(parts.hpac_blob, renderer)
+    rows, depths = rc2.unpack_rows(original, counts)
+    if np.any((depths < 0) | (depths > 15)):
+        raise ValueError("IHS1 depth is outside the counted nibble domain")
+    depths = depths.astype(np.uint8)
+    _, _, tail, _ = rc2.split_ihs1(original, counts)
+    coordinates = []
+    if tag.startswith("drop_row"):
+        # Nonzero rows ranked by mean absolute INTEGER weight. Stable row-index
+        # tie break. Only stored row values change; dimensions and masks stay fixed.
+        eligible = [i for i, r in enumerate(rows) if np.any(r)]
+        chosen = sorted(eligible, key=lambda i: (float(np.abs(rows[i]).mean()), i))[: int(tag[8:])]
+        for i in chosen:
+            module, start, _ = next(x for x in layout.module_ranges if x[1] <= i < x[2])
+            coordinates.append(
+                {
+                    "module": module,
+                    "row": i - start,
+                    "flat_row": i,
+                    "before_mean_abs": float(np.abs(rows[i]).mean()),
+                    "count": len(rows[i]),
+                }
+            )
+            rows[i] = np.zeros_like(rows[i])
+            depths[i] = 0
+    elif tag in ("frame_even", "frame_quad"):
+        # frame_even took one bit off the LSB of the stored frame embedding and paid
+        # -603 HPAC B for +358 tail B, a joint -245 B. The step is the free parameter of
+        # that trade, so frame_quad takes a second bit and measures where the trade turns.
+        step = 2 if tag == "frame_even" else 4
+        frame = layout.frame_field
+        if layout.tail_fields[0].name != frame.name:
+            raise ValueError("frame embedding tail offset changed")
+        values = np.frombuffer(tail[: frame.byte_count], dtype=np.int8).astype(np.int16)
+        limit = 128 - (128 % step)
+        coarse = np.clip(np.rint(values / step) * step, -128, limit - step).astype(np.int8)
+        coordinates = [
+            {
+                "field": frame.name,
+                "changed": int(np.count_nonzero(values != coarse)),
+                "quantization": f"nearest multiple of {step}; ties to even",
+                "step": step,
+            }
+        ]
+        tail = coarse.tobytes() + tail[frame.byte_count :]
+    packed_depths = np.zeros((len(depths) + 1) // 2, dtype=np.uint8)
+    packed_depths[:] = depths[::2]
+    packed_depths[: len(depths) // 2] |= depths[1::2] << 4
+    body = b"IHS1" + packed_depths.tobytes() + rc2.pack_rows(rows, depths) + tail
+    retain(work / "retained/hpac.ihs1", body)
+    if (body == original) != (tag == "control"):
+        raise ValueError("treatment is a no-op or control changed")
+    model = renderer.load_hpac(body, torch.device("cpu"))
+    if model is None:
+        raise ValueError("real integer model failed to load")
+    header = rc3.HEADER.unpack_from(parts.hpac_blob)
+    offset = rc3.HEADER.size + header[-3]
+    learning = parts.hpac_blob[offset]
+    weights = np.frombuffer(parts.hpac_blob[offset + 1 : offset + 25], dtype=np.int8)
+    member = landed.io.split_member(landed.io.read_archive_member(runtime / "archive.zip"))
+    containers = []
+    for twin in range(2):
+        rider, details = rc3.encode(body, counts, header[2], weights, learning)
+        retain(work / f"retained/hpac.twin{twin}.rider", rider)
+        retain(work / f"retained/hpac.twin{twin}.range", details["payload"])
+        retain(work / f"retained/hpac.twin{twin}.params", details["parameters"])
+        outer = ck2_interleave(rider)
+        retain(work / f"retained/hpac.twin{twin}.ck2", outer)
+        # The RC3 landing selected q10/window22. ntb1's window24 variant
+        # preserves the byte COUNT only, not the incumbent compressed bytes.
+        encoded = brotli.compress(outer, quality=10, lgwin=22)
+        retain(work / f"retained/hpac.twin{twin}.br", encoded)
+        if rc3.restore_hpac(rider, counts) != body:
+            raise ValueError("shipping RC3 parser disagrees")
+        containers.append(encoded)
+    if containers[0] != containers[1]:
+        raise ValueError("HPAC twin encode differs")
+    if tag == "control" and containers[0] != member["hpac"]:
+        raise ValueError("HPAC_CONTAINER_CONTROL_FAILED")
+    binding = record(
+        work / "INPUTS.json",
+        {
+            "tag": tag,
+            "source_archive": sources["archive.zip"],
+            "source_files": sources,
+            "reproduction": fact(proof),
+            "producer": fact(Path(__file__)),
+            "coordinates": coordinates,
+            "body": fact(work / "retained/hpac.ihs1"),
+            "seed": 20260911,
+            "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+            "score_claim": False,
+            "cleanup": "KEEP all payloads; immutable stage checkpoints; 40 GiB reserve",
+        },
+    )
+    # In-memory producer input only: shipping files stay byte-identical. The
+    # decoder loop consumes the new counted model exactly as archive parse-back will.
+    from dataclasses import replace
+
+    altered = replace(parts, hpac_blob=(work / "retained/hpac.twin0.rider").read_bytes())
+    return work, runtime, rx, renderer, code_dir, altered, member, binding
+
+
+def encode(tag):
+    """Run the real RLC1 causal loop with known-symbol twin arithmetic encoders."""
+    import torch
+
+    work, runtime, rx, renderer, code_dir, parts, member, binding = prepare(tag)
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+    torch.manual_seed(20260911)
+    np.random.seed(20260911)
+    torch.use_deterministic_algorithms(True)
+    route = landed.io.load_route_b()
+    build_path = work / "ENCODER_BUILD.json"
+    if build_path.exists():
+        build = json.loads(build_path.read_text())
+        for k in ("base_source", "generated", "library"):
+            if fact(build[k]["path"]) != build[k]:
+                raise ValueError("encoder build drift")
+        library = Path(build["library"]["path"])
+    else:
+        library, build = landed.io.compile_rc64(work, route, "ntb2")
+        record(build_path, build)
+    build_libraries(runtime, work / "native")
+    os.environ["RLC1_GEOMETRY_LIBRARY"] = str(control.ROOT / "retained/geometry.dylib")
+    checkpoints = work / "checkpoints"
+    os.environ["TC1_RECEIVER_CHECKPOINT_DIR"] = str(checkpoints)
+    os.environ["TC1_RECEIVER_STOP_AFTER"] = "600"
+    from runtime.entropy.rc64 import NativeDecoder
+    from runtime.rlc1_mixer import LaneMixer
+    from runtime.tc1_receiver_checkpoint import ReceiverCheckpoint
+
+    field = np.memmap(control.ROOT / "trace_input/field.u8", dtype=np.uint8, mode="r", shape=(600, 384, 512))
+    state, start = None, 0
+    latest = checkpoints / "LATEST.json"
+    if latest.exists():
+        start = int(json.loads(latest.read_text())["frame"])
+        state_path = work / "encoder_states" / f"stage_{start:04d}.npz"
+        state_receipt = json.loads(state_path.with_suffix(".json").read_text())
+        if fact(state_path) != state_receipt["payload"] or state_receipt["binding"] != binding:
+            raise ValueError("encoder restart binding mismatch")
+        state = landed.arrays(state_path)
+    twins = [route.NativeRc64Encoder(library, None if state is None else state[f"enc{i}"].tobytes()) for i in range(2)]
+    observed = {"frame": start, "positions": None}
+    original_coding, original_save = LaneMixer.coding, ReceiverCheckpoint.save
+
+    def coding(self, rows, positions, plane, previous):
+        if observed["positions"] is not None or self.frame != observed["frame"]:
+            raise ValueError("known-symbol group order mismatch")
+        observed["positions"] = positions.copy()
+        return original_coding(self, rows, positions, plane, previous)
+
+    def known_symbols(self, probabilities):
+        positions = observed["positions"]
+        if positions is None or len(positions) != len(probabilities):
+            raise ValueError("known-symbol decode call lacks group")
+        symbols = field[observed["frame"]].reshape(-1)[positions].astype(np.int32)
+        for encoder in twins:
+            encoder.encode(symbols, probabilities)
+        observed["positions"] = None
+        return symbols
+
+    original_end = LaneMixer.end_frame
+
+    def end(self, plane, previous):
+        np.testing.assert_array_equal(plane, field[observed["frame"]])
+        original_end(self, plane, previous)
+        observed["frame"] += 1
+
+    def save(self, frame, tokens):
+        if frame != observed["frame"] or observed["positions"] is not None:
+            raise ValueError("encoder checkpoint not at frame boundary")
+        if shutil.disk_usage(ROOT.parent).free < (40 << 30) + (256 << 20):
+            raise RuntimeError("STORAGE_BLOCK at durable prior checkpoint")
+        # Save encoder FIRST. A crash before receiver LATEST commits leaves the
+        # previous matched pair intact; completed encoder stages are immutable.
+        path = work / "encoder_states" / f"stage_{frame:04d}.npz"
+        landed.ROOT = ROOT
+        payload = landed.save(
+            path, {f"enc{i}": np.frombuffer(e.snapshot(), dtype=np.uint8) for i, e in enumerate(twins)}
+        )
+        record(path.with_suffix(".json"), {"payload": payload, "binding": binding, "frame": frame})
+        original_save(self, frame, tokens)
+
+    LaneMixer.coding, LaneMixer.end_frame = coding, end
+    NativeDecoder.decode, ReceiverCheckpoint.save = known_symbols, save
+    tokens, _ = rx.decode_production_tokens(parts, renderer, code_dir, torch.device("cpu"))
+    # The unused decoder C state exists only to reuse the receiver's checkpoint
+    # ABI. Its bit position/report is NOT evidence and is deliberately omitted.
+    if observed["frame"] != 600 or hashlib.sha256(tokens.numpy().tobytes()).hexdigest() != control.FIELD_SHA:
+        raise ValueError("known-symbol loop did not process full field")
+    retain(work / "retained/encoded_field.u8", tokens.numpy().tobytes())
+    archives = []
+    for i, encoder in enumerate(twins):
+        envelope = encoder.finish()
+        retain(work / f"retained/tail.twin{i}.envelope", envelope)
+        import ctypes
+
+        raw = ctypes.string_at(
+            encoder.library.rc64_encoder_data(encoder.context), int(encoder.library.rc64_encoder_size(encoder.context))
+        )
+        retain(work / f"retained/tail.twin{i}.rc64", raw)
+        rider = b"RLC1" + bytes(parts.tc1_weights) + raw
+        retain(work / f"retained/tail.twin{i}.rider", rider)
+        changed = dict(member)
+        changed["hpac"] = (work / f"retained/hpac.twin{i}.br").read_bytes()
+        h = list(rx.RX1_MODEL_HEADER.unpack(changed["header"]))
+        h[5] = len(changed["hpac"])
+        changed["header"] = rx.RX1_MODEL_HEADER.pack(*h)
+        changed["tail"] = member["tail"][:96] + rider
+        body = landed.io.join_member(changed)
+        retain(work / f"retained/member.twin{i}.bin", body)
+        archive = work / f"retained/archive.twin{i}.zip"
+        landed.pack(body, archive, "stored", None)
+        parsed = rx.read_residual_archive(archive)
+        if parsed.hpac_blob != parts.hpac_blob or parsed.token_stream != raw:
+            raise ValueError("archive parser mismatch")
+        for field_name in ("semantic_blob", "carrier_blob", "tc1_weights", "residual_payload"):
+            if getattr(parts, field_name) != getattr(parsed, field_name):
+                raise ValueError("unrelated archive component changed")
+        archives.append(fact(archive))
+    if archives[0]["sha256"] != archives[1]["sha256"]:
+        raise ValueError("tail/archive twins differ")
+    if tag == "control" and archives[0]["sha256"] != control.BASE_SHA:
+        raise ValueError("LIVE_LOOP_CONTROL_FAILED: no treatment prices admissible")
+    return record(
+        work / "PRICE.json",
+        {
+            "binding": binding,
+            "n": 600,
+            "twins": archives,
+            "hpac_bytes": len(changed["hpac"]),
+            "token_stream_bytes": len(raw),
+            "delta_bytes": archives[0]["bytes"] - 180406,
+            "field_sha256": control.FIELD_SHA,
+            "public_decode_verified": False,
+            "score_claim": False,
+        },
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--treatment", choices=TREATMENTS, required=True)
+    parser.add_argument("--resume-from", type=Path, required=True)
+    args = parser.parse_args()
+    if args.resume_from.resolve() != (ROOT / args.treatment).resolve():
+        raise ValueError("wrong resume root")
+    if args.treatment != "control":
+        proof = json.loads((ROOT / "control/PRICE.json").read_text())
+        if proof["twins"][0]["sha256"] != control.BASE_SHA:
+            raise ValueError("live-loop control required")
+    print(json.dumps(encode(args.treatment)), flush=True)
+
+
+if __name__ == "__main__":
+    main()
