@@ -123,6 +123,14 @@ d_pose 0.018335, distortion 3.1208), so it is NOT a like-for-like receiver compa
 `pose_budget_at_gate` is 0 for this object: at `d_seg` 0.0245 the Seg leg alone already exceeds the
 whole 0.04 gate.
 
+**6. The expected-flip surrogate tracks the measured `d_seg` to 1.0%.**
+Stage `w2`'s first logged epoch reads `mean_expected_flip = 0.02474` against the parsed object's
+MEASURED `d_seg = 0.02450141` — **1.0% apart**. So `d_seg` can be read off the training log without
+spending a scoring pass, which makes the Seg leg observable every epoch instead of every ten. The
+Pose surrogate is looser: `mean_pose_mse = 0.024805` against a measured `d_pose = 0.01774`, reading
+**1.4× high**, which is the gap between the training-time MSE on MPS through the STE round trip and
+the parsed object measured on CPU. Neither is a score; both are now logged as components.
+
 ## What is implemented and proven
 
 | stage | result | receipt |
