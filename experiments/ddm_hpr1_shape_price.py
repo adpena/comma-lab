@@ -170,8 +170,22 @@ def patch_receiver_dilation(runtime: Path, dilation: int) -> dict:
     before = fact(target)
     text = target.read_text()
     anchor = "HPAC_LOGIT_PRECISION = 8"
+    already = f"HPAC_PAST_DILATION = {dilation}"
+    if already in text:
+        # Idempotent: a resumed encode re-enters this path with the patch in place.
+        return {
+            "dilation": dilation,
+            "receiver_constant": {"file": "cpr1/inflate.py", "before": before, "after": before},
+            "native_stencil": {
+                "file": "runtime/f26_hpac_native.c",
+                "before": fact(runtime / "runtime/f26_hpac_native.c"),
+                "after": fact(runtime / "runtime/f26_hpac_native.c"),
+                "why": "already patched; resumed run",
+            },
+            "resumed": True,
+        }
     if anchor not in text or "HPAC_PAST_DILATION" in text:
-        raise PriceError("receiver patch anchor is absent or already applied")
+        raise PriceError("receiver patch anchor is absent, or a different dilation is applied")
     text = text.replace(
         anchor,
         anchor + "\n# ddm_hpr1 shape rung: dilation of conv_past, the prior's temporal tap set.\n"
@@ -236,11 +250,20 @@ def prepare(tag: str, checkpoint: Path | None = None):
         raise PriceError("field sha mismatch")
     work = ROOT / tag
     runtime = work / "runtime_copy"
+    # The two receiver files a shape rung patches.  On a RESUMED encode they already
+    # hold the patched bytes, so re-copying the pristine source would either refuse
+    # under immutable persistence or silently revert the rung.  Both are refused here
+    # by naming them: a resumed copy keeps what is on disk and records its sha.
+    patched_names = {"cpr1/inflate.py", "runtime/f26_hpac_native.c"}
     sources = {}
     for src in sorted(PROMOTED45.rglob("*")):
         if src.is_file() and "__pycache__" not in src.parts and src.suffix != ".pyc" and not src.name.startswith("._"):
             destination = runtime / src.relative_to(PROMOTED45)
-            sources[str(destination.relative_to(runtime))] = retain(destination, src.read_bytes())
+            relative = str(destination.relative_to(runtime))
+            if destination.exists() and relative in patched_names:
+                sources[relative] = fact(destination)
+                continue
+            sources[relative] = retain(destination, src.read_bytes())
     if sources["archive.zip"]["sha256"] != POINTER45_SHA:
         raise PriceError("copied archive is not the move-45 archive")
     dilation = TREATMENT_PAST_DILATION[tag]
