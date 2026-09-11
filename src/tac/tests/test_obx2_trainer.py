@@ -227,3 +227,26 @@ def test_blend_spec_builds_a_double_width_head() -> None:
     lattice = tr.LatticeTorch(spec, seed=3)
     assert lattice.out_w.shape[1] == 2 * tr.RENDER_OUTPUTS
     assert "gate_tau" in lat.fusion_parameter_order(spec)
+
+
+def test_assert_resume_compatible_refuses_every_binding_difference() -> None:
+    saved = {
+        "stage": "joint",
+        "seed": 11,
+        "lattice_enabled": False,
+        "chunk_pairs": 4,
+        "lattice_spec": {"channels": 4},
+        "learning_rate": 3.0e-4,
+    }
+    tr.assert_resume_compatible(saved, dict(saved), Path("x"))
+    # a non-binding key may differ without refusing
+    tr.assert_resume_compatible(saved, {**saved, "learning_rate": 1.0e-4}, Path("x"))
+    for key, value in (
+        ("stage", "distill"),
+        ("seed", 12),
+        ("lattice_enabled", True),
+        ("chunk_pairs", 8),
+        ("lattice_spec", {"channels": 8}),
+    ):
+        with pytest.raises(tr.OBX2TrainerError):
+            tr.assert_resume_compatible(saved, {**saved, key: value}, Path("x"))

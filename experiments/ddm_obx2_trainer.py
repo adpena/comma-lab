@@ -568,10 +568,41 @@ def save_stage_checkpoint(
     return qbt1.atomic_torch(path, payload)
 
 
-def load_stage_checkpoint(path: Path, module: OBX2Module, optimizer: torch.optim.Optimizer, ema: Any) -> dict[str, Any]:
+RESUME_BINDING_KEYS = ("stage", "seed", "lattice_enabled", "chunk_pairs", "lattice_spec")
+
+
+def assert_resume_compatible(saved: Mapping[str, Any], live: Mapping[str, Any], path: Path) -> None:
+    """Refuse a resume whose config differs from the one that wrote the checkpoint.
+
+    Torch reports a shape mismatch here as an opaque optimizer group error; a run
+    resumed under a different lattice or stage would otherwise either crash late
+    or, worse, continue against a different object.
+    """
+
+    differences = {
+        key: {"checkpoint": saved.get(key), "live": live.get(key)}
+        for key in RESUME_BINDING_KEYS
+        if saved.get(key) != live.get(key)
+    }
+    if differences:
+        raise OBX2TrainerError(
+            f"resume config differs from the checkpoint that wrote {path}: {json.dumps(differences, default=str)}"
+        )
+
+
+def load_stage_checkpoint(
+    path: Path,
+    module: OBX2Module,
+    optimizer: torch.optim.Optimizer,
+    ema: Any,
+    *,
+    live_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     payload = torch.load(path, map_location="cpu", weights_only=False)
     if payload.get("schema") != "ddm_obx2_checkpoint.v1":
         raise OBX2TrainerError(f"checkpoint schema differs: {path}")
+    if live_config is not None:
+        assert_resume_compatible(payload.get("config", {}), live_config, path)
     module.load_state_dict(payload["model_state"])
     optimizer.load_state_dict(payload["optimizer_state"])
     for name, value in payload["ema_state"].items():
@@ -717,10 +748,25 @@ def run_training(
     trainable = [parameter for parameter in module.parameters() if parameter.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=learning_rate)
     ema = EMA(module, decay=0.997)
+    pose_weight = operating_point_pose_weight(pose_weight_d_pose)
+    config = {
+        "stage": stage,
+        "device": device_name,
+        "epochs": epochs,
+        "chunk_pairs": chunk_pairs,
+        "learning_rate": learning_rate,
+        "seed": seed,
+        "lattice_enabled": lattice_enabled,
+        "gate_kind": int(gate_kind),
+        "pose_weight": pose_weight,
+        "pose_weight_operating_point_d_pose": pose_weight_d_pose,
+        "lattice_spec": spec.describe(),
+        "ema_decay": 0.997,
+    }
     history: list[dict[str, Any]] = []
     start_epoch = 0
     if resume_from is not None and resume_from.is_file():
-        payload = load_stage_checkpoint(resume_from, module, optimizer, ema)
+        payload = load_stage_checkpoint(resume_from, module, optimizer, ema, live_config=config)
         history = list(payload.get("history", []))
         start_epoch = int(payload.get("step", 0))
         module.to(device)
@@ -732,20 +778,6 @@ def run_training(
         posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=device)
         posenet.eval()
         segnet.eval()
-    pose_weight = operating_point_pose_weight(pose_weight_d_pose)
-    config = {
-        "stage": stage,
-        "device": device_name,
-        "epochs": epochs,
-        "chunk_pairs": chunk_pairs,
-        "learning_rate": learning_rate,
-        "seed": seed,
-        "lattice_enabled": lattice_enabled,
-        "pose_weight": pose_weight,
-        "pose_weight_operating_point_d_pose": pose_weight_d_pose,
-        "lattice_spec": spec.describe(),
-        "ema_decay": 0.997,
-    }
     started = time.time()
     for epoch in range(start_epoch, epochs):
         order = pair_order(seed, epoch)
