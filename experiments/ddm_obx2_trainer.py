@@ -1187,9 +1187,157 @@ def derive_pose_weight_from_row(row_path: Path) -> dict[str, Any]:
     return derived
 
 
+POINTER_FIELD = Path("/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/retained/fields/subset6.u8")
+POINTER_FIELD_SHA256 = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
+
+
+def decompose_seg_error(
+    output: Path,
+    *,
+    checkpoint: Path,
+    seed: int,
+    pairs: int,
+    render_chunk: int = 25,
+    scorer_batch: int = 8,
+) -> dict[str, Any]:
+    """Split the object's seg leg into PARTITION error and RENDER floor.
+
+    The pointer reaches d_seg 0.000103 with EXACT tokens plus a renderer that
+    still argmaxes wrong at correct tokens.  This object ships no token field; the
+    closest analogue is the generator's own internal class head, whose argmax is
+    the partition the generator represents BEFORE the render turns it into RGB.
+    So each misclassified scorer pixel is attributed:
+
+      * PARTITION — the generator already represented the wrong class there.  A
+        correction applied to the RGB is not aimed at this.
+      * RENDER FLOOR — the generator represented the RIGHT class and the
+        render-plus-scorer path lost it.  This is what an RGB correction targets.
+
+    Honest limit, stated because it bounds the conclusion: the class head is an
+    internal intermediate, not a shipped field, and the training loss acts on the
+    SCORER's logits rather than on it.  A wrong internal class is therefore
+    strong evidence that the generator does not represent the site, not proof
+    that no render could get it right.
+    """
+
+    from experiments import ddm_qbz1_descent_rate_configuration as qbz1
+    from tac.gt_lineage import AUTHORITY_LINEAGE, assert_gt_lineage
+    from tac.scorer import load_differentiable_scorers
+    from tac.training import EMA
+
+    payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    saved = payload.get("config", {})
+    spec = default_spec(gate_kind=int(saved.get("gate_kind", DEFAULT_GATE_KIND)))
+    module = build_module(born_packet(), spec, seed=seed)
+    optimizer = torch.optim.AdamW([q for q in module.parameters() if q.requires_grad], lr=1.0e-4)
+    ema = EMA(module, decay=0.997)
+    load_stage_checkpoint(checkpoint, module, optimizer, ema)
+    shadow = ema_module(module, ema, spec, seed=seed)
+    packet, accounting, archive = build_packet(shadow)
+    parsed = parsed_module(packet)
+
+    assert_gt_lineage(qbz1.GT_ARGMAX, required=AUTHORITY_LINEAGE, instrument="OBX2 partition split")
+    gt = np.load(qbz1.GT_ARGMAX, mmap_mode="r", allow_pickle=False)
+    with POINTER_FIELD.open("rb") as stream:
+        field_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    field_fact = {"path": str(POINTER_FIELD), "bytes": POINTER_FIELD.stat().st_size, "sha256": field_digest}
+    if field_digest != POINTER_FIELD_SHA256:
+        raise OBX2TrainerError("pinned pointer token plane drifted")
+    token_plane = np.memmap(POINTER_FIELD, dtype=np.uint8, mode="r", shape=(N, EVAL_H, EVAL_W))
+    posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=torch.device("cpu"))
+    posenet.eval()
+    segnet.eval()
+
+    totals = {
+        "pixels": 0,
+        "scorer_wrong": 0,
+        "partition_wrong": 0,
+        "scorer_wrong_and_partition_wrong": 0,
+        "scorer_wrong_and_partition_right": 0,
+        "partition_vs_pointer_tokens_differ": 0,
+        "pointer_tokens_vs_gt_differ": 0,
+    }
+    locality_partition: dict[int, int] = {}
+    locality_render: dict[int, int] = {}
+    pair_ids = list(range(min(pairs, N)))
+    started = time.time()
+    for start in range(0, len(pair_ids), render_chunk):
+        chunk = pair_ids[start : start + render_chunk]
+        with torch.no_grad():
+            outputs = parsed(torch.tensor(chunk, dtype=torch.long))
+            partition = outputs["class_logits"].argmax(dim=-1).cpu().numpy().astype(np.uint8)
+            render = outputs["rgb_pair_01"]
+        for offset in range(0, len(chunk), scorer_batch):
+            pairs_slice = chunk[offset : offset + scorer_batch]
+            with torch.no_grad():
+                camera = qbt1.roundtrip_to_camera_uint8_ste(render[offset : offset + len(pairs_slice)])
+                _, logits = qbt1.scorer_forward(camera, posenet, segnet)
+                scorer_argmax = logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
+            target = np.asarray(gt[pairs_slice], dtype=np.uint8)
+            tokens = np.asarray(token_plane[pairs_slice], dtype=np.uint8)
+            implied = partition[offset : offset + len(pairs_slice)]
+            scorer_wrong = scorer_argmax != target
+            partition_wrong = implied != target
+            totals["pixels"] += int(target.size)
+            totals["scorer_wrong"] += int(scorer_wrong.sum())
+            totals["partition_wrong"] += int(partition_wrong.sum())
+            totals["scorer_wrong_and_partition_wrong"] += int((scorer_wrong & partition_wrong).sum())
+            totals["scorer_wrong_and_partition_right"] += int((scorer_wrong & ~partition_wrong).sum())
+            totals["partition_vs_pointer_tokens_differ"] += int((implied != tokens).sum())
+            totals["pointer_tokens_vs_gt_differ"] += int((tokens != target).sum())
+            for index in range(len(pairs_slice)):
+                for bucket, mask in (
+                    (locality_partition, scorer_wrong[index] & partition_wrong[index]),
+                    (locality_render, scorer_wrong[index] & ~partition_wrong[index]),
+                ):
+                    histogram = seg_error_distance_histogram(
+                        np.where(mask, 1 - target[index].astype(np.int16), target[index]).astype(np.uint8),
+                        target[index],
+                    )
+                    for distance, count in histogram.items():
+                        bucket[distance] = bucket.get(distance, 0) + count
+
+    wrong = max(1, totals["scorer_wrong"])
+    receipt = {
+        "schema": "ddm_obx2_seg_decomposition.v1",
+        "created_at_utc": datetime.now(UTC).isoformat(),
+        "axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotable": False,
+        "research_only": True,
+        "checkpoint": {"path": str(checkpoint), "step": int(payload.get("step", 0))},
+        "packet_bytes": accounting["packet_bytes"],
+        "archive_bytes": accounting["archive_bytes"],
+        "pairs": len(pair_ids),
+        "receiver": "torch",
+        "pointer_token_plane": field_fact,
+        "counts": totals,
+        "d_seg_scorer": totals["scorer_wrong"] / max(1, totals["pixels"]),
+        "d_partition_vs_gt": totals["partition_wrong"] / max(1, totals["pixels"]),
+        "d_pointer_tokens_vs_gt": totals["pointer_tokens_vs_gt_differ"] / max(1, totals["pixels"]),
+        "d_partition_vs_pointer_tokens": totals["partition_vs_pointer_tokens_differ"] / max(1, totals["pixels"]),
+        "share_of_seg_error_that_is_partition_level": totals["scorer_wrong_and_partition_wrong"] / wrong,
+        "share_of_seg_error_that_is_render_floor": totals["scorer_wrong_and_partition_right"] / wrong,
+        "partition_level_locality": summarize_locality(
+            locality_partition, totals["scorer_wrong_and_partition_wrong"]
+        ),
+        "render_floor_locality": summarize_locality(
+            locality_render, totals["scorer_wrong_and_partition_right"]
+        ),
+        "limit": (
+            "the class head is an internal intermediate, not a shipped field, and the loss acts on "
+            "the scorer's logits rather than on it; a wrong internal class is strong evidence that "
+            "the generator does not represent the site, not proof that no render could recover it"
+        ),
+        "elapsed_seconds": time.time() - started,
+    }
+    qbt1.atomic_json(output / f"SEG_DECOMPOSITION_{checkpoint.stem}.json", receipt)
+    return receipt
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="OBX2 base+lattice trainer")
-    parser.add_argument("stage", choices=("stage1", "distill", "joint", "stage7", "score"))
+    parser.add_argument("stage", choices=("stage1", "distill", "joint", "stage7", "score", "decompose"))
     parser.add_argument("--output", type=Path, default=OUTPUT_ROOT)
     parser.add_argument("--seed", type=int, default=20260911)
     parser.add_argument("--parity-pairs", type=int, default=8)
@@ -1345,6 +1493,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                                                 ("packet_bytes", "archive_bytes", "archive_byte_headroom")},
                           "zero_lattice_ablation": receipt["zero_lattice_ablation"],
                           "validation": receipt["validation"]}, indent=2))
+        return 0
+    if args.stage == "decompose":
+        if args.checkpoint is None:
+            raise OBX2TrainerError("decompose requires --checkpoint")
+        receipt = decompose_seg_error(
+            args.output, checkpoint=args.checkpoint, seed=args.seed, pairs=args.validate_pairs
+        )
+        print(json.dumps({k: receipt[k] for k in (
+            "pairs", "d_seg_scorer", "d_partition_vs_gt", "d_pointer_tokens_vs_gt",
+            "d_partition_vs_pointer_tokens", "share_of_seg_error_that_is_partition_level",
+            "share_of_seg_error_that_is_render_floor")}, indent=2))
         return 0
     if args.stage == "stage7":
         if args.archive is None:
