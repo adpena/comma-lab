@@ -131,6 +131,39 @@ Pose surrogate is looser: `mean_pose_mse = 0.024805` against a measured `d_pose 
 **1.4× high**, which is the gap between the training-time MSE on MPS through the STE round trip and
 the parsed object measured on CPU. Neither is a score; both are now logged as components.
 
+**7. The base-only arm is CLOSED — by the store, not by my fit.**
+MAIN ordered a recall before any seg cure, and the recall decided the unit. `md1`-`md4`
+(`.omx/research/ddm_md1_micro_to_macro_dynamics_20260904.md`, 282 forwards over 71 checkpoints, then
+8 legitimate starts, then a burned different-start cell) measured **on the QBF1 born vehicle — this
+exact generator form**:
+
+* 62.0% of the terminal `d_seg` is PERSISTENT (wrong at ≥90% of 71 checkpoints), and the persistent
+  set is the SAME set across schedule, data order and start (Jaccard 0.73-0.85 against nulls of
+  0.35-0.53);
+* deleting every optimizer-reachable site still leaves a floor of `d_seg` **0.00174 — 12.75×** the
+  accuracy corner;
+* every schedule/optimizer/objective lever's **combined ceiling is 1.61×** against the **20.57×**
+  needed, and in md1's own words *"the qn1 n600 realization is moot for sub-0.12 on this vehicle"*;
+* md3/md4: *"the sites are scorer-hard for this generator FORM; the born accuracy corner needs a
+  different GENERATOR FORM, never a start/schedule/seed"*, and the cure it names is **"a Lane carrier,
+  not a loss."**
+
+The w2 stage is an **objective lever on that exact generator form**. It is closed at FORMULATION
+scope by four data-anchored prior instances. The base-only arm was stopped, checkpoints preserved.
+My own pre-registered seg-slope falsifier could NOT have decided this yet — it read INDETERMINATE on
+a 1.05× lever arm — which is precisely why the recall order mattered more than the fit.
+
+What survives, and is now the only arm: **the lattice is a representation change and a counted
+carrier**, which is the class md1-md4 point at. Nothing in md1-md4 closes it; its own conditional
+(*"with capacity gc1 and form gf2"*) excludes exactly the thing the lattice changes.
+
+**A correction to carry back.** The `bz2d` headline "token error amplifies ×1.157 to argmax" was
+RETRACTED the same day it was measured. The store reads: *"THE RATIO DOES NOT TRANSFER"* — the ratio
+moves 1.16× to 1.97× between two points, and the real relation is AFFINE,
+`argmax_errors ≈ 17,241 + 1.1435 × tokens`, where **the intercept is a render-manufactured floor no
+token work can remove**. For a witness that regenerates the partition rather than coding tokens, the
+transferable part is the intercept's existence, not the ratio.
+
 ## What is implemented and proven
 
 | stage | result | receipt |
