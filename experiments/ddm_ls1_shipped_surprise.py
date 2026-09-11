@@ -123,9 +123,10 @@ def trace(resume_from):
     if Path(resume_from).resolve() != (ROOT / "receiver_checkpoints").resolve():
         raise ValueError("resume state must be this arm's receiver checkpoints")
     pins = prepare()
+    import torch
+
     from experiments import ddm_jg2_tail_reencode as jg2
     from experiments.ddm_tc1_public_proof import build_libraries
-    import torch
 
     random.seed(SEED)
     np.random.seed(SEED)
@@ -150,9 +151,9 @@ def trace(resume_from):
     os.environ["TC1_RECEIVER_CHECKPOINT_DIR"] = str(resume_from)
     os.environ["TC1_RECEIVER_STOP_AFTER"] = "600"
     residual, renderer, code_dir = jg2.load_runtime(runtime)
+    from runtime.entropy.rc64 import NativeDecoder
     from runtime.rlc1_mixer import LaneMixer
     from runtime.tc1_shared_mixer import frequencies
-    from runtime.entropy.rc64 import NativeDecoder
 
     target = np.memmap(FIELD, dtype=np.uint8, mode="r", shape=(N, H, W))
     observer = dict(freq=np.empty((H * W, K), dtype=np.uint32),

@@ -23,11 +23,22 @@ sys.path[:0] = [str(REPO), str(REPO / "src")]
 
 import numpy as np
 
+from experiments.ddm_gdc3_geometry_law_probe import GEOMETRY_NAMES, classify_plane
 from experiments.ddm_ls1_shipped_surprise import (
-    AXIS, FIELD, FIELD_SHA, H, K, N, ROOT, TOTAL, W, arrays, fact, record,
+    AXIS,
+    FIELD,
+    FIELD_SHA,
+    ROOT,
+    TOTAL,
+    H,
+    K,
+    N,
+    W,
+    arrays,
+    fact,
+    record,
 )
 from experiments.ddm_tc1_context_statistics import LEVELS, contexts
-from experiments.ddm_gdc3_geometry_law_probe import classify_plane, GEOMETRY_NAMES
 
 PLANE = H * W
 Y, X = np.indices((H, W))
