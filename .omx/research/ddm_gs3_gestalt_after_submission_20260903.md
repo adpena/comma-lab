@@ -1244,3 +1244,21 @@ lives that the HPAC prior and the free mixer do not already remove** (Lane: 0.59
 boundary cost in two unrelated instruments). ls1 measures that atlas at $0 on the SHIPPED field. If the atlas shows the surprise is
 Lane geometry the receiver cannot see, the gestalt answer is a Lane carrier in the counted archive — the born vehicle's question
 posed at the pointer's rate.
+
+## Addendum 29 (MAIN, 2026-09-11 ~01:10Z) — ls1: the atlas closes the token-tail rate corner at the measured level
+
+ls1 (`.omx/research/ddm_ls1_lane_conditioned_surprise_atlas_on_the_shipped_field_20260911.md`, sha b729faa146b62ea3…) instrumented the SHIPPED decoder on the shipped field and reconciled its per-symbol surprise to the real
+stream within 0.0006 %: the instrument is exact. Lane is 0.586 % of the symbols and 33.5 % of the surprise, and in every class the
+cost sits in isolated boundary cells, not runs. Then the oracle ladder, each rung priced as a bias-corrected Miller–Madow estimate:
+tc1's joint contexts 8,218 B; receiver-visible Lane geometry 17,534 B — 8,365 B short of the 25,899 B demand; and a GRANTED complete
+previous-row geometry, side information the receiver does not have and would have to be paid for, 24,864 B — still 1,035 B short
+before its own cost. The gain is diffuse (90 % of it needs 503 of 600 pairs), and the one concrete carrier instance (an explicit
+override map) costs 594,003 B. Three source corrections travel with this: tc2's "5.5 KB" was oracle gain, not a map's price; gdc4
+reported computed lengths, not serialized prices; tc1's ceiling was one mixer's, not a universal one.
+
+**What this settles.** On this object — the pointer's token field under the incumbent's decoder — no measured mechanism on the tail
+reaches the rate demand, and even an oracle with unavailable side information does not. ls2 ($0) measures the last receiver-visible
+hypothesis (full-resolution probability corrections rather than fixed cells). If it falls short too, the honest statement is that the
+sub-0.12 path is closed on THIS object at the measured level, and the remaining question is the one the cross posed on 08-29: an object
+that inherits the born generator's rate (121,928 B) while starting from the distortion regime this lineage reaches (0.017). That is an
+object change, not a mechanism, and it is the operator's gestalt call to make with these numbers in hand.
