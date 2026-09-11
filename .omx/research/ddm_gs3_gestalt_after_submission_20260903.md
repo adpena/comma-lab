@@ -1381,3 +1381,23 @@ to a single sentence: ±1 LSB of independent noise on the render alone puts the 
 exponent 1.744, admissible 0.253 LSB). Standing question handed to the arm: how much of the object's seg gap is token-level partition
 error, which no lattice fixes, versus render floor, which the lattice targets. That split decides whether design A is aimed at the
 binding term at all, and the arm's retained per-chunk argmax can measure it against the pointer's token plane.
+
+## Addendum 37 (MAIN, 2026-09-11 ~16:45Z) — design A closes with its mechanism validated, and the object question turns back into a rate question
+
+obx2's burn ended the way a good burn ends: with the mechanism proven and the bar measured closed on the same day
+(`.omx/research/ddm_obx2_design_a_closure_20260911.md`). The edge-local lattice does what it was designed to do — on the epoch-30
+checkpoint, n600, through the shipping receiver, zeroing it costs 0.00137 of seg and 6.4× on pose, so it takes 53 % of the render
+floor available to it for 575 B. What it cannot reach is the object's real debt. On n600 the generator's own partition is wrong on
+9.0 % of pixels, 561× the pointer's token plane, and that partition-level error is 89.8 % of the seg leg. The remaining 10.2 %, the
+render floor at a correct partition, is 0.00231 on its own, 5.77× the entire seg ceiling the gate allows. A perfect partition rendered
+by this generator still fails. The seg rate decayed monotonically 0.95 → 0.32 %/epoch and the stop rule fired at epoch 46 with the
+ceiling 1,300 epochs away. Two lessons are new. First, md4 already said to run the free step-0 render-floor probe before burning and
+predicted unreachability at nine in ten; this burn ran it afterward. That probe, with the partition-vs-tokens decomposition obx2 built,
+is now the pre-burn gate for any successor object, written into the closure's reactivation criteria and the cross memory. Second, the
+pose relation is not a law: noise does 3.23× the damage of smooth error at equal RMSE, so scorer-plane RMSE is not a sufficient
+statistic for pose and any future admissibility number must name its error family. Where this leaves the object question: the
+pointer's renderer already has a render floor of 1.03e-4 at an exact token plane, below the 4e-4 ceiling. The accuracy half was never
+the renderer's; it is the partition's, and the pointer buys it with ~140 KB of token tail whose lossless rate corner ls1/ls2 measured
+closed. So the open question is the rate of a partition the scorer accepts — which is the seg-debt pool, the pre-distortion line that
+produced moves 30–43, and the non-tail levers ntb2 is measuring now. The successor-object bet under the GO cost one day and returned a
+validated corrector, a pre-burn gate, and a sharper statement of the problem. That is the correct price for it.
