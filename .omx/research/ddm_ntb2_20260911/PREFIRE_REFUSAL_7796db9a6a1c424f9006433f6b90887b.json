@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "FIRST_MEASUREMENT_LANE_REFUSED",
+  "detail": "cloud state unknown or another scored job is live",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-11T19:26:11.217335+00:00"
+}
