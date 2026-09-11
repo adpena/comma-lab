@@ -1,6 +1,15 @@
 {
   "authority": false,
+  "base_local_diagnostic": {
+    "actual_verdict": "REFUSED",
+    "authority": false,
+    "bytes": 10015,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/diagnostics/pair_base/LOCAL_DIAGNOSTIC.json",
+    "sha256": "01e6ce3162fa70feed62067bef134589d91f0e1450a6fc6500a5b87843cf60da",
+    "wall_seconds": 1917.733706791012
+  },
   "calculation": {
+    "candidate_local_ceiling_seconds": 1829.967417125008,
     "hard_timeout_seconds": 1800.0,
     "local_cost_fraction_upper": 0,
     "passed": true,
@@ -8,18 +17,36 @@
     "source_t4_seconds": 1232.418725255,
     "t4_risk_ceiling_seconds": 1232.418725255
   },
-  "candidate_adds_no_decode_work": "the HPAC section is 603 B SMALLER, so materializing the coder's prior is cheaper; the decoder performs the same 117,964,800 symbol decodes against a different prior; the tail is 358 B longer. No new work is added at decode time, and no local diagnostic is offered as timing authority.",
+  "candidate_local_diagnostics": [
+    {
+      "actual_verdict": "REFUSED",
+      "authority": false,
+      "bytes": 9998,
+      "cold": true,
+      "n_samples": 600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/diagnostics/pair_candidate/LOCAL_DIAGNOSTIC.json",
+      "sha256": "1c4bdeb5801a2e25fe34753c465922bc4e665fa8cfb45786b892c4f08b142240",
+      "wall_seconds": 1829.967417125008
+    }
+  ],
   "candidate_receiver": {
     "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
     "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
   },
-  "lineage": "move 45's own leg is mode 'inherited', which the contract forbids as a source, so the lineage runs to the CHAIN'S TERMINATING MEASUREMENT: move 44's completed t4_direct leg at 1232.418725255 s. The receiver delta between that tree and this candidate is EMPTY -- the scoped digests are equal at 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 -- because the only receiver files that move are the archive pin and the derived MANIFEST.sha256 listing, which this digest excludes and pr18 validates independently.",
+  "diagnostic_reference_receiver": {
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+    "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+    "receipt_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df",
+    "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+  },
   "mode": "completed_t4_receiver_delta",
   "receiver_delta_manifest": {
-    "bytes": 8691,
-    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/NORMALIZED_RECEIVER_DELTA.json",
-    "sha256": "e8ca1b088eb413c115280897148042d1d84a09585531507c06f31a0cdaf45f3f"
+    "bytes": 15150,
+    "path": "/Users/adpena/projects/pact/.omx/research/ddm_ntb2_20260911/NORMALIZED_RECEIVER_DELTA.json",
+    "sha256": "738ff969ceb72cea9263620e2463006efb98e26206c8e89c9f6e750c438944ee"
   },
+  "risk_sha256": "f5d64a5cf9fa555c0b23aa961e7aa7c83785d7b943b1bc13948784b43b658a87",
   "schema": "candidate_prefire_timing_risk.v1",
   "score_claim": false,
   "source_receiver": {
@@ -30,7 +57,7 @@
   },
   "source_t4_leg": {
     "bytes": 4733,
-    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/SOURCE_T4_LEG_move44.json",
+    "path": "/Users/adpena/projects/pact/.omx/research/ddm_ntb2_20260911/SOURCE_T4_LEG_move44.json",
     "sha256": "2132d44eee2c2c8982151690103181c65c45020eab5f9aea0d67aca2ece2f8b4"
   },
   "timing_clearance": false

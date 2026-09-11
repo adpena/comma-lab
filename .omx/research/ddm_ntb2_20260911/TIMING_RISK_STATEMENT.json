@@ -1,0 +1,8 @@
+{
+  "authority": false,
+  "candidate_adds_no_decode_work": "the HPAC section is 603 B SMALLER, so materializing the coder's prior is cheaper; the decoder performs the same 117,964,800 symbol decodes against a different prior; the tail is 358 B longer. No new work is added at decode time.",
+  "diagnostics_are_not_authority": "both local diagnostics retain their REFUSED verdict and are used only as the ratio that bounds the projection; no local wall is offered as a timing authority.",
+  "lineage": "move 45's own leg is mode 'inherited', which the contract forbids as a source, so the lineage runs to the CHAIN'S TERMINATING MEASUREMENT: move 44's completed t4_direct leg at 1232.418725255 s measured. The scoped receiver delta between that tree and this candidate is EMPTY -- both digest to 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 -- because the only receiver files that move are the archive pin and the derived MANIFEST.sha256 listing, which this digest excludes and pr18 validates independently.",
+  "risk_sha256": "f5d64a5cf9fa555c0b23aa961e7aa7c83785d7b943b1bc13948784b43b658a87",
+  "score_claim": false
+}

@@ -1,0 +1,21 @@
+{
+  "all_hashes_passed": true,
+  "all_runtime_dependencies_listed": true,
+  "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "manifest": {
+    "bytes": 9955,
+    "path": "/Users/adpena/projects/pact/.omx/research/ddm_ntb2_20260911/CANDIDATE_MANIFEST.json",
+    "sha256": "abdf4c1023f6bca3ca071239d60a7bf1c3a2ecbaafa23b84f58404305355f26e"
+  },
+  "mismatched_rows": [],
+  "receiver_manifest_listing": {
+    "bytes": 4570,
+    "path": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime/MANIFEST.sha256",
+    "sha256": "c8309d7185e25c2fda02dc94c47889fee0e662ec30cbe5b7fec8cf78022f3058"
+  },
+  "receiver_sha256": "92132dfa4c0f24afb161b4622195f89977d6b6fce5caeb6cd96d27bfc724a5df",
+  "rehash_failures": [],
+  "runtime_sha256": "bdd370bcb0b005d0f31ede87fd6c50ea073763eb2adff7bfb291681706b7c6c2",
+  "score_claim": false,
+  "verification_method": "every MANIFEST.sha256 row re-hashed against the shipped file; the manifest excludes itself and archive.zip, the rule this arm falsified against move 44's shipped manifest before regenerating"
+}

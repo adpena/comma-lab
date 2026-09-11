@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_NON_TIMING_GATE_REFUSED",
+  "detail": "encoder execution is not complete n600 on the frozen source/payload",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-11T17:18:23.312848+00:00"
+}

@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_NON_TIMING_GATE_REFUSED",
+  "detail": "bad dependency row",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-11T17:16:28.741602+00:00"
+}

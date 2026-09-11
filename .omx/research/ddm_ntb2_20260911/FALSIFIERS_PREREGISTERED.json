@@ -1,0 +1,15 @@
+{
+  "base_archive_sha256": "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a",
+  "created_at_utc": "2026-09-11T17:28:04.642504+00:00",
+  "falsifiers": [
+    "Cold literal inflate.sh output must carry all 600 pairs with the token cache DISABLED and no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 45's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the entire distortion claim is that a change to the arithmetic coder's PRIOR cannot move a decoded symbol.",
+    "The candidate archive must be at most 180,226 bytes; rate-only net dS must be strictly below -2e-5 against move 45's 180,246 bytes at unchanged distortion. Measured: 180,001 B, -245 B, -1.63135443514932e-04.",
+    "Reassembling move 45's OWN members by this arm's assembly path must reproduce 145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a at 180,246 bytes in both twins, or the -245 B is the rebuild's and not the frame_even edit's.",
+    "move 45's hpac, tail and semantic members must be byte-identical to move 44's, or the reused 600-frame RLC1 encode is not an encode of this pointer's objects and every price here is void.",
+    "The scoped timing-risk receiver delta must be EMPTY at digest 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw MANIFEST.sha256 stays in every custody check and is validated separately.",
+    "Risk ceiling must not exceed 1260 seconds. Only MAIN may authorize this intent, fire the first measurement, and complete the seal; this intent confers no timing and no score authority.",
+    "Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess; another code, a crash, or a subprocess attempt closes this real-door control.",
+    "Pointer or contract drift refuses. Never silently rebase, relax, authorize, fire, or complete from this producer."
+  ],
+  "score_claim": false
+}

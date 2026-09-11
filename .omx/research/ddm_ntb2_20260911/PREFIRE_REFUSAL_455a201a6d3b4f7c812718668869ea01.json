@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_RISK_EVIDENCE_REFUSED",
+  "detail": "risk shape differs",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-11T17:28:36.963019+00:00"
+}
