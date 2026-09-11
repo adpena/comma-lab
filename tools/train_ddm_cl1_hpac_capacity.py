@@ -103,6 +103,10 @@ PREREGISTERED_CONFIG = {
     "seed": 20260716,
     "device": "mps",
     "ema_target_seed_fraction": 0.01,
+    # ddm_hpr1 (2026-09-11): the dilation of conv_past, the prior's only fine-grained
+    # TEMPORAL tap set.  1 is the shipped geometry, so every pre-existing profile keeps
+    # its exact meaning; only a profile that admits another value can move it.
+    "past_dilation": 1,
 }
 RX2_PREREGISTERED_CONFIG = {
     **PREREGISTERED_CONFIG,
@@ -116,11 +120,18 @@ JF1_PREREGISTERED_CONFIG = dict(RX2_PREREGISTERED_CONFIG)
 # Inputs are pinned by the caller (--expected-cache-content-sha256 /
 # --expected-init-sha256) exactly as JF1 pins them; output lives on the SSD tiers.
 CL2_PREREGISTERED_CONFIG = dict(PREREGISTERED_CONFIG)
+# ddm_hpr1 (2026-09-11): cl2's law with the receptive-field SHAPE as the only free axis.
+# cl2 measured that prior CAPACITY does not repay itself (secant +0.446 against the -1
+# break-even) and wrote that a rung must change the field's SHAPE, not its size.  Every
+# constant here is cl2's; only ``past_dilation`` may move, and it moves taps without
+# adding any, so the stored model value count is held exactly.
+HPR1_PREREGISTERED_CONFIG = dict(CL2_PREREGISTERED_CONFIG)
 PREREGISTERED_CONFIG_BY_PROFILE = {
     "cl1": PREREGISTERED_CONFIG,
     "rx2_mc36": RX2_PREREGISTERED_CONFIG,
     "jf1_joint_refit": JF1_PREREGISTERED_CONFIG,
     "cl2_shipped_ladder": CL2_PREREGISTERED_CONFIG,
+    "hpr1_shape_rungs": HPR1_PREREGISTERED_CONFIG,
 }
 PREREGISTERED_RATE_LAMBDAS_BY_PROFILE = {
     "cl1": frozenset({1.0, 0.5, 0.25}),
@@ -131,6 +142,8 @@ PREREGISTERED_RATE_LAMBDAS_BY_PROFILE = {
     # -1 break-even, so 0.25 stayed unfired; 2.0 and 4.0 are the untested opposite side.
     # Purely additive: every lambda cl2 fired stays admitted and its config is untouched.
     "cl2_shipped_ladder": frozenset({4.0, 2.0, 1.0, 0.5, 0.25}),
+    # ddm_hpr1 holds lambda at cl2's measured local optimum; shape is the free axis.
+    "hpr1_shape_rungs": frozenset({1.0}),
 }
 #: Seeds each profile admits.  Every profile defaults to exactly the seed pinned in its
 #: preregistered config (so cl1 / rx2_mc36 / jf1_joint_refit are unchanged); only
@@ -139,8 +152,17 @@ PREREGISTERED_SEEDS_BY_PROFILE = {
     profile: frozenset({config["seed"]}) for profile, config in PREREGISTERED_CONFIG_BY_PROFILE.items()
 }
 PREREGISTERED_SEEDS_BY_PROFILE["cl2_shipped_ladder"] = frozenset({20260716, 20260717, 20260718})
+#: Temporal tap dilations each profile admits.  Every pre-existing profile admits only
+#: the shipped geometry, so this is purely additive; ``hpr1_shape_rungs`` adds stride 2,
+#: pre-registered by ddm_hpr1's measured conditional-information atlas on the shipped
+#: field (four taps at stride 2 carry -4,031 ranking bytes more than the shipped 3x3's
+#: best four; a pure re-centring LOSES, so stride and not offset is the rung).
+PREREGISTERED_PAST_DILATIONS_BY_PROFILE = {
+    profile: frozenset({1}) for profile in PREREGISTERED_CONFIG_BY_PROFILE
+}
+PREREGISTERED_PAST_DILATIONS_BY_PROFILE["hpr1_shape_rungs"] = frozenset({1, 2})
 #: Profiles whose --cache / --init are pinned by caller-supplied SHA-256 values.
-CALLER_PINNED_INPUT_PROFILES = frozenset({"jf1_joint_refit", "cl2_shipped_ladder"})
+CALLER_PINNED_INPUT_PROFILES = frozenset({"jf1_joint_refit", "cl2_shipped_ladder", "hpr1_shape_rungs"})
 EXPECTED_CACHE_SHA256 = "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
 EXPECTED_INIT_SHA256 = "0e6c30cef6b36c4e530779c92c56e9128c1d86c62e85e9fc5358a7e9f40ec985"
 EXPECTED_RX2_SPATIAL_TOKEN_SHA256 = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
@@ -507,7 +529,7 @@ def _assert_preregistered_config(args: argparse.Namespace) -> None:
         for key, expected in expected_config.items()
         # ``seed`` is checked against the profile's admitted SET just below, exactly as
         # ``rate_lambda`` is; every other key stays a strict equality against the config.
-        if key != "seed" and getattr(args, key) != expected
+        if key not in ("seed", "past_dilation") and getattr(args, key) != expected
     }
     admitted_lambdas = PREREGISTERED_RATE_LAMBDAS_BY_PROFILE[args.profile]
     if args.rate_lambda not in admitted_lambdas:
@@ -518,6 +540,12 @@ def _assert_preregistered_config(args: argparse.Namespace) -> None:
     admitted_seeds = PREREGISTERED_SEEDS_BY_PROFILE[args.profile]
     if args.seed not in admitted_seeds:
         differences["seed"] = {"expected": sorted(admitted_seeds), "observed": args.seed}
+    admitted_dilations = PREREGISTERED_PAST_DILATIONS_BY_PROFILE[args.profile]
+    if args.past_dilation not in admitted_dilations:
+        differences["past_dilation"] = {
+            "expected": sorted(admitted_dilations),
+            "observed": args.past_dilation,
+        }
     if differences:
         raise CL1TrainingError(
             "invocation differs from the receiver-closed preregistration: " + json.dumps(differences, sort_keys=True)
@@ -697,6 +725,7 @@ def _run_identity(
         "seed",
         "device",
         "ema_target_seed_fraction",
+        "past_dilation",
     )
     trainer_sha256 = _sha256_file(Path(__file__).resolve())
     local_causal_source_sha256 = _local_causal_sha256()
@@ -876,6 +905,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--channels", type=int, default=64)
     parser.add_argument("--patch", type=int, default=64)
     parser.add_argument("--delta", type=int, default=2)
+    parser.add_argument(
+        "--past-dilation",
+        type=int,
+        default=1,
+        help=(
+            "dilation of conv_past, the prior's fine-grained temporal tap set; 1 is the "
+            "shipped geometry.  Moves taps without adding any, so the stored value count "
+            "is unchanged.  Only a profile that admits the value may use it."
+        ),
+    )
     parser.add_argument("--frame-dim", type=int, default=8)
     parser.add_argument("--norm-mode", choices=("none", "center", "power"), default="none")
     parser.add_argument("--activation", choices=("relu", "leaky"), default="relu")
@@ -1097,6 +1136,14 @@ def main() -> None:
         use_spm=args.spm,
         use_norm_gates=args.norm_gates,
     ).to(device)
+    if args.past_dilation != 1:
+        # conv_past is a dense kxk convolution over the PREVIOUS plane, so its geometry
+        # lives entirely in these two attributes: the sparse evaluator and the native
+        # export both read the dilation back off the module.  Padding is recomputed so
+        # the output plane keeps its size.
+        kernel = int(model.conv_past.weight.shape[-1])
+        model.conv_past.dilation = int(args.past_dilation)
+        model.conv_past.padding = int(args.past_dilation) * (kernel - 1) // 2
     enable_self_compression(model, args.init_bits)
 
     resume: dict[str, Any] | None = None
