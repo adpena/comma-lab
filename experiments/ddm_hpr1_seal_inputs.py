@@ -30,7 +30,6 @@ sys.path[:0] = [str(REPO), str(REPO / "src")]
 
 from experiments.ddm_ntb2_intent_inputs import (
     MEMBER_NAME,
-    POINTER45_SHA,
     census_files,
     content_diff,
     endpoints,
@@ -41,6 +40,20 @@ from experiments.ddm_ntb2_intent_inputs import (
 from tac.candidate_seal import read_archive_member_identity
 
 CANDIDATE_ID = "ddm_hpr1_retrain_control"
+#: The score's rate term, in S per archive byte: 25 / 37,545,489.
+BYTES_TO_S = 6.658589531221714e-07
+
+
+def live_pointer() -> dict:
+    """The CURRENT frontier pointer, read at emit time, never a constant.
+
+    This producer first hardcoded move 45's sha. The pointer moved to 46 while the
+    candidate was being proven and the constant went stale the moment it did -- the
+    binding-numbers-expire genus. The pointer is therefore READ here, and every receipt
+    that references it carries what was read.
+    """
+    document = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
+    return document["our_local_frontier_contest_cuda"]
 #: The two independent assemblies that produced this candidate: each is one full 600-frame
 #: RLC1 encode through the shipping receiver loop with its own arithmetic encoder.
 TWIN_COUNT = 2
@@ -70,8 +83,12 @@ def emit(
     pins = endpoints(candidate)
     if pins["archive_sha256"] != expected_archive_sha256:
         raise SealInputsError(f"candidate archive is {pins['archive_sha256']}, not the priced one")
-    if prefire_file_reference(pointer / "archive.zip")["sha256"] != POINTER45_SHA:
-        raise SealInputsError("pointer runtime is not move 45")
+    live = live_pointer()
+    pointer_sha = prefire_file_reference(pointer / "archive.zip")["sha256"]
+    if pointer_sha != live["archive_sha256"]:
+        raise SealInputsError(
+            f"pointer runtime is {pointer_sha}, not the LIVE pointer {live['archive_sha256']}"
+        )
 
     public = json.loads(public_result.read_text())
     if not public.get("raw_byte_identical_to_pointer"):
@@ -192,7 +209,7 @@ def emit(
         {
             **pins,
             "score_claim": False,
-            "pointer_archive_sha256": POINTER45_SHA,
+            "pointer_archive_sha256": pointer_sha,
             "candidate_raw": public["candidate_raw"],
             "pointer_raw": public["pointer_raw"],
             "bytes_compared": public["candidate_raw"]["bytes"],
@@ -263,6 +280,33 @@ def emit(
         },
     )
 
+    pointer_bytes = prefire_file_reference(pointer / "archive.zip")["bytes"]
+    candidate_bytes = prefire_file_reference(candidate / "archive.zip")["bytes"]
+    net_bytes = candidate_bytes - pointer_bytes
+    write(
+        out / "ADMIT_ARITHMETIC.json",
+        {
+            **pins,
+            "score_claim": False,
+            "pointer": {
+                "archive_sha256": pointer_sha,
+                "archive_bytes": pointer_bytes,
+                "score": live.get("score"),
+            },
+            "candidate": {"archive_sha256": pins["archive_sha256"], "archive_bytes": candidate_bytes},
+            "net_bytes": net_bytes,
+            "bytes_to_s": BYTES_TO_S,
+            "net_delta_s": net_bytes * BYTES_TO_S,
+            "projected_score": (live.get("score") or 0.0) + net_bytes * BYTES_TO_S,
+            "distortion_delta": 0.0,
+            "distortion_argument": (
+                "rate-only: the candidate's cold decode is byte-identical to the pointer's own "
+                "retained raw, so d_seg and d_pose do not move and the whole delta is the archive "
+                "byte count"
+            ),
+        },
+    )
+
     write(
         out / "FALSIFIERS_PREREGISTERED.json",
         {
@@ -293,6 +337,10 @@ def emit(
 
     summary = {
         "candidate_id": CANDIDATE_ID,
+        "pointer_archive_sha256": pointer_sha,
+        "pointer_archive_bytes": pointer_bytes,
+        "net_bytes_vs_pointer": net_bytes,
+        "net_delta_s_vs_pointer": net_bytes * BYTES_TO_S,
         "seal_path": "NORMAL (receiver unchanged; inherits the pointer's measured decode leg)",
         "archive": prefire_file_reference(candidate / "archive.zip"),
         "emitted": sorted(p.name for p in out.glob("*.json")),
