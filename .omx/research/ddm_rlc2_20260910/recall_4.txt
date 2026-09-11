@@ -1,0 +1,4 @@
+98474:      "id": "ddm_rp1_round2_rate_directed_predistortion_k192_20260910",
+98481:          "evidence": "contest-CUDA S 0.1374765052591843 @ 180,238 B; archive sha f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f; harvest /Volumes/APDataStore/pact/ddm_rp1_round2_t4_20260910/MODAL_REMOTE_RESULT.json"
+98485:          "evidence": "contest-CUDA S 0.1374765052591843 @ 180,238 B; archive sha f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f; harvest /Volumes/APDataStore/pact/ddm_rp1_round2_t4_20260910/MODAL_REMOTE_RESULT.json"
+98489:          "evidence": "contest-CUDA S 0.1374765052591843 @ 180,238 B; archive sha f111ab4259c757409e791247d33978a714ceb1cd66e50c149e2e65fbf208756f; harvest /Volumes/APDataStore/pact/ddm_rp1_round2_t4_20260910/MODAL_REMOTE_RESULT.json"

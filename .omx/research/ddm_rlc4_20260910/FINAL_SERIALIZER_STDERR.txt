@@ -1,0 +1,5 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: experiments/ddm_rlc4_cost_preflight.py: failed to insert into database
+error: unable to index file 'experiments/ddm_rlc4_cost_preflight.py'
+fatal: updating files failed

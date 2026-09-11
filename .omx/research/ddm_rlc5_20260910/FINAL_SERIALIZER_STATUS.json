@@ -1,0 +1,9 @@
+{
+  "returncode": 19,
+  "serializer_invocations": 1,
+  "selected_file_count": 87,
+  "argv": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FINAL_SERIALIZER_ARGV.json",
+  "stdout": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FINAL_SERIALIZER_STDOUT.txt",
+  "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/FINAL_SERIALIZER_STDERR.txt",
+  "score_claim": false
+}

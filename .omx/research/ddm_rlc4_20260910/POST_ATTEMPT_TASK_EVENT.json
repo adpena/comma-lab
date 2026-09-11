@@ -1,0 +1,26 @@
+{
+  "task_id": "ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_20260910",
+  "source_design_memo": ".omx/research/ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_charter_20260910.md",
+  "title": "Real move42 counted cure and prefire intent; no dispatch",
+  "status": "blocked",
+  "owner": "ddm_rlc4",
+  "event_type": "note",
+  "event_timestamp_utc": "2026-09-10T18:15:25.739785Z",
+  "event_actor": "ddm_rlc4",
+  "written_at_utc": "2026-09-10T18:15:25.739785Z",
+  "written_pid": 51792,
+  "written_host": "mac.lan",
+  "schema_version": "canonical_task_status_v1_20260518",
+  "predicted_cost_usd": null,
+  "predicted_delta_s_band": null,
+  "actual_delta_s": null,
+  "commit_shas": [],
+  "test_status": "green",
+  "blockers": [
+    "Frozen normalized receiver includes changed MANIFEST.sha256; required old RLC1 digest cannot hold for this valid rebase."
+  ],
+  "started_at_utc": "2026-09-10T17:25:10.668806Z",
+  "completed_at_utc": null,
+  "event_notes": "Final serializer rc17 Git object write denied; verified fallback commit dd656eb3a8a7705004741fc3c321274e76aee9ad; 66 selected contents match, 65 changed, preflight helper already identical in base. MAIN has not landed this bundle. Earlier rc13 ignored-log preflight performed no Git write; one actual Git write attempt. Candidate intent still BLOCKED by real rc3 receiver risk endpoints refusal. FINAL_HANDOFF.json and RESUME_FIRE_ORDER.json carry exact custody and owner/fire orders.",
+  "session_id": "ddm_rlc4_20260910"
+}

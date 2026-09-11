@@ -1,0 +1,10 @@
+{
+  "returncode": 17,
+  "serializer_invocations": 2,
+  "prior_preflight_returncode": 13,
+  "prior_preflight_performed_git_write": false,
+  "argv": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_ARGV.json",
+  "stdout": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_STDOUT.txt",
+  "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_STDERR.txt",
+  "score_claim": false
+}

@@ -1,0 +1,507 @@
+{
+  "schema": "ddm_rlc4.bundle_verification.v1",
+  "time_utc": "2026-09-10T18:14:22.883970+00:00",
+  "verdict": "PASS",
+  "fallback_commit": "dd656eb3a8a7705004741fc3c321274e76aee9ad",
+  "base_head": "6bf93a7d8ad5e717e4e1f75221ee688c9db28fac",
+  "main_landed": false,
+  "bundle_verify_output": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.bundle is okay\nThe bundle contains this ref:\ndd656eb3a8a7705004741fc3c321274e76aee9ad refs/heads/serializer-fallback\nThe bundle requires this ref:\n6bf93a7d8ad5e717e4e1f75221ee688c9db28fac \nThe bundle uses this hash algorithm: sha1\n",
+  "verified_repository": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/bundle_verification.git",
+  "selected_file_count": 66,
+  "changed_file_count": 65,
+  "selected_unchanged_from_base": [
+    "experiments/ddm_rlc4_cost_preflight.py"
+  ],
+  "exact_selected_contents": true,
+  "no_unselected_changes": true,
+  "files": [
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/ARCHIVE_PARSEBACK.json",
+      "bytes": 658,
+      "sha256": "63b1f50f9f8ed334fb23aa5fc098b22efaa3d8114427188dbbd103956e462323",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/CANDIDATE_MANIFEST.json",
+      "bytes": 9444,
+      "sha256": "02491b221c0833e056f16d47c507097ffd641b672e937a6dadf65fb495244eee",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/CONDITIONAL_ARITHMETIC.json",
+      "bytes": 571,
+      "sha256": "871739f8bd901a794dc0171081b05641934b04dc78fc27943f927f3347310baa",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/DELIVERY_STATUS.json",
+      "bytes": 979,
+      "sha256": "8bc9f8fc1b4a92a0188657825e6448db6bcc3357226f5899794d7aed5ec6dc79",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/ENCODER_EXECUTION_0.json",
+      "bytes": 937,
+      "sha256": "1303042239b0f8d9ba2f48ea93a9ecd7110a639c39c95fe0ae3eb98c1d078ecb",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/ENCODER_EXECUTION_1.json",
+      "bytes": 937,
+      "sha256": "597367f672f6e533df1c0ce6ff5310c68e40489aca35599d45abab8d7091798c",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/ENCODE_RESULT.json",
+      "bytes": 4147,
+      "sha256": "65af98b172d103ae9084a6a734eafc51ac7b23b2073f56b5c42e1330f056a7c3",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/FINAL_INTENDED_FILES.json",
+      "bytes": 11641,
+      "sha256": "1f2f46cf6bb5a1de3ee02b0adfea9b603e473daed08c71a5c04f74593104aa88",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/FINAL_PRECOMMIT_VALIDATION.json",
+      "bytes": 1060,
+      "sha256": "b872096549248e456669e216865b36c397e0d48e1f02a2dfa58856bf7803c01f",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/FINAL_TASK_EVENTS.json",
+      "bytes": 5890,
+      "sha256": "3e78827b131cb6b4e07eda3de8d2d8d4104858aa48a25768113302503e91c6e4",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/FINAL_TASK_WARNINGS.txt",
+      "bytes": 11730,
+      "sha256": "808847c67f8de744165dfb37982fca1b1c100df52ff0e385de56cd538fb66a94",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INDEX_BEFORE.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INDEX_BEFORE_FINAL_SERIALIZER.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_ARGV.json",
+      "bytes": 2589,
+      "sha256": "13207a26b63a9b2e94132b2bcd50396bd7e1be347107b14c8400d5b054429cbe",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_ENV.json",
+      "bytes": 249,
+      "sha256": "2be459424505ee5ee9de2de8eecec3af5996ddeca03174dc226b37d5e75f861a",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_STATUS.json",
+      "bytes": 380,
+      "sha256": "48367c9077a8b1a20b05ebf7b93b1c712c7fbad39dc5ba18f00690f4122227b0",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_STDERR.txt",
+      "bytes": 2341,
+      "sha256": "3a108c935dbd8b3698af3ee12374da7615b4b632be4afc8a6ed00fa8ed3f8611",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_STDOUT.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STATUS.json",
+      "bytes": 505,
+      "sha256": "972ac9b49880b80f10bccbc7a258c03ed0f70ca207b417ca18cdd3811f98743d",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STDERR.txt",
+      "bytes": 62,
+      "sha256": "f0bb2fe9da2f30ec037d03ee16d73f6fb13449c5151c1cfb61ce7659552982ce",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/INTENT_PRODUCER_WITH_PATH_STDOUT.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/LITERAL_CENSUS.json",
+      "bytes": 13410,
+      "sha256": "455721e517786f402ac2d0e71e79723915bdab1baa7dd423c71e1e9c69e775c0",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/LITERAL_CENSUS_COUNTS.json",
+      "bytes": 738,
+      "sha256": "16e288223201b7f5eeb5936d18c0e7add94cdb2452522980d29247a26dcb022d",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/LITERAL_OCCURRENCES.json",
+      "bytes": 2196403,
+      "sha256": "e288d50451daaa4401897ccceb70c219d43eb9813894bc929d09fa668c58e8fb",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/MANIFEST_REFERENCE_DIFF.txt",
+      "bytes": 884,
+      "sha256": "e67fbb65be17c959402fe2fc1a7c9cd66ef62f93596a085415ed92c37bac2c36",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/MANIFEST_VALIDATION.json",
+      "bytes": 559,
+      "sha256": "15a5b13d9ff24b769649ac8c89f126064c6e2f85fb49e1eb42d12ee1e701bfd9",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/NORMALIZED_RECEIVER_DELTA.json",
+      "bytes": 14974,
+      "sha256": "b6f69f287d23df7453931d191d8feb404bea893d78f0a2bc286cb761bda4d1ce",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PREFIRE_REFUSAL_acb9c1ab3cb3443881b2af2538547635.json",
+      "bytes": 257,
+      "sha256": "3cbef5ad8c5c4d97aec6e3eb2fcf402bb4bf73faca638118e25c54edee91a517",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PREFLIGHT_FINAL_INTENDED_FILES.json",
+      "bytes": 10676,
+      "sha256": "c04b64395ec08aff689f061df122caec425e960d6d19479eefb8423fc7d7f269",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PREFLIGHT_FINAL_SERIALIZER_ARGV.json",
+      "bytes": 13743,
+      "sha256": "8e8648090dffc97b86fb5a8c08cab50eac7f0a56c4295d5fb724f3b096fd9d20",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PREFLIGHT_FINAL_SERIALIZER_STATUS.json",
+      "bytes": 370,
+      "sha256": "3b04fb35dc2aedc4c1e850481257ed0b9badef1c1f4a04dd296a0a1c5426385e",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PREFLIGHT_FINAL_SERIALIZER_STDERR.txt",
+      "bytes": 402,
+      "sha256": "10e51ea323dcdee87fecc764c3be5e0fead18b1dfeb2557d7e9a83bdbdcf1d91",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PREFLIGHT_FINAL_SERIALIZER_STDOUT.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PUBLIC_PROCESS.json",
+      "bytes": 166,
+      "sha256": "171933fdd27bd502dcdcdc45961ab7b0987b8b06ff9f7804e984d30406268c2e",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PUBLIC_RESULT.json",
+      "bytes": 4991,
+      "sha256": "1d7587b75548c6c3c91be4e06fd3291e1da442c79063e1239eaa2b2dcc7d9d95",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PUBLIC_SMOKE.json",
+      "bytes": 3957,
+      "sha256": "503a35331431049448acfa9a3b9a2e1ca51cbe47620d5ff1218b9709e83f2a37",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/PUBLIC_STDOUT.txt",
+      "bytes": 6175,
+      "sha256": "c0450f1e1a7d968d24ac267802df65c4ee6b1175cb9f617d50f3b20f8fc8033b",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RAW_IDENTITY_N600.json",
+      "bytes": 1771,
+      "sha256": "959cdfbc296b2aafaf3350a5922ca91839e2c2cca7b5c8cf60da6e9cc018b02a",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RECALL_SEARCHES.json",
+      "bytes": 1983,
+      "sha256": "fdebbe079a24b0abca84081cd74a6fec92b14ffc25bec1e9c4e9b3b66da6552b",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RECEIVER_MANIFEST_CONFLICT.json",
+      "bytes": 1278,
+      "sha256": "573dfb6a5b6199074124614d49500f3864357528f437a5a571397dfe352be6b1",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RESUME_FIRE_ORDER.json",
+      "bytes": 1769,
+      "sha256": "fc770a39953cf9c8468fd4c046459a1eb743d3b7051889381a34156743a3cb06",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RETENTION_MANIFEST.json",
+      "bytes": 3538,
+      "sha256": "c6e66980fa0f6c6f8d11ab7e225a8d9147c56242a23820bff84704932db8611b",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RLC4_CANDIDATE.json",
+      "bytes": 4796,
+      "sha256": "fd61785d4f3f5283bcc5c612b532e594841ddc5355f5e4e153bc400b8137f596",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/RLC4_INPUTS.json",
+      "bytes": 3171,
+      "sha256": "6f4599aec1cb3425a5bb1058ff6cee994ff689bdb54fde56315fa619d7c1b1de",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/SOURCE_PINS.json",
+      "bytes": 2869,
+      "sha256": "cb17de6c00909452d52b3f1c8914cd68deabf38fae7241e6fe1649ea4278af3c",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/SOURCE_REVIEWS.json",
+      "bytes": 1809,
+      "sha256": "c0121ca4b492ed0963513be522485f1eee4281bcf90b9c6cc9155e0fed0acbe5",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/SOURCE_REVIEW_PASS_1.json",
+      "bytes": 1393,
+      "sha256": "2d92e04b91698139e8116f34ba6d85a09ebfb12d95011e336d26dfe73b533e41",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/STORAGE_FINAL.json",
+      "bytes": 420,
+      "sha256": "6a62a92e1bb5d58757ffada19feba345e6b2aa339e2ed4dd3a042390f63d9c23",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/TASK_EVENTS.json",
+      "bytes": 1978,
+      "sha256": "8f5a0c5af26637787bcf3d721a9215ca475b2d71061e7f5da2d8cf4a7eb70914",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/TIMING_RISK.json",
+      "bytes": 2630,
+      "sha256": "33110f1d95cb6f548b1c1d281f4b78209dd2af68ca09597708e12be4d22014e3",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/TRACE_RESULT.json",
+      "bytes": 5124,
+      "sha256": "29c3fc9661118456ced41194d4c089a6cc75135267bb9b4cf757ee7444003dc3",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/TWIN_ENCODE.json",
+      "bytes": 1189,
+      "sha256": "abe1246898ae180752900d06b9dd7a506fb47fe1a3feb78586bbaad30b36742e",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/equations.json",
+      "bytes": 3703678,
+      "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/equations.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/equations_matches.json",
+      "bytes": 22464,
+      "sha256": "0c06ea9c186b605f506be50cb19207edfcda2845e520870cb646e9bed42f23e9",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/recall_0.txt",
+      "bytes": 10164,
+      "sha256": "4128f47b5792c87af81c64360e237ec0432d4038357257e324fd73b12b59d9ae",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/recall_1.txt",
+      "bytes": 2018,
+      "sha256": "78aded488834daea05b1947f29ef230d9e323fc11ff07d680023991e17d4e47a",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/recall_2.txt",
+      "bytes": 100935,
+      "sha256": "e4581b8992daca6a2b93977b6712172c64531df09a40cf96f007d78daf8922b1",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/recall_3.txt",
+      "bytes": 680,
+      "sha256": "cb0b1fd4ac1776f51df7829cd3d1160bb84934eb18de2de9e4028d6f3f398716",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_20260910/recall_task_rows.txt",
+      "bytes": 25893,
+      "sha256": "cf599a53384e2532820aa88c5469b0fa85668e035c350da55e32668c093b016b",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": ".omx/research/ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_20260910.md",
+      "bytes": 15264,
+      "sha256": "54bcc83a81c5ff36516cdcf85d529036e36338ea5e097c452e88c79e5a2b1e1e",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": "experiments/ddm_rlc4_cost_preflight.py",
+      "bytes": 3568,
+      "sha256": "94cd63018d6a54fd09e076735451291b461ca7af500980050df4a880212c9242",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": false
+    },
+    {
+      "path": "experiments/ddm_rlc4_evidence.py",
+      "bytes": 13145,
+      "sha256": "84d467fa2e4c01376fa4f970de1f8b7232ea40370764987ec8e3a960dd497362",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": "experiments/ddm_rlc4_native_cache.py",
+      "bytes": 2582,
+      "sha256": "7cad04c7ba47df3ac7baa6e6713d268e7a50bb332ff851eeaeecc0cae47d7135",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": "experiments/ddm_rlc4_public.py",
+      "bytes": 7277,
+      "sha256": "e111031cf278a376ecbcc6e4524a254a7f00ed0f7a0dc52087109124c99c09df",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    },
+    {
+      "path": "experiments/ddm_rlc4_rebase.py",
+      "bytes": 10463,
+      "sha256": "89bae717d2f005982ce8ef6626f274d9784afb50a455384e9382bbb52ab527c7",
+      "bundle_and_working_tree_match": true,
+      "changed_from_base": true
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/receipts.jsonl",
+      "bytes": 13269,
+      "sha256": "a989700430f8362269e2a73ce09657641aded6a1dd28be0a681caca8eb108447"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.bundle",
+      "bytes": 1020673,
+      "sha256": "a525109e9eed2b6699f8626aff7b7e413f575fd137a1c8bfdb3c8dda6ad501c9"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-tree.patch",
+      "bytes": 6432734,
+      "sha256": "de9d59a57db14f61111928e73018292415f112f6b5dd27696b6af6e9cdeebcad"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.format-patch",
+      "bytes": 6442325,
+      "sha256": "cbfc1dbc1ca9044813545f018dacd58c726dc679e3e3f546f5f6497a27ff0da9"
+    }
+  ],
+  "no_coauthor_trailer": true,
+  "shared_staged_index_unchanged": true,
+  "commit_message": "ddm_rlc4: retain real move42 cure and prefire manifest conflict [no-triality] [p0-ledger-ok]\n\nresearch_only=true; full n600 twin encodes and cold public raw identity passed; real frozen intent producer refused receiver risk endpoints. No score claim, authorization, dispatch, or completion. Checkpoint: ddm_rlc4 step 5. Two review passes per Python source. Commit last; MAIN lands. Earlier serializer invocation refused preflight on gitignored log before any Git write; identical tracked text copy now retained.\n\n# CHECKPOINT_DISCIPLINE_WAIVED:keeper-arm 'ddm_rlc4' landing; resume custody = keeper apparatus (charter + done-receipt + persisted final message), not commit-body checkpoints (auto-appended by the serializer)\n\n",
+  "score_claim": false
+}

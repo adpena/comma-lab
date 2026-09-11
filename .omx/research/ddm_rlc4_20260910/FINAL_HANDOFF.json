@@ -1,0 +1,170 @@
+{
+  "schema": "ddm_rlc4.final_handoff.v1",
+  "time_utc": "2026-09-10T18:15:25.760677+00:00",
+  "status": "BLOCKED_INSTANCE_FROZEN_CONTRACT_CONFLICT",
+  "research_only": true,
+  "score_claim": false,
+  "memo": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_resume_rebase_cure_onto_move42_prefire_intent_20260910.md",
+  "delivery": {
+    "schema": "ddm_rlc4.delivery.v1",
+    "state": "STOP_FROZEN_CONTRACT_RECEIVER_MANIFEST_CONFLICT",
+    "candidate_bytes": 180178,
+    "candidate_archive_sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b",
+    "raw_identity_n600": true,
+    "manifest_rows_verified": 49,
+    "runtime_files_censused": 51,
+    "public_smokes_passed": 4,
+    "risk_arithmetic_seconds": 1032.7250802956457,
+    "risk_gate_passed": false,
+    "bare_cli_rc": 1,
+    "producer_rc_with_explicit_repository_import_path": 3,
+    "typed_refusal": "PREFIRE_RISK_EVIDENCE_REFUSED: receiver risk endpoints differ",
+    "intent_path": null,
+    "intent_file_sha256": null,
+    "intent_bytes": null,
+    "intent_canonical_digest": null,
+    "normal_validate_seal_control": "NOT RUN: no valid intent exists; real producer deleted its failed new object",
+    "normal_seal_cli_control": "NOT RUN: no valid intent exists",
+    "modal_dispatch": false,
+    "authorization": false,
+    "completion": false,
+    "score_claim": false
+  },
+  "candidate_archive": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/archive.zip",
+    "bytes": 180178,
+    "sha256": "eaf17a7038a4671bf39c3071192b15eec7d7513d471d520b6d13bc9acf94a60b",
+    "delta_bytes": -60
+  },
+  "real_proofs": {
+    "full_n600_independent_twin_encode": "PASS",
+    "cold_public_n600_all_byte_identity": "PASS",
+    "public_raw_sha256": "1db04341d5ae9972d6296831a9e822d50a5d0f25ef77af378eae75b69e917159",
+    "manifest_rows_verified": 49,
+    "shipped_files_censused": 51,
+    "public_smoke_checks_passed": 4,
+    "measurement_axis": "macOS-CPU advisory"
+  },
+  "intent": {
+    "valid": false,
+    "path": null,
+    "sha256": null,
+    "bytes": null,
+    "canonical_digest": null,
+    "producer_returncode": 3,
+    "refusal": "PREFIRE_RISK_EVIDENCE_REFUSED: receiver risk endpoints differ",
+    "normal_seal_controls_on_valid_intent": "NOT_RUN_NO_VALID_INTENT"
+  },
+  "conflict": {
+    "reference_receiver_sha256": "b06e59a67b60f577eda2038353a9905550967a414e546e87162a33d9d60d1e2d",
+    "candidate_receiver_sha256": "27948d3d5ac0c32bd6eda8c0cfd08b2b488cfaa60c44ce3e98ba2689d7edbb8a",
+    "normalized_different_paths": [
+      {
+        "path": "MANIFEST.sha256",
+        "reference": [
+          4570,
+          "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
+        ],
+        "candidate": [
+          4570,
+          "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
+        ]
+      }
+    ],
+    "reference_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc1_rule118_cure/candidate_runtime/MANIFEST.sha256",
+      "bytes": 4570,
+      "sha256": "98993a00b6f2eb0f0ef8454bfbeea40ccdae7c18012a5a25cdfd645dfa4fc8f4"
+    },
+    "candidate_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/candidate_runtime/MANIFEST.sha256",
+      "bytes": 4570,
+      "sha256": "7c2b977a968dbd0512ce817dd7951e06d817b125875aa410a4c0f0d863345147"
+    },
+    "explanation": "Normalized receiver includes MANIFEST.sha256 verbatim; changing the counted archive pins requires changing the inflate.py hash in the mandatory regenerated manifest. No executable byte changes after normalization. Frozen contract left unchanged.",
+    "score_claim": false
+  },
+  "serializer": {
+    "returncode": 17,
+    "serializer_invocations": 2,
+    "prior_preflight_returncode": 13,
+    "prior_preflight_performed_git_write": false,
+    "argv": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_ARGV.json",
+    "stdout": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_STDOUT.txt",
+    "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_SERIALIZER_STDERR.txt",
+    "score_claim": false
+  },
+  "bundle_verification": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/BUNDLE_VERIFICATION.json",
+    "sha256": "4947c029adf65bb11b4ee43b7eedfe68bdb3c2317b1bb773a4098357aa27a48f",
+    "fallback_commit": "dd656eb3a8a7705004741fc3c321274e76aee9ad",
+    "base_head": "6bf93a7d8ad5e717e4e1f75221ee688c9db28fac",
+    "selected_files": 66,
+    "changed_files": 65,
+    "unchanged_from_base": [
+      "experiments/ddm_rlc4_cost_preflight.py"
+    ],
+    "verdict": "PASS",
+    "artifacts": [
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/receipts.jsonl",
+        "bytes": 13269,
+        "sha256": "a989700430f8362269e2a73ce09657641aded6a1dd28be0a681caca8eb108447"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.bundle",
+        "bytes": 1020673,
+        "sha256": "a525109e9eed2b6699f8626aff7b7e413f575fd137a1c8bfdb3c8dda6ad501c9"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-tree.patch",
+        "bytes": 6432734,
+        "sha256": "de9d59a57db14f61111928e73018292415f112f6b5dd27696b6af6e9cdeebcad"
+      },
+      {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.format-patch",
+        "bytes": 6442325,
+        "sha256": "cbfc1dbc1ca9044813545f018dacd58c726dc679e3e3f546f5f6497a27ff0da9"
+      }
+    ]
+  },
+  "main_landed": false,
+  "post_attempt_metadata_scope": "FINAL_SERIALIZER_ARGV/STATUS/STDOUT/STDERR, BUNDLE_VERIFICATION, FINAL_HANDOFF, POST_ATTEMPT_TASK_EVENT/WARNINGS and final checkpoint are outside the verified commit they describe. Bundled memo predates actual serializer result; its once language means one actual Git write attempt, following one rc13 preflight refusal. No bundled content was changed after serialization.",
+  "storage_after_bundle_verification": {
+    "root": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42",
+    "file_count": 2139,
+    "unique_bytes": 6263149133,
+    "cap_bytes": 8589934592,
+    "payloads_deleted": false,
+    "verification_metadata_retained": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42/bundle_verification.git"
+  },
+  "follow_on_fire_orders": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/FINAL_HANDOFF.json",
+      "fire_trigger": "Git-writable MAIN harvests the final verified serializer bundle",
+      "action": "Land the exact verified production source and evidence bundle, preserving unrelated work. Post-attempt verification and status files remain separate handoff metadata."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN / pr12-family",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc4_20260910/RECEIVER_MANIFEST_CONFLICT.json",
+      "fire_trigger": "Harvest of the real rc3 producer refusal and the one-path normalized receiver diff",
+      "action": "Adjudicate the conflict between refreshing MANIFEST.sha256 and requiring the old receiver digest. Freeze any authorized change prospectively and explicitly decide custody of these already-produced bytes; do not retimestamp evidence. Include the bare-CLI experiments import failure in producer readiness."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN / newly chartered producer",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_rlc2_cure_on_move42",
+      "fire_trigger": "A prospective MAIN/pr12-family resolution and explicit resumed charter while the pointer still names move42",
+      "action": "Resume from retained real candidate and proofs under the resolved production-ordering rules; emit and commit a valid intent and exercise both normal-seal refusals. MAIN alone authorizes, fires, harvests and completes afterward."
+    }
+  ],
+  "frontier_unchanged": "composition S 0.1374765052591843 @ 180,238 B [contest-CUDA T4 n600] (move 42)",
+  "new_exact_score": null,
+  "authorization": false,
+  "dispatch": false,
+  "completion": false,
+  "shared_staged_index_unchanged": true
+}

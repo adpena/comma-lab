@@ -1,0 +1,29 @@
+{
+  "verified": true,
+  "method": "Unbundle into isolated bare Git with read-only base-object alternates; hash all selected commit blobs; exact changed-path census; check format-patch against independent base index. Scratch is reproducible from retained bundle/base and auto-cleaned.",
+  "fallback_commit": "6ff1b06e6299e98ffb2d180ae87a4cfa7cbf096d",
+  "base_head": "879b14f00fb53c9af936c7ee1be6bd6e8583f256",
+  "selected_files_verified": 87,
+  "changed_file_count": 87,
+  "no_unselected_changes": true,
+  "exact_commit_message": true,
+  "no_coauthor_trailer": true,
+  "format_patch_check_returncode": 0,
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/serializer_source_evidence/20260910T200200.440511Z-31088/intended-commit.bundle",
+    "bytes": 1044916,
+    "sha256": "f64e43d6061aa9169300292a14f331a0849150aad88b14d3452dd40758df10c0"
+  },
+  "format_patch": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/serializer_source_evidence/20260910T200200.440511Z-31088/intended-commit.format-patch",
+    "bytes": 6871339,
+    "sha256": "8c189cd0ce8fa3ffe18cc4982abd1afccc9db1d96fe512c89a94f07747563c0a"
+  },
+  "unbundle_stdout": "6ff1b06e6299e98ffb2d180ae87a4cfa7cbf096d refs/heads/serializer-fallback\n",
+  "intent": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/CANDIDATE_PREFIRE_INTENT.json",
+    "bytes": 13773,
+    "sha256": "88204b883d622a6a66081e24ec817fb165e2751b4a8783b74b0968b48d2f8238"
+  },
+  "score_claim": false
+}

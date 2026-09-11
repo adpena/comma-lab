@@ -1,0 +1,6 @@
+The bundle contains this ref:
+86f092ebc9c844acce9d84a86d2e5b73d3e4186d refs/heads/serializer-fallback
+The bundle requires this ref:
+3676ad0b0194e8e1958665d404ecb1dd6efea78b 
+The bundle uses this hash algorithm: sha1
+/Users/adpena/Projects/pact/.omx/research/ddm_rlc2_20260910/serializer/20260910T144310.302853Z-62393/intended-commit.bundle is okay
