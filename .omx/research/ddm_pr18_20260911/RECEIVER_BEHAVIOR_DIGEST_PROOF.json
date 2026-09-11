@@ -1,0 +1,69 @@
+{
+ "schema": "ddm_pr18_receiver_behavior_digest_proof.v1",
+ "axis": "[exact digest arithmetic]",
+ "measured_at_utc": "2026-09-11T15:42:17.910620+00:00",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "definition_v1": "tac.decode_wall_clock.measure_receiver_digest",
+ "definition_v2": "tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
+ "trees": {
+  "move44_pointer": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+   "legacy_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+   "behavior_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+   "behavior_row_count": 49,
+   "manifest_validation": {
+    "schema": "receiver_manifest_validation.v1",
+    "relative_path": "MANIFEST.sha256",
+    "present": true,
+    "listed_file_count": 49,
+    "covered_file_count": 49,
+    "archive_listed": false,
+    "listing_sha256": "c65d2e74dc2c52357676526510f59fd92c3ee5088882e790fcd0ad6b3f9a6ca0",
+    "excluded_from_behavior_digest": true
+   },
+   "ffi4_risk_digest_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+   "behavior_rows_identical_to_ffi4_risk_rows": true
+  },
+  "pc3_candidate": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+   "legacy_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+   "behavior_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+   "behavior_row_count": 49,
+   "manifest_validation": {
+    "schema": "receiver_manifest_validation.v1",
+    "relative_path": "MANIFEST.sha256",
+    "present": true,
+    "listed_file_count": 50,
+    "covered_file_count": 49,
+    "archive_listed": true,
+    "listing_sha256": "55bdbfd268a86f202bdbfca19f20db910253f8bc20b1c22b41b3e2353175b454",
+    "excluded_from_behavior_digest": true
+   },
+   "ffi4_risk_digest_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+   "behavior_rows_identical_to_ffi4_risk_rows": true
+  },
+  "move43_prior_pointer": {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime",
+   "legacy_sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf",
+   "behavior_sha256": null,
+   "behavior_digest_refusal": "decode_wall_clock: manifest hash differs from the file's raw bytes: inflate.py",
+   "ffi4_risk_digest_sha256": "b37ac3f122188a6b9d990b072b0f4f45be08ffb5e9048f84877c63f5f82c58ab",
+   "behavior_rows_identical_to_ffi4_risk_rows": true
+  }
+ },
+ "pairs": {
+  "move44_vs_pc3": {
+   "legacy_equal": false,
+   "behavior_equal": true,
+   "meaning": "an archive-only successor: the defect (legacy DIFFERENT) and the cure (behavior EQUAL)"
+  },
+  "move44_vs_move43": {
+   "legacy_equal": false,
+   "behavior_equal": false,
+   "unvalidated_behavior_row_digest_move43": "b37ac3f122188a6b9d990b072b0f4f45be08ffb5e9048f84877c63f5f82c58ab",
+   "meaning": "a real receiver change still refuses under BOTH definitions; the move43 tree additionally refuses at the independent listing validation (pr9 condition 1 on disk today)"
+  }
+ },
+ "pr14_amendment_amended_sha256_cross_check": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+}

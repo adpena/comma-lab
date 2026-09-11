@@ -16,17 +16,24 @@ from tac.candidate_seal import (
     load_seal,
     measure_archive_identity,
     measure_runtime_digest,
+    sha256_file,
     validate_seal,
     write_seal,
 )
 from tac.decode_wall_clock import (
     CALIBRATION_SCHEMA,
     LOCAL_SCHEMA,
+    RECEIVER_BEHAVIOR_DIGEST_DEFINITION,
+    RECEIVER_DERIVED_LISTING,
+    RECEIVER_DIGEST_DEFINITION,
+    _receiver_rows,
     build_decode_wall_clock,
+    compare_receiver_identity,
     inherit_decode_wall_clock,
     measure_receiver_digest,
     measure_t4_runtime_digest,
     receipt_reference,
+    receiver_identity,
     validate_decode_wall_clock,
 )
 
@@ -404,3 +411,166 @@ def test_calibration_identity_fields_cannot_be_redirected(case, field):
     _json(path, cal)
     leg["calibration_receipt"] = receipt_reference(path)
     assert f"{field} must name the canonical" in _validate(case, leg)[0]
+
+
+# ddm_pr18 — the derived listing (MANIFEST.sha256) leaves the BEHAVIOR identity and is validated
+# independently instead. Synthetic controls first; the measured host trees are at the end.
+
+def _write_manifest(tree: Path, *, include_archive: bool = False) -> Path:
+    """Write the listing a real producer writes: every shipped file except itself."""
+    path = tree / RECEIVER_DERIVED_LISTING
+    rows = []
+    for file in sorted(tree.rglob("*")):
+        if not file.is_file() or file.name == RECEIVER_DERIVED_LISTING:
+            continue
+        rel = file.relative_to(tree).as_posix()
+        if rel == "archive.zip" and not include_archive:
+            continue
+        rows.append(f"{sha256_file(file)}  {rel}\n")
+    path.write_text("".join(rows))
+    return path
+
+
+def test_a_tree_without_a_listing_keeps_one_definition(case):
+    identity = receiver_identity(case[0])
+    assert identity["manifest_validation"]["present"] is False
+    assert identity["behavior_sha256"] == identity["legacy_sha256"] == measure_receiver_digest(case[0])
+    assert identity["excluded_relative_paths"] == []
+
+
+def test_the_listing_leaves_the_behavior_identity_but_not_the_raw_one(case):
+    runtime = case[0]
+    _write_manifest(runtime)
+    before = receiver_identity(runtime)
+    assert before["manifest_validation"]["present"] is True
+    assert before["manifest_validation"]["excluded_from_behavior_digest"] is True
+    assert before["behavior_sha256"] != before["legacy_sha256"]
+    assert before["behavior_row_count"] == len(_receiver_rows(runtime)) - 1
+    _write_manifest(runtime, include_archive=True)  # a different, still-honest listing
+    after = receiver_identity(runtime)
+    assert after["behavior_sha256"] == before["behavior_sha256"]
+    assert after["legacy_sha256"] != before["legacy_sha256"]
+    assert after["manifest_validation"]["archive_listed"] is True
+    assert measure_runtime_digest(runtime).file_map()[RECEIVER_DERIVED_LISTING][1] == sha256_file(
+        runtime / RECEIVER_DERIVED_LISTING)
+
+
+@pytest.mark.parametrize("mutate,message", [
+    (lambda text: text.replace(text[:64], "b" * 64, 1), "manifest hash differs from the file's raw bytes"),
+    (lambda text: "".join(text.splitlines(keepends=True)[1:]), "manifest omits shipped file"),
+    (lambda text: text + f"{'c' * 64}  absent_dependency.py\n", "lists a file the tree does not ship"),
+    (lambda text: text + f"{'c' * 64}  MANIFEST.sha256\n", "derived listing cannot list itself"),
+    (lambda text: text + f"{'c' * 64}  ../escape.py\n", "names a path outside the tree"),
+    (lambda text: text + text.splitlines(keepends=True)[0], "duplicate manifest row"),
+    (lambda text: text + "not-a-hash  extra.py\n", "is not a sha256"),
+    (lambda text: text + "singlefield\n", "malformed manifest line"),
+    (lambda text: "", "manifest lists no file"),
+])
+def test_every_broken_listing_refuses_before_it_can_be_excluded(case, mutate, message):
+    runtime = case[0]
+    path = _write_manifest(runtime)
+    path.write_text(mutate(path.read_text()))
+    with pytest.raises(SealContractError, match=message):
+        receiver_identity(runtime)
+    assert message in _validate(case)[0]
+
+
+def test_a_listing_must_name_the_receiver_entry_point(case):
+    path = _write_manifest(case[0])
+    kept = [line for line in path.read_text().splitlines(keepends=True) if "  inflate.py" not in line]
+    (case[0] / "inflate.py").unlink()
+    path.write_text("".join(kept))
+    with pytest.raises(SealContractError, match=r"manifest does not list inflate\.py"):
+        receiver_identity(case[0])
+
+
+def test_a_listed_archive_is_allowed_but_still_held_to_its_bytes(case):
+    """MEASURED on the pc3 candidate tree: some producers list archive.zip; the hash must hold."""
+    path = _write_manifest(case[0], include_archive=True)
+    assert receiver_identity(case[0])["manifest_validation"]["archive_listed"] is True
+    path.write_text(path.read_text().replace(sha256_file(case[1]), "d" * 64, 1))
+    with pytest.raises(SealContractError, match=r"manifest hash differs from the file's raw bytes: archive\.zip"):
+        receiver_identity(case[0])
+
+
+def _successor(case, tmp_path, payload=b"new payload"):
+    """A pointer tree and an archive-only successor, both carrying an honest listing."""
+    from tac.tests.test_candidate_seal import _stage_candidate
+    _write_manifest(case[0])
+    # The listing ships, so the pointer's own receipts must be measured with it present.
+    source = _json(tmp_path / "source.json", timing_fixture(case[0], tmp_path / "listed_timing"))
+    other = tmp_path / "successor"
+    other.mkdir()
+    runtime, archive = _stage_candidate(other, payload=payload)
+    _write_manifest(runtime)
+    return source, runtime, archive
+
+
+def test_an_archive_only_successor_inherits_and_records_the_definition(case, tmp_path):
+    source, runtime, archive = _successor(case, tmp_path)
+    pointer = case[2]["archive_sha256"]
+    leg = inherit_decode_wall_clock(source_leg_path=source, runtime_dir=runtime, archive_path=archive,
+                                    pointer_archive_sha256=pointer)
+    comparison = leg["receiver_identity_comparison"]
+    assert comparison["schema"] == "receiver_identity_comparison.v1"
+    assert comparison["comparison_digest_definition"] == RECEIVER_BEHAVIOR_DIGEST_DEFINITION
+    assert comparison["behavior_digests_equal"] is True
+    assert comparison["legacy_digests_equal"] is False  # the pins, and therefore the listing, moved
+    assert comparison["source_stored_digest_definition"] == RECEIVER_DIGEST_DEFINITION
+    assert comparison["excluded_relative_paths"] == [RECEIVER_DERIVED_LISTING]
+    assert not validate_decode_wall_clock(leg, runtime_dir=runtime, archive_path=archive,
+                                          pointer_archive_sha256=pointer)[0]
+
+
+def test_a_real_receiver_change_still_refuses_inheritance(case, tmp_path):
+    source, runtime, archive = _successor(case, tmp_path)
+    (runtime / "inflate.sh").write_text("echo changed\n")
+    _write_manifest(runtime)  # an HONEST listing of a genuinely changed receiver
+    with pytest.raises(SealContractError, match="receiver code differs"):
+        inherit_decode_wall_clock(source_leg_path=source, runtime_dir=runtime, archive_path=archive,
+                                  pointer_archive_sha256=case[2]["archive_sha256"])
+
+
+def test_a_recorded_comparison_cannot_disagree_with_the_trees(case, tmp_path):
+    source, runtime, archive = _successor(case, tmp_path)
+    pointer = case[2]["archive_sha256"]
+    leg = inherit_decode_wall_clock(source_leg_path=source, runtime_dir=runtime, archive_path=archive,
+                                    pointer_archive_sha256=pointer)
+    forged = copy.deepcopy(leg)
+    forged["receiver_identity_comparison"]["candidate_behavior_sha256"] = "f" * 64
+    problems = validate_decode_wall_clock(forged, runtime_dir=runtime, archive_path=archive,
+                                          pointer_archive_sha256=pointer)[0]
+    assert any("recorded receiver comparison differs" in problem for problem in problems)
+
+
+def test_a_stored_digest_may_be_written_under_either_definition(case):
+    runtime = case[0]
+    _write_manifest(runtime)
+    identity = receiver_identity(runtime)
+    for stored, expected in ((identity["legacy_sha256"], RECEIVER_DIGEST_DEFINITION),
+                             (identity["behavior_sha256"], RECEIVER_BEHAVIOR_DIGEST_DEFINITION)):
+        assert compare_receiver_identity(stored, runtime, label="candidate")["stored_digest_definition"] == expected
+    with pytest.raises(SealContractError, match="candidate receiver differs from measurement"):
+        compare_receiver_identity("a" * 64, runtime, label="candidate")
+
+
+MOVE44 = Path("/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime")
+PC3 = Path("/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime")
+MOVE43 = Path("/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime")
+
+
+@pytest.mark.skipif(not (MOVE44.is_dir() and PC3.is_dir() and MOVE43.is_dir()),
+                    reason="measured host custody trees are not mounted")
+def test_measured_host_trees_reproduce_the_charter_pairs():
+    """The three pairs the pr18 charter names, on the real trees; not a score claim."""
+    from tac.candidate_seal import measure_prefire_risk_receiver_digest
+
+    behavior = "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+    assert receiver_identity(MOVE44)["behavior_sha256"] == behavior
+    assert receiver_identity(PC3)["behavior_sha256"] == behavior
+    assert measure_receiver_digest(MOVE44) != measure_receiver_digest(PC3)
+    assert measure_prefire_risk_receiver_digest(MOVE44) == behavior  # identical to the ffi4 row set
+    assert measure_receiver_digest(MOVE43) != measure_receiver_digest(MOVE44)
+    with pytest.raises(SealContractError, match=r"manifest hash differs from the file's raw bytes: inflate\.py"):
+        receiver_identity(MOVE43)  # a stale listing on disk today: pr9 condition 1, refused
+    assert measure_prefire_risk_receiver_digest(MOVE43) != behavior

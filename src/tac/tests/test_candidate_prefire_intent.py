@@ -930,7 +930,24 @@ def test_prefire_risk_manifest_exclusion_does_not_bypass_dependency_manifest_val
             doc["manifest"] = intent["evidence"]["candidate_manifest"]
         intent["evidence"][name] = write(path, doc)
     write(fixture["path"], sign(intent))
-    with pytest.raises(cs.PrefireRefusal, match="PREFIRE_NON_TIMING_GATE_REFUSED: dependency manifest/verification not complete"):
+    # ddm_pr18 moves this refusal EARLIER and makes it specific: the intent's own tree is now
+    # checked against its listing at the identity stage, so a stale listing never reaches the
+    # dependency gate. The dependency gate itself is unchanged and is exercised below.
+    with pytest.raises(cs.PrefireRefusal, match="PREFIRE_IDENTITY_DRIFT_REFUSED: derived listing invalid"):
+        validate(fixture)
+
+
+def test_dependency_manifest_gate_still_refuses_an_unverified_listing(fixture):
+    """The pr18 identity check does not replace the independent verification receipt gate."""
+    intent = fixture["intent"]
+    assert validate(fixture)
+    path = Path(intent["evidence"]["manifest_validation"]["path"])
+    doc = json.loads(path.read_text())
+    doc["all_hashes_passed"] = False
+    intent["evidence"]["manifest_validation"] = write(path, doc)
+    write(fixture["path"], sign(intent))
+    with pytest.raises(cs.PrefireRefusal,
+                       match="PREFIRE_NON_TIMING_GATE_REFUSED: dependency manifest/verification not complete"):
         validate(fixture)
 
 
@@ -1268,6 +1285,70 @@ def test_consumer_fix_batch_keeps_definition_and_refuses_stale_latest(fixture, m
     _freeze_consumer_rows(fixture, history, [definition, legacy_snapshot, row, second])
     assert validate(fixture)
     assert fixture["intent"]["contract"]["definition_parent_sha256"] == cs.prefire_digest(definition)
+
+
+def _superseding_amendment(f, history, previous):
+    """ddm_pr18's row: a NEW definition that may follow consumer fixes by pinning the chain."""
+    definition = f["intent"]["contract"]["amendment"]
+    return {"schema": cs.PREFIRE_CONTRACT_AMENDMENT_SCHEMA,
+        "amendment_id": cs.PREFIRE_CONTRACT_AMENDMENT_ID_PR18,
+        "adjudication_memo": definition["adjudication_memo"],
+        "definition_change": dict(cs.PREFIRE_AMENDMENT_DEFINITIONS[cs.PREFIRE_CONTRACT_AMENDMENT_ID_PR18]),
+        "definition_parent_sha256": cs.prefire_digest(definition),
+        "previous_row_sha256": cs.prefire_digest(previous),
+        "implementation_commit": history["amended"],
+        "implementation_manifest": definition["implementation_manifest"], "score_claim": False}
+
+
+def test_a_superseding_amendment_may_follow_consumer_fixes_and_becomes_the_parent(fixture, monkeypatch):
+    history = _contract_git_history(fixture, monkeypatch)
+    definition = fixture["intent"]["contract"]["amendment"]
+    fix = _consumer_fix_row(fixture, history, definition)
+    pr18 = _superseding_amendment(fixture, history, fix)
+    _freeze_consumer_rows(fixture, history, [definition, fix, pr18])
+    fixture["intent"]["contract"]["definition_parent_sha256"] = cs.prefire_digest(pr18)
+    write(fixture["path"], sign(fixture["intent"]))
+    history["land"]()
+    assert validate(fixture)
+    # A later consumer fix must now parent to the NEW definition, not the superseded one.
+    after = _consumer_fix_row(fixture, history, pr18, batch="post-pr18-consumers")
+    after["definition_parent_sha256"] = cs.prefire_digest(pr18)
+    _freeze_consumer_rows(fixture, history, [definition, fix, pr18, after])
+    fixture["intent"]["contract"]["definition_parent_sha256"] = cs.prefire_digest(pr18)
+    write(fixture["path"], sign(fixture["intent"]))
+    history["land"]()
+    assert validate(fixture)
+    stale = _consumer_fix_row(fixture, history, pr18, batch="stale-parent-consumers")
+    _freeze_consumer_rows(fixture, history, [definition, fix, pr18, stale])
+    with pytest.raises(cs.PrefireRefusal, match="consumer-fix definition parent differs"):
+        validate(fixture)
+
+
+@pytest.mark.parametrize("mutation,message", [
+    ("definition", "amendment definition differs"),
+    ("unknown_id", "unknown amendment id"),
+    ("parent", "superseding amendment names a different definition parent"),
+    ("previous", "superseding amendment breaks the append-only row chain"),
+    ("legacy_after_fix", "definition snapshot after consumer fixes is unsupported"),
+])
+def test_a_superseding_amendment_cannot_reset_the_chain(fixture, monkeypatch, mutation, message):
+    history = _contract_git_history(fixture, monkeypatch)
+    definition = fixture["intent"]["contract"]["amendment"]
+    fix = _consumer_fix_row(fixture, history, definition)
+    pr18 = _superseding_amendment(fixture, history, fix)
+    if mutation == "definition":
+        pr18["definition_change"]["excluded_relative_paths"] = []
+    elif mutation == "unknown_id":
+        pr18["amendment_id"] = "ddm_unreviewed_definition"
+    elif mutation == "parent":
+        pr18["definition_parent_sha256"] = "0" * 64
+    elif mutation == "previous":
+        pr18["previous_row_sha256"] = "0" * 64
+    else:
+        pr18 = {**definition, "note": "a legacy snapshot replayed after a consumer fix"}
+    _freeze_consumer_rows(fixture, history, [definition, fix, pr18])
+    with pytest.raises(cs.PrefireRefusal, match=message):
+        validate(fixture)
 
 
 @pytest.mark.parametrize("mutation", ["previous", "parent", "definition", "receiver", "threshold", "evidence",

@@ -39,6 +39,19 @@ ADMISSION_RULE_V3 = "decode_wall_clock.admission_rule.v3"
 LOCAL_SCHEMA = "decode_wall_clock.local.v1"
 CALIBRATION_SCHEMA = "decode_wall_clock.calibration.v1"
 LIMIT_SECONDS = 1260.0
+# ddm_pr18. The shipped tree carries ONE derived file: ``MANIFEST.sha256`` restates the raw
+# sha256 of every other shipped file, including inflate.py's raw hash — which moves with the
+# archive pins. Hashing that restatement into the receiver IDENTITY coupled identity to the
+# pins the normalizer exists to remove, so an archive-only successor differed on exactly one
+# row and inheritance refused a receiver it had already measured. The behavior digest excludes
+# the restatement and validates it independently instead; the raw listing stays in every
+# custody digest (``measure_runtime_digest``) and in the seal's own file pins.
+RECEIVER_DIGEST_DEFINITION = "tac.decode_wall_clock.measure_receiver_digest"
+RECEIVER_BEHAVIOR_DIGEST_DEFINITION = "tac.decode_wall_clock.measure_receiver_behavior_digest.v2"
+RECEIVER_DERIVED_LISTING = "MANIFEST.sha256"
+RECEIVER_MANIFEST_VALIDATION_SCHEMA = "receiver_manifest_validation.v1"
+RECEIVER_IDENTITY_SCHEMA = "receiver_identity.v1"
+RECEIVER_IDENTITY_COMPARISON_SCHEMA = "receiver_identity_comparison.v1"
 
 
 def _require(condition: bool, message: str) -> None:
@@ -77,8 +90,8 @@ def _receipt(ref: object) -> dict:
     return _read(path)
 
 
-def measure_receiver_digest(runtime_dir: Path) -> str:
-    """Hash shipped files, normalizing only the values of explicit archive pin assignments."""
+def _receiver_rows(runtime_dir: Path, *, excluded: frozenset[str] = frozenset()) -> list[tuple[str, int, str]]:
+    """Shipped-file rows, normalizing only the values of explicit archive pin assignments."""
     root = Path(runtime_dir)
     _require(root.is_dir(), f"runtime missing: {root}")
     rows = []
@@ -86,7 +99,7 @@ def measure_receiver_digest(runtime_dir: Path) -> str:
         if not path.is_file() or path.is_symlink():
             continue
         rel = path.relative_to(root).as_posix()
-        if rel == "archive.zip" or runtime_digest_skip_reason(rel):
+        if rel == "archive.zip" or rel in excluded or runtime_digest_skip_reason(rel):
             continue
         data = path.read_bytes()
         if rel == "inflate.py":
@@ -116,7 +129,121 @@ def measure_receiver_digest(runtime_dir: Path) -> str:
                 data = data[:start] + b"<ARCHIVE_PIN>" + data[end:]
         rows.append((rel, len(data), hashlib.sha256(data).hexdigest()))
     _require(bool(rows), "receiver tree empty")
+    return rows
+
+
+def _rows_digest(rows: list[tuple[str, int, str]]) -> str:
     return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
+
+
+def measure_receiver_digest(runtime_dir: Path) -> str:
+    """Legacy raw identity: every shipped file, the derived listing included. Unchanged by pr18."""
+    return _rows_digest(_receiver_rows(runtime_dir))
+
+
+def _manifest_listing(root: Path) -> dict[str, str] | None:
+    """Parse the derived ``sha256  path`` listing; ``None`` when the tree ships none."""
+    path = root / RECEIVER_DERIVED_LISTING
+    if not path.is_file() or path.is_symlink():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise SealContractError(f"decode_wall_clock: unreadable {RECEIVER_DERIVED_LISTING}: {exc}") from exc
+    listing: dict[str, str] = {}
+    for number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        parts = line.split(None, 1)
+        _require(len(parts) == 2, f"malformed manifest line {number}")
+        digest, rel = parts[0], parts[1].lstrip("*").strip()
+        _require(re.fullmatch(r"[0-9a-f]{64}", digest) is not None, f"manifest line {number} is not a sha256")
+        _require(bool(rel) and not Path(rel).is_absolute() and ".." not in Path(rel).parts,
+                 f"manifest line {number} names a path outside the tree")
+        _require(rel != RECEIVER_DERIVED_LISTING, "the derived listing cannot list itself")
+        _require(rel not in listing, f"duplicate manifest row: {rel}")
+        listing[rel] = digest
+    _require(bool(listing), "manifest lists no file")
+    return listing
+
+
+def validate_receiver_manifest(runtime_dir: Path) -> dict:
+    """Re-derive the derived listing from raw bytes; a stale or partial listing is a refusal.
+
+    This is what buys the exclusion in ``measure_receiver_behavior_digest``: the listing leaves
+    the identity rows only because it is proven, on this tree, to be a faithful restatement of
+    them. pr9 condition 1 (a stale manifest riding through inherit) is the defect this forbids.
+    ``archive.zip`` MAY be listed — some producers list it, MEASURED on the pc3 candidate tree —
+    and is then held to the same hash equality; nothing else may be listed or omitted.
+    """
+    root = Path(runtime_dir)
+    _require(root.is_dir(), f"runtime missing: {root}")
+    listing = _manifest_listing(root)
+    present = {}
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.is_symlink():
+            continue
+        rel = path.relative_to(root).as_posix()
+        if runtime_digest_skip_reason(rel):
+            continue
+        present[rel] = sha256_file(path)
+    _require(bool(present), "receiver tree empty")
+    record = {"schema": RECEIVER_MANIFEST_VALIDATION_SCHEMA, "relative_path": RECEIVER_DERIVED_LISTING,
+              "present": listing is not None, "listed_file_count": 0, "covered_file_count": 0,
+              "archive_listed": False, "listing_sha256": None, "excluded_from_behavior_digest": False}
+    if listing is None:
+        return record
+    for rel, digest in sorted(listing.items()):
+        _require(rel in present, f"manifest lists a file the tree does not ship: {rel}")
+        _require(present[rel] == digest, f"manifest hash differs from the file's raw bytes: {rel}")
+    _require("inflate.py" in listing, "manifest does not list inflate.py")
+    covered = {rel for rel in present if rel not in {"archive.zip", RECEIVER_DERIVED_LISTING}}
+    unlisted = sorted(covered - set(listing))
+    _require(not unlisted, "manifest omits shipped file(s): " + ", ".join(unlisted[:4]))
+    record.update(listed_file_count=len(listing), covered_file_count=len(covered),
+                  archive_listed="archive.zip" in listing,
+                  listing_sha256=present[RECEIVER_DERIVED_LISTING], excluded_from_behavior_digest=True)
+    return record
+
+
+def receiver_identity(runtime_dir: Path) -> dict:
+    """Both definitions over one tree walk, with the manifest validation that licenses the v2 one."""
+    root = Path(runtime_dir)
+    validation = validate_receiver_manifest(root)
+    rows = _receiver_rows(root)
+    behavior_rows = rows
+    if validation["excluded_from_behavior_digest"]:
+        behavior_rows = [row for row in rows if row[0] != RECEIVER_DERIVED_LISTING]
+    _require(bool(behavior_rows), "receiver tree carries no behavior-bearing file")
+    return {"schema": RECEIVER_IDENTITY_SCHEMA,
+            "digest_definition": RECEIVER_BEHAVIOR_DIGEST_DEFINITION,
+            "behavior_sha256": _rows_digest(behavior_rows),
+            "behavior_row_count": len(behavior_rows),
+            "legacy_digest_definition": RECEIVER_DIGEST_DEFINITION,
+            "legacy_sha256": _rows_digest(rows),
+            "excluded_relative_paths": [RECEIVER_DERIVED_LISTING] if validation["excluded_from_behavior_digest"] else [],
+            "manifest_validation": validation}
+
+
+def measure_receiver_behavior_digest(runtime_dir: Path) -> str:
+    """ddm_pr18 identity: behavior-bearing bytes only, after the derived listing validates."""
+    return receiver_identity(runtime_dir)["behavior_sha256"]
+
+
+def compare_receiver_identity(stored: object, runtime_dir: Path, *, label: str) -> dict:
+    """Name the definition a STORED digest was written under; refuse when it names neither.
+
+    Receipts written before pr18 carry the legacy digest. Accepting both, and RECORDING which
+    one matched, is what lets an old receipt keep naming its own tree without re-measuring it.
+    """
+    identity = receiver_identity(runtime_dir)
+    if stored == identity["behavior_sha256"]:
+        definition = RECEIVER_BEHAVIOR_DIGEST_DEFINITION
+    elif stored == identity["legacy_sha256"]:
+        definition = RECEIVER_DIGEST_DEFINITION
+    else:
+        raise SealContractError(f"decode_wall_clock: {label} receiver differs from measurement")
+    return {**identity, "stored_sha256": stored, "stored_digest_definition": definition}
 
 
 def _local(ref: object, *, require_margin_basis: bool = True) -> tuple[dict, float]:
@@ -169,7 +296,7 @@ def _local(ref: object, *, require_margin_basis: bool = True) -> tuple[dict, flo
         _require(isinstance(doc.get(name), str) and bool(doc[name]), f"{name} absent")
     root, archive = Path(doc["runtime_dir"]), Path(doc["archive_path"])
     _require(measure_runtime_digest(root).sha256 == doc.get("runtime_sha256"), "local runtime drift")
-    _require(measure_receiver_digest(root) == doc.get("receiver_sha256"), "local receiver drift")
+    compare_receiver_identity(doc.get("receiver_sha256"), root, label="local")
     _require(measure_archive_identity(archive).sha256 == doc.get("archive_sha256"), "local archive drift")
     seconds = _number(doc.get("wall_seconds"), "wall seconds")
     return doc, seconds * 600 / len(frames)
@@ -366,6 +493,24 @@ def build_decode_wall_clock(*, local_receipt_path: Path, calibration_receipt_pat
     return leg
 
 
+def _receiver_comparison(source_identity: dict, candidate_identity: dict) -> dict:
+    """The typed record of WHICH definition decided a cross-tree receiver comparison."""
+    return {"schema": RECEIVER_IDENTITY_COMPARISON_SCHEMA,
+            "comparison_digest_definition": RECEIVER_BEHAVIOR_DIGEST_DEFINITION,
+            "excluded_relative_paths": [RECEIVER_DERIVED_LISTING],
+            "source_stored_digest_definition": source_identity["stored_digest_definition"],
+            "candidate_stored_digest_definition": candidate_identity["stored_digest_definition"],
+            "source_behavior_sha256": source_identity["behavior_sha256"],
+            "candidate_behavior_sha256": candidate_identity["behavior_sha256"],
+            "source_legacy_sha256": source_identity["legacy_sha256"],
+            "candidate_legacy_sha256": candidate_identity["legacy_sha256"],
+            "behavior_digests_equal": source_identity["behavior_sha256"] == candidate_identity["behavior_sha256"],
+            "legacy_digests_equal": source_identity["legacy_sha256"] == candidate_identity["legacy_sha256"],
+            "source_manifest_validation": source_identity["manifest_validation"],
+            "candidate_manifest_validation": candidate_identity["manifest_validation"],
+            "score_claim": False}
+
+
 def inherit_decode_wall_clock(*, source_leg_path: Path, runtime_dir: Path, archive_path: Path,
                                pointer_archive_sha256: str) -> dict:
     """Inherit only a valid measured pointer leg whose normalized receiver code is identical."""
@@ -380,8 +525,13 @@ def inherit_decode_wall_clock(*, source_leg_path: Path, runtime_dir: Path, archi
     if source.get("mode") == "t4_direct":
         leg["source_t4_runtime_sha256"] = source.get("t4_runtime_sha256")
         leg["candidate_t4_runtime_sha256"] = measure_t4_runtime_digest(runtime_dir)
+    problems, observed = validate_decode_wall_clock(leg, runtime_dir=runtime_dir, archive_path=archive_path,
+                                                    pointer_archive_sha256=pointer_archive_sha256)
+    _require(not problems, "; ".join(problems))
+    # The emitted leg CARRIES the definition its comparison used, then re-validates with it.
+    leg["receiver_identity_comparison"] = observed["inherited_receiver_comparison"]
     problems, _ = validate_decode_wall_clock(leg, runtime_dir=runtime_dir, archive_path=archive_path,
-                                            pointer_archive_sha256=pointer_archive_sha256)
+                                             pointer_archive_sha256=pointer_archive_sha256)
     _require(not problems, "; ".join(problems))
     return leg
 
@@ -397,7 +547,8 @@ def validate_decode_wall_clock(leg: object, *, runtime_dir: Path, archive_path: 
         else:
             _require(leg.get("schema") == DECODE_WALL_CLOCK_SCHEMA, "unknown leg schema")
         _require(leg.get("score_claim") is False, "timing cannot claim score authority")
-        _require(leg.get("receiver_sha256") == measure_receiver_digest(runtime_dir), "candidate receiver differs from measurement")
+        candidate_identity = compare_receiver_identity(leg.get("receiver_sha256"), runtime_dir, label="candidate")
+        observed["receiver_identity"] = candidate_identity
         _require(leg.get("archive_sha256") == measure_archive_identity(archive_path).sha256, "candidate archive differs from timing leg")
         if leg.get("mode") == "t4_direct":
             seconds, facts = _t4_direct(leg.get("candidate_t4_receipt"), runtime_dir, archive_path, leg)
@@ -433,9 +584,18 @@ def validate_decode_wall_clock(leg: object, *, runtime_dir: Path, archive_path: 
             else:
                 local, _ = _local(source.get("local_receipt"), require_margin_basis=False)
                 source_runtime, source_archive = Path(local["runtime_dir"]), Path(local["archive_path"])
-            problems, _ = validate_decode_wall_clock(source, runtime_dir=source_runtime, archive_path=source_archive)
+            problems, source_observed = validate_decode_wall_clock(source, runtime_dir=source_runtime,
+                                                                   archive_path=source_archive)
             _require(not problems, "invalid inherited source: " + "; ".join(problems))
-            _require(source.get("receiver_sha256") == leg.get("receiver_sha256"), "inherited receiver code differs")
+            comparison = _receiver_comparison(source_observed["receiver_identity"], candidate_identity)
+            # Equal legacy digests IMPLY equal behavior digests (the behavior rows are a subset),
+            # so this is looser than the old test by exactly the derived listing — and only for
+            # trees whose listings both validated above.
+            _require(comparison["behavior_digests_equal"], "inherited receiver code differs")
+            observed["inherited_receiver_comparison"] = comparison
+            stored_comparison = leg.get("receiver_identity_comparison")
+            _require(stored_comparison is None or stored_comparison == comparison,
+                     "recorded receiver comparison differs from measurement")
             _require(leg.get("inheritance_scope") == INHERITANCE_SCOPE, "inheritance scope statement absent")
             projected = _number(source.get("projected_t4_decode_seconds"), "source projection")
         else:

@@ -1606,6 +1606,27 @@ PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS = frozenset({"MANIFEST.sha256"})
 PREFIRE_CONTRACT_AMENDMENT_SCHEMA = "prefire_contract_amendment.v1"
 PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA = "prefire_contract_consumer_fix.v1"
 PREFIRE_CONTRACT_AMENDMENT_ID = "ddm_pr14_manifest_in_receiver_risk_digest"
+# ddm_pr18 supersedes pr14's scope line: the derived listing now also leaves the legacy
+# decode_wall_clock receiver identity, and an independent validation of that listing is what
+# licenses both exclusions. A superseding row, unlike a pr14 re-pin snapshot, may follow
+# consumer fixes and MUST pin the row it follows and the definition it replaces.
+PREFIRE_CONTRACT_AMENDMENT_ID_PR18 = "ddm_pr18_manifest_excluded_from_receiver_behavior_digest"
+PREFIRE_AMENDMENT_DEFINITIONS = {
+    PREFIRE_CONTRACT_AMENDMENT_ID: {
+        "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
+        "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"},
+    PREFIRE_CONTRACT_AMENDMENT_ID_PR18: {
+        "scope": "candidate_decode_wall_clock receiver identity comparisons; raw custody digests unchanged",
+        "digest_definition": "tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
+        "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
+        "raw_manifest_still_required": True,
+        "independent_manifest_validation": "tac.decode_wall_clock.validate_receiver_manifest",
+        "stored_digest_definitions_accepted": ["tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
+                                               "tac.decode_wall_clock.measure_receiver_digest"],
+        "executable_difference_policy": "REFUSE"},
+}
 FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA = "candidate_first_measurement_authorization.v1"
 SEAL_SCHEMA_V3 = "candidate_seal.v3"
 PREFIRE_REFUSAL_CODES = (
@@ -1781,19 +1802,26 @@ def _pf_freeze_history(rows: list, repo: Path, base_commit: str) -> str:
         _pf_git(repo, "merge-base", "--is-ancestor", previous_commit, commit)
         _pf_git(repo, "merge-base", "--is-ancestor", commit, "HEAD")
         if row.get("schema") == PREFIRE_CONTRACT_AMENDMENT_SCHEMA:
-            _pf_require(not batch_ids, code, "definition snapshot after consumer fixes is unsupported")
-            expected = {
-                "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
-                "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
-                "excluded_relative_paths": sorted(PREFIRE_RISK_RECEIVER_EXCLUDED_PATHS),
-                "raw_manifest_still_required": True, "executable_difference_policy": "REFUSE"}
-            _pf_require(row.get("amendment_id") == PREFIRE_CONTRACT_AMENDMENT_ID
-                        and row.get("score_claim") is False
-                        and prefire_digest(row.get("definition_change")) == prefire_digest(expected),
+            amendment_id = row.get("amendment_id")
+            _pf_require(amendment_id in PREFIRE_AMENDMENT_DEFINITIONS, code, "unknown amendment id")
+            _pf_require(row.get("score_claim") is False
+                        and prefire_digest(row.get("definition_change"))
+                        == prefire_digest(PREFIRE_AMENDMENT_DEFINITIONS[amendment_id]),
                         code, "amendment definition differs")
-            # Historical amendments[1..3] re-pin implementations of the SAME definition.
-            # They remain immutable snapshots; they do not replace pr14's definition identity.
-            if definition is None:
+            if amendment_id == PREFIRE_CONTRACT_AMENDMENT_ID:
+                _pf_require(not batch_ids, code, "definition snapshot after consumer fixes is unsupported")
+                # Historical amendments[1..3] re-pin implementations of the SAME definition.
+                # They remain immutable snapshots; they do not replace pr14's definition identity.
+                if definition is None:
+                    definition = prefire_digest(row)
+            else:
+                # A SUPERSEDING definition may follow consumer fixes, but only by naming the exact
+                # definition it replaces and the exact row it follows — a snapshot that merely
+                # reappeared could otherwise reset the chain silently.
+                _pf_require(definition is not None and row.get("definition_parent_sha256") == definition,
+                            code, "superseding amendment names a different definition parent")
+                _pf_require(previous is not None and row.get("previous_row_sha256") == prefire_digest(previous),
+                            code, "superseding amendment breaks the append-only row chain")
                 definition = prefire_digest(row)
         else:
             _pf_require(row.get("schema") == PREFIRE_CONTRACT_CONSUMER_FIX_SCHEMA
@@ -1948,7 +1976,7 @@ def _pf_schema(intent: object) -> None:
 
 
 def _pf_identity(intent: dict) -> tuple[Path, Path]:
-    from tac.decode_wall_clock import measure_receiver_digest
+    from tac.decode_wall_clock import measure_receiver_digest, validate_receiver_manifest
     code = "PREFIRE_IDENTITY_DRIFT_REFUSED"
     candidate = intent["candidate"]
     archive = _pf_ref(candidate["archive"], code, parse=False)
@@ -1964,6 +1992,12 @@ def _pf_identity(intent: dict) -> tuple[Path, Path]:
     receiver = candidate["normalized_receiver"]
     _pf_require(receiver == {"digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
                             "sha256": measure_receiver_digest(root)}, code, "normalized receiver differs")
+    # ddm_pr18: the intent's own tree must carry a listing that re-derives from its raw bytes,
+    # so a stale manifest (pr9 condition 1) cannot enter the lifecycle at its first object.
+    try:
+        validate_receiver_manifest(root)
+    except SealContractError as exc:
+        raise PrefireRefusal(code, f"derived listing invalid: {exc}") from exc
     pins = candidate["receiver_pins"]
     _pf_require(isinstance(pins, list) and {p.get("relative_path") for p in pins if isinstance(p, dict)}
                 >= {"inflate.py", "inflate.sh"}, code, "both receiver pins required")
