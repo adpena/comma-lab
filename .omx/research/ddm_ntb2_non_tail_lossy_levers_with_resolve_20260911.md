@@ -59,24 +59,28 @@ This producer operation is not mislabeled a public decode; its dummy decoder bit
 position is not reported as evidence. Separate public decoding is required for a
 candidate identity proof.
 
-| Treatment | Counted coordinates | HPAC B | Tail B | Joint delta B | Status |
-|---|---|---:|---:|---:|---|
-| control | unchanged | 11,911 | 119,749 | **0** | **PASSED** — both twins 180,406 B sha `04758c0dfb8d94eb…`, byte-identical to move 44 |
-| drop_row1 | lowest mean-absolute nonzero integer-weight row; stable row-index ties | — | — | — | RUNNING (pid 37970), frame 375 of 600 |
-| drop_row4 | four lowest such rows | — | — | — | RUNNING (pid 38007), frame 375 of 600 |
-| frame_even | 600×8 stored int8 frame embedding rounded to even integer values | — | — | — | RUNNING (pid 38033), frame 375 of 600 |
+| Treatment | Counted coordinates | HPAC B | ΔHPAC | Tail B | ΔTail | **Joint ΔB** | ΔS |
+|---|---|---:|---:|---:|---:|---:|---:|
+| control | unchanged | 11,911 | 0 | 119,749 | 0 | **0** | byte-identical to move 44 |
+| drop_row1 | `frame_scale` row 13 (8 values, mean abs 0.125) | 11,934 | **+23** | 119,744 | −5 | **+18** | +1.199e-05 |
+| drop_row4 | + `conv_b2` rows 45 and 61 (5 each), `spm_pw` row 13 (64) | 11,941 | **+30** | 119,745 | −4 | **+26** | +1.731e-05 |
+| frame_even | `frame_embed.weight`: 2,320 of 4,800 stored int8 values to the nearest even | 11,308 | **−603** | 120,107 | +358 | **−245** | **−1.63135e-04** |
 
-**The control PASSED at 09:38.** Recomputing every causal probability through the actual shipping
-receiver loop, then re-encoding all 600 frames with the landed native arithmetic encoder, reproduces
-move 44's archive BYTE-IDENTICALLY in both twins: HPAC 11,911 B, tail 119,749 B, archive 180,406 B,
-sha `04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e`, joint delta 0. That is the
-gate the producer refuses on (`LIVE_LOOP_CONTROL_FAILED`), so the three treatment prices are now
-admissible as true joint prices rather than as encoder artefacts.
+Both twins agree for every treatment. Archive shas: drop_row1 `b1df64e9…` 180,424 B; drop_row4
+`906938ba…` 180,432 B; **frame_even `432e8f09853a907665d87d44f3ed5eda6c4eebc5783ac23e5452d486371d4db6`
+180,161 B**.
 
-All four survived the codex arm's death because the launcher detaches; they resumed nothing and lost
-nothing. Each writes `hpac_v3/<treatment>/PRICE.json` with `hpac_bytes`, `token_stream_bytes`,
-`delta_bytes` and twin identity; the control additionally REFUSES unless its own twins reproduce
-move 44's archive byte-identically, which is what makes any treatment price admissible.
+**frame_even WINS by 245 B, and because the lever is output-lossless that is the entire price:
+projected S = 0.1372449041713402 − 0.000163135443514932 = 0.1370817687278253**, with d_seg and
+d_pose unchanged by construction rather than by measurement. The parse-back below is what turns
+"by construction" into "by receipt".
+
+The two row-drops are the more interesting negative. Zeroing a row and recording depth zero made the
+tail very slightly BETTER (−5 B, −4 B: the prior barely uses those coordinates) and the HPAC section
+BIGGER (+23 B, +30 B). A section that holds strictly less information got larger, because the depth
+table and the packed-row layout moved and brotli liked the new arrangement less. That is the
+container-break fee arriving on the side nobody prices, and it is why every cell here is a real twin
+encode and not a ledger sum.
 
 No negative verdict or gain attaches to any unmeasured cell. Actual layer and row
 indices are written into each treatment's INPUTS.json before its encode. Dropping a
