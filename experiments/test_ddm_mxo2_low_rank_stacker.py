@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import json
 import subprocess
 from pathlib import Path
 
@@ -83,3 +84,40 @@ def test_native_rejects_non_charter_rank(tmp_path: Path) -> None:
     library.mxo2_create.argtypes = [ctypes.c_int, ctypes.c_uint64]
     library.mxo2_create.restype = ctypes.c_void_p
     assert not library.mxo2_create(3, mxo2.SEED)
+
+
+def test_binding_pins_compare_after_a_json_round_trip() -> None:
+    """A resume must not read unchanged inputs as drift.
+
+    The pins carry tuples (the 23 family names); BINDING.json reads them back as
+    lists, so the raw comparison was always unequal and every resume after the
+    first refused.  Normalizing first makes the comparison honest and leaves the
+    serialized bytes unchanged.
+    """
+    pins = {"family_names": mxo2.FAMILY_NAMES, "seed": mxo2.SEED, "nested": {"k": (1, 2)}}
+    normalized = mxo2.json_normalized(pins)
+    assert pins != normalized
+    assert normalized == json.loads(json.dumps(pins, sort_keys=True))
+    assert mxo2.json_normalized(normalized) == normalized
+    assert json.dumps(normalized, sort_keys=True, indent=2) == json.dumps(
+        pins, sort_keys=True, indent=2
+    )
+
+
+def test_adopt_root_takes_family_roots_and_refuses_foreign_ones(monkeypatch) -> None:
+    """A source change mints a new root; the guard keeps it inside this family."""
+    monkeypatch.setattr(mxo2, "ROOT", mxo2.ROOT)
+    adopted = mxo2.adopt_root(mxo2.ROOT_TIER / f"{mxo2.ROOT_PREFIX}_v9")
+    assert adopted == (mxo2.ROOT_TIER / f"{mxo2.ROOT_PREFIX}_v9").resolve()
+    assert adopted == mxo2.ROOT
+    for foreign in (
+        mxo2.ROOT_TIER / "ddm_pc3_pose_carrier_curve",
+        mxo2.ROOT_TIER / "ddm_ls1",
+        mxo2.ROOT_TIER / "sub" / f"{mxo2.ROOT_PREFIX}_v9",
+        Path("/Volumes/APDataStore/pact") / f"{mxo2.ROOT_PREFIX}_v9",
+    ):
+        try:
+            mxo2.adopt_root(foreign)
+        except mxo2.Mxo2Error:
+            continue
+        raise AssertionError(f"adopt_root accepted a foreign root: {foreign}")

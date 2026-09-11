@@ -39,7 +39,9 @@ from experiments import ddm_jg2_tail_reencode as jg2
 from experiments.ddm_ls1_shipped_surprise import ARCHIVE_SHA, FIELD, FIELD_SHA, fact
 from experiments.ddm_tc1_mixer_codec import frequencies
 
-ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker_v2")
+ROOT_TIER = Path("/Volumes/VertigoDataTier/pact")
+ROOT_PREFIX = "ddm_mxo2_low_rank_stacker"
+ROOT = ROOT_TIER / f"{ROOT_PREFIX}_v3"
 SOURCE = Path("/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime")
 LS1 = ROOT.parent / "ddm_ls1"
 N, H, W, K, TOTAL = 600, 384, 512, 5, 1 << 31
@@ -147,6 +149,35 @@ def save_json(path: Path, value: object, *, immutable: bool = False) -> None:
         (json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n").encode(),
         immutable=immutable,
     )
+
+
+def adopt_root(candidate: Path) -> Path:
+    """Bind the owned durable root named on the command line.
+
+    Every source change mints a new immutable release, so a screen must be able
+    to name a fresh sibling root without editing a constant.  The prefix guard
+    keeps the choice inside this family's own SSD tier and out of any other
+    arm's directory.
+    """
+    global ROOT
+    resolved = candidate.resolve()
+    if resolved.parent != ROOT_TIER.resolve() or not resolved.name.startswith(ROOT_PREFIX):
+        raise Mxo2Error(
+            f"--resume-from must name a {ROOT_TIER}/{ROOT_PREFIX}* root owned by this screen"
+        )
+    ROOT = resolved
+    return ROOT
+
+
+def json_normalized(value: object) -> object:
+    """Round-trip through JSON so a re-run compares like with like.
+
+    Without this, a tuple in the freshly computed pins never equals the list it
+    serialized to, so every resume after the first raised binding drift on
+    unchanged inputs.  Serialization is unaffected: a tuple and its list image
+    emit identical bytes.
+    """
+    return json.loads(json.dumps(value, sort_keys=True, allow_nan=False))
 
 
 def atomic_npz(
@@ -258,6 +289,7 @@ def prepare() -> dict[str, object]:
         "reserve_bytes": MIN_RESERVE,
     }
     binding = ROOT / "BINDING.json"
+    pins = json_normalized(pins)
     if binding.exists() and json.loads(binding.read_text()) != pins:
         raise Mxo2Error("source/input binding drift")
     save_json(binding, pins, immutable=True)
@@ -756,8 +788,7 @@ def main() -> None:
     parser.add_argument("--stage", choices=("surface", "screen", "benchmark"), required=True)
     parser.add_argument("--resume-from", type=Path, required=True)
     args = parser.parse_args()
-    if args.resume_from.resolve() != ROOT.resolve():
-        raise Mxo2Error("--resume-from must name MXO2's owned durable SSD root")
+    adopt_root(args.resume_from)
     guard()
     lock = (ROOT / ".stage.lock").open("a+")
     fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
