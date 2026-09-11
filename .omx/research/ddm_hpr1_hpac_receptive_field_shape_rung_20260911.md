@@ -207,6 +207,27 @@ and has 60 epochs to re-fit them and re-compress their depths. The shape-CONTROL
 identical init, identical 60-epoch law) is running to separate the two; without it the model leg
 cannot be attributed to shape, and I will not attribute it.
 
+### 4b. The training curve, with the control's anchor — MEASURED
+
+At epoch 0 both runs hold the SAME weights (the shipped prior) and differ only in geometry, so the
+gap is the pure cost of reading those weights at the wrong spacing:
+
+| run | epoch 0 token estimate | epoch 0 model estimate | terminal (epoch 60) token estimate |
+|---|---:|---:|---:|
+| shipped geometry (CONTROL) | **124,038 B** | 27,026 B | in flight |
+| R1, dilation 2 | **127,911 B** (+3,873) | 27,026 B (identical) | **122,900 B** |
+
+R1 paid +3,873 B on contact with the new geometry, recovered 5,011 B over 60 epochs, and finished
+**1,138 B below the shipped geometry's own epoch-0 value**. Whether it finishes below the CONTROL's
+epoch-60 value is the shape question, and the control answers it.
+
+**Calibration, and why the encode is still the authority.** The trainer's token figure is an ideal-code
+estimate, not the real coder: the shipped prior estimates 124,038 B and its REAL RLC1 stream is
+119,749 B, so the shipped stack beats the estimate by 4,289 B (3.46 %). Carrying that ratio onto R1
+would project a stream near 118,650 B and a joint near −738 B — **a DERIVED projection, not a price.**
+The ratio is a property of the corrector/mixer stack's interaction with a particular prior's errors
+and there is no reason it transfers; the 600-frame encode now running is the only number that counts.
+
 ## 5. What is owed
 
 R1's Δtail and exact archive bytes (encode running: 600 frames, real coder, real receiver loop), the
