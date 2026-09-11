@@ -1,0 +1,22 @@
+{
+  "schema": "cpu_axis_adjudication.v1",
+  "pointer_move": 48,
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "archive_bytes": 179111,
+  "axis": "contest_cpu",
+  "verdict": "REFUSED_BY_DESIGN",
+  "call": "fc-01M29B7NWPT3F1E26DYNJ50P81",
+  "pair_group_id": "ddm_hpr1_move48_pair_20260911",
+  "receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/cpu1/MODAL_REMOTE_RESULT.json",
+    "bytes": 48036,
+    "sha256": "5fb95e8a638752e5fc12700ffb5b5d14c13058ae0f8c0460541ad66a039228bb"
+  },
+  "receiver_declaration": "linux-nvidia-t4; inflate.sh raises on the CPU path (CUDA guard in inflate.py reached through inflate.sh) \u2014 receiver unchanged from moves 44\u201347 (behavior digest 9f6e7168\u2026)",
+  "returncode": 1,
+  "modal_elapsed_seconds": 10.272930045999999,
+  "cpu_metrics_absent_by_design": true,
+  "packet_requirement": "runtime declaration + this refusal receipt; --submission-score-axis contest_cuda",
+  "recorded_at_utc": "2026-09-11T23:02:44.873896+00:00",
+  "score_claim": false
+}
