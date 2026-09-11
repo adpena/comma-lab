@@ -225,6 +225,8 @@ def test_projected_run_bytes_only_charges_requested_rungs() -> None:
     small = obx2.projected_run_bytes(["teacher"])
     large = obx2.projected_run_bytes(list(obx2.DEFAULT_RUNGS))
     assert small["camera_bytes"] == 0
+    assert small["render_bytes"] == 0
+    assert large["render_bytes"] == obx2.N * 2 * obx2.CHANNELS * obx2.EVAL_H * obx2.EVAL_W
     assert large["camera_bytes"] == len(obx2.RETAIN_CAMERA_RUNGS) * (
         obx2.N * 2 * obx2.CAMERA_H * obx2.CAMERA_W * obx2.CHANNELS
     )

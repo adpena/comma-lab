@@ -208,11 +208,21 @@ def projected_run_bytes(rungs: Sequence[str]) -> dict[str, Any]:
     logits = len([name for name in RETAIN_LOGITS_RUNGS if name in rungs]) * chunks * LOGITS_CHUNK_BYTES
     argmax = len(rungs) * chunks * CHUNK_PAIRS * EVAL_H * EVAL_W
     pose = len(rungs) * chunks * CHUNK_PAIRS * 6 * 4
-    total = camera + logits + argmax + pose
+    render = (
+        len([name for name in RETAIN_RENDER_RUNGS if name in rungs])
+        * chunks
+        * CHUNK_PAIRS
+        * 2
+        * CHANNELS
+        * EVAL_H
+        * EVAL_W
+    )
+    total = camera + logits + argmax + pose + render
     return {
         "chunks": chunks,
         "camera_bytes": camera,
         "logits_bytes": logits,
+        "render_bytes": render,
         "argmax_bytes": argmax,
         "pose_bytes": pose,
         "projected_run_bytes": total,
