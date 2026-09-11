@@ -1,0 +1,24 @@
+{
+ "nothing_deleted": true,
+ "reason": "the pointer MOVED to move 45 (commit 01f2b66ad, S 0.1371383667388406 @ 180,246 B, archive 145e02e2..., lane ddm_pc3_cap1_predictor_refit_move44_contest_cuda_20260911). A seal pinned to a stale pointer refuses, and MAIN directed the rebase (2026-09-11).",
+ "receipts_kept": [
+  "hpac_v3/frame_even/PRICE.json and its retained hpac/tail/member/archive twins",
+  "hpac_v3/{control,drop_row1,drop_row4}/PRICE.json",
+  ".omx/research/ddm_ntb2_20260911/HPAC_JOINT_TABLE.json",
+  "the three superseded move-44 parse-back attempts, cold-stored under /Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts with COLDSTORE_MANIFEST_PUBLIC_ATTEMPTS.json"
+ ],
+ "retired_at_utc": "2026-09-11T16:27:51Z",
+ "schema": "ddm_ntb2_retirement.v1",
+ "score_claim": false,
+ "superseded_by": {
+  "archive_bytes": 180001,
+  "archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "candidate": "ntb2_frame_even rebased onto move 45",
+  "delta_bytes_vs_move45": -245,
+  "delta_s": -0.000163135443514932,
+  "projected_score": 0.13697523129532568,
+  "receipt": "rebase45/frame_even/REBASE.json"
+ },
+ "what_is_retired": "the move-44-based frame_even candidate (180,161 B, sha 432e8f09...) and its cold parse-back attempts; NO seal was ever run against move 44, so what is retired is the candidate and its in-flight proof, not a seal artifact",
+ "why_the_rebase_did_not_need_a_re-encode": "MEASURED: move 45's hpac (11,911 B), tail (119,909 B) and semantic (29,862 B) members are byte-identical to move 44's; only carrier (18,610 to 18,450) and the header moved. The 600-frame RLC1 re-encode consumed the token field and the HPAC prior, neither of which changed, so its retained payloads were reused and its receipts stay valid."
+}

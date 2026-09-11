@@ -284,80 +284,41 @@ So no re-solve of any strength flips any row's sign, and the token plane never h
 The tokens on this arm are byte-identical to move 44's throughout.
 
 ### Verdict scope
-## The candidate — built, staged, and parsing back
+## The candidate, REBASED onto move 45
 
-**Candidate `ntb2_frame_even`: 180,161 B, sha
-`432e8f09853a907665d87d44f3ed5eda6c4eebc5783ac23e5452d486371d4db6`, joint −245 B against move 44,
-ΔS −1.63135443514932e-04, projected S 0.1370817687278253 at unchanged distortion.**
+The pointer moved while this arm was proving its move-44 candidate: **move 45**, commit `01f2b66ad`,
+S 0.1371383667388406 @ 180,246 B, archive `145e02e2…`, lane `ddm_pc3_cap1_predictor_refit…`. A seal
+pinned to a stale pointer refuses, so the move-44 candidate (180,161 B, sha `432e8f09…`) is RETIRED
+with its reason and all its receipts kept
+(`.omx/research/ddm_ntb2_20260911/RETIRED_MOVE44_CANDIDATE.json`). No seal had been run against it.
 
-Composition is a one-element composition: `frame_even` is the only treatment that nets negative, so
-there is nothing to compose it WITH and no union to measure. Its twin encodes already agree.
+**The rebase needed no re-encode, and that is a measured claim rather than a convenience.**
+`experiments/ddm_ntb2_rebase45.py` checks the premise before it builds anything:
 
-**The receiver is UNCHANGED, and that is measured, not asserted.** `inflate.py` carries
-`ARCHIVE_SHA256` / `ARCHIVE_BYTES` as a self-check on the artifact it was promoted with, so a new
-archive cannot decode until they name it — the first parse-back attempt died on exactly that
-(`archive.zip does not match the promoted F26 artifact`). Rewriting those two assignments is not a
-receiver change by the campaign's own definition: `tac.decode_wall_clock.measure_receiver_digest`
-"normaliz[es] only the values of explicit archive pin assignments". `ddm_ntb2_public.stage_runtime`
-therefore rewrites the pin and then REFUSES unless the staged tree's receiver digest equals move
-44's — **MEASURED equal** (`9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890`). So
-the seal is a NORMAL seal inheriting move 44's `t4_direct` decode wall clock; no first measurement
-is owed. Decode-time risk against the strict 27.6 s T4 slack is one-sided in our favour: the model
-section is 603 B SMALLER and the coder's work per symbol is unchanged.
+| member | move 44 | move 45 | identical |
+|---|---:|---:|---:|
+| `hpac` | 11,911 | 11,911 | **yes** |
+| `tail` | 119,909 | 119,909 | **yes** |
+| `semantic` | 29,862 | 29,862 | **yes** |
+| `carrier` | 18,610 | 18,450 | no — pc3's −160 B |
+| `header` | 14 | 14 | no — section lengths |
 
-**In flight at the end of this unit:**
+The 600-frame RLC1 re-encode this arm ran consumed the token field and the HPAC prior, neither of
+which moved, so its retained `hpac.twin*.br` and `tail.twin*.rider` payloads are still the right
+bytes and are reused. The falsifier is the control: reassembling move 45's OWN members reproduces
+`145e02e2…` at 180,246 B in both twins — **PASSED** — and only then is a treatment archive admitted.
 
-| job | launch dir | done receipt | what it settles |
-|---|---|---|---|
-| cold n600 public parse-back of the candidate | `launch_public_fe4` | `ntb2_public_frame_even` | the real `inflate.sh` decodes it, and the raw is byte-identical to move 44's retained `0.raw` — which for a prior-only change IS the d_seg/d_pose proof |
-| `frame_quad` encode | `launch_frame_quad` | `ntb2_frame_quad` | where the coarsening trade turns: step 2 bought −603 HPAC B for +358 tail B, and the step is that trade's free parameter |
+**Rebased candidate `ntb2_frame_even`: 180,001 B, sha
+`a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720`, both twins agreeing, −245 B
+against move 45, ΔS −1.63135443514932e-04, projected S 0.13697523129532568** — 8.2× the −2e-5 admit
+bar, at unchanged distortion. `semantic`, `carrier`, `tc1_weights` and `residual_payload` are
+asserted unchanged against move 45 by the archive parser.
 
-Nothing is sealed and nothing is claimed until the parse-back's `raw_byte_identical_to_move44` is
-true. If it is false, the candidate is dead and every byte stays retained.
-
-## The seal's timing row — and a CORRECTION I owe, because my first reading was on the wrong object
-
-MAIN warned that `--inherit-decode-wall-clock` would refuse this tree because
-`measure_receiver_digest` hashes `MANIFEST.sha256` raw and that manifest lists `inflate.py`'s RAW
-hash, which moves with the archive pin. My first measurement appeared to contradict that: receiver
-digest EQUAL (`9f6e7168…`), t4 runtime digest DIFFERING. **That reading was wrong, and the reason is
-worth more than the reading was.**
-
-`ddm_ntb2`'s `control/source_runtime` — the tree every producer on this arm copies from, inherited
-from the codex arm — **does not contain `MANIFEST.sha256`**, while move 44's actually promoted tree
-(`ddm_rlc5_cure_on_move43/candidate_runtime`) does. So my "equal" was an equality between two trees
-that BOTH lack the file. Measured on the real promoted tree:
-
-| digest | promoted tree (has MANIFEST.sha256) | ntb2's copy (lacks it) | pointer |
-|---|---|---|---|
-| `measure_receiver_digest` | `7e6da183…` | `9f6e7168…` | rlc5's receipts record `7e6da183…` |
-| `measure_t4_runtime_digest` | `e3d23719…` | `e3d23719…` | `runtime_tree_sha256 = e3d23719…` |
-
-So `MANIFEST.sha256` is INSIDE the receiver digest and OUTSIDE the t4 runtime digest. **MAIN's row is
-real and my tree was simply not the shipped object.** Both digests move on the archive pin, by two
-different routes: the receiver digest through the manifest's listing of `inflate.py`, the t4 digest
-through `inflate.py`'s bytes directly.
-
-The controls below were run against ntb2's copy, so they still hold for what they claim — the t4
-digest's behaviour — and one of them is the reason the correction was findable at all:
-
-1. **Path coupling — REFUTED.** A byte-identical copy of the tree at a DIFFERENT absolute path
-   digests to `e3d23719…`, IDENTICAL, even though the manifest's `runtime_root` row and the `files`
-   rows' `repo_relative_path` do carry absolute paths. Those rows do not reach the digest.
-2. **Archive only — no effect.** The candidate's `archive.zip` with move 44's pins digests to
-   `e3d23719…`, IDENTICAL. The archive is correctly excluded.
-3. **Pin only — ISOLATED.** The two `inflate.py` pin constants alone, on move 44's own archive,
-   digest to `8f02b95c…` — the candidate's digest EXACTLY.
-
-So for the t4 row the cause is the pin and nothing else this candidate touches. Receipt:
-`.omx/research/ddm_ntb2_20260911/T4_RUNTIME_DIGEST_ISOLATION.json`.
-
-**What the correction costs and does not cost.** `MANIFEST.sha256` is a dependency listing; neither
-`inflate.sh` nor `inflate.py` reads it (grepped), so it is NOT load-bearing for the decode and the
-running cold parse-back and its raw-identity proof stand on their own. What it DOES mean is that the
-candidate runtime must be staged from the PROMOTED tree with the manifest regenerated before any
-seal, and that this arm's `stage_runtime` digest-equality assertion was comparing the wrong pair. It
-asserted something true of the object it held; it did not assert what I said it asserted.
+Staged faithfully from move 45's promoted tree: 51 shipped files, behavior digest EQUAL at
+`9f6e7168…` (unchanged across moves 44 and 45, since pc3 moved the archive and not receiver code),
+legacy digest differing by the archive pin alone. Move 45's retained raw is `2b762eba…` — byte-
+identical to move 44's, read from pc3's own `RESULT.json`, which is exactly what "the carrier member
+moved and the frames did not" means. The cold n600 parse-back against it is running on APDataStore.
 
 ## pr18 is LIVE on main, and it clears this candidate — a second family confirms the rule
 

@@ -1,0 +1,413 @@
+{
+ "bytes_moved": 3811106548,
+ "false_authority_flags": {
+  "promotion_eligible": false,
+  "score_claim": false
+ },
+ "files_moved": 66,
+ "moved_at_utc": "2026-09-11T15:42:34Z",
+ "nothing_deleted": true,
+ "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_public.py --treatment frame_even --resume-from <public root>",
+ "rebuildable_because": "a deterministic decode of a retained archive by a retained receiver tree; the archive (432e8f09) and both trees are retained",
+ "rows": [
+  {
+   "bytes": 3662409600,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/output/.f26_decode_checkpoints/render_cpu_in_progress.raw",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/output/.f26_decode_checkpoints/render_cpu_in_progress.raw",
+   "sha256": "SKIPPED_LARGE_STREAMED"
+  },
+  {
+   "bytes": 3725,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.json",
+   "sha256": "c6a98bf745335ab7e0f776e25cc70a0a4b27428b90a97e96011db3b2920fc8f5"
+  },
+  {
+   "bytes": 117964800,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/output/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+   "sha256": "SKIPPED_LARGE_STREAMED"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/LATEST.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/LATEST.json",
+   "sha256": "7adbad2e94f98ee7279135155fde7eb52c4c3203b3c18f774fa92a50672d25f6"
+  },
+  {
+   "bytes": 10065,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0025.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0025.json",
+   "sha256": "6cf27a98c860b56f2ef78bd12d852770b0417fcd432d83647ffc7276853fe122"
+  },
+  {
+   "bytes": 554132,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0025.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0025.npz",
+   "sha256": "931ffc97e85c8fc19a6d92979d7ace55a0e475a44b9921f2700338188c4c2f43"
+  },
+  {
+   "bytes": 10065,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0050.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0050.json",
+   "sha256": "de1ef63707814ade310d977b7ab177fde090f9dfe44cf2129e5d74cb55971976"
+  },
+  {
+   "bytes": 631309,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0050.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0050.npz",
+   "sha256": "acd13976c6b661b6fa540bd1770a5cfc125098060ade0feec338cc31bfc97f8d"
+  },
+  {
+   "bytes": 10065,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0075.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0075.json",
+   "sha256": "5f712c2e5820dc36c5bd09fb17a1bfd68a017ae2ac9e39d559b46c467a9f5489"
+  },
+  {
+   "bytes": 709659,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0075.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0075.npz",
+   "sha256": "384a0eade5d746169062ab062a3384fbcecdab87717b962ccc88847176573f8d"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0100.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0100.json",
+   "sha256": "ec159985a0fbd8618e91f6985a6926a093eeccf6daa660b0be696880cc0ba389"
+  },
+  {
+   "bytes": 768316,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0100.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0100.npz",
+   "sha256": "399749798946716f8b66885d8c26511f1c2607a78658c0e98d59dc013efe027f"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0125.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0125.json",
+   "sha256": "b90c06907ef374d367fb435ad3d4c7de0c82f0433f98480c252fafcea421250c"
+  },
+  {
+   "bytes": 823190,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0125.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0125.npz",
+   "sha256": "eb98549f1ced8f4bdd99cf6088b3c5d8826c69ab553ed46e93c5396e783ddc41"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0150.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0150.json",
+   "sha256": "5f4f4fb721dfa59e86be3e51b8ffff82d6c63c511563a894117a00798fa6dcd6"
+  },
+  {
+   "bytes": 876445,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0150.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0150.npz",
+   "sha256": "2771c3e2294a7c9acc6ef1b7a38467c19131ccc4de5103c052ba081bdfb0e4bf"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0175.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0175.json",
+   "sha256": "0af5fd445b67126d281ab8c16d4e9614d8c344a113c7f165acb6ef4b5ad87939"
+  },
+  {
+   "bytes": 921896,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0175.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0175.npz",
+   "sha256": "244a3f35b849f3928b1fd49244c6239fd522c198987dacbab8798e456669df03"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0200.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0200.json",
+   "sha256": "0982bb2ed9790801be9e26e9a400344cc5127b568e4ca952686ca6ce1b7efb53"
+  },
+  {
+   "bytes": 960611,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0200.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0200.npz",
+   "sha256": "f061db7918914f335d41d2114df431f3e195e7d19354ea4840b3e8fbc34fa184"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0225.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0225.json",
+   "sha256": "3920ee19c96a064244d4f1168a226316945d08609953b9807f4ec1e7b84f670b"
+  },
+  {
+   "bytes": 992387,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0225.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0225.npz",
+   "sha256": "287b7475f9aec19faf5559956f2b5f1936b3649bca355261af40b0f96c6ffa68"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0250.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0250.json",
+   "sha256": "35c2d3c7865a0af0c095f1a364ec5c5330a2bd819da410ea0b3745104d6d8bb9"
+  },
+  {
+   "bytes": 1023568,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0250.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0250.npz",
+   "sha256": "18d0d0ac15e1d5e2fad0f450d7eb05e43f75e49732ce722fb830a115e6e6a07a"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0275.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0275.json",
+   "sha256": "d011bf270bebd3daf0e6b574bc39c0e1737c45173fdd43dffe0b81224dfe74e0"
+  },
+  {
+   "bytes": 1055410,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0275.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0275.npz",
+   "sha256": "3bec54aa0b3468e537b4a583249143e3c4699846232b66b8312912d9387307f3"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0300.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0300.json",
+   "sha256": "079400a13383eb2ec68838955f1893b682647be643c75fde13d2b8a29ef4f165"
+  },
+  {
+   "bytes": 1087519,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0300.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0300.npz",
+   "sha256": "e8b2b9c2f372071cb19c44f7cf43926e97d9c4cc969d2f47ce70301a9ad5d416"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0325.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0325.json",
+   "sha256": "269a6ae0db7b4eee26bb579acada4d2640fc6366fcd5cd6400b78d3836486f11"
+  },
+  {
+   "bytes": 1120208,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0325.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0325.npz",
+   "sha256": "4e70ce3dab08c4fe959fad2443183514c4ed70c8f51c0e8a9e77cd6a10ff01bf"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0350.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0350.json",
+   "sha256": "5a007a222e9acd50f33c9ed8dac2336bd54bb95716e8b516e017fd71f3e5ba9f"
+  },
+  {
+   "bytes": 1149981,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0350.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0350.npz",
+   "sha256": "5aba7b1a96edcf30b62b6999b25a8cdac0036839d06fb39b22c31219847d1f8a"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0375.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0375.json",
+   "sha256": "663100f2d5fb2007d7a23195b8f66ba10a726b3ee6e92a6a67b4c42cc4c8c8d1"
+  },
+  {
+   "bytes": 1177856,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0375.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0375.npz",
+   "sha256": "f6cabb609a39966ce8ac552cdcecad2bd8ef186f9a5afd5a406baaec25833a18"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0400.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0400.json",
+   "sha256": "3d01656c98c73d9a0ef02ddb6645fc4bbe5e13d76b4f0913b33bf3792dc16a83"
+  },
+  {
+   "bytes": 1206500,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0400.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0400.npz",
+   "sha256": "9e86753aca6e6943aedfbabe5addee823ab2a01155a89b7a21a3c05cb7371450"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0425.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0425.json",
+   "sha256": "8099563082046b11c097ad840d692ff7cd61cd5575ca0b4939d71eda4fe99efa"
+  },
+  {
+   "bytes": 1237449,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0425.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0425.npz",
+   "sha256": "93d837e2d4a960c3c7a5e9e888dd1ceb542c154d9af10e7667d938ae3b4033e5"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0450.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0450.json",
+   "sha256": "52f335b4e56645d1b740bf96fc1408f8a41da25ac01fe2a8f3d2d23956408c17"
+  },
+  {
+   "bytes": 1271683,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0450.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0450.npz",
+   "sha256": "b96db2c62fe8dabf01ffc578c732d5fcff2bc1de4e4a35e0070b56e481905a66"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0475.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0475.json",
+   "sha256": "23e3e4b7fc9bab0136f036c49319d5129e4bf629d60e6088d13ea12074643825"
+  },
+  {
+   "bytes": 1317237,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0475.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0475.npz",
+   "sha256": "a6d4984e5518ad393293f360ee9e0143e6a980d6fbf92da8831cfc8a0f9d18d6"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0500.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0500.json",
+   "sha256": "f9e6f79210d2786c5850cd7144f64a2ce79dbb36fd0429b82dc36ddd6ffa52dd"
+  },
+  {
+   "bytes": 1349220,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0500.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0500.npz",
+   "sha256": "69cf6a5fa0b633bcf7fd9f26e4f3eb8cdfaf37772c8f07e6cbb44d4bbc074241"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0525.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0525.json",
+   "sha256": "fac62651c51dc73288bc031bba4a2f73b0746afd33f067345079c4e91b45caff"
+  },
+  {
+   "bytes": 1395904,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0525.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0525.npz",
+   "sha256": "1b2cc1d5f258f8232e3ec710b216a4aa956143862c7bccbf5a9059c83f271111"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0550.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0550.json",
+   "sha256": "5a2716b02f21121fc022954c91784cc81b09e235ccf5b18bb82b2fd81ef86c24"
+  },
+  {
+   "bytes": 1433206,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0550.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0550.npz",
+   "sha256": "99a2ab6628017fb6489bc5cac5cbef565459912a725f8bd829488beb1b186cea"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0575.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0575.json",
+   "sha256": "3c491a01cdf8ca57568e069c9a2a5f244d12829f86a698ba3da305a16280eda6"
+  },
+  {
+   "bytes": 1469480,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0575.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0575.npz",
+   "sha256": "0d4056e6c680a6921770450682702133c9bdf89040abf8d00ab3e632d082f33c"
+  },
+  {
+   "bytes": 10067,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0600.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0600.json",
+   "sha256": "7adbad2e94f98ee7279135155fde7eb52c4c3203b3c18f774fa92a50672d25f6"
+  },
+  {
+   "bytes": 1508801,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/frame_checkpoints/stage_0600.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/frame_checkpoints/stage_0600.npz",
+   "sha256": "e1ec4b75ec0bd598859f04d7c08f29fce2d84a9da314d57889e0395e500b9e5a"
+  },
+  {
+   "bytes": 1283,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/INPUTS.attempt_0000.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/INPUTS.attempt_0000.json",
+   "sha256": "8f991d84d2ac4d9d5e8deca42565a90ae225bc56f54c0afe56c27a8198753853"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/LATEST.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/LATEST.json",
+   "sha256": "1d28410feab928b4067af79ae9884e9b97d1f93557e1d918d43003ef36a6512d"
+  },
+  {
+   "bytes": 10065,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0025.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0025.json",
+   "sha256": "f985fc0e0a20e5b20dbc33f695457ed0fc49c06913555f2b2f402749e1c47793"
+  },
+  {
+   "bytes": 554132,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0025.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0025.npz",
+   "sha256": "931ffc97e85c8fc19a6d92979d7ace55a0e475a44b9921f2700338188c4c2f43"
+  },
+  {
+   "bytes": 10065,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0050.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0050.json",
+   "sha256": "cc56752ff7d23f45badfb33b2aa634a34de0c3a4e08a9bb3727d02c6b1916524"
+  },
+  {
+   "bytes": 631309,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0050.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0050.npz",
+   "sha256": "acd13976c6b661b6fa540bd1770a5cfc125098060ade0feec338cc31bfc97f8d"
+  },
+  {
+   "bytes": 10065,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0075.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0075.json",
+   "sha256": "36de649d6fcdb6b8caa76afc9dc4bd9d00b9998f8bdf92d2eca49e36e7b7c1c4"
+  },
+  {
+   "bytes": 709659,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0075.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0075.npz",
+   "sha256": "384a0eade5d746169062ab062a3384fbcecdab87717b962ccc88847176573f8d"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0100.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0100.json",
+   "sha256": "ffb23c2d22932bb17216d6366fbbdd13ec0de96459427919ee167c4f723ff08b"
+  },
+  {
+   "bytes": 768316,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0100.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0100.npz",
+   "sha256": "399749798946716f8b66885d8c26511f1c2607a78658c0e98d59dc013efe027f"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0125.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0125.json",
+   "sha256": "de541e6f673c75202a98f5ed4fda0e37715040f94b1ab3225f8b428c1393fe9c"
+  },
+  {
+   "bytes": 823190,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0125.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0125.npz",
+   "sha256": "eb98549f1ced8f4bdd99cf6088b3c5d8826c69ab553ed46e93c5396e783ddc41"
+  },
+  {
+   "bytes": 10066,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0150.json",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0150.json",
+   "sha256": "1d28410feab928b4067af79ae9884e9b97d1f93557e1d918d43003ef36a6512d"
+  },
+  {
+   "bytes": 876445,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/superseded/frame_checkpoints_attempt0000/stage_0150.npz",
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/superseded/frame_checkpoints_attempt0000/stage_0150.npz",
+   "sha256": "2771c3e2294a7c9acc6ef1b7a38467c19131ccc4de5103c052ba081bdfb0e4bf"
+  }
+ ],
+ "schema": "ddm_ntb2_coldstore_manifest.v1",
+ "what": "the superseded cold-parse-back attempts run against this arm's MANIFEST-LESS working copy of the receiver tree, including a 1.8 GB partial render and the COMPLETED 600-pair token-decode checkpoint",
+ "why_superseded": "the candidate must be staged from move 44's PROMOTED tree, which ships MANIFEST.sha256; the proof is being re-run cold on that faithful tree so every receipt binds one object"
+}
