@@ -144,27 +144,23 @@ def run(treatment: str, timeout: int) -> dict:
         "hpac_producer": landed.fact(REPO / "experiments/ddm_ntb2_hpac.py"),
         "score_claim": False,
     }
-    inputs = work / "INPUTS.json"
-    # Drift is about the OBJECT under proof, not about this file: a producer edit between a
-    # crash and its resume must not invalidate a decode already half-done, while a different
-    # archive, runtime, receiver, base or source raw must.
-    identity_keys = (
+    # INPUTS.json holds the IDENTITY of the object under proof and nothing else, so it is
+    # stable across producer edits: the receipts are written immutably, and a binding that
+    # carried this file's own sha would refuse its own resume the moment the producer was
+    # fixed. The full binding, producer sha included, is recorded per ATTEMPT below, where
+    # a new value is a new file rather than a conflict.
+    identity = {k: binding[k] for k in (
         "treatment",
         "runtime_sha256",
         "receiver_sha256",
         "archive",
         "base_archive_sha256",
         "source_raw_sha256",
-    )
-    if inputs.exists():
-        prior_binding = json.loads(inputs.read_text())
-        if {k: prior_binding.get(k) for k in identity_keys} != {k: binding[k] for k in identity_keys}:
-            raise SystemExit("public proof source/config drift")
-        binding["producer_history"] = sorted(
-            {prior_binding["producer"]["sha256"], binding["producer"]["sha256"]}
-            | set(prior_binding.get("producer_history", []))
-        )
-    record(inputs, binding)
+    )}
+    inputs = work / "INPUTS.json"
+    if inputs.exists() and json.loads(inputs.read_text()) != identity:
+        raise SystemExit("public proof source/config drift")
+    record(inputs, identity)
 
     done = work / "RESULT.json"
     if done.exists():
