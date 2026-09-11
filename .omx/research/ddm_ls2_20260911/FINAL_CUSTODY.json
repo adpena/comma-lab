@@ -1,0 +1,27 @@
+{
+  "manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/MANIFEST.json",
+    "bytes": 1346712,
+    "sha256": "24a1d18ba8125e76cb923c2ed0869af7cae0f4367993ea19cba1e6ffde58267f"
+  },
+  "result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/RESULT.json",
+    "bytes": 16677,
+    "sha256": "c74b2d57dcf3f910b5e42f277ccc265a2e3f78d38454b4d3cb7a5dd72fc98607"
+  },
+  "verification": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/INDEPENDENT_VERIFICATION.json",
+    "bytes": 845,
+    "sha256": "0e7e0e7c7603c5aec2e6d02be967cae967953a61d5a8761e4c535080d6c5c3d9"
+  },
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_ls2_probability_bound.py",
+    "bytes": 22243,
+    "sha256": "36c12fed5c923752e13282955b6507db643a1966c6be05ef1df0068dcbd669df"
+  },
+  "memo": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ls2_full_resolution_lane_probability_bound_20260911.md",
+    "bytes": 14191,
+    "sha256": "225db0ec75bd20b3e219378e732767112b8c165d846dafc48a0a3d7e1a576737"
+  }
+}

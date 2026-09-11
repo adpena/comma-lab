@@ -1,0 +1,29 @@
+{
+  "actions": [
+    {
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/handoff/landing",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "id": "ddm_ls2::MAIN_LANDING",
+      "owner": "MAIN",
+      "trigger": "Harvest complete measurement, verify serializer receipt/bundle and all intended blobs, then land exact reviewed unit in shared Git"
+    },
+    {
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/handoff/joint_native_timing",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "id": "ddm_ls2::JOINT_NATIVE_TIMING",
+      "owner": "MAIN",
+      "trigger": "MAIN harvests LS2 positive net result, verifies unchanged archive/field and source-defined live timing contract; assign one native joint-correction feasibility measurement before considering any recode"
+    }
+  ],
+  "candidate_built": false,
+  "finite_scope": "two predeclared fixed-weight causal additive probability families on move44 full shipped prior",
+  "lossless_recode_queued": false,
+  "main_owns_future_build_authorization": true,
+  "net_integer_logloss_bytes": 385.5504801282797,
+  "paid_dispatch": false,
+  "reason": "Native receiver implementation cost and live complete-evaluation timing admission are absent",
+  "schema": "ddm_ls2_fire_or_refusal.v1",
+  "scorer_run": false,
+  "status": "REFUSED_CANDIDATE_FIRE",
+  "target_demand_bytes": 25899
+}

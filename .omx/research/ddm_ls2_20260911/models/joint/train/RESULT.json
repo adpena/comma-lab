@@ -1,0 +1,95 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free n600 receiver probabilities]",
+  "baseline_error_bits": -2.9383227229118347e-07,
+  "baseline_nats": 531907.3647497533,
+  "box": [
+    -4.0,
+    3.96875
+  ],
+  "coefficient_bytes": 10,
+  "complete_baseline_bytes": 95991.34311522925,
+  "family": "joint",
+  "gap_bytes": 0.00012778109519451242,
+  "header_bytes": 8,
+  "iteration": 4,
+  "kept_gain_bytes": 333.6854908070823,
+  "loss_nats": 530057.0194925797,
+  "lower_loss_nats": 530057.0187840109,
+  "omitted_credit_bytes": 68.8284480943555,
+  "optimistic_net_upper_bytes": 384.514066719159,
+  "parameters": {
+    "bytes": 18,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/fit/joint/train/parameters.bin",
+    "sha256": "192bb6adac5f48ed5d58419330e06fd35d72e4b93ad0c85d1d4f3eaf8fba85c1"
+  },
+  "rounded": [
+    [
+      28,
+      7
+    ],
+    [
+      19,
+      4
+    ],
+    [
+      21,
+      7
+    ],
+    [
+      15,
+      6
+    ],
+    [
+      16,
+      10
+    ]
+  ],
+  "split": "train",
+  "weights": [
+    [
+      0.8725876317932418,
+      0.23226985074488024,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.6046919071940503,
+      0.1171298871024098,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.6470020797900002,
+      0.22462186974085058,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.4539524897658459,
+      0.17453341611654666,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.5108164953819188,
+      0.3065586386508064,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ]
+}

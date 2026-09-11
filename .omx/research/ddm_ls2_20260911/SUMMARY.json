@@ -1,0 +1,601 @@
+{
+  "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+  "artifacts": {
+    "BINDING.json": {
+      "bytes": 2248,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/BINDING.json",
+      "sha256": "08dcb1087e67cebadde813863a56be4ffb7e2eda81487be76999c9ef6428d533"
+    },
+    "CONTROLS.json": {
+      "bytes": 531,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/CONTROLS.json",
+      "sha256": "0144b78ded5cd1a6d2324be7a2419647b0ac9aa51cc92aab560ccd3bcc5a6283"
+    },
+    "PREPARE.json": {
+      "bytes": 347,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/PREPARE.json",
+      "sha256": "c78698fbae4256007b5d7ccadfb6059423931eed8de551b4adf952bcce77b936"
+    },
+    "PRICING.json": {
+      "bytes": 3139,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/PRICING.json",
+      "sha256": "2419c92d1cedde043d987a4e5a206d6173dc7e1da7654518e405bfe1e4ae4ca7"
+    },
+    "PROTOCOL.md": {
+      "bytes": 4108,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/PROTOCOL.md",
+      "sha256": "2d2e403a49cee33abf2e614353b6d5333481eaa0ac8b5c58e5c7f0b1bbb456d0"
+    },
+    "RECALL.md": {
+      "bytes": 5315,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/RECALL.md",
+      "sha256": "5113d9b2987a3f37152ba0fc7813aa3c8f76835d24495c730ecb5a07b0022603"
+    },
+    "RETENTION_price_None_None.json": {
+      "bytes": 424770,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/RETENTION_price_None_None.json",
+      "sha256": "713ce9dd7c25b36f6f6440e625a478fd6fa87afd300cfe73feb42d71062764f4"
+    },
+    "REVIEWS.md": {
+      "bytes": 2420,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/REVIEWS.md",
+      "sha256": "084ed754fb0ebf7fe7d093f4acfb14a3952627a4070684c23e06751f17b3e91c"
+    },
+    "SOURCE_TRANSITION.json": {
+      "bytes": 892,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/SOURCE_TRANSITION.json",
+      "sha256": "2578cc63513169593562581dbde3ad61429982d45513d6eb362eef373ed4fe7a"
+    },
+    "VALIDATION.json": {
+      "bytes": 48689,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/VALIDATION.json",
+      "sha256": "ec735b54fd820f77ccf4d8eb1d59ccb871388949d3a3f49d6e02bebac35a3bcd"
+    }
+  },
+  "axis": "[macOS-CPU advisory / scorer-free n600 receiver probabilities]",
+  "best_model": "joint_full",
+  "best_net_byte_equivalent": 385.5504801282797,
+  "conditional_rate_score_contribution": 0.00025672223907396687,
+  "field_sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8",
+  "finite_bounds": {
+    "joint_full": {
+      "axis": "[macOS-CPU advisory / scorer-free n600 receiver probabilities]",
+      "baseline_error_bits": -4.731118679046631e-07,
+      "baseline_nats": 663550.2291748077,
+      "box": [
+        -4.0,
+        3.96875
+      ],
+      "coefficient_bytes": 10,
+      "complete_baseline_bytes": 119748.3002428845,
+      "family": "joint",
+      "gap_bytes": 0.00014378914055935722,
+      "header_bytes": 8,
+      "iteration": 4,
+      "kept_gain_bytes": 401.00416121518555,
+      "loss_nats": 661326.5899448948,
+      "lower_loss_nats": 661326.5891475584,
+      "omitted_credit_bytes": 85.72211642174383,
+      "optimistic_net_upper_bytes": 468.7264214850584,
+      "parameters": {
+        "bytes": 18,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/fit/joint/full/parameters.bin",
+        "sha256": "39906d5c5940f5449bd666fcb30f56f6a567e6190bd88a8db0505cebbcb0ba70"
+      },
+      "rounded": [
+        [
+          28,
+          8
+        ],
+        [
+          18,
+          4
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          13,
+          5
+        ],
+        [
+          12,
+          10
+        ]
+      ],
+      "split": "full",
+      "weights": [
+        [
+          0.8685821598926439,
+          0.23607205290042,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.5691022517762382,
+          0.12870074517606933,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.5737369911868926,
+          0.18841043847927136,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.3981095976994121,
+          0.1583800941513627,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.36104729745417136,
+          0.31871989559009223,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    "joint_train": {
+      "axis": "[macOS-CPU advisory / scorer-free n600 receiver probabilities]",
+      "baseline_error_bits": -2.9383227229118347e-07,
+      "baseline_nats": 531907.3647497533,
+      "box": [
+        -4.0,
+        3.96875
+      ],
+      "coefficient_bytes": 10,
+      "complete_baseline_bytes": 95991.34311522925,
+      "family": "joint",
+      "gap_bytes": 0.00012778109519451242,
+      "header_bytes": 8,
+      "iteration": 4,
+      "kept_gain_bytes": 333.6854908070823,
+      "loss_nats": 530057.0194925797,
+      "lower_loss_nats": 530057.0187840109,
+      "omitted_credit_bytes": 68.8284480943555,
+      "optimistic_net_upper_bytes": 384.514066719159,
+      "parameters": {
+        "bytes": 18,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/fit/joint/train/parameters.bin",
+        "sha256": "192bb6adac5f48ed5d58419330e06fd35d72e4b93ad0c85d1d4f3eaf8fba85c1"
+      },
+      "rounded": [
+        [
+          28,
+          7
+        ],
+        [
+          19,
+          4
+        ],
+        [
+          21,
+          7
+        ],
+        [
+          15,
+          6
+        ],
+        [
+          16,
+          10
+        ]
+      ],
+      "split": "train",
+      "weights": [
+        [
+          0.8725876317932418,
+          0.23226985074488024,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.6046919071940503,
+          0.1171298871024098,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.6470020797900002,
+          0.22462186974085058,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.4539524897658459,
+          0.17453341611654666,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.5108164953819188,
+          0.3065586386508064,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    "separate_full": {
+      "axis": "[macOS-CPU advisory / scorer-free n600 receiver probabilities]",
+      "baseline_error_bits": -4.731118679046631e-07,
+      "baseline_nats": 663550.2291748077,
+      "box": [
+        -4.0,
+        3.96875
+      ],
+      "coefficient_bytes": 15,
+      "complete_baseline_bytes": 119748.3002428845,
+      "family": "separate",
+      "gap_bytes": 2.2068094603710163e-06,
+      "header_bytes": 8,
+      "iteration": 4,
+      "kept_gain_bytes": 285.5855799886595,
+      "loss_nats": 661966.6064581859,
+      "lower_loss_nats": 661966.6064459488,
+      "omitted_credit_bytes": 85.72211642174383,
+      "optimistic_net_upper_bytes": 348.307698676188,
+      "parameters": {
+        "bytes": 23,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/fit/separate/full/parameters.bin",
+        "sha256": "9ba7873428a74fd8dea24c1b871eafd01bb498aabcf479f9aab427049e803eee"
+      },
+      "rounded": [
+        [
+          29,
+          15,
+          7
+        ],
+        [
+          21,
+          13,
+          4
+        ],
+        [
+          19,
+          0,
+          6
+        ],
+        [
+          7,
+          10,
+          5
+        ],
+        [
+          -10,
+          19,
+          10
+        ]
+      ],
+      "split": "full",
+      "weights": [
+        [
+          0.910426154808029,
+          0.4789073244241179,
+          0.22890786421876166,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.6704877453931996,
+          0.392045101229301,
+          0.13221875288626772,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.579568116496415,
+          -0.012436948539296756,
+          0.1897263188713364,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.20540409101729687,
+          0.30377274064026616,
+          0.15904392492631544,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.31532218465488676,
+          0.5872484156523032,
+          0.3206642608270934,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    "separate_train": {
+      "axis": "[macOS-CPU advisory / scorer-free n600 receiver probabilities]",
+      "baseline_error_bits": -2.9383227229118347e-07,
+      "baseline_nats": 531907.3647497533,
+      "box": [
+        -4.0,
+        3.96875
+      ],
+      "coefficient_bytes": 15,
+      "complete_baseline_bytes": 95991.34311522925,
+      "family": "separate",
+      "gap_bytes": 1.7183337976040713e-06,
+      "header_bytes": 8,
+      "iteration": 4,
+      "kept_gain_bytes": 235.11095172541164,
+      "loss_nats": 530603.6328032954,
+      "lower_loss_nats": 530603.6327937669,
+      "omitted_credit_bytes": 68.8284480943555,
+      "optimistic_net_upper_bytes": 280.93940157473844,
+      "parameters": {
+        "bytes": 23,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/fit/separate/train/parameters.bin",
+        "sha256": "6800a2fc3a9f84ee4fe9d5b473c42b01ff2f70dd6708e9d98f78f1a8d9327457"
+      },
+      "rounded": [
+        [
+          29,
+          16,
+          7
+        ],
+        [
+          20,
+          18,
+          4
+        ],
+        [
+          20,
+          7,
+          7
+        ],
+        [
+          9,
+          12,
+          6
+        ],
+        [
+          -1,
+          25,
+          10
+        ]
+      ],
+      "split": "train",
+      "weights": [
+        [
+          0.8911500504604819,
+          0.5072576383683799,
+          0.22410148022992624,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.6126565460715153,
+          0.5778898610346358,
+          0.11898198190914326,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.6178785389534938,
+          0.21256982820837084,
+          0.22450833469970075,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.2666562163460485,
+          0.375749457844957,
+          0.17442026648862635,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.04639263270497063,
+          0.7798414207333254,
+          0.30587172353374614,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    }
+  },
+  "fire_or_refusal": {
+    "bytes": 1442,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/FIRE_OR_REFUSAL.json",
+    "sha256": "491f0d94118ebbf6ff74da7ad10bd42a58b1bab348551debea94bab586904bce"
+  },
+  "fraction_of_required_saving": 0.014886693699690322,
+  "frontier": {
+    "archive_bytes": 180406,
+    "axis": "[contest-CUDA T4 n600]",
+    "distortion": 0.01711995387438173,
+    "move": 44,
+    "pose": 4.59e-06,
+    "rate_coefficient": 6.658589531221714e-07,
+    "report_component_boundary": "8 decimal reported components; exact archive bytes",
+    "required_saving_bytes": 25899,
+    "score": 0.1372449041713402,
+    "seg": 0.00010345,
+    "source": {
+      "bytes": 242556,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+      "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+    },
+    "strict_sub012_integer_cap": 154507
+  },
+  "frontier_moved": false,
+  "ls1_atlas_result": {
+    "bytes": 165544,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls1/atlas/RESULT.json",
+    "sha256": "ddf6a80bd9d49e6fe1ace7c227650694c9c2af7178c97830b8fd57d98e231bb9"
+  },
+  "model_comparison": {
+    "joint_full": {
+      "class_bytes": [
+        291.9822122495979,
+        47.15829468050532,
+        50.259609669147245,
+        -47.22516324804455,
+        61.3755267770736
+      ],
+      "fit_gross_bytes": 334.98014171166267,
+      "fit_pairs": 480,
+      "gross_bytes": 403.5504801282797,
+      "heldout_class_bytes": [
+        42.777907196233095,
+        14.59267455490177,
+        5.9640615656408675,
+        -9.159645014348149,
+        14.395340114189445
+      ],
+      "heldout_gross_bytes": 68.57033841661702,
+      "heldout_pairs": 120,
+      "net_bytes": 385.5504801282797,
+      "other_rows_bytes": 374.00039168438514,
+      "parameter_bytes": 18,
+      "patch_boundary_bytes": 29.55008844389455,
+      "validation_scope": "full600 in-sample fit; heldout_* fields are descriptive split slices only, not validation"
+    },
+    "joint_train": {
+      "class_bytes": [
+        289.2024718384916,
+        53.41614511378714,
+        55.296789857405386,
+        -51.35586078080778,
+        56.19833107871307
+      ],
+      "fit_gross_bytes": 335.70829498205745,
+      "fit_pairs": 480,
+      "gross_bytes": 402.75787710758937,
+      "heldout_class_bytes": [
+        41.566803031434866,
+        15.931460931490218,
+        5.953288779688774,
+        -9.741829440954453,
+        13.339858823872513
+      ],
+      "heldout_gross_bytes": 67.04958212553191,
+      "heldout_pairs": 120,
+      "net_bytes": 384.75787710758937,
+      "other_rows_bytes": 373.2932303728449,
+      "parameter_bytes": 18,
+      "patch_boundary_bytes": 29.464646734744274,
+      "validation_scope": "heldout pairs excluded from coefficient fitting; causal online adaptation allowed"
+    },
+    "separate_full": {
+      "class_bytes": [
+        267.748642777581,
+        -88.53592906976166,
+        57.69442540458601,
+        -44.61735520009693,
+        96.87247714704769
+      ],
+      "fit_gross_bytes": 236.2345791105045,
+      "fit_pairs": 480,
+      "gross_bytes": 289.16226105935607,
+      "heldout_class_bytes": [
+        37.93693796312352,
+        -7.0122750706393076,
+        7.084097830784,
+        -6.487688272084251,
+        21.40660949766761
+      ],
+      "heldout_gross_bytes": 52.92768194885154,
+      "heldout_pairs": 120,
+      "net_bytes": 266.16226105935607,
+      "other_rows_bytes": 268.9606006243989,
+      "parameter_bytes": 23,
+      "patch_boundary_bytes": 20.20166043495769,
+      "validation_scope": "full600 in-sample fit; heldout_* fields are descriptive split slices only, not validation"
+    },
+    "separate_train": {
+      "class_bytes": [
+        285.6719296141595,
+        -93.40834294426726,
+        67.42616259265714,
+        -57.041248094669704,
+        84.10517575637103
+      ],
+      "fit_gross_bytes": 238.13164365308717,
+      "fit_pairs": 480,
+      "gross_bytes": 286.7536769242505,
+      "heldout_class_bytes": [
+        38.50195548768207,
+        -7.853678046899947,
+        6.978894103096567,
+        -8.14768051587459,
+        19.14254224315926
+      ],
+      "heldout_gross_bytes": 48.622033271163346,
+      "heldout_pairs": 120,
+      "net_bytes": 263.7536769242505,
+      "other_rows_bytes": 266.6370199637062,
+      "parameter_bytes": 23,
+      "patch_boundary_bytes": 20.116656960544127,
+      "validation_scope": "heldout pairs excluded from coefficient fitting; causal online adaptation allowed"
+    }
+  },
+  "omitted_credit_bytes": 85.72211642174383,
+  "pairs": 600,
+  "promotable": false,
+  "rate_boundary": "log-loss byte equivalents; no physical RC64 stream, candidate archive, public identity or new score measured",
+  "remaining_demand_byte_equivalent": 25513.44951987172,
+  "research_only": true,
+  "schema": "ddm_ls2_result.v1",
+  "scope": "FORMULATION: predeclared boxes, exact frozen shipped probabilities and causal count features; not all context models, carriers or generators",
+  "score_claim": false,
+  "seed": 20260911,
+  "status": "MEASUREMENT_COMPLETE",
+  "symbols": 117964800,
+  "verdict": "Both finite models have positive charged all-symbol integer log-loss gains; neither approaches required rate saving. Build refused pending native timing."
+}

@@ -1,0 +1,7 @@
+{
+  "gradient_max_error": 1.1102230246251565e-16,
+  "hessian_max_error": 1.8318679906315083e-15,
+  "loss_error": -1.1368683772161603e-13,
+  "real_rows": 4096,
+  "status": "PASS"
+}

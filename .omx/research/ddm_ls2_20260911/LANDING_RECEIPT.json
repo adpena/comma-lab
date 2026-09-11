@@ -1,0 +1,145 @@
+{
+  "schema": "ddm_ls2_landing_receipt.v1",
+  "status": "BUNDLE_READY_SHARED_HEAD_NOT_LANDED",
+  "measurement_status": "COMPLETE_VERIFIED_N600",
+  "serializer_rc": 17,
+  "reason": "Sandbox Git object-write denial; final serializer produced verified fallback",
+  "fallback_commit": "cbb60b66ece984bb7364fa0f9569d9655df5c01c",
+  "base_head": "b364fac96accb7589ad50895ed4c0e322feb0a05",
+  "bundle": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/landing/serializer_fallback/20260911T011539.097557Z-65186/intended-commit.bundle",
+    "bytes": 30552,
+    "sha256": "e09aa7d2ac8f2db1b9fbd2b9cb995379ac4fa53bf10975f9cf252eddb4a9a887"
+  },
+  "format_patch": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/landing/serializer_fallback/20260911T011539.097557Z-65186/intended-commit.format-patch",
+    "bytes": 84404,
+    "sha256": "a00fc9287cf49e5797dac005e431cefc8ef13724f26638028a6bfd12e4be102a"
+  },
+  "receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/landing/serializer_fallback/20260911T011539.097557Z-65186/receipts.jsonl",
+    "bytes": 5845,
+    "sha256": "7ec670d34d1126c73af5ff5820f3cb8bca40c21468fcd76fb1f46e3fdce051cf"
+  },
+  "intended_blobs": [
+    {
+      "path": "experiments/ddm_ls2_probability_bound.py",
+      "sha256": "36c12fed5c923752e13282955b6507db643a1966c6be05ef1df0068dcbd669df",
+      "bytes": 22243,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_full_resolution_lane_probability_bound_20260911.md",
+      "sha256": "225db0ec75bd20b3e219378e732767112b8c165d846dafc48a0a3d7e1a576737",
+      "bytes": 14191,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/FINAL_CUSTODY.json",
+      "sha256": "9629c67bde67d8d0a31e8b97326acba04cf1328475bde82ff51a459faac9dd3e",
+      "bytes": 1141,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/FIRE_OR_REFUSAL.json",
+      "sha256": "491f0d94118ebbf6ff74da7ad10bd42a58b1bab348551debea94bab586904bce",
+      "bytes": 1442,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/PROTOCOL.md",
+      "sha256": "2d2e403a49cee33abf2e614353b6d5333481eaa0ac8b5c58e5c7f0b1bbb456d0",
+      "bytes": 4108,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/RECALL.md",
+      "sha256": "5113d9b2987a3f37152ba0fc7813aa3c8f76835d24495c730ecb5a07b0022603",
+      "bytes": 5315,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/REVIEWS.md",
+      "sha256": "084ed754fb0ebf7fe7d093f4acfb14a3952627a4070684c23e06751f17b3e91c",
+      "bytes": 2420,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/SUMMARY.json",
+      "sha256": "c74b2d57dcf3f910b5e42f277ccc265a2e3f78d38454b4d3cb7a5dd72fc98607",
+      "bytes": 16677,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/joint/full/NUMERICAL_CONTROL.json",
+      "sha256": "37b898c1c2b9e6d9f5555b6a92826eb8173e31a4cf9a61f5fe94105bfdacb66f",
+      "bytes": 176,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/joint/full/RESULT.json",
+      "sha256": "d2b0d8a89d7f7216cff220a791d2dd67e55b22a724dc696af70b07a44adc6ab9",
+      "bytes": 1642,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/joint/train/NUMERICAL_CONTROL.json",
+      "sha256": "3e737b70b212ce3c780e7ffdf2c60db7180f9a04f2ce2dab41b374dbaf6172be",
+      "bytes": 177,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/joint/train/RESULT.json",
+      "sha256": "436564e9524882e7514cbc0e0a3268e1a89fdf5b8c72680fc01c8724a9a7311c",
+      "bytes": 1643,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/separate/full/NUMERICAL_CONTROL.json",
+      "sha256": "906567ad9039f4d1d1473090799bc05870523ab820ee307eb8ee90b605787fd7",
+      "bytes": 178,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/separate/full/RESULT.json",
+      "sha256": "2c0c05e483bd26fe2bde4092bdb8060076261d880e244c0b0a4b7b41230def5c",
+      "bytes": 1775,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/separate/train/NUMERICAL_CONTROL.json",
+      "sha256": "f229ea66fd67e118d0ae1675aa92070592a05b0cf8e84357e22566ac1324c35e",
+      "bytes": 180,
+      "status": "PASS"
+    },
+    {
+      "path": ".omx/research/ddm_ls2_20260911/models/separate/train/RESULT.json",
+      "sha256": "bedc25376e8bb6231064d709f6480751d4833dd55d7558e4e074a1ddaacc314e",
+      "bytes": 1779,
+      "status": "PASS"
+    }
+  ],
+  "bundle_verify_rc": 0,
+  "bundle_verify_output": "The bundle contains this ref:\ncbb60b66ece984bb7364fa0f9569d9655df5c01c refs/heads/serializer-fallback\nThe bundle requires this ref:\nb364fac96accb7589ad50895ed4c0e322feb0a05 \nThe bundle uses this hash algorithm: sha1\n/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/landing/serializer_fallback/20260911T011539.097557Z-65186/intended-commit.bundle is okay\n",
+  "shared_index_byte_identical": true,
+  "shared_staged_paths": [],
+  "operator_only_commit_message": true,
+  "frontier_unchanged": true,
+  "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound",
+  "result": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/RESULT.json",
+    "bytes": 16677,
+    "sha256": "c74b2d57dcf3f910b5e42f277ccc265a2e3f78d38454b4d3cb7a5dd72fc98607"
+  },
+  "manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/MANIFEST.json",
+    "bytes": 1346712,
+    "sha256": "24a1d18ba8125e76cb923c2ed0869af7cae0f4367993ea19cba1e6ffde58267f"
+  },
+  "fire_or_refusal": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound/FIRE_OR_REFUSAL.json",
+    "bytes": 1442,
+    "sha256": "491f0d94118ebbf6ff74da7ad10bd42a58b1bab348551debea94bab586904bce"
+  },
+  "note": "This post-serializer companion receipt is separate from the committed intended tree; MAIN must land bundle before native timing follow-on."
+}
