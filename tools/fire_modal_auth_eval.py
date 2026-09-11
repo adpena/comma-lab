@@ -677,7 +677,14 @@ def _first_measurement_main(argv: list[str]) -> int:
         _pf_require(cloud is not None and not cloud, "FIRST_MEASUREMENT_LANE_REFUSED", "cloud state unknown or another scored job is live")
         runtime = Path(intent["candidate"]["runtime"]["path"])
         archive = Path(intent["candidate"]["archive"]["path"])
-        _pf_require(not validate_tree(runtime), "PREFIRE_NON_TIMING_GATE_REFUSED", "runtime upload validator refused")
+        # Same effective tree as the --seal path (line ~1015): macOS metadata litter is
+        # sanitized on a real fire and only REPORTED on a dry run, and the validator skips
+        # it either way. An ExFAT-staged runtime dir carries AppleDouble stubs that the real
+        # upload never ships; validating the raw tree refused a valid intent (ntb2, move 46).
+        fm_litter = sanitize_litter(runtime, apply=not args.dry_run)
+        fm_problems = validate_tree(runtime, skip=frozenset(fm_litter))
+        _pf_require(not fm_problems, "PREFIRE_NON_TIMING_GATE_REFUSED",
+                    "runtime upload validator refused: " + "; ".join(fm_problems[:3]))
         runtime_digests = measure_fire_runtime_digests(runtime)
         uploaded = runtime_digests["modal_uploaded_runtime"]
         expected_runtime_tree_sha256 = uploaded["runtime_tree_sha256"]
