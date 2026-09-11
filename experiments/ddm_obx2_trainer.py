@@ -313,7 +313,7 @@ def build_module(packet: bytes, spec: lat.LatticeSpec, *, seed: int) -> OBX2Modu
     return OBX2Module(base, LatticeTorch(spec, seed=seed))
 
 
-def build_packet(module: OBX2Module) -> tuple[bytes, dict[str, Any]]:
+def build_packet(module: OBX2Module) -> tuple[bytes, dict[str, Any], bytes]:
     """Serialize the complete OBX2 object: born sections re-encoded plus the lattice."""
 
     packet = born_packet()
@@ -331,8 +331,22 @@ def build_packet(module: OBX2Module) -> tuple[bytes, dict[str, Any]]:
     }
     sections = [lat.race_section(section_id, raw) for section_id, raw in raws.items()]
     payload = lat.pack_obx2_packet(sections)
+    # The contest charges `archive.zip`, not the packet: the ZIP container adds
+    # framing on top of every packet byte, so the gate is reported on both and
+    # the rate term is computed from the archive.
+    archive = qbf1.deterministic_archive(payload, member_name="0.obx2")
+    archive_repeat = qbf1.deterministic_archive(payload, member_name="0.obx2")
+    if archive_repeat != archive:
+        raise OBX2TrainerError("deterministic archive builder is nondeterministic")
+    if qbf1.read_deterministic_archive(archive, member_name="0.obx2") != payload:
+        raise OBX2TrainerError("archive receiver does not return the packet it was built from")
     accounting = {
         "packet_bytes": len(payload),
+        "archive_bytes": len(archive),
+        "archive_sha256": sha256_bytes(archive),
+        "archive_framing_bytes": len(archive) - len(payload),
+        "archive_byte_headroom": PACKET_BYTE_GATE - len(archive),
+        "rate_at_archive_bytes": 25.0 * len(archive) / RATE_DENOMINATOR,
         "sections": {
             lat.SECTION_NAMES[row.section_id]: {
                 "raw_bytes": row.raw_bytes,
@@ -347,7 +361,7 @@ def build_packet(module: OBX2Module) -> tuple[bytes, dict[str, Any]]:
         "packet_byte_gate": PACKET_BYTE_GATE,
         "packet_byte_headroom": PACKET_BYTE_GATE - len(payload),
     }
-    return payload, accounting
+    return payload, accounting, archive
 
 
 def receiver_render(packet: bytes, pair_ids: Sequence[int], *, height: int = EVAL_H, width: int = EVAL_W) -> np.ndarray:
@@ -574,6 +588,7 @@ def score_parsed_object(
     workers: int,
     render_chunk: int = 50,
     receiver: str = "torch",
+    archive_bytes: bytes | None = None,
 ) -> dict[str, Any]:
     """Authority advisory row: render the PARSED packet, score on the frozen CPU scorers.
 
@@ -617,7 +632,8 @@ def score_parsed_object(
     d_seg = seg_errors / seg_pixels
     d_pose = pose_square / pose_values
     distortion = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
-    rate = 25.0 * len(packet) / RATE_DENOMINATOR
+    scored_bytes = len(archive_bytes) if archive_bytes is not None else len(packet)
+    rate = 25.0 * scored_bytes / RATE_DENOMINATOR
     return {
         "axis": "[macOS-CPU advisory]",
         "score_claim": False,
@@ -631,11 +647,11 @@ def score_parsed_object(
         "pose_values": pose_values,
         "d_pose": d_pose,
         "distortion": distortion,
-        "packet_bytes": len(packet),
-        "rate_at_packet_bytes": rate,
-        "advisory_score_at_packet_bytes": rate + distortion,
+        "scored_bytes": scored_bytes,
+        "rate_at_scored_bytes": rate,
+        "advisory_score_at_scored_bytes": rate + distortion,
         "passes_distortion_gate": distortion < DISTORTION_GATE,
-        "passes_packet_byte_gate": len(packet) <= PACKET_BYTE_GATE,
+        "passes_byte_gate": scored_bytes <= PACKET_BYTE_GATE,
         "render_seconds": render_seconds,
         "total_seconds": time.time() - started,
     }
@@ -757,12 +773,15 @@ def run_training(
             )
 
     shadow = ema_module(module, ema, spec, seed=seed)
-    packet, accounting = build_packet(shadow)
-    repeat, _ = build_packet(shadow)
-    if repeat != packet:
-        raise OBX2TrainerError("terminal packet encoder is nondeterministic")
+    packet, accounting, archive = build_packet(shadow)
+    repeat, _, repeat_archive = build_packet(shadow)
+    if repeat != packet or repeat_archive != archive:
+        raise OBX2TrainerError("terminal packet or archive encoder is nondeterministic")
     packet_path = output / "candidates" / f"obx2_{stage}_terminal.packet"
     qbt1.atomic_bytes(packet_path, packet)
+    archive_path = output / "candidates" / f"obx2_{stage}_terminal.archive.zip"
+    qbt1.atomic_bytes(archive_path, archive)
+    qbt1.atomic_bytes(output / "candidates" / f"obx2_{stage}_terminal.archive.repeat.zip", repeat_archive)
     validation = score_parsed_object(
         packet,
         pair_ids=list(range(min(validate_pairs, N))),
@@ -770,6 +789,7 @@ def run_training(
         pose_target=pose_target,
         workers=workers,
         receiver="torch",
+        archive_bytes=archive,
     )
     cross_check = score_parsed_object(
         packet,
@@ -778,6 +798,7 @@ def run_training(
         pose_target=pose_target,
         workers=workers,
         receiver="numpy",
+        archive_bytes=archive,
     )
     receipt = {
         "schema": "ddm_obx2_training_stage.v1",
@@ -789,6 +810,7 @@ def run_training(
         "config": config,
         "packet_accounting": accounting,
         "packet_path": str(packet_path),
+        "archive_path": str(archive_path),
         "deterministic_repeat": True,
         "validation": validation,
         "portable_receiver_cross_check": cross_check,
@@ -829,10 +851,10 @@ def stage1(output: Path, *, seed: int, parity_pairs: int) -> dict[str, Any]:
     spec = default_spec()
     module = build_module(born_packet(), spec, seed=seed)
     module.eval()
-    payload, accounting = build_packet(module)
-    repeat, repeat_accounting = build_packet(module)
-    if repeat != payload:
-        raise OBX2TrainerError("OBX2 packet encoder is nondeterministic")
+    payload, accounting, archive = build_packet(module)
+    repeat, repeat_accounting, repeat_archive = build_packet(module)
+    if repeat != payload or repeat_archive != archive:
+        raise OBX2TrainerError("OBX2 packet or archive encoder is nondeterministic")
     sections = lat.decode_obx2_packet(payload)
     if set(sections) != set(lat.SECTION_NAMES):
         raise OBX2TrainerError("parsed OBX2 packet section set differs")
