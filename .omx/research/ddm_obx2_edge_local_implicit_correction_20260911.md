@@ -98,7 +98,7 @@ gate (D13) exists.
 | Stage 0 — storage and identity | PASS. Every frozen pin matched; two-runs-plus-reserve projection admitted against 78.8 GiB free on Vertigo. | `checkpoints/stage_00_identity.json` |
 | Stage 1 — receiver parity | PASS. A zero lattice is the born object **exactly** (max abs 0.0) through the parsed packet. Encoder repeats byte-identically. torch twin vs the float64 NumPy receiver: relative-L2 parity **0.9999908**, max abs 0.00124, 0.022% of rounded uint8 values disagree. Zero-lattice packet **108,826 B**, 13,174 B under the gate. | `checkpoints/stage_01_receiver_parity.json` |
 | Stage 2a — gate pricing (declared) | RUNNING, n600, 16 rungs; 3 complete (rows 2 and 3 above), including the decisive `sp_384x512`. The queued `sp384_render_noise_*` rungs confirm or refute derivation 4. | `STAGE_2A_RESULT.json` when complete |
-| base-only n600 control | RUNNING, 200 epochs, MPS, joint scorer descent, lattice frozen. Loss 13.30 → 4.65 by epoch 17. | `base_only/STAGE_JOINT_RESULT.json` |
+| base-only n600 control | RUNNING, 200 epochs, MPS, joint scorer descent, lattice frozen. Loss 13.30 → 4.17 by epoch 24, then flat. Its **epoch-20 object is byte-closed: packet 108,994 B, archive 109,104 B, 12,896 B under the gate**, sha `4b622dc8c1287c38…`; its n600 distortion row is computing. | `base_only/CHECKPOINT_SCORE_*.json` |
 | base+lattice n600 | RUNNING, identical config with the lattice live: the A/B that isolates the lattice's marginal contribution. | `lattice/STAGE_JOINT_RESULT.json` |
 | Stage 7 — public timing harness | BUILT. Decodes the exact archive twice, requires byte-identical output inside 1,260 s. Not yet run on a candidate. | `STAGE_7_TIMING_<receiver>.json` |
 
@@ -165,10 +165,15 @@ Every one of these is a change or an addition the burn spec left open. None is s
   receiver; validation measures the shipping torch path on all 600 and keeps the portable NumPy path
   as an explicit cross-check. Which receiver ships is a Stage-7 decision, and the object must be
   scored through the one that does.
-- **The governor refused an over-declared launch, and it was right.** The parallel lattice arm was
-  refused (`rc=5`, projected 122.5 GiB over a 116.0 GiB ceiling) because I declared 24 GiB of peak RSS.
-  The MEASURED training-child RSS is **1.01 GiB**. Relaunched with an 8 GiB declaration and 4
-  cross-check workers. Recorded because the error was mine, not the gate's.
+- **The governor refused two launches, and was right both times.** The first: I declared 24 GiB of peak
+  RSS for the parallel lattice arm against a MEASURED training-child RSS of **1.01 GiB**; relaunched at
+  8 GiB. The second: with four live processes the box was genuinely at 121.2 GiB projected against a
+  116.0 GiB ceiling, so the pose ladder is QUEUED behind the scoring run rather than forced. Recorded
+  because the first error was mine, and because the second is the honest state of a full machine.
+- **The scorer batch was 50 pairs and peaked past 16 GiB of RSS.** Fixed: rendering still walks 50-pair
+  chunks, scoring walks them in batches of 8. The two in-flight training arms carry the old code, so
+  their terminal validation may still peak there; their checkpoints are saved every 10 epochs, so a
+  killed validation costs a rescore, not the run.
 - **MPS training is not bitwise reproducible across hosts.** The shipped artifact is deterministic and
   hashed, and the run is resumable from disk, but the training trajectory on MPS is not bit-identical.
   Declared, not hidden.
