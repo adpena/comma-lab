@@ -149,7 +149,7 @@ TREATMENT_PAST_DILATION = {
 #: receiver constant and nothing in C.
 TREATMENT_CONE_DILATION = {
     "control": 1, "retrain": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3,
-    "retrain_frame_even": 1, "retrain_frame_quad": 1,
+    "retrain_frame_even": 1, "retrain_frame_quad": 1, "control47": 1,
 }
 
 
