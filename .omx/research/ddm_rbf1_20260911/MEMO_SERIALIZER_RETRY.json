@@ -1,0 +1,20 @@
+{
+  "files": [
+    ".omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md",
+    ".omx/research/ddm_rbf1_20260911/BUNDLE_MIRROR.json",
+    ".omx/research/ddm_rbf1_20260911/CODE_SERIALIZER.json",
+    ".omx/research/ddm_rbf1_20260911/FIRE_ORDERS.json",
+    ".omx/research/ddm_rbf1_20260911/MEMO_SERIALIZER.json",
+    ".omx/research/ddm_rbf1_20260911/RECALL.json",
+    ".omx/research/ddm_rbf1_20260911/RENDER_LAUNCH.json",
+    ".omx/research/ddm_rbf1_20260911/RENDER_RESOURCE.json",
+    ".omx/research/ddm_rbf1_20260911/RESIDUAL_SERIALIZER.json",
+    ".omx/research/ddm_rbf1_20260911/STORAGE_PLAN.json",
+    ".omx/research/ddm_rbf1_20260911/UNIT_RESOURCE.json",
+    ".omx/research/ddm_rbf1_20260911/equations_recall.json",
+    ".omx/research/ddm_rbf1_20260911/task_recall.json"
+  ],
+  "returncode": 17,
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T130633.122804Z-94369/intended-commit.bundle format_patch=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T130633.122804Z-94369/intended-commit.format-patch receipt=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T130633.122804Z-94369/receipts.jsonl fallback_commit=a7e15fef348ed24e65bce0f404df3274b1b5c059\n",
+  "stderr": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: .omx/research/ddm_rbf1_20260911/BUNDLE_MIRROR.json: failed to insert into database\nerror: unable to index file '.omx/research/ddm_rbf1_20260911/BUNDLE_MIRROR.json'\nfatal: adding files failed\n"
+}

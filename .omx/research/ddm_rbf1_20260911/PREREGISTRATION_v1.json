@@ -1,0 +1,36 @@
+{
+  "schema": "ddm_rbf1_prereg.v1",
+  "written_utc": "2026-09-11T13:57:00Z",
+  "written_before": "any n600 or subset scoring of the five modes; only the cached shipped-field residual and scorer-free geometry were known",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "bar_arithmetic": {
+    "pointer": {"S": 0.1372449041713402, "archive_bytes": 180406, "d_pose": 4.59e-06, "pose_term": 0.00677495387438173, "d_seg_derived": 0.00010345, "seg_term_derived": 0.010345},
+    "one_seg_error_in_S": 8.4772e-07,
+    "one_unit_pose_sse_in_S": 0.20500,
+    "net_seg_errors_to_clear_minus_2e-5_bar": -23.6,
+    "pose_sse_that_alone_costs_2e-5_S": 9.76e-05,
+    "derivation": "dS/derrors = 100/(600*384*512); dS/d(pose_sse) = 5/sqrt(10*d_pose)/(600*6)"
+  },
+  "measured_inputs": {
+    "errors_cached_n600": 12196,
+    "token_correct_errors": 10204,
+    "scored_plane_token_edge_pixels_per_frame": 3812,
+    "scored_plane_token_edge_pixels_n600": 2287200,
+    "error_share_of_edge_pixels": 0.005332,
+    "collateral_exposure_ratio": 187.5,
+    "scored_plane_max_abs_dRGB_on_edge_mean": {"guided": 27.0, "composition": 31.0, "ssaa": 10.3, "sdf": 4.3},
+    "scored_plane_max_abs_dRGB_off_edge_mean": {"guided": 0.0, "composition": 0.0, "ssaa": 0.0, "sdf": 0.0}
+  },
+  "competing_hypotheses": {
+    "H1_purification": "guided replaces each band pixel with its own token class's local RGB mean; at 10,204 of 12,196 errors the stored token equals GT, so purification can fix up to 10,204 and can harm up to 1,992. If collateral is small, guided wins large.",
+    "H2_collateral": "the same operator perturbs 2,287,200 already-correct scored-plane edge pixels by a mean of 27 of 255 RGB levels. A harm rate of only 0.5% on those is 11,436 new errors, which dominates any benefit. Under H2 the net d_seg is WORSE and the family closes."
+  },
+  "predictions_registered": [
+    "sign(delta_d_seg) is ordered by intervention amplitude: sdf least harmful, then ssaa, then guided, then composition.",
+    "benefit < harm for guided and composition (H2 dominates) with probability the author judges high but does not assert as measured.",
+    "d_pose worsens monotonically with amplitude for every mode, because PoseNet reads the treated frame_1 of every pair.",
+    "no treatment is inert: every mode changes at least 18,000 camera pixels per frame, so a null result would itself be a finding."
+  ],
+  "falsifier_of_the_whole_family": "If every mode has 100*delta_d_seg + 0.205*delta_pose_sse >= -2e-5 at n600, the FREE post-render boundary treatment family is closed at formulation scope on this vehicle, because the free receiver cannot identify which 0.53% of its edge pixels are wrong (strict-scorer rule forbids a scorer in the receiver), so it must act on all of them."
+}

@@ -1,0 +1,50 @@
+{
+  "schema": "ddm_rbf1_mechanism_probes.v1",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "written_utc": "2026-09-11T14:20:00Z",
+  "probe_1_resampler_phase": {
+    "question": "Does the receiver's up-then-down resampling impose a position-dependent sub-pixel displacement that the token plane could pre-compensate for free?",
+    "method": "DERIVED exactly in fp64 from torch's own bilinear operator: the composite Down(874->384) o Up(384->874) per-axis matrix, and the same for 1164/512. Per-output centroid shift and point-spread width.",
+    "result": {
+      "per_output_weight_sum": 1.0,
+      "centroid_shift_rows_px": {"mean": 0.0, "min": -0.101470, "max": 0.101470, "std": 0.007323, "nonzero_only_at": "the two border indices"},
+      "centroid_shift_cols_px": {"mean": 0.0, "min": -0.101744, "max": 0.101744, "std": 0.006359},
+      "psf_std_px_rows": {"mean": 0.3674, "min": 0.0478, "max": 0.4687},
+      "self_weight_rows": {"mean": 0.8541, "min": 0.7803, "max": 0.9977}
+    },
+    "verdict": "FALSIFIED as a lever. There is no systematic sub-pixel displacement to pre-compensate: the composite is centroid-preserving everywhere except the border pixel. What it does impose is a position-dependent LOW-PASS whose strength varies 10x (psf std 0.048 to 0.469 px)."
+  },
+  "probe_2_blur_strength_correlation": {
+    "question": "Is the one-pixel jitter driven by that position-dependent low-pass?",
+    "method": "n600 cached residual error counts per row and per column, divided by the token-edge exposure per row/column measured over 60 seeded-random pairs, then correlated against the derived psf width and self weight.",
+    "result": {
+      "rows_pearson_rate_vs_psf_std": 0.0077,
+      "rows_pearson_rate_vs_self_weight": -0.0102,
+      "rows_blurriest_over_sharpest_tercile_ratio": 1.076,
+      "cols_pearson_rate_vs_psf_std": 0.0036,
+      "cols_blurriest_over_sharpest_tercile_ratio": 0.974
+    },
+    "verdict": "FALSIFIED. The error rate per edge pixel does not track the resampler's local blur strength. The charter's 'anti-aliasing consistent with the scorer's resize' rationale has no measured mechanism behind it on this field; the SSAA and SDF treatments survive only as generic smoothing/displacement operators, not as resize-consistency cures."
+  },
+  "probe_3_treatment_amplitude_in_the_scorers_plane": {
+    "question": "How large is each treatment inside the 384x512 plane the scorer actually reads, and where?",
+    "method": "R(baseline camera) vs R(treated camera) using the scorer's own bilinear resize, two pairs, max over RGB channels.",
+    "result_mean_abs_dRGB_of_255": {"guided": 27.0, "composition": 31.0, "ssaa": 10.3, "sdf": 4.3},
+    "result_off_token_edge_mean": 0.0,
+    "verdict": "The band restriction survives the downsample: the scored plane changes ONLY at token-edge pixels. But on those pixels the change is large, and there are 2,287,200 of them at n600 while only 12,196 (0.53%) are wrong: a 187.5:1 collateral exposure."
+  },
+  "probe_4_renderer_blend_at_token_correct_errors": {
+    "question": "At a token-correct error, does the rendered RGB look like the wrongly predicted class? If so, purification toward the stored class should fix it.",
+    "method": "12 seeded-random pairs (seed 2), 196 token-correct error cells from the cached n600 residual. In the scored plane, compare the rendered RGB against the local 7x7 class-restricted mean of the GT class and of the predicted class.",
+    "scope": "SEEDED RANDOM SUBSET of 12 pairs -- SCOPE reduction, no verdict",
+    "result": {
+      "cells": 196,
+      "mean_distance_to_gt_class_local_mean": 90.917,
+      "mean_distance_to_predicted_class_local_mean": 128.353,
+      "render_closer_to_gt_class_fraction": 0.6684,
+      "render_closer_to_predicted_class_fraction": 0.3316
+    },
+    "verdict": "The render is ALREADY closer to the GT class's own local colour at two thirds of token-correct errors, and SegNet still calls them wrong. The pixel's colour is not what decides the argmax there. This is the CLAUDE.md region law ('SegNet sees REGIONS, not pixels') measured for the first time on the render-treatment family rather than on the store-the-flip-pixels sidecar family. It predicts a weak benefit channel for any pointwise purification, while the collateral channel of probe 3 operates at full strength."
+  }
+}

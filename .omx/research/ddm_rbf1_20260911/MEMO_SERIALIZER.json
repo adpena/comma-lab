@@ -1,0 +1,19 @@
+{
+  "files": [
+    ".omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md",
+    ".omx/research/ddm_rbf1_20260911/BUNDLE_MIRROR.json",
+    ".omx/research/ddm_rbf1_20260911/CODE_SERIALIZER.json",
+    ".omx/research/ddm_rbf1_20260911/FIRE_ORDERS.json",
+    ".omx/research/ddm_rbf1_20260911/RECALL.json",
+    ".omx/research/ddm_rbf1_20260911/RENDER_LAUNCH.json",
+    ".omx/research/ddm_rbf1_20260911/RENDER_RESOURCE.json",
+    ".omx/research/ddm_rbf1_20260911/RESIDUAL_SERIALIZER.json",
+    ".omx/research/ddm_rbf1_20260911/STORAGE_PLAN.json",
+    ".omx/research/ddm_rbf1_20260911/UNIT_RESOURCE.json",
+    ".omx/research/ddm_rbf1_20260911/equations_recall.json",
+    ".omx/research/ddm_rbf1_20260911/task_recall.json"
+  ],
+  "returncode": 8,
+  "stdout": "",
+  "stderr": "[subagent-commit-serializer] REFUSED: ABORT per Catalog #340 STAGING-surface PREVENT (sister of Catalog #314 POST-COMMIT detect). At least one sister subagent has declared one of these files in its in-flight `files_touched` checkpoint within the last 60 minutes. Coordinate via Catalog #230 ownership map OR opt out via the paired-env bypass.\nABORT: 1 sister subagent collision(s) detected. Per CLAUDE.md \"Bugs must be permanently fixed AND self-protected against\" non-negotiable + Catalog #340 STAGING-surface PREVENTION (sister of Catalog #314 POST-COMMIT detect).\n  sister='ddm_rbf1' (checkpoint 0.3 min ago) overlaps on: { .omx/research/ddm_rbf1_20260911/FIRE_ORDERS.json, .omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md }\n  Recommendation: coordinate via Catalog #230 ownership map OR commit via tools/subagent_commit_serializer.py with --expected-content-sha256 per Catalog #157 (lets fcntl arbitrate).\n"
+}

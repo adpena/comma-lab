@@ -1,0 +1,39 @@
+{
+  "artifacts": {
+    "composition": {
+      "bytes": 3052136,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/unit_controls/rendered_composition.npy",
+      "sha256": "84fbd75075a34eb67e0ab02149f4063da32a76825ca7256815f4c732f620cbf4"
+    },
+    "guided": {
+      "bytes": 3052136,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/unit_controls/rendered_guided.npy",
+      "sha256": "3620ab92b3f98d15efbf92689890fc49af49b8c6b17c04721cc31ce4c86842ca"
+    },
+    "master": {
+      "bytes": 3052136,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/unit_controls/rendered_master.npy",
+      "sha256": "6128fe1ad7b2c55080e5c6758d4bb04928efc8271a57524e22c32f93038fbf60"
+    },
+    "native": {
+      "bytes": 2359424,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/unit_controls/native_master.npy",
+      "sha256": "abbdb4c07f0ccf0f2fda67905be54b8393055ad0fc9b648b4a6d15077ab4179e"
+    },
+    "sdf": {
+      "bytes": 3052136,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/unit_controls/rendered_sdf.npy",
+      "sha256": "da71c26308a6f9457b4a07a50378b99c05fc5c4bba9765fc181171c468e7e9de"
+    },
+    "ssaa": {
+      "bytes": 3052136,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/unit_controls/rendered_ssaa.npy",
+      "sha256": "d492b9cfae7f41baef13872d58ef270939011988fc7679b6470709c8d732b861"
+    }
+  },
+  "elapsed_s": 5.546710416994756,
+  "maxrss_bytes_macos": 1586315264,
+  "scope": "single real-pair resource and source-identity control; no scorer or n600 treatment verdict",
+  "source_changed_channels": 0,
+  "threads": 4
+}

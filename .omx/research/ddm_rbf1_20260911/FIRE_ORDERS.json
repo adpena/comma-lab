@@ -1,0 +1,61 @@
+{
+  "schema": "ddm_rbf1_fire_orders.v1",
+  "score_claim": false,
+  "actions": [
+    {
+      "id": "rbf1_render_harvest",
+      "disposition": "FIRED",
+      "owner": "ddm_rbf1",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/RENDER_COMPLETE.json",
+      "fire_trigger": "ddm_rbf1_render terminal rc0 receipt; then verify all 120 chunk receipts and aggregate timing",
+      "launcher_manifest": "/Volumes/VertigoDataTier/pact/ddm_rbf1/render_launch/launch_manifest.json"
+    },
+    {
+      "id": "rbf1_joint_n600",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN assigns fleet slot; ddm_rbf1 executes",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/RESULT.json",
+      "fire_trigger": "RENDER_COMPLETE.json n=600 AND exclusive fleet-wide n600 scorer slot explicitly assigned to ddm_rbf1",
+      "runner_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_rbf1_boundary_probe.py",
+        "score",
+        "--resume-from",
+        "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained",
+        "--slot-receipt",
+        "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/SCORER_SLOT.json"
+      ],
+      "slot_receipt_required_fields": {
+        "owner": "ddm_rbf1",
+        "status": "assigned"
+      },
+      "slot_receipt_exists": false,
+      "execution_constraints": [
+        "one scorer job fleet-wide",
+        "governed tools/launch_detached_process.py with a measured resource envelope",
+        "five-pair restartable chunks",
+        "all 600 pairs and all five predeclared modes",
+        "no Modal",
+        "no MPS/ANE",
+        "no fitted free receiver constants"
+      ],
+      "score_claim": false
+    },
+    {
+      "id": "rbf1_conditional_candidate_intent",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_rbf1_20260911/first_measurement_intent/",
+      "fire_trigger": "n600 measured delta_S < -0.00002 at unchanged archive bytes and non-regressing pose",
+      "action": "Compare the measured composition; if needed measure other promising compositions, then twin encode and cold public n600 parseback, full literal census, outside-tree manifest, cross-host treatment parity, measured decode wall-clock risk receipt; hand MAIN first-measurement intent inputs. Do not dispatch."
+    },
+    {
+      "id": "rbf1_land_bundles",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "main Git history",
+      "fire_trigger": "reviewed rbf1 fallback bundles and writable Git object store",
+      "action": "Land only exact rbf1 files with expected hashes; do not sweep sibling untracked files."
+    }
+  ]
+}

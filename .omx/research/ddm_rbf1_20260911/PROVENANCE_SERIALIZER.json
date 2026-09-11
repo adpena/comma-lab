@@ -1,0 +1,6 @@
+{
+  "returncode": 17,
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T132206.102516Z-19455/intended-commit.bundle format_patch=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T132206.102516Z-19455/intended-commit.format-patch receipt=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T132206.102516Z-19455/receipts.jsonl fallback_commit=dd7f91816f5ee80d20cc30820ebd8e78d0b0672d\n",
+  "stderr": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: experiments/ddm_rbf1_cached_residual.py: failed to insert into database\nerror: unable to index file 'experiments/ddm_rbf1_cached_residual.py'\nfatal: adding files failed\n",
+  "numeric_and_payload_repeat_exact": true
+}

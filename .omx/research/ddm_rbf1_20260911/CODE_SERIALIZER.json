@@ -1,0 +1,21 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/subagent_commit_serializer.py",
+    "--message",
+    "rbf1: retain original boundary treatments and n600 render-seam probe [no-triality] [p0-ledger-ok] checkpoint ddm_rbf1 step 2",
+    "--files",
+    "experiments/ddm_rbf1_boundary_treatments.py",
+    "experiments/ddm_rbf1_boundary_probe.py",
+    "experiments/tests/test_ddm_rbf1_boundary_treatments.py",
+    "--expected-content-sha256",
+    "experiments/ddm_rbf1_boundary_treatments.py=124ff0726e493a964cadb5f60374c099ce35321251b9145df74617c519a858c5",
+    "--expected-content-sha256",
+    "experiments/ddm_rbf1_boundary_probe.py=5c85288a7312183382d843b31a97760fa31e655365cc316e16128171e6afb0f2",
+    "--expected-content-sha256",
+    "experiments/tests/test_ddm_rbf1_boundary_treatments.py=755fa3470eb9e8e1d309add3311e9e2229157442bbc83dba71010cc3818c0b69"
+  ],
+  "returncode": 17,
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T125652.919280Z-81004/intended-commit.bundle format_patch=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T125652.919280Z-81004/intended-commit.format-patch receipt=/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/commit_serializer_fallbacks/20260911T125652.919280Z-81004/receipts.jsonl fallback_commit=3098742a812948c564dfc3719e0656728f9ebc1f\n",
+  "stderr": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: experiments/ddm_rbf1_boundary_probe.py: failed to insert into database\nerror: unable to index file 'experiments/ddm_rbf1_boundary_probe.py'\nfatal: adding files failed\n"
+}

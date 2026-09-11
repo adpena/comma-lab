@@ -1,0 +1,118 @@
+{
+  "artifact": {
+    "bytes": 487968,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/cached_residual/cells_n600.npy",
+    "sha256": "9849a7d2a660ce8f76b8800b661b07dc1c1e246b4a6ee527b063893507fa6a4c"
+  },
+  "axis": "[macOS-CPU advisory, cached shipped-public argmax; no new scorer]",
+  "cache_limit": "Argmax producer provenance inherited from sj1; fresh frozen-CPU rescoring is still owed. All token correctness classifications recomputed against shipped subset6, not the STEP0 receipt's stale base token field.",
+  "cache_source_receipt": {
+    "bytes": 4915,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/seg_final/STEP0_RESULT.json",
+    "sha256": "b6207e7cfb9c0e51e092ce033163d7f9e3ea136a39a8a377f8bf634f17caa541"
+  },
+  "class_enrichment": [
+    1.7769168933175585,
+    40.2718074721767,
+    0.3714105784805475,
+    10.881904809096069,
+    0.12867222420689933
+  ],
+  "class_population": [
+    27407371,
+    690753,
+    58413069,
+    1460386,
+    29993221
+  ],
+  "confusion_gt_rows_predicted_columns": [
+    [
+      0,
+      2589,
+      1100,
+      899,
+      447
+    ],
+    [
+      2776,
+      0,
+      7,
+      26,
+      67
+    ],
+    [
+      928,
+      4,
+      0,
+      1311,
+      0
+    ],
+    [
+      600,
+      16,
+      1016,
+      0,
+      11
+    ],
+    [
+      298,
+      94,
+      0,
+      7,
+      0
+    ]
+  ],
+  "d_seg": 0.00010338677300347223,
+  "distance_to_token_edge_histogram": {
+    "0": 11928,
+    "1": 182,
+    "19": 1,
+    "2": 47,
+    "3": 14,
+    "4": 9,
+    "5": 7,
+    "6": 6,
+    "8": 1,
+    "9": 1
+  },
+  "error_by_gt_class": [
+    5035,
+    2876,
+    2243,
+    1643,
+    399
+  ],
+  "errors": 12196,
+  "field_positions": 117964800,
+  "gt_class_in_predicted_3x3": 11550,
+  "inputs": {
+    "argmax": {
+      "bytes": 117964928,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/seg_final/argmax_n600.npy",
+      "sha256": "4784e33d7bedbc568aab0d6514acb54525d48a0581b97c89bd0002505612529a"
+    },
+    "gt": {
+      "bytes": 117980732,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"
+    },
+    "tokens": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/retained/fields/subset6.u8",
+      "sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
+    }
+  },
+  "n": 600,
+  "predicted_class_in_gt_3x3": 12141,
+  "public_join_receipt": {
+    "bytes": 4988,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rlc5_20260910/PUBLIC_RESULT.json",
+    "sha256": "1138086c76acc64dd24a85354c3c98c8f0018a769ff0044752bde5d933292c3b"
+  },
+  "row_max": 296,
+  "row_min": 154,
+  "score_claim": false,
+  "token_correct": 10204,
+  "token_correct_fraction": 0.8366677599212856,
+  "within_one_pixel_of_token_edge": 12110
+}

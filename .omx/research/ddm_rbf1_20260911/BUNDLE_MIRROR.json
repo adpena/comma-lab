@@ -1,0 +1,36 @@
+{
+  "rows": [
+    {
+      "source": "/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/intended-commit.bundle",
+      "mirror": "/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/residual_bundle_mirror/intended-commit.bundle",
+      "bytes": 5097,
+      "sha256": "d3a68f7d1f6c454a566867746dad1d3f1f79cda9cf6fcc54bb63b345ea6a5d87",
+      "mirror_sha256": "d3a68f7d1f6c454a566867746dad1d3f1f79cda9cf6fcc54bb63b345ea6a5d87",
+      "action": "COPY; source retained"
+    },
+    {
+      "source": "/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/intended-commit.format-patch",
+      "mirror": "/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/residual_bundle_mirror/intended-commit.format-patch",
+      "bytes": 11059,
+      "sha256": "45a77a18fc453d144484face1cb03699f62de07eb00b5adcb4fdd03d17c7458d",
+      "mirror_sha256": "45a77a18fc453d144484face1cb03699f62de07eb00b5adcb4fdd03d17c7458d",
+      "action": "COPY; source retained"
+    },
+    {
+      "source": "/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/intended-tree.patch",
+      "mirror": "/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/residual_bundle_mirror/intended-tree.patch",
+      "bytes": 10293,
+      "sha256": "d24f1ecd09582382e28cea36e29a15ad0186869c6189bbb59cb4fbadacd218e3",
+      "mirror_sha256": "d24f1ecd09582382e28cea36e29a15ad0186869c6189bbb59cb4fbadacd218e3",
+      "action": "COPY; source retained"
+    },
+    {
+      "source": "/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/receipts.jsonl",
+      "mirror": "/Volumes/VertigoDataTier/pact/ddm_rbf1/receipts/residual_bundle_mirror/receipts.jsonl",
+      "bytes": 3418,
+      "sha256": "12c7056e4f8b9856ec8c2749abcf1a046eb089d244e3edbf7c1c46ae2b515f44",
+      "mirror_sha256": "12c7056e4f8b9856ec8c2749abcf1a046eb089d244e3edbf7c1c46ae2b515f44",
+      "action": "COPY; source retained"
+    }
+  ]
+}

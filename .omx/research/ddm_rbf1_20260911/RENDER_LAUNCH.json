@@ -1,0 +1,33 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/launch_detached_process.py",
+    "--output-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_rbf1/render_launch",
+    "--purpose",
+    "ddm_rbf1 scorer-free n600 render-seam falsifier; all five renders retained",
+    "--authority",
+    "ddm_rbf1 charter; render only; scorer slot pending",
+    "--artifact-budget-gib",
+    "22",
+    "--derive-resource-budgets",
+    "--measured-peak-rss-gib",
+    "1.4773712158203125",
+    "--measured-thread-need",
+    "4",
+    "--walltime-cap-s",
+    "14400",
+    "--done-receipt",
+    "ddm_rbf1_render",
+    "--nice-best-effort",
+    "--",
+    ".venv/bin/python",
+    "experiments/ddm_rbf1_boundary_probe.py",
+    "render",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained"
+  ],
+  "returncode": 0,
+  "stdout": "{\"fresh_roots\": [], \"launch_id\": {\"manifest_path\": \"/Volumes/VertigoDataTier/pact/ddm_rbf1/render_launch/launch_manifest.json\", \"monotonic_launch_counter\": 1495, \"pid\": 79182}, \"log_path\": \"/Volumes/VertigoDataTier/pact/ddm_rbf1/render_launch/run.log\", \"manifest_path\": \"/Volumes/VertigoDataTier/pact/ddm_rbf1/render_launch/launch_manifest.json\", \"output_dir\": \"/Volumes/VertigoDataTier/pact/ddm_rbf1/render_launch\", \"pid\": 79182, \"schema\": \"detached_local_process_launch.v2\", \"watchers\": []}\n",
+  "stderr": ""
+}

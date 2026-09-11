@@ -1,0 +1,18 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/subagent_commit_serializer.py",
+    "--message",
+    "rbf1: reproduce cached shipped residual and stage generic receiver hooks [no-triality] [p0-ledger-ok] checkpoint ddm_rbf1 step 2",
+    "--files",
+    "experiments/ddm_rbf1_cached_residual.py",
+    "experiments/ddm_rbf1_stage_receivers.sh",
+    "--expected-content-sha256",
+    "experiments/ddm_rbf1_cached_residual.py=1bcae8dc51c38844fbef1333cdaf98cfc8cd9af1c6cb8f8817342d2c25b51055",
+    "--expected-content-sha256",
+    "experiments/ddm_rbf1_stage_receivers.sh=ba7277ce24af176fad66ed59f1567b7793e3c4708032bb3fd010977eba2ea1c5"
+  ],
+  "returncode": 17,
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/intended-commit.bundle format_patch=/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/intended-commit.format-patch receipt=/Volumes/VertigoDataTier/pact/anonymous/receipts/commit_serializer_fallbacks/20260911T130156.425899Z-88935/receipts.jsonl fallback_commit=7d3389cb57140fb3599b10615c406d31becefee6\n",
+  "stderr": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: experiments/ddm_rbf1_cached_residual.py: failed to insert into database\nerror: unable to index file 'experiments/ddm_rbf1_cached_residual.py'\nfatal: adding files failed\n"
+}

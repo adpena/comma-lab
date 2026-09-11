@@ -1,0 +1,97 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "both_frames_rescue_test": {
+    "method": "4 seeded-random pairs (seed 3), tau=8 guided, band-local. Variant f1_only treats frame_1; variant both_frames treats frame_0 and frame_1 identically.",
+    "question": "Is the pose tax an artefact of treating only frame_1, creating spurious apparent motion? If so, treating frame_0 with the same operator and the same token plane should cure it.",
+    "result": {
+      "baseline_d_pose": 1.0879e-06,
+      "both_frames_d_pose": 0.00066899,
+      "both_frames_delta_S_pose": 0.49292,
+      "f1_only_d_pose": 0.00067723,
+      "f1_only_delta_S_pose": 0.499004,
+      "seg_errors": {
+        "baseline": 70,
+        "both_frames": 98,
+        "f1_only": 98
+      }
+    },
+    "verdict": "FALSIFIED as a rescue. Symmetric treatment recovers 1.2% of the pose tax. The tax is OUT-OF-DISTRIBUTION, not asymmetry: the move-44 render sits at a pose optimum (d_pose 4.59e-06 at n600), so any deviation from the exact rendered bytes is a large RELATIVE pose error whichever frames carry it."
+  },
+  "direction_control": {
+    "reading": "the operator's direction carries REAL information from the token plane -- reversing it makes seg 1.8x worse and its harm/benefit ratio 3.5x worse. But pose is direction-blind (3.36e-04 vs 4.85e-04), so the directional signal cannot be cashed.",
+    "tau_minus_8": {
+      "benefit": 2,
+      "d_pose": 0.00033578,
+      "delta_S_seg": 0.005595,
+      "harm": 24,
+      "harm_over_benefit": 12.0
+    },
+    "tau_plus_8": {
+      "benefit": 5,
+      "d_pose": 0.00048526,
+      "delta_S_seg": 0.003052,
+      "harm": 17,
+      "harm_over_benefit": 3.4
+    }
+  },
+  "quadratic_pose_tax": {
+    "consequence": "even tau = 1, a single quantisation level on the token-edge band, costs 5.4e-03 S of pose = 270 bars, while measuring ZERO seg benefit (B=0 at tau=1). There is no amplitude at which the family pays; the infimum of delta_S over tau is 0, reached only by not treating.",
+    "d_pose_by_tau": {
+      "1": 7.5878e-06,
+      "2": 2.9235e-05,
+      "255": 0.015299,
+      "4": 0.0001219,
+      "8": 0.00048526,
+      "baseline": 3.2693e-07
+    },
+    "in_S": "delta_S_pose = (5/sqrt(10*4.59e-06)) * k * tau^2 = 5.6e-03 * tau^2",
+    "law": "d_pose(tau) - d_pose(0) = k * tau^2 with k = 7.6e-06 per unit tau^2 on this support (~20,000 treated camera pixels per frame)",
+    "ratio_per_doubling": [
+      3.85,
+      4.17,
+      3.98
+    ],
+    "source": "amplitude receipt, guided source, seed 1, first 2 pairs"
+  },
+  "schema": "ddm_rbf1_pose_tax.v1",
+  "scope": "SEEDED RANDOM SUBSETS -- SCOPE reduction, no n600 verdict; the n600 verdict is retained/RESULT.json",
+  "score_claim": false,
+  "support_scaling_test": {
+    "baseline_d_pose": 9.8193e-07,
+    "baseline_seg_errors": 78,
+    "combined_law": "delta_S_pose ~= 0.0024 * f^1.16 * tau^2 S, where f is the percent of frame_1's pixels edited and tau the per-channel amplitude bound in RGB levels. Checked against the amplitude series: f=2.2, tau=1 gives 0.0060 S against the measured 0.0054 S.",
+    "consequence_for_successors": "A REGIONAL operator acting at SegNet's receptive-field scale -- which probe 4 says is where the error actually lives -- has LARGER support than a boundary operator and therefore pays MORE pose tax, not less. The two channels are in direct opposition on this vehicle: the scale at which the seg error is addressable is the scale at which the pose tax is largest.",
+    "method": "4 seeded-random pairs (seed 5), guided at tau=8, applying the clamped delta to a uniformly random fraction of the band's changed pixels.",
+    "question": "Does the pose tax scale with the SUPPORT of the edit as well as with its amplitude? This prices any future free receiver-side pixel edit, not just this family.",
+    "reading": "Over a 16x range of support the tax rises 24.8x, an exponent of 1.16: roughly LINEAR in the number of edited pixels, slightly super-linear. Per-halving ratios are noisy at 4 pairs (1.29, 5.51, 3.49), so the exponent is the transferable quantity, not any single step. Seg errors also rise monotonically with support (78 base -> 85, 100, 102, 113): there is no support at which the seg channel turns beneficial either.",
+    "rows": [
+      {
+        "d_pose_minus_base": 0.00053829,
+        "fraction": 1.0,
+        "mean_pixels": 22823,
+        "seg_errors": 113
+      },
+      {
+        "d_pose_minus_base": 0.00041816,
+        "fraction": 0.5,
+        "mean_pixels": 11411,
+        "seg_errors": 102
+      },
+      {
+        "d_pose_minus_base": 7.5871e-05,
+        "fraction": 0.25,
+        "mean_pixels": 5705,
+        "seg_errors": 100
+      },
+      {
+        "d_pose_minus_base": 2.1737e-05,
+        "fraction": 0.0625,
+        "mean_pixels": 1426,
+        "seg_errors": 85
+      }
+    ],
+    "scope": "SEEDED RANDOM SUBSET of 4 pairs -- SCOPE reduction, no verdict"
+  },
+  "transferable_law": "On the move-44 vehicle the shipped render is a POSE OPTIMUM. A free post-render edit of the token-edge band pays a quadratic, direction-blind, symmetry-proof pose tax of about 5.6e-03 * tau^2 S. Any future free receiver-side pixel edit must price this tax BEFORE pricing its seg benefit; at this operating point the pose channel is roughly 100x the seg channel for the same intervention.",
+  "written_utc": "2026-09-11T14:30:00Z"
+}

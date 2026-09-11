@@ -1,0 +1,9 @@
+{
+  "axis": "derived arithmetic on cached n600 CPU residual; no new score",
+  "score_claim": false,
+  "S_per_repaired_cell_at_held_pose_and_bytes": 8.477105034722222e-07,
+  "repairs_required_to_strictly_clear_2e_minus5": 24,
+  "quarter_correct_token_errors": 2551.0,
+  "conditional_delta_S_quarter_correct_token_repairs": -0.002162509494357639,
+  "gate": "actual joint fresh n600 d_seg and d_pose; cached arithmetic does not admit any treatment"
+}
