@@ -1,0 +1,32 @@
+{
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "executions": [
+    {
+      "bytes": 1600,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/ENCODER_EXECUTION_0.json",
+      "sha256": "4228987e2e1ea50a092285377cd9028410438417ae63664dcc1130851947b541"
+    },
+    {
+      "bytes": 1600,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/ENCODER_EXECUTION_1.json",
+      "sha256": "50eee069eaabf74cdec784a5c8b104a565d3c403a8f0b6353ad0085a194c4b42"
+    }
+  ],
+  "n_samples": 600,
+  "payloads": [
+    {
+      "bytes": 179011,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin0.bin",
+      "sha256": "6cb6cb5693c99cb5051d0c9ca5d2d9f0e6595fb7967a3d4e47905c9897bed4a9"
+    },
+    {
+      "bytes": 179011,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin1.bin",
+      "sha256": "6cb6cb5693c99cb5051d0c9ca5d2d9f0e6595fb7967a3d4e47905c9897bed4a9"
+    }
+  ],
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false,
+  "twin_identity": true
+}

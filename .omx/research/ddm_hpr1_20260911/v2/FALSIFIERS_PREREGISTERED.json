@@ -1,0 +1,14 @@
+{
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "falsifiers": [
+    "Cold literal inflate.sh output must carry all 600 pairs with the token cache DISABLED and no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 45's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc; one differing byte refuses the row, because the entire distortion claim is that a change to the arithmetic coder's PRIOR cannot move a decoded symbol.",
+    "The candidate tree must differ from move 45's promoted tree in EXACTLY {archive.zip, inflate.py, MANIFEST.sha256}; any fourth file refuses the row, because a fourth file would make this a receiver change and forfeit the normal seal path it claims.",
+    "Both independent 600-frame assemblies must produce the identical archive sha256 d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9 at 179,359 B; a disagreement refuses the row.",
+    "The archive must be 179,359 B exactly. The rate claim is the byte count and nothing else; a different size is a different candidate.",
+    "No scorer may run for this row. If the raw is byte-identical the distortion is unchanged by identity, and if it is not, the row is already refused."
+  ],
+  "pre_registered_at_utc": "2026-09-11T21:54:00.978124+00:00",
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false
+}

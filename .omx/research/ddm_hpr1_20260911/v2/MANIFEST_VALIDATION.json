@@ -1,0 +1,21 @@
+{
+  "all_hashes_passed": true,
+  "all_runtime_dependencies_listed": true,
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "manifest": {
+    "bytes": 10163,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/CANDIDATE_MANIFEST.json",
+    "sha256": "5c905926a60fd16e11edc7c717820cf558a065c3b8b5fd326c42275aa50775a8"
+  },
+  "mismatched_rows": [],
+  "receiver_manifest_listing": {
+    "bytes": 4570,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/MANIFEST.sha256",
+    "sha256": "afa4ef8019064693d80d505e6d6db78914f9c97291764ee78c07ad0f87509613"
+  },
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "rehash_failures": [],
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false,
+  "verification_method": "every MANIFEST.sha256 row re-hashed against the shipped file; the manifest excludes itself and archive.zip, the rule ntb2 falsified against move 44's shipped manifest and this arm reused rather than re-derived"
+}

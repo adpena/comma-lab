@@ -1,0 +1,39 @@
+{
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "price_receipt": {
+    "bytes": 17930,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/PRICE.json",
+    "sha256": "e750c15a204ebd24b14e1dc0310ad24205b8ad3785c18155dda3ed448d5b07fa"
+  },
+  "public_proof": {
+    "bytes": 3225,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/RESULT.json",
+    "sha256": "bf2f3086257749260020e8b7a00aeb05ff21cdbfc3741f8e7c3328aa3ba79692"
+  },
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "retention_receipt": {
+    "bytes": 7114,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/RETENTION.json",
+    "sha256": "db1194f20ab2a6e05fca90068e11e13486558fe51ab616110bd840375f3eba65"
+  },
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false,
+  "statement": "every payload this candidate rests on is retained with bytes and sha256 on the Vertigo tier; nothing was measured and discarded",
+  "terminal_checkpoint": {
+    "bytes": 1051255,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/train/dil1/qat.checkpoints/qat_stage_end_epoch_0060.pt",
+    "sha256": "80edbe6e650ce28a3f81b08274d25b36751b32e771a7aca100db8a296af17068"
+  },
+  "twin_payloads": [
+    {
+      "bytes": 179111,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/archive.twin0.zip",
+      "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+    },
+    {
+      "bytes": 179111,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/archive.twin1.zip",
+      "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+    }
+  ]
+}

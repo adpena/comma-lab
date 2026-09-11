@@ -1,0 +1,40 @@
+{
+  "actual_public_result": {
+    "bytes": 3225,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/RESULT.json",
+    "sha256": "bf2f3086257749260020e8b7a00aeb05ff21cdbfc3741f8e7c3328aa3ba79692"
+  },
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "bytes_compared": 3662409600,
+  "candidate_public_stdout": {
+    "bytes": 5827,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/attempts/attempt_0000/run.log",
+    "sha256": "33ccf00a9b05665aaeb99e982d13c2ea1bdaf6ff10304e58285e554eb6b14a2a"
+  },
+  "candidate_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "checkpoint_resume": false,
+  "command": [
+    "bash",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/inflate.sh",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/data",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/output",
+    "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/file_list.txt"
+  ],
+  "entrypoint": "inflate.sh",
+  "n_samples": 600,
+  "pair_count": 600,
+  "pointer_archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+  "pointer_raw": {
+    "bytes": 3662409600,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw",
+    "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+  },
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false,
+  "token_cache_status": "DISABLED"
+}

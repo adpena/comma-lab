@@ -1,0 +1,21 @@
+{
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "bytes_to_s": 6.658589531221714e-07,
+  "candidate": {
+    "archive_bytes": 179111,
+    "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+  },
+  "distortion_argument": "rate-only: the candidate's cold decode is byte-identical to the pointer's own retained raw, so d_seg and d_pose do not move and the whole delta is the archive byte count",
+  "distortion_delta": 0.0,
+  "net_bytes": -248,
+  "net_delta_s": -0.0001651330203742985,
+  "pointer": {
+    "archive_bytes": 179359,
+    "archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+    "score": 0.13654774984742127
+  },
+  "projected_score": 0.13638261682704697,
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false
+}

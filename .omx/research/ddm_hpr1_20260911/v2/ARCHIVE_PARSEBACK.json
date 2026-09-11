@@ -1,0 +1,17 @@
+{
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "member": {
+    "bytes": 179011,
+    "name": "p",
+    "sha256": "6cb6cb5693c99cb5051d0c9ca5d2d9f0e6595fb7967a3d4e47905c9897bed4a9"
+  },
+  "parse_method": "runtime.residual_archive.read_residual_archive on the shipped archive",
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "runtime_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 179359,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/archive.zip",
+    "sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9"
+  }
+}

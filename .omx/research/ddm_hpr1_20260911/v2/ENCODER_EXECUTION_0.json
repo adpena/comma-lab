@@ -1,0 +1,33 @@
+{
+  "archive_bytes": 179111,
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "experiments/ddm_hpr1_shape_price.py",
+    "--treatment",
+    "retrain"
+  ],
+  "completed": true,
+  "consumed_hpac_section": {
+    "bytes": 11629,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/hpac.twin0.br",
+    "sha256": "925adb48dca8a77e74b0f988164a377d7f6945d3e78b97c4abec10c96bdc28b2"
+  },
+  "consumed_tail_rider": {
+    "bytes": 118960,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/tail.twin0.rider",
+    "sha256": "3e05ec2d04b6fdc08eab6ba3d77ee6bc325ec13f301460eeb37966187b32c527"
+  },
+  "execution_id": "ddm_hpr1_retrain_control_hpac_prior_assembly_0",
+  "execution_scope": "one full assembly of move 45's members with THIS twin's own retained HPAC section (hpac.twin0.br) and its own re-encoded tail rider (tail.twin0.rider), both produced by this twin's arithmetic encoder inside one 600-frame run of the shipping receiver loop, never copied from the other twin",
+  "finished_at_utc": "2026-09-11T21:54:00.937804+00:00",
+  "n_samples": 600,
+  "payload": {
+    "bytes": 179011,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin0.bin",
+    "sha256": "6cb6cb5693c99cb5051d0c9ca5d2d9f0e6595fb7967a3d4e47905c9897bed4a9"
+  },
+  "producer_source_commit": "c8ad0569f9e17a2b5570ce9799d218fb38377686",
+  "score_claim": false,
+  "started_at_utc": "2026-09-11T21:54:00.937627+00:00"
+}

@@ -1,0 +1,70 @@
+{
+  "inflate_sh_smokes": {
+    "candidate": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+      "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+      "exception_class": "RuntimeError",
+      "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+      "outcome": "REACHED_CUDA_GATE",
+      "returncode": 1,
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+      "seconds": 3.2070999145507812,
+      "stderr_tail": [
+        "    ~~~~^^",
+        "  File \"/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/inflate.py\", line 58, in main",
+        "    raise RuntimeError(",
+        "    ...<2 lines>...",
+        "    )",
+        "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+      ],
+      "tree_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8"
+    },
+    "frontier": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/archive.zip",
+      "archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+      "exception_class": "RuntimeError",
+      "exception_message": "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget",
+      "outcome": "REACHED_CUDA_GATE",
+      "returncode": 1,
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime",
+      "seconds": 2.7954788208007812,
+      "stderr_tail": [
+        "    ~~~~^^",
+        "  File \"/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/inflate.py\", line 58, in main",
+        "    raise RuntimeError(",
+        "    ...<2 lines>...",
+        "    )",
+        "RuntimeError: semantic_joint_ctxmix requires CUDA inflation on linux-nvidia-t4; the measured CPU path exceeded the 1,800-second contest budget"
+      ],
+      "tree_sha256": "90e0bdcbf6ba87a736112051ea90ba153f71b5f1b446bb5bb5d007424b5a1cd6"
+    }
+  },
+  "public_path_probe_seconds": 180.0,
+  "public_path_probes": {
+    "candidate": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+      "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+      "exception_class": null,
+      "exception_message": "",
+      "note": "cut at the probe bound inside the token decode",
+      "outcome": "REACHED_TOKEN_DECODE",
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+      "seconds": 144.03473210334778,
+      "stderr_tail": [],
+      "tree_sha256": "d7715d4470af440ae9fa9a90772c84d5421b5819537a5b90e828ac9a80e15aa8"
+    },
+    "frontier": {
+      "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/archive.zip",
+      "archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
+      "exception_class": null,
+      "exception_message": "",
+      "note": "cut at the probe bound inside the token decode",
+      "outcome": "REACHED_TOKEN_DECODE",
+      "runtime_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime",
+      "seconds": 144.02711606025696,
+      "stderr_tail": [],
+      "tree_sha256": "90e0bdcbf6ba87a736112051ea90ba153f71b5f1b446bb5bb5d007424b5a1cd6"
+    }
+  },
+  "schema": "candidate_public_entrypoint_smoke.v1"
+}
