@@ -106,6 +106,20 @@ correction reaches, and beneath that sits a 5.77× floor that survives a perfect
   this: both were queued behind A and neither was measured.
 * **The `se(3)` pose hypothesis.** Its falsifier is built and running; nothing here bears on it.
 
+## A constraint the successor inherits, measured here
+
+Two rungs land at essentially the same scorer-plane RMSE and settle a design question with no fit
+between the claim and the rows: `grid_384x512` (smooth resampling error, RMSE 4.544) measures
+`d_pose` 0.011817, while `sp384_render_noise_8` (independent per-pixel noise, RMSE **4.340** — 4.5 %
+LOWER) measures 0.111126. **Independent noise does 9.40× the Pose damage at matched magnitude.**
+
+For any successor generator this is a constraint, not a curiosity: **its render error must be
+SMOOTH.** High-frequency error costs nearly an order of magnitude more Pose per unit of RMSE than
+smooth error of the same size, so a representation whose residual is noisy pays a penalty a
+representation whose residual is a smooth resampling artefact does not. It argues against
+high-frequency corrective machinery in the render path and for low-order, smooth representations —
+and it is measured on this vehicle's own scorer, not imported.
+
 ## Reactivation criteria
 
 Design A reactivates on a generator whose render floor and partition error both clear the arithmetic
@@ -120,7 +134,9 @@ above. Concretely, all three:
    `experiments/ddm_obx2_trainer.py::decompose_seg_error`. This object's is 0.00231. The floor is a
    property of the generator's render, measurable before any lattice is trained, and md4's advice
    applies: *"the free step-0 probe predicts unreachability at 9 in 10 — use it before burning."*
-3. **A lattice budget that survives training.** 15,840 codes at 8 bits coded to 16,133 B once trained
+3. **A smooth error spectrum**, by the constraint above: 9.40× at matched RMSE is too large a
+   penalty to pay on a term already 5.77× over its ceiling.
+4. **A lattice budget that survives training.** 15,840 codes at 8 bits coded to 16,133 B once trained
    (98-99 % nonzero); a successor needs either fewer codes, fewer bits, or an entropy model that
    holds under training, measured by a real coder race and not projected.
 
