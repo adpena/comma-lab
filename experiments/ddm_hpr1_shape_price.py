@@ -80,9 +80,13 @@ TREATMENTS = (
     # Composition rows: ntb2's even-rounding of the frame embedding, re-applied ON TOP of
     # the retrained prior that move 47 ships. Base = move 47, not move 45.
     "retrain_frame_even", "retrain_frame_quad",
+    # The move-47 CONTROL: the shipped retrained prior, re-encoded unchanged. Its falsifier
+    # is that it must reproduce move 47's archive byte-identically, which is what makes the
+    # q values collected alongside it the SHIPPED mixer's own opinion and not an artefact.
+    "control47",
 )
 #: Treatments whose base is the move-47 promoted tree rather than move 45's.
-ON_MOVE47 = ("retrain_frame_even", "retrain_frame_quad")
+ON_MOVE47 = ("retrain_frame_even", "retrain_frame_quad", "control47")
 #: The rounding step each composition row applies to `frame_embed.weight`.
 FRAME_STEP = {"retrain_frame_even": 2, "retrain_frame_quad": 4}
 
@@ -136,7 +140,7 @@ def build_geometry(runtime: Path, work: Path) -> dict:
 #: before any shape rung is proposed as the candidate.
 TREATMENT_PAST_DILATION = {
     "control": 1, "retrain": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1,
-    "retrain_frame_even": 1, "retrain_frame_quad": 1,
+    "retrain_frame_even": 1, "retrain_frame_quad": 1, "control47": 1,
 }
 #: conv_a's spacing.  The receiver reaches conv_a's taps through geometry-general code in
 #: BOTH the optimized torch path (``hpac_inference._conv_a_features`` builds its gather
@@ -185,7 +189,7 @@ def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path |
     checkpoint through the landed IHS1 packer -- the same call cl2's ladder used -- so
     no serialization is re-implemented here either.
     """
-    if tag == "control":
+    if tag in ("control", "control47"):
         return shipped_body
     if tag in ON_MOVE47:
         # ntb2's frame_even, re-applied on top of whatever prior the base archive ships.
@@ -394,7 +398,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
     body = treatment_body(tag, shipped_body, work, checkpoint, renderer)
     layout_held = assert_layout_held(body, shipped_body, counts)
     retain(work / "retained/hpac.ihs1", body)
-    if (body == shipped_body) != (tag == "control"):
+    if (body == shipped_body) != (tag in ("control", "control47")):
         raise PriceError("treatment is a no-op, or the control body changed")
     if renderer.load_hpac(body, torch.device("cpu")) is None:
         raise PriceError("real integer model failed to load")
@@ -420,7 +424,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
         containers.append(encoded)
     if containers[0] != containers[1]:
         raise PriceError("HPAC twin encode differs")
-    if tag == "control" and containers[0] != member["hpac"]:
+    if tag in ("control", "control47") and containers[0] != member["hpac"]:
         raise PriceError("HPAC_CONTAINER_CONTROL_FAILED")
     binding = record(
         work / "INPUTS.json",
@@ -456,7 +460,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
     return work, runtime, rx, renderer, code_dir, altered, member, binding
 
 
-def encode(tag: str, checkpoint: Path | None = None) -> dict:
+def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) -> dict:
     """Run the shipping RLC1 causal loop with known-symbol twin arithmetic encoders."""
     import torch
 
@@ -507,11 +511,22 @@ def encode(tag: str, checkpoint: Path | None = None) -> dict:
         observed["positions"] = positions.copy()
         return original_coding(self, rows, positions, plane, previous)
 
+    # The coder's scalar q, as the mixer actually emitted it: the probability the coded
+    # row assigned to the symbol that was coded. Collected from the SAME hook the encoder
+    # is fed from, so it is the shipped mixer's own opinion on the shipped prior and not a
+    # re-derivation of one.
+    q_probability: list[np.ndarray] = []
+    q_frame: list[np.ndarray] = []
+
     def known_symbols(self, probabilities):
         positions = observed["positions"]
         if positions is None or len(positions) != len(probabilities):
             raise PriceError("known-symbol decode call lacks its group")
         symbols = field[observed["frame"]].reshape(-1)[positions].astype(np.int32)
+        if collect_q:
+            rows = np.asarray(probabilities)
+            q_probability.append(rows[np.arange(len(symbols)), symbols].astype(np.float32))
+            q_frame.append(np.full(len(symbols), observed["frame"], dtype=np.int16))
         for encoder in twins:
             encoder.encode(symbols, probabilities)
         observed["positions"] = None
@@ -546,6 +561,26 @@ def encode(tag: str, checkpoint: Path | None = None) -> dict:
     if observed["frame"] != 600 or field_sha != FIELD_SHA:
         raise PriceError("known-symbol loop did not process the full field")
     retain(work / "retained/encoded_field.u8", tokens.numpy().tobytes())
+    if collect_q:
+        landed.ROOT = ROOT
+        payload = landed.save(
+            work / "retained/coded_row_q.npz",
+            {"q": np.concatenate(q_probability), "frame": np.concatenate(q_frame)},
+        )
+        record(
+            work / "Q_COLLECTION.json",
+            {
+                "payload": payload,
+                "symbols": int(sum(len(a) for a in q_probability)),
+                "definition": (
+                    "per coded symbol, the probability the shipped mixer's coded row assigned to the "
+                    "symbol that was actually coded, read off the same hook the arithmetic encoder is "
+                    "fed from; and the frame it belongs to, for the two-fold held-out split"
+                ),
+                "prior": "the treatment's own HPAC prior",
+                "score_claim": False,
+            },
+        )
     archives = []
     for index, encoder in enumerate(twins):
         envelope = encoder.finish()
@@ -578,7 +613,7 @@ def encode(tag: str, checkpoint: Path | None = None) -> dict:
         archives.append(fact(archive))
     if archives[0]["sha256"] != archives[1]["sha256"]:
         raise PriceError("tail/archive twins differ")
-    if tag == "control" and archives[0]["sha256"] != binding["base_archive_expected"]["sha256"]:
+    if tag in ("control", "control47") and archives[0]["sha256"] != binding["base_archive_expected"]["sha256"]:
         raise PriceError("LIVE_LOOP_CONTROL_FAILED: no treatment prices are admissible")
     return record(
         work / "PRICE.json",
@@ -606,19 +641,21 @@ def main() -> int:
     parser.add_argument("--resume-from", type=Path, required=True)
     parser.add_argument("--store-root", choices=tuple(STORE_ROOTS), default="vertigo")
     parser.add_argument("--checkpoint", type=Path, help="terminal EMA QAT checkpoint for a shape rung")
+    parser.add_argument("--collect-q", action="store_true",
+                        help="also retain the coded-row probability of each coded symbol, for the q rung")
     args = parser.parse_args()
     global ROOT
     ROOT = STORE_ROOTS[args.store_root]
     if args.resume_from.resolve() != (ROOT / args.treatment).resolve():
         raise PriceError("wrong resume root")
-    if args.treatment != "control":
+    if args.treatment not in ("control", "control47"):
         control_price = ROOT / "control/PRICE.json"
         if not control_price.exists():
             control_price = LEGACY_ROOT / "control/PRICE.json"
         proof = json.loads(control_price.read_text())
         if proof["twins"][0]["sha256"] != POINTER45_SHA:
             raise PriceError("live-loop control required before any treatment price")
-    print(json.dumps(encode(args.treatment, args.checkpoint)), flush=True)
+    print(json.dumps(encode(args.treatment, args.checkpoint, args.collect_q)), flush=True)
     return 0
 
 
