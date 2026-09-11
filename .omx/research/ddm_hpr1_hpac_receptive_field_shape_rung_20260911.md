@@ -228,6 +228,44 @@ would project a stream near 118,650 B and a joint near −738 B — **a DERIVED 
 The ratio is a property of the corrector/mixer stack's interaction with a particular prior's errors
 and there is no reason it transfers; the 600-frame encode now running is the only number that counts.
 
+### 4c. R1's EXACT PRICE — MEASURED, and the pre-registered sign is CONFIRMED
+
+`price/past_dil2/PRICE.json`, 600 frames, real coder, real receiver loop, twins agreeing:
+
+| leg | R1 (`past_dil2`) | move 45 | Δ |
+|---|---:|---:|---:|
+| `hpac` member | 12,274 B | 11,911 B | **Δmodel = +363 B** |
+| RLC1 token stream | 119,311 B | 119,749 B | **Δtail = −438 B** |
+| **archive** | **180,171 B** | 180,246 B | **ΔB = −75 B** |
+| archive sha256 | `581c636c365c0a5ad09b3d756285e0b7bfd856ef75d9eaf931105934fcd86ecb` | — | — |
+| decoded field | equals the shipped field sha | — | **output-lossless** |
+
+**Secant Δtail/Δmodel = −1.2066**, against cl2's **+0.446** for capacity and the **−1** break-even.
+**The receptive field's SHAPE repays itself where its SIZE does not** — the first rung on this object
+to cross cl1's break-even, and the pre-registered sign from the window atlas is confirmed by the real
+coder. ΔS = −75 × 6.658589531221714e-7 = **−4.9939e-5**; projected S **0.13708842731735646**.
+Decode-time cost +0.389 s, 1.41 % of the strict slack. Receiver change: YES (three edits, §1.3), so
+the first-measurement chain, never a normal seal.
+
+**Two honesty notes on the margin.** (i) −75 B is only ~2.2× the 34.8 B standard deviation the
+container-break lottery carries, so the WIN is real and reproducible for these exact bytes but its
+margin over zero is not comfortable; the −438 B tail leg is the robust half, the +363 B model leg is
+the noisy half. (ii) The fire rule (net ΔS < −2e-5) is met by 2.5×, but firing R1 would be premature
+until §4d resolves, because a cheaper candidate may be hiding inside the same experiment.
+
+### 4d. The attribution that must land before anything fires
+
+The CONTROL — shipped geometry, same init, same 60-epoch law — is running, and its early telemetry
+says the question is live: at **epoch 8** it already estimates **122,707 B** of tokens, BELOW R1's
+epoch-60 terminal of 122,900, with 52 epochs left to improve. If the control's exact archive also
+beats 180,246 B, then part or all of R1's −75 B belongs to **retraining the prior on the CURRENT
+field** — which the shipped prior has never had, since its weights descend from cl2's move-26 fit and
+the field moved at move 32 (sj1's token pre-distortion) [DERIVED from the store, not measured here].
+
+That would matter more than R1 itself: **a pure retrain is NOT a receiver change**, so it takes the
+normal seal path with no first-measurement chain and no three-file patch. A successor must price the
+control before treating R1 as the candidate.
+
 ## 5. What is owed
 
 R1's Δtail and exact archive bytes (encode running: 600 frames, real coder, real receiver loop), the
