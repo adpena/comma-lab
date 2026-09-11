@@ -888,14 +888,21 @@ def run_training(
         receiver="torch",
         archive_bytes=archive,
     )
-    cross_check = score_parsed_object(
-        packet,
-        pair_ids=list(range(min(cross_check_pairs, N))),
-        gt=gt,
-        pose_target=pose_target,
-        workers=workers,
-        receiver="numpy",
-        archive_bytes=archive,
+    cross_pairs = list(range(min(cross_check_pairs, N)))
+    cross_check = {
+        "pairs": len(cross_pairs),
+        "numpy": score_parsed_object(
+            packet, pair_ids=cross_pairs, gt=gt, pose_target=pose_target,
+            workers=workers, receiver="numpy", archive_bytes=archive,
+        ),
+        "torch_same_pairs": score_parsed_object(
+            packet, pair_ids=cross_pairs, gt=gt, pose_target=pose_target,
+            workers=workers, receiver="torch", archive_bytes=archive,
+        ),
+        "note": "both receivers on the same pairs; a PREFIX, so not a population row",
+    }
+    cross_check["distortion_delta_numpy_minus_torch"] = (
+        cross_check["numpy"]["distortion"] - cross_check["torch_same_pairs"]["distortion"]
     )
     receipt = {
         "schema": "ddm_obx2_training_stage.v1",
@@ -1021,14 +1028,26 @@ def score_checkpoint(
     )
     cross_check = None
     if cross_check_pairs > 0:
-        cross_check = score_parsed_object(
-            packet,
-            pair_ids=list(range(min(cross_check_pairs, N))),
-            gt=gt,
-            pose_target=pose_target,
-            workers=workers,
-            receiver="numpy",
-            archive_bytes=archive,
+        # Compare the two receivers on the SAME pairs.  A NumPy prefix read against
+        # a 600-pair torch row measures prefix bias, not receiver disagreement.
+        cross_pairs = list(range(min(cross_check_pairs, N)))
+        cross_check = {
+            "pairs": len(cross_pairs),
+            "numpy": score_parsed_object(
+                packet, pair_ids=cross_pairs, gt=gt, pose_target=pose_target,
+                workers=workers, receiver="numpy", archive_bytes=archive,
+            ),
+            "torch_same_pairs": score_parsed_object(
+                packet, pair_ids=cross_pairs, gt=gt, pose_target=pose_target,
+                workers=workers, receiver="torch", archive_bytes=archive,
+            ),
+        }
+        cross_check["distortion_delta_numpy_minus_torch"] = (
+            cross_check["numpy"]["distortion"] - cross_check["torch_same_pairs"]["distortion"]
+        )
+        cross_check["note"] = (
+            "both receivers on the same pairs; this is receiver disagreement, and it is a PREFIX "
+            "so it is not a population row"
         )
     receipt = {
         "schema": "ddm_obx2_checkpoint_score.v1",
