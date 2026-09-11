@@ -195,3 +195,19 @@ streaming both immediately before reclaim. Certificate:
 producing command, the surviving identical copy, and why the CLAIM those bytes support is preserved
 (RESULT.json, the committed seal's RAW_IDENTITY receipt, and the landed move-47 pointer row). **The
 composition row's raw is NOT reclaimed**: its row is unsealed and its bytes are live evidence.
+
+A SECOND reclaim followed after move 48 fired, on MAIN's housekeeping unit and to the same rule:
+`diagnostics/pair_base/output/0.raw`, the BASE leg of my matched concurrent pair, 3,662,409,600 B.
+All three copies were streamed end to end immediately before the delete and all three agreed at
+`2b762eba…`, so the reclaim left **two** survivors, not one — and one of them,
+`public/retrain_frame_even/output/0.raw`, is inside this arm's own tree rather than depending on
+another arm's retention. Both survivors were re-checked for presence and size at the moment of the
+delete: a survivor that vanished between the hash and the unlink would silently turn a duplicate
+into the last copy. Certificate:
+`/Volumes/VertigoDataTier/pact/ddm_hpr1/CERTIFIED_RECLAIM_diagnostics_pair_base.json` (a NEW file;
+the first certificate is not overwritten). The claim those bytes carried — a cold 600-pair decode of
+the move-47 tree in 1,376.139 s — survives in `diagnostics/pair_base/LOCAL_DIAGNOSTIC.json`, which
+independently pins the raw's bytes and sha256, and it was never load-bearing anyway: the shipped
+TIMING_RISK rides pr19's strictly more conservative pair. `diagnostics/pair_candidate/output/0.raw`
+and the move-48 candidate's raw both stay; MAIN scoped the unit to `pair_base` alone. Freed
+3.41 GiB, 50.48 -> 53.89 GiB, reserve untouched.
