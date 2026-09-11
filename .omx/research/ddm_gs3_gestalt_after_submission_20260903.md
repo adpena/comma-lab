@@ -1559,3 +1559,8 @@ mxo3), the pose corner closed at n600 (pc3), the store's recall says no door on 
 were restored by exercised certificates. Standing question carried into tomorrow, unchanged in kind but sharper in number: the
 coded-token object's remaining rate lives in objects fit to older states of itself. The next arm audits every counted section for
 staleness against the current field before pricing anything structural.
+
+**Correction to Addenda 37 and 41 (MAIN, after cons1, 2026-09-11 ~22:05Z).** obx2's pre-registered pre-burn gate is 3.1990e-4, not
+the 4.0e-4 its memo restated (25 % looser); the measured render floor 0.00231 is 7.22× over the real gate, not 5.77×. cons1 also
+found the memo's "registered" pose law had no registry row — built, tested, cited, invisible — and registered it with its nine n600
+anchors: the built-but-unwired class caught one call short of the consumer. Consolidation moved no pointer; it is means.
