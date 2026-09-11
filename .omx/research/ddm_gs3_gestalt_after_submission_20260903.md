@@ -1262,3 +1262,17 @@ hypothesis (full-resolution probability corrections rather than fixed cells). If
 sub-0.12 path is closed on THIS object at the measured level, and the remaining question is the one the cross posed on 08-29: an object
 that inherits the born generator's rate (121,928 B) while starting from the distortion regime this lineage reaches (0.017). That is an
 object change, not a mechanism, and it is the operator's gestalt call to make with these numbers in hand.
+
+## Addendum 30 (MAIN, 2026-09-11 ~02:10Z) — ls2 closes the last receiver-visible hypothesis; the rate corner is measured closed on this object
+
+ls2 (`.omx/research/ddm_ls2_full_resolution_lane_probability_bound_20260911.md`, sha 225db0ec75bd20b3…) priced the full-resolution Lane probability correction on all 600 pairs of the shipped field: 266 B (separate
+features) and 386 B (joint distance) of RC64 byte-equivalents, net — 1.49 % of the 25,899 B demand — and Lane itself got worse under the
+separate model. With ls1's ladder above it (receiver-visible geometry 8,365 B short; a granted oracle the receiver cannot have 1,035 B
+short before its own cost), the token-tail rate corner on THIS object is closed at the measured level. The operator's reading of 08-21 and
+09-09 was right on the evidence: months of negatives point at the gestalt, and the gestalt is an OBJECT question. The cross (08-29) already
+stated it: the born generator holds the rate (121,928 B, 16,058 B under the cap) and this lineage holds the distortion (0.0171; the born
+object's 0.33 is data-anchored at Lane edges, md1–md4); born rate + pointer distortion = 0.109, sub-0.12 by 0.011 — a derived feasibility,
+not an archive. Nothing in this session's twelve closures contradicts it; each closure was a mechanism trying to buy the born object's rate
+from inside the pointer's object. ob1 designs the successor object under the cross's criterion — inherit the born generator's byte
+feasibility, start from a reachable distortion regime, put the Lane-edge geometry in the counted archive as a carrier the generator
+consumes — with $0 falsifiers on the retained born renders and the shipped field. Whether to burn it is the operator's call.
