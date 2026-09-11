@@ -435,6 +435,109 @@ def public(args) -> dict[str, Any]:
     return result
 
 
+def diagnostic(args) -> dict[str, Any]:
+    """One COLD n600 local decode of a runtime tree, as a refused timing diagnostic.
+
+    The pre-fire risk contract prices a candidate's T4 spend by the LOCAL cost ratio
+    between the source receiver and the candidate's, applied to the source's completed
+    t4_direct leg.  Both legs must therefore be real cold n600 `inflate.sh` runs, and the
+    receipt must carry ``actual_verdict = "REFUSED"``: a local wall clock is never timing
+    authority, and for a candidate id outside the reviewed rlc2 chain the validator reads
+    that refusal out of the RECEIPT, not out of the reference block that cites it.
+
+    The tree is READ ONLY.  Every byte this writes -- the archive member, the file list,
+    the output, the checkpoints, the scratch -- lands under ``--work-dir``, so a
+    diagnostic can be run against another arm's sealed tree without touching it.
+    """
+    root = Path(args.runtime).resolve()
+    work = Path(args.work_dir)
+    for name in ("data", "output", "scratch", "frame_checkpoints"):
+        (work / name).mkdir(parents=True, exist_ok=True)
+    output = work / "output" / "0.raw"
+    if output.exists():
+        raise Pc3PublicError(
+            "unreceipted raw: preserve and recover the log, never rerender over it"
+        )
+    archive = root / "archive.zip"
+    with zipfile.ZipFile(archive) as zf:
+        (work / "data/p").write_bytes(zf.read("p"))
+    (work / "file_list.txt").write_bytes(b"0.hevc\n")
+    env = dict(
+        os.environ,
+        PATH=str(REPO / ".venv/bin") + os.pathsep + os.environ["PATH"],
+        PYTHONDONTWRITEBYTECODE="1",
+        TMPDIR=str(work / "scratch"),
+        RLC1_ADVISORY_CPU="1",
+        RLC1_PROOF_BLAS_THREADS=str(args.blas_threads),
+        TC1_RECEIVER_CHECKPOINT_DIR=str(work / "frame_checkpoints"),
+        TC1_RECEIVER_STOP_AFTER="600",
+        F26_TOKEN_DECODER="python",
+        CC="/usr/bin/cc",
+    )
+    for key in (
+        "CPR1_RC64_LIBRARY", "F26_CORRECTOR_NATIVE_LIBRARY", "F26_HPAC_NATIVE_LIBRARY",
+        "RLC1_GEOMETRY_LIBRARY", "F26_ADVISORY_DECODE_CACHE_ROOT",
+        "F26_ADVISORY_PAIR_LIMIT", "F26_ADVISORY_RENDER_WORKERS",
+        "F26_ADVISORY_RENDER_RSS_BYTES",
+    ):
+        env.pop(key, None)
+    command = [
+        "bash", str(root / "inflate.sh"),
+        str(work / "data"), str(work / "output"), str(work / "file_list.txt"),
+    ]
+    started = time.perf_counter()
+    with (work / "run.log").open("wb") as log:
+        completed = subprocess.run(
+            command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT
+        )
+    wall = time.perf_counter() - started
+    if completed.returncode:
+        raise Pc3PublicError(f"diagnostic shell failed; retained log {work / 'run.log'}")
+    reports = [
+        json.loads(line)
+        for line in (work / "run.log").read_text().splitlines()
+        if line.startswith('{"archive_bytes"')
+    ]
+    if len(reports) != 1:
+        raise Pc3PublicError("exactly one public report required")
+    report = reports[0]
+    if report["pair_count"] != 600 or report["token_cache"]["status"] != "DISABLED":
+        raise Pc3PublicError(f"diagnostic is not a cold n600 decode: {report}")
+    receipt = {
+        "schema": "decode_wall_clock.local.v1",
+        "actual_verdict": "REFUSED",
+        "authority": False,
+        "score_claim": False,
+        "measurement_kind": "cold_public_entrypoint_decode",
+        "axis": "[macOS-CPU advisory diagnostic; never timing authority]",
+        "wall_seconds": wall,
+        "cold_start": True,
+        "checkpoint_resume": bool(report["checkpoint_resume"]),
+        "completed": True,
+        "frames": list(range(600)),
+        "n_samples": 600,
+        "runtime_dir": str(root),
+        "runtime_sha256": measure_runtime_digest(root).sha256,
+        "receiver_sha256": measure_receiver_digest(root),
+        "archive_path": str(archive),
+        "archive_sha256": fact(archive)["sha256"],
+        "command": command,
+        "cpu_threads": int(args.blas_threads),
+        "proof_blas_threads": int(args.blas_threads),
+        "host": os.uname().nodename,
+        "platform": " ".join(os.uname()),
+        "producer": fact(Path(__file__)),
+        "compiler": compiler_fact(),
+        "rendered_raw": fact(output),
+        "report": report,
+        "quiesce_note": args.quiesce_note,
+    }
+    record(work / "LOCAL_DIAGNOSTIC.json", receipt)
+    print(json.dumps({"wall_seconds": wall, "receiver_sha256": receipt["receiver_sha256"],
+                      "raw_sha256": receipt["rendered_raw"]["sha256"]}))
+    return receipt
+
+
 def _public_path_probe(runtime_root: Path, timeout_s: float) -> dict[str, Any]:
     """Run the receiver's own ``f26_inflate.inflate_archive`` on CPU, this body's way.
 
@@ -625,6 +728,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     smokes.add_argument("--bound-seconds", type=float, default=180.0)
     smokes.set_defaults(func=smoke)
+
+    diag = sub.add_parser(
+        "diagnostic", help="one cold n600 local decode as a REFUSED timing diagnostic"
+    )
+    diag.add_argument("--runtime", type=Path, required=True)
+    diag.add_argument("--work-dir", type=Path, required=True)
+    diag.add_argument("--blas-threads", type=int, default=4)
+    diag.add_argument("--quiesce-note", required=True)
+    diag.set_defaults(func=diagnostic)
 
     args = parser.parse_args(argv)
     args.func(args)
