@@ -317,7 +317,91 @@ Two controls came free with the re-pricing:
   continuous optimum solved against move 44's state IS move 45's optimum, and every ceiling row and
   projected rung carries across without re-solving.
 
-## 9. How to finish the ceiling (it is running and resumable)
+## 8c. THE OWED UNIT, CLOSED — n600 ceiling, realized rungs, verdict
+
+### The n600 bound (supersedes §4's provisional n = 135 figures)
+
+All 600 pairs, strided shards, every stop on physics: **519 `no_improving_step`, 81
+`converged_below_materiality_floor`, zero on a budget.**
+
+| | |
+|---|---|
+| base d_pose (n600, this instrument) | 4.58676349e-06, leg 0.0067725649 |
+| mean per-pair gain to the continuous optimum | **3.101354e-07** (s.d. 7.123e-07, s.e.m. 2.908e-08) |
+| 95 % CI on the mean gain | [2.531399e-07, 3.671309e-07] |
+| ceiling d_pose | 4.276628e-06 — **6.76 %** below base |
+| **PAYABLE BYTES for the entire lattice family** | **349.9 B**, CI **[284.7, 415.5] B** |
+
+The n = 135 figures (495.6 B point, 706.9 B optimistic) were 1.42× and 1.70× too generous; the
+full field is tighter. **Global ÷2 costs 914 B on move 45 — 2.20× past even the optimistic edge of
+the CI. Global ÷4 (1,833 B) is 4.41× past. Closed by the bound, on cost alone.**
+
+The gain is anti-concentrated, more so at n600 than the prefix suggested: the 20 highest-d_pose
+pairs carry **63.4 %** of the base but only **20.9 %** of the gain; the top 60 carry 81.8 % and
+37.3 %. The pairs that hold the pose mass are reach-limited, not lattice-limited, and 20 pairs gain
+exactly zero from infinite coefficient precision.
+
+### The estimator that failed, and said so
+
+`mode=project` rounds the continuous optimum onto each rung's lattice. On this body it is worthless,
+and the way it failed is the finding: **all seventeen rungs scored an ORDER OF MAGNITUDE worse than
+the shipped codes** — the `shipped` rung 4.35e-05 against 4.59e-06, and even `global_div16`, a
+lattice 16× finer (and one that does not fit int12: max |code| 2,464), only reached 5.59e-06, still
+worse. Two `round` calls sit inside the render, so the objective is rough at the scale of a lattice
+step; **the continuous optimum is a knife edge that no lattice lands on.** A rung must therefore be
+realized as a refinement of the SHIPPED point, which is what `mode=halfstep` measures: the four
+half-integer offsets a dimension's halving newly reaches (±0.5, ±1.5 steps — ±1, ±2 are the integer
+neighbours the shipped point is already a `refine_pair` fixed point against), every dimension, every
+pair, real renderer, real scorer, differenced against a control in the same batch.
+
+### The per-rung verdict, at move 45's bytes, exact √ per rung
+
+Gains clamped at ≥ 0 — a halving may always decline to move a coordinate, since the shipped point
+stays representable on the finer lattice. That is the treatment most generous to the rung.
+
+| rung | ΔB | realized mean gain | ΔS_pose (exact √) | ΔS_rate | **NET** | verdict |
+|---|---:|---:|---:|---:|---:|---|
+| dim5_div2 (**best**) | +75 | 1.5413e-08 | −1.139e-05 | +4.994e-05 | **+3.855e-05** | refused |
+| dim9_div2 | +77 | 1.3433e-08 | −9.924e-06 | +5.127e-05 | +4.135e-05 | refused |
+| dim1_div2 | +75 | 1.1185e-08 | −8.262e-06 | +4.994e-05 | +4.168e-05 | refused |
+| dim8_div2 | +77 | 1.0223e-08 | −7.551e-06 | +5.127e-05 | +4.372e-05 | refused |
+| dim7_div2 | +75 | 9.0732e-09 | −6.702e-06 | +4.994e-05 | +4.324e-05 | refused |
+| dim0_div2 | +75 | 8.8793e-09 | −6.558e-06 | +4.994e-05 | +4.338e-05 | refused |
+| dim6_div2 | +75 | 8.1441e-09 | −6.015e-06 | +4.994e-05 | +4.392e-05 | refused |
+| dim10_div2 | +81 | 7.4596e-09 | −5.509e-06 | +5.393e-05 | +4.843e-05 | refused |
+| dim11_div2 | +75 | 6.5905e-09 | −4.867e-06 | +4.994e-05 | +4.507e-05 | refused |
+| dim2_div2 | +75 | 6.4455e-09 | −4.760e-06 | +4.994e-05 | +4.518e-05 | refused |
+| dim4_div2 | +76 | 3.7924e-09 | −2.800e-06 | +5.061e-05 | +4.780e-05 | refused |
+| dim3_div2 | +80 | 3.4272e-09 | −2.531e-06 | +5.327e-05 | +5.074e-05 | refused |
+| global_div2 (best coordinate per pair) | +914 | 7.6422e-08 | −5.666e-05 | +6.086e-04 | +5.519e-04 | refused |
+
+**Not one rung nets below the −2e-5 bar; not one nets below ZERO.** The best, dim5 ÷2, is
+**+3.855e-05 — 1.93× the bar on the wrong side**, its rate cost 4.4× its pose credit. The cheapest
+rung needs a mean gain of 6.74e-08 and the best measured realized gain is 1.54e-08: **4.4× short.**
+
+### Verdict
+
+**CLOSED at FORMULATION scope.** On move 45's carrier no coefficient-lattice refinement pays —
+per-dimension or global, realized from the shipped point, priced by the shipped coder with a
+byte-exact control. Two independent legs agree: the n600 ceiling closes the global rungs by cost
+before any of them is built, and the realized measurement closes every rung including the
+per-dimension ones the bound could not reach.
+
+With this, the family's coefficient-refit closure (ra3 / rr1 / es1) stands with **349.9 B, CI
+[284.7, 415.5]** as its n600 number: that is the total payable value of every lattice refinement
+inside the shipped 12-dimensional span, against a cheapest rung costing 75 B that realizes 4.4× less
+than it needs.
+
+**Not closed by this:** a different carrier FORMAT; a rank change (a receiver change, and dead by the
+10,174.8 B absolute wall regardless); a solver that reaches a DIFFERENT basin rather than refining
+this one — the ceiling is the continuous optimum in the basin of the shipped point, and the project
+result shows that basin is narrow.
+
+Receipts: `RUNG_VERDICT.json` (also `.omx/research/ddm_pc3_20260911/`), `rate/CARRIER_RATE_move45.json`,
+`halfstep/halfstep_rows_*.jsonl`, `projection/PROJECTION.json`, `ceiling/ceiling_rows_*.jsonl`,
+`CEILING_TRANSFER_CONTROL.json`.
+
+## 9. How the ceiling was finished (COMPLETE at n600; kept for reproduction)
 
 Nine strided shards, each resuming from its own rows file; killing them costs only the pair each was on. Resume with:
 

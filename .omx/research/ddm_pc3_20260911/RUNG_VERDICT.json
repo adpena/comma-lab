@@ -1,0 +1,218 @@
+{
+  "admit_bar": -2e-05,
+  "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet, DALI-lineage GT] + exact coder arithmetic",
+  "base": {
+    "control_minus_base": 1.0334049072096782e-10,
+    "d_pose_mean_n600": 4.58676349183645e-06,
+    "pose_leg": 0.006772564870000471,
+    "same_batch_control_mean": 4.586866832327171e-06,
+    "why_control": "every rung is differenced against a control evaluated in the SAME batch, so the batch-shape float offset cancels"
+  },
+  "byte_to_score": 6.658589531221714e-07,
+  "ceiling_n600": {
+    "ceiling_d_pose_mean": 4.276628062181275e-06,
+    "ci95": [
+      2.5313993010420513e-07,
+      3.671309292061456e-07
+    ],
+    "fraction_of_base": 0.06761530874813064,
+    "mean_gain": 3.1013542965517536e-07,
+    "pairs": 600,
+    "payable_bytes": 349.8812501398706,
+    "payable_bytes_ci95": [
+      284.65269178272666,
+      415.5459332925574
+    ],
+    "sd": 7.122953649740043e-07,
+    "sem": 2.9079336505597063e-08,
+    "stop_reasons": {
+      "converged_below_materiality_floor": 81,
+      "no_improving_step": 519
+    },
+    "supersedes": "the n=135 provisional figures 495.6 B point / 706.9 B optimistic"
+  },
+  "clamp": "per-pair gains clamped at >= 0: a halving may always decline to move a coordinate, since the shipped point stays representable on the finer lattice. This is the treatment most generous to the rung.",
+  "pointer": {
+    "archive_bytes": 180246,
+    "axis": "contest_cuda",
+    "move": 45,
+    "score": 0.1371383667388406
+  },
+  "projection_estimator_finding": {
+    "finest_rung_global_div16_d_pose": 5.594377402837728e-06,
+    "global_div16_fits_int12": false,
+    "result": "every one of the 17 rungs scored an ORDER OF MAGNITUDE worse than the shipped codes",
+    "shipped_rung_d_pose": 4.3517856252946046e-05,
+    "what": "rounding the n600 continuous optimum onto each rung's lattice",
+    "why": "two round calls sit inside the render, so the objective is rough at the scale of a lattice step; the continuous optimum is a knife edge no lattice lands on. The estimator is therefore not a lower bound worth quoting for a rung -- which is why the rungs were re-measured as refinements of the SHIPPED point instead."
+  },
+  "promotable": false,
+  "realized_rungs_from_the_shipped_point": [
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -6.558441119105911e-06,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 4.3380980365056945e-05,
+      "pairs_that_moved": 35,
+      "realized_d_pose_mean": 4.5779875399844385e-06,
+      "realized_mean_gain": 8.879292342732038e-09,
+      "rung": "dim0_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -8.262159361439175e-06,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 4.167726212272368e-05,
+      "pairs_that_moved": 37,
+      "realized_d_pose_mean": 4.57568233053753e-06,
+      "realized_mean_gain": 1.1184501789641214e-08,
+      "rung": "dim1_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -4.7601552708321365e-06,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 4.517926621333072e-05,
+      "pairs_that_moved": 26,
+      "realized_d_pose_mean": 4.580421333529054e-06,
+      "realized_mean_gain": 6.445498798116992e-09,
+      "rung": "dim2_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 80,
+      "delta_s_pose_exact_sqrt": -2.530676359707544e-06,
+      "delta_s_rate": 5.326871624977371e-05,
+      "gain_needed_to_break_even": 7.186941165555797e-08,
+      "net_delta_s": 5.0738039890066166e-05,
+      "pairs_that_moved": 18,
+      "realized_d_pose_mean": 4.583439600182639e-06,
+      "realized_mean_gain": 3.4272321445322876e-09,
+      "rung": "dim3_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 76,
+      "delta_s_pose_exact_sqrt": -2.800355415590039e-06,
+      "delta_s_rate": 5.060528043728503e-05,
+      "gain_needed_to_break_even": 6.828941946440158e-08,
+      "net_delta_s": 4.780492502169499e-05,
+      "pairs_that_moved": 19,
+      "realized_d_pose_mean": 4.583074456054464e-06,
+      "realized_mean_gain": 3.792376272706809e-09,
+      "rung": "dim4_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -1.1388697286477019e-05,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 3.855072419768584e-05,
+      "pairs_that_moved": 50,
+      "realized_d_pose_mean": 4.571453490562605e-06,
+      "realized_mean_gain": 1.5413341764565336e-08,
+      "rung": "dim5_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -6.015171329307352e-06,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 4.3924250154855504e-05,
+      "pairs_that_moved": 31,
+      "realized_d_pose_mean": 4.578722731166264e-06,
+      "realized_mean_gain": 8.144101160906093e-09,
+      "rung": "dim6_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -6.701730132308362e-06,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 4.3237691351854494e-05,
+      "pairs_that_moved": 26,
+      "realized_d_pose_mean": 4.577793640974319e-06,
+      "realized_mean_gain": 9.073191352851634e-09,
+      "rung": "dim7_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 77,
+      "delta_s_pose_exact_sqrt": -7.551293961006317e-06,
+      "delta_s_rate": 5.12711393904072e-05,
+      "gain_needed_to_break_even": 6.918455052263561e-08,
+      "net_delta_s": 4.3719845429400884e-05,
+      "pairs_that_moved": 35,
+      "realized_d_pose_mean": 4.576644093668317e-06,
+      "realized_mean_gain": 1.0222738658854305e-08,
+      "rung": "dim8_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 77,
+      "delta_s_pose_exact_sqrt": -9.924072243633515e-06,
+      "delta_s_rate": 5.12711393904072e-05,
+      "gain_needed_to_break_even": 6.918455052263561e-08,
+      "net_delta_s": 4.1347067146773685e-05,
+      "pairs_that_moved": 39,
+      "realized_d_pose_mean": 4.573434245011723e-06,
+      "realized_mean_gain": 1.3432587315447778e-08,
+      "rung": "dim9_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 81,
+      "delta_s_pose_exact_sqrt": -5.509416850293762e-06,
+      "delta_s_rate": 5.393457520289588e-05,
+      "gain_needed_to_break_even": 7.276418801927473e-08,
+      "net_delta_s": 4.842515835260212e-05,
+      "pairs_that_moved": 41,
+      "realized_d_pose_mean": 4.5794072070256475e-06,
+      "realized_mean_gain": 7.459625301523318e-09,
+      "rung": "dim10_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 75,
+      "delta_s_pose_exact_sqrt": -4.8673036625321645e-06,
+      "delta_s_rate": 4.9939421484162856e-05,
+      "gain_needed_to_break_even": 6.739419973254057e-08,
+      "net_delta_s": 4.507211782163069e-05,
+      "pairs_that_moved": 43,
+      "realized_d_pose_mean": 4.580276301164092e-06,
+      "realized_mean_gain": 6.590531163078799e-09,
+      "rung": "dim11_div2"
+    },
+    {
+      "admitted": false,
+      "delta_bytes": 914,
+      "delta_s_pose_exact_sqrt": -5.665675005144498e-05,
+      "delta_s_rate": 0.0006085950831536647,
+      "net_delta_s": 0.0005519383331022197,
+      "note": "best single coordinate per pair; a genuine global halving could do better per pair but costs the same 914 B",
+      "pairs_that_moved": 279,
+      "realized_d_pose_mean": 4.510444663547341e-06,
+      "realized_mean_gain": 7.642216877983e-08,
+      "rung": "global_div2"
+    }
+  ],
+  "schema": "ddm_pc3_rung_verdict.v1",
+  "score_claim": false,
+  "verdict": {
+    "any_rung_admitted": false,
+    "best_net_delta_s": 3.855072419768584e-05,
+    "best_rung": "dim5_div2",
+    "best_rung_multiple_of_bar": 1.9275362098842916,
+    "statement": "CLOSED at formulation scope: on move 45's carrier, no coefficient-lattice refinement pays. Every rung's rate cost exceeds its realised pose credit by 3.4x to 20x, the best (dim5) by 4.4x, and the n600 ceiling independently closes the global rungs by cost alone (914 B against 415.5 B payable at the optimistic edge of the CI)."
+  },
+  "verdict_scope": "FORMULATION: per-dimension and global coefficient-lattice halvings on the CAP1 carrier at move 45, realised as refinements of the shipped point, priced by the shipped coder with a byte-exact control. NOT closed: a different carrier FORMAT, a rank change (a receiver change, and dead by the 10,174.8 B absolute wall anyway), or a solver that reaches a different basin rather than refining this one."
+}
