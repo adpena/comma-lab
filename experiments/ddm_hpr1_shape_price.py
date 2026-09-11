@@ -171,7 +171,37 @@ def patch_receiver_dilation(runtime: Path, dilation: int) -> dict:
     target.chmod(0o644)
     target.write_text(text)
     after = fact(target)
-    return {"file": "cpr1/inflate.py", "before": before, "after": after, "dilation": dilation}
+
+    # The NATIVE token decoder (F26_TOKEN_DECODER=native-hpac, opt-in; the shipped
+    # default is "python") re-implements conv_past in C with the dilation-1 stencil
+    # baked into its source-coordinate arithmetic.  Leaving it unpatched would let one
+    # decoder mode silently produce a DIFFERENT field from the other, so the same
+    # constant moves in both places or the rung refuses.
+    native = runtime / "runtime/f26_hpac_native.c"
+    native_before = fact(native)
+    source = native.read_text()
+    replacements = [
+        ("int32_t source_row = global_row + kernel_row - 1;",
+         f"int32_t source_row = global_row + (kernel_row - 1) * {dilation};"),
+        ("int32_t source_col = global_col + kernel_col - 1;",
+         f"int32_t source_col = global_col + (kernel_col - 1) * {dilation};"),
+    ]
+    for old, new in replacements:
+        if source.count(old) != 1:
+            raise PriceError(f"native conv_past stencil anchor is not unique: {old!r}")
+        source = source.replace(old, new, 1)
+    native.chmod(0o644)
+    native.write_text(source)
+    return {
+        "dilation": dilation,
+        "receiver_constant": {"file": "cpr1/inflate.py", "before": before, "after": after},
+        "native_stencil": {
+            "file": "runtime/f26_hpac_native.c",
+            "before": native_before,
+            "after": fact(native),
+            "why": "native-hpac mode re-implements conv_past in C with the dilation baked in",
+        },
+    }
 
 
 def prepare(tag: str, checkpoint: Path | None = None):
