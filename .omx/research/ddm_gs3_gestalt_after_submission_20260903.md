@@ -1325,3 +1325,17 @@ untested is the COLLAPSE of those 23 predictions into one probability through a 
 nonlinear stacker over the pre-mix outputs) at $0 under mxo1's own trigger: ≥ 3,000 B at ≤ 200 ns per symbol. The portfolio stands at six live
 bets: the object (obx2), pose (pc3), non-tail lossy levers (ntb2), the generic pretrained prior (gpp1), the boundary treatment (rbf1), and the
 pre-mix stacker (mxo2). ntb1 closed every lossless non-tail lever at 0 B; the lossy ones are ntb2's.
+
+## Addendum 34 (MAIN, 2026-09-11 ~15:20Z) — obx2 handback 1: the born object's distance was coverage, not capacity
+
+obx2 (`.omx/research/ddm_obx2_edge_local_implicit_correction_20260911.md`, sha fb0468916ecc6ea5…) built the successor object and, before training it, measured the thing the cross had been arguing about for
+two weeks. The born object's 8.6267 on n600 decomposes as 0.4072 on the 32 pairs it was trained on and 9.0299 on the 568 it never saw:
+`qbt1::validate_config` refused every training set but the sealed n32, so 568 of its 600 latent records were never optimized. The 8.6 was
+never a capacity wall; it was a fence the code put around the data. That reframes the cross from "8.6 apart" to "one full-coverage training
+away from a measured answer" — and obx2's harness reproduces move 44's contest-CUDA row to 0.036 %, so the answer will be trusted when it
+lands. Three more facts: the object's archive is 108,988 B with the lattice (13 KB under the gate; training grew the model section 51 B in
+ten epochs); the 384×512 render grid clears 0.04 (0.0324) when back-projected in the scorer's plane, while the naive downsample would have
+produced a false structural refusal (0.1187) — the prefix-and-plane genus again, caught by the arm; and the pose budget at < 0.04 implies a
+scorer-plane RMSE near 0.22 of one LSB, so no 122 KB object matches the teacher photometrically: the object must be a pose-equivalent
+WITNESS, which is what both live runs are (joint scorer descent, not distillation). One porting item stands between a passing object and a
+T4 row: the portable NumPy receiver is 2.06× over the 1,260 s budget (torch 187–334 s).
