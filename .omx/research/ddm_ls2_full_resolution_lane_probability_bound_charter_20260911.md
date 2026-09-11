@@ -62,3 +62,22 @@ tables and a typed fire-or-refusal receipt in the consumer store. Finish with an
 verdict. This remains a $0 scorer-free measurement until a separately bound candidate exists.
 
 <!-- # FORMALIZATION_PENDING: proposed measurement of two finite probability-correction families; no new measured law or runtime actuator is claimed. -->
+
+## OPTIMAL FORM (appended by MAIN for the spawn-site lint)
+- Reference form: ls1's exact per-symbol instrument on the SHIPPED decoder (surprise reconciled to the real stream within 0.0006 %) and
+  its Miller–Madow oracle ladder; this charter prices the full-resolution probability correction with the SAME instrument and the
+  SAME shipped field. Any reduced subset is SCOPE (declared, no verdict); a proxy model or a different coder is MECHANISM (toy-bracketed).
+- Provenance pins (sha256 prefixes): ls1 memo b729faa146b62ea3…; this charter as written by ls1 8392a530f73ca2eb…; the shipped field subset6.u8 (a92e7d90…,
+  pin it from the encode receipt); pointer move 44 commit 99625f32f / archive 04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e;
+  retained ls1 store `/Volumes/VertigoDataTier/pact/ddm_ls1/` (record the atlas RESULT sha you consume).
+
+## Prior negatives accounted (operator 2026-08-15)
+- ls1: fixed-cell replacements fall short even with free parameters — the full-resolution bound must be priced as MARGINAL savings
+  under the shipped model, with the correction's own serialized cost, never as a sum of per-context gains (m164 UNION ≠ SUM; m166).
+- gdc4 / available-vs-authoritative field: pin the shipped field by the encoder's receipt; never pass6.u8.
+- tc1 / tc2: oracle gain ≠ map cost; report both columns.
+- eb2: the receiver holds no partition/pose — a receiver-visible bound may use only the decoded token plane and the carrier.
+Serializer commit LAST; rc 17 is NOT a stop; checkpoint as `ddm_ls2` and mark it COMPLETE at the end. Final message ends with the
+frontier line `composition S 0.1372449041713402 @ 180,406 B [contest-CUDA T4 n600] (move 44)`.
+
+<!-- # FORMALIZATION_PENDING: measurement charter; no measured row -->
