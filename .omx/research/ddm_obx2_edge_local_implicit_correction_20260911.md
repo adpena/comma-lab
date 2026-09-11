@@ -378,6 +378,13 @@ reading already names, where the same twist that moves the partition IS the pose
 numbers per pair (3,600 values for the whole video), not a photometric field. It is joint, in the
 forward pass, and counted — not the post-hoc stored sidecar family that earlier work found walled.
 
+**Scope limit of the falsifier, stated before its verdict.** The shift rungs displace frame 1 by a
+uniform HORIZONTAL translation. That is one geometric mode, and the simplest. A real ego-motion error
+is a six-degree-of-freedom twist — mostly forward translation plus yaw — which produces a divergent,
+structured flow field rather than a rigid slide. So a null result on uniform translation bounds the
+hypothesis for THAT mode; it does not close every geometric cure. A positive result would be stronger
+than the test, a null one weaker. Recorded before the rungs landed.
+
 **The `$0` falsifier that must fire first**, because the hypothesis is worthless if PoseNet is not
 reading geometry: perturb the teacher's frame 1 by a pure sub-pixel geometric shift at several
 magnitudes and measure `d_pose` against the same photometric-RMSE budget as the existing rungs. If a
