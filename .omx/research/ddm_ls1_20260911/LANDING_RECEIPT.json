@@ -1,0 +1,100 @@
+{
+  "schema": "ddm_ls1_landing_receipt.v1",
+  "written_at_utc": "2026-09-11T00:50:41.049762+00:00",
+  "status": "BUNDLE_READY_SHARED_HEAD_NOT_LANDED",
+  "measurement_status": "COMPLETE_VERIFIED_N600",
+  "shared_head_observed": "094627a36e6d176f624001da139049e9717ad833",
+  "shared_staged_paths_observed": [],
+  "measurement_manifest": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ls1/MANIFEST.json",
+    "bytes": 1284028,
+    "sha256": "e2ac3e439bfa01ab2818b749ddd34031a556cdc9540ff216af7ce7917ed0eee3",
+    "scope": "Completed measurement snapshot; landing artifacts separately described here."
+  },
+  "landings": [
+    {
+      "receipt": "/Volumes/VertigoDataTier/pact/ddm_ls1/landing/docs_fallback/20260911T004717.578861Z-46589/receipts.jsonl",
+      "receipt_sha256": "cab296f03feff787b59569f85801b7367e95235940a01741b974e31993381c0a",
+      "fallback_commit": "5144537f940073805ffeb4b9bbcd6b647cfea080",
+      "base_head": "094627a36e6d176f624001da139049e9717ad833",
+      "files": [
+        {
+          "content_sha256": "b729faa146b62ea394ec502be37fb0d66d11f577202431cfcd9d5618f79f40bc",
+          "path": ".omx/research/ddm_ls1_lane_conditioned_surprise_atlas_on_the_shipped_field_20260911.md"
+        },
+        {
+          "content_sha256": "8392a530f73ca2eb460ea566801a27c15a084861dab6430d5868b60aba1409e9",
+          "path": ".omx/research/ddm_ls2_full_resolution_lane_probability_bound_charter_20260911.md"
+        },
+        {
+          "content_sha256": "aa6d10945982f5acc70ec9af4e86e3121c98af36270c21a1eb01620ffbdef7d9",
+          "path": ".omx/research/ddm_ls1_20260911/SUMMARY.json"
+        },
+        {
+          "content_sha256": "5f6c13f78eb90d727e733e1f7f785f1a3efe8b3fd16d58e5ccee3ac84b91d562",
+          "path": ".omx/research/ddm_ls1_20260911/FIRE_ORDERS.json"
+        }
+      ],
+      "bundle": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls1/landing/docs_fallback/20260911T004717.578861Z-46589/intended-commit.bundle",
+        "bytes": 17648,
+        "sha256": "96660b5b809f8cba16e38690e46810bb73410b016dc4803cc9b444fc0f45edbb"
+      },
+      "format_patch": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls1/landing/docs_fallback/20260911T004717.578861Z-46589/intended-commit.format-patch",
+        "sha256": "50ffcc6ab76c6851605d40f3e06bcb9e3be7f0fcbcc116bce6979a84613e94b4"
+      },
+      "verification": {
+        "git_bundle_verify_rc": 0,
+        "output": "The bundle contains this ref:\n5144537f940073805ffeb4b9bbcd6b647cfea080 refs/heads/serializer-fallback\nThe bundle requires this ref:\n094627a36e6d176f624001da139049e9717ad833 \nThe bundle uses this hash algorithm: sha1\n/Volumes/VertigoDataTier/pact/ddm_ls1/landing/docs_fallback/20260911T004717.578861Z-46589/intended-commit.bundle is okay\n",
+        "owned_patch_and_worktree_content_hashes": "PASS",
+        "operator_only_commit_message": "PASS"
+      },
+      "serializer_rc": 17
+    },
+    {
+      "receipt": "/Volumes/VertigoDataTier/pact/ddm_ls1/landing/source_fallback/20260911T004658.931539Z-46341/receipts.jsonl",
+      "receipt_sha256": "78a94e668245f175506b823d196b327d3860ca8393930cb21497bf4b21d6f05d",
+      "fallback_commit": "5b1e49a74db75a8a52250d1352e314466d2e4052",
+      "base_head": "094627a36e6d176f624001da139049e9717ad833",
+      "files": [
+        {
+          "content_sha256": "736e66036a55b015e99012e819a3be06d6431d312f4e51c5dd4758823ebcd9e0",
+          "path": "experiments/ddm_ls1_shipped_surprise.py"
+        },
+        {
+          "content_sha256": "ff57264eeefd90252e75689c86e2365fe77ddf17f9d5bcdcdb00b7a09bfe32ed",
+          "path": "experiments/ddm_ls1_oracle_atlas.py"
+        },
+        {
+          "content_sha256": "7c156cbf1740c2e140f7cb774957f81c0b83edcb0f8b5a0958d8c098870aa443",
+          "path": "experiments/ddm_ls1_verify_atlas.py"
+        },
+        {
+          "content_sha256": "57e77c2f232d6a10968a3c9f47ba445750a5bc994fee0119c2721ada51759c71",
+          "path": "experiments/ddm_ls1_resume_control.py"
+        }
+      ],
+      "bundle": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls1/landing/source_fallback/20260911T004658.931539Z-46341/intended-commit.bundle",
+        "bytes": 16674,
+        "sha256": "1997c76f7930db085e4ce2947744f8b0d04fa718c86f0a67453eb4f9d1cafc11"
+      },
+      "format_patch": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ls1/landing/source_fallback/20260911T004658.931539Z-46341/intended-commit.format-patch",
+        "sha256": "4a4211067ca5556b484ad97ee3073487db90550f1a032b1486fce1fa52bb64f6"
+      },
+      "verification": {
+        "git_bundle_verify_rc": 0,
+        "output": "The bundle contains this ref:\n5b1e49a74db75a8a52250d1352e314466d2e4052 refs/heads/serializer-fallback\nThe bundle requires this ref:\n094627a36e6d176f624001da139049e9717ad833 \nThe bundle uses this hash algorithm: sha1\n/Volumes/VertigoDataTier/pact/ddm_ls1/landing/source_fallback/20260911T004658.931539Z-46341/intended-commit.bundle is okay\n",
+        "owned_patch_and_worktree_content_hashes": "PASS",
+        "operator_only_commit_message": "PASS"
+      },
+      "serializer_rc": 17
+    }
+  ],
+  "consumer_orders": "/Users/adpena/Projects/pact/.omx/research/ddm_ls1_20260911/FIRE_ORDERS.json",
+  "reason_shared_landing_unavailable": "Sandbox denied Git temporary backing-store writes; both serializer fallbacks succeeded.",
+  "recall_evidence": "/Users/adpena/Projects/pact/.omx/research/ddm_ls1_lane_conditioned_surprise_atlas_on_the_shipped_field_20260911.md#recall-evidence",
+  "landing_receipt_custody": "Companion receipt written after frozen serializer inputs; not included in either fallback commit."
+}
