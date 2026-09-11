@@ -52,6 +52,7 @@ distortion of any renderer on that grid. Complete 600-pair rungs:
 | `teacher` (identity) | 0.000103412 | 4.58687e-6 | 0.0171139 | 0 | yes |
 | `sp_874x1164` (control) | 0.000103412 | 4.58687e-6 | 0.0171139 | 0 | yes |
 | **`sp_384x512`** | 0.000111576 | 4.52317e-5 | **0.0324253** | 0.160 | **yes** |
+| `grid_384x512` (area down, bicubic up) | 0.000435232 | 0.011817 | 0.387281 | 4.544 | no |
 
 **The render grid is cleared.** A renderer on the QBF 384×512 grid reaches distortion 0.0324 over all
 600 pairs, inside the gate with 0.0076 of margin. At the 122,000 B packet gate that is
@@ -62,19 +63,22 @@ distortion of any renderer on that grid. Complete 600-pair rungs:
 The burn's question is therefore now exact: **can 122,000 B encode a render close enough to the
 `sp_384x512` field?** Not whether the architecture's output space is rich enough — it is.
 
-Two supporting cautions, both measured. The naive `grid_384x512` construction (area down, bicubic up)
-scored 0.1187 on a 4-pair smoke, **8× worse** than the scorer-plane-matched render on the same grid;
-had Stage 2a used only that rung it would have produced a false structural refusal of the whole
-architecture. And the 4-pair smoke of `sp_384x512` read 0.01475 against the n600 value of 0.0324 —
-**2.2× optimistic** — so no prefix here is a verdict, in either direction.
+Two supporting cautions, both measured on n600. The naive `grid_384x512` construction (area down,
+bicubic up) scores 0.387281 — **11.9× worse** than the scorer-plane-matched render on the SAME grid,
+and **261× worse on Pose** (0.011817 vs 4.52e-5) against only 3.9× on Seg. Had Stage 2a used only that
+rung it would have produced a false structural refusal of the whole architecture. And the 4-pair smoke
+of `sp_384x512` read 0.01475 against the n600 value of 0.0324 — **2.2× optimistic** — so no prefix
+here is a verdict, in either direction.
 
 **4. The photometric-distillation route is closed by arithmetic — the object must be a witness.**
-DERIVED, from two measured points, and pre-registered for confirmation by the queued
+DERIVED from three measured n600 points, and pre-registered for further confirmation by the queued
 `sp384_render_noise_*` rungs. At distortion `< 0.04` with the measured `d_seg ~ 1.1e-4`
-(0.011 of the budget), the Pose budget is `d_pose < 8.4e-5`. Fitting `d_pose = 4.59e-6 + k * spRMSE^2`
-through `teacher` (0, 4.59e-6) and `sp_384x512` (0.160, 4.52e-5) gives `k = 1.59e-3`, so the
-admissible scorer-plane RMSE is about **0.22 of one uint8 LSB** — near-lossless. No 122,000 B object
-encodes 1,200 frames of 384×512 at that fidelity.
+(0.011 of the budget), the Pose budget is `d_pose < 8.4e-5`. Fitting
+`d_pose = 4.587e-6 + C * spRMSE^p` through `teacher` (0), `sp_384x512` (0.160, 4.523e-5) and
+`grid_384x512` (4.544, 0.011817) gives a MEASURED exponent **p = 1.695**, `C = 9.078e-4` — the growth
+is sub-quadratic, so a two-point quadratic read over-predicts the far point by 2.77×. The admissible
+scorer-plane RMSE is **0.238 of one uint8 LSB, 0.093% of full scale** — near-lossless. No 122,000 B
+object encodes 1,200 frames of 384×512 at that fidelity.
 
 The consequence is not that the burn fails. It is that **matching the teacher photometrically is the
 wrong objective**: the constraint is on PoseNet's six outputs, not on the image, and the set of
