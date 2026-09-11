@@ -1,0 +1,52 @@
+{
+ "consumers_that_route_through_it": [
+  {
+   "invoked_here": false,
+   "quoted": "Runs before every other stage and before any subprocess: a refused seal must cost nothing, least of all a paid call",
+   "tool": "tools/fire_modal_auth_eval.py",
+   "where": "STAGE 0 SEAL, line ~936",
+   "why_not": "firing is MAIN's and the campaign routes every Modal call through this tool; reading its Stage 0 call site and exercising the shared gate proves the door without this arm touching the firing path"
+  },
+  {
+   "invoked_here": true,
+   "observed": "rc 3 and NO seal written on both --decode-wall-clock and --inherit-decode-wall-clock with the full normal-seal argument set",
+   "quoted": "the seal is re-read and re-validated through the same validate_seal the fire path uses",
+   "tool": "tools/make_candidate_seal.py",
+   "where": "re-validates its own output"
+  }
+ ],
+ "emitter_paths_also_refuse": [
+  {
+   "path": "--decode-wall-clock <intent>",
+   "returncode": 3,
+   "seal_written": false,
+   "stderr": "decode wall-clock refused: unknown leg schema"
+  },
+  {
+   "path": "--inherit-decode-wall-clock <intent>",
+   "returncode": 3,
+   "seal_written": false,
+   "stderr": "inheritance must point directly to a measured or t4_direct leg (never to an inherited one)"
+  }
+ ],
+ "intent": {
+  "bytes": 16646,
+  "file_sha256": "f5211e7b1b50ee403b756f15f7f317b44deaef0d0bd563b31ecce4fef5fe5950",
+  "intent_sha256": "338a6dca031b8ebfc039baa47e9e035a1b801220c202189bb70d82a7f7976c81",
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/CANDIDATE_PREFIRE_INTENT.json"
+ },
+ "measured_utc": "2026-09-11T19:12:50Z",
+ "note": "a BARE seal invocation is refused by argparse first and never reaches the schema check; that would pass this control for the wrong reason, so the full normal-seal argument set was used",
+ "passed": true,
+ "question": "do BOTH normal seal-consumer paths refuse the intent object with exactly PREFIRE_INTENT_SCHEMA_REFUSED, before any consumer subprocess?",
+ "schema": "ddm_ntb2_real_door_control.v1",
+ "score_claim": false,
+ "shared_gate": {
+  "callable": "tac.candidate_seal.validate_seal",
+  "problems": [
+   "candidate_prefire_intent.v1 is not a completed seal"
+  ],
+  "verdict": "PREFIRE_INTENT_SCHEMA_REFUSED",
+  "verdict_with_decode_wall_clock_required": "PREFIRE_INTENT_SCHEMA_REFUSED"
+ }
+}

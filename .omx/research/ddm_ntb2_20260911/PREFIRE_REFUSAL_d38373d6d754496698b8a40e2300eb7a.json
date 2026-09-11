@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "FIRST_MEASUREMENT_REPLAY_REFUSED",
+  "detail": "object already exists: /Users/adpena/Projects/pact/.omx/research/ddm_ntb2_20260911/CANDIDATE_PREFIRE_INTENT.json",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-11T19:11:05.249111+00:00"
+}
