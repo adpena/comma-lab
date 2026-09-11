@@ -1346,3 +1346,19 @@ code under rule 118); the float64 NumPy receiver at 2,593 s is the cross-check o
 sharper: the two receivers disagree on 0.093 % of rounded uint8 values (max abs 0.0075), so the object must be validated
 and scored through the receiver that ships, never through the other. Nothing stands between a passing object and a T4 row
 except the object passing.
+
+## Addendum 35 (MAIN, 2026-09-11 ~18:00Z) — rbf1: the free pixel actuator dies on pose, not on wall-clock, and the error is context
+
+rbf1 (`.omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md`) was chartered on a premise its own first
+measurement corrected: the arm was told the T4 slack was ~540 s, then ~27.6 s, and asked whether a post-render boundary
+treatment could fit. Two of three operators fit at the band (SSAA 8.8 s, SDF 20.4 s of 27.581 s). None of that mattered. Every
+mode raised S, the best by +0.56, the composition by +10.9, because a receiver-side pixel edit pays a pose tax that is quadratic
+in its amplitude (ΔS_pose = 6.6e-3·τ², the excess constant to 5 % across an 8× range) and, at the pointer's d_pose of 4.59e-6,
+about 100× the seg channel for the same intervention. The seg side closes on its own arithmetic too: 0.53 % of token-edge pixels
+are wrong, so breaking even needs 186× selectivity and the operators reach 10–18×. Three facts the charter did not ask for are the
+gestalt's gain: the composite resampler is centroid-preserving except at the border (there is no phase to pre-compensate); jitter
+does not track blur (r ≈ +0.008); and at two thirds of the token-correct errors the render is already CLOSER to the ground-truth
+class colour than to its own. The residual is not a pixel that is the wrong colour. It is a region the scorer reads in context,
+which is the SegNet-sees-regions law measured from the inside. Law for successors, in the arm's words: price the pose channel
+before the seg channel for any receiver-side pixel actuator on this vehicle. This is the third free lever closed this week on the
+same object (mxo1 slack, ls1/ls2 atlas, rbf1 treatment); the object question, not the lever question, is where the bet sits.
