@@ -782,6 +782,8 @@ def run_training(
     for epoch in range(start_epoch, epochs):
         order = pair_order(seed, epoch)
         epoch_loss = 0.0
+        epoch_seg = 0.0
+        epoch_pose = 0.0
         batches = 0
         tau = qbt1.tau_for_step(epoch, max(1, epochs))
         for index in range(0, N, chunk_pairs):
@@ -799,6 +801,8 @@ def run_training(
                 seg_loss = qbt1.expected_flip_margin_loss(logits, target_seg, tau)
                 pose_loss = F.mse_loss(pose6, target_pose)
                 loss = 100.0 * seg_loss + pose_weight * pose_loss
+                epoch_seg += float(seg_loss.detach())
+                epoch_pose += float(pose_loss.detach())
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
@@ -809,6 +813,13 @@ def run_training(
         row = {
             "epoch": epoch,
             "mean_loss": epoch_loss / max(1, batches),
+            # Components, so a flattening total can be attributed to the term
+            # that is actually stuck.  Both are surrogates read at the epoch's
+            # tau, not scores.
+            "mean_expected_flip": epoch_seg / max(1, batches),
+            "mean_pose_mse": epoch_pose / max(1, batches),
+            "mean_seg_contribution": 100.0 * epoch_seg / max(1, batches),
+            "mean_pose_contribution": pose_weight * epoch_pose / max(1, batches),
             "tau": tau,
             "elapsed_seconds": time.time() - started,
             "axis": "[training-surrogate, not a score]",
