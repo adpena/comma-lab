@@ -156,11 +156,16 @@ def _axis_weights(coordinate: torch.Tensor, size: int) -> tuple[torch.Tensor, to
 class LatticeTorch(nn.Module):
     """Differentiable twin of the counted OBX2 lattice section."""
 
-    def __init__(self, spec: lat.LatticeSpec, *, seed: int) -> None:
+    def __init__(self, spec: lat.LatticeSpec, *, seed: int, prequantized: bool = False) -> None:
         super().__init__()
         if spec.condition_channels != CONDITION_CHANNELS or spec.outputs != OUTPUTS:
             raise OBX2TrainerError("lattice spec does not match the OBX2 render contract")
         self.spec = spec
+        # A receiver rebuilt from a packet already holds DEQUANTIZED grid values;
+        # re-deriving a scale and re-quantizing them would be a silent second
+        # pass of the quantizer, so the receiver skips it by construction rather
+        # than relying on the round trip happening to be the identity.
+        self.prequantized = bool(prequantized)
         generator = torch.Generator(device="cpu")
         generator.manual_seed(seed)
         self.grids = nn.ParameterList(
@@ -185,7 +190,7 @@ class LatticeTorch(nn.Module):
         grids, scales = [], []
         for grid, bits in zip(self.grids, self.spec.bits, strict=True):
             scale = symmetric_scale(grid, bits)
-            grids.append(quantize_ste(grid, scale, bits))
+            grids.append(grid if self.prequantized else quantize_ste(grid, scale, bits))
             scales.append(scale)
         return grids, scales
 
@@ -394,6 +399,56 @@ def receiver_render(packet: bytes, pair_ids: Sequence[int], *, height: int = EVA
     return out
 
 
+def parsed_module(packet: bytes) -> OBX2Module:
+    """Rebuild the object from the PARSED packet bytes alone, for the torch receiver.
+
+    Nothing here reads a live tensor: the generator parameters, the per-pair
+    latents, the lattice codes, the per-level scales, and the fusion weights all
+    come out of the decoded sections.  This is the receiver that is fast enough
+    to ship (measured 0.311 s/pair at batch 16, 187 s for n600 against the
+    1,260 s public budget, against 4.32 s/pair and 2,593 s for the portable
+    float64 NumPy reference).  The two receivers disagree on 0.0666% of rounded
+    uint8 values, so the admission row must be measured through the receiver that
+    actually ships; the NumPy reference stays the portability cross-check.
+    """
+
+    sections = lat.decode_obx2_packet(packet)
+    params = qbf1.decode_model(sections[lat.SECTION_MODEL])
+    meta = qbf1.decode_latent_meta(sections[lat.SECTION_LATENT_META])
+    records = qbf1.decode_latent_table(sections[lat.SECTION_LATENTS])
+    if set(records) != set(range(N)):
+        raise OBX2TrainerError("parsed packet does not carry all 600 latent records")
+    boundary = np.stack(
+        [qbf1.dequantize(records[i][0], meta["boundary_scale"], (qbf1.BOUNDARY_LATENT_DIM,)) for i in range(N)]
+    )
+    interior = np.stack(
+        [qbf1.dequantize(records[i][1], meta["interior_scale"], (qbf1.INTERIOR_LATENT_DIM,)) for i in range(N)]
+    )
+    spec, codes, scales, fusion = lat.decode_lattice_section(sections[lat.SECTION_LATTICE])
+    grids = lat.lattice_grids(spec, codes, scales)
+    base = qbt1.QBFLOWTorch(params, boundary, interior)
+    lattice = LatticeTorch(spec, seed=0, prequantized=True)
+    with torch.no_grad():
+        for parameter, grid in zip(lattice.grids, grids, strict=True):
+            parameter.copy_(torch.from_numpy(np.ascontiguousarray(grid)))
+        lattice.hidden_w.copy_(torch.from_numpy(fusion["hidden_w"]))
+        lattice.hidden_b.copy_(torch.from_numpy(fusion["hidden_b"]))
+        lattice.out_w.copy_(torch.from_numpy(fusion["out_w"]))
+        lattice.out_b.copy_(torch.from_numpy(fusion["out_b"]))
+        lattice.gate_tau.copy_(torch.from_numpy(fusion["gate_tau"]))
+    module = OBX2Module(base, lattice)
+    module.eval()
+    return module
+
+
+def torch_receiver_render(module: OBX2Module, pair_ids: Sequence[int]) -> torch.Tensor:
+    """Render the parsed object with the shipping torch receiver."""
+
+    with torch.no_grad():
+        outputs = module(torch.tensor(list(pair_ids), dtype=torch.long))
+        return outputs["rgb_pair_01"]
+
+
 # ---------------------------------------------------------------------------
 # Training
 # ---------------------------------------------------------------------------
@@ -518,14 +573,23 @@ def score_parsed_object(
     pose_target: np.ndarray,
     workers: int,
     render_chunk: int = 50,
+    receiver: str = "torch",
 ) -> dict[str, Any]:
-    """Authority advisory row: render the PARSED packet, score on the frozen CPU scorers."""
+    """Authority advisory row: render the PARSED packet, score on the frozen CPU scorers.
+
+    `receiver` selects which reference decodes the parsed bytes.  They are not
+    interchangeable: on a trained lattice they disagree on about 0.09% of rounded
+    uint8 values, so a row is only meaningful with its receiver named.
+    """
 
     from tac.scorer import load_differentiable_scorers
 
+    if receiver not in ("numpy", "torch"):
+        raise OBX2TrainerError(f"unknown receiver: {receiver}")
     posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=torch.device("cpu"))
     posenet.eval()
     segnet.eval()
+    torch_module = parsed_module(packet) if receiver == "torch" else None
     seg_errors = 0
     seg_pixels = 0
     pose_square = 0.0
@@ -535,10 +599,13 @@ def score_parsed_object(
     for start in range(0, len(pair_ids), render_chunk):
         chunk = list(pair_ids[start : start + render_chunk])
         render_started = time.time()
-        render = parallel_receiver_render(packet, chunk, workers=workers)
+        if torch_module is None:
+            render = torch.from_numpy(parallel_receiver_render(packet, chunk, workers=workers))
+        else:
+            render = torch_receiver_render(torch_module, chunk)
         render_seconds += time.time() - render_started
         with torch.no_grad():
-            camera = qbt1.roundtrip_to_camera_uint8_ste(torch.from_numpy(render))
+            camera = qbt1.roundtrip_to_camera_uint8_ste(render)
             pose6, logits = qbt1.scorer_forward(camera, posenet, segnet)
             argmax = logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
             pose = pose6.cpu().numpy().astype(np.float64)
@@ -555,6 +622,7 @@ def score_parsed_object(
         "axis": "[macOS-CPU advisory]",
         "score_claim": False,
         "promotable": False,
+        "receiver": receiver,
         "pairs": len(pair_ids),
         "seg_errors": seg_errors,
         "seg_pixels": seg_pixels,
@@ -589,6 +657,7 @@ def run_training(
     save_every_epochs: int,
     pose_weight_d_pose: float,
     validate_pairs: int,
+    cross_check_pairs: int = 40,
 ) -> dict[str, Any]:
     """One governed training stage over the complete 600-pair population."""
 
@@ -700,6 +769,15 @@ def run_training(
         gt=gt,
         pose_target=pose_target,
         workers=workers,
+        receiver="torch",
+    )
+    cross_check = score_parsed_object(
+        packet,
+        pair_ids=list(range(min(cross_check_pairs, N))),
+        gt=gt,
+        pose_target=pose_target,
+        workers=workers,
+        receiver="numpy",
     )
     receipt = {
         "schema": "ddm_obx2_training_stage.v1",
@@ -713,6 +791,7 @@ def run_training(
         "packet_path": str(packet_path),
         "deterministic_repeat": True,
         "validation": validation,
+        "portable_receiver_cross_check": cross_check,
         "history_tail": history[-10:],
         "elapsed_seconds": time.time() - started,
         "host": {"platform": platform.platform(), "python": platform.python_version()},
@@ -738,6 +817,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--save-every-epochs", type=int, default=5)
     parser.add_argument("--pose-weight-operating-point", type=float, default=1.0e-3)
     parser.add_argument("--validate-pairs", type=int, default=N)
+    parser.add_argument("--cross-check-pairs", type=int, default=40)
     parser.add_argument("--launch-authorized", action="store_true")
     return parser
 
@@ -862,9 +942,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         save_every_epochs=args.save_every_epochs,
         pose_weight_d_pose=args.pose_weight_operating_point,
         validate_pairs=args.validate_pairs,
+        cross_check_pairs=args.cross_check_pairs,
     )
-    print(json.dumps({"stage": args.stage, "validation": receipt["validation"],
-                      "packet_bytes": receipt["packet_accounting"]["packet_bytes"]}, indent=2))
+    print(
+        json.dumps(
+            {
+                "stage": args.stage,
+                "validation": receipt["validation"],
+                "portable_receiver_cross_check": receipt["portable_receiver_cross_check"],
+                "packet_bytes": receipt["packet_accounting"]["packet_bytes"],
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

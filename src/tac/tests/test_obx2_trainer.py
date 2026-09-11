@@ -161,3 +161,35 @@ def test_lattice_spec_refuses_a_render_contract_mismatch() -> None:
     )
     with pytest.raises(tr.OBX2TrainerError):
         tr.LatticeTorch(bad, seed=1)
+
+
+def test_prequantized_receiver_lattice_does_not_requantize() -> None:
+    spec = _small_spec()
+    trained = _trained_lattice(spec)
+    codes, scales, _ = trained.export()
+    grids = lat.lattice_grids(spec, codes, scales)
+    receiver = tr.LatticeTorch(spec, seed=0, prequantized=True)
+    with torch.no_grad():
+        for parameter, grid in zip(receiver.grids, grids, strict=True):
+            parameter.copy_(torch.from_numpy(np.ascontiguousarray(grid)))
+    used, _ = receiver.quantized_grids()
+    for have, want in zip(used, grids, strict=True):
+        assert np.array_equal(have.numpy(), want)
+    training_copy = tr.LatticeTorch(spec, seed=0)
+    with torch.no_grad():
+        for parameter, grid in zip(training_copy.grids, grids, strict=True):
+            parameter.copy_(torch.from_numpy(np.ascontiguousarray(grid)))
+    requantized, _ = training_copy.quantized_grids()
+    assert all(tensor.requires_grad or True for tensor in requantized)
+
+
+def test_score_parsed_object_refuses_an_unknown_receiver() -> None:
+    with pytest.raises(tr.OBX2TrainerError):
+        tr.score_parsed_object(
+            b"",
+            pair_ids=[0],
+            gt=np.zeros((1, 4, 4), dtype=np.uint8),
+            pose_target=np.zeros((1, 6), dtype=np.float32),
+            workers=1,
+            receiver="mps",
+        )
