@@ -64,7 +64,7 @@ FIELD_SHA = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
 #: Free-space floor, matched to the 40 GiB fail-closed reserve the sister HPAC
 #: producers hold.  Never lowered: a refusal here is the guard working.
 RESERVE_BYTES = 40 << 30
-TREATMENTS = ("control", "past_dil2", "past_dil3")
+TREATMENTS = ("control", "past_dil2", "past_dil3", "cone_dil2", "cone_dil3")
 
 
 class PriceError(RuntimeError):
@@ -110,7 +110,13 @@ def build_geometry(runtime: Path, work: Path) -> dict:
 #: receiver: the packer's topology carries no dilation and the serialized rows are the
 #: masked taps, so a dilated prior's IHS1 bytes have exactly the shipped structure.
 #: That is what makes this a pure shape rung -- and what makes it a receiver change.
-TREATMENT_PAST_DILATION = {"control": 1, "past_dil2": 2, "past_dil3": 3}
+TREATMENT_PAST_DILATION = {"control": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1}
+#: conv_a's spacing.  The receiver reaches conv_a's taps through geometry-general code in
+#: BOTH the optimized torch path (``hpac_inference._conv_a_features`` builds its gather
+#: from ``sparse.a_offsets`` with a bounds check) and the native export
+#: (``f26_hpac_native.c`` reads ``a_offsets`` off the module), so this axis costs ONE
+#: receiver constant and nothing in C.
+TREATMENT_CONE_DILATION = {"control": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3}
 
 
 def assert_layout_held(body: bytes, shipped_body: bytes, counts: list[int]) -> dict:
@@ -157,6 +163,32 @@ def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path |
 
     packed = rx2._pack_terminal_ihs1(checkpoint, work / "model")
     return Path(packed["raw"]["path"]).read_bytes()
+
+
+def patch_receiver_cone(runtime: Path, dilation: int) -> dict:
+    """Set conv_a's dilation in this arm's runtime COPY -- one constant, no C change.
+
+    ``residual_archive`` calls ``optimize_sparse_evaluator`` unconditionally, which
+    rebinds ``selected_logits`` to the geometry-general implementation, so the padded
+    dilation-1 routine in ``hpac_integer_sparse`` is dead on the shipped path.
+    """
+    target = runtime / "cpr1/inflate.py"
+    before = fact(target)
+    text = target.read_text()
+    already = f"HPAC_CONE_DILATION = {dilation}"
+    if already in text:
+        return {"cone_dilation": dilation, "file": "cpr1/inflate.py", "before": before, "after": before, "resumed": True}
+    anchor = "HPAC_LOGIT_PRECISION = 8"
+    if anchor not in text or "HPAC_CONE_DILATION" in text:
+        raise PriceError("cone patch anchor is absent, or a different dilation is applied")
+    text = text.replace(anchor, anchor + f"\n# ddm_hpr1 shape rung: spacing of conv_a's causal cone.\nHPAC_CONE_DILATION = {dilation}", 1)
+    call = "    deserialize_integer_model(model, raw)\n    return model.to(device)"
+    if text.count(call) != 1:
+        raise PriceError("receiver load_hpac anchor is not unique")
+    text = text.replace(call, "    model.conv_a.dilation = HPAC_CONE_DILATION\n" + call, 1)
+    target.chmod(0o644)
+    target.write_text(text)
+    return {"cone_dilation": dilation, "file": "cpr1/inflate.py", "before": before, "after": fact(target)}
 
 
 def patch_receiver_dilation(runtime: Path, dilation: int) -> dict:
@@ -267,7 +299,9 @@ def prepare(tag: str, checkpoint: Path | None = None):
     if sources["archive.zip"]["sha256"] != POINTER45_SHA:
         raise PriceError("copied archive is not the move-45 archive")
     dilation = TREATMENT_PAST_DILATION[tag]
+    cone = TREATMENT_CONE_DILATION[tag]
     receiver_patch = None if dilation == 1 else patch_receiver_dilation(runtime, dilation)
+    cone_patch = None if cone == 1 else patch_receiver_cone(runtime, cone)
     rx, renderer, code_dir = landed.io.load_runtime(runtime)
     from runtime import ihs2
     from runtime import rc3_shared_mixer as rc3
@@ -313,8 +347,10 @@ def prepare(tag: str, checkpoint: Path | None = None):
             "tag": tag,
             "past_dilation": dilation,
             "layout_held": layout_held,
+            "cone_dilation": cone,
             "receiver_patch": receiver_patch,
-            "receiver_change": receiver_patch is not None,
+            "cone_patch": cone_patch,
+            "receiver_change": receiver_patch is not None or cone_patch is not None,
             "checkpoint": None if checkpoint is None else fact(checkpoint),
             "base_archive": sources["archive.zip"],
             "base_archive_expected": {"sha256": POINTER45_SHA, "bytes": POINTER45_BYTES},

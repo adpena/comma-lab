@@ -107,6 +107,10 @@ PREREGISTERED_CONFIG = {
     # TEMPORAL tap set.  1 is the shipped geometry, so every pre-existing profile keeps
     # its exact meaning; only a profile that admits another value can move it.
     "past_dilation": 1,
+    # ddm_hpr1 (2026-09-11): the dilation of conv_a, the SPATIAL causal cone.  The
+    # receiver reaches conv_a's taps through geometry-general code in both the optimized
+    # torch path and the native export, so this axis costs ONE receiver constant.
+    "conv_a_dilation": 1,
 }
 RX2_PREREGISTERED_CONFIG = {
     **PREREGISTERED_CONFIG,
@@ -161,6 +165,13 @@ PREREGISTERED_PAST_DILATIONS_BY_PROFILE = {
     profile: frozenset({1}) for profile in PREREGISTERED_CONFIG_BY_PROFILE
 }
 PREREGISTERED_PAST_DILATIONS_BY_PROFILE["hpr1_shape_rungs"] = frozenset({1, 2})
+#: Spatial cone dilations each profile admits, same additive discipline.  ddm_hpr1's
+#: measured spatial set atlas ranks dilation 2 and 3 ahead of the shipped spacing at a
+#: held tap count (-3,309 and -5,220 ranking bytes).
+PREREGISTERED_CONV_A_DILATIONS_BY_PROFILE = {
+    profile: frozenset({1}) for profile in PREREGISTERED_CONFIG_BY_PROFILE
+}
+PREREGISTERED_CONV_A_DILATIONS_BY_PROFILE["hpr1_shape_rungs"] = frozenset({1, 2, 3})
 #: Profiles whose --cache / --init are pinned by caller-supplied SHA-256 values.
 CALLER_PINNED_INPUT_PROFILES = frozenset({"jf1_joint_refit", "cl2_shipped_ladder", "hpr1_shape_rungs"})
 EXPECTED_CACHE_SHA256 = "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
@@ -529,7 +540,7 @@ def _assert_preregistered_config(args: argparse.Namespace) -> None:
         for key, expected in expected_config.items()
         # ``seed`` is checked against the profile's admitted SET just below, exactly as
         # ``rate_lambda`` is; every other key stays a strict equality against the config.
-        if key not in ("seed", "past_dilation") and getattr(args, key) != expected
+        if key not in ("seed", "past_dilation", "conv_a_dilation") and getattr(args, key) != expected
     }
     admitted_lambdas = PREREGISTERED_RATE_LAMBDAS_BY_PROFILE[args.profile]
     if args.rate_lambda not in admitted_lambdas:
@@ -545,6 +556,12 @@ def _assert_preregistered_config(args: argparse.Namespace) -> None:
         differences["past_dilation"] = {
             "expected": sorted(admitted_dilations),
             "observed": args.past_dilation,
+        }
+    admitted_cone = PREREGISTERED_CONV_A_DILATIONS_BY_PROFILE[args.profile]
+    if args.conv_a_dilation not in admitted_cone:
+        differences["conv_a_dilation"] = {
+            "expected": sorted(admitted_cone),
+            "observed": args.conv_a_dilation,
         }
     if differences:
         raise CL1TrainingError(
@@ -726,6 +743,7 @@ def _run_identity(
         "device",
         "ema_target_seed_fraction",
         "past_dilation",
+        "conv_a_dilation",
     )
     trainer_sha256 = _sha256_file(Path(__file__).resolve())
     local_causal_source_sha256 = _local_causal_sha256()
@@ -913,6 +931,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "dilation of conv_past, the prior's fine-grained temporal tap set; 1 is the "
             "shipped geometry.  Moves taps without adding any, so the stored value count "
             "is unchanged.  Only a profile that admits the value may use it."
+        ),
+    )
+    parser.add_argument(
+        "--conv-a-dilation",
+        type=int,
+        default=1,
+        help=(
+            "dilation of conv_a, the SPATIAL causal cone; 1 is the shipped geometry.  "
+            "Moves 23 taps without adding any.  Only a profile that admits the value may use it."
         ),
     )
     parser.add_argument("--frame-dim", type=int, default=8)
@@ -1144,6 +1171,13 @@ def main() -> None:
         kernel = int(model.conv_past.weight.shape[-1])
         model.conv_past.dilation = int(args.past_dilation)
         model.conv_past.padding = int(args.past_dilation) * (kernel - 1) // 2
+    if args.conv_a_dilation != 1:
+        # conv_a's mask is unchanged; only the spacing its taps are read at moves, and
+        # the receiver derives that spacing from the module.  Padding follows the kernel
+        # so the dense training forward keeps the patch size.
+        kernel = int(model.conv_a.weight.shape[-1])
+        model.conv_a.dilation = int(args.conv_a_dilation)
+        model.conv_a.padding = int(args.conv_a_dilation) * (kernel - 1) // 2
     enable_self_compression(model, args.init_bits)
 
     resume: dict[str, Any] | None = None
