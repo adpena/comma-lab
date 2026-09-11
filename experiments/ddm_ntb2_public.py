@@ -98,8 +98,12 @@ def stage_runtime(treatment: str) -> Path:
     """
     runtime = ROOT / treatment / "candidate_runtime"
     source = control.ROOT / "source_runtime"
-    if runtime.exists():
-        shutil.rmtree(runtime)
+    archive_ready = runtime / "archive.zip"
+    if archive_ready.is_file():
+        # Idempotent on resume. Re-staging a tree the receiver has already checkpointed
+        # against makes it refuse with "receiver checkpoint binding or bytes changed",
+        # which is the guard doing its job on a tree that only LOOKED the same.
+        return runtime
     shutil.copytree(source, runtime, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     archive = hpac.ROOT / treatment / "retained/archive.twin0.zip"
     if not archive.is_file():
