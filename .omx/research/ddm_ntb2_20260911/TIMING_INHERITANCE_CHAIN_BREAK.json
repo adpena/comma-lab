@@ -1,0 +1,57 @@
+{
+ "axis": "[contract arithmetic; measured refusals, scorer-free]",
+ "finding": "move 45 has NO inheritable decode-wall-clock leg, so NO move-46 candidate can seal with --inherit-decode-wall-clock. This is not specific to ddm_ntb2; it blocks pc3's rebase and any other move-46 candidate identically.",
+ "measured_refusals": [
+  {
+   "how_known": "read from src/tac/decode_wall_clock.py; move 45's leg has mode 'inherited'",
+   "result": "REFUSED by contract text",
+   "row": "inheritance must point directly to a measured or t4_direct leg (never to an inherited one)",
+   "source_leg": "move 45's leg"
+  },
+  {
+   "how_known": "MEASURED by calling inherit_decode_wall_clock directly",
+   "pointer_archive_sha256": "move 45 (145e02e2\u2026)",
+   "result": "REFUSED",
+   "row": "decode_wall_clock: source measurement is not the pointer archive",
+   "source_leg": "move 44's t4_direct leg"
+  },
+  {
+   "how_known": "MEASURED; the control that proves the refusal above is about the POINTER and not about this candidate's tree",
+   "pointer_archive_sha256": "move 44 (04758c0d\u2026)",
+   "result": "PASS, projected 1232.418725255",
+   "source_leg": "move 44's t4_direct leg"
+  }
+ ],
+ "measured_utc": "2026-09-11T16:29:58Z",
+ "not_done": "no contract code was patched; the refusals were measured and reported",
+ "resolutions_for_MAIN_not_taken_here": [
+  "fire a real t4_direct decode for move 45's archive, restoring a measured anchor to inherit from",
+  "seal with --first-fire-intent and let MAIN complete it from the fired measurement",
+  "amend the contract to follow the inheritance CHAIN to its terminating t4_direct when every link shares one receiver behavior digest -- a contract change, therefore MAIN's and a second family's call, not this arm's"
+ ],
+ "schema": "ddm_ntb2_timing_inheritance_chain_break.v1",
+ "score_claim": false,
+ "searched": "no t4_direct leg exists anywhere in .omx/research for archive 145e02e2\u2026; make_candidate_seal.py passes the LIVE pointer's pointer_archive_sha256 into inherit_decode_wall_clock (tools/make_candidate_seal.py:298-303), so the candidate's own base does not substitute for it",
+ "the_chain": [
+  {
+   "archive": "04758c0d\u2026",
+   "leg_mode": "t4_direct",
+   "move": 44,
+   "note": "a real cold T4 decode; projected_t4_decode_seconds 1232.418725255"
+  },
+  {
+   "archive": "145e02e2\u2026",
+   "leg_mode": "inherited",
+   "move": 45,
+   "note": "VALID when it was sealed, because the pointer WAS move 44, so the source leg's archive_sha256 equalled pointer_archive_sha256",
+   "source": "move 44's t4_direct leg"
+  },
+  {
+   "archive": "a0de607d\u2026 (this candidate)",
+   "leg_mode": "NONE AVAILABLE",
+   "move": 46,
+   "note": "the pointer is now move 45"
+  }
+ ],
+ "why_the_row_is_right_anyway": "the row exists so a timing claim names the pointer's own archive. The contract already tolerates a candidate inheriting timing measured on a DIFFERENT archive; what it does not tolerate is doing so twice in a row, which is the honest place to stop."
+}
