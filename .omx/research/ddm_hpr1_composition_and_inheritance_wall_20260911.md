@@ -96,30 +96,41 @@ the inputs already staged.
 
 ## 3. The step-4 variant and the q rung
 
-Both are IN FLIGHT on the same rail, detached with done-receipts, and their prices land in this file.
+Both are MEASURED.
 
-**`retrain_frame_quad`** (step 4): 3,543 of 4,800 values moved, hpac **11,146 B**, model leg
-**−1,116 B** — MEASURED. Its tail cost, and therefore its joint, is owed. Note it must beat the step-2
-row's −248 B, not merely move 47: a bigger model saving is not a win if the tail gives more back.
-Launch history worth carrying: its first run died at frame 400 on the 40 GiB reserve and its RESUME
-then correctly REFUSED, because I had changed the producer in between and the checkpoints were no
-longer bound to it. The immutability guard did its job; the rerun is from zero.
+### 3a. The step-4 variant LOSES — and it locates where the trade turns
 
-**The q rung** — the coder's scalar q re-solved on the REFIT prior, against mxo3's prior negative of
-**−183.53 B** on the OLD prior. Instrument: `experiments/ddm_hpr1_q_rung.py`, scoring a 64-bin
-calibration table that `--collect-q` accumulates online from the same hook the arithmetic encoder is
-fed from; folds by frame PARITY so they interleave the video; each fold coded under the other fold's
-KT table with back-off, **using mxo3's own `cross_bits`, imported and not re-derived**, because a
-prior negative and its re-test must be one instrument. The scorer carries its own control: on a
-synthetic perfectly-calibrated table it returns **−0.04 B**, so it cannot manufacture a gain.
+| | step 2 (`retrain_frame_even`) | **step 4 (`retrain_frame_quad`)** | move 47 |
+|---|---:|---:|---:|
+| values moved | 2,310 / 4,800 | **3,543 / 4,800** | — |
+| `hpac` | 11,629 B (−633) | **11,146 B (−1,116)** | 12,262 B |
+| stream | 118,896 B (+385) | **119,685 B (+1,174)** | 118,511 B |
+| **archive** | **179,111 B (−248)** | **179,417 B (+58)** | 179,359 B |
+| ΔS | −1.6513e-04 | **+3.8620e-05** | — |
 
-**I threw away my first version of this statistic.** It collected the probability the coded row gave
-the symbol *actually coded* — an event whose frequency is 1 by construction, so any refit of it is
-degenerate and would have produced a confident number about nothing. I stopped my own 90-minute run
-rather than let it finish into a wrong answer, and replaced it with the row's own confidence against
-whether its argmax was right — an event whose realisation varies. The exact binary baseline is
-accumulated alongside, because binning it after the fact would have left the baseline approximate
-while the challenger stayed exact, a comparison tilted by construction.
+sha `a62badec6621de3b…`; output-lossless. **Step 4 buys 483 B MORE model saving and gives 789 B MORE
+back on the tail, so the joint flips sign.** ntb2 wrote that `frame_quad` "measures where the trade
+turns" and never ran it; it turns **between step 2 and step 4**, and step 2 is the winner. The rounding
+family is closed at this resolution: coarser does not pay.
+
+### 3b. The q rung — NEGATIVE, and 51× harder than on the old prior
+
+MAIN's question was whether the refit moved q's optimum. **It did not — it moved q CLOSER to it.**
+
+| | refit prior (move 47) | old prior (mxo3) |
+|---|---:|---:|
+| held-out recalibration gain | **−9,439.97 B** | −183.53 B |
+| verdict | NEGATIVE | NEGATIVE |
+
+Instrument: 117,964,800 symbols, 64 bins, two folds of 58,982,400 each by frame parity, each coded
+under the other's KT table with back-off — **mxo3's own `cross_bits`, imported**. The control that
+makes the collection trustworthy: `control47` re-encoded move 47's prior unchanged and reproduced its
+archive at **179,359 B, Δ 0**, so these are the shipped mixer's own probabilities.
+
+**The mechanism is visible in one number.** The mean stated confidence is **0.99802722** and the mean
+argmax-correct rate is **0.99802843** — a calibration error of **−1.21e-06**. The mixer is calibrated
+to six decimal places on the refit prior. Recalibrating it costs **51× more** than it cost on the old
+prior, which is what "already calibrated, and now more so" looks like. **Closed.**
 
 ## 4. One storage decision, certified not silent
 
