@@ -1276,3 +1276,16 @@ not an archive. Nothing in this session's twelve closures contradicts it; each c
 from inside the pointer's object. ob1 designs the successor object under the cross's criterion — inherit the born generator's byte
 feasibility, start from a reachable distortion regime, put the Lane-edge geometry in the counted archive as a carrier the generator
 consumes — with $0 falsifiers on the retained born renders and the shipped field. Whether to burn it is the operator's call.
+
+## Addendum 31 (MAIN, 2026-09-11 ~02:40Z) — obx1: the cross corrected on n600, the direct splice closed, and the object decision put where it belongs
+
+obx1 (`.omx/research/ddm_obx1_successor_object_under_the_cross_design_20260911.md`, sha 9f49b2dcacd788fc…) did what the cross needed first: it measured the born object on the COMPLETE population. qbt2b r10 is not at
+distortion 0.33 — that was the n32 hardtail prefix — it is at **8.6267** (d_seg 0.0633, d_pose 0.529) on n600 through the frozen scorer,
+with its rate at 106,714 B physical / 121,928 B HT. The cross's two halves stand, but the distance between them is 8.6, not 0.3, and the
+corrected counterfactual is 0.0983. The $0 falsifier then closed the naive bridge: splicing the pointer's Lane cells into the born render
+makes distortion WORSE (14.57) at a 4.45 MB carrier — interpolation spill, the same physics that killed every post-hoc sidecar on the
+witness (§Pose is SOLVED, 2026-07-10). What survives is the first design that changes the OBJECT instead of the tail: an edge-local implicit
+correction lattice co-trained through R over the born generator (LIIF/SHACIRA anchors), with a Poisson-fusion and a temporal-edge design
+queued behind it. obx1 sealed it with a burn spec and, correctly, stopped: this is a new vehicle generation measured in days of local
+training, not a bounded burn, and the standing GO was written for the latter. The decision is the operator's: `GO ddm_obx2` or hold.
+Everything MAIN can do without that decision is done; the pointer is at move 44 and PR #140 is staged on its bytes at 91/93.
