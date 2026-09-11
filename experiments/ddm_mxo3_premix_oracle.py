@@ -80,6 +80,11 @@ CONTEXT_SETS = {
     "rich": {"miss_bins": 256, "premix_axes": ("std", "mean", "peak", "agree")},
 }
 AXIS_LEVELS = {"std": 8, "mean": 8, "peak": 4, "agree": 6}
+# A summary can hide a single loud family, so each family also gets its own
+# one-axis model on the same held-out terms.
+FAMILY_EDGES = np.array([-3e-1, -3e-2, -3e-3, 0.0, 3e-3, 3e-2, 3e-1])
+FAMILY_LEVELS = len(FAMILY_EDGES) + 1
+FAMILIES = 23
 
 
 def binary_bits(probability: np.ndarray, hit: np.ndarray) -> np.ndarray:
@@ -106,18 +111,24 @@ def premix_levels(axes: tuple[str, ...]) -> int:
     return product
 
 
-def premix_context(
-    family_q15: np.ndarray, mixer_q15: np.ndarray, axes: tuple[str, ...]
-) -> np.ndarray:
-    """Quantised statistics of the 23 pre-mix opinions, relative to the mix.
+def opinions(family_q15: np.ndarray, mixer_q15: np.ndarray) -> np.ndarray:
+    """Each family's own log-odds opinion, with the shared base odds removed.
 
-    Each family's coded probability shares the corrector's base odds, so the
+    Every family's coded probability rides the corrector's base odds, so the
     difference of log odds isolates that family's own multiplier -- exactly the
     quantity the fixed mixer weights and then discards.
     """
     family = np.clip(family_q15.astype(np.float64), 1.0, Q15 - 1.0) / Q15
     mixed = np.clip(mixer_q15.astype(np.float64), 1.0, Q15 - 1.0) / Q15
-    opinion = np.log(family / (1.0 - family)) - np.log(mixed / (1.0 - mixed))[:, None]
+    return np.log(family / (1.0 - family)) - np.log(mixed / (1.0 - mixed))[:, None]
+
+
+def premix_context(
+    family_q15: np.ndarray, mixer_q15: np.ndarray, axes: tuple[str, ...]
+) -> np.ndarray:
+    """Quantised summary statistics of the 23 pre-mix opinions."""
+    opinion = opinions(family_q15, mixer_q15)
+    mixed = mixer_q15
     parts = {
         "std": np.digitize(opinion.std(axis=1), STD_EDGES),
         "mean": np.digitize(opinion.mean(axis=1), MEAN_EDGES),
@@ -159,6 +170,10 @@ def accumulate(
     counts = np.zeros((2, *shape), dtype=np.int64)
     hits = np.zeros((2, *shape), dtype=np.int64)
     shuffled_hits = np.zeros(shape, dtype=np.int64)
+    family_shape = (FAMILIES, K, miss_bins, FAMILY_LEVELS)
+    family_counts = np.zeros((2, *family_shape), dtype=np.int64)
+    family_hits = np.zeros((2, *family_shape), dtype=np.int64)
+    family_cells = FAMILIES * K * miss_bins * FAMILY_LEVELS
     calib_counts = np.zeros((2, K, miss_bins), dtype=np.int64)
     calib_hits = np.zeros((2, K, miss_bins), dtype=np.int64)
     shipped_bits = 0.0
@@ -190,6 +205,22 @@ def accumulate(
         shuffled_hits += (
             np.bincount(flat, weights=control, minlength=cells).reshape(shape).astype(np.int64)
         )
+        level = np.digitize(opinions(family, mixer), FAMILY_EDGES)
+        family_flat = (
+            (np.arange(FAMILIES) * K + hit_class[:, None]) * miss_bins + bins[:, None]
+        ) * FAMILY_LEVELS + level
+        family_counts[fold] += (
+            np.bincount(family_flat.reshape(-1), minlength=family_cells).reshape(family_shape)
+        )
+        family_hits[fold] += (
+            np.bincount(
+                family_flat.reshape(-1),
+                weights=np.repeat(hit, FAMILIES),
+                minlength=family_cells,
+            )
+            .reshape(family_shape)
+            .astype(np.int64)
+        )
         calib_flat = hit_class * miss_bins + bins
         calib_counts[fold] += np.bincount(calib_flat, minlength=K * miss_bins).reshape(K, miss_bins)
         calib_hits[fold] += (
@@ -204,6 +235,8 @@ def accumulate(
         "counts": counts,
         "hits": hits,
         "shuffled_hits": shuffled_hits,
+        "family_counts": family_counts,
+        "family_hits": family_hits,
         "calib_counts": calib_counts,
         "calib_hits": calib_hits,
         "shipped_bits": shipped_bits,
@@ -268,6 +301,16 @@ def report(state: dict[str, object], frames: int) -> dict[str, object]:
     calib_prior = kt_estimate(calib_counts, calib_hits, class_rate)
     held_calibrated = cross_bits(calib_counts, calib_hits, class_rate)
     held_full = cross_bits(counts, hits, calib_prior[..., None])
+    # One model per family, each backing off to the same calibrated table.  These
+    # are 23 SEPARATE measurements, never a union: they are reported as a range,
+    # not a total, because disjoint gains do not add.
+    family_prior = calib_prior[..., None]
+    per_family = [
+        (held_calibrated - cross_bits(
+            state["family_counts"][:, pos], state["family_hits"][:, pos], family_prior
+        )) / 8
+        for pos in range(FAMILIES)
+    ]
     occupied = int((counts.sum(axis=0) > 0).sum())
     # The control keeps the partition and destroys the signal, so whatever it
     # "saves" over the same recalibrated baseline is the partition's overfit.
@@ -289,6 +332,9 @@ def report(state: dict[str, object], frames: int) -> dict[str, object]:
         "holdout_recalibration_bytes": (shipped_bits - held_calibrated) / 8,
         "holdout_premix_bytes": (held_calibrated - held_full) / 8,
         "holdout_premix_vs_shipped_bytes": (shipped_bits - held_full) / 8,
+        "holdout_per_family_bytes": per_family,
+        "holdout_best_single_family_bytes": max(per_family),
+        "holdout_worst_single_family_bytes": min(per_family),
         "context_set": state["context_set"],
         "miss_bins": state["miss_bins"],
         "premix_axes": state["premix_axes"],

@@ -182,3 +182,13 @@ def test_holdout_rejects_a_finer_partition_that_carries_no_signal(monkeypatch) -
     summary = _run(monkeypatch, planted=False, context_set="summary")
     assert abs(rich["holdout_premix_bytes"]) < 0.01 * rich["shipped_binary_bytes"]
     assert abs(summary["holdout_premix_bytes"]) < 0.01 * summary["shipped_binary_bytes"]
+
+
+def test_per_family_models_register_a_planted_single_family_signal(monkeypatch) -> None:
+    """A summary can hide one loud family, so each family is also tested alone."""
+    planted = _run(monkeypatch, planted=True, context_set="summary")
+    assert len(planted["holdout_per_family_bytes"]) == oracle.FAMILIES
+    assert planted["holdout_best_single_family_bytes"] > 0.01 * planted["shipped_binary_bytes"]
+    noise = _run(monkeypatch, planted=False, context_set="summary")
+    assert noise["holdout_best_single_family_bytes"] < 0.01 * noise["shipped_binary_bytes"]
+    assert noise["holdout_worst_single_family_bytes"] <= noise["holdout_best_single_family_bytes"]
