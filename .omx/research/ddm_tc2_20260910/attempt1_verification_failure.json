@@ -1,0 +1,18 @@
+{
+  "cause": "Our unified diff omitted the no-newline-at-end-of-file marker for atomic JSON receipts; file boundaries were merged. Rebuild a valid standard diff, keep this attempt for custody.",
+  "fallback_commit": "3eb15f2ef5ccc88f9b58df0fc4170baeb6521378",
+  "mismatched_files": [
+    ".omx/research/ddm_tc2_20260910/reviews.json",
+    ".omx/research/ddm_tc2_20260910/RESULT.json",
+    ".omx/research/ddm_tc2_20260910/encode_result.json",
+    ".omx/research/ddm_tc2_20260910/decode_result.json",
+    ".omx/research/ddm_tc2_20260910/equation_registration.json",
+    ".omx/research/ddm_tc2_20260910/FIRE_ORDERS.json",
+    ".omx/research/ddm_tc2_20260910/task_events.json",
+    ".omx/research/ddm_tc2_20260910/LANE_ROAD_BAND_ENTROPY.json",
+    ".omx/research/ddm_tc2_20260910/lane_registration.json",
+    ".omx/research/ddm_tc2_20260910/retained_manifest.json"
+  ],
+  "source_python_and_memo_hashes_unchanged": true,
+  "status": "REJECTED_DO_NOT_LAND"
+}

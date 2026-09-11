@@ -1,0 +1,161 @@
+{
+  "captured_utc": "2026-09-10T02:28:24.079279+00:00",
+  "files": [
+    {
+      "bytes": 8776,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/FINAL_HANDOFF.json",
+      "sha256": "dca8b2b18fdb7fd4610079d8dd337a03453e84bf9be33757571f8f4624951aeb"
+    },
+    {
+      "bytes": 3343,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/FIRE_ORDERS.json",
+      "sha256": "3de397f07d93e0b6138353e44131f60ae52aabb03c4fc3b4d88f4cbbf072cad0"
+    },
+    {
+      "bytes": 1305,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/LANE_ROAD_BAND_ENTROPY.json",
+      "sha256": "8418c95ce3ebd64efce1864de859d5560df7074e64d42f7f168b6b931ab823ac"
+    },
+    {
+      "bytes": 2889,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/RESULT.json",
+      "sha256": "f14fa3212dd8cb92d932a04c7241e6e5e9d2b76ef446f1436d0e3363d63dd89e"
+    },
+    {
+      "bytes": 232670,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/attempt1_landing.patch",
+      "sha256": "419d2dd4af75968a69162ad5baf20f71c7fa70cc3284f1cfe86cd7994c73e620"
+    },
+    {
+      "bytes": 5177,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/attempt1_landing_manifest.json",
+      "sha256": "35aa170e94cee4f456e46d67874ac0ac84febb28c966cc02133ed554e548d5dd"
+    },
+    {
+      "bytes": 3655,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/attempt1_serializer_argv.json",
+      "sha256": "bc7a7908bf3ffce346ca6df9380897807b3daf6f2a3ef1000d96a9f24fdc0f12"
+    },
+    {
+      "bytes": 860,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/attempt1_serializer_status.json",
+      "sha256": "d0860190e1c353e38fb2900e91d3b749083d9bf09cba0c71fad646dc3f724b31"
+    },
+    {
+      "bytes": 953,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/attempt1_verification_failure.json",
+      "sha256": "14a8e0dc1c4a33cca5bd042d68492ed91123a11e90a4d7f59bab2ccd185b9b4f"
+    },
+    {
+      "bytes": 5881,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/bundle_verification.json",
+      "sha256": "7d1c5896bdcafccc285049e6152868b6078f7be3407690ce2057503b4575bf1b"
+    },
+    {
+      "bytes": 1931,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/decode_result.json",
+      "sha256": "771c5b1d189249eb494a2f20ec7cca38ef47c6cbbb1a7857df3669184565fa8a"
+    },
+    {
+      "bytes": 2335,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/encode_result.json",
+      "sha256": "0e6964188ae8787da40d0817f0f2700619410afe4af43e91ae5f4e0dbf37a536"
+    },
+    {
+      "bytes": 9358,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/equation_events.jsonl",
+      "sha256": "71dcf9cf300257f16c2f46fcbc24b1c736660e103ad1fd9a11f5a0f16f2b16e8"
+    },
+    {
+      "bytes": 12212,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/equation_registration.json",
+      "sha256": "7397ef8eafabb1242c59150875c6607220df8c4edc0a4b9051ac1c0b79451c70"
+    },
+    {
+      "bytes": 1421,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/final_landing_task_event.json",
+      "sha256": "d8a93df7825ae8dd8195684baeebb3dfa7f40af7528d4319a2f8ece3f7c0333a"
+    },
+    {
+      "bytes": 621,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/fit_run.sh",
+      "sha256": "db79171bb7852a7cdf885e3365b914443030867f9eeb8232dc5afb185851928f"
+    },
+    {
+      "bytes": 232960,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/landing.patch",
+      "sha256": "b74f643f7514de5df6809d16ed22d25100b31e49735deb31a0c4beb2a15668e4"
+    },
+    {
+      "bytes": 5252,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/landing_manifest.json",
+      "sha256": "7059088244a41d36bad9943f75be8296407f0dcaaffb627eb3f9a977edc8dec7"
+    },
+    {
+      "bytes": 1293,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/lane_registration.json",
+      "sha256": "f2c6f2d6aeca3cc22651a2b3759a5659570d3821f05f4fd84730e1fd80367fae"
+    },
+    {
+      "bytes": 17945,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/live_frontier.json",
+      "sha256": "4d0dd93cbd025da8f6f582e4355474cd34bc25dc926f87f66a030268bbe6cf1d"
+    },
+    {
+      "bytes": 1145,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/retained_manifest.json",
+      "sha256": "9c0da92d0b0b5d270595ceebd1c1aae19261c573f6b343e6367847507b6c888f"
+    },
+    {
+      "bytes": 18225,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/reviews.json",
+      "sha256": "21c7a5a1ddf563dc181421d56c3909127ec0782dae56e4978ec6dbcb14f21264"
+    },
+    {
+      "bytes": 3655,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/serializer_argv.json",
+      "sha256": "bc7a7908bf3ffce346ca6df9380897807b3daf6f2a3ef1000d96a9f24fdc0f12"
+    },
+    {
+      "bytes": 108,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/serializer_environment.json",
+      "sha256": "307add57cf39320295728cdcca531707cc9beadd2ae63d67ff013e770cc0a3dd"
+    },
+    {
+      "bytes": 1008,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/serializer_self_identity_refusal.json",
+      "sha256": "7d12e359bcd13966f0853ea20f50cb139288e51a801882a9c81ffc776581ffc2"
+    },
+    {
+      "bytes": 860,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/serializer_status.json",
+      "sha256": "2d09e812b0c226b49a197a236ce34ef83815b57f5fce618baec214978f95c7f2"
+    },
+    {
+      "bytes": 24637,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/source_landing.patch",
+      "sha256": "e1cf086301423f51fbbede686642672166cafff7979fadcbda783cdf1f4e63d8"
+    },
+    {
+      "bytes": 671,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/source_serializer_argv.json",
+      "sha256": "cb53ee8fc76e885b26271d859d7193d44f711d601226ad662f82b984e130c07d"
+    },
+    {
+      "bytes": 981,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/source_serializer_status.json",
+      "sha256": "5642d19b1d842a8c60f6756e3f963a5594203691449599fab075851d0d432a55"
+    },
+    {
+      "bytes": 11682,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/task_events.json",
+      "sha256": "0de5f6aa0d1b34372483679818aa2e1120c2b472fc9f1b43b474b7febfb93b9b"
+    },
+    {
+      "bytes": 11582,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/task_loader_existing_warnings.json",
+      "sha256": "233a6fda7277c1ab68ddfb9a49d3e3de0e792c0792fa628a47850aa49ddcb7d8"
+    }
+  ],
+  "purpose": "Exact final owned handoff leaves; no claim they are in the fallback commit."
+}

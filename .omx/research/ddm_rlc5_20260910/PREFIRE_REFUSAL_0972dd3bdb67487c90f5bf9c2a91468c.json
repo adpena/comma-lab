@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "FIRST_MEASUREMENT_LANE_REFUSED",
+  "detail": "refusing to write an axis-untagged FIRE_MANIFEST: missing 'axis'. Every Modal auth-eval row carries its contest axis tag or it is not evidence.",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-10T20:16:36.499533+00:00"
+}

@@ -1,0 +1,136 @@
+{
+  "base_head": "d6dabdf082a316374141fc0463c29edecbac7a48",
+  "bundle": {
+    "bytes": 50464,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022638.520227Z-45819/intended-commit.bundle",
+    "sha256": "d2a6b134472afb5f702c8c2663651df4316b7a20040e08938cf76b140b63fb69"
+  },
+  "fallback_commit": "83645a01e395a9dd2a0a0a94dc8f36731bc3fc42",
+  "main_commit_hooks_ran": false,
+  "reason_main_hooks_missing": "Main object insertion was denied before git commit. Source reviews, Ruff and real-input proofs are separately complete.",
+  "rejected_attempt": {
+    "cause": "Our unified diff omitted the no-newline-at-end-of-file marker for atomic JSON receipts; file boundaries were merged. Rebuild a valid standard diff, keep this attempt for custody.",
+    "fallback_commit": "3eb15f2ef5ccc88f9b58df0fc4170baeb6521378",
+    "mismatched_files": [
+      ".omx/research/ddm_tc2_20260910/reviews.json",
+      ".omx/research/ddm_tc2_20260910/RESULT.json",
+      ".omx/research/ddm_tc2_20260910/encode_result.json",
+      ".omx/research/ddm_tc2_20260910/decode_result.json",
+      ".omx/research/ddm_tc2_20260910/equation_registration.json",
+      ".omx/research/ddm_tc2_20260910/FIRE_ORDERS.json",
+      ".omx/research/ddm_tc2_20260910/task_events.json",
+      ".omx/research/ddm_tc2_20260910/LANE_ROAD_BAND_ENTROPY.json",
+      ".omx/research/ddm_tc2_20260910/lane_registration.json",
+      ".omx/research/ddm_tc2_20260910/retained_manifest.json"
+    ],
+    "source_python_and_memo_hashes_unchanged": true,
+    "status": "REJECTED_DO_NOT_LAND"
+  },
+  "shared_index_byte_identical": true,
+  "status": "VERIFIED_BUNDLE_ONLY_NOT_MAIN",
+  "verification_method": "Independent Git bare store fetched local bundle using read-only main objects as alternates; cat-file every intended blob, compare post-edit SHA, parse all JSON/JSONL and inspect trailers.",
+  "verification_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/bundle_verification.git",
+  "verification_store_rebuildable": "git init --bare; fetch the retained bundle with GIT_ALTERNATE_OBJECT_DIRECTORIES pointing to source objects for recorded base_head. Keep store until MAIN lands.",
+  "verified_files": [
+    {
+      "bytes": 24036,
+      "path": "experiments/ddm_tc2_lane_context.py",
+      "sha256": "1a2af56ad51cb6e8cf528913a87fd4ecc37058c2c7033bb6671982e1af77cad7"
+    },
+    {
+      "bytes": 7118,
+      "path": "experiments/ddm_tc2_result.py",
+      "sha256": "d91708c0d1086cf8c1fe048246c7cca5bf069110d588142af897f36e062a4b82"
+    },
+    {
+      "bytes": 14088,
+      "path": "experiments/ddm_tc2_codec.py",
+      "sha256": "b07505176b33bd0d9ca3068bfd57820caf86fa2f417d25f8ed7c7942710a37df"
+    },
+    {
+      "bytes": 18347,
+      "path": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "sha256": "8b0599ce76cebacfb97f48334efc3c8c85f3bae425398a0d83e40d0383f2f507"
+    },
+    {
+      "bytes": 5967,
+      "path": ".omx/research/charters/ddm_tc2_better_causal_lane_predictor_build_20260910.md",
+      "sha256": "0519ab63bffcbedc42380505cd4d16bf0d378fd1f975226ffc8d9ccbcb7b539a"
+    },
+    {
+      "bytes": 621,
+      "path": ".omx/research/ddm_tc2_20260910/fit_run.sh",
+      "sha256": "db79171bb7852a7cdf885e3365b914443030867f9eeb8232dc5afb185851928f"
+    },
+    {
+      "bytes": 18225,
+      "path": ".omx/research/ddm_tc2_20260910/reviews.json",
+      "sha256": "21c7a5a1ddf563dc181421d56c3909127ec0782dae56e4978ec6dbcb14f21264"
+    },
+    {
+      "bytes": 2889,
+      "path": ".omx/research/ddm_tc2_20260910/RESULT.json",
+      "sha256": "f14fa3212dd8cb92d932a04c7241e6e5e9d2b76ef446f1436d0e3363d63dd89e"
+    },
+    {
+      "bytes": 2335,
+      "path": ".omx/research/ddm_tc2_20260910/encode_result.json",
+      "sha256": "0e6964188ae8787da40d0817f0f2700619410afe4af43e91ae5f4e0dbf37a536"
+    },
+    {
+      "bytes": 1931,
+      "path": ".omx/research/ddm_tc2_20260910/decode_result.json",
+      "sha256": "771c5b1d189249eb494a2f20ec7cca38ef47c6cbbb1a7857df3669184565fa8a"
+    },
+    {
+      "bytes": 12212,
+      "path": ".omx/research/ddm_tc2_20260910/equation_registration.json",
+      "sha256": "7397ef8eafabb1242c59150875c6607220df8c4edc0a4b9051ac1c0b79451c70"
+    },
+    {
+      "bytes": 9358,
+      "path": ".omx/research/ddm_tc2_20260910/equation_events.jsonl",
+      "sha256": "71dcf9cf300257f16c2f46fcbc24b1c736660e103ad1fd9a11f5a0f16f2b16e8"
+    },
+    {
+      "bytes": 3343,
+      "path": ".omx/research/ddm_tc2_20260910/FIRE_ORDERS.json",
+      "sha256": "3de397f07d93e0b6138353e44131f60ae52aabb03c4fc3b4d88f4cbbf072cad0"
+    },
+    {
+      "bytes": 11682,
+      "path": ".omx/research/ddm_tc2_20260910/task_events.json",
+      "sha256": "0de5f6aa0d1b34372483679818aa2e1120c2b472fc9f1b43b474b7febfb93b9b"
+    },
+    {
+      "bytes": 1305,
+      "path": ".omx/research/ddm_tc2_20260910/LANE_ROAD_BAND_ENTROPY.json",
+      "sha256": "8418c95ce3ebd64efce1864de859d5560df7074e64d42f7f168b6b931ab823ac"
+    },
+    {
+      "bytes": 17945,
+      "path": ".omx/research/ddm_tc2_20260910/live_frontier.json",
+      "sha256": "4d0dd93cbd025da8f6f582e4355474cd34bc25dc926f87f66a030268bbe6cf1d"
+    },
+    {
+      "bytes": 1293,
+      "path": ".omx/research/ddm_tc2_20260910/lane_registration.json",
+      "sha256": "f2c6f2d6aeca3cc22651a2b3759a5659570d3821f05f4fd84730e1fd80367fae"
+    },
+    {
+      "bytes": 1145,
+      "path": ".omx/research/ddm_tc2_20260910/retained_manifest.json",
+      "sha256": "9c0da92d0b0b5d270595ceebd1c1aae19261c573f6b343e6367847507b6c888f"
+    },
+    {
+      "bytes": 8282058,
+      "path": ".omx/state/canonical_equations_registry.jsonl",
+      "sha256": "62450a0cc645e45b5cfad565be804dc5b8a45e0a476f7fa28de4da50d4c11057"
+    },
+    {
+      "bytes": 938511,
+      "path": ".omx/state/canonical_task_status.jsonl",
+      "sha256": "db27227a48efca3adff4cd9c9d8ec090608a5093a93e80675b684e5a2451ca9a"
+    }
+  ]
+}

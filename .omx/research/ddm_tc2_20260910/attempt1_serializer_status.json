@@ -1,0 +1,5 @@
+{
+  "returncode": 17,
+  "stderr": "[subagent-commit-serializer] git apply --cached failed (rc=128) \u2014 the patch is likely NOT cleanly based on HEAD. Regenerate it against HEAD and retry:\nerror: unable to create temporary file: Operation not permitted\nerror: unable to create backing store for newly created file experiments/ddm_tc2_lane_context.py\n",
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_apply_cached bundle=/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022457.538754Z-40277/intended-commit.bundle format_patch=/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022457.538754Z-40277/intended-commit.format-patch receipt=/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022457.538754Z-40277/receipts.jsonl fallback_commit=3eb15f2ef5ccc88f9b58df0fc4170baeb6521378\n"
+}

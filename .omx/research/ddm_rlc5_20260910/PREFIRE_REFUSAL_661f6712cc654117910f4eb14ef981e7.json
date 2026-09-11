@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "FIRST_MEASUREMENT_RESULT_REFUSED",
+  "detail": "real one-call T4 registration absent or ambiguous",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-10T20:30:41.665835+00:00"
+}

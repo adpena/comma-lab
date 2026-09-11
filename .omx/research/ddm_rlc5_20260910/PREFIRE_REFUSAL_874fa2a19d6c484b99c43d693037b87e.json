@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_CONTRACT_DRIFT_REFUSED",
+  "detail": "live file differs from committed blob: /Users/adpena/Projects/pact/tools/fire_modal_auth_eval.py",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-10T20:10:14.642654+00:00"
+}

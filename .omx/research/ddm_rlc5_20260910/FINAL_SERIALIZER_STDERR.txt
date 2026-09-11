@@ -1,0 +1,6 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: experiments/ddm_rlc4_evidence.py: failed to insert into database
+error: unable to index file 'experiments/ddm_rlc4_evidence.py'
+fatal: updating files failed
+BUNDLE_FALLBACK_STORAGE_REFUSED rc=19 phase=git_add receipt=/Users/adpena/Projects/pact/.omx/state/commit_serializer_fallback_refusals/20260910T200050.801509Z-29703/receipts.jsonl error=fallback storage reserve refused projected_bytes=14906674 reserve_bytes=42949672960

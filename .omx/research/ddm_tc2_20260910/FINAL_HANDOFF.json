@@ -1,0 +1,152 @@
+{
+  "active_measurement_processes": 0,
+  "actual_archive_delta_bytes": null,
+  "actual_net_tail_saved_bytes": 78,
+  "archive_dispatches": 0,
+  "build_charter": {
+    "bytes": 5967,
+    "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_tc2_better_causal_lane_predictor_build_20260910.md",
+    "sha256": "0519ab63bffcbedc42380505cd4d16bf0d378fd1f975226ffc8d9ccbcb7b539a"
+  },
+  "bundle": {
+    "bytes": 50464,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/serializer/20260910T022638.520227Z-45819/intended-commit.bundle",
+    "sha256": "d2a6b134472afb5f702c8c2663651df4316b7a20040e08938cf76b140b63fb69"
+  },
+  "bundle_verification": {
+    "bytes": 5881,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/bundle_verification.json",
+    "sha256": "7d1c5896bdcafccc285049e6152868b6078f7be3407690ce2057503b4575bf1b"
+  },
+  "captured_utc": "2026-09-10T02:28:24.053787+00:00",
+  "causal_ideal_gain_bytes": 82.77145659571397,
+  "conditional_full600_token_identity": true,
+  "cross_host_bin_parity_measured": false,
+  "equation_id": "lane_boundary_context_map_bound_v1",
+  "fallback_commit": "83645a01e395a9dd2a0a0a94dc8f36731bc3fc42",
+  "field_scope": "immutable move37 full600 only",
+  "field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+  "follow_ons": [
+    {
+      "action": "Implement and price the supplied better-predictor charter; fold joint40-weight calibration into that build; no richer implementation was made by TC2.",
+      "build_charter": ".omx/research/charters/ddm_tc2_better_causal_lane_predictor_build_20260910.md",
+      "canonical_consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/better_predictor/FIRE_ORDER.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "MAIN harvests completed TC2 handoff; verifies encode net78B below1000B and GT reference5480.397216 above3000 ideal B; deduplicates ownership and pins the current field.",
+      "measurement_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "owner": "MAIN",
+      "schema": "ddm_tc2_fire_order.v1",
+      "score_claim": false,
+      "source_memo": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "task_id": "ddm_tc2_lane_boundary_context_map_20260910::BETTER_PREDICTOR"
+    },
+    {
+      "action": "Consume the retained twin rider as a rate candidate, regenerate base probabilities in the public receiver, and route a verified positive current-archive result through the existing seal chain. The move37 tail saving78B is not an archive or score claim.",
+      "candidate_rider": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/codec/encode/twin0.rider",
+      "canonical_consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/seal_intake/FIRE_ORDER.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "MAIN harvests a successful full600 conditional parse-back receipt; checks current-field compatibility or rebases once; public-prefix receiver, cross-host bin parity and actual archive net-positive gates precede any seal or evaluation.",
+      "measurement_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "owner": "MAIN",
+      "schema": "ddm_tc2_fire_order.v1",
+      "score_claim": false,
+      "source_memo": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "task_id": "ddm_tc2_lane_boundary_context_map_20260910::SEAL_INTAKE"
+    },
+    {
+      "action": "Land and verify the final retained patch/bundle; the earlier source-only fallback is superseded by the final handoff. No main landing is currently claimed.",
+      "canonical_consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/landing/FIRE_ORDER.json",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "fire_trigger": "MAIN harvest in a Git-writable context with required checks; use final landing.patch and manifest, deduplicate only owned equation/task/lane events, and preserve the shared staged index.",
+      "measurement_field_sha256": "361cc6c9749fdec1381936836c9b45f4e04702f02eed9f8ea5343b1afa957b94",
+      "owner": "MAIN",
+      "schema": "ddm_tc2_fire_order.v1",
+      "score_claim": false,
+      "source_memo": ".omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+      "task_id": "ddm_tc2_lane_boundary_context_map_20260910::LANDING"
+    }
+  ],
+  "frontier_moved_by_tc2": false,
+  "full_frame_inflate_output_parity_measured": false,
+  "landing_blocker": "MAIN_CHECKOUT_GIT_OBJECT_WRITE_DENIED",
+  "landing_manifest": {
+    "bytes": 5252,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/landing_manifest.json",
+    "sha256": "7059088244a41d36bad9943f75be8296407f0dcaaffb627eb3f9a977edc8dec7"
+  },
+  "landing_patch": {
+    "bytes": 232960,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_20260910/landing.patch",
+    "sha256": "b74f643f7514de5df6809d16ed22d25100b31e49735deb31a0c4beb2a15668e4"
+  },
+  "late_metadata_custody": "This handoff, bundle verification, serializer status, final landing ledger note and checkpoint are post-serialization leaves; MAIN retains/lands them with the verified bundle, without claiming they are already in that commit.",
+  "live_frontier_at_harvest": {
+    "archive_sha256": "8877f75d87bf25b410264e08682959c7710cf677307bd5452039ce53835f6bf4",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 180186,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_rp1_t4_rate_directed_predistortion_20260910",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "5e1e6dac4b0391d77596883e4d9b4b1988b22ccc8ad0b07e544e7ad76ad38927",
+      "source_receipt_sha256": "41d24304787b7c17505550bb17e516c981e985d8822c0b74e329e1e6c67c7b5f"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_rp1_t4_rate_directed_predistortion_20260910",
+    "measured_at_utc": null,
+    "score": 0.13766931482209038,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_rp1_t4_rate_directed_predistortion_20260910.json"
+  },
+  "main_commit_hooks_ran": false,
+  "main_landed": false,
+  "measurement_complete": true,
+  "memo": {
+    "bytes": 18347,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_tc2_lane_boundary_context_map_20260910.md",
+    "sha256": "8b0599ce76cebacfb97f48334efc3c8c85f3bae425398a0d83e40d0383f2f507"
+  },
+  "positions": 117964800,
+  "reference_ideal_gain_bytes": 5480.397215671794,
+  "rejected_bundle_commit": "3eb15f2ef5ccc88f9b58df0fc4170baeb6521378",
+  "retained_payload_manifest": {
+    "authority": {
+      "score_claim": false,
+      "standalone_public_receiver_proof": false
+    },
+    "captured_utc": "2026-09-10T02:23:28.663489+00:00",
+    "files": 6795,
+    "late_metadata_rule": "Final serializer and handoff metadata are separately SHA bound after this immutable payload manifest.",
+    "manifest": {
+      "bytes": 1277341,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/handoff/retained_manifest.jsonl",
+      "sha256": "19cce9d51e2a63afbfc9808a1c5d6e38d9d8a442a9761aa2865174ab1643cd41"
+    },
+    "no_artifacts_moved_or_deleted": true,
+    "no_payload_discarded": true,
+    "reproduction_argv": "Exact launch argv/config and statuses in all manifest-listed launch_*/launch_manifest.json and safe_run.json; frozen source snapshots in retained/sources. Each stage requires --resume-from this root.",
+    "retention": "Keep all candidates, arrays, checkpoints and inputs. Reserve40GiB fail-closed before writes. This manifest is custody, not cleanup permission.",
+    "schema": "ddm_tc2_retained_manifest.v1",
+    "source_binding": "/Volumes/VertigoDataTier/pact/ddm_tc2_lane_context_map/INPUTS.json",
+    "total_bytes": 5922365818
+  },
+  "schema": "ddm_tc2_final_handoff.v1",
+  "score_claim": false,
+  "scorer_runs": 0,
+  "shared_index_byte_identical": true,
+  "standalone_public_receiver_proof": false,
+  "status": "MEASURED_COMPLETE_BUNDLE_VERIFIED_MAIN_MUST_LAND",
+  "sub012_achieved": false,
+  "superseded_source_only_bundle": "75fb5caabe564a1c46119616904082de71c7ffba",
+  "twin_byte_identity": true,
+  "verdict_scope": "INSTANCE: concrete five-weight extension; no geometry family closure",
+  "verified_files": 20
+}
