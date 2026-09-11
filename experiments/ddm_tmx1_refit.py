@@ -275,21 +275,24 @@ def main() -> int:
                         help="thin the retained trace by this factor for the SEARCH only")
     parser.add_argument("--steps", type=int, nargs="+", default=[-3, -2, -1, 1, 2, 3])
     parser.add_argument("--out", type=Path, default=ROOT)
+    parser.add_argument("--control", type=Path, default=CONTROL,
+                        help="the control encode whose retained trace this fit consumes")
     parser.add_argument("--self-test", action="store_true",
                         help="prove the offline cascade equals the shipped mixer and stop")
     args = parser.parse_args()
     started = time.time()
-    runtime = CONTROL / "runtime_copy"
+    control = args.control
+    runtime = control / "runtime_copy"
     base = load_shipped(runtime)
     if args.self_test:
         print(json.dumps(self_test(base, args.out), indent=2, sort_keys=True))
         return 0
-    price = json.loads((CONTROL / "PRICE.json").read_text())
+    price = json.loads((control / "PRICE.json").read_text())
     stride = int(price["fit_trace"]["stride"])
-    with np.load(CONTROL / "retained/fit_trace.npz", allow_pickle=False) as data:
+    with np.load(control / "retained/fit_trace.npz", allow_pickle=False) as data:
         trace = {k: data[k] for k in data.files}
     rows_sha = hashlib.sha256(trace["rows"].tobytes()).hexdigest()
-    shipped_rider = (CONTROL / "retained/rider_config.bin").read_bytes()
+    shipped_rider = (control / "retained/rider_config.bin").read_bytes()
     shipped = np.frombuffer(shipped_rider[1:41], dtype=np.int8).astype(np.int64)
 
     probe = trace["rows"][:200000]
@@ -354,7 +357,7 @@ def main() -> int:
     )
     report = {
         "schema": "ddm_tmx1_refit.v1",
-        "control": str(CONTROL),
+        "control": str(control),
         "control_archive_sha256": price["binding"]["base_archive"]["sha256"],
         "trace_rows_sha256": rows_sha,
         "samples": int(len(truth)),
