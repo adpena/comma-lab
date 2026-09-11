@@ -1313,3 +1313,15 @@ bets, each ending in a sealed candidate or a measured negative, never a memo alo
 
 What they share: every one is priced on the shipped field by the real coder or the frozen scorer, every one seals through the contract that
 just proved itself, and every one is a MEASURED bet, chosen by marginal S per byte or per second, not by novelty for its own sake.
+
+## Addendum 33 (MAIN, 2026-09-11 ~05:30Z) — mxo1 closes the free-online-mixing bet and corrects the slack; the portfolio adjusts
+
+mxo1 (`.omx/research/ddm_mxo1_free_decode_time_online_context_mixing_20260911.md`, sha 60b5a34bb6146af8…) built the thing the bounds were about and measured it: the best free online learner over the shipped stream saves
+368 B (1.42 % of the demand; 4.08 % of tc1's oracle); a leaky recurrence adds 35 B; a previous-frame hash saves 114 B. Two premises fell with it,
+both mine. The receiver's strict slack under the contract's 1,260 s ceiling is **27.6 s**, not the ~540 s I derived from the README's 1,800 s
+budget — one wrong denominator turned a 20× compute budget into 1×, and the correction is now in gpp1's and rbf1's charters before either
+built on it. And move 44 already runs a 23-family PAQ-style online adaptive corrector, so "add online adaptation" was never new; what is
+untested is the COLLAPSE of those 23 predictions into one probability through a fixed 35-weight mixer. mxo2 screens exactly that (a low-rank
+nonlinear stacker over the pre-mix outputs) at $0 under mxo1's own trigger: ≥ 3,000 B at ≤ 200 ns per symbol. The portfolio stands at six live
+bets: the object (obx2), pose (pc3), non-tail lossy levers (ntb2), the generic pretrained prior (gpp1), the boundary treatment (rbf1), and the
+pre-mix stacker (mxo2). ntb1 closed every lossless non-tail lever at 0 B; the lossy ones are ntb2's.
