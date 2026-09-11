@@ -179,13 +179,19 @@ def storage_preflight(output: Path, *, required: int) -> dict[str, Any]:
     }
 
 
-def assert_active_claim(claim_id: str) -> dict[str, Any]:
-    """Refuse unless an OBX2-owned lane row is the newest row for its lane."""
+def assert_active_claim(claim_id: str, *, claims_path: Path | None = None) -> dict[str, Any]:
+    """Refuse unless an OBX2-owned lane row is the newest row for its lane.
+
+    `claims_path` exists so the parsing and refusal logic can be tested against a
+    fixed table; coupling a unit test to the live, mutable ledger makes it fail
+    for operational reasons that have nothing to do with the code.
+    """
 
     if not claim_id.startswith("ddm_obx2_"):
         raise OBX2Error("claim id must be an OBX2-owned lane id")
+    source = ACTIVE_CLAIMS if claims_path is None else claims_path
     newest: dict[str, str] | None = None
-    for line in ACTIVE_CLAIMS.read_text().splitlines():
+    for line in source.read_text().splitlines():
         if not line.startswith("| 20"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]

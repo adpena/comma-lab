@@ -245,9 +245,34 @@ def test_active_claim_refuses_a_foreign_lane_id() -> None:
         obx2.assert_active_claim("ddm_other_lane_20260911")
 
 
-def test_active_claim_accepts_the_live_obx2_lane() -> None:
-    claim = obx2.assert_active_claim(obx2.LANE_ID)
-    assert claim["status"].startswith(("building", "active"))
+def _claims_table(tmp_path: Path, rows: list[tuple[str, str]]) -> Path:
+    header = "| timestamp_utc | agent | lane_id | platform | instance | eta | status | notes |\n"
+    body = "".join(
+        f"| {stamp} | claude | {obx2.LANE_ID} | local | job | | {status} | n |\n" for stamp, status in rows
+    )
+    path = tmp_path / "claims.md"
+    path.write_text(header + body)
+    return path
+
+
+def test_active_claim_reads_the_newest_row_for_the_lane(tmp_path: Path) -> None:
+    # Rows are newest-first, so a terminal row written after an active one wins.
+    path = _claims_table(tmp_path, [("2026-09-11T10:00:00Z", "active_local_training")])
+    assert obx2.assert_active_claim(obx2.LANE_ID, claims_path=path)["status"] == "active_local_training"
+    path = _claims_table(
+        tmp_path,
+        [("2026-09-11T11:00:00Z", "refused_dispatch_admission_gate"), ("2026-09-11T10:00:00Z", "building")],
+    )
+    with pytest.raises(obx2.OBX2Error):
+        obx2.assert_active_claim(obx2.LANE_ID, claims_path=path)
+    path = _claims_table(tmp_path, [("2026-09-11T11:00:00Z", "building")])
+    assert obx2.assert_active_claim(obx2.LANE_ID, claims_path=path)["status"] == "building"
+
+
+def test_active_claim_refuses_when_the_lane_has_no_row(tmp_path: Path) -> None:
+    path = _claims_table(tmp_path, [])
+    with pytest.raises(obx2.OBX2Error):
+        obx2.assert_active_claim(obx2.LANE_ID, claims_path=path)
 
 
 def test_scorer_plane_render_on_the_identity_grid_converges_to_the_teacher() -> None:
