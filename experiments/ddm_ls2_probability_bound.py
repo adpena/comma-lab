@@ -4,6 +4,7 @@
 Research instrument only. Produces no candidate and makes no score claim.
 """
 from __future__ import annotations
+
 import argparse
 import ctypes
 import fcntl
@@ -11,11 +12,11 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[1]
@@ -23,9 +24,10 @@ sys.path[:0] = [str(REPO), str(REPO / 'src')]
 for key in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS'):
     os.environ[key] = '1'
 import numpy as np
-from experiments.ddm_ls1_shipped_surprise import FIELD, FIELD_SHA, ARCHIVE_SHA, fact
+
 from experiments.ddm_ls1_oracle_atlas import lane_row_distance, previous_frame_distance
-from experiments.ddm_tc1_mixer_codec import frequencies, mix_probabilities, log2_fixed
+from experiments.ddm_ls1_shipped_surprise import ARCHIVE_SHA, FIELD, FIELD_SHA, fact
+from experiments.ddm_tc1_mixer_codec import frequencies, log2_fixed, mix_probabilities
 
 ROOT = Path('/Volumes/VertigoDataTier/pact/ddm_ls2_full_resolution_lane_probability_bound')
 LS1 = ROOT.parent / 'ddm_ls1'
@@ -380,8 +382,8 @@ def controls():
         np.testing.assert_array_equal(codes[0],previous_frame_distance(None if frame==0 else target[frame-1]))
         np.testing.assert_array_equal(codes[1],lane_row_distance(target[frame],True))
         for g in (0,1,31,63,64,126,189):
-            changed=target[frame].copy(); changed.reshape(-1)[PHASE>=g]=5
-            current=PHASE==g
+            changed=target[frame].copy(); changed.reshape(-1)[g <= PHASE]=5
+            current=g == PHASE
             np.testing.assert_array_equal(lane_row_distance(changed,True)[current],codes[1][current])
             tested+=int(current.sum())
         zero=np.zeros((K,3),dtype=np.int8)
