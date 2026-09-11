@@ -1,0 +1,65 @@
+{
+  "all_materialized_payloads_retained": true,
+  "axis": "[macOS-CPU advisory]",
+  "candidate": {
+    "archive_bytes": 4555301,
+    "archive_path": "/Volumes/VertigoDataTier/pact/ddm_obx1_successor_object/candidate/archive.zip",
+    "archive_sha256": "a6456ccd2941c9ac2e5fa873e75cef22454593b997756a4c7bf71fdd0ae40a8a",
+    "archive_repeat_identity": true,
+    "carrier_bytes": 4448561,
+    "carrier_path": "/Volumes/VertigoDataTier/pact/ddm_obx1_successor_object/candidate/carrier.obx1cat",
+    "carrier_sha256": "3905ac1fa540b9c560bd954e88a1ec6734464919ed8bfe004100a06638be3ef7",
+    "receiver_base_packet_identity": true,
+    "receiver_carrier_identity": true,
+    "receiver_chunk_identity": true
+  },
+  "components": {
+    "born": {
+      "d_pose": 0.52944848959797,
+      "d_seg": 0.06325725979275174,
+      "distortion": 8.626700750101595,
+      "physical_archive_score_advisory": 8.697757222425073
+    },
+    "fused": {
+      "d_pose": 1.1038073466877865,
+      "d_seg": 0.11243711683485243,
+      "distortion": 14.566071306836974,
+      "physical_archive_score_advisory": 17.599259261853355
+    }
+  },
+  "contest_eval_invocations": 0,
+  "created_at_utc": "2026-09-11T02:05:40.255520+00:00",
+  "denominators": {
+    "pairs": 600,
+    "pose_values": 3600,
+    "seg_pixels": 117964800
+  },
+  "measurement": {
+    "carrier_distortion_delta": 5.93937055673538,
+    "carrier_score_delta_at_physical_bytes": 8.901502039428282,
+    "candidate_delta_vs_0_12": 17.479259261853354,
+    "candidate_strict_byte_cap_at_own_distortion": -21695393,
+    "cross_counterfactual_B_hat_plus_pointer_distortion": 0.09830680431066184
+  },
+  "modal_invocations": 0,
+  "pointer_moved": false,
+  "promotable": false,
+  "retained_population": {
+    "carrier_chunk_bytes": 4448309,
+    "chunks": 30,
+    "nonzero_delta_values": 3842071,
+    "payload_bytes": 4574775934,
+    "saturated_delta_values": 330096,
+    "support_cells": 1286055
+  },
+  "schema": "ddm_obx1_falsifier_receipt.v1",
+  "score_claim": false,
+  "source_result": {
+    "bytes": 24379,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_obx1_successor_object/RESULT.json",
+    "sha256": "ae19bb553e6810b4492d2c8df8ba5cec4f319534bf7a559010faa46f9944b81e"
+  },
+  "support_definition": "Lane-side four-neighbour boundary from shipped subset6.u8, dilated by one four-neighbour cell",
+  "verdict": "DIRECT_LANE_EDGE_Q8_INSTANCE_REFUSED",
+  "verdict_scope": "INSTANCE: exact QBT2B r10 plus decoded int8 Lane-edge correction lattice"
+}
