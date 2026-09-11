@@ -36,7 +36,11 @@ from experiments import ddm_ntb2_hpac as hpac
 from experiments import ddm_rlc1_run as landed
 from experiments.ddm_rlc4_rebase import measure_receiver_digest, measure_runtime_digest
 
-ROOT = control.ROOT.parent / "public"
+# The storage waterfall, not a loosened guard: VertigoDataTier fell to 28 GiB under five
+# live arms while this proof needs 3.66 GB plus headroom, and APDataStore has 63 GiB. Both
+# are sanctioned SSD tiers; `--public-root` chooses, and the reserve is unchanged.
+DEFAULT_ROOT = control.ROOT.parent / "public"
+ROOT = DEFAULT_ROOT
 # move 44's own cold public decode, from ddm_rlc5's retained proof.
 SOURCE_RAW = Path(
     "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw"
@@ -337,7 +341,16 @@ def main(argv=None) -> int:
     parser.add_argument("--treatment", default="frame_even", choices=hpac.TREATMENTS[1:])
     parser.add_argument("--timeout", type=int, default=36000)
     parser.add_argument("--resume-from", type=Path, default=None)
+    parser.add_argument(
+        "--public-root",
+        type=Path,
+        default=None,
+        help="tier to run the proof on; defaults to this arm's own store",
+    )
     args = parser.parse_args(argv)
+    if args.public_root is not None:
+        global ROOT
+        ROOT = args.public_root.resolve()
     ROOT.mkdir(parents=True, exist_ok=True)
     if args.resume_from is not None and args.resume_from.resolve() != ROOT.resolve():
         raise SystemExit(f"wrong resume root: {args.resume_from}")
