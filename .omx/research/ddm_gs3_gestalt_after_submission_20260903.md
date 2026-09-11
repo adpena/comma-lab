@@ -1583,3 +1583,29 @@ risk receipt whose shape the project had rejected an hour earlier. What remains 
 the tail mixer's 60 B of state fit to the move-32 field (tmx1, priced now, bounded at tens of bytes), then the renderer's provenance
 and a quantization-aware refit, then the temporal tap sets measured against the retrained control. Demand at held distortion is
 −24,604 B; today bought 1,295 B of it. The store's own recall says no door on the books reaches the rest.
+
+## Addendum 48 (2026-09-12, host ~00:25Z) — tmx1: the tail-mixer refit LOSES; the staleness ranking is corrected
+
+tmx1 (Opus) refit the tail mixer's 40 int8 values on the current decoded field (a92e7d90…) with the real coder
+over all 600 frames. Controls reproduced both pointer streams at Δ 0 on the first attempt (control47 118,511 B,
+control48 118,896 B; twins identical; output-lossless). The refit rows: refit47 +203 B, refit47b +22 B, refit48
++155 B, **refit48b +20 B** (best). In-sample the refit gained −90 to −98 B; the sample-to-field transfer lost
+112–118 B, exactly as the held-out folds predicted (+54 to +59 B, t 2.2–2.3). The family's measured ceiling is
++20 B against a fire bar of −30.04 B; nothing was staged or sealed.
+
+What outlives the row. The staleness audit (Addendum 47) ranked refits by the byte mass a section CONDITIONS:
+60 B of mixer prices 118,511 B of tail, so it ranked first. That ranking is refuted: 12,262 B of HPAC prior
+repaid −887 B on the same stream; 40 B of mixer repays nothing. Rank refit rungs by FITTED CAPACITY against
+the objective's noise, not by conditioned mass. The law "refit every counted section after a field change" now
+stands at n=2 with one positive (hpr1) and one negative (tmx1) instance: a proposal, not a law; a low-capacity
+section's refit is not owed. tc3's earlier 37-vs-79 B negative is isolated the same way (the refit alone is worth
+less than nothing).
+
+tmx1's own corrections, kept: a 1 % control bar was set on a 1 %-SE estimator (now 3 SE computed from the
+sample; a float/int length mismatch measured dead at 0.0001 %); the pointer moved to 48 under the arm and its
+guard caught it before a byte was written (candidate rows bind the live pointer; base rows declare
+`prices_against_live_pointer`); volatile free-space bound into INPUTS.json was removed. The local-disk routing
+was reverted hash-verified; no reserve was lowered.
+
+Remaining refit rungs in priority by fitted capacity: ren1's renderer (provenance + gated QAT refit, live), then
+hpr1's temporal tap sets against the RETRAINED control. Demand −24,604 B; the day's take stays 1,295 B.
