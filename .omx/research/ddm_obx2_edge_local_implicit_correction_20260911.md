@@ -75,10 +75,11 @@ DERIVED from three measured n600 points, and pre-registered for further confirma
 `sp384_render_noise_*` rungs. At distortion `< 0.04` with the measured `d_seg ~ 1.1e-4`
 (0.011 of the budget), the Pose budget is `d_pose < 8.4e-5`. Fitting
 `d_pose = 4.587e-6 + C * spRMSE^p` through `teacher` (0), `sp_384x512` (0.160, 4.523e-5) and
-`grid_384x512` (4.544, 0.011817) gives a MEASURED exponent **p = 1.695**, `C = 9.078e-4` — the growth
-is sub-quadratic, so a two-point quadratic read over-predicts the far point by 2.77×. The admissible
-scorer-plane RMSE is **0.238 of one uint8 LSB, 0.093% of full scale** — near-lossless. No 122,000 B
-object encodes 1,200 frames of 384×512 at that fidelity.
+`grid_384x512` (4.544, 0.011817) and `sp_192x256` (8.670, 0.0391067) gives a MEASURED exponent **p = 1.7121**, `C = 9.294e-4` — the
+growth is sub-quadratic, and the fit holds within **5.1%** across three decades of RMSE. The
+admissible scorer-plane RMSE is **0.236 of one uint8 LSB, 0.093% of full scale** — near-lossless. No
+122,000 B object encodes 1,200 frames of 384×512 at that fidelity. Registered as canonical equation
+`obx2_pose_vs_scorer_plane_rmse_v1`.
 
 The consequence is not that the burn fails. It is that **matching the teacher photometrically is the
 wrong objective**: the constraint is on PoseNet's six outputs, not on the image, and the set of
@@ -90,6 +91,37 @@ A supporting measured fact points the same way: uniform noise applied ONLY outsi
 boundary band still drove `d_pose` to 2.82 on a 4-pair smoke. **Pose damage is not edge-local**, so a
 purely edge-gated correction cannot reach the term that binds — which is why the `interface_blend`
 gate (D13) exists.
+
+**5. The first trained object: the binding term INVERTS, and the pinned pose weight was 4× wrong.**
+The base-only control's epoch-20 object, byte-closed from its own checkpoint and scored on n600
+through the SHIPPING torch receiver:
+
+| quantity | value |
+|---|---:|
+| archive | **109,104 B** (PASSES 122,000 B, 12,896 B headroom), sha `4b622dc8c1287c38…` |
+| `d_seg` | 0.02450141059 |
+| `d_pose` | 0.01773646324 |
+| distortion | **2.871287865** — Seg leg 2.45014, Pose leg 0.421147 |
+| advisory S at its own bytes | 2.94393574 |
+| gates | byte gate PASS; **distortion gate FAIL by 71.8×** |
+
+Twenty epochs of n600 joint descent took distortion 8.6267 → 2.8713 (3.0×), with **Pose improving
+29.9×** and Seg 2.6×. So **Seg now dominates**: its leg is 5.8× Pose's. That inverts the reading the
+Stage-2a constructions gave, where Pose carried almost all the cost — because those constructions
+started from a photometrically perfect teacher, and a trained generator does not.
+
+The consequence is immediate and was acted on. The contest Pose term's derivative at THIS measured
+operating point is `5/sqrt(10 × 0.01773646324) = 11.87234458`. Both live arms were training under a
+pinned **47.67312946** — **4.015× overweight** — aiming capacity at the smaller leg. Both were stopped
+at their newest checkpoints and re-opened warm-started as stage `w2` with the derived weight, their
+earlier checkpoints preserved under their own names. The derivation pins its artifact, sha, receiver
+and 600-pair denominator; it is registered as `obx2_pose_vs_scorer_plane_rmse_v1`.
+
+Two honest caveats on this row. The NumPy cross-check ran on a **40-pair prefix** (d_seg 0.026926,
+d_pose 0.018335, distortion 3.1208), so it is NOT a like-for-like receiver comparison against the
+600-pair torch row — a flaw in how I wired the cross-check, recorded rather than papered over. And
+`pose_budget_at_gate` is 0 for this object: at `d_seg` 0.0245 the Seg leg alone already exceeds the
+whole 0.04 gate.
 
 ## What is implemented and proven
 
