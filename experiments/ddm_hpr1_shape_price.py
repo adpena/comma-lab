@@ -511,12 +511,25 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
         observed["positions"] = positions.copy()
         return original_coding(self, rows, positions, plane, previous)
 
-    # The coder's scalar q, as the mixer actually emitted it: the probability the coded
-    # row assigned to the symbol that was coded. Collected from the SAME hook the encoder
-    # is fed from, so it is the shipped mixer's own opinion on the shipped prior and not a
-    # re-derivation of one.
-    q_probability: list[np.ndarray] = []
-    q_frame: list[np.ndarray] = []
+    # The CALIBRATION table of the coder's scalar q, accumulated online from the SAME hook
+    # the arithmetic encoder is fed from, so it is the shipped mixer's own opinion on this
+    # prior and not a re-derivation of one.
+    #
+    # WHY A TABLE AND NOT THE RAW PROBABILITIES. I first collected only the probability of
+    # the symbol actually coded. That statistic cannot answer a calibration question: the
+    # event it names ("the coded symbol was coded") has frequency 1 by construction, so any
+    # refit of it is degenerate. A calibration test needs an event whose realisation VARIES,
+    # and the coded row supplies one -- the row's own confidence q_max and whether its
+    # argmax was right. Binning by q_max and scoring the argmax outcome is a real test, and
+    # accumulating it online costs a few kilobytes instead of a gigabyte of raw rows.
+    #
+    # Fold = frame parity, so the two folds interleave the video rather than splitting it
+    # into a first and second half that differ in content.
+    Q_BINS = 64
+    q_counts = np.zeros((2, Q_BINS), dtype=np.int64)
+    q_hits = np.zeros((2, Q_BINS), dtype=np.int64)
+    q_shipped_bits = np.zeros((2, Q_BINS), dtype=np.float64)
+    q_conf_sum = np.zeros((2, Q_BINS), dtype=np.float64)
 
     def known_symbols(self, probabilities):
         positions = observed["positions"]
@@ -524,9 +537,18 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
             raise PriceError("known-symbol decode call lacks its group")
         symbols = field[observed["frame"]].reshape(-1)[positions].astype(np.int32)
         if collect_q:
-            rows = np.asarray(probabilities)
-            q_probability.append(rows[np.arange(len(symbols)), symbols].astype(np.float32))
-            q_frame.append(np.full(len(symbols), observed["frame"], dtype=np.int16))
+            rows = np.asarray(probabilities, dtype=np.float64)
+            index = np.arange(len(symbols))
+            coded = np.clip(rows[index, symbols], 1e-12, 1.0)
+            confidence = rows.max(axis=1)
+            correct = (rows.argmax(axis=1) == symbols)
+            # 64 equal bins on the confidence axis, the scale the mixer states it on.
+            binned = np.clip((confidence * Q_BINS).astype(np.int64), 0, Q_BINS - 1)
+            fold = observed["frame"] & 1
+            np.add.at(q_counts[fold], binned, 1)
+            np.add.at(q_hits[fold], binned, correct.astype(np.int64))
+            np.add.at(q_shipped_bits[fold], binned, -np.log2(coded))
+            np.add.at(q_conf_sum[fold], binned, confidence)
         for encoder in twins:
             encoder.encode(symbols, probabilities)
         observed["positions"] = None
@@ -564,19 +586,24 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
     if collect_q:
         landed.ROOT = ROOT
         payload = landed.save(
-            work / "retained/coded_row_q.npz",
-            {"q": np.concatenate(q_probability), "frame": np.concatenate(q_frame)},
+            work / "retained/q_calibration.npz",
+            {
+                "counts": q_counts,
+                "hits": q_hits,
+                "shipped_bits": q_shipped_bits,
+                "confidence_sum": q_conf_sum,
+            },
         )
         record(
-            work / "Q_COLLECTION.json",
+            work / "Q_CALIBRATION.json",
             {
                 "payload": payload,
-                "symbols": int(sum(len(a) for a in q_probability)),
-                "definition": (
-                    "per coded symbol, the probability the shipped mixer's coded row assigned to the "
-                    "symbol that was actually coded, read off the same hook the arithmetic encoder is "
-                    "fed from; and the frame it belongs to, for the two-fold held-out split"
-                ),
+                "bins": Q_BINS,
+                "symbols": int(q_counts.sum()),
+                "fold_definition": "frame parity, so the folds interleave the video rather than halving it",
+                "bin_axis": "the coded row's own confidence, its maximum probability, in 64 equal bins",
+                "outcome": "whether the row's argmax was the symbol actually coded",
+                "shipped_bits_definition": "sum of -log2(probability the row gave the coded symbol)",
                 "prior": "the treatment's own HPAC prior",
                 "score_claim": False,
             },
