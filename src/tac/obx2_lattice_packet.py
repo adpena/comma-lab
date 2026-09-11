@@ -169,7 +169,10 @@ def interface_gate(signed_interfaces: np.ndarray, tau: float) -> np.ndarray:
     if tau <= 0.0:
         raise OBX2PacketError("interface gate width must be positive")
     nearest = np.abs(np.asarray(signed_interfaces, dtype=np.float32)).min(axis=-1)
-    return np.exp(-np.square(nearest / np.float32(tau))).astype(np.float32)
+    # Clip before squaring so a far-from-every-interface pixel underflows the
+    # gate to zero instead of overflowing the square to an invalid float.
+    ratio = np.clip(nearest / np.float32(tau), 0.0, 1.0e9).astype(np.float32)
+    return np.exp(-np.minimum(np.square(ratio), np.float32(80.0))).astype(np.float32)
 
 
 def pack_codes(codes: np.ndarray, bits: int) -> bytes:
@@ -567,8 +570,16 @@ def query_lattice_numpy(
     stacked = np.concatenate([*features, condition.astype(np.float32)], axis=-1)
     if stacked.shape[-1] != spec.feature_width:
         raise OBX2PacketError("fused lattice feature width differs from the declared geometry")
-    hidden = np.tanh(stacked @ fusion["hidden_w"] + fusion["hidden_b"])
-    return (hidden @ fusion["out_w"] + fusion["out_b"]).astype(np.float32)
+    # NumPy's BLAS matmul raises a spurious FE_DIVBYZERO on finite float32
+    # operands that contain very small magnitudes (the gate underflows far from
+    # every interface).  The invariant that matters is a finite OUTPUT, so the
+    # flags are ignored and finiteness is checked explicitly instead.
+    with np.errstate(all="ignore"):
+        hidden = np.tanh(stacked @ fusion["hidden_w"] + fusion["hidden_b"])
+        outputs = (hidden @ fusion["out_w"] + fusion["out_b"]).astype(np.float32)
+    if not np.isfinite(outputs).all():
+        raise OBX2PacketError("lattice query produced a non-finite correction")
+    return outputs
 
 
 __all__ = [
