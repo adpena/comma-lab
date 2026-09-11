@@ -45,6 +45,27 @@ RAW_BYTES = 3_662_409_600
 RESERVE_BYTES = 24 << 30
 
 
+def retain(path: Path, payload: bytes) -> dict:
+    """Persist a receipt inside THIS producer's store.
+
+    `hpac.retain` refuses anything outside `hpac_v3/`, which is correct for it and wrong
+    here: the parse-back's receipts belong to the parse-back. Same reserve, same
+    immutable-write helper, different root.
+    """
+    if not path.resolve().is_relative_to(ROOT.resolve()):
+        raise ValueError("write outside the public-proof store")
+    if shutil.disk_usage(ROOT.parent).free < (40 << 30) + len(payload):
+        raise RuntimeError("STORAGE_BLOCK: keep all existing evidence")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    landed.io.persist_immutable_bytes(path, payload, label="ntb2 public proof receipt")
+    return landed.fact(path)
+
+
+def record(path: Path, value: dict) -> dict:
+    retain(path, (json.dumps(value, sort_keys=True, indent=2) + "\n").encode())
+    return value
+
+
 def compare_bytes(left: Path, right: Path) -> bool:
     """Byte equality of two multi-GB files without holding either in memory."""
     if left.stat().st_size != right.stat().st_size:
@@ -99,7 +120,7 @@ def run(treatment: str, timeout: int) -> dict:
     inputs = work / "INPUTS.json"
     if inputs.exists() and json.loads(inputs.read_text()) != binding:
         raise SystemExit("public proof source/config drift")
-    hpac.record(inputs, binding)
+    record(inputs, binding)
 
     done = work / "RESULT.json"
     if done.exists():
@@ -149,7 +170,7 @@ def run(treatment: str, timeout: int) -> dict:
     attempt = attempts / f"attempt_{len(list(attempts.glob('attempt_*'))):04d}"
     attempt.mkdir()
     resumed = (work / "frame_checkpoints/LATEST.json").exists()
-    hpac.record(
+    record(
         attempt / "COMMAND.json",
         {
             "argv": command,
@@ -170,7 +191,7 @@ def run(treatment: str, timeout: int) -> dict:
             command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=timeout
         )
     wall = time.perf_counter() - started
-    hpac.record(
+    record(
         attempt / "PROCESS.json",
         {
             "returncode": completed.returncode,
@@ -211,11 +232,11 @@ def run(treatment: str, timeout: int) -> dict:
     }
     if not identical or candidate_raw["bytes"] != RAW_BYTES:
         result["status"] = "RAW_IDENTITY_FAILED"
-        hpac.record(work / "RAW_IDENTITY_FAILED.json", result)
+        record(work / "RAW_IDENTITY_FAILED.json", result)
         raise RuntimeError("raw identity failed; every byte retained")
     if binding["runtime_sha256"] != measure_runtime_digest(runtime).sha256:
         raise SystemExit("runtime changed during the proof")
-    return hpac.record(done, result)
+    return record(done, result)
 
 
 def main(argv=None) -> int:
