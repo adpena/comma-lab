@@ -922,9 +922,91 @@ def stage7_public_timing(output: Path, *, archive_path: Path, receiver: str, wor
     return receipt
 
 
+def score_checkpoint(
+    output: Path,
+    *,
+    checkpoint: Path,
+    seed: int,
+    workers: int,
+    validate_pairs: int,
+    cross_check_pairs: int,
+) -> dict[str, Any]:
+    """Byte-close an existing stage checkpoint and score the parsed object on n600.
+
+    This reads a checkpoint a live run already wrote; it trains nothing and it
+    never touches the run's state.  The lattice geometry and gate kind come from
+    the checkpoint's own config, so the object scored is the object that run is
+    building.
+    """
+
+    from experiments import ddm_qbz1_descent_rate_configuration as qbz1
+    from tac.training import EMA
+
+    payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    if payload.get("schema") != "ddm_obx2_checkpoint.v1":
+        raise OBX2TrainerError(f"checkpoint schema differs: {checkpoint}")
+    saved = payload.get("config", {})
+    spec = default_spec(gate_kind=int(saved.get("gate_kind", DEFAULT_GATE_KIND)))
+    if spec.describe() != saved.get("lattice_spec", spec.describe()):
+        raise OBX2TrainerError("checkpoint lattice geometry differs from the compiled default spec")
+    module = build_module(born_packet(), spec, seed=seed)
+    if not bool(saved.get("lattice_enabled", True)):
+        for parameter in module.lattice.parameters():
+            parameter.requires_grad_(False)
+    optimizer = torch.optim.AdamW([q for q in module.parameters() if q.requires_grad], lr=1.0e-4)
+    ema = EMA(module, decay=0.997)
+    load_stage_checkpoint(checkpoint, module, optimizer, ema)
+    shadow = ema_module(module, ema, spec, seed=seed)
+    packet, accounting, archive = build_packet(shadow)
+    repeat, _, repeat_archive = build_packet(shadow)
+    if repeat != packet or repeat_archive != archive:
+        raise OBX2TrainerError("checkpoint packet or archive encoder is nondeterministic")
+    stem = f"{checkpoint.parent.parent.name}_{checkpoint.stem}"
+    qbt1.atomic_bytes(output / "candidates" / f"{stem}.packet", packet)
+    qbt1.atomic_bytes(output / "candidates" / f"{stem}.archive.zip", archive)
+
+    gt = np.load(qbz1.GT_ARGMAX, mmap_mode="r", allow_pickle=False)
+    pose_target = np.load(qbz1.GT_POSE6, mmap_mode="r", allow_pickle=False)
+    validation = score_parsed_object(
+        packet,
+        pair_ids=list(range(min(validate_pairs, N))),
+        gt=gt,
+        pose_target=pose_target,
+        workers=workers,
+        receiver="torch",
+        archive_bytes=archive,
+    )
+    cross_check = None
+    if cross_check_pairs > 0:
+        cross_check = score_parsed_object(
+            packet,
+            pair_ids=list(range(min(cross_check_pairs, N))),
+            gt=gt,
+            pose_target=pose_target,
+            workers=workers,
+            receiver="numpy",
+            archive_bytes=archive,
+        )
+    receipt = {
+        "schema": "ddm_obx2_checkpoint_score.v1",
+        "created_at_utc": datetime.now(UTC).isoformat(),
+        "axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotable": False,
+        "research_only": True,
+        "checkpoint": {"path": str(checkpoint), "step": int(payload.get("step", 0)), "config": saved},
+        "packet_accounting": accounting,
+        "validation": validation,
+        "portable_receiver_cross_check": cross_check,
+        "host": {"platform": platform.platform(), "python": platform.python_version()},
+    }
+    qbt1.atomic_json(output / f"CHECKPOINT_SCORE_{stem}.json", receipt)
+    return receipt
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="OBX2 base+lattice trainer")
-    parser.add_argument("stage", choices=("stage1", "distill", "joint", "stage7"))
+    parser.add_argument("stage", choices=("stage1", "distill", "joint", "stage7", "score"))
     parser.add_argument("--output", type=Path, default=OUTPUT_ROOT)
     parser.add_argument("--seed", type=int, default=20260911)
     parser.add_argument("--parity-pairs", type=int, default=8)
@@ -942,6 +1024,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cross-check-pairs", type=int, default=40)
     parser.add_argument("--gate-kind", type=int, default=DEFAULT_GATE_KIND, choices=(0, 1, 2))
     parser.add_argument("--archive", type=Path, default=None)
+    parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--receiver", default="torch", choices=("torch", "numpy"))
     parser.add_argument("--launch-authorized", action="store_true")
     return parser
@@ -1049,6 +1132,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 indent=2,
             )
         )
+        return 0
+    if args.stage == "score":
+        if args.checkpoint is None:
+            raise OBX2TrainerError("score requires --checkpoint")
+        receipt = score_checkpoint(
+            args.output,
+            checkpoint=args.checkpoint,
+            seed=args.seed,
+            workers=args.workers,
+            validate_pairs=args.validate_pairs,
+            cross_check_pairs=args.cross_check_pairs,
+        )
+        print(json.dumps({"stage": "score", "step": receipt["checkpoint"]["step"],
+                          "packet_accounting": {k: receipt["packet_accounting"][k] for k in
+                                                ("packet_bytes", "archive_bytes", "archive_byte_headroom")},
+                          "validation": receipt["validation"]}, indent=2))
         return 0
     if args.stage == "stage7":
         if args.archive is None:
