@@ -104,7 +104,32 @@ correction reaches, and beneath that sits a 5.77× floor that survives a perfect
   whose render floor is small enough for it to matter.
 * **Design B (sparse screened-Poisson fusion) and design C (temporal edge-state)** are untouched by
   this: both were queued behind A and neither was measured.
-* **The `se(3)` pose hypothesis.** Its falsifier is built and running; nothing here bears on it.
+* **The `se(3)` pose hypothesis is CLOSED at uniform-translation scope**, by its own pre-registered
+  rule. Four n600 rungs displaced frame 1 by 0.25 to 2.00 px and read against photometric error of
+  EQUAL scorer-plane RMSE:
+
+  | rung | px | spRMSE | `d_pose` | vs smooth | vs noise | `d_seg` | distortion |
+  |---|---:|---:|---:|---:|---:|---:|---:|
+  | `shift_025` | 0.25 | 1.0345 | 0.00155795 | 1.675× | 1.291× | 0.000225423 | 0.14736 |
+  | `shift_050` | 0.50 | 2.0697 | 0.00509686 | 1.641× | 0.505× | 0.000436868 | 0.269449 |
+  | `shift_100` | 1.00 | 4.1194 | 0.0130311 | 1.264× | 0.157× | 0.001187 | 0.479686 |
+  | `shift_200` | 2.00 | 8.7073 | 0.0322767 | **0.849×** | 0.039× | 0.00271599 | 0.839725 |
+
+  The largest response is **1.675×** smooth photometric error of the same magnitude, and by 2 px the
+  shift is **less** damaging than smooth error (0.849×). The scale for a genuine structure effect on
+  this instrument is **9.40×**. Rule: *"comparable responses close the hypothesis."* **CLOSED.** A
+  counted warp would buy a constant under 1.7×, not a qualitative change, so none is proposed.
+
+  **Two caveats travel with that verdict, both recorded before the data.**
+  *Scope:* these rungs test a uniform horizontal translation — one geometric mode, the simplest. A
+  real ego-motion error is a 6-DOF twist producing a divergent flow field, untested here.
+  *Absorption:* the response SATURATES (exponent 1.712 → 1.365 → 1.212) because **a uniform
+  translation is itself a legitimate ego-motion** — PoseNet reports it as pose rather than as error.
+  So this falsifier partly measures absorption, and a null result on it is weaker than a null result
+  on a mode that cannot be absorbed.
+
+  One cost did NOT saturate: the shift's own `d_seg` ran 0.000225 → **0.00271599**, which at 2 px is
+  **6.8× the seg ceiling by itself**, because SegNet reads the frame being displaced.
 
 ## A constraint the successor inherits, measured here
 
@@ -136,7 +161,14 @@ above. Concretely, all three:
    applies: *"the free step-0 probe predicts unreachability at 9 in 10 — use it before burning."*
 3. **A smooth error spectrum**, by the constraint above: 9.40× at matched RMSE is too large a
    penalty to pay on a term already 5.77× over its ceiling.
-4. **A lattice budget that survives training.** 15,840 codes at 8 bits coded to 16,133 B once trained
+4. **Any future geometric test must perturb a mode PoseNet CANNOT absorb.** The `se(3)` falsifier
+   here saturated because a uniform translation is a legitimate ego-motion and gets absorbed into the
+   pose estimate. **One candidate mode, named and not launched: a region-differential displacement —
+   opposite sub-pixel shifts applied to the upper and lower image halves.** No single rigid twist
+   produces that field for any depth map, so it lies outside the 6-DOF family and cannot be absorbed;
+   PoseNet must report the residual as error. Its cost would be read against photometric error of
+   equal scorer-plane RMSE, on the same instrument, under the same rule.
+5. **A lattice budget that survives training.** 15,840 codes at 8 bits coded to 16,133 B once trained
    (98-99 % nonzero); a successor needs either fewer codes, fewer bits, or an entropy model that
    holds under training, measured by a real coder race and not projected.
 

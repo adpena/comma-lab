@@ -360,16 +360,58 @@ Every one of these is a change or an addition the burn spec left open. None is s
   latents (26,130 B) are paid for. Whether that buys the 10× Seg and 6.9× Pose that result 1 demands
   is the burn's open question.
 
-## The se(3) falsifier: two rungs in, and they point one way
+## Stage 2a, complete ladder — all n600 rows
 
-MEASURED n600, two of four rungs (`shift_100` and `shift_200` running). Frame 1 displaced by a
+**Capacity / construction rungs (smooth error):**
+
+| rung | `d_seg` | `d_pose` | distortion | spRMSE | passes 0.04 |
+|---|---:|---:|---:|---:|---|
+| `teacher` | 0.000103412 | 4.58687e-6 | 0.0171139 | 0 | yes |
+| `sp_874x1164` | 0.000103412 | 4.58687e-6 | 0.0171139 | 0 | yes |
+| `sp_384x512` | 0.000111576 | 4.52317e-5 | 0.0324253 | 0.160 | **yes** |
+| `sp_640x852` | 0.00011044 | 5.04831e-5 | 0.0335124 | 0.1992 | **yes** |
+| `grid_384x512` | 0.000435232 | 0.011817 | 0.387281 | 4.544 | no |
+| `sp_192x256` | 0.00312771 | 0.0391067 | 0.938124 | 8.670 | no |
+
+**Render-space noise rungs (independent per-pixel, applied to the 384×512 render):**
+
+| rung | `d_seg` | `d_pose` | distortion | spRMSE | passes |
+|---|---:|---:|---:|---:|---|
+| `sp384_render_noise_1` | 0.000138109 | 0.000543636 | 0.0875426 | 0.7604 | no |
+| `sp384_render_noise_2` | 0.000156742 | 0.00202857 | 0.158102 | 1.278 | no |
+| `sp384_render_noise_4` | 0.000183665 | 0.0120593 | 0.365631 | 2.300 | no |
+| `sp384_render_noise_8` | 0.000223711 | 0.111126 | 1.07653 | 4.340 | no |
+
+**Camera-space noise rungs (applied to the 874×1164 camera image):**
+
+| rung | `d_seg` | `d_pose` | distortion | camRMSE | spRMSE | passes |
+|---|---:|---:|---:|---:|---:|---|
+| `noise_1` | 0.000125927 | 0.000208845 | 0.0582924 | 0.8164 | 0.5443 | no |
+| `noise_2` | 0.000143026 | 0.000705769 | 0.0983126 | 1.414 | 0.9426 | no |
+| `noise_4` | 0.000166821 | 0.00353996 | 0.20483 | 2.581 | 1.721 | no |
+| `noise_8` | 0.000200534 | 0.0257611 | 0.527607 | 4.895 | 3.263 | no |
+| `interior_noise_16` | 0.000238003 | **0.272033** | 1.67314 | 9.235 | 6.157 | no |
+
+The camera rungs also measure the scorer's own bilinear downsample: it attenuates independent camera
+noise by a factor of **1.50** (camRMSE / spRMSE = 0.8164/0.5443 = 1.500, constant across the family).
+
+`interior_noise_16` is the oracle rung — noise applied ONLY outside the GT argmax boundary band. Its
+n600 `d_pose` is **0.272033**, 3,238× the 8.4e-5 budget, which confirms on the population what a
+4-pair smoke first suggested (and corrects that smoke's 2.82 reading, which was 10× high):
+**Pose damage is not edge-local.** That is the measurement behind the D13 blend gate.
+
+## The se(3) falsifier: CLOSED at uniform-translation scope
+
+MEASURED n600, all four rungs. **VERDICT: comparable → hypothesis CLOSED** at uniform-translation
+scope; the full statement and its two caveats live in the closure memo. Frame 1 displaced by a
 uniform horizontal translation, read against photometric error of EQUAL scorer-plane RMSE:
 
 | rung | px | spRMSE | `d_pose` | vs SMOOTH at same RMSE | vs NOISE at same RMSE |
 |---|---:|---:|---:|---:|---:|
 | `shift_025` | 0.25 | 1.034 | 0.00155795 | **1.676×** | 1.293× |
 | `shift_050` | 0.50 | 2.070 | 0.00509686 | **1.640×** | 0.505× |
-| `shift_100` | 1.00 | 4.119 | 0.0130311 | **1.265×** | 0.157× |
+| `shift_100` | 1.00 | 4.1194 | 0.0130311 | **1.264×** | 0.157× |
+| `shift_200` | 2.00 | 8.7073 | 0.0322767 | **0.849×** | 0.039× |
 
 The shift family's own exponent in scorer-plane RMSE starts at **1.7105** — the smooth family's
 1.7439 — and then **falls to 1.3651**. The response SATURATES, and the reason is physical: a uniform
