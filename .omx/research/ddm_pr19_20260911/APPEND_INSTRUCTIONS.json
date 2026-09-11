@@ -1,0 +1,60 @@
+{
+ "schema": "ddm_pr19_prepared_unappended_contract_rows.v1",
+ "state": "PREPARED_NOT_APPENDED",
+ "hold_rule": "MAIN's binding hold: do NOT append until move 48 has COMPLETED. Appending makes the frozen file's last row change, and every in-flight prefire intent pins the last row (pr17 NO-GRACE), so the move-48 first-measurement intent would be invalidated mid-flight.",
+ "score_claim": false,
+ "timing_clearance": false,
+ "authority": false,
+ "rows_in_order": [
+  {
+   "file": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/PREFIRE_CONTRACT_AMENDMENT_ROW_PR19.json",
+   "schema": "prefire_contract_amendment.v1",
+   "amendment_id": "ddm_pr19_identity_class_envelope_replaces_local_ratio_projection",
+   "row_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+   "definition_parent_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+   "previous_row_sha256": "a841f9c187d1a718c7f3cc74b5b29c443aa824e38d756a7f8d41a9e57cf58a36"
+  },
+  {
+   "file": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/PREFIRE_CONTRACT_CONSUMER_FIX_ROW_PR19.json",
+   "schema": "prefire_contract_consumer_fix.v1",
+   "fix_batch_id": "pr19_identity_class_envelope_consumers_20260911",
+   "row_sha256": "d9553f662a04428f630a090c06e24267c08aeefc85afceb4d3b4d11f1ea47e7f",
+   "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+   "previous_row_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+   "fix_ids": [
+    "pr19-cold-report-work-facts",
+    "pr19-identity-class-projection",
+    "pr19-local-ratio-as-hard-timeout-stress-test",
+    "pr19-timing-chain-refusals-pinned",
+    "pr19-work-domination-and-receiver-identity"
+   ]
+  }
+ ],
+ "implementation_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+ "implementation_manifest": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR19.json",
+  "bytes": 2251,
+  "sha256": "c50370e76cc54162a4850db7a6736b5e63a2a99556cb0ffcd60ab0b6c527e753"
+ },
+ "adjudication_memo": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_risk_gate_identity_class_and_chain_inheritance_20260911.md",
+  "bytes": 16089,
+  "sha256": "1a7e363f1ed546552a6272f8ae79fc200715686fb77382db5e70dc0a692f7c82"
+ },
+ "definition_after_append": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+ "dry_run_validation": {
+  "function": "tac.candidate_seal._pf_freeze_history",
+  "input": "the frozen file's current amendments + these two rows, in this order",
+  "result": "PASSED \u2014 append-only chain, commit ancestry, definition parent and row pins all validate",
+  "frozen_file_touched": false
+ },
+ "append_procedure": [
+  "1. Confirm with MAIN that move 48 has COMPLETED and no prefire intent is in flight.",
+  "2. Re-check that HEAD has not changed any path in tac.candidate_seal.PREFIRE_IMPLEMENTATION_PATHS since implementation_commit: _pf_contract validates the LAST row's manifest against the LIVE files (require_live), so if any pinned consumer moved, re-derive the manifest and both rows at the new commit.",
+  "3. Append the two rows, in this order, to the 'amendments' array of .omx/research/ddm_ffi1_20260910/PREFIRE_CONTRACT_FROZEN.json.",
+  "4. Re-run: tac.candidate_seal._pf_freeze_history(frozen['amendments'], repo, frozen['implementation_commit']) and assert it returns the amendment row digest above.",
+  "5. Re-run the five suites; re-emit any prefire intent against the new last row (build_prefire_intent reads the frozen file, so a re-run picks it up with no edit).",
+  "6. Commit the frozen file through tools/subagent_commit_serializer.py."
+ ],
+ "note_the_fire_tool_is_pinned": "tools/fire_modal_auth_eval.py is in the pinned implementation manifest and was NOT edited by ddm_pr19."
+}

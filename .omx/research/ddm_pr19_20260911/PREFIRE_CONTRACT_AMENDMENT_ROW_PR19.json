@@ -1,0 +1,67 @@
+{
+ "schema": "prefire_contract_amendment.v1",
+ "amendment_id": "ddm_pr19_identity_class_envelope_replaces_local_ratio_projection",
+ "adjudication_memo": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_risk_gate_identity_class_and_chain_inheritance_20260911.md",
+  "bytes": 16089,
+  "sha256": "1a7e363f1ed546552a6272f8ae79fc200715686fb77382db5e70dc0a692f7c82"
+ },
+ "definition_change": {
+  "scope": "candidate_prefire_timing_risk.v1 projection basis only; decode_wall_clock inheritance is UNCHANGED and timing chains stay refused",
+  "risk_mode": "measured_t4_identity_class_envelope",
+  "definition": "tac.candidate_seal.validate_prefire_risk.identity_class_envelope.v1",
+  "projection_basis": "max measured_t4_decode_seconds over the declared t4_direct legs of the candidate's identity class; no local extrapolation enters the projection",
+  "identity_class": [
+   "prefire risk receiver digest equal to every declared leg's",
+   "receiver delta manifest carries zero differing rows",
+   "decoded_token_sha256 equal to every declared leg's",
+   "candidate decoder_bit_position <= the dominating leg's",
+   "candidate archive bytes <= the dominating leg's"
+  ],
+  "local_ratio_role": "hard_timeout_stress_test",
+  "policy_limit_seconds": 1260.0,
+  "hard_timeout_seconds": 1800.0,
+  "receiver_change_policy": "REFUSE \u2014 a receiver change keeps completed_t4_receiver_delta",
+  "chain_inheritance_policy": "REFUSE",
+  "executable_difference_policy": "REFUSE"
+ },
+ "definition_parent_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+ "previous_row_sha256": "a841f9c187d1a718c7f3cc74b5b29c443aa824e38d756a7f8d41a9e57cf58a36",
+ "measured_identity_class": {
+  "receiver_risk_digest": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "receiver_row_count": 49,
+  "trees": {
+   "move44": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+   "move45": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+   "move46": "/Volumes/APDataStore/pact/ddm_ntb2_proof45/frame_even/candidate_runtime",
+   "move47_pointer": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime",
+   "move48_candidate": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime"
+  },
+  "decoded_token_sha256_prefix": "a92e7d902a449896",
+  "t4_direct_legs": [
+   {
+    "move": 44,
+    "archive_sha256_prefix": "04758c0dfb8d",
+    "archive_bytes": 180406,
+    "decoder_bit_position": 958049,
+    "measured_t4_decode_seconds": 1232.418725255
+   },
+   {
+    "move": 46,
+    "archive_sha256_prefix": "a0de607df2ff",
+    "archive_bytes": 180001,
+    "decoder_bit_position": 960913,
+    "measured_t4_decode_seconds": 1140.8051148040001
+   }
+  ],
+  "t4_host_dispersion_ratio": 1.0803061007197008,
+  "local_cold_n600_window_spread_ratio": 2.827132355423425
+ },
+ "implementation_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+ "implementation_manifest": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR19.json",
+  "bytes": 2251,
+  "sha256": "c50370e76cc54162a4850db7a6736b5e63a2a99556cb0ffcd60ab0b6c527e753"
+ },
+ "score_claim": false
+}

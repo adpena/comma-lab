@@ -1,0 +1,75 @@
+{
+ "schema": "prefire_contract_consumer_fix.v1",
+ "fix_batch_id": "pr19_identity_class_envelope_consumers_20260911",
+ "previous_row_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+ "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+ "definition_change": false,
+ "consumer_fixes": [
+  {
+   "fix_id": "pr19-cold-report-work-facts",
+   "scope": "tac.candidate_seal._pf_cold_work_facts and _pf_candidate_cold_report; tac.decode_wall_clock.t4_direct_cold_report",
+   "reason": "the risk gate had no way to read the receiver's own work-bearing fields, so it could only compare wall clocks. The decoded token plane is the one identity that crosses the device boundary (MEASURED a92e7d902a449896... in both the T4 and the local cold reports of this class).",
+   "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+   "tests": [
+    "src/tac/tests/test_decode_wall_clock_t4_direct.py::test_pr19_t4_direct_cold_report_exposes_the_work_facts",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_candidate_cold_report_that_names_another_archive"
+   ]
+  },
+  {
+   "fix_id": "pr19-identity-class-projection",
+   "scope": "tac.candidate_seal.validate_prefire_risk mode dispatch and _validate_prefire_risk_identity_class",
+   "reason": "the local ratio spreads 2.83x across cold n600 windows of ONE identity class and its max(0, r-1) clamp is one-sided, so it inflated the projection and refused output-lossless rate-only candidates; the projection now comes from real T4 measurements of the same receiver and token plane.",
+   "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+   "tests": [
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_risk_passes_without_a_local_ratio_projection",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_risk_validates_through_the_full_intent",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_passes_on_the_real_move48_candidate",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_identity_class_shape_refusals"
+   ]
+  },
+  {
+   "fix_id": "pr19-local-ratio-as-hard-timeout-stress-test",
+   "scope": "the calculation block of _validate_prefire_risk_identity_class",
+   "reason": "the observed local delta is retained, not discarded: it must now prove the candidate cannot reach the 1800 s hard timeout even if the whole delta is real work. The 1260 s policy limit is unchanged and is applied to a real measured T4 number.",
+   "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+   "tests": [
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_keeps_the_1260_policy_limit_and_adds_an_1800_stress_refusal",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_warm_or_foreign_local_diagnostic"
+   ]
+  },
+  {
+   "fix_id": "pr19-timing-chain-refusals-pinned",
+   "scope": "regression guard only; tac.decode_wall_clock inheritance is UNCHANGED",
+   "reason": "adjudication (B) is REFUSED, so the two clauses that admit at most one inherited row per measured leg are load-bearing contract text and are now pinned on the real move-44/46/47/48 host trees, with the control that the same leg still inherits while it IS the pointer.",
+   "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+   "tests": [
+    "src/tac/tests/test_decode_wall_clock_t4_direct.py::test_pr19_chain_inheritance_stays_refused_on_the_real_trees",
+    "src/tac/tests/test_decode_wall_clock_t4_direct.py::test_t4_direct_leg_builds_validates_and_inherits"
+   ]
+  },
+  {
+   "fix_id": "pr19-work-domination-and-receiver-identity",
+   "scope": "the leg loop and delta block of _validate_prefire_risk_identity_class",
+   "reason": "a shared receiver does not pin decode work; the mode additionally requires an identical token plane, a dominating leg on coded bits and archive bytes, and a delta manifest with zero differing rows, so tc4 still holds (a receiver change keeps completed_t4_receiver_delta and its own measurement).",
+   "causal_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+   "tests": [
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_leg_that_decoded_a_different_token_plane",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_candidate_that_consumes_more_coded_bits",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_candidate_archive_larger_than_the_dominating_leg",
+    "src/tac/tests/test_candidate_prefire_intent.py::test_pr19_refuses_a_real_receiver_change"
+   ]
+  }
+ ],
+ "implementation_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+ "implementation_manifest": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR19.json",
+  "bytes": 2251,
+  "sha256": "c50370e76cc54162a4850db7a6736b5e63a2a99556cb0ffcd60ab0b6c527e753"
+ },
+ "adjudication_memo": {
+  "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr19_risk_gate_identity_class_and_chain_inheritance_20260911.md",
+  "bytes": 16089,
+  "sha256": "1a7e363f1ed546552a6272f8ae79fc200715686fb77382db5e70dc0a692f7c82"
+ },
+ "score_claim": false
+}
