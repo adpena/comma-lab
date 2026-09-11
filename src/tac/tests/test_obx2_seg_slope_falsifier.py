@@ -51,11 +51,13 @@ def test_a_fast_descent_is_open_and_projects_inside_the_stage() -> None:
 
 
 def test_a_slow_descent_is_closed_for_projecting_past_the_stage() -> None:
-    epochs = range(0, 40)
+    # Long enough to clear amendment A1's lever arm: a genuinely slow but
+    # well-determined descent must still receive a CLOSED verdict.
+    epochs = range(0, 200)
     values = _exponential(epochs, 0.025, 0.002)  # a decade every 500 epochs
     verdict = fal.judge("slow", list(epochs), values)
     assert verdict.verdict == "CLOSED_AT_FORMULATION_SCOPE"
-    assert "exceeds the stage" in " ".join(verdict.reasons)
+    assert "exceeds the stage" in " ".join(verdict.reasons) or "flattened" in " ".join(verdict.reasons)
 
 
 def test_a_rising_curve_is_closed() -> None:
@@ -100,7 +102,8 @@ def test_a_noisy_curve_reports_indeterminate_when_its_band_straddles_the_stage()
     verdict = fal.judge("noisy", epochs, values)
     assert verdict.verdict in {"INDETERMINATE", "CLOSED_AT_FORMULATION_SCOPE", "OPEN"}
     if verdict.verdict == "INDETERMINATE":
-        assert "straddles" in " ".join(verdict.reasons)
+        joined = " ".join(verdict.reasons)
+        assert "straddles" in joined or "lever arm" in joined or "cannot tell the families apart" in joined
 
 
 def test_fit_bands_widen_with_the_residual_and_round_trip_the_target() -> None:
@@ -140,3 +143,43 @@ def test_describe_reports_both_families_and_both_targets() -> None:
         assert "epoch_to_ceiling_4e-4" in entry
         assert "epoch_to_pose_consistent_1.87e-4" in entry
         assert "epoch_band_to_ceiling_4e-4" in entry
+
+
+def test_amendment_a1_withholds_a_verdict_on_too_small_a_fall() -> None:
+    epochs = list(range(0, 12))
+    values = [0.025 * (1.0 - 0.005 * e) for e in epochs]  # ~5% fall in total
+    verdict = fal.judge("shallow", epochs, values)
+    assert verdict.verdict == "INDETERMINATE"
+    assert "lever arm" in " ".join(verdict.reasons)
+
+
+def test_amendment_a1_withholds_a_verdict_when_the_families_disagree() -> None:
+    # A convex-in-log curve: power and exponential extrapolate to wildly
+    # different epochs even though both fit the window well.
+    epochs = list(range(30, 42))
+    values = [0.025 * 10.0 ** (-0.004 * (e - 30)) for e in epochs]
+    verdict = fal.judge("disagree", epochs, values)
+    if verdict.verdict == "INDETERMINATE":
+        assert "disagree" in " ".join(verdict.reasons) or "lever arm" in " ".join(verdict.reasons)
+    projections = [f.epoch_reaching(fal.D_SEG_CEILING) for f in verdict.fits.values()]
+    if all(p is not None and p > 0 for p in projections):
+        spread = max(projections) / min(projections)
+        if spread > fal.FAMILY_DISAGREEMENT_FACTOR:
+            assert verdict.verdict == "INDETERMINATE"
+
+
+def test_amendment_a1_cannot_flip_a_verdict_only_withhold_one() -> None:
+    # A clean fast descent still reads OPEN with the amendment in place.
+    assert fal.judge("fast", list(range(0, 40)), _exponential(range(0, 40), 0.025, 0.05)).verdict == "OPEN"
+    # and a clean slow one, given a lever arm, still reads CLOSED
+    slow = fal.judge("slow", list(range(0, 200)), _exponential(range(0, 200), 0.025, 0.002))
+    assert slow.verdict == "CLOSED_AT_FORMULATION_SCOPE"
+
+
+def test_amendment_a1_trusts_the_primary_when_one_family_clearly_fits_better() -> None:
+    # A pure exponential over a long window: the exponential family fits far
+    # better, so the families' disagreement must NOT withhold the verdict.
+    epochs = list(range(0, 200))
+    verdict = fal.judge("clean_exp", epochs, _exponential(range(0, 200), 0.025, 0.002))
+    assert verdict.primary == "exponential"
+    assert verdict.verdict != "INDETERMINATE"

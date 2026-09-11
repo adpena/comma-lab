@@ -44,6 +44,28 @@ VERDICT RULE, pre-registered
     error is propagated to an epoch band, and a band that straddles
     `STAGE_EPOCHS` is reported as INDETERMINATE rather than forced to a side.
 
+AMENDMENT A1 (declared 2026-09-11, after the rule's FIRST firing, with its
+reason, and applied to every run from here — the original verdict is reported
+as it fired and is not retracted).  The rule as written has a hole: over a short
+window a good fit has a tiny residual, so the band comes out NARROW exactly when
+the extrapolation is least trustworthy, and the INDETERMINATE guard fails when it
+is most needed.  At its first firing both arms projected CLOSED off six epochs
+spanning 0.07 decades of the power family's x-axis, while the two families
+disagreed about the answer by five orders of magnitude (554 epochs against 176
+million).  That disagreement is itself the measurement: the data does not
+determine the functional form, so the projection is a choice of model rather
+than a result.  Two guards are added, stated before the re-run:
+  * `MIN_OBSERVED_FALL` (1.25x) — the surrogate must have fallen by at least this
+    factor across the fit window before any projection is load-bearing.
+  * `FAMILY_DISAGREEMENT_FACTOR` (3.0) — if the two families' projections to the
+    ceiling differ by more than this WHILE the data cannot tell the families
+    apart, the verdict is INDETERMINATE.  "Cannot tell apart" is
+    `RSE_DISCRIMINATION` (0.5): the worse fit is less than twice as bad as the
+    better one.  When one family clearly fits better the primary is trusted, so
+    a curve that really is exponential still gets a verdict.
+Both report INDETERMINATE rather than a side.  Neither can turn an OPEN into a
+CLOSED or the reverse; they can only withhold a verdict the data cannot support.
+
 Nothing here reads a scorer, trains, or launches.  It fits numbers a live run
 already wrote and prints a verdict.
 """
@@ -76,6 +98,9 @@ FLATTEN_MIN_EPOCH = 60
 FLATTEN_MIN_FACTOR = 1.5
 FLATTEN_HORIZON_EPOCHS = 100
 MIN_EPOCHS_TO_FIT = 6
+MIN_OBSERVED_FALL = 1.25  # amendment A1
+FAMILY_DISAGREEMENT_FACTOR = 3.0  # amendment A1
+RSE_DISCRIMINATION = 0.5  # amendment A1: below this ratio one family clearly fits better
 SURROGATE_CALIBRATION = {
     "surrogate": "mean_expected_flip",
     "measured_d_seg": 0.02450141059,
@@ -214,6 +239,37 @@ def judge(arm: str, epochs: Sequence[int], values: Sequence[float]) -> ArmVerdic
     result.primary = min(result.fits, key=lambda name: result.fits[name].residual_standard_error)
     primary = result.fits[result.primary]
 
+    observed_fall = max(values) / min(values) if min(values) > 0 else 1.0
+    result.reasons.append(f"surrogate fell {observed_fall:.3f}x across the fit window")
+    if observed_fall < MIN_OBSERVED_FALL:
+        result.verdict = "INDETERMINATE"
+        result.reasons.append(
+            f"amendment A1: a {observed_fall:.3f}x fall is under the {MIN_OBSERVED_FALL}x lever arm any "
+            "projection needs; the window cannot support an extrapolation in either direction"
+        )
+        return result
+    projections = [
+        fit.epoch_reaching(D_SEG_CEILING)
+        for fit in result.fits.values()
+        if fit.epoch_reaching(D_SEG_CEILING) is not None
+    ]
+    if len(projections) == len(result.fits) and min(projections) > 0:
+        spread = max(projections) / min(projections)
+        errors = [fit.residual_standard_error for fit in result.fits.values()]
+        discrimination = (min(errors) / max(errors)) if max(errors) > 0 else 0.0
+        result.reasons.append(
+            f"model families disagree by {spread:.3g}x on the epoch to the ceiling; "
+            f"fit-quality ratio {discrimination:.3f}"
+        )
+        if spread > FAMILY_DISAGREEMENT_FACTOR and discrimination > RSE_DISCRIMINATION:
+            result.verdict = "INDETERMINATE"
+            result.reasons.append(
+                f"amendment A1: a {spread:.3g}x disagreement at fit-quality ratio {discrimination:.3f} "
+                "means the data cannot tell the families apart, so the projection is a choice of "
+                "model and not a measurement"
+            )
+            return result
+
     reached = primary.epoch_reaching(D_SEG_CEILING)
     low, high = primary.epoch_band(D_SEG_CEILING)
     if reached is None:
@@ -311,6 +367,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             "flatten_min_factor": FLATTEN_MIN_FACTOR,
             "flatten_horizon_epochs": FLATTEN_HORIZON_EPOCHS,
             "min_epochs_to_fit": MIN_EPOCHS_TO_FIT,
+            "amendment_a1_min_observed_fall": MIN_OBSERVED_FALL,
+            "amendment_a1_family_disagreement_factor": FAMILY_DISAGREEMENT_FACTOR,
+            "amendment_a1_rse_discrimination": RSE_DISCRIMINATION,
             "surrogate_calibration": SURROGATE_CALIBRATION,
         },
         "arms": results,
