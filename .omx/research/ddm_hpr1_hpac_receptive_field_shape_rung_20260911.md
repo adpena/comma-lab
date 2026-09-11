@@ -6,9 +6,10 @@
 **STATE (Opus, 2026-09-11) — COMPLETE.** All four deliverables are measured. The headline is not the
 one the charter expected: **the pre-registered shape rung is FALSIFIED by the real coder (+812 B
 against its own control), and the experiment's CONTROL is a −887 B candidate with no receiver change**
-(§4e). One step is owed before any seal — the cold public parse-back — and §5 says exactly why I
-stopped rather than stamp a false label into a receipt. No frontier move, no Modal dispatch, no scorer
-run, no seal, no candidate claim. This file is crash-resumable.
+(§4e). MAIN accepted the control as **move 47**, by NORMAL seal inheriting move 46's leg (§4f). The
+cold public parse-back is running on a FORKED prover under a truthful label (§5); the normal-seal
+inputs land the moment it returns. No frontier move, no Modal dispatch, no scorer run, no seal, no
+candidate claim. This file is crash-resumable.
 
 Frontier line: `composition S 0.1371383667388406 @ 180,246 B [contest-CUDA T4 n600] (move 45)` — UNMOVED
 by this arm.
