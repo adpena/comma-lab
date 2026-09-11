@@ -9,19 +9,25 @@ plane the scorer actually reads:
 
     d_pose(r) = d_pose_floor + C * r ** p
 
-with `d_pose_floor` the pointer's own measured `d_pose` at `r = 0`.  Six n600
-points constrain it across three decades of `r` and the fit holds within 13%;
-a fit restricted to the small-error regime the gate actually lives in returns
-the same exponent, so the law is not being extrapolated into a regime it does
-not describe.
+with `d_pose_floor` the pointer's own measured `d_pose` at `r = 0`.  CORRECTION, 2026-09-11.  I described this as a law holding "within 5%" on four
+points and "within 13%" on six.  On SEVEN the worst residual is **29%**, and the
+local exponent between consecutive measured points wanders from 0.555 to 2.548 —
+a factor of 4.6.  A single power law is a SUMMARY of these points, not a law
+governing them, and the fitted crossing is an interpolation with roughly 30%
+uncertainty.  The primary claim is therefore the MEASURED BRACKET: the highest
+rung whose `d_pose` stays inside the budget and the lowest rung that breaks it.
+The fit is retained as an interpolant and is labelled as one.
 
 Why this equation exists.  The OBX2 burn gate is `distortion < 0.04` at
 `<= 122,000 B`.  With the measured `d_seg` of a scorer-plane-matched render
 (1.1e-4, contributing 0.011), the Pose budget is `d_pose < 8.4e-5`, and
-inverting the law gives an admissible scorer-plane RMSE of **0.253 of one uint8
-LSB — 0.099% of full scale**.  The rung that pins this most directly is
-`sp384_render_noise_1`: +/-1 LSB of independent noise on the render alone takes
-the object to distortion 0.0875, 2.2x past the gate.  No 122,000 B object encodes 1,200 frames of
+the admissible scorer-plane RMSE is BRACKETED BY MEASUREMENT between **0.1992
+(`sp_640x852`, inside the budget) and 0.7604 (`sp384_render_noise_1`, outside
+it)**, with the interpolant placing the crossing near 0.245.  Every point in
+that bracket is near-lossless — 0.08% to 0.30% of full scale — so the closure's
+direction is robust to the fit's 29% wobble even though its exact value is not.
+The rungs that pin it are direct: +/-1 LSB of independent noise on the render
+alone takes the object to distortion 0.0875, and +/-2 LSB to 0.1581.  No 122,000 B object encodes 1,200 frames of
 384x512 at that fidelity, so matching a photometric teacher is the wrong
 objective and the object must be POSE-EQUIVALENT rather than photometrically
 faithful.  The law is what turns that from an opinion into arithmetic.
@@ -53,24 +59,27 @@ EQUATION_ID = "obx2_pose_vs_scorer_plane_rmse_v1"
 # r = 0 is move 44's own decoded bytes; the rest are deterministic constructions
 # of them scored in the same frozen CPU process.
 POSE_FLOOR = 4.58687e-6
-# RECALIBRATED 2026-09-11 on six n600 points (was 9.29365e-4 / 1.7121 on four).
-POWER_LAW_COEFFICIENT = 8.71762e-4
-POWER_LAW_EXPONENT = 1.7440
+# RECALIBRATED twice on 2026-09-11: four points, then six, now SEVEN.
+POWER_LAW_COEFFICIENT = 9.33907e-4
+POWER_LAW_EXPONENT = 1.7508
 
 MEASURED_POINTS: tuple[tuple[str, float, float], ...] = (
     ("teacher", 0.0, 4.58687e-6),
     ("sp_384x512", 0.160, 4.52317e-5),
     ("sp_640x852", 0.1992, 5.04831e-5),
     ("sp384_render_noise_1", 0.7604, 5.43636e-4),
+    ("sp384_render_noise_2", 1.278, 2.02857e-3),
     ("grid_384x512", 4.544, 0.011817),
     ("sp_192x256", 8.670, 0.0391067),
 )
 
-# A fit restricted to the small-error regime the gate lives in (spRMSE < 1,
-# three points) gives exponent 1.7219 and C 8.47341e-4 — the SAME law, so the
-# global fit is not being extrapolated into a regime it does not describe.
-SMALL_REGIME_EXPONENT = 1.7219
-SMALL_REGIME_COEFFICIENT = 8.47341e-4
+# The local exponent between consecutive measured points, which is what says
+# whether one power law describes this at all: 0.555, 1.839, 2.548, 1.391,
+# 1.853.  It wanders by 4.6x.  The fit is an INTERPOLANT with 29% worst
+# residual, not a law, and the honest primary claim is the measured bracket
+# below rather than any single exponent.
+LOCAL_EXPONENTS = (0.555, 1.839, 2.548, 1.391, 1.853)
+WORST_RELATIVE_ERROR = 0.290
 SMALL_REGIME_MAX_RMSE = 1.0
 
 # The gate this law is used against (OBX2 burn spec "Exact admission arithmetic").
@@ -89,8 +98,25 @@ def predict_d_pose(scorer_plane_rmse: float) -> float:
     return POSE_FLOOR + POWER_LAW_COEFFICIENT * rmse**POWER_LAW_EXPONENT
 
 
+def measured_bracket(d_pose_budget: float) -> tuple[float | None, float | None]:
+    """The measured rungs that bracket a Pose budget: (highest inside, lowest outside).
+
+    This is the honest primary claim.  It needs no model: it is two measured
+    n600 rows and the statement that the crossing lies between them.
+    """
+
+    inside = [rmse for _, rmse, d_pose in MEASURED_POINTS if d_pose < d_pose_budget]
+    outside = [rmse for _, rmse, d_pose in MEASURED_POINTS if d_pose >= d_pose_budget]
+    return (max(inside) if inside else None, min(outside) if outside else None)
+
+
 def admissible_scorer_plane_rmse(d_pose_budget: float) -> float:
-    """Invert the law: the largest scorer-plane RMSE that stays inside a Pose budget."""
+    """INTERPOLATE the fit to a Pose budget.
+
+    The fit carries a 29% worst residual and its local exponent varies 4.6x, so
+    this is an interpolation between measured rungs and not a law's prediction.
+    Prefer `measured_bracket` for any claim that has to hold.
+    """
 
     budget = float(d_pose_budget)
     if budget <= POSE_FLOOR:
@@ -194,10 +220,10 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
         equation_id=EQUATION_ID,
         name="OBX2 PoseNet distortion versus scorer-plane RMSE",
         one_line_summary=(
-            "d_pose = 4.587e-06 + 8.718e-04 * spRMSE^1.744 over three decades (within 13%); "
-            "inverting it puts the admissible scorer-plane RMSE at 0.253 of one uint8 LSB."
+            "seven n600 points bracket the gate crossing between spRMSE 0.1992 and 0.7604; the "
+            "power-law interpolant summarizes them to 29% and places it near 0.245 uint8 LSB."
         ),
-        latex_form=r"d_{pose}(r) = d_{pose}^{floor} + C\,r^{p},\quad C = 8.718\times10^{-4},\ p = 1.744",
+        latex_form=r"d_{pose}(r) \approx d_{pose}^{floor} + C\,r^{p},\quad C = 9.339\times10^{-4},\ p = 1.751",
         python_callable_module_path=(
             "tac.canonical_equations.obx2_pose_vs_scorer_plane_rmse_20260911:predict_d_pose"
         ),
@@ -205,21 +231,19 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
             "vehicle": ["qbf_coordinate_generator", "move_44_decoded_bytes"],
             "measurement_axis": ["macOS-CPU advisory"],
             "scorer_plane_rmse_range": [0.0, 8.67],
-            "small_regime_agreement": {
-                "exponent": SMALL_REGIME_EXPONENT,
-                "coefficient": SMALL_REGIME_COEFFICIENT,
-                "max_rmse": SMALL_REGIME_MAX_RMSE,
-            },
+            "local_exponents_between_consecutive_points": list(LOCAL_EXPONENTS),
+            "worst_relative_error": WORST_RELATIVE_ERROR,
+            "status": "interpolant, not a law: the local exponent varies 4.6x across the measured range",
             "note": (
-                "fitted on deterministic constructions of ONE video's decoded bytes; the "
-                "small-error regime is now constrained by three points whose own fit returns "
-                "the same exponent as the global one"
+                "fitted on deterministic constructions of ONE video's decoded bytes; a single "
+                "power law summarizes them to 29% and no better, so claims should rest on the "
+                "measured bracket rather than on the fitted crossing"
             ),
         },
         units_in={"scorer_plane_rmse": "uint8_levels_rms_in_the_384x512_scorer_plane"},
         units_out={"d_pose": "mean_squared_error_over_600x6_posenet_values"},
         empirical_anchors=anchors,
-        predicted_vs_empirical_residual={"worst_relative_error_over_six_n600_points": worst_ratio},
+        predicted_vs_empirical_residual={"worst_relative_error_over_seven_n600_points": worst_ratio},
         last_calibration_utc="2026-09-11T00:00:00Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
@@ -239,16 +263,17 @@ def build_obx2_pose_vs_scorer_plane_rmse_v1() -> CanonicalEquation:
 __all__ = [
     "DISTORTION_GATE",
     "EQUATION_ID",
+    "LOCAL_EXPONENTS",
     "MEASURED_POINTS",
     "POSE_FLOOR",
     "POWER_LAW_COEFFICIENT",
     "POWER_LAW_EXPONENT",
-    "SMALL_REGIME_COEFFICIENT",
-    "SMALL_REGIME_EXPONENT",
     "SMALL_REGIME_MAX_RMSE",
+    "WORST_RELATIVE_ERROR",
     "admissible_scorer_plane_rmse",
     "build_obx2_pose_vs_scorer_plane_rmse_v1",
     "derive_pose_weight",
+    "measured_bracket",
     "pose_budget_at_distortion_gate",
     "pose_weight_at_operating_point",
     "predict_d_pose",

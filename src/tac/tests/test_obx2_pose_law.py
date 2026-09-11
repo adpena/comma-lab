@@ -14,7 +14,7 @@ def test_law_reproduces_every_measured_n600_point_within_six_percent() -> None:
     for name, rmse, measured in law.MEASURED_POINTS:
         predicted = law.predict_d_pose(rmse)
         assert predicted > 0.0, name
-        assert abs(predicted / measured - 1.0) < 0.13, name
+        assert abs(predicted / measured - 1.0) < 0.30, name
 
 
 def test_law_floors_at_the_pointer_own_d_pose_and_rises_monotonically() -> None:
@@ -96,23 +96,33 @@ def test_canonical_equation_builds_with_every_measured_anchor() -> None:
     equation = law.build_obx2_pose_vs_scorer_plane_rmse_v1()
     assert equation.equation_id == law.EQUATION_ID
     assert len(equation.empirical_anchors) == len(law.MEASURED_POINTS)
-    worst = equation.predicted_vs_empirical_residual["worst_relative_error_over_six_n600_points"]
-    assert 0.0 < worst < 0.13
+    worst = equation.predicted_vs_empirical_residual["worst_relative_error_over_seven_n600_points"]
+    assert 0.0 < worst < 0.30
     assert equation.domain_of_validity["scorer_plane_rmse_range"] == [0.0, 8.67]
 
 
-def test_the_small_error_regime_returns_the_same_law_as_the_global_fit() -> None:
-    # The gate lives below spRMSE 1; a separate fit there must not be a different law.
-    assert abs(law.SMALL_REGIME_EXPONENT / law.POWER_LAW_EXPONENT - 1.0) < 0.05
-    small = [p for p in law.MEASURED_POINTS if 0.0 < p[1] < law.SMALL_REGIME_MAX_RMSE]
-    assert len(small) >= 3
-    for _, rmse, measured in small:
-        local = law.POSE_FLOOR + law.SMALL_REGIME_COEFFICIENT * rmse**law.SMALL_REGIME_EXPONENT
-        assert abs(local / measured - 1.0) < 0.15
+def test_the_fit_is_labelled_an_interpolant_because_its_local_exponent_wanders() -> None:
+    # If one power law governed this, the local exponents would agree.  They do
+    # not, which is why the bracket is the claim and the fit is a convenience.
+    assert max(law.LOCAL_EXPONENTS) / min(law.LOCAL_EXPONENTS) > 4.0
+    assert law.WORST_RELATIVE_ERROR > 0.2
 
 
-def test_one_lsb_of_render_noise_already_fails_the_gate() -> None:
-    rung = {name: (rmse, d_pose) for name, rmse, d_pose in law.MEASURED_POINTS}["sp384_render_noise_1"]
-    rmse, d_pose = rung
-    assert d_pose > law.pose_budget_at_distortion_gate(0.000138109)
-    assert rmse > law.admissible_scorer_plane_rmse(law.pose_budget_at_distortion_gate(0.000111576))
+def test_the_measured_bracket_needs_no_model_and_contains_the_fit() -> None:
+    budget = law.pose_budget_at_distortion_gate(0.000111576)
+    inside, outside = law.measured_bracket(budget)
+    assert inside is not None and outside is not None
+    assert inside < outside
+    assert inside <= law.admissible_scorer_plane_rmse(budget) <= outside
+    # every rung in the bracket is near-lossless
+    assert 100.0 * outside / law.SCORER_PLANE_RMSE_FULL_SCALE < 0.35
+    # a budget nothing reaches has no inside rung
+    assert law.measured_bracket(1.0e-12)[0] is None
+
+
+def test_one_and_two_lsb_of_render_noise_both_fail_the_gate() -> None:
+    rungs = {name: (rmse, d_pose) for name, rmse, d_pose in law.MEASURED_POINTS}
+    for name, seg in (("sp384_render_noise_1", 0.000138109), ("sp384_render_noise_2", 0.000156742)):
+        rmse, d_pose = rungs[name]
+        assert d_pose > law.pose_budget_at_distortion_gate(seg), name
+        assert 100.0 * seg + math.sqrt(10.0 * d_pose) > law.DISTORTION_GATE, name
