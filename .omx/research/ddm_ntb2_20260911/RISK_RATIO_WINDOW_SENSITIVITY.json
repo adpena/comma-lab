@@ -1,4 +1,20 @@
 {
+ "MEASURED_2026_09_11_UPDATE": {
+  "candidate_seconds": 2214.5721771659737,
+  "next_measurement_launched": "base and candidate decoded CONCURRENTLY (launch_pair_base / launch_pair_cand), so both legs share one instantaneous environment and the ratio can reflect the two archives. This is the only fair form available on a shared box; a quiesced fleet would be better still.",
+  "not_done": "no contract change, no relaxation of the 1,260 s limit, no selection of the friendliest base among the three, and no argument that the refusal is wrong. A ratio measured on an instrument noisier than its effect is not evidence in either direction -- including in the direction this arm would prefer.",
+  "passes_1260_limit": false,
+  "projection_seconds": 1685.6542618690796,
+  "ratio_with_matched_window_base": 0.3677609949656522,
+  "the_real_finding": "this ratio cannot be measured by SEQUENTIAL runs on a shared box. The quantity it must resolve is a candidate whose true decode delta is about zero -- same 117,964,800 symbol decodes, a 603 B SMALLER model, an EMPTY scoped receiver delta -- and the instrument's own noise on identical bytes is 20.9 pct, an order of magnitude larger. Every sequential number here is a property of the window it ran in.",
+  "three_measurements_of_the_same_base_archive": {
+   "ntb2_window_seconds": 1619.1221897079959,
+   "pc3_window_seconds": 1957.5967032500193,
+   "spread_fraction": 0.209,
+   "verdict": "the SAME bytes decode 20.9 pct apart depending on when the run starts. The box's load fell from ~20 to ~10 between this arm's candidate leg and its base leg."
+  },
+  "what_was_added": "a SECOND measurement of the SAME base archive -- move 44's promoted tree, the t4_direct leg's own runtime -- in this arm's window, to test whether the 13.1 pct was the candidate or the box"
+ },
  "action_taken": "a fresh base diagnostic on move 44's promoted tree -- the t4_direct leg's own runtime, whose receiver digest 7e6da183 is what the contract requires of a base -- launched in this arm's window with the same fleet live (load 14, pc3 at four processes). Both legs then share one set of conditions.",
  "authority": false,
  "axis": "[macOS-CPU advisory; local diagnostics, never timing authority]",
