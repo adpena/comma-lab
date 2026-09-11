@@ -350,12 +350,38 @@ coordinates move on the order of tens of bytes per row. That points the next uni
 
 ## Composition and boundaries
 
-No measured winning treatment exists yet; no composed candidate bytes, SHA, projected S,
-or seal exist. No receiver files, upstream files, PR trees, sealed source trees, or
-obx2/pc3/mxo1/gpp1/rbf1 directories were edited. No Modal. No scorer ran. All payloads
-created so far are retained on the SSD. Source hashes and per-stage checkpoints bind
-the outputs. Bulk writes refuse below a 40 GiB reserve; no payload deletion is authorized.
-Process-list inspection (`ps`) was denied by the sandbox; no fleet-idle claim is made.
+**Candidate:** `ntb2_frame_even`, 180,161 B, sha `432e8f09…`, joint −245 B, ΔS −1.63135e-04,
+projected S 0.1370817687278253, distortion unchanged (prior-only change). NOT sealed: the cold
+public parse-back is still running, and nothing is sealed or claimed before its
+`raw_byte_identical_to_move44` returns true. No Modal dispatch. No scorer ran on the candidate and
+none needs to.
+
+**Receiver:** UNCHANGED, measured — `measure_receiver_digest` of the staged tree equals move 44's,
+so the seal is a NORMAL seal inheriting `t4_direct`. Only `inflate.py`'s two archive-pin constants
+differ, and that function normalizes exactly those.
+
+**Boundaries this unit declares:**
+- Every renderer number is `[macOS-CPU advisory, jg1/up2 instrument, DALI GT lineage]`. The control
+  agreeing with the T4 row to 0.07 % on both legs is strong evidence for the deltas, not a licence
+  to quote a local number as a score.
+- The renderer closure is scoped to **3-bit at the shipped per-axis max-absolute quantizer, fixed
+  tokens, no weight refit**. A quantization-aware refit is NOT closed.
+- `coord_mix`, `blocks.1.pw`, `blocks.2.pw` were stopped at 20/60/60 pairs. Those rows are LOWER
+  BOUNDS (a mean of 600 non-negative terms is bounded below by any partial sum over 600), never
+  prefix estimates, and they are quoted only as bounds.
+- The three renderer treatments' argmax planes, pose vectors and per-chunk render shas are retained;
+  their full 1.83 GB frame-1 rasters are NOT, because the tier has under 11 GiB above its reserve.
+  They are exactly rebuildable from the retained archive plus the retained token field by the same
+  producer, and the per-chunk shas certify that rebuild.
+- **Tier pressure is live**: `/Volumes/VertigoDataTier` fell from 51 GiB to 41 GiB during this unit
+  while five arms ran. The 40 GiB reserve in the HPAC producers is a fail-CLOSED guard, so a
+  `frame_quad` or a future encode may refuse rather than corrupt; it resumes from its stage
+  checkpoints. `ddm_rbf1` holds 18 G and `ddm_obx2` 4.1 G; this arm holds 3.1 G and deleted nothing.
+- Rows 0–20 of the renderer control were produced by producer sha `da5714d2…` and the rest by later
+  shas. The edits between them touch only the `--retain-frames` branch (never taken by any of these
+  runs) and receipt fields; no measured quantity is on a changed path.
+- Three parse-back attempts are retained, including the two that failed. Nothing was deleted; the
+  superseded INPUTS and the half-done receiver checkpoints are under `public/frame_even/superseded/`.
 
 ## RECALL EVIDENCE
 
