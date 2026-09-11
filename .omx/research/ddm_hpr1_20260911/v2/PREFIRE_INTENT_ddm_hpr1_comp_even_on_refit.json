@@ -2,9 +2,9 @@
   "schema": "candidate_prefire_intent.v1",
   "state": "PREFIRE_FIRST_MEASUREMENT_ONLY",
   "candidate_id": "ddm_hpr1_comp_even_on_refit",
-  "created_at_utc": "2026-09-11T22:18:02.650404+00:00",
+  "created_at_utc": "2026-09-11T22:29:44.276135+00:00",
   "created_by": "candidate-prefire-producer",
-  "producer_source_commit": "c8ad0569f9e17a2b5570ce9799d218fb38377686",
+  "producer_source_commit": "acf805f51702e402e959927c85c345e8a8f72eef",
   "score_claim": false,
   "promotion_eligible": false,
   "timing_clearance": false,
@@ -219,17 +219,17 @@
     "candidate_manifest": {
       "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/CANDIDATE_MANIFEST.json",
       "bytes": 10163,
-      "sha256": "5c905926a60fd16e11edc7c717820cf558a065c3b8b5fd326c42275aa50775a8"
+      "sha256": "75648d3fb2f70404723e4f0c5681d63374fa1c30892c1eccc47e1cd712b68d3b"
     },
     "manifest_validation": {
       "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/MANIFEST_VALIDATION.json",
       "bytes": 1128,
-      "sha256": "3e481b4b2e9a82f844f3f2b3ffb7fd723ff778e32c918ef4c83f101db367e0bb"
+      "sha256": "eefe30138259cef697eb40aae91b261bbb77293c31379d88ed9c27e17729d892"
     },
     "twin_encode": {
       "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/TWIN_ENCODE.json",
       "bytes": 1275,
-      "sha256": "bb48b589813af75b553ccf3e5fd0b4283bc06e9bd478951b601928faf076b15a"
+      "sha256": "8e439f398931e755718ef9590e2fc7c1a632c24467c915015e446ad039f325e5"
     },
     "archive_parseback": {
       "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/ARCHIVE_PARSEBACK.json",
@@ -248,8 +248,8 @@
     },
     "retention_manifest": {
       "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/RETENTION_MANIFEST.json",
-      "bytes": 1794,
-      "sha256": "4d96266f4c39e02420298dae8d57a7d6315a8f53048843c2b808c2587cc46ad2"
+      "bytes": 4228,
+      "sha256": "fe134f79a3d654922102552340511f20837dad5d72292bc347ea7ec7b3ce8cd9"
     },
     "timing_risk": {
       "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/TIMING_RISK.json",
@@ -285,11 +285,11 @@
     "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/PRICE.json"
   ],
   "falsifiers": [
-    "The cold literal inflate.sh output must carry all 600 pairs with no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 47's retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc. This row edits the arithmetic coder's PRIOR only, so a single differing byte falsifies the whole distortion argument, not merely this candidate.",
-    "The candidate archive must be at most 179,111 bytes and the rate-only net dS must be strictly below -2e-5 against move 47's 179,359 bytes at unchanged distortion. Measured: 179,111 B, -248 B, -1.651330203742985e-04 -- 8.3x the bar.",
-    "Reassembling move 47's OWN members through this arm's assembly path must reproduce d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9 at 179,359 bytes in both twins, or the -248 B belongs to the rebuild and not to the even-rounding composed on the refit prior.",
+    "The cold literal inflate.sh output must carry all 600 pairs with no checkpoint resume, and every one of the 3,662,409,600 raw bytes must equal move 47 retained raw 2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc. This row edits the arithmetic coder PRIOR only, so a single differing byte falsifies the whole distortion argument, not merely this candidate.",
+    "The candidate archive must be at most 179,111 bytes and the rate-only net dS must be strictly below -2e-5 against move 47 179,359 bytes at unchanged distortion. Measured: 179,111 B, -248 B, -1.651330203742985e-04 -- 8.3x the bar.",
+    "Reassembling move 47 OWN members through this arm assembly path must reproduce d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9 at 179,359 bytes in both twins, or the -248 B belongs to the rebuild and not to the even-rounding composed on the refit prior.",
     "The scoped receiver delta against the pointer tree must be EMPTY at prefire risk digest 9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890 over 49 rows; the raw MANIFEST.sha256 stays in every custody check and is validated separately. A non-empty delta means this candidate changes the receiver and cannot inherit any decode timing.",
     "Risk ceiling 1232.418725255 s must not exceed the 1260 s policy limit, and the demoted local-ratio stress test 1477.6098406913195 s must stay under the 1800 s hard timeout. Both normal seal paths must refuse this object with exactly PREFIRE_INTENT_SCHEMA_REFUSED before any consumer subprocess. Only MAIN may authorize, fire and complete; this intent confers no timing and no score authority, and pointer or contract drift refuses rather than rebases."
   ],
-  "intent_sha256": "9abf79c0808d35c13798b0679529518d7845c66c2d470be91f40ed5dc1de7c98"
+  "intent_sha256": "087693141bb2aeb14d2f7ee0e92bb71ff57da5cb0ffc8bd1fd27f02f94ed5524"
 }

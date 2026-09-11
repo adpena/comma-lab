@@ -1,5 +1,62 @@
 {
   "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "payloads": [
+    {
+      "bytes": 179111,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+      "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+    },
+    {
+      "bytes": 179011,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin0.bin",
+      "sha256": "6cb6cb5693c99cb5051d0c9ca5d2d9f0e6595fb7967a3d4e47905c9897bed4a9"
+    },
+    {
+      "bytes": 179011,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/member.twin1.bin",
+      "sha256": "6cb6cb5693c99cb5051d0c9ca5d2d9f0e6595fb7967a3d4e47905c9897bed4a9"
+    },
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/output/0.raw",
+      "sha256": "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
+    },
+    {
+      "bytes": 757,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hpr1_20260911/v2/ARCHIVE_PARSEBACK.json",
+      "sha256": "930abdc6bb8e533a7f3d8b485c4784caa22f3f5f3f556de0e204b45de6c8f0c5"
+    },
+    {
+      "bytes": 17930,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/PRICE.json",
+      "sha256": "e750c15a204ebd24b14e1dc0310ad24205b8ad3785c18155dda3ed448d5b07fa"
+    },
+    {
+      "bytes": 3225,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/RESULT.json",
+      "sha256": "bf2f3086257749260020e8b7a00aeb05ff21cdbfc3741f8e7c3328aa3ba79692"
+    },
+    {
+      "bytes": 7114,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/RETENTION.json",
+      "sha256": "db1194f20ab2a6e05fca90068e11e13486558fe51ab616110bd840375f3eba65"
+    },
+    {
+      "bytes": 1051255,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/train/dil1/qat.checkpoints/qat_stage_end_epoch_0060.pt",
+      "sha256": "80edbe6e650ce28a3f81b08274d25b36751b32e771a7aca100db8a296af17068"
+    },
+    {
+      "bytes": 179111,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/archive.twin0.zip",
+      "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+    },
+    {
+      "bytes": 179111,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/archive.twin1.zip",
+      "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+    }
+  ],
   "price_receipt": {
     "bytes": 17930,
     "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/PRICE.json",

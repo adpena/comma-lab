@@ -4,7 +4,7 @@
     "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
     "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
   },
-  "candidate_id": "ddm_hpr1_retrain_control",
+  "candidate_id": "ddm_hpr1_comp_even_on_refit",
   "content_diff_vs_pointer_tree": [
     "MANIFEST.sha256",
     "archive.zip",
@@ -19,10 +19,17 @@
     "FALSIFIERS_PREREGISTERED.json",
     "LITERAL_CENSUS.json",
     "MANIFEST_VALIDATION.json",
+    "PREFIRE_INTENT_ddm_hpr1_comp_even_on_refit.json",
+    "PREFIRE_REFUSAL_0e7548873e2a4afeaec8caa3a152e745.json",
+    "PREFIRE_REFUSAL_597be09449c440c4b0eb8e355341d9fa.json",
+    "PREFIRE_REFUSAL_d49a916b8efb4b30a62ffdd7b85d606f.json",
     "PUBLIC_SMOKE.json",
     "PUBLIC_SMOKE_VALIDATION.json",
     "RAW_IDENTITY_N600.json",
+    "RECEIVER_DELTA_MANIFEST.json",
     "RETENTION_MANIFEST.json",
+    "SEAL_INPUTS_SUMMARY.json",
+    "TIMING_RISK.json",
     "TWIN_ENCODE.json"
   ],
   "literal_occurrence_count": 527,
@@ -33,6 +40,6 @@
   "pointer_archive_sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9",
   "raw_byte_identical_to_pointer": true,
   "score_claim": false,
-  "seal_path": "NORMAL (receiver unchanged; inherits the pointer's measured decode leg)",
+  "seal_path": "UNDECIDED HERE -- this producer stops at the inputs. Whether the candidate seals normally or as a first measurement is decided by what its receiver delta and its decode leg admit, and is recorded in the seal or intent object, never in this summary.",
   "seal_written": false
 }

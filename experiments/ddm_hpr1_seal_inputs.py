@@ -70,7 +70,13 @@ IDENTITY_CLASS_LEGS = (
 #: >= 951,228 and 180,001 B >= 179,111 B), so its measured decode bounds this one's work.
 DOMINATING_LEG = IDENTITY_CLASS_LEGS[1]
 
-CANDIDATE_ID = "ddm_hpr1_retrain_control"
+#: There is deliberately NO candidate-id constant. This producer emitted receipts for the
+#: retrain CONTROL first, and a module constant naming that candidate silently rode along
+#: into the NEXT candidate's execution receipts -- an object that named a different
+#: candidate than the one it described. The id is now an argument and the treatment is
+#: derived from the price receipt that actually produced these payloads, so a receipt
+#: cannot inherit the previous row's identity by forgetting to update a constant.
+
 #: The score's rate term, in S per archive byte: 25 / 37,545,489.
 BYTES_TO_S = 6.658589531221714e-07
 
@@ -133,6 +139,7 @@ def emit(
     checkpoint: Path,
     retention: Path,
     expected_archive_sha256: str,
+    candidate_id: str,
 ) -> dict:
     pins = endpoints(candidate)
     if pins["archive_sha256"] != expected_archive_sha256:
@@ -152,14 +159,19 @@ def emit(
         raise SealInputsError("twins disagree")
     commit = git_commit()
     retained = price_receipt.parent / "retained"
+    #: The treatment that produced these payloads, taken from the price receipt's own
+    #: directory rather than typed: the recorded command must be the command that ran.
+    treatment = price_receipt.parent.name
+    base_archive = price["binding"]["base_archive"]
 
     executions = []
     for twin in range(TWIN_COUNT):
         entry = price["twins"][twin]
         receipt = {
-            "execution_id": f"{CANDIDATE_ID}_hpac_prior_assembly_{twin}",
+            "execution_id": f"{candidate_id}_hpac_prior_assembly_{twin}",
             "execution_scope": (
-                "one full assembly of move 45's members with THIS twin's own retained HPAC "
+                f"one full assembly of the members of base archive {base_archive['sha256']} "
+                f"({base_archive['bytes']} B) with THIS twin's own retained HPAC "
                 f"section (hpac.twin{twin}.br) and its own re-encoded tail rider "
                 f"(tail.twin{twin}.rider), both produced by this twin's arithmetic encoder "
                 "inside one 600-frame run of the shipping receiver loop, never copied from "
@@ -180,7 +192,7 @@ def emit(
                 str(REPO / ".venv/bin/python"),
                 "experiments/ddm_hpr1_shape_price.py",
                 "--treatment",
-                "retrain",
+                treatment,
             ],
             "started_at_utc": utc_now(),
             "finished_at_utc": utc_now(),
@@ -315,11 +327,48 @@ def emit(
         },
     )
 
+    # The NORMAL seal reads the named keys below; the FIRST-MEASUREMENT contract reads a
+    # flat `payloads` list and requires it to COVER the archive, both twin members, the
+    # cold raw, the parse-back receipt and every path the intent declares retained
+    # (tac.candidate_seal, "retention missing archive/twins/raw/parseback/declared
+    # payload"). A manifest that satisfies one reader and not the other is a manifest
+    # whose shape depends on who is asking, so this emits BOTH and refuses if the flat
+    # list does not cover the required set -- the coverage is checked HERE, where the
+    # paths are known, rather than discovered as a refusal three producers downstream.
+    retained_payloads = [
+        prefire_file_reference(path)
+        for path in (
+            candidate / "archive.zip",
+            *(Path(price["twins"][i]["path"]).with_name(f"member.twin{i}.bin")
+              for i in range(TWIN_COUNT)),
+            Path(public["candidate_raw"]["path"]),
+            out / "ARCHIVE_PARSEBACK.json",
+            price_receipt,
+            public_result,
+            retention,
+            checkpoint,
+            *(retained / f"archive.twin{i}.zip" for i in range(TWIN_COUNT)),
+        )
+    ]
+    covered = {ref["path"] for ref in retained_payloads}
+    required_cover = {
+        str(candidate / "archive.zip"),
+        *(str(Path(price["twins"][i]["path"]).with_name(f"member.twin{i}.bin"))
+          for i in range(TWIN_COUNT)),
+        public["candidate_raw"]["path"],
+        str(out / "ARCHIVE_PARSEBACK.json"),
+        str(price_receipt),
+    }
+    if not required_cover <= covered:
+        raise SealInputsError(f"retention payloads do not cover: {sorted(required_cover - covered)}")
+    if len(covered) != len(retained_payloads):
+        raise SealInputsError("duplicate retained payload path")
     write(
         out / "RETENTION_MANIFEST.json",
         {
             **pins,
             "score_claim": False,
+            "payloads": retained_payloads,
             "retention_receipt": prefire_file_reference(retention),
             "public_proof": prefire_file_reference(public_result),
             "price_receipt": prefire_file_reference(price_receipt),
@@ -390,12 +439,23 @@ def emit(
     )
 
     summary = {
-        "candidate_id": CANDIDATE_ID,
+        "candidate_id": candidate_id,
         "pointer_archive_sha256": pointer_sha,
         "pointer_archive_bytes": pointer_bytes,
         "net_bytes_vs_pointer": net_bytes,
         "net_delta_s_vs_pointer": net_bytes * BYTES_TO_S,
-        "seal_path": "NORMAL (receiver unchanged; inherits the pointer's measured decode leg)",
+        # This producer does NOT know the seal path and must not assert one. The line here
+        # used to read "NORMAL (receiver unchanged; inherits the pointer's measured decode
+        # leg)" -- true of the retrain control, false of the very next candidate, whose
+        # BOTH inheritance routes refused and which therefore became a first-measurement
+        # row. A constant sentence about a decision made elsewhere is a claim that goes
+        # stale silently, so it is replaced by the fact this producer can actually support.
+        "seal_path": (
+            "UNDECIDED HERE -- this producer stops at the inputs. Whether the candidate "
+            "seals normally or as a first measurement is decided by what its receiver "
+            "delta and its decode leg admit, and is recorded in the seal or intent object, "
+            "never in this summary."
+        ),
         "archive": prefire_file_reference(candidate / "archive.zip"),
         "emitted": sorted(p.name for p in out.glob("*.json")),
         "content_diff_vs_pointer_tree": [row["relative_path"] for row in diff],
@@ -623,6 +683,7 @@ def main(argv=None) -> int:
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--retention", type=Path)
     parser.add_argument("--expected-archive-sha256")
+    parser.add_argument("--candidate-id")
     args = parser.parse_args(argv)
     if str(args.out_dir).startswith("/Volumes/APDataStore"):
         raise SealInputsError("APDataStore is not this producer's tier")
@@ -643,9 +704,15 @@ def main(argv=None) -> int:
         return 0
     missing = [name for name in ("pointer_runtime", "public_result", "price_receipt",
                                  "train_inputs", "checkpoint", "retention",
-                                 "expected_archive_sha256") if getattr(args, name) is None]
+                                 "expected_archive_sha256", "candidate_id")
+               if getattr(args, name) is None]
     if missing:
         raise SealInputsError(f"receipts mode requires: {missing}")
+    # The id names the candidate in every execution receipt, so a placeholder would ship a
+    # receipt that describes a candidate nobody can identify. Refuse it here rather than
+    # let the seal producer discover it after the receipts are already on disk.
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_]{6,}", args.candidate_id):
+        raise SealInputsError(f"candidate id is not a candidate name: {args.candidate_id!r}")
     summary = emit(
         args.candidate_runtime.resolve(),
         args.pointer_runtime.resolve(),
@@ -656,6 +723,7 @@ def main(argv=None) -> int:
         args.checkpoint.resolve(),
         args.retention.resolve(),
         args.expected_archive_sha256,
+        args.candidate_id,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
