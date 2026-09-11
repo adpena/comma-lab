@@ -122,6 +122,25 @@ Exchange rates at move 44's operating point (DERIVED from the T4 row
 largest single-layer byte gain on this lever, 1,409 B, buys a budget of **9.38e-6 d_seg or
 1.27e-6 d_pose** — against a live d_pose of only 4.59e-6 in total.
 
+### The control reproduces the contest-CUDA row to 0.06 % — MEASURED, and it is the arm's most reusable result
+
+The control is move 44's own archive through this producer, all 600 pairs. It was run to establish a
+reference for the deltas. It did something better than that:
+
+| leg | this instrument, n600 | move 44, contest-CUDA T4 n600 | ratio |
+|---|---|---|---:|
+| d_seg | 0.00010338677300347222 | 0.00010345 | 0.9994 |
+| d_pose | 4.586732867899564e-06 | 4.59e-06 | 0.9993 |
+| S recomputed | 0.137236169 | 0.1372449041713402 | Δ 8.7e-06 |
+
+A macOS-CPU instrument, on the DALI GT lineage, reproduces BOTH contest-CUDA distortion legs to
+within 0.07 % and the whole score to 8.7e-06 S, in 2,397 s. Two consequences. First, every delta in
+the tables below is measured on an instrument that tracks the authority to about a part in 1,500, so
+the refutations are not resting on an axis gap. Second — and this outlives this arm — **the
+distortion half of a candidate can be screened locally at full n600 before any Modal byte is spent.**
+The honest caveat is that agreement at ONE point does not prove agreement on every delta; it is
+strong evidence, not a licence to quote a local number as a score.
+
 ### n600 rows — MEASURED
 
 | Treatment | Archive B | ΔB | pairs measured | d_seg | d_pose | verdict |
