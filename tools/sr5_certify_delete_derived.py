@@ -395,6 +395,13 @@ def main() -> int:
         help="Why this store is CLOSED (verdict/memo/claim row). Recorded on every cert row.",
     )
     parser.add_argument("--limit", type=int, default=0, help="0 = no cap on files considered.")
+    parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="Walk the candidate list from the end. Lets a second instance work the other "
+        "half of a large class concurrently; the two meet in the middle and each refuses "
+        "(never deletes) a file the other already removed.",
+    )
     parser.add_argument("--apply", action="store_true", help="Without this, census + verify only.")
     parser.add_argument("--progress-every", type=int, default=50)
     args = parser.parse_args()
@@ -421,7 +428,7 @@ def main() -> int:
             if name.startswith("._"):
                 continue
             targets.append(Path(dirpath) / name)
-    targets.sort()
+    targets.sort(reverse=args.reverse)
     if args.limit:
         targets = targets[: args.limit]
 
