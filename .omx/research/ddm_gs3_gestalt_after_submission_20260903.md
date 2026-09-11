@@ -1443,3 +1443,6 @@ rounding, as every rate-only move has been, and the rate corner's binding number
 distortion 0.01712, so the demand is now −25,899 + 160 = −25,739 B. ntb2's output-lossless HPAC prior (−245 B) rebases onto this
 pointer next. The day under the GO: two closures by measurement (design A, free boundary treatment), one closure on the rule's text
 (free prior), one apparatus amendment, one pointer move, and a second candidate queued behind it.
+
+**Correction to Addendum 39 (MAIN, same hour).** The re-derived cap at held distortion is 154,507 B, not 154,347 B: distortion is
+unchanged from move 44, so the cap is unchanged and only the demand moves, 180,246 − 154,507 = −25,739 B (was −25,899 B at move 44).
