@@ -354,6 +354,26 @@ Findings beyond charter seeds that changed execution:
   rider, so rw1's old loader cannot be reused unchanged for current model pricing.
 - sj1's implementation establishes the token-identity/re-solve conflict above.
 
+Second recall pass (Opus continuation, 2026-09-11), which materially changed execution:
+
+- `ddm_sd1_semantic_20260809/SD1_FINDINGS.md` + its retained `cpu_screen/results.json` hold a
+  COMPLETE single-tensor q3/q5 sweep of all sixteen renderer tensors on the 191,052 B PR130
+  ancestor — an n120 seeded stratified screen against the frozen CPU SegNet with real rebuilt
+  archive bytes. Every layer that is 4-bit today LOST there (`coord_mix` +1.03602 ΔS_sem, `head`
+  +0.10136, `blocks.1.pw` +0.04807, down to `blocks.3.dw` +0.00097), and **four cells WON**, three
+  of them FiLM. That is what opened the FiLM door here rather than letting the pw refutations close
+  the whole lever by analogy. Its `verdict_scope` is explicit: "INSTANCE and FORMULATION … no
+  public-receiver, bit-matched-QAT, capacity, **pose**, or contest-score verdict", and
+  `"pose_status": "NOT_MEASURED; full score unavailable"`.
+- `experiments/ddm_sm3_semantic_representation.py:87-94` shows `blocks.0.film.weight` was put into
+  the shipped 3-bit set by a BYTES argument ("the surviving marginal"), not by SD1's objective — SD1
+  had measured it at `+4.92e-05`, a loss. So the shipped depth table was never a score optimum, and
+  saying so is not a criticism of it: nobody had the pose leg to optimize against.
+- `ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md` independently closes the scale-rule
+  axis this arm probed in weight space: 400 realized ULP moves on the shipped per-row fp16 scales,
+  with a NEGATIVE rate toll so any repair would have won, accepted **zero**. Two different
+  instruments, same answer.
+
 Pins verified: ntb1 memo `58b1163d5a46e54683e63aa2c343651ddbd1695c4f8febe4ebf996bc15f2297a`;
 ntb1 charter `161d759e192e4fd96af011e6011ec42787d16c41758a3020e94d7c007f74bf99`;
 move44 encode receipt `17dded18372053ac869c88be204294404e16953e41b11795ab846f0d95f2e9dd`.
