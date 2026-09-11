@@ -333,6 +333,142 @@
         "sha256": "ab2e0c89016b618ca6d27641edc30850e9d4ab56eeb7f8c4da539f1e9583b787"
       },
       "score_claim": false
+    },
+    {
+      "schema": "prefire_contract_amendment.v1",
+      "amendment_id": "ddm_pr18_manifest_excluded_from_receiver_behavior_digest",
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_manifest_row_exclusion_from_receiver_behavior_digest_20260911.md",
+        "bytes": 11904,
+        "sha256": "7b81e1029094b6964f9bb32a2933fbf6b460fb093d26af7d0139bc6a61c80700"
+      },
+      "definition_change": {
+        "scope": "candidate_decode_wall_clock receiver identity comparisons; raw custody digests unchanged",
+        "digest_definition": "tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
+        "excluded_relative_paths": [
+          "MANIFEST.sha256"
+        ],
+        "raw_manifest_still_required": true,
+        "independent_manifest_validation": "tac.decode_wall_clock.validate_receiver_manifest",
+        "stored_digest_definitions_accepted": [
+          "tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
+          "tac.decode_wall_clock.measure_receiver_digest"
+        ],
+        "executable_difference_policy": "REFUSE"
+      },
+      "definition_parent_sha256": "f51c6729760705855e812c01da307a1aed1298dd14581d38c50419e7e41cae1d",
+      "previous_row_sha256": "0d85a7752d7f2132cc8f803cf446d504d324fc7a410eb659ade2749693232612",
+      "reference_receiver": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+        "legacy_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+        "behavior_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+        "behavior_row_count": 49,
+        "listed_file_count": 49,
+        "archive_listed": false,
+        "listing_sha256": "c65d2e74dc2c52357676526510f59fd92c3ee5088882e790fcd0ad6b3f9a6ca0"
+      },
+      "candidate_receiver": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime",
+        "legacy_sha256": "fad971b11b799cedc82f07bbcbf2e6a07a66a7867bb353754fe5771bc1fc3256",
+        "behavior_sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+        "behavior_row_count": 49,
+        "listed_file_count": 50,
+        "archive_listed": true,
+        "listing_sha256": "55bdbfd268a86f202bdbfca19f20db910253f8bc20b1c22b41b3e2353175b454"
+      },
+      "negative_control_receiver": {
+        "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime",
+        "legacy_sha256": "6726fd77a7c4fa80b70ce37accb30595c1004cdd91b9ef990bf9c12f21c296bf",
+        "behavior_sha256": null,
+        "behavior_digest_refusal": "manifest hash differs from the file's raw bytes: inflate.py",
+        "unvalidated_row_digest": "b37ac3f122188a6b9d990b072b0f4f45be08ffb5e9048f84877c63f5f82c58ab"
+      },
+      "measured_proof": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/RECEIVER_BEHAVIOR_DIGEST_PROOF.json",
+        "bytes": 3238,
+        "sha256": "98ebe46095d5f9a859c3b9b6ae1c715869e368086967694894fbb47376356469"
+      },
+      "implementation_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR18.json",
+        "bytes": 2251,
+        "sha256": "eebbec0d716f85d17ed60403f93dab5c28c0ba84713459a55506e634e65c3f32"
+      },
+      "score_claim": false,
+      "note": "amendment[6]: SUPERSEDES the pr14 definition for the decode_wall_clock receiver identity. The derived MANIFEST.sha256 listing leaves the BEHAVIOR digest and is validated independently instead (every listed file present, every listed hash re-derived from raw bytes, inflate.py listed, nothing shipped unlisted; archive.zip optional). Raw custody digests are unchanged. Stored legacy digests stay acceptable and every comparison records which definition decided it. Appending this row invalidates in-flight intents (pr17 NO-GRACE)."
+    },
+    {
+      "schema": "prefire_contract_consumer_fix.v1",
+      "fix_batch_id": "pr18_receiver_behavior_digest_consumers_20260911",
+      "previous_row_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+      "definition_parent_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+      "definition_change": false,
+      "consumer_fixes": [
+        {
+          "fix_id": "pr18-independent-listing-validation",
+          "scope": "tac.decode_wall_clock.validate_receiver_manifest on every tree the custody path touches",
+          "reason": "pr9 condition 1: excluding a derived listing without proving it re-derives would let a stale listing ride through inherit.",
+          "causal_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+          "tests": [
+            "src/tac/tests/test_decode_wall_clock.py::test_every_broken_listing_refuses_before_it_can_be_excluded",
+            "src/tac/tests/test_decode_wall_clock.py::test_a_listing_must_name_the_receiver_entry_point",
+            "src/tac/tests/test_decode_wall_clock.py::test_a_listed_archive_is_allowed_but_still_held_to_its_bytes"
+          ]
+        },
+        {
+          "fix_id": "pr18-inherit-behavior-comparison",
+          "scope": "tac.decode_wall_clock.validate_decode_wall_clock inherited-leg receiver comparison",
+          "reason": "the cross-tree comparison ran over the raw rows, so an archive-only successor refused on the restated inflate.py hash alone (MEASURED on pc3's tree).",
+          "causal_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+          "tests": [
+            "src/tac/tests/test_decode_wall_clock.py::test_an_archive_only_successor_inherits_and_records_the_definition",
+            "src/tac/tests/test_decode_wall_clock.py::test_a_real_receiver_change_still_refuses_inheritance",
+            "src/tac/tests/test_decode_wall_clock.py::test_measured_host_trees_reproduce_the_charter_pairs"
+          ]
+        },
+        {
+          "fix_id": "pr18-intent-identity-listing-validation",
+          "scope": "tac.candidate_seal._pf_identity derived-listing validation at intent time",
+          "reason": "the first lifecycle object must not admit a tree whose listing disagrees with its own bytes.",
+          "causal_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_prefire_risk_manifest_exclusion_does_not_bypass_dependency_manifest_validation",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_dependency_manifest_gate_still_refuses_an_unverified_listing"
+          ]
+        },
+        {
+          "fix_id": "pr18-stored-definition-acceptance",
+          "scope": "tac.decode_wall_clock.compare_receiver_identity stored-digest definition naming",
+          "reason": "receipts written before this row carry the legacy digest and must keep naming their own tree.",
+          "causal_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+          "tests": [
+            "src/tac/tests/test_decode_wall_clock.py::test_a_stored_digest_may_be_written_under_either_definition",
+            "src/tac/tests/test_decode_wall_clock.py::test_a_recorded_comparison_cannot_disagree_with_the_trees"
+          ]
+        },
+        {
+          "fix_id": "pr18-superseding-amendment-chain",
+          "scope": "tac.candidate_seal._pf_freeze_history superseding-definition rows",
+          "reason": "a new definition had no path through the frozen contract once consumer fixes existed.",
+          "causal_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_a_superseding_amendment_may_follow_consumer_fixes_and_becomes_the_parent",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_a_superseding_amendment_cannot_reset_the_chain"
+          ]
+        }
+      ],
+      "implementation_commit": "5d2632ee4dbd29430847041675cf5bd5134a7489",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR18.json",
+        "bytes": 2251,
+        "sha256": "eebbec0d716f85d17ed60403f93dab5c28c0ba84713459a55506e634e65c3f32"
+      },
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_manifest_row_exclusion_from_receiver_behavior_digest_20260911.md",
+        "bytes": 11904,
+        "sha256": "7b81e1029094b6964f9bb32a2933fbf6b460fb093d26af7d0139bc6a61c80700"
+      },
+      "score_claim": false
     }
   ]
 }

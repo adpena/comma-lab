@@ -1,0 +1,77 @@
+[
+ {
+  "path": "experiments/modal_auth_eval.py",
+  "bytes": 84201,
+  "sha256": "9840404e44d564ea9d1a6d9338aa46f9c8389997f7f2b73d3b079e6d352f1b29"
+ },
+ {
+  "path": "src/tac/candidate_seal.py",
+  "bytes": 158781,
+  "sha256": "707b5207579cdcc45035e6b6b633b4bacc93d2349ccb5a5be96d6a787e64391f"
+ },
+ {
+  "path": "src/tac/checkpoint_maturity.py",
+  "bytes": 10381,
+  "sha256": "e41ccbf336494f1d2ee2b85a0d796e539d62e54fc8448966c141fb95211f6ef5"
+ },
+ {
+  "path": "src/tac/decode_wall_clock.py",
+  "bytes": 40071,
+  "sha256": "ce1f8c7b486098d9662c4706ddec4cdd94cc84f39c53ad986845651f91009a46"
+ },
+ {
+  "path": "src/tac/deploy/modal/auth_eval.py",
+  "bytes": 35999,
+  "sha256": "a075ffde7ad7addcf03f4049839c30c5ae95daf69fc7ba05afda261082f39da1"
+ },
+ {
+  "path": "src/tac/deploy/modal/call_id_ledger.py",
+  "bytes": 76093,
+  "sha256": "1fdc2e847f27af82ad1f05815614cb993eb0cf9f4158b23516f61c65ac0fa6ae"
+ },
+ {
+  "path": "src/tac/deploy/modal/result_json.py",
+  "bytes": 6551,
+  "sha256": "94d4829b48329ea2a334d86f472b8d10b54722a8432486e146cbd2062f5b0a7d"
+ },
+ {
+  "path": "src/tac/deploy/modal/single_flight.py",
+  "bytes": 24551,
+  "sha256": "a8d808e546ec673b4752e68d019ebe3c06e6b37412403ea6ba7feb9ca0bc838d"
+ },
+ {
+  "path": "src/tac/git_custody_read.py",
+  "bytes": 10222,
+  "sha256": "096585df139e2cc97c894f39a4cc6c12ff94dcc96959a1323f5253d2bf0f3ed5"
+ },
+ {
+  "path": "src/tac/modal_source_snapshot.py",
+  "bytes": 28138,
+  "sha256": "d505d64929451d818c4956bd1a73670f2568da4572ec788b388f25b7017d9290"
+ },
+ {
+  "path": "tools/authorize_candidate_first_measurement.py",
+  "bytes": 1658,
+  "sha256": "a498ff79819ff7ef2e5faf959af591d5061062f44e85fe57aae13b9ece27f851"
+ },
+ {
+  "path": "tools/fire_modal_auth_eval.py",
+  "bytes": 69737,
+  "sha256": "d3501d56a6fd330d43fb4504b9eb0d0bbde2a14358995bef1f1af9eada018703"
+ },
+ {
+  "path": "tools/launch_detached_process.py",
+  "bytes": 73676,
+  "sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa"
+ },
+ {
+  "path": "tools/make_candidate_seal.py",
+  "bytes": 20219,
+  "sha256": "e4b7f48ffa7df4a35586d803b50fb94bc25d36a667b9dfb1a6b8cec08d343791"
+ },
+ {
+  "path": "tools/modal_harvest_poller.py",
+  "bytes": 36333,
+  "sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f"
+ }
+]
