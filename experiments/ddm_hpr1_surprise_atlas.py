@@ -431,6 +431,41 @@ def set_atlas(sets: dict[str, tuple[tuple[int, int], ...]], frame_stride: int, p
     }
 
 
+#: Candidate 3x3 TEMPORAL window geometries, as (dilation, centre_dy, centre_dx).  Each
+#: holds exactly nine taps, so model capacity is held and only SHAPE varies.  A dilation
+#: change is a geometric parameter of the same kind as the kernel sizes the receiver
+#: already ships; a centre shift is an OFFSET fitted to this video and is flagged as such.
+TEMPORAL_WINDOWS = {
+    "shipped_d1_c00": (1, 0, 0),
+    "d2_c00": (2, 0, 0),
+    "d3_c00": (3, 0, 0),
+    "d1_c11_offset": (1, 1, 1),
+    "d2_c11_offset": (2, 1, 1),
+    "d3_c22_offset": (3, 2, 2),
+}
+
+
+def window_taps(dilation: int, centre_dy: int, centre_dx: int) -> tuple[tuple[int, int], ...]:
+    return tuple(
+        (centre_dy + dilation * row, centre_dx + dilation * column)
+        for row in (-1, 0, 1)
+        for column in (-1, 0, 1)
+    )
+
+
+def best_four(taps, single_tap_cmi: dict[tuple[int, int], float]) -> tuple[tuple[int, int], ...]:
+    """The four positions of a window with the highest single-tap conditional information.
+
+    A geometry-blind selection rule: every window is reduced the same way, so the joint
+    estimate compares what each SHAPE can offer rather than a hand-picked subset.  Four
+    keeps the joint table at 5**4 cells, which stays dense at 112 million observations.
+    """
+    missing = [tap for tap in taps if tap not in single_tap_cmi]
+    if missing:
+        raise AtlasError(f"single-tap atlas does not cover {missing}; widen --radius")
+    return tuple(sorted(sorted(taps, key=lambda tap: -single_tap_cmi[tap])[:4]))
+
+
 def _candidates(plane: str, radius: int) -> list[tuple[int, int]]:
     if plane == "past":
         return [(dy, dx) for dy in range(-radius, radius + 1) for dx in range(-radius, radius + 1)]
@@ -444,7 +479,7 @@ def _candidates(plane: str, radius: int) -> list[tuple[int, int]]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("reconstruct", "atlas", "set_atlas"))
+    parser.add_argument("stage", choices=("reconstruct", "atlas", "set_atlas", "window_atlas"))
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument(
         "--runtime-root",
@@ -460,6 +495,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.stage == "reconstruct":
         payload = reconstruct(args.runtime_root)
         write_json(args.out_dir / "RECEPTIVE_FIELD.json", payload)
+    elif args.stage == "window_atlas":
+        source = args.out_dir / f"ATLAS_past_r{args.radius}.json"
+        single = {
+            tuple(row["tap"]): row["cmi_bits_per_symbol"]
+            for row in json.loads(source.read_text())["rows"]
+        }
+        sets = {
+            name: best_four(window_taps(*geometry), single)
+            for name, geometry in TEMPORAL_WINDOWS.items()
+        }
+        payload = set_atlas(sets, args.frame_stride, "past")
+        payload["windows"] = {
+            name: {"geometry": list(geometry), "all_taps": [list(t) for t in window_taps(*geometry)]}
+            for name, geometry in TEMPORAL_WINDOWS.items()
+        }
+        payload["single_tap_source"] = str(source)
+        write_json(args.out_dir / "WINDOW_ATLAS_past.json", payload)
     elif args.stage == "set_atlas":
         sets = TEMPORAL_SETS if args.plane == "past" else SPATIAL_SETS
         payload = set_atlas(sets, args.frame_stride, args.plane)
