@@ -130,12 +130,35 @@ replaced by the landed native ENCODER fed with known source symbols. The decoded
 equal to the shipped field frame by frame inside the loop — **that assertion IS the output-lossless
 proof, so no scorer is needed and none ran.**
 
-Measured so far:
+**THE LIVE-LOOP CONTROL PASSES — MEASURED.** `price/control/PRICE.json`:
 
-- **The HPAC container control PASSES.** Re-encoding the shipped prior through RC3 + ck2 + brotli
-  (q10, lgwin22) reproduces move 45's `hpac` member byte-identically at **11,911 B**, twins agree.
-- The 600-frame live-loop control is running; its falsifier is the full archive sha
-  `145e02e21f9a1cbc…` @ 180,246 B. **No treatment price is admissible until it returns identical.**
+| object | this arm's re-encode | move 45 | verdict |
+|---|---|---|---|
+| archive sha256 | `145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a` | same | identical |
+| archive bytes | 180,246 | 180,246 | Δ = 0 |
+| `hpac` member | 11,911 | 11,911 | identical |
+| RLC1 token stream | 119,749 | 119,749 | identical |
+| decoded field sha256 | `a92e7d902a449896…` | the shipped field | output-lossless |
+| twin encodes | agree | — | deterministic |
+
+Both twins agree and every unrelated archive component (`semantic`, `carrier`, `tc1_weights`,
+`residual_payload`) is asserted unchanged. **The rail is real; rung prices measured on it are
+admissible.**
+
+### 3a. Decode-time cost of a dilation rung — MEASURED
+
+`experiments/ddm_hpr1_shape_timing.py`, receipt `probe/TIMING_conv_past.json`. `conv_past` runs once
+per frame OUTSIDE the per-group loop, so its delta is the whole decode-time delta of the rung.
+Interleaved A/B/A/B on the same host, on the module the shipping loader builds from move 45's bytes:
+
+| dilation | ns/symbol | projected over 600 frames | Δ vs shipped | fraction of the 27.581 s strict slack |
+|---:|---:|---:|---:|---:|
+| 1 (shipped) | 102.089 | 12.043 s | — | — |
+| **2 (R1)** | 105.389 | 12.432 s | **+0.389 s** | **1.41 %** |
+| 3 (R2) | 111.864 | 13.196 s | +1.153 s | 4.18 % |
+
+**Neither pre-registered rung is a timing blocker.** The 600-frame figure is a PROJECTION; a decode
+budget's authority is a full public decode.
 
 ## 4. What is owed
 
