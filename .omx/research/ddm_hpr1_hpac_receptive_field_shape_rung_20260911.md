@@ -361,6 +361,16 @@ to that prover — a `--label` override, or adding this arm's treatment names to
 which the parse-back is mechanical.** No seal exists and none is claimed until the raw comes back
 byte-identical.
 
+**Composition with ntb2's move-46 candidate, stated so MAIN can rebase without guessing.** ntb2's
+`frame_even` ROUNDS the SHIPPED prior's `frame_embed.weight` to even values (−245 B). This arm's
+`retrain` replaces ALL of that prior's weights, the frame embedding included. **They do not compose
+additively and they are not independent levers — they are two different edits to the same object.**
+`frame_even`'s treatment can be RE-APPLIED on top of `retrain`'s new weights (it is a value rounding
+of one field), but that composition is a THIRD candidate and needs its own twin encode; nobody may sum
+−887 and −245. If ntb2's candidate lands first, `retrain` must be re-priced on the new base — the rail
+does that with one `--treatment` after its `POINTER45_SHA` is rebound, and its control-falsifier
+refuses automatically if the pointer moved under it.
+
 **Unfired, with pre-registered signs intact but their predictor now refuted:** R2 (`past_dil3`),
 R6 (`cone_dil2` / `cone_dil3`), and the two offset rungs. Each is one trainer command plus one
 `--treatment` on this rail. A successor should note that §4e refutes the statistic that ranked them,
@@ -391,6 +401,7 @@ sealed promoted tree and the sister arms' directories (`ddm_ntb2_*`, `ddm_pc3_*`
 and copied, never written. MAIN's 2026-09-11 storage re-route was applied mid-arm: every payload
 written after it is under `/Volumes/VertigoDataTier/pact/ddm_hpr1/`, the reserve in this arm's
 producers was RAISED from 8 to 40 GiB to match the sister HPAC producers, and the earlier payloads
-under `/Volumes/APDataStore/pact/ddm_hpr1/` were left in place as instructed. Two governor REFUSALs
+under `/Volumes/APDataStore/pact/ddm_hpr1/` were left in place as instructed, with BOTH roots and 20
+key payload shas recorded in `/Volumes/VertigoDataTier/pact/ddm_hpr1/RETENTION.json`. Two governor REFUSALs
 (memory ceiling 116.0 GiB, projected 144.3 GiB) were recorded as information and waited out, never
 bypassed and never lowered.
