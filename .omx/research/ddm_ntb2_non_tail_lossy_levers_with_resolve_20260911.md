@@ -165,14 +165,70 @@ are the three late FiLM tensors, every one of which GROWS the archive.** There i
 byte-saving cut to find. The best byte-per-damage member is `blocks.2.pw.weight` (−1,386 B at 4.49
 mean levels), which is why it is being measured at n600: a family is refuted at its best member.
 
+### The instrument falsifier — MEASURED PASS
+
+Every row above is a statement about the render, so the render had to be shown to BE the
+receiver's. `ddm_ntb2_renderer_screen.py --forward-model-control` re-renders move 44's own
+tokens through move 44's own renderer and diffs the frames move 44's public receiver actually
+decoded (`ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw`, sha
+`2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc`, the cold public decode of
+archive `04758c0d…`): **0 of 12,208,032 pixels differ, max_abs_delta 0**, at `semantic_batch 1`,
+on four seeded-random pairs. Receipt: `renderer_score/FORWARD_MODEL_CONTROL.json`.
+
+### The pw/coord_mix refutation, priced — MEASURED
+
+| Layer → 3-bit | ΔB | rate gain (S) | pairs | d_pose floor (n600) | pose-leg floor | pose cost (S) | over its gain |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| coord_mix.weight | −1,409 | 0.000938 | 20 | 3.0837e-01 | 1.75604 | +1.74926 | **1,864x** |
+| blocks.1.pw.weight | −1,390 | 0.000926 | 60 | 3.4768e-03 | 0.18646 | +0.17969 | **194x** |
+| blocks.2.pw.weight | −1,386 | 0.000923 | 60 | 1.0138e-03 | 0.10069 | +0.09391 | **102x** |
+
+`blocks.2.pw.weight` is the family's BEST byte-per-damage member by the screen, and it is over
+by two orders of magnitude. Each run was stopped at its bound rather than spending another
+40 minutes refining a number already a hundredfold past the decision.
+
+### The FiLM door — the one door with a favourable precedent, and it closes too
+
+Recall (agent sweep, 2026-09-11) surfaced `ddm_sd1_semantic_20260809` : an n120 seeded stratified
+screen on the **191,052 B PR130 ancestor** measured all sixteen tensors at q3, and **four cells came
+out NEGATIVE** — `frame_embed` (−332 B, Δd_seg −4.728e-05), `blocks.3.film` (−184 B, −9.285e-05),
+`blocks.2.film` (−160 B, −8.534e-05), `blocks.1.film` (−168 B, −3.557e-05). Two of those four ship
+today. That is a real precedent for a q3 cut IMPROVING seg, and on move 44 those three FiLM packets
+move only 0.0014–0.043 grey levels, so the door had to be opened rather than argued shut.
+
+**SD1's objective was the semantic leg alone.** Its own record says so: `"pose_status":
+"NOT_MEASURED; full score unavailable"`. No renderer depth cell, on any object, had ever been
+measured against PoseNet before this arm. Measured here at a matched 100-pair prefix against this
+producer's own control (same pairs, same instrument):
+
+| Layer → 3-bit | ΔB | Δd_seg | seg leg | Δd_pose | pose leg at move 44's base | rate | **total** |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| blocks.1.film.weight | **+1** | +2.3905e-06 | +0.000239 | +5.0454e-06 | +0.003041 | +0.0000007 | **+0.003281 S** |
+| blocks.3.film.weight | **+15** | +6.6121e-07 | +0.000066 | +4.4089e-07 | +0.000318 | +0.0000100 | **+0.000394 S** |
+
+Both LOSE, both are pose-dominated (93% and 81% of the loss), and both also cost bytes on this
+object because mode-6 row-prune already keeps only 1% of the FiLM rows, so re-quantizing what is
+left buys nothing and the depth-table and scale overhead dominates. **The ancestor's four q3
+"winners" were winners of a seg-only objective; with pose measured they are not winners.** That,
+and not a sweep, is why the shipped depth table was never a score optimum — `blocks.0.film.weight`
+in particular was substituted into the shipped 3-bit set by a bytes argument after SD1 had
+measured it at `semantic_leg_delta_s = +4.92e-05`, a loss.
+
+### The re-solve, answered without running one
+
+The charter asks for these cuts "with the real re-solve". The re-solve is bounded above by
+recovering the ENTIRE pose leg — a carrier that reproduced the target pose exactly. Apply that
+upper bound to every row:
+
+- `coord_mix` keeps a seg-leg floor of **+0.02438 S** against a 0.000938 S gain — 26x over, on seg
+  alone, with pose fully forgiven.
+- `blocks.1.film` keeps **+0.000239 S** of seg plus its byte cost, against a gain of zero (it grows
+  the archive); `blocks.3.film` keeps **+0.000076 S**. Both stay net-positive.
+
+So no re-solve of any strength flips any row's sign, and the token plane never had to be touched.
+The tokens on this arm are byte-identical to move 44's throughout.
+
 ### Verdict scope
-
-This closes **3-bit at the shipped per-axis max-absolute quantizer with the token plane fixed and
-no weight refit**, on move 44's body, at n600, on this arm's instrument. It does NOT close a
-quantization-AWARE refit (training the remaining weights to compensate), a per-row mixed depth (a
-receiver format change, therefore out of this charter), or any non-uniform codebook the receiver
-does not already parse. Those are named, not dismissed.
-
 ## Composition and boundaries
 
 No measured winning treatment exists yet; no composed candidate bytes, SHA, projected S,
