@@ -1,0 +1,45 @@
+{
+  "axis": "[macOS-CPU advisory; scorer-free]",
+  "n600_scorer_measured": false,
+  "score_claim": false,
+  "carrier_body_bytes": 18645,
+  "carrier_fields": {
+    "basis_bits": 96368,
+    "residual_bits": 51424,
+    "scales": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/carrier_fields/scales.bin",
+      "bytes": 96,
+      "sha256": "28f9c06ec1de4068076445c8006238d5e1f8dfb186bbc366c44209cc16580975"
+    },
+    "metadata": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/carrier_fields/metadata.bin",
+      "bytes": 40,
+      "sha256": "77686cee9ff499bbe610e1845f58ab9c38e52e31f6ba71d4ddc1aec09b189233"
+    },
+    "basis": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/carrier_fields/basis.bin",
+      "bytes": 12046,
+      "sha256": "200245939f3c23779774718b267ff3397938b8d9ffcaa65058737053dc6fc5de"
+    },
+    "rice": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/carrier_fields/rice.bin",
+      "bytes": 6428,
+      "sha256": "9caebbd0f4ae1959ee241ad2ec4088fdfc5a99f2b13c3b1f690ee59befe90299"
+    },
+    "body_tail": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/carrier_fields/body_tail.bin",
+      "bytes": 29,
+      "sha256": "f7a37aa2b594e7a5da9f1709f014cfc73bdb6f86d2356a9d4ad20d429cde536d"
+    }
+  },
+  "renderer_state_dict_strict_load": true,
+  "zip_twins_verified": 13,
+  "hpac_raw_census_closes": true,
+  "semantic_raw_census_closes": true,
+  "negative": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/negative_wrong_name.zip",
+    "bytes": 180406,
+    "sha256": "28abb5e3beef44cd6887f20ae9b317ee8407e22f61ce3fac4ba6473baaa287e8",
+    "refusal": "archive must contain exactly member p"
+  }
+}

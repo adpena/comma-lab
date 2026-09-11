@@ -1,0 +1,33 @@
+{
+  "schema": "ddm_ntb1_fire_orders.v1",
+  "charter_complete": false,
+  "orders": [
+    {
+      "task_id": "ddm_ntb1::HPAC_JOINT",
+      "owner": "ddm_ntb1",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/hpac_joint",
+      "fire_trigger": "Next ddm_ntb1 continuation: first bind an RLC1-aware causal encoder to move44 and reproduce the source stream on all600; then price a structural row/table pruning treatment jointly with its fully re-encoded tail. Re-read current pointer before dispatch.",
+      "action": "Implement and measure HPAC pruning plus real tail twins; do not reuse JG2 without the counted RLC1 mixer and observe path.",
+      "status": "pending"
+    },
+    {
+      "task_id": "ddm_ntb1::RENDERER_RESOLVE",
+      "owner": "MAIN assigns scorer slot; ddm_ntb1 implements",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/renderer_resolve",
+      "fire_trigger": "MAIN explicitly assigns this arm the sole fleet scorer slot; current source pins verified; no other full-n600 scorer active.",
+      "action": "Per-layer 4-to-3-bit precision cuts at their own optimum, sj1 real seg re-solve, retained tail twins, frozen CPU Seg and Pose n600 in chunks at most120. No transfer of ancestor distortion.",
+      "status": "pending"
+    },
+    {
+      "task_id": "ddm_ntb1::COMPOSE_SEAL",
+      "owner": "ddm_ntb1; MAIN owns exact fire",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/composed",
+      "fire_trigger": "At harvest, at least one real joint treatment clears -2e-5 S on matched n600 components; compose only paying treatments and remeasure the changed object.",
+      "action": "Retain composition twins, full cold public600 parse-back, outside-tree manifest/census/smokes; unchanged receiver permits make_candidate_seal.py with move44 t4_direct; any receiver change stops for MAIN first-measurement intent. No Modal from this arm.",
+      "status": "pending"
+    }
+  ]
+}

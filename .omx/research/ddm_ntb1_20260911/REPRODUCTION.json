@@ -1,0 +1,8 @@
+{
+  "all_13_archives_reproduced_byte_identically_after_formatting": true,
+  "producer_v1_retained": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/retained/producer_v1.py",
+  "final_producer_sha256": "a02a29c6a0a1110093bddf3e56f179be40036e69b4f0cece7f966e378e235e81",
+  "price_receipt": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/PRICES.json",
+  "scorer_run": false,
+  "cold_n600_public_inflate_run": false
+}

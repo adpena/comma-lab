@@ -1,0 +1,260 @@
+{
+  "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+  "best": {
+    "archive": {
+      "bytes": 180406,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/zip_stored/archive.twin0.zip",
+      "sha256": "89459720b857e05e830783adb03d1af8d6021c9caf6755d665d5740efd3e871b"
+    },
+    "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+    "clears_bar": false,
+    "delta_bytes": 0,
+    "delta_d_pose_derived": 0,
+    "delta_d_seg_derived": 0,
+    "delta_s_conditional": 0.0,
+    "lever": "zip_stored",
+    "n600_scorer_measured": false,
+    "parsed_model_and_tail_identity": true,
+    "score_claim": false,
+    "twins_identical": true
+  },
+  "hpac_lossy": "UNMEASURED: requires move44 RLC1-aware causal tail re-encode; older JG2 encoder is not that mechanism",
+  "renderer_resolve": "QUEUED: no scorer ownership assigned by charter/common contract",
+  "rows": [
+    {
+      "archive": {
+        "bytes": 180406,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/zip_stored/archive.twin0.zip",
+        "sha256": "89459720b857e05e830783adb03d1af8d6021c9caf6755d665d5740efd3e871b"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 0,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 0.0,
+      "lever": "zip_stored",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180464,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/zip_deflate/archive.twin0.zip",
+        "sha256": "92cb6b61169d585ed61fa3690fcf449d793ffc1cdbaddfa2f98618101b2b470c"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 58,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 3.861981928108594e-05,
+      "lever": "zip_deflate",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 181620,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/zip_bzip2/archive.twin0.zip",
+        "sha256": "058ad734b123a86c2d20afe4fc878afb2e9ab2958eea823e442c140c67cfc328"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 1214,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 0.0008083527690903161,
+      "lever": "zip_bzip2",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 182898,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/zip_lzma/archive.twin0.zip",
+        "sha256": "611f036dd6550be89d1e2dcb828d202a3178fc98bba4d103adc90ef884d98241"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 2492,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 0.0016593205111804512,
+      "lever": "zip_lzma",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180428,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/hpac_brotli_q11/archive.twin0.zip",
+        "sha256": "863f679060f2845e9d21d0061671be6ecce448d5770e8c3e89251bad91afc5a2"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 22,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 1.464889696868777e-05,
+      "lever": "hpac_brotli_q11",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180406,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/hpac_brotli_q10/archive.twin0.zip",
+        "sha256": "0e0f1c2a95d0bf134ec968982eaf5de85bc0d7134afdc0ba972a0767593d2c9a"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 0,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 0.0,
+      "lever": "hpac_brotli_q10",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180497,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/semantic_brotli_q11/archive.twin0.zip",
+        "sha256": "5c4c777173415ac8a3a16172d79555044dca469e2ad38f93fbf9976a05dbb65b"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 91,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 6.05931647341176e-05,
+      "lever": "semantic_brotli_q11",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180407,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/semantic_brotli_q10/archive.twin0.zip",
+        "sha256": "d31a6294877688670315e4200d018dd15a482642958adb1e3f9831d7c5d72cf3"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 1,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 6.658589531221714e-07,
+      "lever": "semantic_brotli_q10",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180413,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/carrier_brotli_q11/archive.twin0.zip",
+        "sha256": "ab37f308d499fcf862e88a1037b5330992a742cfcd8f564c7d96621117f11ab1"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 7,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 4.6610126718552e-06,
+      "lever": "carrier_brotli_q11",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180408,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/carrier_brotli_q10/archive.twin0.zip",
+        "sha256": "9302e036eb920aad2c7540fd8ce3bc0e8c9ad8ab32f08f9a79ad36ae7428e1af"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 2,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 1.3317179062443428e-06,
+      "lever": "carrier_brotli_q10",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180763,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/hpac_xz/archive.twin0.zip",
+        "sha256": "69d46e7fa97004eb73df9f30fc666e1f962562855616a509fddf99ca15dd8815"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 357,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 0.0002377116462646152,
+      "lever": "hpac_xz",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180997,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/semantic_plane_toggle/archive.twin0.zip",
+        "sha256": "786db4d65222acdc4169cc56e699f0bd058e04e9f6e6e9351908c67e7941a348"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 591,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 0.0003935226412952033,
+      "lever": "semantic_plane_toggle",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    },
+    {
+      "archive": {
+        "bytes": 180422,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/retained/prices/carrier_plane_toggle/archive.twin0.zip",
+        "sha256": "873ebde57ffb3fb3f8eef712f4f15c68607b6eec52169a88c7958e46d13d6929"
+      },
+      "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+      "clears_bar": false,
+      "delta_bytes": 16,
+      "delta_d_pose_derived": 0,
+      "delta_d_seg_derived": 0,
+      "delta_s_conditional": 1.0653743249954742e-05,
+      "lever": "carrier_plane_toggle",
+      "n600_scorer_measured": false,
+      "parsed_model_and_tail_identity": true,
+      "score_claim": false,
+      "twins_identical": true
+    }
+  ],
+  "score_claim": false
+}

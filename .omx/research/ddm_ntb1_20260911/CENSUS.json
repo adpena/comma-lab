@@ -1,0 +1,1150 @@
+{
+  "archive": {
+    "bytes": 180406,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/reproduction/source_runtime/archive.zip",
+    "sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e"
+  },
+  "attribution": "Layer counts are restored body bytes/bits. Shared arithmetic coding and outer Brotli prevent additive compressed layer attribution.",
+  "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+  "container": {
+    "carrier": 18610,
+    "header": 14,
+    "hpac": 11911,
+    "semantic": 29862,
+    "tail": 119909
+  },
+  "hpac": {
+    "body_bytes": 17770,
+    "coded_weights": 9198,
+    "depth_table": 259,
+    "fields": [
+      {
+        "depths": [
+          4,
+          4,
+          3,
+          3,
+          0,
+          3,
+          0,
+          0,
+          4,
+          3,
+          3,
+          3,
+          4,
+          5,
+          4,
+          2,
+          4,
+          4,
+          4,
+          5,
+          3,
+          4,
+          4,
+          3,
+          4,
+          5,
+          3,
+          2,
+          4,
+          3,
+          3,
+          4,
+          4,
+          3,
+          3,
+          5,
+          3,
+          4,
+          3,
+          4,
+          3,
+          5,
+          4,
+          3,
+          2,
+          0,
+          3,
+          4,
+          4,
+          0,
+          1,
+          4,
+          5,
+          0,
+          3,
+          2,
+          4,
+          0,
+          4,
+          2,
+          4,
+          0,
+          5,
+          0
+        ],
+        "layer": "frame_shift",
+        "rows": 64,
+        "weight_bits": 1560
+      },
+      {
+        "depths": [
+          4,
+          4,
+          0,
+          0,
+          0,
+          5,
+          0,
+          0,
+          2,
+          5,
+          5,
+          4,
+          0,
+          1,
+          5,
+          4,
+          4,
+          2,
+          3,
+          4,
+          5,
+          0,
+          5,
+          5,
+          2,
+          5,
+          4,
+          5,
+          4,
+          5,
+          3,
+          0,
+          4,
+          5,
+          4,
+          0,
+          4,
+          5,
+          4,
+          4,
+          0,
+          4,
+          6,
+          4,
+          4,
+          0,
+          3,
+          6,
+          5,
+          0,
+          4,
+          1,
+          6,
+          0,
+          4,
+          2,
+          4,
+          0,
+          2,
+          3,
+          5,
+          0,
+          4,
+          0
+        ],
+        "layer": "frame_scale",
+        "rows": 64,
+        "weight_bits": 1536
+      },
+      {
+        "depths": [
+          7,
+          6,
+          7,
+          0,
+          0,
+          5,
+          0,
+          0,
+          7,
+          7,
+          4,
+          7,
+          0,
+          2,
+          7,
+          8,
+          6,
+          2,
+          7,
+          7,
+          7,
+          4,
+          6,
+          7,
+          5,
+          7,
+          6,
+          6,
+          7,
+          7,
+          8,
+          0,
+          2,
+          7,
+          7,
+          3,
+          8,
+          7,
+          7,
+          5,
+          4,
+          7,
+          6,
+          6,
+          8,
+          0,
+          8,
+          7,
+          7,
+          0,
+          6,
+          5,
+          7,
+          0,
+          6,
+          0,
+          7,
+          0,
+          3,
+          8,
+          4,
+          0,
+          6,
+          0
+        ],
+        "layer": "conv_a",
+        "rows": 64,
+        "weight_bits": 49910
+      },
+      {
+        "depths": [
+          5,
+          5,
+          5,
+          4,
+          4,
+          4,
+          0,
+          0,
+          5,
+          6,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          5,
+          5,
+          5,
+          3,
+          5,
+          6,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          5,
+          5,
+          4,
+          6,
+          4,
+          5,
+          5,
+          6,
+          6,
+          5,
+          6,
+          6,
+          0,
+          6,
+          5,
+          5,
+          3,
+          5,
+          5,
+          5,
+          0,
+          4,
+          2,
+          6,
+          2,
+          4,
+          5,
+          5,
+          0,
+          5,
+          0
+        ],
+        "layer": "conv_b1",
+        "rows": 64,
+        "weight_bits": 3906
+      },
+      {
+        "depths": [
+          5,
+          5,
+          5,
+          5,
+          3,
+          5,
+          2,
+          2,
+          5,
+          5,
+          4,
+          5,
+          4,
+          4,
+          5,
+          5,
+          4,
+          5,
+          5,
+          5,
+          5,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          4,
+          5,
+          5,
+          4,
+          5,
+          5,
+          5,
+          5,
+          2,
+          5,
+          5,
+          5,
+          4,
+          5,
+          5,
+          5,
+          2,
+          5,
+          3,
+          5,
+          3,
+          4,
+          5,
+          5,
+          2,
+          5,
+          2
+        ],
+        "layer": "conv_b2",
+        "rows": 64,
+        "weight_bits": 1425
+      },
+      {
+        "depths": [
+          4,
+          3,
+          5,
+          4,
+          4,
+          5,
+          4,
+          3,
+          4,
+          4,
+          5,
+          6,
+          5,
+          5,
+          5,
+          4,
+          6,
+          6,
+          5,
+          5,
+          6,
+          4,
+          6,
+          4,
+          6,
+          3,
+          4,
+          4,
+          6,
+          4,
+          8,
+          5,
+          5,
+          4,
+          5,
+          4,
+          6,
+          4,
+          2,
+          5,
+          6,
+          5,
+          4,
+          5,
+          4,
+          4,
+          4,
+          6,
+          5,
+          5,
+          5,
+          5,
+          5,
+          2,
+          5,
+          5,
+          5,
+          5,
+          6,
+          7,
+          6,
+          2,
+          4,
+          4
+        ],
+        "layer": "conv_past",
+        "rows": 64,
+        "weight_bits": 13545
+      },
+      {
+        "depths": [
+          5,
+          5,
+          6,
+          6,
+          4,
+          6,
+          6,
+          5,
+          6,
+          7,
+          6,
+          6,
+          6,
+          4,
+          6,
+          5,
+          4,
+          6,
+          6,
+          6,
+          5,
+          7,
+          7,
+          0,
+          5,
+          6,
+          0,
+          4,
+          5,
+          3,
+          6,
+          6,
+          6,
+          6,
+          5,
+          5,
+          6,
+          5,
+          4,
+          4,
+          6,
+          6,
+          5,
+          6,
+          5,
+          6,
+          5,
+          6,
+          6,
+          6,
+          6,
+          6,
+          5,
+          6,
+          5,
+          6,
+          6,
+          6,
+          5,
+          6,
+          6,
+          6,
+          5,
+          6
+        ],
+        "layer": "spm_dw",
+        "rows": 64,
+        "weight_bits": 3087
+      },
+      {
+        "depths": [
+          0,
+          5,
+          4,
+          0,
+          0,
+          4,
+          0,
+          0,
+          2,
+          4,
+          3,
+          5,
+          0,
+          1,
+          5,
+          3,
+          3,
+          3,
+          4,
+          5,
+          4,
+          3,
+          4,
+          3,
+          2,
+          6,
+          4,
+          4,
+          4,
+          5,
+          4,
+          0,
+          3,
+          5,
+          6,
+          4,
+          2,
+          5,
+          4,
+          3,
+          3,
+          5,
+          3,
+          4,
+          4,
+          0,
+          6,
+          5,
+          3,
+          0,
+          6,
+          0,
+          4,
+          0,
+          5,
+          0,
+          5,
+          0,
+          4,
+          6,
+          3,
+          0,
+          5,
+          0
+        ],
+        "layer": "spm_pw",
+        "rows": 64,
+        "weight_bits": 12608
+      },
+      {
+        "depths": [
+          5,
+          5,
+          5,
+          5,
+          6
+        ],
+        "layer": "head",
+        "rows": 5,
+        "weight_bits": 1664
+      }
+    ],
+    "magic": 4,
+    "packed_weight_bytes": 11156,
+    "padding_bits": 7,
+    "parameters": 25,
+    "prefix": 263,
+    "rider_header": 22,
+    "tail": 6351,
+    "tail_fields": [
+      {
+        "bytes": 4800,
+        "dtype": "i1",
+        "name": "frame_embed.weight",
+        "shape": [
+          600,
+          8
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "frame_shift.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "frame_shift.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "frame_scale.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "frame_scale.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "conv_a.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "conv_a.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "conv_b1.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "conv_b1.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "conv_b2.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "conv_b2.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "conv_past.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "conv_past.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "spm_dw.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "spm_dw.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 128,
+        "dtype": "<i2",
+        "name": "spm_pw.bias",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 64,
+        "dtype": "i1",
+        "name": "spm_pw.exponent",
+        "shape": [
+          64
+        ]
+      },
+      {
+        "bytes": 10,
+        "dtype": "<i2",
+        "name": "head.bias",
+        "shape": [
+          5
+        ]
+      },
+      {
+        "bytes": 5,
+        "dtype": "i1",
+        "name": "head.exponent",
+        "shape": [
+          5
+        ]
+      }
+    ]
+  },
+  "non_tail_bytes": 60497,
+  "receiver_models_loaded": true,
+  "score_claim": false,
+  "semantic": {
+    "body_bytes": 36130,
+    "coded_weights": 24181,
+    "fields": [
+      {
+        "bytes": 8,
+        "kind": "depth_table",
+        "start": 10
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 18
+      },
+      {
+        "bits": 4,
+        "bytes": 240,
+        "count": 480,
+        "kind": "codes",
+        "layer": "token_embed.weight",
+        "padding_bits": 0,
+        "start": 210
+      },
+      {
+        "bytes": 16,
+        "kind": "fp16_scales",
+        "start": 450
+      },
+      {
+        "bits": 3,
+        "bytes": 1800,
+        "count": 4800,
+        "kind": "codes",
+        "layer": "frame_embed.weight",
+        "padding_bits": 0,
+        "start": 466
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 2266
+      },
+      {
+        "bits": 4,
+        "bytes": 4800,
+        "count": 9600,
+        "kind": "codes",
+        "layer": "coord_mix.weight",
+        "padding_bits": 0,
+        "start": 2458
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 7258
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 7450
+      },
+      {
+        "bits": 4,
+        "bytes": 432,
+        "count": 864,
+        "kind": "codes",
+        "layer": "blocks.0.dw.weight",
+        "padding_bits": 0,
+        "start": 7642
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 8074
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 8266
+      },
+      {
+        "bits": 4,
+        "bytes": 4608,
+        "count": 9216,
+        "kind": "codes",
+        "layer": "blocks.0.pw.weight",
+        "padding_bits": 0,
+        "start": 8458
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 13066
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 13258
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 13450
+      },
+      {
+        "bytes": 384,
+        "kind": "fp16_scales",
+        "start": 13642
+      },
+      {
+        "bits": 3,
+        "bytes": 576,
+        "count": 1536,
+        "kind": "codes",
+        "layer": "blocks.0.film.weight",
+        "padding_bits": 0,
+        "start": 14026
+      },
+      {
+        "bytes": 384,
+        "kind": "fp16_tensor",
+        "start": 14602
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 14986
+      },
+      {
+        "bits": 4,
+        "bytes": 432,
+        "count": 864,
+        "kind": "codes",
+        "layer": "blocks.1.dw.weight",
+        "padding_bits": 0,
+        "start": 15178
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 15610
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 15802
+      },
+      {
+        "bits": 4,
+        "bytes": 4608,
+        "count": 9216,
+        "kind": "codes",
+        "layer": "blocks.1.pw.weight",
+        "padding_bits": 0,
+        "start": 15994
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 20602
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 20794
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 20986
+      },
+      {
+        "bytes": 24,
+        "kind": "prune_mask",
+        "start": 21178
+      },
+      {
+        "bytes": 4,
+        "kind": "fp16_scales",
+        "start": 21202
+      },
+      {
+        "bits": 4,
+        "bytes": 8,
+        "count": 16,
+        "kind": "codes",
+        "layer": "blocks.1.film.weight",
+        "padding_bits": 0,
+        "start": 21206
+      },
+      {
+        "bytes": 384,
+        "kind": "fp16_tensor",
+        "start": 21214
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 21598
+      },
+      {
+        "bits": 4,
+        "bytes": 432,
+        "count": 864,
+        "kind": "codes",
+        "layer": "blocks.2.dw.weight",
+        "padding_bits": 0,
+        "start": 21790
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 22222
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 22414
+      },
+      {
+        "bits": 4,
+        "bytes": 4608,
+        "count": 9216,
+        "kind": "codes",
+        "layer": "blocks.2.pw.weight",
+        "padding_bits": 0,
+        "start": 22606
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 27214
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 27406
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 27598
+      },
+      {
+        "bytes": 24,
+        "kind": "prune_mask",
+        "start": 27790
+      },
+      {
+        "bytes": 4,
+        "kind": "fp16_scales",
+        "start": 27814
+      },
+      {
+        "bits": 4,
+        "bytes": 8,
+        "count": 16,
+        "kind": "codes",
+        "layer": "blocks.2.film.weight",
+        "padding_bits": 0,
+        "start": 27818
+      },
+      {
+        "bytes": 384,
+        "kind": "fp16_tensor",
+        "start": 27826
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 28210
+      },
+      {
+        "bits": 4,
+        "bytes": 432,
+        "count": 864,
+        "kind": "codes",
+        "layer": "blocks.3.dw.weight",
+        "padding_bits": 0,
+        "start": 28402
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 28834
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_scales",
+        "start": 29026
+      },
+      {
+        "bits": 4,
+        "bytes": 4608,
+        "count": 9216,
+        "kind": "codes",
+        "layer": "blocks.3.pw.weight",
+        "padding_bits": 0,
+        "start": 29218
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 33826
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 34018
+      },
+      {
+        "bytes": 192,
+        "kind": "fp16_tensor",
+        "start": 34210
+      },
+      {
+        "bytes": 24,
+        "kind": "prune_mask",
+        "start": 34402
+      },
+      {
+        "bytes": 4,
+        "kind": "fp16_scales",
+        "start": 34426
+      },
+      {
+        "bits": 4,
+        "bytes": 8,
+        "count": 16,
+        "kind": "codes",
+        "layer": "blocks.3.film.weight",
+        "padding_bits": 0,
+        "start": 34430
+      },
+      {
+        "bytes": 384,
+        "kind": "fp16_tensor",
+        "start": 34438
+      },
+      {
+        "bytes": 6,
+        "kind": "fp16_scales",
+        "start": 34822
+      },
+      {
+        "bits": 4,
+        "bytes": 1296,
+        "count": 2592,
+        "kind": "codes",
+        "layer": "head.weight",
+        "padding_bits": 0,
+        "start": 34828
+      },
+      {
+        "bytes": 6,
+        "kind": "fp16_tensor",
+        "start": 36124
+      }
+    ],
+    "header_and_selection": 10,
+    "metadata": 7234,
+    "mixer_weights": 24,
+    "rider_header": 12
+  },
+  "tail": {
+    "arithmetic_stream": 119749,
+    "counted_rider": 64,
+    "fixed_table": 96
+  },
+  "wans_parser": "runtime/entropy/renderer_weight_codec.py inspected; WANS branch is not used by shipped SM1S/SM3R body.",
+  "zip": {
+    "archive_comment": 0,
+    "central_extra": 0,
+    "central_fixed": 46,
+    "central_name": 1,
+    "compression_method": 0,
+    "eocd_fixed": 22,
+    "local_extra": 0,
+    "local_fixed": 30,
+    "local_name": 1,
+    "member_comment": 0
+  }
+}

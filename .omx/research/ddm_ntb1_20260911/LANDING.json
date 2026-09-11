@@ -1,0 +1,69 @@
+{
+  "schema": "ddm_ntb1_landing.v1",
+  "rc": 17,
+  "shared_main_commit_claim": false,
+  "bundle_verified": true,
+  "files_verified": [
+    {
+      "content_sha256": "a02a29c6a0a1110093bddf3e56f179be40036e69b4f0cece7f966e378e235e81",
+      "path": "experiments/ddm_ntb1_non_tail_bytes.py"
+    },
+    {
+      "content_sha256": "58b1163d5a46e54683e63aa2c343651ddbd1695c4f8febe4ebf996bc15f2297a",
+      "path": ".omx/research/ddm_ntb1_non_tail_bytes_price_and_resolve_20260911.md"
+    },
+    {
+      "content_sha256": "a18e71da5f14db8d9e013d22b27ceff8ddbdaa06831ddaca401ab48fe86974f4",
+      "path": ".omx/research/ddm_ntb1_20260911/ARTIFACT_MANIFEST.json"
+    },
+    {
+      "content_sha256": "61289c57898ab9c01301ab09972bbba5844e7724bee40d72646ab246032acbf7",
+      "path": ".omx/research/ddm_ntb1_20260911/CENSUS.json"
+    },
+    {
+      "content_sha256": "e9d024276c099b870aea29008b3f360362a190c24118b9af7005306086589f2a",
+      "path": ".omx/research/ddm_ntb1_20260911/EQUATIONS_RELEVANT.json"
+    },
+    {
+      "content_sha256": "f5f7b13fcca69b458331c65c2db9b87e79dde2a965c341c7511e7f3634b9c003",
+      "path": ".omx/research/ddm_ntb1_20260911/FIRE_ORDERS.json"
+    },
+    {
+      "content_sha256": "15e085699b97fb7b587459c4d0754b2c5640d1d3c1384a6bf5798278b02dc755",
+      "path": ".omx/research/ddm_ntb1_20260911/INPUTS.json"
+    },
+    {
+      "content_sha256": "6099fabad8c8a8b79f20fad40502cac5a6e80c68fc736d1143b8b8b96eeba2cb",
+      "path": ".omx/research/ddm_ntb1_20260911/PRICES.json"
+    },
+    {
+      "content_sha256": "255011e0b55d077658a9f0ee82b541618798bbffa5b0bd1896b8eb4f2ccedc0c",
+      "path": ".omx/research/ddm_ntb1_20260911/RECALL.json"
+    },
+    {
+      "content_sha256": "1c0893b042b0365a066e6d599ce3e2bf8889b2b69dff4715a099eb42563fbc5b",
+      "path": ".omx/research/ddm_ntb1_20260911/REPRODUCTION.json"
+    },
+    {
+      "content_sha256": "f20b18ca3cc806faac93de2b2dd8016911a32c789e3d58ac61a4829593fe5c94",
+      "path": ".omx/research/ddm_ntb1_20260911/TASK_EVENTS.json"
+    },
+    {
+      "content_sha256": "dcee42f1822a82f71f2ade7116f2f187ef00f191432f60eb089db12216259361",
+      "path": ".omx/research/ddm_ntb1_20260911/VERIFY.json"
+    },
+    {
+      "content_sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3",
+      "path": ".omx/research/ddm_ntb1_20260911/equations_recall.json"
+    }
+  ],
+  "fallback_commit": "e5a4b5779be48d8568d5627b1de5cec8c028e38f",
+  "bundle_path": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/serializer/20260911T125349.458590Z-77919/intended-commit.bundle",
+  "bundle_sha256": "554d15e461a8eeb900e0880d22b8266db2148ec7c4ef50a9562a9dcaac8b4a74",
+  "verify_stdout": "The bundle contains this ref:\ne5a4b5779be48d8568d5627b1de5cec8c028e38f refs/heads/serializer-fallback\nThe bundle requires this ref:\ne6f3b7820b0b0c41625b462fbb63ee1f6dd27995 \nThe bundle uses this hash algorithm: sha1\n",
+  "verify_stderr": "/Volumes/VertigoDataTier/pact/ddm_ntb1_non_tail_bytes/serializer/20260911T125349.458590Z-77919/intended-commit.bundle is okay\n",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": "/Users/adpena/Projects/pact main branch",
+  "fire_trigger": "MAIN harvests this byte-only result bundle; verify intended files then land exactly these files. Full charter remains partial."
+}
