@@ -42,8 +42,11 @@ from experiments.ddm_rlc4_rebase import measure_receiver_digest, measure_runtime
 DEFAULT_ROOT = control.ROOT.parent / "public"
 ROOT = DEFAULT_ROOT
 # move 44's own cold public decode, from ddm_rlc5's retained proof.
+# The pointer's own retained cold decode. Move 45's is byte-identical to move 44's
+# (both `2b762eba…`, read from pc3's own RESULT.json), which is exactly what "the carrier
+# member moved and the frames did not" means. `--source-raw` names which one is cited.
 SOURCE_RAW = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/public_rlc4/output/0.raw"
+    "/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/public/output/0.raw"
 )
 SOURCE_RAW_SHA = "2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc"
 RAW_BYTES = 3_662_409_600
@@ -130,6 +133,11 @@ def regenerate_manifest(root: Path) -> bytes:
     return rows.encode()
 
 
+PROMOTED = control.ROOT / "promoted_runtime_move45"
+CANDIDATE_ARCHIVE = None
+PRICE_RECEIPT = None
+
+
 def stage_runtime(treatment: str) -> Path:
     """The PROMOTED tree with the treatment's archive, its pin, and a rebuilt manifest.
 
@@ -147,7 +155,7 @@ def stage_runtime(treatment: str) -> Path:
     and `MANIFEST.sha256`, and nothing else.
     """
     runtime = ROOT / treatment / "candidate_runtime"
-    source = control.ROOT / "promoted_runtime"
+    source = PROMOTED
     if not (source / "MANIFEST.sha256").is_file():
         raise SystemExit(f"promoted tree missing its manifest: {source}")
     if (runtime / "MANIFEST.sha256").is_file():
@@ -159,7 +167,7 @@ def stage_runtime(treatment: str) -> Path:
     shutil.copytree(
         source, runtime, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "._*", ".DS_Store")
     )
-    archive = hpac.ROOT / treatment / "retained/archive.twin0.zip"
+    archive = CANDIDATE_ARCHIVE or (hpac.ROOT / treatment / "retained/archive.twin0.zip")
     if not archive.is_file():
         raise SystemExit(f"no priced archive for {treatment}: {archive}")
     shutil.copy2(archive, runtime / "archive.zip")
@@ -192,7 +200,8 @@ def run(treatment: str, timeout: int) -> dict:
     work = ROOT / treatment
     for name in ("data", "output", "scratch", "frame_checkpoints", "retained_native", "attempts"):
         (work / name).mkdir(parents=True, exist_ok=True)
-    price = json.loads((hpac.ROOT / treatment / "PRICE.json").read_text())
+    price_path = PRICE_RECEIPT or (hpac.ROOT / treatment / "PRICE.json")
+    price = json.loads(price_path.read_text())
     if price["twins"][0]["sha256"] != price["twins"][1]["sha256"]:
         raise SystemExit("twins disagree; nothing to parse back")
     runtime = stage_runtime(treatment)
@@ -206,7 +215,7 @@ def run(treatment: str, timeout: int) -> dict:
         "archive": archive,
         "base_archive_sha256": control.BASE_SHA,
         "source_raw_sha256": SOURCE_RAW_SHA,
-        "price": landed.fact(hpac.ROOT / treatment / "PRICE.json"),
+        "price": landed.fact(price_path),
         "producer": landed.fact(Path(__file__)),
         "hpac_producer": landed.fact(REPO / "experiments/ddm_ntb2_hpac.py"),
         "score_claim": False,
@@ -362,10 +371,26 @@ def main(argv=None) -> int:
         default=None,
         help="tier to run the proof on; defaults to this arm's own store",
     )
+    parser.add_argument("--promoted-root", type=Path, default=None,
+                        help="the POINTER's promoted receiver tree to stage from")
+    parser.add_argument("--candidate-archive", type=Path, default=None,
+                        help="the priced candidate archive to stage")
+    parser.add_argument("--price-receipt", type=Path, default=None,
+                        help="the twin-encode receipt naming that archive")
+    parser.add_argument("--source-raw", type=Path, default=None,
+                        help="the pointer's own retained cold decode to prove identity against")
     args = parser.parse_args(argv)
+    global ROOT, PROMOTED, CANDIDATE_ARCHIVE, PRICE_RECEIPT
     if args.public_root is not None:
-        global ROOT
         ROOT = args.public_root.resolve()
+    if args.promoted_root is not None:
+        PROMOTED = args.promoted_root.resolve()
+    if args.candidate_archive is not None:
+        CANDIDATE_ARCHIVE = args.candidate_archive.resolve()
+    if args.price_receipt is not None:
+        PRICE_RECEIPT = args.price_receipt.resolve()
+    if args.source_raw is not None:
+        globals()["SOURCE_RAW"] = args.source_raw.resolve()
     ROOT.mkdir(parents=True, exist_ok=True)
     if args.resume_from is not None and args.resume_from.resolve() != ROOT.resolve():
         raise SystemExit(f"wrong resume root: {args.resume_from}")
