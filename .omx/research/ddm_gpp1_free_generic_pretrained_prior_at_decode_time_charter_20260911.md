@@ -1,4 +1,4 @@
-# ddm_gp1 — the weirder one: a FREE generic pretrained prior at decode time — public, non-video-derived weights run on the receiver's OWN rendered RGB to produce Lane/partition contexts the token plane cannot (design + $0 conditional-surprise measurement; charter, MAIN 2026-09-11; operator: be creative, divergent)
+# ddm_gpp1 — the weirder one: a FREE generic pretrained prior at decode time — public, non-video-derived weights run on the receiver's OWN rendered RGB to produce Lane/partition contexts the token plane cannot (design + $0 conditional-surprise measurement; charter, MAIN 2026-09-11; operator: be creative, divergent)
 
 ## The opening (read rule 118 and the dependency policy in CLAUDE.md before anything)
 The rate term charges `archive.zip` bytes only; `inflate.py` and its dependencies are FREE if generic (not video-derived) and installable
@@ -26,9 +26,9 @@ belief is a different, richer context. The demand is 25,899 B (21.6 % of the 119
 3. If the bound clears ≥ 8,000 B: prototype the context in the shipped coder's mixing path (copy of `runtime/`), replay the shipped stream
    exactly, report realized bytes, wall-clock, determinism controls, and the receiver diff — then STOP for MAIN's first-measurement chain.
    If it does not clear, close the family at formulation scope with the numbers.
-4. Memo `.omx/research/ddm_gp1_free_generic_pretrained_prior_at_decode_time_20260911.md`: legality reading, model table, the measured
+4. Memo `.omx/research/ddm_gpp1_free_generic_pretrained_prior_at_decode_time_20260911.md`: legality reading, model table, the measured
    bound, the prototype (if reached), the next charter. Serializer commits (two review passes per .py); rc 17 is NOT a stop.
-   Checkpoint `ddm_gp1`; COMPLETE at the end.
+   Checkpoint `ddm_gpp1`; COMPLETE at the end.
 
 ## Boundaries
 NEVER use SegNet/PoseNet weights or any derivative of the scorers (strict-scorer rule); no training on the contest video; no Modal; no
