@@ -164,6 +164,45 @@ moves 1.16× to 1.97× between two points, and the real relation is AFFINE,
 token work can remove**. For a witness that regenerates the partition rather than coding tokens, the
 transferable part is the intercept's existence, not the ratio.
 
+**8. The seg leg is 83% PARTITION error, not render floor — design A targets the smaller share.**
+MAIN asked how much of the object's `d_seg` is token-level partition error, which no RGB correction
+reaches, against render floor, which is what the lattice targets. The object ships no token field, so
+the analogue is the generator's own internal class head — the partition it represents BEFORE the
+render turns it into RGB. On a **4-pair smoke** (the n600 pass is running; a prefix is not a verdict):
+
+| quantity | value |
+|---|---:|
+| `d_seg` at the scorer | 0.026754 |
+| the generator's OWN partition vs GT | **0.078646** — wrong on 7.9% of pixels |
+| the pointer's token plane vs GT | 0.000164 — wrong on 0.016% |
+| the object's partition vs the pointer's tokens | 0.078650 |
+| share of seg error where the partition was ALREADY wrong | **82.7%** |
+| share that is render floor | 17.3% |
+
+If the lattice eliminated the **entire** render floor, `d_seg` would fall 0.026754 → 0.022127, a
+**1.21×** improvement against the ~60× the gate needs. On this reading design A is not aimed at the
+binding term. It also matches md1-md4 without being fitted to them: *"the sites are scorer-hard for
+this generator FORM."*
+
+One nuance the numbers force, against the word "floor": the render-plus-scorer path **recovers** more
+partition error than it creates. The generator's partition is wrong on 7.9% while the scorer's argmax
+is wrong on 2.7% — the path repairs about two thirds. The same holds for the pointer: its token plane
+is wrong on 1.64e-4 and its seg leg is 1.03e-4. So the path is a smoother in both directions, and the
+decomposition measures the NET at each pixel, which is the quantity that matters.
+
+**9. The lattice's own bytes: the epoch-30 object is 778 B OVER the gate.**
+Packet 122,668 B / archive **122,778 B** against the 122,000 B gate. The lattice section alone codes
+to **16,133 B** (18,826 B raw) — above the ~15,400 B the budget left — because the trained codes are
+dense: 98-99% nonzero on every level and saturating at ±127. So the correction is currently spending
+13% of the packet, and by the decomposition above it is spending it on the 17% share.
+
+**10. MAIN's rate rule, arithmetic.** Over 18 epochs (20→37) the lattice arm's surrogate moved
+0.0254741 → 0.0229619: a measured **0.6089%/epoch**, already **36% below** the 0.95%/epoch MAIN set as
+the continue-threshold (that 0.95% was itself measured over the stage's first 7 epochs, so the rate
+has decayed). At that constant rate `d_seg` 4.0e-4 arrives at **epoch 700**, 3.5× outside the stage.
+The pre-registered falsifier still reads INDETERMINATE — the 1.109× fall is under its 1.25× lever —
+and MAIN's 20-epoch window is two epochs short of closing.
+
 ## What is implemented and proven
 
 | stage | result | receipt |
