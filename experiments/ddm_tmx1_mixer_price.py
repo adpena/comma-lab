@@ -135,6 +135,10 @@ def base_tree(tag: str, work: Path) -> tuple[Path, str]:
     archive = fact(COMPOSITION48)
     if not archive["sha256"].startswith(COMPOSITION48_SHA):
         raise PriceError("move-48 composition archive is not the one hpr1 priced")
+    # THE CANDIDATE GUARD: a row priced on this base is a row against the LIVE pointer, so
+    # a move underneath it refuses rather than silently pricing a stale base.
+    if archive["sha256"] != live:
+        raise PriceError(f"POINTER_MOVED: composition base {archive['sha256']} is not the live pointer {live}")
     for src in sorted(PROMOTED47.rglob("*")):
         if src.is_file() and "__pycache__" not in src.parts and src.suffix != ".pyc" and not src.name.startswith("._"):
             destination = composed / src.relative_to(PROMOTED47)
