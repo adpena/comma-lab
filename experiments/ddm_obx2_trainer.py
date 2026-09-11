@@ -639,6 +639,7 @@ def score_parsed_object(
     pose_target: np.ndarray,
     workers: int,
     render_chunk: int = 50,
+    scorer_batch: int = 8,
     receiver: str = "torch",
     archive_bytes: bytes | None = None,
 ) -> dict[str, Any]:
@@ -671,16 +672,22 @@ def score_parsed_object(
         else:
             render = torch_receiver_render(torch_module, chunk)
         render_seconds += time.time() - render_started
-        with torch.no_grad():
-            camera = qbt1.roundtrip_to_camera_uint8_ste(render)
-            pose6, logits = qbt1.scorer_forward(camera, posenet, segnet)
-            argmax = logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
-            pose = pose6.cpu().numpy().astype(np.float64)
-        target = np.asarray(gt[chunk], dtype=np.uint8)
-        seg_errors += int((argmax != target).sum())
-        seg_pixels += int(target.size)
-        pose_square += float(np.square(pose - np.asarray(pose_target[chunk], dtype=np.float64)).sum())
-        pose_values += int(pose.size)
+        # Render in large chunks (one module build) but score in small batches:
+        # the frozen scorers at 50 pairs peak past 16 GiB of RSS, which is both
+        # wasteful and enough to trip a launch's own memory guard at the very
+        # end of a long run.
+        for offset in range(0, len(chunk), scorer_batch):
+            pairs = chunk[offset : offset + scorer_batch]
+            with torch.no_grad():
+                camera = qbt1.roundtrip_to_camera_uint8_ste(render[offset : offset + len(pairs)])
+                pose6, logits = qbt1.scorer_forward(camera, posenet, segnet)
+                argmax = logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
+                pose = pose6.cpu().numpy().astype(np.float64)
+            target = np.asarray(gt[pairs], dtype=np.uint8)
+            seg_errors += int((argmax != target).sum())
+            seg_pixels += int(target.size)
+            pose_square += float(np.square(pose - np.asarray(pose_target[pairs], dtype=np.float64)).sum())
+            pose_values += int(pose.size)
     d_seg = seg_errors / seg_pixels
     d_pose = pose_square / pose_values
     distortion = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
@@ -691,6 +698,8 @@ def score_parsed_object(
         "score_claim": False,
         "promotable": False,
         "receiver": receiver,
+        "render_chunk": render_chunk,
+        "scorer_batch": scorer_batch,
         "pairs": len(pair_ids),
         "seg_errors": seg_errors,
         "seg_pixels": seg_pixels,
