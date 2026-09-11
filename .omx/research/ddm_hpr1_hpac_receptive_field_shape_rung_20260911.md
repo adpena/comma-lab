@@ -3,10 +3,12 @@
 `[no-triality] [p0-ledger-ok]` · research_only=true · score_claim=false ·
 `# FORMALIZATION_PENDING: the shape statistic is a conditional-information RANKING, not a coder charge; it is registered as a canonical equation only when a real byte price confirms or falsifies its sign, per the standing "first-order token price is a ranking not a charge" law.`
 
-**STATE (Opus, 2026-09-11).** Deliverables 1 and 2 are COMPLETE and measured. Deliverable 3 (exact
-bytes per rung) is in flight: the move-45 live-loop pricing rail PASSED its falsifying control,
-and the winning rung is training. No frontier move, no Modal dispatch, no scorer run, no candidate
-claim. This file is crash-resumable.
+**STATE (Opus, 2026-09-11) — COMPLETE.** All four deliverables are measured. The headline is not the
+one the charter expected: **the pre-registered shape rung is FALSIFIED by the real coder (+812 B
+against its own control), and the experiment's CONTROL is a −887 B candidate with no receiver change**
+(§4e). One step is owed before any seal — the cold public parse-back — and §5 says exactly why I
+stopped rather than stamp a false label into a receipt. No frontier move, no Modal dispatch, no scorer
+run, no seal, no candidate claim. This file is crash-resumable.
 
 Frontier line: `composition S 0.1371383667388406 @ 180,246 B [contest-CUDA T4 n600] (move 45)` — UNMOVED
 by this arm.
@@ -337,11 +339,32 @@ token field has moved since (sj1's pre-distortion at move 32 and after). The pri
 field it was never fit to. The −887 B is the cost of that staleness, and it was hiding in plain sight
 as *the control* of a shape experiment. [The lineage is DERIVED from the store; the −887 B is MEASURED.]
 
-## 5. What is owed
+## 5. Fire verdict, and the ONE step owed
 
-R1's Δtail and exact archive bytes (encode running: 600 frames, real coder, real receiver loop), the
-secant against cl2's +0.446, the shape-CONTROL's separation of shape from training budget, and the
-fire verdict. R2/R6 and the two offset rungs stay pre-registered and unfired.
+**Fire verdict on the charter's rule (net ΔS < −2e-5 at exact bytes against 180,246 B):**
+
+- **R1 `past_dil2` — DO NOT FIRE.** It clears the arithmetic bar (−4.994e-5) but it is dominated by
+  its own control on every axis: 812 B larger, a three-file receiver change against none, and the
+  first-measurement chain against a normal seal. Firing it would bank the retrain's win while paying
+  the shape's loss and the receiver-change cost. Retained, priced, closed.
+- **CONTROL `retrain` — FIRE-ELIGIBLE, ONE STEP OWED.** 179,359 B, ΔS −5.906e-4, projected
+  S 0.1365477498474212, `receiver_change: false`, output-lossless by in-loop assertion, twins agreeing.
+
+**The one step owed is the cold public parse-back**, and I stopped rather than fake it. The landed
+prover, `experiments/ddm_ntb2_public.py`, already takes `--candidate-archive`, `--price-receipt`,
+`--promoted-root` and `--public-root`, so it can read this arm's candidate — but its `--treatment`
+choices are ntb2's own, and it writes that string into every receipt it emits. Running it as
+`--treatment frame_even` over `retrain`'s bytes would stamp a FALSE LABEL into a custody receipt,
+which is the exact class this campaign extincts, so I did not. I also did not edit a sister arm's live
+producer while it runs, per this arm's boundaries. **The minimal honest unblock is a one-line change
+to that prover — a `--label` override, or adding this arm's treatment names to its `choices` — after
+which the parse-back is mechanical.** No seal exists and none is claimed until the raw comes back
+byte-identical.
+
+**Unfired, with pre-registered signs intact but their predictor now refuted:** R2 (`past_dil3`),
+R6 (`cone_dil2` / `cone_dil3`), and the two offset rungs. Each is one trainer command plus one
+`--treatment` on this rail. A successor should note that §4e refutes the statistic that ranked them,
+so their signs are now UNSUPPORTED, not merely unfired — re-derive before spending Metal on them.
 
 ## 6. Apparatus landed
 
