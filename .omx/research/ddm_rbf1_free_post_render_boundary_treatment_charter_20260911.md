@@ -1,4 +1,4 @@
-# ddm_rb1 — FREE deterministic post-render boundary treatment against the measured 86 % one-pixel jitter residual ($0 falsifier at n600; seal if it pays; charter, MAIN 2026-09-11; operator full-authority GO)
+# ddm_rbf1 — FREE deterministic post-render boundary treatment against the measured 86 % one-pixel jitter residual ($0 falsifier at n600; seal if it pays; charter, MAIN 2026-09-11; operator full-authority GO)
 
 ## The opening
 MEASURED (memory `residual_seg_debt_is_renderer_boundary_jitter_at_correct_tokens_20260908`, sha 9c223361163636b6…): 86 % of the pointer's
@@ -23,9 +23,9 @@ bilinear resize (the same D as PoseNet) — treat every candidate through the re
    literal census (rule 118: no fitted constant may enter the code — a treatment parameter must be a generic constant or DERIVED from the
    token plane at decode time; if it is fitted to this video it is COUNTED and must go in the archive), and hand MAIN the first-measurement
    intent inputs (timing-risk receipt with the measured wall-clock delta). Do NOT fire.
-4. Memo `.omx/research/ddm_rb1_free_post_render_boundary_treatment_20260911.md`: the residual instrument, the three treatments' n600
+4. Memo `.omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md`: the residual instrument, the three treatments' n600
    table, the composition, the intent inputs (or the measured closure). Serializer commits (two review passes per .py); rc 17 is NOT a stop.
-   Checkpoint `ddm_rb1`; COMPLETE.
+   Checkpoint `ddm_rbf1`; COMPLETE.
 
 ## Boundaries
 No Modal, no scorer weights in the receiver (strict-scorer rule), no fitted per-video constants in free code (rule 118), never edit
