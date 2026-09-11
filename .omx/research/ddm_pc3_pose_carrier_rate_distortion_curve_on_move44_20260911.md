@@ -281,4 +281,40 @@ Producers: `experiments/ddm_pc3_pose_carrier_curve.py` (base / ceiling / reach /
 build), `experiments/ddm_pc3_public.py` (stage / cold public proof / smoke),
 `experiments/ddm_pc3_ceiling_shards.sh`.
 
+## 9. How to finish the ceiling (it is running and resumable)
+
+Nine strided shards, each resuming from its own rows file; killing them costs only the pair each was on. Resume with:
+
+```bash
+.venv/bin/python tools/launch_detached_process.py \
+  --output-dir /Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/logs/ceiling_resume \
+  --nice 5 --nice-best-effort --done-receipt ddm_pc3_ceiling --receipt-supersede \
+  --purpose "ddm_pc3 n600 ceiling, resumed" --authority "MAIN charter ddm_pc3" \
+  --env OUT=/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/ceiling \
+  --env OPERATING_POINT=4.58676349183645e-06 --env SHARDS=9 --env THREADS=2 \
+  -- bash experiments/ddm_pc3_ceiling_shards.sh
+```
+
+Then the curve, and the realized rungs the bound does not close:
+
+```bash
+.venv/bin/python experiments/ddm_pc3_pose_carrier_curve.py report \
+  --base  .../base/pose_base_move44.npy --rows .../ceiling/ceiling_rows_*.jsonl \
+  --out   .../CURVE.json \
+  --rung global_div2 808 --rung global_div4 1697 --rung global_div8 2603 --rung dim3_div2 54
+.venv/bin/python experiments/ddm_pc3_pose_carrier_curve.py project \
+  --rows .../ceiling/ceiling_rows_*.jsonl --base .../base/pose_base_move44.npy \
+  --out-dir .../projection --progress
+```
+
+`project` is the cheap closer: it rounds each pair's continuous optimum onto each rung's lattice and re-scores it
+through the real renderer — one evaluation per pair per rung, minutes not hours — which brackets every rung from
+BELOW while the ceiling brackets it from above. Its `shipped` rung is not filler: the shipped codes are a
+`refine_pair` fixed point under the ±1/±2 SINGLE-coordinate polish, but the continuous optimum's rounding is a
+MULTI-coordinate move, so if it scores better that is a pose gain at ZERO bytes.
+
+One honesty note on the resume: `ddm_pc3_ceiling_shards.sh` redirects each shard's progress log with `>`, so a resume
+overwrites the previous run's shard LOG. The per-pair rows are appended and intact — the measurement is preserved,
+the narration of the first run is not.
+
 <!-- # FORMALIZATION_PENDING: the curve becomes an equations-leg law once the n600 ceiling closes the lattice family with its exact row -->
