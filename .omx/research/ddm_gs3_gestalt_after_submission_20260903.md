@@ -1446,3 +1446,17 @@ pointer next. The day under the GO: two closures by measurement (design A, free 
 
 **Correction to Addendum 39 (MAIN, same hour).** The re-derived cap at held distortion is 154,507 B, not 154,347 B: distortion is
 unchanged from move 44, so the cap is unchanged and only the demand moves, 180,246 − 154,507 = −25,739 B (was −25,899 B at move 44).
+
+## Addendum 40 (MAIN, 2026-09-11 ~16:50Z) — mxo3: the receiver already contains the stacker the charter asked for
+
+The charter framed move 44's context mixer as a fixed 35-weight object and asked whether a low-rank nonlinear stacker over the 23
+pre-mix family outputs could buy 3,000 B inside 200 ns/symbol. mxo3 measured the premise before the lever: the shipped mixer is
+4,000 contexts × 23 weights, cold-started at zero counted bytes, learned online every group, and it reaches the coded row through a
+single scalar. A second stacker on top of an online stacker finds +9.28 B at rank 2 and loses at ranks 4 and 8, on realized code
+length against the real 119,749 B stream reconciled to 0.000584 %. The arm did not stop at the zero; it built a second instrument to
+tell a ceiling from a weak learner, and held out: every one of the 23 families costs bytes on its own, the table costs 894–5,491 B
+across partitions, and the most generous in-sample bound plus the entire Q15 blind spot is 1,210 B. The timing half passed
+comfortably (27–57 ns/symbol), which is what makes this a closure of the family and not of the budget. For the gestalt: the
+context-mixing corner of the token tail is now closed from both sides on this object — ls1/ls2 from the context side (the atlas's
+oracle is 1,035 B short of the demand) and mxo3 from the mixing side (no stacker over the existing families pays). What remains on
+the tail is what the pre-distortion line already exploits: changing the field the scorer does not read, not coding the field better.
