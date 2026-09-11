@@ -469,6 +469,37 @@
         "sha256": "7b81e1029094b6964f9bb32a2933fbf6b460fb093d26af7d0139bc6a61c80700"
       },
       "score_claim": false
+    },
+    {
+      "schema": "prefire_contract_consumer_fix.v1",
+      "fix_batch_id": "main_first_measurement_litter_parity_20260911",
+      "previous_row_sha256": "d23787f0746897c9c95050d2031f1b0811a9fed8dc8e35620dfb5cf8300eff6a",
+      "definition_parent_sha256": "d84cab3b005b476b93c05b15df160062a76961028dd48df1399c0e263537cba9",
+      "definition_change": false,
+      "consumer_fixes": [
+        {
+          "fix_id": "main-first-measurement-litter-skip-parity",
+          "scope": "tools/fire_modal_auth_eval.py _first_measurement_main runtime upload validation",
+          "reason": "the first-measurement path validated the RAW tree while --seal validates the tree minus the sanitize stage's macOS metadata litter, so an ExFAT-staged runtime dir refused a valid intent (ntb2 move 46: 94 AppleDouble stubs, receipt PREFIRE_REFUSAL_953c56d8...). MEASURED: every one of those paths already returns a runtime_digest_skip_reason, and the intent's pinned runtime sha bdd370bcb0b005d0 re-measures byte-identically with them present, so no custody statement moved; validate_tree still runs every other file through validate_runtime_upload_file.",
+          "causal_commit": "d1ed3674b45d1b04d02ef1bdf07dae3a1d7ac4ab",
+          "tests": [
+            "src/tac/tests/test_candidate_prefire_intent.py::test_dry_run_consumes_nothing_and_explicit_argv",
+            "src/tac/tests/test_candidate_prefire_intent.py::test_first_measurement_manifest_is_axis_tagged_and_writable"
+          ]
+        }
+      ],
+      "implementation_commit": "79a50df080a6b67bcc6d0bc63b63d237fd4ac6f8",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/PREFIRE_IMPLEMENTATION_MANIFEST_PR18_FIRE_LITTER.json",
+        "bytes": 2251,
+        "sha256": "da2e30092a6de84a0aa195cb2c19e3beadadf700a3efd795f47ee7094b868677"
+      },
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pr18_20260911/CONSUMER_FIX_fire_tool_litter_parity_20260911.md",
+        "bytes": 4949,
+        "sha256": "a40392a73f92ef5b391ab57380a49c62612b526b628a62d0441f7e39a0f3253d"
+      },
+      "score_claim": false
     }
   ]
 }
