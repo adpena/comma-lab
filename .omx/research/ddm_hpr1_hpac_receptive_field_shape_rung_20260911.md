@@ -200,9 +200,20 @@ and the rung differ only in geometry.
 ## 5. Apparatus landed
 
 - `tools/train_ddm_cl1_hpac_capacity.py` gains ONE additive profile, `hpr1_shape_rungs`: cl2's config
-  dict byte-for-byte, with `--past-dilation` as the only free axis. Verified additive — every
-  pre-existing profile still PASSES at dilation 1 and still REFUSES dilation 2; 36 trainer tests pass.
+  dict byte-for-byte, with TWO free geometry axes, `--past-dilation` {1,2} and `--conv-a-dilation`
+  {1,2,3}. Verified additive per profile — `cl1` / `rx2_mc36` / `jf1_joint_refit` /
+  `cl2_shipped_ladder` all PASS at dilation 1 on both axes and all REFUSE 2; 36 trainer tests pass.
+- `experiments/ddm_hpr1_shape_price.py` — the move-45 rail, control-falsified, with `past_dil2`,
+  `past_dil3`, `cone_dil2`, `cone_dil3` treatments, idempotent resume-safe receiver patches, and a
+  layout invariant that admits depth movement (the rung's model leg) while refusing any change to the
+  stored value count.
 - `experiments/ddm_hpr1_shape_inputs.py` derives both trainer inputs from move 45 alone.
+- `experiments/ddm_hpr1_shape_timing.py` — the interleaved decode-time instrument.
+- `experiments/ddm_hpr1_surprise_atlas.py` — reconstruction, displacement atlas, set atlas, window
+  atlas.
+
+**A successor inherits a launchable board, not prose:** every rung above is one trainer command plus
+one `--treatment` on a rail that already reproduces move 45 byte-identically.
 
 ## 6. Boundaries honoured
 
