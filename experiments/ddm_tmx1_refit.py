@@ -260,6 +260,28 @@ def self_test(base, out: Path) -> dict:
     shipped_lane[idle] = mine[0][idle]
     checks["lane_stage"] = bool(np.array_equal(shipped_lane, mine[2]))
     checks["inactive_rows"] = int(idle.sum())
+    # The second half of the replay the mixing check does not reach: the online RUN state
+    # and the five contexts.  Drive the SHIPPED SharedMixer's own ``end_frame`` forward over
+    # the real field and require this tool's replayed run state -- and the contexts computed
+    # from it -- to agree exactly, frame by frame.
+    field = np.memmap(FIELD, dtype=np.uint8, mode="r", shape=(N, H, W))
+    mixer = base.SharedMixer(bytes(np.ones(K * F, dtype=np.int8)))
+    replay, run_ok, ctx_ok = np.zeros((H, W), dtype=np.uint8), True, True
+    for frame in range(6):
+        plane = np.asarray(field[frame])
+        previous = None if frame == 0 else np.asarray(field[frame - 1])
+        sample = np.sort(rng.choice(H * W, size=4000, replace=False)).astype(np.int64)
+        shipped_ctx = base.contexts(plane, previous, mixer.run, sample)
+        replayed_ctx = base.contexts(plane, previous, replay, sample)
+        run_ok &= bool(np.array_equal(mixer.run, replay))
+        ctx_ok &= all(np.array_equal(shipped_ctx[name], replayed_ctx[name]) for name in base.LEVELS)
+        mixer.seen[:] = True
+        mixer.base[:] = 1
+        mixer.end_frame(plane, previous)
+        replay = (np.zeros((H, W), dtype=np.uint8) if frame == 0 else
+                  np.where(plane == previous, np.minimum(replay + 1, 7), 0).astype(np.uint8))
+    checks["run_state_replay"] = run_ok
+    checks["contexts"] = ctx_ok
     checks["all_passed"] = all(v is True for k, v in checks.items() if isinstance(v, bool))
     out.mkdir(parents=True, exist_ok=True)
     (out / "CASCADE_SELFTEST.json").write_text(json.dumps(checks, indent=2, sort_keys=True) + "\n")
