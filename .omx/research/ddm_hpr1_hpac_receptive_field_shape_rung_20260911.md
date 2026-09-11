@@ -51,17 +51,6 @@ and `frame_shift`/`frame_scale` (FiLM from the 8-dim frame embedding). Total sto
 3. **A shape rung is a receiver change in THREE places, not one, and the third is a silent-divergence
    hazard.** `cpr1/inflate.py` carries the constants; `runtime/f26_hpac_native.c` RE-IMPLEMENTS
    `conv_past` in C with the dilation-1 stencil baked into its source-coordinate arithmetic
-   (`source_row = global_row + kernel_row - 1`, lines ~448/455); and the two are selected at run time
-   by `F26_TOKEN_DECODER` (shipped default `python`, `native-hpac` opt-in). A rung that patched only
-   `inflate.py` would decode one field in the default mode and a DIFFERENT field in native mode — an
-   archive that is output-lossless on one decoder and wrong on the other, with nothing to announce it.
-   This arm's producer therefore moves the constant in both files or refuses on a non-unique anchor,
-   and records both before/after by sha. **The hazard is pre-existing and applies to any future
-   geometry rung on this object, not only to this one.**
-
-3. **A shape rung is a receiver change in THREE places, not one, and the third is a silent-divergence
-   hazard.** `cpr1/inflate.py` carries the constants; `runtime/f26_hpac_native.c` RE-IMPLEMENTS
-   `conv_past` in C with the dilation-1 stencil baked into its source-coordinate arithmetic
    (`source_row = global_row + kernel_row - 1`, ~lines 448/455); and the two are selected at run time
    by `F26_TOKEN_DECODER` (shipped default `python`, `native-hpac` opt-in). A rung that patched only
    `inflate.py` would decode one field in the default mode and a DIFFERENT field in native mode — an
