@@ -6,9 +6,11 @@ common contract: `.omx/tmp/codex_runs/_common_contract.md`.
 
 ## Current outcome
 
-**CLOSED at formulation scope. The exact pointer has not moved and this arm does
-not move it.** The FREE deterministic post-render boundary treatment family is
-measured NEGATIVE on both scored channels at every amplitude tested, and the
+**CLOSED at formulation scope, on the n600 verdict row. The exact pointer has not
+moved and this arm does not move it.** The FREE deterministic post-render boundary
+treatment family is measured NEGATIVE at n600 on both scored channels — the best
+of five modes is SDF at **ΔS +0.088367**, 4,418 bars on the wrong side — and at
+every amplitude tested, and the
 closure is double: the seg channel loses on collateral and the pose channel loses
 on a quadratic out-of-distribution tax that symmetric application does not cure.
 Wall-clock, which the charter's CORRECTION made the first gate, turns out NOT to
@@ -275,96 +277,73 @@ on seg alone they would have to be **186x** better than random, another order of
 magnitude, and they would still owe the quadratic pose tax on top. That gap, not
 an implementation defect, is what closes the family.
 
-## Fresh n600 treatment table
+## Fresh n600 treatment table — THE VERDICT
 
-The governed job `score_launch` (pid 10979, counter 1527, slot receipt
-`retained/SCORER_SLOT.json`) runs the frozen CPU scorer over all five modes in
-five-pair resumable chunks and writes `retained/RESULT.json` at the end. **At the
-time of writing it is at 90/600 pairs.** The rows below are the RUNNING AGGREGATE
-over those 90 pairs — a declared CONTIGUOUS PREFIX, so per the prefix-bias law it
-is SCOPE, not the verdict, and its pose column is biased HARD (pose prefixes
-measure 2.54–4.21x harder than the population). The verdict row is `RESULT.json`.
+`retained/RESULT.json`, written by the governed `score_launch` job (rc 0, 6,719 s,
+slot receipt `retained/SCORER_SLOT.json`): the frozen CPU scorer over **all 600
+pairs and all five modes**, five-pair resumable chunks, 120/120 complete.
+Axis `[macOS-CPU advisory]`, `score_claim=false`. The bar is ΔS < −2e-05.
 
-| Mode | seg errors | d_seg | d_pose | B | H | H/B | ΔS_seg | ΔS_pose | ΔS |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| baseline | 1,623 | 9.1722e-05 | 1.7265e-05 | 0 | 0 | — | +0.000000 | +0.000000 | **+0.000000** |
-| Guided | 6,907 | 3.9034e-04 | 8.4911e-03 | 370 | 5,654 | 15.28 | +0.029862 | +6.253779 | **+6.283641** |
-| SSAA | 2,616 | 1.4784e-04 | 7.8137e-04 | 99 | 1,092 | 11.03 | +0.005612 | +0.563922 | **+0.569533** |
-| SDF | 2,451 | 1.3852e-04 | 9.6638e-04 | 72 | 900 | 12.50 | +0.004679 | +0.700461 | **+0.705140** |
-| Guided→SSAA→SDF | 7,403 | 4.1837e-04 | 1.5824e-02 | 385 | 6,165 | 16.01 | +0.032665 | +11.665767 | **+11.698432** |
+| Mode | seg errors | d_seg | d_pose | B | H | W | H/B | **ΔS (exact)** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 12,196 | 1.03387e-04 | 4.58676e-06 | 0 | 0 | 0 | — | 0 |
+| Guided | 48,249 | 4.09012e-04 | 8.50614e-03 | 2,314 | 38,367 | 69 | 16.58 | **+0.31544278** |
+| SSAA | 19,108 | 1.61981e-04 | 8.98293e-04 | 626 | 7,538 | 25 | 12.04 | **+0.09386511** |
+| SDF | 17,336 | 1.46959e-04 | 8.24146e-04 | 447 | 5,587 | 20 | 12.50 | **+0.08836715** |
+| Guided→SSAA→SDF | 50,791 | 4.30561e-04 | 1.37977e-02 | 2,421 | 41,016 | 67 | 16.94 | **+0.39739742** |
 
-The bar is ΔS < −2e-05. The best mode is **+0.5695**, which is **28,477 bars on the
-wrong side**, and the composition is the worst row in the arm. No mode is within
-four orders of magnitude of the bar, and the ordering, the harm/benefit ratios and
-the pose domination all agree with the 24-pair seeded-RANDOM amplitude family, so
-the prefix is not carrying the result.
+**Every mode is positive. The best is SDF at +0.088367 — 4,418 bars on the wrong
+side of the bar — and the composition is the worst row in the arm, so there is no
+payable composition either.** The 110/600 prefix verdict held at n600 in sign,
+ordering, magnitude and harm/benefit ratio.
 
-**The fresh residual reproduction runs alongside it and reproduces the cached
-census with an independent frozen-CPU scorer.** At 90 pairs: 1,623 errors, of which
-**82.50%** have the stored token equal to GT (cached n600: 83.67%), **99.26%** sit
-within Chebyshev 1 of a token class edge (cached: 99.29%), and **96.00%** have the
-GT class present in the predicted 3x3 (cached: 94.70%). That is the charter's
-deliverable 1 falsifier passing on a fresh scorer, not an inherited argmax.
+**One number in the prefix tables above is corrected here.** Those tables priced
+pose with a local linearisation at the pointer's operating point
+(`5/sqrt(10·d_pose)` = 738). At these excursions the sqrt term is far from linear —
+`sqrt(10·8.506e-03)` = 0.2916 against `sqrt(10·4.587e-06)` = 0.006772 — so the
+linearisation OVERSTATES ΔS by about 7x. The exact column above is authoritative;
+the linearised columns remain useful only for reading the seg/pose split. The
+family is closed either way, by three to four orders of magnitude.
 
+**The baseline row is an exact instrument reproduction.** The fresh frozen-CPU
+scorer, run on the freshly re-rendered baseline, returns **12,196 errors,
+d_seg 1.03387e-04, 10,204 token-correct (83.67%), 12,110 within Chebyshev 1 of a
+token edge (99.29%), 11,550 with the GT class in the predicted 3x3 (94.70%)** —
+*identical in every count* to the cached n600 census the dead arm produced from the
+sj1-lineage argmax. That is the charter's deliverable 1 falsifier passing exactly,
+and it retires the cached census's own "fresh rescoring is still owed" caveat.
+Its d_pose 4.58676e-06 agrees with the pointer's contest-CUDA 4.59e-06 to three
+figures, and its 12,196 errors sit 7 below the pointer's 12,203 — the expected
+CPU/CUDA argmax drift on this axis, recorded rather than smoothed.
 
-## Where a pixel actuator IS affordable in pose — the spatial law
+## Retention certification
 
-The pose tax is not spatially uniform, and a successor should not price it as if it
-were. Applying the same guided tau = 8 band edit one token class at a time
-(5 seeded-random pairs, seed 11; baseline d_pose 5.1845e-06, 92 seg errors):
+`.omx/research/ddm_rbf1_20260911/RETENTION_CERTIFICATION_v1.json`. Custody root
+`/Volumes/VertigoDataTier/pact/ddm_rbf1/` holds **20,399,094,081 B**. All 240 chunk
+receipts are present, carrying **2,040 payload files, 2,040 recorded sha256, 2,040
+present on disk** — no measure-and-discard occurred anywhere in this arm. Chunk
+sha256 values are the ones `save_array` computed at write time inside each
+`RENDER.json`/`SCORE.json`; re-hashing 19 GiB would add nothing.
 
-| class band | mean edited px | Δd_pose | ΔS_pose | ΔS_seg | pose S per 1,000 px |
-|---|---:|---:|---:|---:|---:|
-| Road | 11,010 | 1.030e-03 | +0.760432 | +0.003662 | 0.0691 |
-| Lane | 4,654 | 5.987e-05 | +0.044186 | +0.003764 | **0.0095** |
-| Undrivable | 2,814 | 4.799e-04 | +0.354196 | +0.002035 | 0.1259 |
-| Movable | 1,092 | 4.997e-05 | +0.036881 | +0.000712 | 0.0338 |
-| MyCar | 2,634 | 1.483e-05 | +0.010944 | +0.000407 | **0.0042** |
+**Certified rebuildable: 20,381,606,074 B**, byte-exact, by two commands
+(`ddm_rbf1_boundary_probe.py render` then `... score`) whose determinism is frozen
+by `INPUTS.json` — probe and treatment module sha256, torch/numpy versions, host,
+seed, chunk size — and enforced by `prepare()`'s binding refusal and `save_array`'s
+refusal to overwrite differing content. Measured rebuild cost **11,119 s ≈ 3.1 h**.
+**Must keep: 8,606,302 B** — the pricing rows (wall-clock, not byte-reproducible on
+another host), the amplitude rows, the receipt JSONs and the serializer bundles.
+The per-chunk `RENDER.json`/`SCORE.json` files must also survive any reclaim: they
+are the sha records that make everything else reclaimable.
 
-**The pose tax per edited pixel varies 30x across class bands.** It concentrates in
-Road and Undrivable — precisely the ground plane and the horizon, the structures
-that carry the ego-motion geometry — and is 16–30x cheaper on the static ego hood
-(MyCar) and on Lane markings. PoseNet is not sensitive to the frame; it is
-sensitive to the geometry in it.
-
-**But ΔS_seg is positive in every band, including the cheap ones**, and the Lane
-band is the sharpest case in the whole arm: it carries 44% of the residual
-(Road↔Lane is 5,365 of 12,196 errors) and it is the second-cheapest band in pose,
-yet it shows the LARGEST seg harm of any band (+0.003764) from only 4,654 edited
-pixels. The spatial escape does not rescue the family. What it does is tell the
-next actuator where it may live: **pose is affordable only inside MyCar and Lane,
-and any successor must be seg-positive by construction, not merely pose-cheap.**
-Widen this 5-pair arm to a seeded RANDOM n≥120 before routing on it.
-Receipt: `ddm_rbf1_20260911/POSE_SPATIAL_v1.json`.
-
-## The counted extension is closed too, by the same arithmetic
-
-Rule 118 forbids a fitted scalar in FREE receiver code, but a fitted byte in the
-COUNTED archive costs only 25/37,545,489 = 6.66e-07 S, so "ship a selector that
-says where to treat" is the natural next move and deserves its price, not a
-hand-wave.
-
-- **An oracle per-pixel selector is nearly affordable and still does not pay.**
-  Naming 12,196 positions out of 2,287,200 token-edge pixels costs
-  `n·H(k/n)` = 109,640 bits = **13,705 B = 0.009126 S**, against a benefit CEILING
-  of **0.010339 S** (fixing every error with zero harm, i.e. the entire seg term).
-  The margin is 61 bars before any of the treatment's real behaviour is charged.
-- **The actuator, not the addressing, is what fails.** At tau = 8 on 24 pairs the
-  operator fixes **5.12%** of errors and harms **0.309%** of correct edge pixels.
-  Break-even at that fix rate needs a harm rate of **0.0286%** — the measured rate
-  is **10.8x too high**. A selector cannot lower the harm rate; it can only stop
-  treating, which forfeits the benefit in the same proportion.
-- **And the pose tax survives selection.** Treating even the 12,196 scored-plane
-  error positions means editing roughly 61,000 camera pixels (6% of the frame, at
-  the 5:1 camera-to-token expansion), which by the measured law costs
-  `0.0024·6^1.16·8²` ≈ **1.3 S** in pose alone.
-- A coarse **per-pair on/off selector** is almost free (600 bits = 75 B =
-  4.99e-05 S), but it has nothing to select: the harm/benefit ratio is 9.9–20.0
-  essentially uniformly, so there is no pair in which treating is net positive.
-
-So the closure is not "we could not find where to treat." It is that the actuator
-is simultaneously too weak on seg (5% fix rate) and too expensive on pose
-(quadratic OOD tax) for any addressing scheme to rescue.
+**Not retained, stated plainly:** this arm never materialised a raster/PNG tree and
+never wrote a standalone n600 `0.raw`-equivalent per treatment (1.83 GB per full
+n600 single-frame raster set, 3.66 GB per pair set). Those bytes were never
+created, so none were discarded — each treated frame lives inside its chunk's uint8
+camera pair array at the same fidelity. **They stay unretained.** No blocker:
+every certify-or-block field is present for every rebuildable class. **This arm
+deletes nothing**; the reclaim is `ddm_sr5`'s to make, and the recommended order is
+the 19.7 GB of `*_camera_u8.npy` plus `native_f32.npy` first, then the 590 MB of
+`*_argmax.npy` only once no successor has a per-cell question open.
 
 ## Equations leg
 
@@ -417,11 +396,10 @@ idea is represented as completed work.
 ## NEXT_IF_RESUMED
 
 - **FIRED and COMPLETE** — the governed n600 five-mode render: `retained/RENDER_COMPLETE.json`, 120/120 chunks, fresh baseline byte-identical to the shipped public output on all 600 pairs.
-- **FIRED** — owner ddm_rbf1; consumer `retained/RESULT.json`; the fleet scorer slot was self-assigned on resume under the operator's full-authority standing GO (`retained/SCORER_SLOT.json`, with the recorded preflight). Launch receipts: `/Volumes/VertigoDataTier/pact/ddm_rbf1/score_launch/`, done receipt `ddm_rbf1_score`. Resume with
-  `.venv/bin/python experiments/ddm_rbf1_boundary_probe.py score --resume-from /Volumes/VertigoDataTier/pact/ddm_rbf1/retained --slot-receipt /Volumes/VertigoDataTier/pact/ddm_rbf1/retained/SCORER_SLOT.json`
-  (five-pair resumable chunks; a restart re-uses every completed `chunks/*/SCORE.json`).
+- **FIRED and COMPLETE** — the n600 five-mode verdict row: `retained/RESULT.json`, rc 0, 6,719 s, 120/120 chunks, slot receipt `retained/SCORER_SLOT.json` with its recorded preflight. Launch receipts `/Volumes/VertigoDataTier/pact/ddm_rbf1/score_launch/`, done receipt `ddm_rbf1_score`. No mode crosses the bar; no candidate exists.
 - **FIRED and COMPLETE** — the amplitude-family falsifier: `retained/amplitude/AMPLITUDE_guided_seed1_n24.json`.
-- **CLOSED, no fire order** — the conditional candidate-intent packet. Its trigger was an n600 composition below ΔS −2e-5. Every measured mode and every measured amplitude is POSITIVE by 10^2 to 10^5 bars, and the family's infimum over amplitude is 0. No receiver delta, candidate tree, twin encode, parse-back or intent packet is owed, and none was produced. Nothing was fired at Modal.
+- **CLOSED, no fire order** — the conditional candidate-intent packet. Its trigger was an n600 composition below ΔS −2e-5. Every n600 mode and every measured amplitude is POSITIVE by 10^3 to 10^4 bars, and the family's infimum over amplitude is 0. No receiver delta, candidate tree, twin encode, parse-back or intent packet is owed, and none was produced. Nothing was fired at Modal.
+- **FIRED and COMPLETE** — retention certification for the 20.40 GB custody root: `.omx/research/ddm_rbf1_20260911/RETENTION_CERTIFICATION_v1.json`. Nothing deleted by this arm.
 - **FIRED and COMPLETE** — landing: the dead arm's five stranded files (rc 17, Git object write denied) are on main unchanged, alongside the two new runners and their tests.
 
 ## LIVE-HYPOTHESES
@@ -432,7 +410,7 @@ idea is represented as completed work.
 
 ## DEAD-ENDS
 
-- **The free post-render boundary treatment family is CLOSED at formulation scope on the move-44 vehicle.** verdict_scope: formulation — deterministic post-render operators on the token-edge band of the rendered frames, free receiver code, no counted side information. Closed on TWO independent channels: seg (ΔS_seg > 0 at every operator and every amplitude; harm/benefit 3–19 against, where breaking even needs 186x better-than-random selectivity) and pose (a quadratic, direction-blind, symmetry-proof out-of-distribution tax of ≈5.6e-03·tau² S). Reactivation criteria: an operator that measures harm/benefit below 1 on a seeded RANDOM n≥120 sample AND leaves d_pose within 3e-08 of the shipped render, or a vehicle whose d_pose operating point is more than 10x higher.
+- **The free post-render boundary treatment family is CLOSED at formulation scope on the move-44 vehicle.** verdict_scope: formulation — deterministic post-render operators on the token-edge band of the rendered frames, free receiver code, no counted side information. Closed on TWO independent channels at n600: seg (ΔS_seg > 0 for all five modes and at every amplitude; harm/benefit 12.0–16.9 at n600, where breaking even needs 186x better-than-random selectivity) and pose (a quadratic, direction-blind, symmetry-proof out-of-distribution tax of ≈6.6e-03·tau² S). n600 exact ΔS: SDF +0.088367, SSAA +0.093865, guided +0.315443, composition +0.397397. Reactivation criteria: an operator that measures harm/benefit below 1 on a seeded RANDOM n≥120 sample AND leaves d_pose within 3e-08 of the shipped render, or a vehicle whose d_pose operating point is more than 10x higher.
 - **The charter's "anti-aliasing consistent with the scorer's resize" rationale is falsified**, not merely unmeasured: the composite Down∘Up is centroid-preserving except at the border, and the error rate per edge pixel does not track its position-dependent blur (Pearson +0.008 / +0.004).
 - **The "treat both frames to protect pose" rescue is falsified** — it recovers 1.2% of the tax.
 - **Wall-clock is NOT what closes this family.** SSAA at a projected 14.9 s and SDF at 21.3 s fit inside the 27.581 s strict T4 slack once evaluated at the band. Any successor that cites wall-clock as the reason this family died would be repeating a premise this arm measured false.

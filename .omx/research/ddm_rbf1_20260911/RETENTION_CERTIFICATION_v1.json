@@ -1,0 +1,189 @@
+{
+  "always_keep_the_payload": "Every payload this arm materialised is on disk with a recorded sha256. No measure-and-discard occurred: the render and score stages both persist bytes before recording any scalar, and all 240 chunk receipts are present with 2,040 payload files, 2,040 recorded sha256, 2,040 present on disk.",
+  "authority": "ddm_rbf1 certification for a later reclaim arm (ddm_sr5). This arm DELETES NOTHING. Vertigo is at its 40 GiB reserve; the rows below name which payloads are certify-or-block CLEAN to reclaim and what it costs to rebuild them.",
+  "axis": "[macOS-CPU advisory]",
+  "custody_bytes_total": 20399094081,
+  "custody_root": "/Volumes/VertigoDataTier/pact/ddm_rbf1",
+  "evidence_files_fresh_hashed": [
+    {
+      "bytes": 29133,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/RESULT.json",
+      "sha256": "c945aa2b1824929fa491c5021e2656c1315f0118d9cea3a0647c701fdf30aba2"
+    },
+    {
+      "bytes": 25683,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/RENDER_COMPLETE.json",
+      "sha256": "eba67bc8ff20e1d8c0694e01ab5fafe8cd27d10904068e8dfa64947d0e9b6776"
+    },
+    {
+      "bytes": 30348,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/INPUTS.json",
+      "sha256": "308f73073298f096e0401f436e739439d4f9b51b071abf2795aa54e9463715db"
+    },
+    {
+      "bytes": 1318,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/SCORER_SLOT.json",
+      "sha256": "de435aed8f4d00143a44377054cfc7cffbc01b36a1b1b8dd6415f57fc20dcbde"
+    },
+    {
+      "bytes": 3425,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/CACHED_RESIDUAL.json",
+      "sha256": "f3b2be23f3601af5fad1dbec9c907e010b06ebca72483e1cebefd1413259571e"
+    },
+    {
+      "bytes": 487968,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/cached_residual/cells_n600.npy",
+      "sha256": "9849a7d2a660ce8f76b8800b661b07dc1c1e246b4a6ee527b063893507fa6a4c"
+    },
+    {
+      "bytes": 3693,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/amplitude/AMPLITUDE_guided_seed1_n24.json",
+      "sha256": "226eec9cc8f29e1887d8d343550ca9335f5f42c7751c68e4d02e6a233eb1ae31"
+    },
+    {
+      "bytes": 4243,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/pricing/BAND_LOCAL_PRICE_v1.json",
+      "sha256": "a651c77a880d58de0f14006da08d9d2b1a55bea85031ffb0b2f380786979e938"
+    },
+    {
+      "bytes": 4951,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/pricing/BAND_LOCAL_PRICE_v2.json",
+      "sha256": "3152f089f5fdc5f4dfbdc6bfa83e8aabe6e739810065fca8086c6b86237a55fd"
+    },
+    {
+      "bytes": 2587,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/pricing/WALLCLOCK_TABLE_v1.json",
+      "sha256": "f87cdd56d98dfc91c994a6338c691dc1fb75969fbb18eeb08c14d893715f62c7"
+    },
+    {
+      "bytes": 104047,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/RESEARCH_RECEIVERS.json",
+      "sha256": "be94561a0f1eec9b92f346afeac3f2493bd240b92a17a02fc2f0bd4f9795aa45"
+    },
+    {
+      "bytes": 782,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/composition_receiver.patch",
+      "sha256": "3bc29de8db9b02d4cae64eeba66062a9fcb37a0de8470326cdd66ea854e3c10c"
+    },
+    {
+      "bytes": 772,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/guided_receiver.patch",
+      "sha256": "415445d16d6ac20dd689a0fde045bafcf5aec9fba2d44c40433593ee4053c04e"
+    },
+    {
+      "bytes": 766,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/sdf_receiver.patch",
+      "sha256": "7138af4c6746c81a8dcb07d9b99bb11eb3e39d7922c613cd0e8295006380563e"
+    },
+    {
+      "bytes": 768,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/ssaa_receiver.patch",
+      "sha256": "afb4cef3643506cd5c17b17310a322d4fa5e17ef027f6af5eae602cb56ce8fb9"
+    }
+  ],
+  "generated_utc": "2026-09-11T16:12:18Z",
+  "not_retained": "This arm never materialised a separate raster/PNG tree, and never wrote a standalone n600 0.raw-equivalent per treatment (1.83 GB per full n600 single-frame raster set, 3.66 GB per pair set). Those bytes were never created, so nothing was discarded: each treated frame is retained inside its chunk's uint8 camera pair array instead, which is the same information at the same fidelity. They stay unretained.",
+  "payload_classes": [
+    {
+      "bytes": 18312124800,
+      "certified_rebuildable": true,
+      "class": "chunks/*/{baseline,guided,ssaa,sdf,composition}_camera_u8.npy",
+      "files": 600,
+      "present_on_disk": 600,
+      "rebuild_command": ".venv/bin/python experiments/ddm_rbf1_boundary_probe.py render --resume-from /Volumes/VertigoDataTier/pact/ddm_rbf1/retained",
+      "rebuild_cost_s": 4400,
+      "rebuild_determinism": "byte-exact. The render replays the pinned move-44 archive through a read-only copy of the shipped runtime; INPUTS.json freezes the probe and treatment module sha256, torch/numpy versions, host, seed and chunk size, and prepare() REFUSES if that binding changed. save_array refuses to overwrite differing content.",
+      "science_dependency": "NONE remaining. The verdict this arm owed is RESULT.json; these bytes were its input and are not needed again unless a successor re-scores a NEW mode.",
+      "sha256_recorded": 600,
+      "sha_record": "chunks/*/RENDER.json artifacts"
+    },
+    {
+      "bytes": 1415592960,
+      "certified_rebuildable": true,
+      "class": "chunks/*/native_f32.npy",
+      "files": 120,
+      "present_on_disk": 120,
+      "rebuild_command": "same render command",
+      "rebuild_cost_s": 0,
+      "rebuild_determinism": "byte-exact, same binding",
+      "science_dependency": "NONE. Retained as the pre-resize fp32 master so a successor could treat at native resolution without re-running the renderer; that variant was not built and is not queued.",
+      "sha256_recorded": 120,
+      "sha_record": "chunks/*/RENDER.json artifacts"
+    },
+    {
+      "bytes": 590504016,
+      "certified_rebuildable": true,
+      "class": "chunks/*/{mode}_argmax.npy + {mode}_pose.npy + residual_cells_i32.npy",
+      "files": 1320,
+      "present_on_disk": 1320,
+      "rebuild_command": ".venv/bin/python experiments/ddm_rbf1_boundary_probe.py score --resume-from /Volumes/VertigoDataTier/pact/ddm_rbf1/retained --slot-receipt /Volumes/VertigoDataTier/pact/ddm_rbf1/retained/SCORER_SLOT.json",
+      "rebuild_cost_s": 6719,
+      "rebuild_determinism": "byte-exact given the renders (frozen CPU scorer, torch.inference_mode, eval-mode BatchNorm running stats, no RNG). REQUIRES the camera_u8 payloads above, so reclaiming both classes makes the rebuild a 2-stage 3.1 h job.",
+      "science_dependency": "WEAK. Every aggregate is already in RESULT.json; the per-cell arrays only matter to a successor that wants a NEW cut of the residual (for example per-class or per-row benefit/harm).",
+      "sha256_recorded": 1320,
+      "sha_record": "chunks/*/SCORE.json artifacts"
+    },
+    {
+      "bytes": 57297872,
+      "certified_rebuildable": true,
+      "class": "retained/unit_controls/",
+      "files": null,
+      "rebuild_command": ".venv/bin/python -m pytest experiments/tests/test_ddm_rbf1_boundary_treatments.py",
+      "rebuild_cost_s": 120,
+      "rebuild_determinism": "byte-exact (the test asserts sha equality of a repeat)",
+      "science_dependency": "NONE"
+    },
+    {
+      "bytes": 4069268,
+      "certified_rebuildable": true,
+      "class": "retained/research_receiver_variants/",
+      "files": null,
+      "rebuild_command": "bash experiments/ddm_rbf1_stage_receivers.sh",
+      "rebuild_cost_s": 10,
+      "rebuild_determinism": "byte-exact",
+      "science_dependency": "NONE. These are unmeasured research trees; the family is closed, so no candidate will be built from them."
+    },
+    {
+      "bytes": 1009765,
+      "certified_rebuildable": true,
+      "class": "retained/receiver_readonly/",
+      "files": null,
+      "rebuild_command": ".venv/bin/python experiments/ddm_rbf1_boundary_probe.py prepare",
+      "rebuild_cost_s": 5,
+      "rebuild_determinism": "byte-exact copy of /Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+      "science_dependency": "NONE, but it is only rebuildable while the rlc5 move-44 runtime tree survives. Reclaim it AFTER that tree, never before."
+    },
+    {
+      "bytes": 1007393,
+      "certified_rebuildable": true,
+      "class": "retained/cached_residual/",
+      "files": null,
+      "rebuild_command": ".venv/bin/python experiments/ddm_rbf1_cached_residual.py --resume-from /Volumes/VertigoDataTier/pact/ddm_rbf1/retained",
+      "rebuild_cost_s": 600,
+      "rebuild_determinism": "byte-exact, but depends on the pinned sj1 argmax at /Volumes/VertigoDataTier/pact/ddm_sj1_pass6/seg_final/argmax_n600.npy",
+      "science_dependency": "SUPERSEDED. The fresh n600 score reproduced this census EXACTLY (12,196 errors, 10,204 token-correct, 12,110 within one pixel), so RESULT.json now carries the same numbers from an independent scorer."
+    },
+    {
+      "bytes": 8606302,
+      "certified_rebuildable": false,
+      "class": "retained/pricing/ + retained/amplitude/ + top-level receipt JSONs + receipts/ bundles",
+      "files": null,
+      "rebuild_command": "pricing rows are WALL-CLOCK measurements and are NOT byte-reproducible on a different host or load; amplitude rows are byte-reproducible from the chunks",
+      "science_dependency": "THESE ARE THE EVIDENCE. Never reclaim: they are the memo's receipts and are a few tens of MB."
+    }
+  ],
+  "reclaim_summary": {
+    "blocker": "NONE. Every certify-or-block field is present for the rebuildable classes: original path, bytes, sha256, the exact command, the frozen binding that makes the rebuild byte-exact, and the measured rebuild cost.",
+    "certified_rebuildable_bytes": 20381606074,
+    "must_keep_bytes": 8606302,
+    "recommended_order": [
+      "chunks/*/*_camera_u8.npy and native_f32.npy together (19.7 GB, the whole win)",
+      "then chunks/*/*_argmax.npy (590 MB) only if a successor has no per-cell question open",
+      "keep every *.json receipt, the amplitude and pricing rows, and the chunk RENDER.json/SCORE.json files: they are the sha records that make the rest reclaimable"
+    ],
+    "total_rebuild_cost_s": 11119
+  },
+  "schema": "ddm_rbf1_retention_certification.v1",
+  "score_claim": false,
+  "sha_provenance": "Chunk payload sha256 values are NOT re-hashed here: each was computed by experiments/ddm_rbf1_boundary_probe.py::save_array at write time and is recorded inside the chunk's own RENDER.json / SCORE.json, which is the certify-or-block record. Re-hashing 19 GiB would add no information and cost an hour of a contended host."
+}
