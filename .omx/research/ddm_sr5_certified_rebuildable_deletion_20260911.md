@@ -346,4 +346,50 @@ science.
 - A whole-tree rebuild certificate for pk4, pfs1, qs1 or pr135 still does not exist. sr4's refusal
   stands on its own terms. Nothing here supersedes it.
 
+
+## ADDENDUM — second unit, after Vertigo fell back under its reserve
+
+Vertigo returned to **35.317 GiB** within the hour. Not from my work: a live arm's two full-video pose
+diagnostics (7.1 GiB under `ddm_hpr1/diagnostics/`) landed there, and that directory is live — hpr1 is
+emitting the move-48 intent and will certify-reclaim its own duplicate. I did not touch it. The guard
+was by then refusing a 3 KB copy, measured by `ddm_tmx1` with three instruments.
+
+**So I spent the class I had already certified and exercised but deliberately left whole: rbf1's
+render payloads.** `tools/sr5_certify_delete_command_rebuildable.py`, unchanged and already committed,
+verified **107 rebuild inputs** present and sha-matched once, then required every chunk's binding block
+to be byte-identical to that verified set before touching any file in it.
+
+| | |
+|---|---:|
+| manifests walked | 95 of 120 |
+| artifacts certified and deleted | **596** |
+| bytes | **16,317,683,968 = 15.196 GiB** |
+| refused | **0** |
+| Vertigo | 35.317 → **50.515 GiB** |
+
+It stopped itself at the target with **124 of 720** artifacts still in place. The keep-set is intact and
+verified after the fact: all six top-level receipt JSONs, `pricing/` (3) and `amplitude/` (1),
+**120/120 `RENDER.json` and 120/120 `SCORE.json`** — the sha records that make the rest reclaimable —
+the 1,320 argmax/pose/residual files rbf1's own order puts last, and `RENDER_COMPLETE.json` still at
+its certified `eba67bc8ff20…`.
+
+Every cert row carries the restore caveat this arm measured earlier: the recorded rebuild command
+aborts on the first deleted chunk unless that chunk's `RENDER.json` is moved aside first. A certificate
+that promises a restore the command cannot perform is not a certificate.
+
+**mxo3 was not taken, and the refusal was exercised rather than asserted.** Its condition — "only if
+Vertigo is still below 45 GiB" — was never met (50.515 GiB). Independently, all three sr5 producers
+refuse the path through their `/ddm_mxo2` guard; I called `assert_not_protected` on a real frame path
+in each and recorded the three refusals verbatim. Lifting that guard takes a deliberate reviewed code
+change, and I did not work around it. Record:
+`.omx/research/ddm_sr5_20260911/MXO3_STRUCTURAL_REFUSAL.json`.
+
+**Running totals for sr5: 2,280 files deleted, 46,647,976,848 B = 43.443 GiB, zero refusals**, plus
+3.411 GiB released losslessly by dedup and 5.84 GiB returned to APDataStore by relocation.
+
+A separate deliverable from this unit, read-only and changing nothing:
+`.omx/research/ddm_sr5_reserve_derivation_20260911.md` — the 40 GiB SSD reserve is a boot-volume swap
+floor copied onto two external SSDs that host no swap. Derived from what it must actually cover, the
+figure is ~21 GiB, ~24 GiB with margin.
+
 <!-- # FORMALIZATION_PENDING: storage custody arm; no measured scientific row and no canonical equation governs filesystem reclaim -->

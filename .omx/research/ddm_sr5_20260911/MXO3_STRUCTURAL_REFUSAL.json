@@ -1,0 +1,16 @@
+{
+ "authorization": "MAIN 2026-09-11: take it only if Vertigo is still below 45 GiB after rbf1",
+ "class": "surface/frames/frame_*.npz (600 files, 7.691 GiB)",
+ "condition_measurement": "Vertigo reached 50.515 GiB after the rbf1 render class, so the 45 GiB condition was never met and the class was not needed.",
+ "condition_met": false,
+ "guard_exercised_not_asserted": {
+  "tools/sr5_certify_delete_command_rebuildable.py": "REFUSED: protected path refused: /Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker_v3/surface/frames/frame_0000.npz matches '/ddm_mxo2'",
+  "tools/sr5_certify_delete_derived.py": "REFUSED: protected path refused: /Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker_v3/surface/frames/frame_0000.npz matches '/ddm_mxo2'",
+  "tools/sr5_certify_hardlink_dedup.py": "REFUSED: protected path refused: /Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker_v3/surface/frames/frame_0000.npz matches '/ddm_mxo2'"
+ },
+ "schema": "ddm_sr5_structural_refusal.v1",
+ "score_claim": false,
+ "store": "/Volumes/VertigoDataTier/pact/ddm_mxo2_low_rank_stacker_v3",
+ "verdict": "NOT_TAKEN: the condition was unmet AND all three sr5 producers refuse the path structurally through their /ddm_mxo2 guard. The guard was EXERCISED here, not assumed. Lifting it needs a deliberate reviewed code change; sr5 did not work around it.",
+ "written_at_utc": "2026-09-11T22:26:28.295615Z"
+}

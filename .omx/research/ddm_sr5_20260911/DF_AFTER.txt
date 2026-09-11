@@ -7,3 +7,13 @@ Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  M
 
 /Volumes/VertigoDataTier free = 61.018 GiB = 65.52 GB
 /Volumes/APDataStore free = 51.135 GiB = 54.91 GB
+
+# ---- SECOND UNIT (after Vertigo fell back under its reserve from a live arm's writes) ----
+# before: VertigoDataTier 35.317 GiB (37.92 GB) / APDataStore 51.018 GiB (54.78 GB)
+# after:  see below
+Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on
+/dev/disk5s1  1953309744 1900047724  52969204    98% 1671314 529692040    0%   /Volumes/VertigoDataTier
+/dev/disk6s1  1953450624 1899954432  53496192    98%       1         0  100%   /Volumes/APDataStore
+
+/Volumes/VertigoDataTier free = 50.515 GiB = 54.24 GB
+/Volumes/APDataStore free = 51.018 GiB = 54.78 GB
