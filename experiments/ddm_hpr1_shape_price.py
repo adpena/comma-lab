@@ -59,12 +59,32 @@ ROOT = STORE_ROOTS["vertigo"]
 PROMOTED45 = Path("/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime")
 POINTER45_SHA = "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
 POINTER45_BYTES = 180_246
+#: The move-47 promoted tree: this arm's own retrain control, now sealed. A treatment that
+#: composes ON TOP of the shipped prior reads its body out of THIS archive, so the base is
+#: named by the live pointer rather than by a constant -- the pointer moved twice under this
+#: arm already and each time a hardcoded sha went stale the moment it did.
+PROMOTED47 = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime")
+
+
+def live_pointer() -> dict:
+    """The CURRENT frontier pointer, read at call time, never a constant."""
+    document = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
+    return document["our_local_frontier_contest_cuda"]
 FIELD = Path("/Volumes/APDataStore/pact/ddm_hpr1/inputs/field.u8")
 FIELD_SHA = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
 #: Free-space floor, matched to the 40 GiB fail-closed reserve the sister HPAC
 #: producers hold.  Never lowered: a refusal here is the guard working.
 RESERVE_BYTES = 40 << 30
-TREATMENTS = ("control", "retrain", "past_dil2", "past_dil3", "cone_dil2", "cone_dil3")
+TREATMENTS = (
+    "control", "retrain", "past_dil2", "past_dil3", "cone_dil2", "cone_dil3",
+    # Composition rows: ntb2's even-rounding of the frame embedding, re-applied ON TOP of
+    # the retrained prior that move 47 ships. Base = move 47, not move 45.
+    "retrain_frame_even", "retrain_frame_quad",
+)
+#: Treatments whose base is the move-47 promoted tree rather than move 45's.
+ON_MOVE47 = ("retrain_frame_even", "retrain_frame_quad")
+#: The rounding step each composition row applies to `frame_embed.weight`.
+FRAME_STEP = {"retrain_frame_even": 2, "retrain_frame_quad": 4}
 
 
 class PriceError(RuntimeError):
@@ -115,7 +135,8 @@ def build_geometry(runtime: Path, work: Path) -> dict:
 #: change, so if it wins it takes the normal seal path -- which is why it must be priced
 #: before any shape rung is proposed as the candidate.
 TREATMENT_PAST_DILATION = {
-    "control": 1, "retrain": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1
+    "control": 1, "retrain": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1,
+    "retrain_frame_even": 1, "retrain_frame_quad": 1,
 }
 #: conv_a's spacing.  The receiver reaches conv_a's taps through geometry-general code in
 #: BOTH the optimized torch path (``hpac_inference._conv_a_features`` builds its gather
@@ -123,7 +144,8 @@ TREATMENT_PAST_DILATION = {
 #: (``f26_hpac_native.c`` reads ``a_offsets`` off the module), so this axis costs ONE
 #: receiver constant and nothing in C.
 TREATMENT_CONE_DILATION = {
-    "control": 1, "retrain": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3
+    "control": 1, "retrain": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3,
+    "retrain_frame_even": 1, "retrain_frame_quad": 1,
 }
 
 
@@ -155,7 +177,7 @@ def assert_layout_held(body: bytes, shipped_body: bytes, counts: list[int]) -> d
     }
 
 
-def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path | None) -> bytes:
+def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path | None, renderer=None) -> bytes:
     """Return the IHS1 body this treatment ships.
 
     ``control`` returns the shipped bytes unchanged, which is what makes the archive
@@ -165,6 +187,49 @@ def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path |
     """
     if tag == "control":
         return shipped_body
+    if tag in ON_MOVE47:
+        # ntb2's frame_even, re-applied on top of whatever prior the base archive ships.
+        # `shipped_body` here IS the move-47 body, i.e. the retrained prior, so this
+        # composes rather than re-does: the rounding is a value edit on one tail field and
+        # touches nothing else.
+        import numpy as _np
+        from runtime import ihs2 as _ihs2
+        from runtime import rc2_hpac_semistatic_mixing as _rc2
+
+        step = FRAME_STEP[tag]
+        layout = _ihs2.layout_from_runtime(renderer)
+        counts = list(layout.row_counts)
+        rows, depths = _rc2.unpack_rows(shipped_body, counts)
+        if _np.any((depths < 0) | (depths > 15)):
+            raise PriceError("IHS1 depth is outside the counted nibble domain")
+        depths = depths.astype(_np.uint8)
+        _, _, tail, _ = _rc2.split_ihs1(shipped_body, counts)
+        frame = layout.frame_field
+        if layout.tail_fields[0].name != frame.name:
+            raise PriceError("frame embedding tail offset changed")
+        values = _np.frombuffer(tail[: frame.byte_count], dtype=_np.int8).astype(_np.int16)
+        limit = 128 - (128 % step)
+        coarse = _np.clip(_np.rint(values / step) * step, -128, limit - step).astype(_np.int8)
+        changed = int(_np.count_nonzero(values != coarse))
+        tail = coarse.tobytes() + tail[frame.byte_count :]
+        packed_depths = _np.zeros((len(depths) + 1) // 2, dtype=_np.uint8)
+        packed_depths[:] = depths[::2]
+        packed_depths[: len(depths) // 2] |= depths[1::2] << 4
+        body = b"IHS1" + packed_depths.tobytes() + _rc2.pack_rows(rows, depths) + tail
+        record(
+            work / "COMPOSITION.json",
+            {
+                "tag": tag,
+                "step": step,
+                "field": frame.name,
+                "values": int(values.size),
+                "changed": changed,
+                "quantization": f"nearest multiple of {step}; ties to even",
+                "base": "the move-47 promoted archive's own IHS1 body (the retrained prior)",
+                "score_claim": False,
+            },
+        )
+        return body
     if checkpoint is None:
         raise PriceError(f"treatment {tag} requires --checkpoint")
     from experiments import ddm_rx2_mc36_identity_race as rx2
@@ -282,10 +347,18 @@ def prepare(tag: str, checkpoint: Path | None = None):
     import brotli
     import torch
 
-    pointer = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
-    live = pointer["our_local_frontier_contest_cuda"]["archive_sha256"]
-    if live != POINTER45_SHA:
-        raise PriceError(f"POINTER_MOVED: live {live} is not the move-45 base this rail prices")
+    live_row = live_pointer()
+    live = live_row["archive_sha256"]
+    on_47 = tag in ON_MOVE47
+    base_tree = PROMOTED47 if on_47 else PROMOTED45
+    base_sha = fact(base_tree / "archive.zip")["sha256"]
+    if on_47:
+        # A composition row prices against the LIVE pointer, so its base must BE the live
+        # pointer; a move underneath refuses rather than silently pricing a stale base.
+        if base_sha != live:
+            raise PriceError(f"POINTER_MOVED: base {base_sha} is not the live pointer {live}")
+    elif base_sha != POINTER45_SHA:
+        raise PriceError(f"base tree {base_sha} is not the move-45 tree this rail priced")
     if fact(FIELD)["sha256"] != FIELD_SHA:
         raise PriceError("field sha mismatch")
     work = ROOT / tag
@@ -296,16 +369,16 @@ def prepare(tag: str, checkpoint: Path | None = None):
     # by naming them: a resumed copy keeps what is on disk and records its sha.
     patched_names = {"cpr1/inflate.py", "runtime/f26_hpac_native.c"}
     sources = {}
-    for src in sorted(PROMOTED45.rglob("*")):
+    for src in sorted(base_tree.rglob("*")):
         if src.is_file() and "__pycache__" not in src.parts and src.suffix != ".pyc" and not src.name.startswith("._"):
-            destination = runtime / src.relative_to(PROMOTED45)
+            destination = runtime / src.relative_to(base_tree)
             relative = str(destination.relative_to(runtime))
             if destination.exists() and relative in patched_names:
                 sources[relative] = fact(destination)
                 continue
             sources[relative] = retain(destination, src.read_bytes())
-    if sources["archive.zip"]["sha256"] != POINTER45_SHA:
-        raise PriceError("copied archive is not the move-45 archive")
+    if sources["archive.zip"]["sha256"] != base_sha:
+        raise PriceError("copied archive is not the base archive")
     dilation = TREATMENT_PAST_DILATION[tag]
     cone = TREATMENT_CONE_DILATION[tag]
     receiver_patch = None if dilation == 1 else patch_receiver_dilation(runtime, dilation)
@@ -318,7 +391,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
     layout = ihs2.layout_from_runtime(renderer)
     counts = list(layout.row_counts)
     shipped_body = rx.materialize_ihs1(parts.hpac_blob, renderer)
-    body = treatment_body(tag, shipped_body, work, checkpoint)
+    body = treatment_body(tag, shipped_body, work, checkpoint, renderer)
     layout_held = assert_layout_held(body, shipped_body, counts)
     retain(work / "retained/hpac.ihs1", body)
     if (body == shipped_body) != (tag == "control"):
@@ -361,7 +434,9 @@ def prepare(tag: str, checkpoint: Path | None = None):
             "receiver_change": receiver_patch is not None or cone_patch is not None,
             "checkpoint": None if checkpoint is None else fact(checkpoint),
             "base_archive": sources["archive.zip"],
-            "base_archive_expected": {"sha256": POINTER45_SHA, "bytes": POINTER45_BYTES},
+            "base_archive_expected": {"sha256": base_sha, "bytes": fact(base_tree / "archive.zip")["bytes"]},
+            "base_tree": str(base_tree),
+            "live_pointer": {"archive_sha256": live, "score": live_row.get("score")},
             "source_files": sources,
             "field": fact(FIELD),
             "producer": fact(Path(__file__)),
@@ -503,7 +578,7 @@ def encode(tag: str, checkpoint: Path | None = None) -> dict:
         archives.append(fact(archive))
     if archives[0]["sha256"] != archives[1]["sha256"]:
         raise PriceError("tail/archive twins differ")
-    if tag == "control" and archives[0]["sha256"] != POINTER45_SHA:
+    if tag == "control" and archives[0]["sha256"] != binding["base_archive_expected"]["sha256"]:
         raise PriceError("LIVE_LOOP_CONTROL_FAILED: no treatment prices are admissible")
     return record(
         work / "PRICE.json",
@@ -516,7 +591,7 @@ def encode(tag: str, checkpoint: Path | None = None) -> dict:
             "shipped_hpac_section_bytes": len(member["hpac"]),
             "token_stream_bytes": len(raw),
             "shipped_token_stream_bytes": len(member["tail"]) - 96 - 4 - len(bytes(parts.tc1_weights)),
-            "delta_bytes_vs_move45": archives[0]["bytes"] - POINTER45_BYTES,
+            "delta_bytes_vs_base": archives[0]["bytes"] - binding["base_archive_expected"]["bytes"],
             "decoded_field_sha256": field_sha,
             "output_lossless": field_sha == FIELD_SHA,
             "public_decode_verified": False,
