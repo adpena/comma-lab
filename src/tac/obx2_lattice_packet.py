@@ -54,7 +54,15 @@ CODEC_NAMES = {value: key for key, value in CODEC_IDS.items()}
 LATTICE_MAGIC = b"OBX2LAT1"
 LATTICE_VERSION = 1
 SUPPORTED_BITS = (4, 8, 16)
-GATE_KINDS = {0: "none", 1: "interface_softgate"}
+# 0 no gate; 1 the correction is multiplied by the interface gate (edge-local
+# only); 2 the head emits TWO corrections and blends them with the gate, so the
+# object can put capacity at class interfaces AND away from them.  Kind 2 exists
+# because the measured binding term is Pose and Pose damage is NOT edge-local:
+# uniform noise applied only OUTSIDE the argmax boundary band still drives
+# d_pose to 2.82 on a 4-pair smoke, so a purely edge-gated correction cannot
+# reach the term that binds.
+GATE_KINDS = {0: "none", 1: "interface_softgate", 2: "interface_blend"}
+GATED_KINDS = (1, 2)
 QUANTIZER_KINDS = {0: "symmetric_uniform_per_level"}
 ENTROPY_MODELS = {0: "section_codec_race"}
 
@@ -137,7 +145,7 @@ def fusion_parameter_order(spec: LatticeSpec) -> tuple[str, ...]:
     """Serialization order of the counted fusion parameters for this gate kind."""
 
     base = ("hidden_w", "hidden_b", "out_w", "out_b")
-    return (*base, "gate_tau") if spec.gate_kind == 1 else base
+    return (*base, "gate_tau") if spec.gate_kind in GATED_KINDS else base
 
 
 def fusion_parameter_names(spec: LatticeSpec) -> set[str]:
@@ -582,6 +590,28 @@ def query_lattice_numpy(
     return outputs
 
 
+def blend_correction(outputs: np.ndarray, gate: np.ndarray, gate_kind: int) -> np.ndarray:
+    """Combine the fusion head's outputs with the decoded gate.
+
+    Kind 1 scales one correction by the gate.  Kind 2 blends two corrections,
+    `gate * near + (1 - gate) * far`, so the same lattice can act at class
+    interfaces and away from them.  Kind 0 ignores the gate entirely.
+    """
+
+    if gate_kind not in GATE_KINDS:
+        raise OBX2PacketError("unknown lattice gate kind")
+    weights = np.asarray(gate, dtype=np.float32)[..., None]
+    if gate_kind == 0:
+        return np.asarray(outputs, dtype=np.float32)
+    if gate_kind == 1:
+        return np.asarray(outputs, dtype=np.float32) * weights
+    values = np.asarray(outputs, dtype=np.float32)
+    if values.shape[-1] % 2:
+        raise OBX2PacketError("interface_blend head must emit an even output width")
+    half = values.shape[-1] // 2
+    return values[..., :half] * weights + values[..., half:] * (1.0 - weights)
+
+
 __all__ = [
     "CARRIED_SECTIONS",
     "CODEC_IDS",
@@ -600,6 +630,7 @@ __all__ = [
     "LatticeSpec",
     "OBX2PacketError",
     "RacedSection",
+    "blend_correction",
     "decode_lattice_section",
     "decode_obx2_packet",
     "dequantize_level",

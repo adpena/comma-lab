@@ -37,7 +37,7 @@ def _small_spec() -> lat.LatticeSpec:
         entropy_model=0,
         condition_channels=tr.CONDITION_CHANNELS,
         hidden=5,
-        outputs=tr.OUTPUTS,
+        outputs=tr.head_width(1),
     )
 
 
@@ -157,7 +157,7 @@ def test_lattice_spec_refuses_a_render_contract_mismatch() -> None:
         entropy_model=0,
         condition_channels=tr.CONDITION_CHANNELS,
         hidden=4,
-        outputs=tr.OUTPUTS + 1,
+        outputs=tr.head_width(1) + 1,
     )
     with pytest.raises(tr.OBX2TrainerError):
         tr.LatticeTorch(bad, seed=1)
@@ -197,3 +197,33 @@ def test_score_parsed_object_refuses_an_unknown_receiver() -> None:
             workers=1,
             receiver="mps",
         )
+
+
+def test_head_width_doubles_only_for_the_blend_gate() -> None:
+    assert tr.head_width(0) == tr.RENDER_OUTPUTS
+    assert tr.head_width(1) == tr.RENDER_OUTPUTS
+    assert tr.head_width(2) == 2 * tr.RENDER_OUTPUTS
+    with pytest.raises(tr.OBX2TrainerError):
+        tr.head_width(7)
+
+
+def test_blend_correction_matches_each_gate_kind() -> None:
+    outputs = np.asarray([[1.0, 2.0, 3.0, 4.0]], dtype=np.float32)
+    gate = np.asarray([0.25], dtype=np.float32)
+    assert np.allclose(lat.blend_correction(outputs, gate, 0), outputs)
+    assert np.allclose(lat.blend_correction(outputs, gate, 1), outputs * 0.25)
+    blended = lat.blend_correction(outputs, gate, 2)
+    assert blended.shape == (1, 2)
+    assert np.allclose(blended, [[1.0 * 0.25 + 3.0 * 0.75, 2.0 * 0.25 + 4.0 * 0.75]])
+    with pytest.raises(lat.OBX2PacketError):
+        lat.blend_correction(np.zeros((1, 3), dtype=np.float32), gate, 2)
+    with pytest.raises(lat.OBX2PacketError):
+        lat.blend_correction(outputs, gate, 9)
+
+
+def test_blend_spec_builds_a_double_width_head() -> None:
+    spec = tr.default_spec(gate_kind=2)
+    assert spec.outputs == 2 * tr.RENDER_OUTPUTS
+    lattice = tr.LatticeTorch(spec, seed=3)
+    assert lattice.out_w.shape[1] == 2 * tr.RENDER_OUTPUTS
+    assert "gate_tau" in lat.fusion_parameter_order(spec)

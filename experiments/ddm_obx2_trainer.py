@@ -76,7 +76,16 @@ DEFAULT_BITS = (8, 8, 8)
 DEFAULT_HIDDEN = 24
 DEFAULT_GATE_TAU = 0.35
 CONDITION_CHANNELS = qbf1.N_INTERFACES + 1  # tanh(signed interfaces) plus the gate itself
-OUTPUTS = 2 * CHANNELS
+RENDER_OUTPUTS = 2 * CHANNELS  # two frames x RGB
+DEFAULT_GATE_KIND = 1
+
+
+def head_width(gate_kind: int) -> int:
+    """Fusion head width: the blend kind emits a near and a far correction."""
+
+    if gate_kind not in lat.GATE_KINDS:
+        raise OBX2TrainerError(f"unknown lattice gate kind: {gate_kind}")
+    return 2 * RENDER_OUTPUTS if gate_kind == 2 else RENDER_OUTPUTS
 
 
 class OBX2TrainerError(RuntimeError):
@@ -158,7 +167,7 @@ class LatticeTorch(nn.Module):
 
     def __init__(self, spec: lat.LatticeSpec, *, seed: int, prequantized: bool = False) -> None:
         super().__init__()
-        if spec.condition_channels != CONDITION_CHANNELS or spec.outputs != OUTPUTS:
+        if spec.condition_channels != CONDITION_CHANNELS or spec.outputs != head_width(spec.gate_kind):
             raise OBX2TrainerError("lattice spec does not match the OBX2 render contract")
         self.spec = spec
         # A receiver rebuilt from a packet already holds DEQUANTIZED grid values;
@@ -277,8 +286,17 @@ class OBX2Module(nn.Module):
             x=grid_x.expand(batch, height, width).reshape(-1),
             condition=condition.reshape(-1, condition.shape[-1]),
         )
-        correction = correction.reshape(batch, height, width, 2, CHANNELS)
-        correction = correction * gate.reshape(batch, height, width, 1, 1)
+        gate_kind = self.lattice.spec.gate_kind
+        correction = correction.reshape(batch, height, width, -1)
+        weights = gate.reshape(batch, height, width, 1)
+        if gate_kind == 0:
+            blended = correction
+        elif gate_kind == 1:
+            blended = correction * weights
+        else:
+            half = correction.shape[-1] // 2
+            blended = correction[..., :half] * weights + correction[..., half:] * (1.0 - weights)
+        correction = blended.reshape(batch, height, width, 2, CHANNELS)
         base_rgb = outputs["rgb_pair_01"].permute(0, 3, 4, 1, 2)
         corrected = torch.clamp(base_rgb + correction, 0.0, 1.0)
         outputs["rgb_pair_01"] = corrected.permute(0, 3, 4, 1, 2)
@@ -293,17 +311,18 @@ def default_spec(
     channels: int = DEFAULT_CHANNELS,
     bits: Sequence[int] = DEFAULT_BITS,
     hidden: int = DEFAULT_HIDDEN,
+    gate_kind: int = DEFAULT_GATE_KIND,
 ) -> lat.LatticeSpec:
     return lat.LatticeSpec(
         levels=tuple(tuple(int(value) for value in level) for level in levels),  # type: ignore[arg-type]
         channels=int(channels),
         bits=tuple(int(value) for value in bits),
-        gate_kind=1,
+        gate_kind=int(gate_kind),
         quantizer_kind=0,
         entropy_model=0,
         condition_channels=CONDITION_CHANNELS,
         hidden=int(hidden),
-        outputs=OUTPUTS,
+        outputs=head_width(int(gate_kind)),
     )
 
 
@@ -406,8 +425,10 @@ def receiver_render(packet: bytes, pair_ids: Sequence[int], *, height: int = EVA
             y=grid_y.reshape(-1),
             x=grid_x.reshape(-1),
             condition=condition.reshape(-1, spec.condition_channels),
-        ).reshape(height, width, 2, CHANNELS)
-        correction = correction * gate[..., None, None]
+        )
+        correction = lat.blend_correction(correction, gate.reshape(-1), spec.gate_kind).reshape(
+            height, width, 2, CHANNELS
+        )
         rgb = np.asarray(reference["rgb_pair"], dtype=np.float32).reshape(height, width, 2, CHANNELS)
         out[index] = np.clip(rgb + correction, 0.0, 1.0).transpose(2, 3, 0, 1)
     return out
@@ -674,6 +695,7 @@ def run_training(
     pose_weight_d_pose: float,
     validate_pairs: int,
     cross_check_pairs: int = 40,
+    gate_kind: int = DEFAULT_GATE_KIND,
 ) -> dict[str, Any]:
     """One governed training stage over the complete 600-pair population."""
 
@@ -686,7 +708,7 @@ def run_training(
     device = torch.device(device_name)
     torch.manual_seed(seed)
     np.random.seed(seed % (2**32))
-    spec = default_spec()
+    spec = default_spec(gate_kind=gate_kind)
     module = build_module(born_packet(), spec, seed=seed).to(device)
     module.train()
     if not lattice_enabled:
@@ -822,9 +844,55 @@ def run_training(
     return receipt
 
 
+def stage7_public_timing(output: Path, *, archive_path: Path, receiver: str, workers: int) -> dict[str, Any]:
+    """Decode the exact candidate twice: both runs inside 1,260 s and byte-identical."""
+
+    archive = archive_path.read_bytes()
+    packet = qbf1.read_deterministic_archive(archive, member_name="0.obx2")
+    runs = []
+    digests = []
+    for attempt in range(2):
+        started = time.time()
+        frames = []
+        for start in range(0, N, 50):
+            chunk = list(range(start, min(N, start + 50)))
+            if receiver == "torch":
+                render = torch_receiver_render(parsed_module(packet), chunk)
+            else:
+                render = torch.from_numpy(parallel_receiver_render(packet, chunk, workers=workers))
+            with torch.no_grad():
+                camera = qbt1.roundtrip_to_camera_uint8_ste(render).to(torch.uint8)
+            frames.append(hashlib.sha256(camera.cpu().numpy().tobytes(order="C")).hexdigest())
+        elapsed = time.time() - started
+        digest = hashlib.sha256("".join(frames).encode("ascii")).hexdigest()
+        runs.append({"attempt": attempt, "elapsed_seconds": elapsed, "output_sha256": digest})
+        digests.append(digest)
+    receipt = {
+        "schema": "ddm_obx2_stage7_public_timing.v1",
+        "created_at_utc": datetime.now(UTC).isoformat(),
+        "axis": "[macOS-CPU advisory timing]",
+        "score_claim": False,
+        "promotable": False,
+        "receiver": receiver,
+        "archive": {"path": str(archive_path), "bytes": len(archive), "sha256": sha256_bytes(archive)},
+        "runs": runs,
+        "budget_seconds": 1_260,
+        "deterministic_across_runs": digests[0] == digests[1],
+        "slowest_seconds": max(row["elapsed_seconds"] for row in runs),
+        "passes_timing_budget": max(row["elapsed_seconds"] for row in runs) <= 1_260,
+        "note": (
+            "this is local macOS timing, not the contest runtime; it bounds the receiver's own cost "
+            "and proves decode determinism, it does not certify the contest host"
+        ),
+        "host": {"platform": platform.platform(), "python": platform.python_version()},
+    }
+    qbt1.atomic_json(output / f"STAGE_7_TIMING_{receiver}.json", receipt)
+    return receipt
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="OBX2 base+lattice trainer")
-    parser.add_argument("stage", choices=("stage1", "distill", "joint"))
+    parser.add_argument("stage", choices=("stage1", "distill", "joint", "stage7"))
     parser.add_argument("--output", type=Path, default=OUTPUT_ROOT)
     parser.add_argument("--seed", type=int, default=20260911)
     parser.add_argument("--parity-pairs", type=int, default=8)
@@ -840,15 +908,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pose-weight-operating-point", type=float, default=1.0e-3)
     parser.add_argument("--validate-pairs", type=int, default=N)
     parser.add_argument("--cross-check-pairs", type=int, default=40)
+    parser.add_argument("--gate-kind", type=int, default=DEFAULT_GATE_KIND, choices=(0, 1, 2))
+    parser.add_argument("--archive", type=Path, default=None)
+    parser.add_argument("--receiver", default="torch", choices=("torch", "numpy"))
     parser.add_argument("--launch-authorized", action="store_true")
     return parser
 
 
-def stage1(output: Path, *, seed: int, parity_pairs: int) -> dict[str, Any]:
+def stage1(output: Path, *, seed: int, parity_pairs: int, gate_kind: int = DEFAULT_GATE_KIND) -> dict[str, Any]:
     """Receiver parity: a zero lattice must be the born object, byte for byte."""
 
     started = time.time()
-    spec = default_spec()
+    spec = default_spec(gate_kind=gate_kind)
     module = build_module(born_packet(), spec, seed=seed)
     module.eval()
     payload, accounting, archive = build_packet(module)
@@ -926,7 +997,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     torch.manual_seed(args.seed)
     torch.set_num_threads(max(1, min(8, os.cpu_count() or 1)))
     if args.stage == "stage1":
-        receipt = stage1(args.output, seed=args.seed, parity_pairs=args.parity_pairs)
+        receipt = stage1(args.output, seed=args.seed, parity_pairs=args.parity_pairs, gate_kind=args.gate_kind)
         print(
             json.dumps(
                 {
@@ -947,6 +1018,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         )
         return 0
+    if args.stage == "stage7":
+        if args.archive is None:
+            raise OBX2TrainerError("stage7 requires --archive")
+        receipt = stage7_public_timing(
+            args.output, archive_path=args.archive, receiver=args.receiver, workers=args.workers
+        )
+        print(json.dumps(receipt, indent=2))
+        return 0
     if not args.launch_authorized:
         raise OBX2TrainerError("n600 training requires explicit --launch-authorized")
     receipt = run_training(
@@ -965,6 +1044,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         pose_weight_d_pose=args.pose_weight_operating_point,
         validate_pairs=args.validate_pairs,
         cross_check_pairs=args.cross_check_pairs,
+        gate_kind=args.gate_kind,
     )
     print(
         json.dumps(
