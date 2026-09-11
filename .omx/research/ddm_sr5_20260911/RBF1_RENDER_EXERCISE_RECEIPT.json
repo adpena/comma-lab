@@ -1,0 +1,101 @@
+{
+ "arm": "ddm_sr5",
+ "axis": "[macOS filesystem custody; render replay, no scorer forward pass]",
+ "chunk_receipt_restore": {
+  "action": "RESTORED_ARM_ORIGINAL",
+  "exercise_written_sha256": "f51b8b1cfaa25a0a76e1f374ca75cb6b98af811c5cc9934951c9802e65eb91e4",
+  "original_sha256": "4eaed489e98f0cecdf4061efef2c5f57c7449736bbbce32b66c045398ad27b5b",
+  "restored_sha256": "4eaed489e98f0cecdf4061efef2c5f57c7449736bbbce32b66c045398ad27b5b"
+ },
+ "comparisons": [
+  {
+   "artifact_key": "baseline",
+   "filename": "baseline_camera_u8.npy",
+   "held_original_sha256": "0fd8d4e34aa9c3c9231b97c5ebac6c1f38086f1d08e5578b384d6fc703ed80cf",
+   "matches_held_original": true,
+   "matches_recorded": true,
+   "recorded_bytes": 30520208,
+   "recorded_sha256": "0fd8d4e34aa9c3c9231b97c5ebac6c1f38086f1d08e5578b384d6fc703ed80cf",
+   "regenerated_bytes": 30520208,
+   "regenerated_sha256": "0fd8d4e34aa9c3c9231b97c5ebac6c1f38086f1d08e5578b384d6fc703ed80cf",
+   "result": "BYTE_EXACT"
+  },
+  {
+   "artifact_key": "composition",
+   "filename": "composition_camera_u8.npy",
+   "held_original_sha256": "d11bbc21ab9376377816fe34f13358766d6e859347c9d0337847754c0fe7dee2",
+   "matches_held_original": true,
+   "matches_recorded": true,
+   "recorded_bytes": 30520208,
+   "recorded_sha256": "d11bbc21ab9376377816fe34f13358766d6e859347c9d0337847754c0fe7dee2",
+   "regenerated_bytes": 30520208,
+   "regenerated_sha256": "d11bbc21ab9376377816fe34f13358766d6e859347c9d0337847754c0fe7dee2",
+   "result": "BYTE_EXACT"
+  },
+  {
+   "artifact_key": "guided",
+   "filename": "guided_camera_u8.npy",
+   "held_original_sha256": "8c65f3a6b99fe43f31e61a0bac7f06764d1dcdd4d4d66e47ddf07e3223fa1559",
+   "matches_held_original": true,
+   "matches_recorded": true,
+   "recorded_bytes": 30520208,
+   "recorded_sha256": "8c65f3a6b99fe43f31e61a0bac7f06764d1dcdd4d4d66e47ddf07e3223fa1559",
+   "regenerated_bytes": 30520208,
+   "regenerated_sha256": "8c65f3a6b99fe43f31e61a0bac7f06764d1dcdd4d4d66e47ddf07e3223fa1559",
+   "result": "BYTE_EXACT"
+  },
+  {
+   "artifact_key": "native",
+   "filename": "native_f32.npy",
+   "held_original_sha256": "383522a2801b3fb7826cd5c034650a319e0d581fe8994e653ba05264e0b22de8",
+   "matches_held_original": true,
+   "matches_recorded": true,
+   "recorded_bytes": 11796608,
+   "recorded_sha256": "383522a2801b3fb7826cd5c034650a319e0d581fe8994e653ba05264e0b22de8",
+   "regenerated_bytes": 11796608,
+   "regenerated_sha256": "383522a2801b3fb7826cd5c034650a319e0d581fe8994e653ba05264e0b22de8",
+   "result": "BYTE_EXACT"
+  },
+  {
+   "artifact_key": "sdf",
+   "filename": "sdf_camera_u8.npy",
+   "held_original_sha256": "7925d28eb87ff24ac3d6ac9556f3886de50991c4c1f87b7afb596d4c0a904840",
+   "matches_held_original": true,
+   "matches_recorded": true,
+   "recorded_bytes": 30520208,
+   "recorded_sha256": "7925d28eb87ff24ac3d6ac9556f3886de50991c4c1f87b7afb596d4c0a904840",
+   "regenerated_bytes": 30520208,
+   "regenerated_sha256": "7925d28eb87ff24ac3d6ac9556f3886de50991c4c1f87b7afb596d4c0a904840",
+   "result": "BYTE_EXACT"
+  },
+  {
+   "artifact_key": "ssaa",
+   "filename": "ssaa_camera_u8.npy",
+   "held_original_sha256": "d72e3977e0d0b353619d456916512bb59a1f7dc71e73e02701e7df6316b41870",
+   "matches_held_original": true,
+   "matches_recorded": true,
+   "recorded_bytes": 30520208,
+   "recorded_sha256": "d72e3977e0d0b353619d456916512bb59a1f7dc71e73e02701e7df6316b41870",
+   "regenerated_bytes": 30520208,
+   "regenerated_sha256": "d72e3977e0d0b353619d456916512bb59a1f7dc71e73e02701e7df6316b41870",
+   "result": "BYTE_EXACT"
+  }
+ ],
+ "corrected_restore_procedure": "The recorded command alone does NOT restore a deleted payload: render() calls verify_receipt() on each chunk's RENDER.json first, and fact() on a missing artifact raises instead of regenerating it. The working procedure, exercised here, is: move the affected chunk's RENDER.json aside, run the recorded render command (it regenerates only the chunks whose receipt is absent), then check the regenerated files against the sha256 values in the archived RENDER.json and put that original receipt back.",
+ "payload_class": "chunks/*/{baseline,guided,ssaa,sdf,composition}_camera_u8.npy + native_f32.npy",
+ "promotable": false,
+ "recorded_rebuild_command": ".venv/bin/python experiments/ddm_rbf1_boundary_probe.py render --resume-from /Volumes/VertigoDataTier/pact/ddm_rbf1/retained",
+ "render_complete_evidence_restore": {
+  "action": "RESTORED",
+  "backup_sha256": "eba67bc8ff20e1d8c0694e01ab5fafe8cd27d10904068e8dfa64947d0e9b6776",
+  "certified_sha256": "eba67bc8ff20e1d8c0694e01ab5fafe8cd27d10904068e8dfa64947d0e9b6776",
+  "live_sha256_after_exercise": "902f5362ee129300cf9e54a7f021a4dee4ff08a47990d4956931495b5ccc4b13",
+  "restored_sha256": "eba67bc8ff20e1d8c0694e01ab5fafe8cd27d10904068e8dfa64947d0e9b6776"
+ },
+ "rollback": {},
+ "schema": "ddm_sr5_rebuild_exercise_receipt.v1",
+ "score_claim": false,
+ "slice": "/Volumes/VertigoDataTier/pact/ddm_rbf1/retained/chunks/595_600",
+ "store": "/Volumes/VertigoDataTier/pact/ddm_rbf1",
+ "verdict": "REBUILD_REPRODUCED_RECORDED_SHA256"
+}

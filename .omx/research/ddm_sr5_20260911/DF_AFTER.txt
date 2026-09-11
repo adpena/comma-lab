@@ -1,0 +1,9 @@
+# ddm_sr5 free-space AFTER all sr5 actions (2026-09-11T17:2xZ)
+# Units: statvfs f_bavail*f_frsize. GiB = 2^30. GB = 10^9 (what df -h displays on this host).
+
+Filesystem   1024-blocks       Used Available Capacity iused     ifree %iused  Mounted on
+/dev/disk5s1  1953309744 1889035288  63981640    97% 1669520 639816400    0%   /Volumes/VertigoDataTier
+/dev/disk6s1  1953450624 1899831808  53618816    98%       1         0  100%   /Volumes/APDataStore
+
+/Volumes/VertigoDataTier free = 61.018 GiB = 65.52 GB
+/Volumes/APDataStore free = 51.135 GiB = 54.91 GB

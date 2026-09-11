@@ -1,0 +1,16 @@
+# ddm_sr5 free-space BEFORE any sr5 mutation
+# Units: statvfs f_bavail * f_frsize. GiB = 2^30 (df -k Available / 1048576). GB = 10^9.
+# Source of the Vertigo number: the df_before block of the first apply summary written by
+# tools/sr5_certify_delete_derived.py into .omx/research/ddm_sr5_certified_deletions_20260911.jsonl
+# (captured 2026-09-11T16:11:32Z, immediately before the first unlink).
+
+VertigoDataTier  free = 37,966,176,256 B = 35.358 GiB = 37.97 GB
+  df -k line: /dev/disk5s1  1953309744  1915940580  37076344  99%  /Volumes/VertigoDataTier
+
+APDataStore      free = 51,442,432 KiB  = 49.06 GiB = 52.68 GB   (no sr5 mutation on this tier)
+  df -k line: /dev/disk6s1  1953450624  1902008192  51442432  98%  /Volumes/APDataStore
+
+NOTE ON UNITS: the charter's "Vertigo 38 GiB free / APDataStore 49 GiB" are the df -h display
+values, which on this host correspond to 37.97 GB and 52.68 GB. Every sr5 number below is stated
+in true GiB (2^30) with the GB value alongside, so the target "free >= 60" is never ambiguous.
+sr5 targets 61 true GiB, which clears 60 under either reading.

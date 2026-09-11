@@ -1,0 +1,18 @@
+{
+ "schema": "ddm_sr5_dedup_prefilter.v1",
+ "store": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729",
+ "method": "sha256 over three 16 MiB windows per file (head, midpoint, tail) of each */inflated/0.raw. A prefilter, NOT an equality proof.",
+ "population": {"files": 14, "bytes_each": 3662409600, "st_nlink": 1, "distinct_inodes": true},
+ "distinct_signatures": 11,
+ "duplicate_candidate_groups": [
+  ["v4d_cx1_pj2ix2", "v4d_pj2"],
+  ["v4d_mq1_partial", "v4d_ms8", "v4d_pw1"]
+ ],
+ "lossless_opportunity_if_confirmed_bytes": 10987228800,
+ "lossless_opportunity_if_confirmed_gib": 10.233,
+ "why_this_matters": "Hardlink-dedup frees space WITHOUT deleting anything, which the certify-or-block rule prefers over any deletion. Confirming the two groups costs a full sha256 of five files (18.3 GB of reads); hardlinking then releases three files' worth of blocks.",
+ "why_sr5_did_not_act": "The 61 GiB target was already being met by a class whose restore is a numpy slice of a sibling in the same directory, and this arm ran the prefilter late -- after deletions had begun. Acting on it would have meant building and reviewing a certified hardlink producer at the end of the run for space the arm did not need. It is handed forward as a measured, high-value, lossless door.",
+ "caution_from_sr4": "Hardlinked files share future writes; any regeneration must target a fresh output path. sr4 performed its own hardlinks only after FULL source and destination hashes plus a custody audit.",
+ "status": "PREFILTER_ONLY_NOT_AN_EQUALITY_PROOF",
+ "score_claim": false
+}

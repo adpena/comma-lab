@@ -1,0 +1,36 @@
+{
+ "schema": "ddm_sr5_coldstore_adjudication.v1",
+ "authorization": "MAIN 2026-09-11 item (1): delete ntb2's certified-and-moved AP bulk under sr5's certify-or-block rule",
+ "verdict": "REFUSED_FOR_THE_BULK, CERTIFIABLE_REMAINDER_HANDED_FORWARD",
+ "classes": [
+  {
+   "class": "public_frame_even_manifestless_attempts",
+   "manifest": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/public_frame_even_manifestless_attempts/MANIFEST.json",
+   "rows": 66,
+   "bytes": 3811106548,
+   "verdict": "REFUSED",
+   "measured_reason": "Two rows totalling 3,780,374,400 B -- 99.2% of the class -- record sha256 as the literal string 'SKIPPED_LARGE_STREAMED'. There is no hash, so no certificate can bind the bytes on disk to the manifest, and no rebuild can be checked against anything. The rule is explicit: if the proof is missing, emit a blocker and keep the bytes. The remaining 64 rows total only 30,732,148 B and are not worth a producer.",
+   "unhashed_rows": [
+    {"bytes": 3662409600, "name": "render_cpu_in_progress.raw"},
+    {"bytes": 117964800, "name": "tokens_cpu_stage_complete.u8"}
+   ],
+   "second_reason": "Its rebuild command is a full deterministic decode (experiments/ddm_ntb2_public.py --treatment frame_even), which is candidate work this charter bars and could not be exercised here."
+  },
+  {
+   "class": "renderer_score_checkpoints",
+   "manifest": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/MANIFEST.json",
+   "rows": 12,
+   "bytes": 708197883,
+   "verdict": "SPLIT",
+   "refused_rows": 6,
+   "refused_bytes": 353999376,
+   "refused_reason": "run_completed is FALSE on six of the twelve rows. Their stated justification -- 'superseded by the run's own RESULT.json + argmax_plane.npz' -- is not true for a run that did not complete, so the supersession claim fails and the bytes stay.",
+   "certifiable_rows": 6,
+   "certifiable_bytes": 354198507,
+   "certifiable_reason": "Six rows have run_completed TRUE, a real sha256, and BOTH superseding artifacts verified present on Vertigo for every treatment: blocks.1.film.weight, blocks.3.film.weight and control each have RESULT.json and argmax_plane.npz under /Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/<treatment>/.",
+   "why_sr5_did_not_delete_them": "Their certificate is a SUPERSESSION proof, not a rebuild proof -- the recorded rebuild command is a renderer_score run this charter bars -- so neither sr5 producer fits, and 354 MB does not justify a fifth producer once the rlc2 relocation had already returned 5.84 GiB to APDataStore. The six verified rows are handed forward so a successor can act in one step."
+  }
+ ],
+ "not_touched": ["/Volumes/APDataStore/pact/ddm_ntb2_proof45", "/Volumes/APDataStore/pact/ddm_ntb2_public_proof", "every ddm_pc3 fire directory"],
+ "score_claim": false
+}

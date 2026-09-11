@@ -1,0 +1,9 @@
+{
+ "schema": "ddm_sr5_sidecar_consistency_audit.v1",
+ "method": "seeded random sample (seed 0) of DELETED ledger rows; for each: the payload must be absent, its DERIVED_DELETED.json resolver must exist and name it, the resolver sha256 must equal the ledger's on_disk_sha256, and the recorded rebuild source must still be a file on disk",
+ "sampled": 60,
+ "consistent": 60,
+ "problems": 0,
+ "note": "run mid-sweep; the population grows as the sweep proceeds, so this is a sample audit of the mechanism, not a census of every deletion",
+ "score_claim": false
+}

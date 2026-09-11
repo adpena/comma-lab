@@ -1,0 +1,20 @@
+{
+ "schema": "ddm_sr5_dedup_result.v1",
+ "authorization": "MAIN 2026-09-11 item (3)",
+ "method": "FULL sha256 of all five prefilter candidates, then hardlink within confirmed groups. Nothing deleted.",
+ "hashed_files": 5,
+ "prefilter_candidate_groups": 2,
+ "confirmed_groups": 1,
+ "confirmed_group": {"keeper": "v4d_cx1_pj2ix2", "member": "v4d_pj2", "sha256_prefix": "988785e7cadfd613", "shared_inode": 3206328, "bytes_released": 3662409600},
+ "falsified_group": {"members": ["v4d_mq1_partial", "v4d_ms8", "v4d_pw1"], "verdict": "NOT_IDENTICAL", "note": "The 3x16 MiB head/mid/tail prefilter matched these three, but their FULL sha256 values differ, so they were never grouped and never touched. The differing bytes lie outside the sampled windows."},
+ "bytes_released_measured": 3662409600,
+ "gib_released_measured": 3.411,
+ "gib_released_prefilter_upper_bound": 10.233,
+ "correction": "sr5's earlier lead said 'if a full hash confirms them, hardlinking frees 10.233 GiB'. That was an UPPER BOUND on an unconfirmed prefilter. The measured answer is 3.411 GiB -- one of the two candidate groups was a false positive. A sampled prefilter may choose what to hash; it may never decide that two files are equal.",
+ "df_before_bytes": 59246583808,
+ "df_after_bytes": 62907936768,
+ "df_free_delta_bytes": 3661352960,
+ "nothing_deleted": true,
+ "caution": "The two linked paths now share one inode; any regeneration must write to a fresh path, never in place.",
+ "score_claim": false
+}
