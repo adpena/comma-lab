@@ -1,4 +1,4 @@
-# ddm_nt1 — the 60,497 non-tail bytes: inventory, price, and re-solve every counted byte that is not the token tail (charter, MAIN 2026-09-11; operator full-authority GO)
+# ddm_ntb1 — the 60,497 non-tail bytes: inventory, price, and re-solve every counted byte that is not the token tail (charter, MAIN 2026-09-11; operator full-authority GO)
 
 ## Why
 Move 44's archive is 180,406 B = token tail 119,909 B + NON-TAIL 60,497 B (ZIP overhead + RX1M header + HPAC model + semantic renderer +
@@ -22,8 +22,8 @@ that removes 500 B at unchanged distortion is −3.3e-4 S (16 bars). Price it al
    the paying non-tail changes and the tail re-encoded where a model changed; twin encodes; full cold n600 public parse-back; manifest
    from outside the tree; census; smokes. If the receiver code is UNCHANGED → normal seal (`make_candidate_seal.py`, inherits move 44's
    t4_direct leg); if any receiver file changed → STOP and hand MAIN the first-measurement intent inputs instead (do not fire).
-4. Memo `.omx/research/ddm_nt1_non_tail_bytes_price_and_resolve_20260911.md`: census, lever table, composed candidate, seal path.
-   Serializer commits (two review passes per .py; `[no-triality] [p0-ledger-ok]`); rc 17 is NOT a stop. Checkpoint as `ddm_nt1`; mark COMPLETE.
+4. Memo `.omx/research/ddm_ntb1_non_tail_bytes_price_and_resolve_20260911.md`: census, lever table, composed candidate, seal path.
+   Serializer commits (two review passes per .py; `[no-triality] [p0-ledger-ok]`); rc 17 is NOT a stop. Checkpoint as `ddm_ntb1`; mark COMPLETE.
 
 ## Boundaries
 No Modal (MAIN fires); never edit `upstream/`, the PR tree, sealed trees; read-only on `/Volumes/...` sources (copy); n600 only;
