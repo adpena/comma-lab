@@ -612,8 +612,15 @@ def load_stage_checkpoint(
         assert_resume_compatible(payload.get("config", {}), live_config, path)
     module.load_state_dict(payload["model_state"])
     optimizer.load_state_dict(payload["optimizer_state"])
+    # A checkpoint is written on CPU, so the shadow must be restored onto the
+    # device its module actually lives on; otherwise the first ema.update after
+    # a resume mixes an MPS parameter with a CPU shadow and the run dies at the
+    # first step of the new stage.
+    live = dict(module.state_dict())
     for name, value in payload["ema_state"].items():
-        ema.shadow[name] = value.clone()
+        reference = live.get(name)
+        restored = value.clone()
+        ema.shadow[name] = restored if reference is None else restored.to(reference.device)
     torch.set_rng_state(payload["torch_rng_state"])
     np.random.set_state(payload["numpy_rng_state"])
     return payload

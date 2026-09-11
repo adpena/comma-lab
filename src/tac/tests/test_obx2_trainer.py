@@ -23,8 +23,18 @@ for _root in (REPO, REPO / "src"):
     if str(_root) not in sys.path:
         sys.path.insert(0, str(_root))
 
+from typing import Any  # noqa: E402
+
 from experiments import ddm_obx2_trainer as tr  # noqa: E402
+from experiments import ddm_qbt1_qbflow_trainer as qbt1  # noqa: E402
 from tac import obx2_lattice_packet as lat  # noqa: E402
+
+
+def _stub_base() -> Any:
+    """Smallest object with the base surface the module and checkpoint touch."""
+
+    params, boundary, interior = tr.born_state(tr.born_packet())
+    return qbt1.QBFLOWTorch(params, boundary, interior)
 
 
 def _small_spec() -> lat.LatticeSpec:
@@ -250,3 +260,27 @@ def test_assert_resume_compatible_refuses_every_binding_difference() -> None:
     ):
         with pytest.raises(tr.OBX2TrainerError):
             tr.assert_resume_compatible(saved, {**saved, key: value}, Path("x"))
+
+
+def test_resume_restores_the_ema_shadow_onto_the_module_device(tmp_path: Path) -> None:
+    from tac.training import EMA
+
+    spec = _small_spec()
+    module = tr.OBX2Module(_stub_base(), tr.LatticeTorch(spec, seed=2))
+    optimizer = torch.optim.AdamW(module.parameters(), lr=1e-4)
+    ema = EMA(module, decay=0.997)
+    path = tmp_path / "ckpt.pt"
+    tr.save_stage_checkpoint(
+        path, module=module, ema=ema, optimizer=optimizer, config={"stage": "joint"}, step=1, history=[]
+    )
+    fresh = tr.OBX2Module(_stub_base(), tr.LatticeTorch(spec, seed=2))
+    fresh_optimizer = torch.optim.AdamW(fresh.parameters(), lr=1e-4)
+    fresh_ema = EMA(fresh, decay=0.997)
+    tr.load_stage_checkpoint(path, fresh, fresh_optimizer, fresh_ema)
+    live = dict(fresh.state_dict())
+    assert fresh_ema.shadow, "resume restored an empty EMA shadow"
+    for name, shadow in fresh_ema.shadow.items():
+        if name in live:
+            assert shadow.device == live[name].device, name
+    # the invariant the bug broke: one update after a resume must not raise
+    fresh_ema.update(fresh)
