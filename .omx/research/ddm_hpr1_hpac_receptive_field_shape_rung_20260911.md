@@ -336,9 +336,16 @@ field, byte for byte) and the semantic and carrier members are asserted untouche
 unchanged — the geometry did not move.
 
 **Why nobody had this.** The shipped prior's weights descend from cl2's λ=1.0 fit at move 26, and the
-token field has moved since (sj1's pre-distortion at move 32 and after). The prior has been coding a
-field it was never fit to. The −887 B is the cost of that staleness, and it was hiding in plain sight
-as *the control* of a shape experiment. [The lineage is DERIVED from the store; the −887 B is MEASURED.]
+token field has moved since. The prior has been coding a field it was never fit to. The −887 B is the
+cost of that staleness, and it was hiding in plain sight as *the control* of a shape experiment.
+
+**CORRECTION to my own figure (2026-09-11, from the staleness audit).** I first wrote "the field moved
+at move 32". That is a first-change-after-cl2 statement, not a last-change statement, and as a
+staleness figure it is wrong. MEASURED from `.omx/state/pointer_move_events.jsonl`: **the field moved
+EIGHT times — moves 31, 32, 35, 38, 39, 40, 42, 43 — and last moved at move 43** (sj1 pass 6, commit
+`48109233e`). Moves 44–47 are field-invariant by receipt. The correction makes the staleness WORSE,
+not better: the prior was fit once at move 26 and then coded eight different fields. Full audit:
+`.omx/research/ddm_hpr1_staleness_audit_20260911.md`.
 
 ### 4f. Relative significance, and MAIN's sequencing (MAIN, 2026-09-11)
 
