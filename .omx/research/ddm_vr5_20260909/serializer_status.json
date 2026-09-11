@@ -1,0 +1,18 @@
+{
+  "returncode": 17,
+  "status": "BUNDLE_READY_MAIN_MUST_LAND",
+  "main_landed": false,
+  "fallback_commit": "43c4a084639a7ad96c097b857e47a0b510aaf613",
+  "base_head": "32620e7c46d47d5408207ac60b408872aeb397fa",
+  "bundle_path": "/Users/adpena/Projects/pact/.omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-commit.bundle",
+  "bundle_sha256": "b5c34b9aaed08179f540fc30dbd6eaaead4b731b798d46f52384e7e235527423",
+  "bundle_verified": true,
+  "all_16_content_hashes_match": true,
+  "shared_index_empty": true,
+  "score_claim": false,
+  "ssd_apply_executed": false,
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-commit.bundle",
+  "owner": "MAIN",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "fire_trigger": "Harvest in Git-writable session; land exact packet before applying reclaim plan."
+}

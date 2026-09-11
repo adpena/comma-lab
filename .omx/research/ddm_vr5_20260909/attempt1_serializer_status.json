@@ -1,0 +1,6 @@
+{
+  "returncode": 13,
+  "main_landed": false,
+  "log": ".omx/research/ddm_vr5_20260909/serializer_stdout.log",
+  "fallback_directory": "/Users/adpena/Projects/pact/.omx/research/ddm_vr5_20260909/serializer"
+}
