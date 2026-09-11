@@ -7,8 +7,8 @@
 one the charter expected: **the pre-registered shape rung is FALSIFIED by the real coder (+812 B
 against its own control), and the experiment's CONTROL is a −887 B candidate with no receiver change**
 (§4e). MAIN accepted the control as **move 47**, by NORMAL seal inheriting move 46's leg (§4f). The
-cold public parse-back is running on a FORKED prover under a truthful label (§5); the normal-seal
-inputs land the moment it returns. No frontier move, no Modal dispatch, no scorer run, no seal, no
+cold public parse-back PASSED on a FORKED prover under a truthful label, the public smokes are clean,
+and every normal-seal input is staged (§5b) — STOPPED before sealing, awaiting move 46's leg. No frontier move, no Modal dispatch, no scorer run, no seal, no
 candidate claim. This file is crash-resumable.
 
 Frontier line: `composition S 0.1371383667388406 @ 180,246 B [contest-CUDA T4 n600] (move 45)` — UNMOVED
@@ -396,6 +396,43 @@ of one field), but that composition is a THIRD candidate and needs its own twin 
 −887 and −245. If ntb2's candidate lands first, `retrain` must be re-priced on the new base — the rail
 does that with one `--treatment` after its `POINTER45_SHA` is rebound, and its control-falsifier
 refuses automatically if the pointer moved under it.
+
+### 5b. The parse-back PASSED, the smokes are clean, and the seal inputs are staged — STOPPED
+
+`public/retrain_control/RESULT.json` (`ddm_hpr1_public.v1`, treatment `retrain_control`):
+
+| | value |
+|---|---|
+| candidate raw | **3,662,409,600 B**, sha `2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc` |
+| pointer raw | the same, byte for byte |
+| `raw_byte_identical_to_pointer` | **true** |
+| cold start / resume | **cold**, no checkpoint resume, token cache DISABLED, `F26_TOKEN_DECODER=python` |
+| samples | 600 pairs | 
+| wall | 821.6 s `[macOS-CPU advisory diagnostic; NOT a contest decode-time receipt]` |
+| scorer runs | **none** |
+
+**The distortion argument is now a receipt rather than a construction.** Every byte the scorer would
+see is the byte it already saw at move 45, so d_seg and d_pose are unchanged by identity.
+
+Public-entrypoint smokes (candidate + frontier, four bounded probes) checked with the seal validator's
+**own** checker, `tac.candidate_seal._public_smoke_problems`: **problems `[]`**.
+
+Normal-seal inputs staged in `seal_inputs/` — TWIN_ENCODE (+2 execution receipts), CANDIDATE_MANIFEST,
+MANIFEST_VALIDATION, ARCHIVE_PARSEBACK, RAW_IDENTITY_N600, LITERAL_CENSUS, RETENTION_MANIFEST,
+FALSIFIERS_PREREGISTERED, PUBLIC_SMOKE(+VALIDATION). Measured across them:
+
+- content diff vs the pointer tree = **exactly `{MANIFEST.sha256, archive.zip, inflate.py}`** — the
+  normal-seal proof, and the reason this row does not need the first-measurement chain;
+- every `MANIFEST.sha256` row re-hashes clean (`all_hashes_passed: true`, no mismatched rows);
+- `twin_identity: true` across both independent 600-frame assemblies;
+- the `p` member measures **179,259 B**, sha `c5d23677c07a0f81…`, read with the contract's own reader;
+- literal census: 527 occurrences, **rule 118 verdict CLEAR** — the refitted weights are video-derived
+  and every one is COUNTED inside `archive.zip`'s `hpac` member (11,911 → 12,262 B); the prior's SHAPE,
+  which is the part living in receiver code, does not move at all, so **no shape bit ships**;
+- five falsifiers pre-registered, including that a FOURTH differing file refuses the row.
+
+**STOPPED HERE, by MAIN's instruction.** `seal_written: false`. The seal needs move 46's measured leg
+and runs as `tools/make_candidate_seal.py … --inherit-decode-wall-clock <move 46 leg>`; MAIN says when.
 
 ### 5a. Follow-on queue (MAIN's ordering)
 
