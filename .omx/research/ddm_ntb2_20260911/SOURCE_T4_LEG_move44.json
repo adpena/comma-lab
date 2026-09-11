@@ -1,0 +1,110 @@
+{
+  "archive_path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime/archive.zip",
+  "archive_sha256": "04758c0dfb8d94ebe801602aac96d93a4f260aad24f58b6b9cdbbe2270ad460e",
+  "candidate_t4_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+    "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+  },
+  "first_measurement_runtime_custody": {
+    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+    "expected_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf",
+    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+    "normal_projected_runtime_tree_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/35b82cfc847d170bc57959ea0f58c8daf53fe7fabed9c7410145b438ad858664/out/submission_dir",
+    "retained_runtime_tree_sha256": "e44a61a1b2b2e5dab42488cdb1c33cef04e6a516b5be4ad361576c9df93506ee",
+    "runtime_file_count": 48,
+    "runtime_files_sha256": "fb1f6295a3527fdc07b3682d7e8ed42354e14e54dbbb4317deaa9f4f27ba21d4",
+    "schema": "first_measurement_runtime_custody.v1",
+    "sources": {
+      "argv": {
+        "field_path": [
+          "exact_argv"
+        ],
+        "file": {
+          "bytes": 7341,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+          "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+        },
+        "flag": "--expected-runtime-content-tree-sha256"
+      },
+      "context": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 4973,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/FIRST_MEASUREMENT_CONTEXT.json",
+          "sha256": "f0fe10b83a913fb59b92874d7fda8f276d4844038855f35ea9d1dc9059a50eec"
+        }
+      },
+      "provenance": {
+        "field_path": [
+          "artifacts",
+          "provenance.json"
+        ],
+        "file": {
+          "bytes": 242556,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        },
+        "manifest_field_path": [
+          "inflate_runtime_manifest"
+        ]
+      },
+      "request": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 7341,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/modal_cuda_auth_eval_local_request.json",
+          "sha256": "7abb991cf95d7a53a210df1fb975355e6c0d420c2ec74475c22bb333d316675c"
+        }
+      },
+      "result": {
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ],
+        "file": {
+          "bytes": 242556,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_rlc5_first_measurement_run5/MODAL_REMOTE_RESULT.json",
+          "sha256": "b3ec1dd9dbe43debeeeeae075a49c1cd8b2d23507a7fc317e9884590b9c8fe46"
+        }
+      }
+    },
+    "worker_runtime_content_tree_sha256": "e1e6d1252b56b66b7f7559fe0df751ffbf38559d99abf21f06f00134f685bcaf"
+  },
+  "limit_seconds": 1260.0,
+  "measured_t4_decode_seconds": 1232.418725255,
+  "mode": "t4_direct",
+  "projected_t4_decode_seconds": 1232.418725255,
+  "receiver_sha256": "7e6da183f3b318a4de4fb4dafcdb2f768aa04b02c65f5a4507a821a3cb2c868b",
+  "runtime_dir": "/Volumes/VertigoDataTier/pact/ddm_rlc5_cure_on_move43/candidate_runtime",
+  "schema": "candidate_decode_wall_clock.v2",
+  "score_claim": false,
+  "t4_archive_sha256_field": [
+    "expected_archive_sha256"
+  ],
+  "t4_cuda_available_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_available"
+  ],
+  "t4_hardware_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_device_name"
+  ],
+  "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+  "t4_runtime_sha256": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+  "t4_runtime_sha256_field": [
+    "expected_runtime_tree_sha256"
+  ],
+  "t4_seconds_field": [
+    "artifacts",
+    "contest_auth_eval.json",
+    "inflate_elapsed_seconds"
+  ],
+  "t4_timing_scope": "cold_public_entrypoint_decode"
+}

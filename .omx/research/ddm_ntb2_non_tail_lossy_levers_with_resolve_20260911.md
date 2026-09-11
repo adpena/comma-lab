@@ -348,12 +348,19 @@ pointer was then move 44, so its source leg WAS the pointer archive. The contrac
 inheriting timing measured on a different archive once; it does not tolerate doing it twice, and
 that is a defensible place to stop rather than a bug to route around.
 
-Three resolutions, all MAIN's to choose and none taken here: fire a real `t4_direct` decode for move
-45 and restore a measured anchor; seal with `--first-fire-intent` and complete it from the fired
-measurement; or amend the contract to follow the inheritance CHAIN to its terminating measurement
-when every link shares one receiver behavior digest — a contract change, therefore a second family's
-call. Receipt: `.omx/research/ddm_ntb2_20260911/TIMING_INHERITANCE_CHAIN_BREAK.json`. Nothing was
-patched.
+MAIN chose (2026-09-11): do NOT patch the contract, and do NOT wait for a bare `t4_direct` on
+move 45 — a timing-only Modal row buys no score. This candidate takes the **first-measurement**
+path: the intent carries its timing lineage to the chain's terminating measurement, MAIN fires the
+real T4 decode, and the completion gives move 46 its OWN `t4_direct` leg, so move 47 inherits
+normally and the chain heals itself.
+
+**Recorded as a contract fact for a pr19 family to adjudicate later, NOT for this arm to implement:**
+the contract could follow an inheritance CHAIN to its terminating `t4_direct` when every link shares
+one receiver behavior digest. Today it requires the IMMEDIATE source to be both non-inherited and
+the pointer archive, which is satisfiable exactly once after each real measurement. Whether that is
+the right rule is a question about how much a timing measurement is allowed to cover, and it wants a
+second family and a deliberate amendment — not an arm that happens to be blocked by it. Receipt:
+`.omx/research/ddm_ntb2_20260911/TIMING_INHERITANCE_CHAIN_BREAK.json`. Nothing was patched.
 
 ## pr18 is LIVE on main, and it clears this candidate — a second family confirms the rule
 
