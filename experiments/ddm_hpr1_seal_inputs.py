@@ -82,7 +82,30 @@ class SealInputsError(RuntimeError):
     """An input is not what this candidate's own receipts say it is."""
 
 
+def canonical(path: Path) -> Path:
+    """Rewrite a path inside the repo to the repo's OWN spelling of its case.
+
+    macOS is case-insensitive, so `/Users/adpena/projects/pact/...` opens the same file as
+    `/Users/adpena/Projects/pact/...` and `Path.resolve()` does NOT correct the case. A
+    caller whose shell cwd carries the other spelling therefore writes that spelling into
+    every receipt reference, and the intent emitter compares those references as STRINGS.
+    ntb2's first intent died exactly here. Normalising at the boundary makes the case a
+    property of this producer rather than of whoever invoked it.
+    """
+    resolved = Path(path).resolve()
+    try:
+        relative = resolved.relative_to(REPO)
+    except ValueError:
+        lower_repo = str(REPO).lower()
+        if str(resolved).lower().startswith(lower_repo + "/"):
+            relative = Path(str(resolved)[len(lower_repo) + 1 :])
+        else:
+            return resolved
+    return REPO / relative
+
+
 def write(path: Path, document) -> Path:
+    path = canonical(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
     return path
