@@ -1,4 +1,4 @@
-# ddm_mx1 — the weird one: a FREE decode-time online context model, trained on the decoded prefix inside the 540 s wall-clock slack, aimed at the 9 KB joint-oracle gap (design + $0 prototype on the shipped stream; charter, MAIN 2026-09-11; operator: be creative, divergent)
+# ddm_mxo1 — the weird one: a FREE decode-time online context model, trained on the decoded prefix inside the 540 s wall-clock slack, aimed at the 9 KB joint-oracle gap (design + $0 prototype on the shipped stream; charter, MAIN 2026-09-11; operator: be creative, divergent)
 
 ## The opening
 Rule 118: deterministic generic compute in `inflate.py` is FREE; only video-derived content counts. Move 44's receiver decodes in ~1,000 s of
@@ -29,8 +29,8 @@ the 540 s slack. The information exists (ls1's ladder); the question is how much
    the wall-clock measured on this host with a projected T4 factor from the leg, and the exact determinism controls. If it realizes ≥ 3,000 B
    (100 bars) with a receiver diff that stays deterministic, produce the receiver delta and the re-encoded tail as candidate inputs and STOP
    for MAIN's first-measurement chain.
-4. Memo `.omx/research/ddm_mx1_free_decode_time_online_context_mixing_20260911.md`: slack bound, three learners priced, prototype result,
-   determinism controls, next charter. Serializer commits (two review passes per .py); rc 17 is NOT a stop. Checkpoint `ddm_mx1`; COMPLETE.
+4. Memo `.omx/research/ddm_mxo1_free_decode_time_online_context_mixing_20260911.md`: slack bound, three learners priced, prototype result,
+   determinism controls, next charter. Serializer commits (two review passes per .py); rc 17 is NOT a stop. Checkpoint `ddm_mxo1`; COMPLETE.
 
 ## Boundaries
 No Modal, no scorer, no candidate archive, no receiver edits in sealed trees (copy); never edit `upstream/` or the PR tree; n600 streams
