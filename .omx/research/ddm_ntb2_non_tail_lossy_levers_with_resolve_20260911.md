@@ -229,6 +229,39 @@ So no re-solve of any strength flips any row's sign, and the token plane never h
 The tokens on this arm are byte-identical to move 44's throughout.
 
 ### Verdict scope
+## What this arm establishes for the campaign
+
+The non-tail census ntb1 measured is 60,497 B: ZIP 100 / RX1M 14 / HPAC 11,911 / renderer 29,862 /
+carrier 18,610. ntb1 closed every LOSSLESS lever in it at 0 B. This arm took the two LOSSY ones.
+
+**The renderer's 29,862 B are not purchasable.** Its local damage-per-byte at the shipped operating
+point runs 102x to 1,864x the score's own exchange rate, and that ratio survives forgiving the entire
+pose leg. The three layers with a near-invisible render all GROW the archive. The scale rule is not
+the wall (best per-row clip gains 1.01–2.21x) and the re-solve is not the cure (its upper bound does
+not flip a sign). Combined with rw1's measured minimum action — one int4 code step already moves
+240–455 argmax cells — the honest reading is that this section sits AT its distortion-rate knee.
+
+The arithmetic that follows is worth stating plainly. Sub-0.12 from move 44's 0.1372449 needs
+−0.01724 S. The seg and pose legs TOGETHER are only 0.010345 + 0.006775 = 0.017120 S, so even
+driving both distortion legs to exactly zero does not reach the target: **the remaining gap is a
+RATE gap and it is about 25,891 B.** The renderer cannot supply them, and the HPAC's structural
+coordinates move on the order of tens of bytes per row. That points the next unit at the tail
+(119,749 B) and the carrier (18,610 B), not at the model sections.
+
+**Doors this arm did NOT open, named so a successor takes them with eyes open:**
+- Quantization-AWARE refit (train the surviving weights to compensate a 3-bit layer). SD1 left this
+  open explicitly ("bit-depth family — OPEN: all non-int4 cells re-quantize a q4-QAT master").
+  Everything measured here is training-free.
+- Per-row mixed depth inside a tensor. The IHS1 depth nibble is per-row for the HPAC, but the
+  renderer's depth table is per-tensor; making it per-row is a receiver format change.
+- Row-pruning the renderer's pw/dw tensors through the existing `MODE_ROW_PRUNE` the receiver already
+  parses. Untested here. The prior against it is strong (zeroing a row is thousands of int4 code
+  steps, and rw1 measured one step at 240–455 cells), but the mechanism is different from precision
+  noise and the format is already in the receiver.
+- Growing the HPAC prior instead of shrinking it. Every treatment here removes capacity; nobody has
+  measured whether the joint optimum lies in the other direction. That requires training, not a
+  structural edit.
+
 ## Composition and boundaries
 
 No measured winning treatment exists yet; no composed candidate bytes, SHA, projected S,
