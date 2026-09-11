@@ -155,13 +155,11 @@ class Objective:
         self.step = base.Q * base.SCALE
         self.calls = 0
 
-    def __call__(self, weights) -> float:
+    def stages(self, weights):
+        """The two shipped stages, returning (tc1 output, lane freq, final rows)."""
         weights = np.asarray(weights, dtype=np.int64)
         w35 = weights[:35].reshape(K, F)
         w5 = weights[35:].reshape(K, 1)
-        if not np.all(np.any(w35, axis=1)):
-            return float("inf")  # an all-zero bank routes to a fallback this rail does not price
-        self.calls += 1
         exponent = np.einsum("nkf,nf->nk", self.phi, w35[self.arg].astype(np.int32))
         exponent -= exponent.max(axis=1, keepdims=True)
         integer, fraction = np.divmod(exponent.astype(np.int64), self.step)
@@ -180,6 +178,14 @@ class Objective:
         result = np.maximum(raw, np.finfo(np.float32).tiny).astype(np.float32)
         inactive = ~np.any(extra, axis=1) | (w5[a1, 0] == 0)
         result[inactive] = mixed[inactive]
+        return mixed, f1, result
+
+    def __call__(self, weights) -> float:
+        w35 = np.asarray(weights, dtype=np.int64)[:35].reshape(K, F)
+        if not np.all(np.any(w35, axis=1)):
+            return float("inf")  # an all-zero bank routes to a fallback this rail does not price
+        self.calls += 1
+        result = self.stages(weights)[2]
         final = coder_frequencies(result)
         return float(-np.log2(final[self.index, self.truth].astype(np.float64) / TOTAL).sum())
 
@@ -212,6 +218,56 @@ def coordinate_search(objective, start, sweeps: int, steps, log: list):
     return best, value
 
 
+def self_test(base, out: Path) -> dict:
+    """Prove the offline cascade is BIT-IDENTICAL to the shipped mixer, on both stages.
+
+    The fit is only worth trusting if its replay of ``mix_probabilities`` is the shipped
+    arithmetic and not a lookalike.  This drives random rows and random feature blocks
+    through both paths -- the shipped function and the vectorised copy inside
+    ``Objective.__call__`` -- and requires exact float32 equality, the inactive-row
+    fallback included.  It needs no trace, so it can run before any encode.
+    """
+    rng = np.random.default_rng(7)
+    n = 5000
+    rows = np.maximum(rng.dirichlet(np.full(K, 0.02), size=n).astype(np.float32),
+                      np.finfo(np.float32).tiny).astype(np.float32)
+    freq = coder_frequencies(rows)
+    checks = {"frequencies": bool(np.array_equal(base.frequencies(rows), freq))}
+    arg = freq.argmax(axis=1)
+    phi = rng.integers(-3000, 3000, size=(n, K, F)).astype(np.int16)
+    phi[:, :, 5] = base.log2_fixed(freq.astype(np.float64) / TOTAL)
+    phi[np.arange(n), arg, 6] = base.Q
+    w35 = np.array([[-2, 26, -20, 15, 17, -1, 3], [-7, 25, -1, 11, 17, -1, 2],
+                    [5, 19, -18, 7, 14, -2, 5], [7, 20, -12, 2, 10, -2, 5],
+                    [11, 13, -14, 9, 10, -2, 8]], dtype=np.int64)
+    w5 = np.array([29, 23, 6, 10, 5], dtype=np.int64).reshape(K, 1)
+    lane_table = rng.integers(-2000, 2000, size=(K * BINS, K)).astype(np.int16)
+    bins = rng.integers(0, BINS, size=n)
+    # the lane row for EVERY possible tc1-output winner, exactly as ``build_lane`` packs it
+    lane = np.stack([lane_table[k * BINS + bins] for k in range(K)], axis=1).astype(np.int16)
+    lane[bins == BINS - 1] = 0
+    objective = Objective(base, phi, freq, arg, lane, arg)
+    mine = objective.stages(np.concatenate([w35.reshape(-1), w5.reshape(-1)]))
+    shipped_mixed = base.mix_probabilities(freq, phi, w35, rows)
+    checks["tc1_stage"] = bool(np.array_equal(shipped_mixed, mine[0]))
+    f1 = coder_frequencies(mine[0])
+    a1 = f1.argmax(axis=1)
+    lane_phi = np.empty((n, K, 1), dtype=np.int16)
+    lane_phi[:, :, -1] = lane_table[a1 * BINS + bins]
+    lane_phi[bins == BINS - 1] = 0
+    shipped_lane = base.mix_probabilities(f1, lane_phi, w5, mine[0])
+    idle = np.all(lane_phi[:, :, 0] == 0, axis=1)
+    shipped_lane[idle] = mine[0][idle]
+    checks["lane_stage"] = bool(np.array_equal(shipped_lane, mine[2]))
+    checks["inactive_rows"] = int(idle.sum())
+    checks["all_passed"] = all(v is True for k, v in checks.items() if isinstance(v, bool))
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "CASCADE_SELFTEST.json").write_text(json.dumps(checks, indent=2, sort_keys=True) + "\n")
+    if not checks["all_passed"]:
+        raise FitError(f"CASCADE_SELFTEST_FAILED: {checks}")
+    return checks
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sweeps", type=int, default=6)
@@ -219,10 +275,15 @@ def main() -> int:
                         help="thin the retained trace by this factor for the SEARCH only")
     parser.add_argument("--steps", type=int, nargs="+", default=[-3, -2, -1, 1, 2, 3])
     parser.add_argument("--out", type=Path, default=ROOT)
+    parser.add_argument("--self-test", action="store_true",
+                        help="prove the offline cascade equals the shipped mixer and stop")
     args = parser.parse_args()
     started = time.time()
     runtime = CONTROL / "runtime_copy"
     base = load_shipped(runtime)
+    if args.self_test:
+        print(json.dumps(self_test(base, args.out), indent=2, sort_keys=True))
+        return 0
     price = json.loads((CONTROL / "PRICE.json").read_text())
     stride = int(price["fit_trace"]["stride"])
     with np.load(CONTROL / "retained/fit_trace.npz", allow_pickle=False) as data:
