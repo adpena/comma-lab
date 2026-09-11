@@ -133,6 +133,45 @@ def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def fusion_parameter_order(spec: LatticeSpec) -> tuple[str, ...]:
+    """Serialization order of the counted fusion parameters for this gate kind."""
+
+    base = ("hidden_w", "hidden_b", "out_w", "out_b")
+    return (*base, "gate_tau") if spec.gate_kind == 1 else base
+
+
+def fusion_parameter_names(spec: LatticeSpec) -> set[str]:
+    return set(fusion_parameter_order(spec))
+
+
+def fusion_parameter_shape(spec: LatticeSpec, name: str) -> tuple[int, ...]:
+    shapes = {
+        "hidden_w": (spec.feature_width, spec.hidden),
+        "hidden_b": (spec.hidden,),
+        "out_w": (spec.hidden, spec.outputs),
+        "out_b": (spec.outputs,),
+        "gate_tau": (1,),
+    }
+    if name not in shapes:
+        raise OBX2PacketError(f"unknown lattice fusion parameter: {name}")
+    return shapes[name]
+
+
+def interface_gate(signed_interfaces: np.ndarray, tau: float) -> np.ndarray:
+    """Deterministic edge-local gate from the born generator's own decoded state.
+
+    The gate is a generic function of the decoded signed-interface field: it is
+    near one where some interface is close to zero (a class boundary) and decays
+    away from every interface.  No support map, position list, or mask is
+    shipped; the receiver recomputes this from sections 1-4.
+    """
+
+    if tau <= 0.0:
+        raise OBX2PacketError("interface gate width must be positive")
+    nearest = np.abs(np.asarray(signed_interfaces, dtype=np.float32)).min(axis=-1)
+    return np.exp(-np.square(nearest / np.float32(tau))).astype(np.float32)
+
+
 def pack_codes(codes: np.ndarray, bits: int) -> bytes:
     """Pack signed integer codes at 4, 8, or 16 bits, little-endian, no padding bias."""
 
@@ -190,7 +229,7 @@ def encode_lattice_section(
 
     if len(codes) != len(spec.levels) or len(scales) != len(spec.levels):
         raise OBX2PacketError("lattice code/scale count differs from the level count")
-    required = {"hidden_w", "hidden_b", "out_w", "out_b"}
+    required = fusion_parameter_names(spec)
     if set(fusion) != required:
         raise OBX2PacketError(f"lattice fusion parameter set must be exactly {sorted(required)}")
     if fusion["hidden_w"].shape != (spec.feature_width, spec.hidden):
@@ -201,6 +240,10 @@ def encode_lattice_section(
         raise OBX2PacketError("lattice fusion output weight shape differs")
     if fusion["out_b"].shape != (spec.outputs,):
         raise OBX2PacketError("lattice fusion output bias shape differs")
+    if "gate_tau" in required:
+        tau = np.asarray(fusion["gate_tau"], dtype=np.float64)
+        if tau.shape != (1,) or not np.isfinite(tau).all() or float(tau[0]) <= 0.0:
+            raise OBX2PacketError("lattice gate width must be a single positive finite value")
 
     body = io.BytesIO()
     for index, ((depth, height, width), bits, scale) in enumerate(zip(spec.levels, spec.bits, scales, strict=True)):
@@ -216,7 +259,7 @@ def encode_lattice_section(
         body.write(struct.pack(">I", len(packed)))
         body.write(packed)
     body.write(_MLP_HEADER.pack(spec.feature_width, spec.hidden, spec.outputs, spec.condition_channels))
-    for name in ("hidden_w", "hidden_b", "out_w", "out_b"):
+    for name in fusion_parameter_order(spec):
         values = np.asarray(fusion[name], dtype="<f4")
         if not np.isfinite(values).all():
             raise OBX2PacketError(f"lattice fusion parameter is not finite: {name}")
@@ -313,12 +356,8 @@ def decode_lattice_section(raw: bytes) -> tuple[LatticeSpec, list[np.ndarray], l
         raise OBX2PacketError("lattice fusion header disagrees with the declared geometry")
 
     fusion: dict[str, np.ndarray] = {}
-    for name, shape in (
-        ("hidden_w", (spec.feature_width, spec.hidden)),
-        ("hidden_b", (spec.hidden,)),
-        ("out_w", (spec.hidden, spec.outputs)),
-        ("out_b", (spec.outputs,)),
-    ):
+    for name in fusion_parameter_order(spec):
+        shape = fusion_parameter_shape(spec, name)
         count = int(np.prod(shape))
         stop = offset + 4 * count
         if stop > len(body):
@@ -554,6 +593,10 @@ __all__ = [
     "decode_obx2_packet",
     "dequantize_level",
     "encode_lattice_section",
+    "fusion_parameter_names",
+    "fusion_parameter_order",
+    "fusion_parameter_shape",
+    "interface_gate",
     "lattice_grids",
     "pack_codes",
     "pack_obx2_packet",

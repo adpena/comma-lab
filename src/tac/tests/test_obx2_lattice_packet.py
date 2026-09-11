@@ -41,6 +41,8 @@ def _payload(spec: pkt.LatticeSpec, *, seed: int = 3) -> tuple[list[np.ndarray],
         "out_w": rng.standard_normal((spec.hidden, spec.outputs)).astype(np.float32),
         "out_b": rng.standard_normal(spec.outputs).astype(np.float32),
     }
+    if spec.gate_kind == 1:
+        fusion["gate_tau"] = np.asarray([0.35], dtype=np.float32)
     return codes, scales, fusion
 
 
@@ -340,3 +342,42 @@ def test_encode_refuses_a_shaped_level_array_with_the_wrong_geometry() -> None:
     codes[0] = codes[0].reshape(depth, height, width, spec.channels).transpose(0, 2, 1, 3)
     with pytest.raises(pkt.OBX2PacketError):
         pkt.encode_lattice_section(spec, codes=codes, scales=scales, fusion=fusion)
+
+
+def test_gate_parameter_is_required_and_validated_for_the_gated_kind() -> None:
+    spec = _spec(gate_kind=1)
+    codes, scales, fusion = _payload(spec)
+    assert pkt.fusion_parameter_order(spec)[-1] == "gate_tau"
+    raw = pkt.encode_lattice_section(spec, codes=codes, scales=scales, fusion=fusion)
+    _, _, _, got = pkt.decode_lattice_section(raw)
+    assert float(got["gate_tau"][0]) == pytest.approx(0.35)
+    for bad in (np.asarray([0.0], dtype=np.float32), np.asarray([-1.0], dtype=np.float32)):
+        broken = dict(fusion)
+        broken["gate_tau"] = bad
+        with pytest.raises(pkt.OBX2PacketError):
+            pkt.encode_lattice_section(spec, codes=codes, scales=scales, fusion=broken)
+    ungated = _spec(gate_kind=0)
+    assert "gate_tau" not in pkt.fusion_parameter_order(ungated)
+    codes2, scales2, fusion2 = _payload(ungated)
+    assert "gate_tau" not in fusion2
+    pkt.encode_lattice_section(ungated, codes=codes2, scales=scales2, fusion=fusion2)
+
+
+def test_interface_gate_peaks_on_the_boundary_and_decays_away_from_it() -> None:
+    signed = np.asarray(
+        [[[0.0, 2.0], [0.5, 3.0], [4.0, 5.0]]],
+        dtype=np.float32,
+    )
+    gate = pkt.interface_gate(signed, 0.5)
+    assert gate.shape == (1, 3)
+    assert float(gate[0, 0]) == pytest.approx(1.0)
+    assert float(gate[0, 1]) == pytest.approx(np.exp(-1.0), abs=1e-6)
+    assert float(gate[0, 2]) < 1e-6
+    assert float(gate[0, 0]) > float(gate[0, 1]) > float(gate[0, 2])
+    with pytest.raises(pkt.OBX2PacketError):
+        pkt.interface_gate(signed, 0.0)
+
+
+def test_unknown_fusion_parameter_shape_refuses() -> None:
+    with pytest.raises(pkt.OBX2PacketError):
+        pkt.fusion_parameter_shape(_spec(), "not_a_parameter")
