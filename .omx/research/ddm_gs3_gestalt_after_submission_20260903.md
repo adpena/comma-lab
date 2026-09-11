@@ -1289,3 +1289,27 @@ correction lattice co-trained through R over the born generator (LIIF/SHACIRA an
 queued behind it. obx1 sealed it with a burn spec and, correctly, stopped: this is a new vehicle generation measured in days of local
 training, not a bounded burn, and the standing GO was written for the latter. The decision is the operator's: `GO ddm_obx2` or hold.
 Everything MAIN can do without that decision is done; the pointer is at move 44 and PR #140 is staged on its bytes at 91/93.
+
+## Addendum 32 (MAIN, 2026-09-11 ~03:40Z) — the operator's GO, and six bets chosen by marginal value and by where the free compute is
+
+The operator (09-11): "do whatever it takes … full authority and standing go … be creative and weird and think divergently." Six parallel
+bets, each ending in a sealed candidate or a measured negative, never a memo alone:
+
+1. **obx2 — the object.** Design A from obx1: an edge-local implicit correction lattice co-trained through R over the born generator. The only
+   construction that changes the object rather than the tail. Gate: a parsed ≤ 122,000 B object at n600 distortion < 0.04 before any scorer.
+2. **pc3 — pose is the steepest marginal.** At d_pose 4.59e-6 the pose term's derivative is 738 S per unit, 7.4× seg's 100. Every pass re-solved
+   the carrier at its lattice; nobody priced the d_pose-vs-bytes curve. Halving d_pose is 99 bars and is worth up to 2,970 B.
+3. **ntb1 — the 60,497 non-tail bytes** were never priced this week: ZIP overhead, header, the 13.5 KB HPAC model, the renderer's weights, the
+   carrier's container. A 500 B cut at unchanged distortion is 16 bars.
+4. **mxo1 — free compute is the untouched budget.** The T4 leg uses ~1,000 s of 1,800; rule 118 makes decode-time compute free. tc1's counted
+   35-weight mixer realized 6 % of a 9,011 B joint oracle; an online-learned mixer/recurrent model trained on the decoded prefix, zero counted
+   bytes, deterministic integer arithmetic, is the thing those bounds were about and no one built.
+5. **gpp1 — the receiver can look at its own pictures.** eb2 said the receiver holds no partition; but it renders RGB, and a generic, public,
+   non-video-derived model (never the scorers) run on those renders gives a Lane belief the token plane cannot. Rule 118 free if generic;
+   the legality reading is deliverable one, the operator decides at publish.
+6. **rbf1 — 86 % of the remaining d_seg is one-pixel boundary jitter at correct tokens.** rw1 closed grid repairs; a free deterministic
+   render-time boundary treatment (guided filter, edge-aware AA, token-driven sub-pixel displacement) is a different family, priced through
+   the real R operator at n600 on both seg and pose.
+
+What they share: every one is priced on the shipped field by the real coder or the frozen scorer, every one seals through the contract that
+just proved itself, and every one is a MEASURED bet, chosen by marginal S per byte or per second, not by novelty for its own sake.
