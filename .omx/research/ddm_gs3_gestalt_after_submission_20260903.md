@@ -1362,3 +1362,22 @@ class colour than to its own. The residual is not a pixel that is the wrong colo
 which is the SegNet-sees-regions law measured from the inside. Law for successors, in the arm's words: price the pose channel
 before the seg channel for any receiver-side pixel actuator on this vehicle. This is the third free lever closed this week on the
 same object (mxo1 slack, ls1/ls2 atlas, rbf1 treatment); the object question, not the lever question, is where the bet sits.
+
+## Addendum 36 (MAIN, 2026-09-11 ~15:30Z) — obx2 handback 4: the store closed the base-only stage, the fit could not, and a ratio I carried was retracted
+
+Three things happened in one unit, and the order they happened in is the lesson. First, the arm pre-registered a seg-slope falsifier,
+fired it on six epochs, got CLOSED for both arms, and refused to bank the verdict because the two fit families disagreed by five orders
+of magnitude on a 0.07-decade window; it amended the rule in the open (INDETERMINATE when the data cannot separate the families; the
+amendment can withhold a verdict but never flip one) and reported both firings. Second, it did the recall MAIN ordered, apparatus not
+volition, and the store answered what the fit could not: md1–md4 were measured on this exact generator form. Sixty-two percent of the
+terminal seg error is persistent across schedule, data order, and start; deleting every optimizer-reachable site leaves 12.75× the
+accuracy corner; every schedule, optimizer, and objective lever's combined ceiling is 1.61× against a 20.57× need. The w2 base-only
+stage was an objective lever on a closed form. It stopped, with checkpoints kept. The lattice head survives because it is the
+representation change md3 and md4 name as the cure, and their conditional excludes precisely what it changes. Third, the arm corrected
+a citation MAIN had carried into its charter: bz2d's ×1.157 token-to-argmax ratio was retracted the same day it was written. The
+relation is affine, argmax ≈ 17,241 + 1.1435·tokens, and the intercept is a render-manufactured floor no token work removes. For a
+witness that regenerates the partition, the transferable fact is that the intercept exists, not the slope. The pose side sharpened
+to a single sentence: ±1 LSB of independent noise on the render alone puts the object 2.2× past the gate (law on six n600 points,
+exponent 1.744, admissible 0.253 LSB). Standing question handed to the arm: how much of the object's seg gap is token-level partition
+error, which no lattice fixes, versus render floor, which the lattice targets. That split decides whether design A is aimed at the
+binding term at all, and the arm's retained per-chunk argmax can measure it against the pointer's token plane.
