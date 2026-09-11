@@ -113,6 +113,34 @@ def build_geometry(runtime: Path, work: Path) -> dict:
 TREATMENT_PAST_DILATION = {"control": 1, "past_dil2": 2, "past_dil3": 3}
 
 
+def assert_layout_held(body: bytes, shipped_body: bytes, counts: list[int]) -> dict:
+    """A shape rung moves taps; it must not add or drop any.
+
+    The invariant is the LAYOUT -- the same rows with the same per-row value counts --
+    NOT the byte length.  Packed length legitimately moves because QAT relearns the
+    per-row bit depths, and that movement IS the rung's model leg.  Checking length
+    here would refuse every real rung.
+    """
+    from runtime import rc2_hpac_semistatic_mixing as rc2
+
+    rows, depths = rc2.unpack_rows(body, counts)
+    shipped_rows, shipped_depths = rc2.unpack_rows(shipped_body, counts)
+    if len(rows) != len(shipped_rows):
+        raise PriceError("packed body changed the row count: this is not a shape rung")
+    moved = [i for i, (a, b) in enumerate(zip(rows, shipped_rows, strict=True)) if a.size != b.size]
+    if moved:
+        raise PriceError(f"packed body changed per-row value counts at rows {moved[:8]}")
+    return {
+        "rows": len(rows),
+        "values": int(sum(r.size for r in rows)),
+        "mean_depth_bits": float(sum(int(d) for d in depths) / len(depths)),
+        "shipped_mean_depth_bits": float(sum(int(d) for d in shipped_depths) / len(shipped_depths)),
+        "body_bytes": len(body),
+        "shipped_body_bytes": len(shipped_body),
+        "delta_body_bytes": len(body) - len(shipped_body),
+    }
+
+
 def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path | None) -> bytes:
     """Return the IHS1 body this treatment ships.
 
@@ -128,16 +156,7 @@ def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path |
     from experiments import ddm_rx2_mc36_identity_race as rx2
 
     packed = rx2._pack_terminal_ihs1(checkpoint, work / "model")
-    body = Path(packed["raw"]["path"]).read_bytes()
-    if len(body) != len(shipped_body):
-        # The rung moves taps without adding any, so the packed LAYOUT must match the
-        # shipped one exactly; only the depths and values may differ.  A length change
-        # means the topology moved and the rung is no longer a shape rung.
-        raise PriceError(
-            f"packed body is {len(body)} B against the shipped {len(shipped_body)} B: "
-            "a shape rung must not change the stored value count"
-        )
-    return body
+    return Path(packed["raw"]["path"]).read_bytes()
 
 
 def patch_receiver_dilation(runtime: Path, dilation: int) -> dict:
@@ -235,6 +254,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
     counts = list(layout.row_counts)
     shipped_body = rx.materialize_ihs1(parts.hpac_blob, renderer)
     body = treatment_body(tag, shipped_body, work, checkpoint)
+    layout_held = assert_layout_held(body, shipped_body, counts)
     retain(work / "retained/hpac.ihs1", body)
     if (body == shipped_body) != (tag == "control"):
         raise PriceError("treatment is a no-op, or the control body changed")
@@ -269,6 +289,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
         {
             "tag": tag,
             "past_dilation": dilation,
+            "layout_held": layout_held,
             "receiver_patch": receiver_patch,
             "receiver_change": receiver_patch is not None,
             "checkpoint": None if checkpoint is None else fact(checkpoint),
