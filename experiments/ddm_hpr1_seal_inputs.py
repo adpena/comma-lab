@@ -294,7 +294,7 @@ def emit(
     summary = {
         "candidate_id": CANDIDATE_ID,
         "seal_path": "NORMAL (receiver unchanged; inherits the pointer's measured decode leg)",
-        "archive": {"sha256": pins["archive_sha256"], "bytes": pins["archive_bytes"]},
+        "archive": prefire_file_reference(candidate / "archive.zip"),
         "emitted": sorted(p.name for p in out.glob("*.json")),
         "content_diff_vs_pointer_tree": [row["relative_path"] for row in diff],
         "literal_occurrence_count": total,
