@@ -269,6 +269,9 @@ rate target nor justifies a receiver integration.  The candidate-input branch is
 therefore **NOT FIRED**.  There is no archive delta and no score projection
 presented as a result.
 
+The canonical own-vehicle frontier remains composition S 0.1372449041713402 at
+180,406 B `[contest-CUDA T4 n600]` (move 44), **UNCHANGED**.
+
 The next possible charter is `ddm_mxo2_full_family_residual_stacker`, disposition
 `QUEUED-WITH-A-FIRE-ORDER`, owner `MAIN`, consumer store
 `/Volumes/VertigoDataTier/pact/ddm_mxo1_free_decode_time_online_context_mixing/`.
@@ -308,5 +311,3 @@ forms or build a receiver delta.
   0.0952% of stream bytes and fails bd1's 2.8–5.7% gate.
 - Raster-order replay is dead as an instrument: it preserves length but not the
   shipped RC64 bytes; only 190-group order reproduced the control sha.
-
-composition S 0.1372449041713402 @ 180,406 B `[contest-CUDA T4 n600]` (move 44), **UNCHANGED**.
