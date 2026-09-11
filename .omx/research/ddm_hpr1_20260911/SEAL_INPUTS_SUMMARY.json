@@ -1,0 +1,38 @@
+{
+  "archive": {
+    "bytes": 179359,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime/archive.zip",
+    "sha256": "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9"
+  },
+  "candidate_id": "ddm_hpr1_retrain_control",
+  "content_diff_vs_pointer_tree": [
+    "MANIFEST.sha256",
+    "archive.zip",
+    "inflate.py"
+  ],
+  "emitted": [
+    "ADMIT_ARITHMETIC.json",
+    "ARCHIVE_PARSEBACK.json",
+    "CANDIDATE_MANIFEST.json",
+    "ENCODER_EXECUTION_0.json",
+    "ENCODER_EXECUTION_1.json",
+    "FALSIFIERS_PREREGISTERED.json",
+    "LITERAL_CENSUS.json",
+    "MANIFEST_VALIDATION.json",
+    "PUBLIC_SMOKE.json",
+    "PUBLIC_SMOKE_VALIDATION.json",
+    "RAW_IDENTITY_N600.json",
+    "RETENTION_MANIFEST.json",
+    "TWIN_ENCODE.json"
+  ],
+  "literal_occurrence_count": 527,
+  "manifest_mismatched_rows": [],
+  "net_bytes_vs_pointer": -642,
+  "net_delta_s_vs_pointer": -0.00042748144790443404,
+  "pointer_archive_bytes": 180001,
+  "pointer_archive_sha256": "a0de607df2ff566d4eb6fc43031179f5450f0cb622803d4ce71b987f8970d720",
+  "raw_byte_identical_to_pointer": true,
+  "score_claim": false,
+  "seal_path": "NORMAL (receiver unchanged; inherits the pointer's measured decode leg)",
+  "seal_written": false
+}

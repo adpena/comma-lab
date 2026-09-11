@@ -355,20 +355,85 @@ def emit(
     return summary
 
 
+def smoke(candidate: Path, frontier: Path, out: Path, bound_seconds: float) -> dict:
+    """The four bounded public-entrypoint probes, checked by the VALIDATOR'S OWN checker.
+
+    ntb2's `smoke` subcommand is mechanically right but pins move 45's sha into the
+    checker, and the pointer is now move 46 -- the same expired-constant genus this file
+    just cured in itself. The probe MECHANICS are reused unchanged; only the pointer sha
+    is read live.
+    """
+    import ddm_pc2_carrier_kwidth_rankcut as pc2
+    import ddm_pc3_public as pc3pub
+
+    from tac.candidate_seal import _public_smoke_problems
+
+    probe_timeout = 0.8 * bound_seconds
+    trees = {"candidate": candidate, "frontier": frontier}
+    probes = {
+        ("public_path_probes", "candidate"): pc3pub._public_path_probe(candidate, timeout_s=probe_timeout),
+        ("public_path_probes", "frontier"): pc3pub._public_path_probe(frontier, timeout_s=probe_timeout),
+        ("inflate_sh_smokes", "candidate"): pc2._inflate_sh_smoke(candidate, timeout_s=probe_timeout),
+        ("inflate_sh_smokes", "frontier"): pc2._inflate_sh_smoke(frontier, timeout_s=probe_timeout),
+    }
+    block = {
+        "schema": "candidate_public_entrypoint_smoke.v1",
+        "public_path_probe_seconds": bound_seconds,
+        "public_path_probes": {},
+        "inflate_sh_smokes": {},
+    }
+    for (group, role), probe in probes.items():
+        block[group][role] = pc2._smoke_receipt(trees[role], probe)
+    write(out / "PUBLIC_SMOKE.json", block)
+    problems, observed = _public_smoke_problems(
+        block,
+        candidate_runtime_dir=candidate,
+        candidate_archive_path=candidate / "archive.zip",
+        pointer_archive_sha256=live_pointer()["archive_sha256"],
+    )
+    write(
+        out / "PUBLIC_SMOKE_VALIDATION.json",
+        {
+            "problems": problems,
+            "observed": observed,
+            "pointer_archive_sha256": live_pointer()["archive_sha256"],
+            "score_claim": False,
+        },
+    )
+    if problems:
+        raise SealInputsError(f"smoke block refused by the seal validator: {problems}")
+    return {"problems": problems}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--mode", choices=("receipts", "smoke"), default="receipts")
+    parser.add_argument("--frontier-runtime", type=Path)
+    parser.add_argument("--bound-seconds", type=float, default=180.0)
     parser.add_argument("--candidate-runtime", type=Path, required=True)
-    parser.add_argument("--pointer-runtime", type=Path, required=True)
+    parser.add_argument("--pointer-runtime", type=Path)
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--public-result", type=Path, required=True)
-    parser.add_argument("--price-receipt", type=Path, required=True)
-    parser.add_argument("--train-inputs", type=Path, required=True)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--retention", type=Path, required=True)
-    parser.add_argument("--expected-archive-sha256", required=True)
+    parser.add_argument("--public-result", type=Path)
+    parser.add_argument("--price-receipt", type=Path)
+    parser.add_argument("--train-inputs", type=Path)
+    parser.add_argument("--checkpoint", type=Path)
+    parser.add_argument("--retention", type=Path)
+    parser.add_argument("--expected-archive-sha256")
     args = parser.parse_args(argv)
     if str(args.out_dir).startswith("/Volumes/APDataStore"):
         raise SealInputsError("APDataStore is not this producer's tier")
+    if args.mode == "smoke":
+        if args.frontier_runtime is None:
+            raise SealInputsError("--frontier-runtime is required for the smoke mode")
+        print(json.dumps(smoke(
+            args.candidate_runtime.resolve(), args.frontier_runtime.resolve(),
+            args.out_dir.resolve(), args.bound_seconds)))
+        return 0
+    missing = [name for name in ("pointer_runtime", "public_result", "price_receipt",
+                                 "train_inputs", "checkpoint", "retention",
+                                 "expected_archive_sha256") if getattr(args, name) is None]
+    if missing:
+        raise SealInputsError(f"receipts mode requires: {missing}")
     summary = emit(
         args.candidate_runtime.resolve(),
         args.pointer_runtime.resolve(),
