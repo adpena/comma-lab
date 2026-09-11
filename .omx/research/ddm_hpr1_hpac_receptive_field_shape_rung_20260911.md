@@ -339,6 +339,30 @@ token field has moved since (sj1's pre-distortion at move 32 and after). The pri
 field it was never fit to. The −887 B is the cost of that staleness, and it was hiding in plain sight
 as *the control* of a shape experiment. [The lineage is DERIVED from the store; the −887 B is MEASURED.]
 
+### 4f. Relative significance, and MAIN's sequencing (MAIN, 2026-09-11)
+
+MAIN's adversarial review of the R1 verdict is at
+`.omx/research/ddm_hpr1_20260911/MAIN_R1_VERDICT_REVIEW_20260911.md`. Against the remaining gap to
+sub-0.12 of **0.0171383667** at move 45:
+
+| object | ΔB | ΔS | **share of the remaining gap** |
+|---|---:|---:|---:|
+| R1 (conv_past dil 2) vs move 45 | −75 B | −4.994e-5 | **0.29 %** |
+| CONTROL (retrain) vs move 45 | −887 B | −5.906e-4 | **3.45 %** |
+| R1 vs its own control (shape isolated) | +812 B | +5.41e-4 | −3.16 % (a loss) |
+
+MAIN's review is explicit that **R1 is not dismissed on magnitude** — 0.29 % of the gap would be banked
+under the byte-closed-rows-at-cadence law if it stood alone — but on **DOMINANCE**, and that the
+verdict scope is INSTANCE: one shape rung is falsified at exact bytes, the shape family is not closed,
+and un-recoverability is not claimed for R1. It is superseded, which is a different exit.
+
+**Sequencing (MAIN):** move 46 = ntb2's `frame_even` (first-measurement chain, which gives move 46 a
+measured T4 leg); **move 47 = this control, by NORMAL seal inheriting move 46's leg.** The token field
+and carrier are identical between moves 45 and 46, and this candidate replaces the `hpac` and tail
+members outright rather than editing move 46's, so its 179,359 B stay valid as a successor of 46. The
+absolute projected score is the same either way — **S 0.1365477498474212** — because the rate term
+reads the archive's byte count; only the printed Δ changes (−887 B against 45, −642 B against 46).
+
 ## 5. Fire verdict, and the ONE step owed
 
 **Fire verdict on the charter's rule (net ΔS < −2e-5 at exact bytes against 180,246 B):**
@@ -350,16 +374,17 @@ as *the control* of a shape experiment. [The lineage is DERIVED from the store; 
 - **CONTROL `retrain` — FIRE-ELIGIBLE, ONE STEP OWED.** 179,359 B, ΔS −5.906e-4, projected
   S 0.1365477498474212, `receiver_change: false`, output-lossless by in-loop assertion, twins agreeing.
 
-**The one step owed is the cold public parse-back**, and I stopped rather than fake it. The landed
-prover, `experiments/ddm_ntb2_public.py`, already takes `--candidate-archive`, `--price-receipt`,
-`--promoted-root` and `--public-root`, so it can read this arm's candidate — but its `--treatment`
-choices are ntb2's own, and it writes that string into every receipt it emits. Running it as
-`--treatment frame_even` over `retrain`'s bytes would stamp a FALSE LABEL into a custody receipt,
-which is the exact class this campaign extincts, so I did not. I also did not edit a sister arm's live
-producer while it runs, per this arm's boundaries. **The minimal honest unblock is a one-line change
-to that prover — a `--label` override, or adding this arm's treatment names to its `choices` — after
-which the parse-back is mechanical.** No seal exists and none is claimed until the raw comes back
-byte-identical.
+**The one step owed was the cold public parse-back, and MAIN routed it: fork, do not borrow.**
+`experiments/ddm_hpr1_public.py` imports the landed prover's pure helpers — above all
+`regenerate_manifest`, whose rule was falsified against move 44's shipped manifest before use — and
+supplies only this arm's labels, roots and bindings, under the truthful treatment name
+`retrain_control`. Nothing about the decode, the environment clearing or the raw comparison is
+re-derived. The staging assertion PASSES: exactly `archive.zip`, `inflate.py` and `MANIFEST.sha256`
+move against the sealed move-45 promoted tree, 49 manifest rows, pins rewritten to `d1fab05d…` /
+179,359 — **and that file-set assertion is itself the proof this candidate is not a receiver change.**
+The cold n600 decode runs with `F26_TOKEN_DECODER=python`, the cache and every pre-built library
+cleared from the environment, and no resume. No seal exists and none is claimed until the raw comes
+back byte-identical to the pointer's retained `2b762eba…`.
 
 **Composition with ntb2's move-46 candidate, stated so MAIN can rebase without guessing.** ntb2's
 `frame_even` ROUNDS the SHIPPED prior's `frame_embed.weight` to even values (−245 B). This arm's
@@ -371,10 +396,20 @@ of one field), but that composition is a THIRD candidate and needs its own twin 
 does that with one `--treatment` after its `POINTER45_SHA` is rebound, and its control-falsifier
 refuses automatically if the pointer moved under it.
 
-**Unfired, with pre-registered signs intact but their predictor now refuted:** R2 (`past_dil3`),
-R6 (`cone_dil2` / `cone_dil3`), and the two offset rungs. Each is one trainer command plus one
-`--treatment` on this rail. A successor should note that §4e refutes the statistic that ranked them,
-so their signs are now UNSUPPORTED, not merely unfired — re-derive before spending Metal on them.
+### 5a. Follow-on queue (MAIN's ordering)
+
+1. **R6 — `conv_a` cone dilation** (`cone_dil2` / `cone_dil3`). The cheapest unfired rung: ONE receiver
+   constant and nothing in C (§2c), already wired into the trainer profile and the rail. Receiver
+   change ⇒ first-measurement chain.
+2. **The temporal-axis sets the atlas found POSITIVE.** Every temporal set's MDL net is positive while
+   every spatial set's is negative (§2c) — the unexploited information is on the temporal axis, and
+   §4e refuted only the *dilation* family's sign, not that reading.
+
+**Both carry a caveat a successor must honour:** §4e refutes the conditional-information set statistic
+as a RUNG PREDICTOR on this object, so the pre-registered signs for R2, R6 and the offset rungs are now
+**UNSUPPORTED, not merely unfired.** Re-derive a predictor before spending Metal on them — and note
+that the retrain baseline moved: any future rung must be measured against the RETRAINED control, not
+against move 45, or it will re-earn R1's confound.
 
 ## 6. Apparatus landed
 
