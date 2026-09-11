@@ -4,7 +4,7 @@
 `# FORMALIZATION_PENDING: the shape statistic is a conditional-information RANKING, not a coder charge; it is registered as a canonical equation only when a real byte price confirms or falsifies its sign, per the standing "first-order token price is a ranking not a charge" law.`
 
 **STATE (Opus, 2026-09-11).** Deliverables 1 and 2 are COMPLETE and measured. Deliverable 3 (exact
-bytes per rung) is in flight: the move-45 live-loop pricing rail is running its falsifying control,
+bytes per rung) is in flight: the move-45 live-loop pricing rail PASSED its falsifying control,
 and the winning rung is training. No frontier move, no Modal dispatch, no scorer run, no candidate
 claim. This file is crash-resumable.
 
@@ -152,7 +152,7 @@ coding groups 190→253 (+33 % group iterations) against a 27.581 s strict slack
 
 ---
 
-## 3. The exact-byte pricing rail — control IN FLIGHT
+## 3. The exact-byte pricing rail — control PASSES
 
 Producer `experiments/ddm_hpr1_shape_price.py`, this arm's store. It is ntb2's law re-rooted on move
 45 and owned here: the shipping receiver loop runs unchanged and only the arithmetic DECODE call is
