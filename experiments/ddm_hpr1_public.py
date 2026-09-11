@@ -55,7 +55,8 @@ SOURCE_RAW_SHA = base.SOURCE_RAW_SHA
 RAW_BYTES = base.RAW_BYTES
 RESERVE_BYTES = base.RESERVE_BYTES
 #: The truthful name of what is being proven. It is this arm's treatment, so it is this
-#: arm's word, and it is the same string the price receipt carries.
+#: arm's word, and it is the same string the price receipt carries. Overridable, because
+#: this arm proves more than one candidate and a label must never be borrowed.
 TREATMENT = "retrain_control"
 
 
@@ -146,7 +147,7 @@ def run(timeout: int) -> dict:
         "runtime_sha256": measure_runtime_digest(runtime).sha256,
         "receiver_sha256": measure_receiver_digest(runtime),
         "archive": archive,
-        "base_archive_sha256": price_producer.POINTER45_SHA,
+        "base_archive_sha256": base.sha256_file(PROMOTED / "archive.zip"),
         "source_raw_sha256": SOURCE_RAW_SHA,
         "price": landed.fact(PRICE_RECEIPT),
         "producer": landed.fact(Path(__file__)),
@@ -292,10 +293,24 @@ def main(argv=None) -> int:
     parser.add_argument("--timeout", type=int, default=36000)
     parser.add_argument("--resume-from", type=Path, default=None)
     parser.add_argument("--public-root", type=Path, default=None)
+    parser.add_argument("--treatment", default=None,
+                        help="the truthful name of the candidate under proof; it goes into every receipt")
+    parser.add_argument("--promoted-root", type=Path, default=None,
+                        help="the POINTER's promoted receiver tree to stage from")
+    parser.add_argument("--candidate-archive", type=Path, default=None)
+    parser.add_argument("--price-receipt", type=Path, default=None)
     args = parser.parse_args(argv)
-    global ROOT
+    global ROOT, TREATMENT, PROMOTED, CANDIDATE_ARCHIVE, PRICE_RECEIPT
     if args.public_root is not None:
         ROOT = args.public_root.resolve()
+    if args.treatment is not None:
+        TREATMENT = args.treatment
+    if args.promoted_root is not None:
+        PROMOTED = args.promoted_root.resolve()
+    if args.candidate_archive is not None:
+        CANDIDATE_ARCHIVE = args.candidate_archive.resolve()
+    if args.price_receipt is not None:
+        PRICE_RECEIPT = args.price_receipt.resolve()
     if str(ROOT).startswith("/Volumes/APDataStore"):
         raise SystemExit("APDataStore is not this producer's tier")
     ROOT.mkdir(parents=True, exist_ok=True)
