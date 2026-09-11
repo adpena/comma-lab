@@ -1,0 +1,27 @@
+{
+  "apply_fire_order": {
+    "bytes": 1774,
+    "path": ".omx/research/ddm_vr7_20260910/apply_fire_order.json",
+    "sha256": "7860785bfdebb4dddd0578b8f4b6302bd20363a2397241ed5a2dbe28f9e5220c"
+  },
+  "deletable_bytes": 35034879550,
+  "inventory_deleted_bytes": 0,
+  "inventory_present_rows": 1212,
+  "landing_status": {
+    "bytes": 2078,
+    "path": ".omx/research/ddm_vr7_20260910/landing_status.json",
+    "sha256": "71859e7087f200e07aa07616bc72abebc09d60604abdb9e232386f09f54c603f"
+  },
+  "ledger": {
+    "bytes": 5113242,
+    "path": ".omx/research/ddm_vr7_reclaim_plan_20260910.jsonl",
+    "sha256": "fbff257ddab7dac5e3160ea3e4b667a3046f28d66b53eea5dde109cc48146394"
+  },
+  "memo": {
+    "bytes": 15281,
+    "path": ".omx/research/ddm_vr7_certified_deletion_20260910.md",
+    "sha256": "0895278454d1e7f95eb93988dc5afff150ac810f404603671a8b13c7efd54d58"
+  },
+  "rows": 1212,
+  "score_claim": false
+}

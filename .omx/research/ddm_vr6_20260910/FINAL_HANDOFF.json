@@ -1,0 +1,43 @@
+{
+  "status": "BLOCKED_RECLAIM_AND_MAIN_LANDING",
+  "score_claim": false,
+  "deletable_bytes": 0,
+  "reclaimed_bytes": 0,
+  "target_bytes": 42949672960,
+  "memo": ".omx/research/ddm_vr6_tonights_reclaim_20260910.md",
+  "ledger": ".omx/research/ddm_vr6_reclaim_plan_20260910.jsonl",
+  "ledger_sha256": "b0ace2373ffa2778e5d90b5057bcb8dcaf44591815719feab8a9a8f8d9aa6ce7",
+  "rehash": "/Volumes/VertigoDataTier/pact/ddm_vr6_reclaim_20260910/rehash_ledger.jsonl",
+  "landing_patch": ".omx/research/ddm_vr6_20260910/landing.patch",
+  "landing_patch_sha256": "99d0281800bb1f32b437215e54aa648f5ae517dcdd36b0b1fa0eec486fc0f3df",
+  "fallback_commit": "c7fd2f6ea80b4f27c49233bd05b213d27db9a229",
+  "fallback_bundle": "/Users/adpena/Projects/pact/.omx/research/ddm_vr6_20260910/serializer/20260910T034306.677443Z-56139/intended-commit.bundle",
+  "fallback_bundle_verified": true,
+  "main_landed": false,
+  "intended_files_match_receipt_and_worktree": true,
+  "intended_file_count": 57,
+  "index_before_after_empty": true,
+  "frontier": {
+    "score": 0.13763861019288715,
+    "bytes": 180233,
+    "axis": "contest-CUDA T4 n600",
+    "archive_sha256": "986d536b31ed1079c517dadea73ba33daf018c53692a2b2fbbf8d6244dfe9857"
+  },
+  "next_actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN / storage custodian with sj1",
+      "consumer_store": ".omx/research/ddm_vr6_reclaim_plan_20260910.jsonl",
+      "fire_trigger": "Harvest in host-visible session",
+      "action": "Resolve pass5 raw source/layout/path protection and actual consumer checks; regenerate supported plan before any deletion."
+    },
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "main Git; .omx/research/ddm_vr6_20260910/landing.patch",
+      "fire_trigger": "Git-writable session harvest",
+      "action": "Land verified artifact patch or equivalent fallback bundle; verify the 57 content hashes."
+    }
+  ],
+  "completed_at": "2026-09-10T03:44:26.928274+00:00"
+}

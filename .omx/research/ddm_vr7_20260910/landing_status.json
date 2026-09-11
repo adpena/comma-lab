@@ -1,0 +1,53 @@
+{
+  "attempts": 1,
+  "bundle": {
+    "bytes": 1432975,
+    "path": ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.bundle",
+    "sha256": "07c628bb500c7f14d3bf98b4967347b11c16acfdde5e000a0b49094490b73a26"
+  },
+  "bundle_verification": {
+    "argv": [
+      "git",
+      "bundle",
+      "verify",
+      ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.bundle"
+    ],
+    "returncode": 0,
+    "stderr": ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.bundle is okay\n",
+    "stdout": "The bundle contains this ref:\n4edf82e2b7ab499aa5ac93aca4bfe95cfa050e84 refs/heads/serializer-fallback\nThe bundle requires this ref:\n0aaf0c87bf9243a7e35b43c5119519230cb9e823 \nThe bundle uses this hash algorithm: sha1\n"
+  },
+  "consumer_store": ".omx/research/ddm_vr7_20260910/landing.patch",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "fallback_commit": "4edf82e2b7ab499aa5ac93aca4bfe95cfa050e84",
+  "fire_trigger": "MAIN harvest: land the exact reviewed fallback via authorized Git-write context; then apply_fire_order.json live gates.",
+  "inventory_deleted_bytes": 0,
+  "owner": "MAIN",
+  "patch": {
+    "bytes": 16521329,
+    "path": ".omx/research/ddm_vr7_20260910/landing.patch",
+    "sha256": "a7eadd5a9303d93be5e79d024bbf2a5f88148860ed4f9e7df2499d7e4ab256b1"
+  },
+  "patch_matches_worktree_check": {
+    "argv": [
+      "git",
+      "apply",
+      "--reverse",
+      "--check",
+      ".omx/research/ddm_vr7_20260910/landing.patch"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "ddm_vr7.landing_status.v1",
+  "score_claim": false,
+  "serializer_receipts": {
+    "bytes": 18432,
+    "path": ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/receipts.jsonl",
+    "sha256": "47a3c3cb8bde33b3614973fe7131f0d842f1dfc8bf3bd1241ca1cba757cf02f1"
+  },
+  "serializer_returncode": 17,
+  "shared_index_unchanged": true,
+  "shared_worktree_committed": false,
+  "status": "GIT_OBJECT_WRITE_DENIED_FALLBACK_READY"
+}

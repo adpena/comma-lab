@@ -1,0 +1,10 @@
+{
+  "returncode": 0,
+  "stdout": "The bundle contains this ref:\nc7fd2f6ea80b4f27c49233bd05b213d27db9a229 refs/heads/serializer-fallback\nThe bundle requires this ref:\n2266099161961c4e9aea6fc707b27c67e3b511b8 \nThe bundle uses this hash algorithm: sha1\n",
+  "stderr": ".omx/research/ddm_vr6_20260910/serializer/20260910T034306.677443Z-56139/intended-commit.bundle is okay\n",
+  "bundle_sha256": "553c30fc2efd9204d9c1a2f5d4061cee0790d4553abea8b84b3f55ca1e0d2c07",
+  "landing_patch_sha256": "99d0281800bb1f32b437215e54aa648f5ae517dcdd36b0b1fa0eec486fc0f3df",
+  "landing_patch_bytes": 4368779,
+  "matches_serializer_patch": true,
+  "main_landed": false
+}

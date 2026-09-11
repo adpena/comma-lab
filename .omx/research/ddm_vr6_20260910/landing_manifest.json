@@ -1,0 +1,287 @@
+[
+  {
+    "path": ".omx/research/ddm_vr6_tonights_reclaim_20260910.md",
+    "bytes": 14180,
+    "sha256": "a1b6d221198035457daea3abe8b950c38d530b52d22fce6c2a226064c295307b"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_reclaim_plan_20260910.jsonl",
+    "bytes": 300947,
+    "sha256": "b0ace2373ffa2778e5d90b5057bcb8dcaf44591815719feab8a9a8f8d9aa6ce7"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ap_tonight_t4.json",
+    "bytes": 1907,
+    "sha256": "8c7834026dc880faa8fc38bd1e02e86a21a42cc23623e395421a9c2cc3e33a45"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/apply_command.json",
+    "bytes": 1147,
+    "sha256": "9e647f985692882e21e32217a185e48c79ed0ebdc7eba1983d9b85093a39fceb"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/artifact_review.json",
+    "bytes": 2095,
+    "sha256": "e6c9c0ab52421d4dc116b73c51214b137707fd805bd29ea6c31576ab041cf51e"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/blocked_owners.md",
+    "bytes": 1381,
+    "sha256": "569707f4943f96d72fad3e97663a5b7e38f8c40dcd73bf56d0ea7ea26b1b5fbf"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_bnd2_segment_code.json",
+    "bytes": 2048,
+    "sha256": "49db3d5e3b05512e6bc8b490484a942444cd123c0e16b58accd4bd2bff288436"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_bnd3_address_term.json",
+    "bytes": 1349,
+    "sha256": "819da36a61e2a3c8215d1652011ad85f8139061506c7d992f2b970ff67ccd266"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_rp1_20260728.json",
+    "bytes": 273,
+    "sha256": "fb54becbb5cf185b95cd3dc5dd9d10d0c34804a0ad4c44a4ce9c50b6d825e351"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_rp1_rate_directed_predistortion.json",
+    "bytes": 297,
+    "sha256": "f943caf56664a4882896aec1e5f6809e5d6c10326e8cda56d4e2f2aad0b3bbe1"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_rp1_round2.json",
+    "bytes": 272,
+    "sha256": "7e4ac87413ce4dc40ca5e87facf9e6c84a253ccc4765a73d7cf0f90a9f89d3c4"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_sj1_compose39_price.json",
+    "bytes": 2533,
+    "sha256": "818e49cbafbb4bca1dbeb05f703dd3e952a7d4cb96abeef7085ad34fa235a865"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_sj1_multipass_token_predistortion.json",
+    "bytes": 1795,
+    "sha256": "ff353268dde766511fd071a6d9150e4fe49e80d9c8707f32b0dfa7df4aa9a17c"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_sj1_pass5_price.json",
+    "bytes": 3805,
+    "sha256": "bd2f6473e9c750c36553338983fc93e4805256a292c35da09a2e6f00cbe81242"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_tc2_lane_context_map.json",
+    "bytes": 1472,
+    "sha256": "b63691755f62f781450a6582f8e22d7eb3f2359f92e57f0c7a0007195d6bc9e8"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/ddm_tc3_lane_predictor_seal.json",
+    "bytes": 587,
+    "sha256": "b95693b83523c1fd0d95fc17d5a05e053bfcce11b196ff20cea79794e8a5cb07"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/df_plan.json",
+    "bytes": 256,
+    "sha256": "2cb217eb8150d1cfe7992a233f816e7e5ce40e42e334e3483436a3141785c651"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/equations_recall.json",
+    "bytes": 3686581,
+    "sha256": "f76218f0f4ab438a996e16212ee73dc88adc42496fb71a3da298176e4d884476"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/equations_recall_summary.json",
+    "bytes": 310,
+    "sha256": "2c3504d31758725bb5ddb973c1faea0e046c6f92e0525df77fa457271a0d1701"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/frontier_readback.json",
+    "bytes": 2998,
+    "sha256": "0744360756a961e69f4f9624a580c47593416f16018f3e8b076487c94df794c0"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/git_before.txt",
+    "bytes": 5849,
+    "sha256": "9063c7a2e960fde76c0b7bcebd3b22dec9bc3ec1380b40dbcb3cec4f6186679c"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/head_before.txt",
+    "bytes": 41,
+    "sha256": "0afde852c02b94e7e42920efbed26744cefa3ad83962c284498bbb397a4c9702"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/index_before.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/index_design_task_recall.txt",
+    "bytes": 2649,
+    "sha256": "6d8bb06d76343da57931174a9f81bd192a1ed20d05f597c0a7d223c921e2eb0b"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_cold_store.json",
+    "bytes": 5167,
+    "sha256": "961f6e09ad268003acf0375b125eac00b8478bc26c579971847bad3041e6b047"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_ddm_js5_20260812.json",
+    "bytes": 299,
+    "sha256": "cb5d6f9ebb0e1b20c830d962eae05917b70292febe926991edcafb94431c0e07"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_ddm_mc35_20260814.json",
+    "bytes": 300,
+    "sha256": "fd630305aec53331cac302fd7614f8af273744452a176e0474f4f1ef38c39e64"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_ddm_pfs1_20260729.json",
+    "bytes": 4534,
+    "sha256": "a7311d3bc1b6a9d64729e513841a9c866552b63b675f306fdcddaeb7d10639a4"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_ddm_pk4_20260813.json",
+    "bytes": 302,
+    "sha256": "543218fcd2fedbdcbd471ae4321320c2c1dca35fc64582e2422d1aadaa2378d2"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_ddm_pz4_joint_target_conditioned_receiver.json",
+    "bytes": 657,
+    "sha256": "bb599da8c96dfe0549cf02f6aaed36a3d855b7cb0ae6bbf8b4350a64791d153d"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_ddm_qs1_20260813.json",
+    "bytes": 623,
+    "sha256": "1c7050164095080cb7c766821718fbb8f82b4f922db9a84b6b188a536ebd2621"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_evidence.json",
+    "bytes": 10106,
+    "sha256": "b4787647c4c0fb6edbcf9c7599d8a47a7a97cc67d774bbe53ca052738408e728"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_experiments.json",
+    "bytes": 33309,
+    "sha256": "8e26cb85ef070aea313ddb371b12d3a444e7a0bf60d91920ce43557ac3073a22"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_hprc_projection_gap_repairs.json",
+    "bytes": 8294,
+    "sha256": "0e4fd665e41728c27db3945e0c5196cc85783b6ab564bc4f4d833f9ff68e8d2b"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_pr135_joint_solve_20260810.json",
+    "bytes": 2245,
+    "sha256": "26cefd86d7fc779a372c63763ab7c1ce7852cfd6af589e97aa029f5394ac7b51"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/inventory_public_datasets.json",
+    "bytes": 627,
+    "sha256": "2ee33a97d58b6238edf1cc4adc9e544cd0fb18e371d2fd868579e3ddc2dfa2dd"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/legacy_certificate_preflight.json",
+    "bytes": 39049,
+    "sha256": "f06d942e9ed9538fa31a80fc11782375aa1d7df91fed3771161a204689663b52"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/main_apply_command.txt",
+    "bytes": 662,
+    "sha256": "7fdaf049b05496a6169437d861f48e25b19b031f23b133389e36ae24e45fa1b8"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/overlay_reproducer_inspection.json",
+    "bytes": 4680,
+    "sha256": "e4dca7aa9a83a23b8c6d377a114f029569c5b763cbaf785a34cb29fc4e01ba5d"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/pass5_raw_inventory.json",
+    "bytes": 805,
+    "sha256": "80e2b2dd8f580e772dc74ccbfc0669e815ecff23429bce7fbf4783e4314f4ff2"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/pass5_reference_scan.json",
+    "bytes": 7236,
+    "sha256": "c81438dcee5de959cb3b9c92e3c95f72e56d1eb72fa0513b96b6852394b70bf0"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/pass5_seal_reproducer.json",
+    "bytes": 2713,
+    "sha256": "1b6371d963aca33f0e9b98867dcd0d4f53ea166f41aaec5b461f9b00486775cc"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/plan_retained_attempt.json",
+    "bytes": 749,
+    "sha256": "0cad85cc31db2f04e43432575a27ef4ab731b2ceb879e2cdb69fe55bf510c4b3"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/planner_closures.json",
+    "bytes": 877,
+    "sha256": "10d6e0f322c14c1fcc70c8c4dc4275dbd5fbefa7dddc4c73df5dd3cd91023c6b"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/planner_source.jsonl",
+    "bytes": 2923,
+    "sha256": "55ceac7fe09342852924504de258ee740a548466a7eb73c9c24cb0a45af0f760"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/process_plan.json",
+    "bytes": 1561,
+    "sha256": "9e823f6955a4182c824ec23c948633101f1c86e7ee023ac328d80acedb5579c9"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/recall_evidence.json",
+    "bytes": 1593,
+    "sha256": "b4d0df908db30cbf1c83a01ad6d7c63a7559a9ec39325e415ba0440a64033876"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/research_recall.txt",
+    "bytes": 25185,
+    "sha256": "83673bfd031f520cbfbf48b67da8b1e03a4fb1731daae7d6eda72b50ba95160a"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/summary.json",
+    "bytes": 907,
+    "sha256": "5bc7d864323f88dcf29565220f129d6134d59d904d85261cd39f73e638c0dc15"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/tonight_subtrees.json",
+    "bytes": 12267,
+    "sha256": "3e105b1415c705bd10886aa4871dbd00647f2996a4b2001529d46cc7aebf9ce2"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/top_ten.json",
+    "bytes": 1097,
+    "sha256": "9ca21a94b0c98a7feb72376361e1af5c7391eedaf0bc65464cb95be71e28014f"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/validation.json",
+    "bytes": 525,
+    "sha256": "01347feb2a08ede434c6b76bf44f68b6fa778bf71f8b9ba5e146650d7d178e5f"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/vertigo_du.stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/vertigo_du.txt",
+    "bytes": 71659,
+    "sha256": "c504676c299ee529686ed8c44a33166915b11fb98e34b72685dab9c61795c125"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/serializer_preflight_refusal.json",
+    "bytes": 315,
+    "sha256": "db614e2bac1ddbece39d5a2d58e4fe1d9cbdf8aeb37feaddcaa71781b2d7caf6"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/serializer_preflight_stdout.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".omx/research/ddm_vr6_20260910/serializer_preflight_stderr.txt",
+    "bytes": 398,
+    "sha256": "278440f5269ab3e30cef4a92155eac10ff22076125545e562303170103436765"
+  }
+]

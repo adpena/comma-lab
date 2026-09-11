@@ -1,0 +1,6 @@
+{
+  "attempt": 1,
+  "returncode": 17,
+  "stderr": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: experiments/ddm_vr3_certified_raw_reclaim.py: failed to insert into database\nerror: unable to index file 'experiments/ddm_vr3_certified_raw_reclaim.py'\nfatal: updating files failed\n",
+  "stdout": "BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.bundle format_patch=/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.format-patch receipt=/Users/adpena/Projects/pact/.omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/receipts.jsonl fallback_commit=4edf82e2b7ab499aa5ac93aca4bfe95cfa050e84\n"
+}
