@@ -1,8 +1,11 @@
 # ddm_mxo3 (resuming ddm_mxo2) — the pre-mix stacker screen, CLOSED at n600: the shipped collapse keeps nothing
 
 **Axis:** `[macOS-CPU advisory / scorer-free n600 exact integer-row screen]`. No score claim, no Modal,
-no scorer, no candidate archive. Frontier unchanged: `composition S 0.1372449041713402 @ 180,406 B
-[contest-CUDA T4 n600] (move 44)`.
+no scorer, no candidate archive. This screen's binding frontier, unchanged by it:
+`composition S 0.1372449041713402 @ 180,406 B [contest-CUDA T4 n600] (move 44)` — the archive every
+number here was measured against. While this screen ran, a sister arm landed **move 45**
+(S 0.1371383667388406 @ 180,246 B, archive `145e02e21f9a1cbc…`); that is not this arm's doing and does
+not touch any measurement below.
 
 ## Answer
 

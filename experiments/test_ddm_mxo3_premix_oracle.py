@@ -192,3 +192,18 @@ def test_per_family_models_register_a_planted_single_family_signal(monkeypatch) 
     noise = _run(monkeypatch, planted=False, context_set="summary")
     assert noise["holdout_best_single_family_bytes"] < 0.01 * noise["shipped_binary_bytes"]
     assert noise["holdout_worst_single_family_bytes"] <= noise["holdout_best_single_family_bytes"]
+
+
+def test_q15_blind_accounting_is_total_when_no_family_ever_disagrees(monkeypatch) -> None:
+    """The blind bound must catch a surface that shows no disagreement at all."""
+    rng = np.random.default_rng(5)
+    frames = [_frame(rng, 20_000, True) for _ in range(2)]
+    for frame in frames:
+        frame["family_q15"][:] = frame["mixer_q15"][:, None]
+    monkeypatch.setattr(oracle, "checked_npz", _Frames(frames))
+    blind = oracle.report(
+        oracle.accumulate(Path("/unused"), 2, np.random.default_rng(3), "summary", 1), 2
+    )
+    assert blind["q15_blind_share_of_binary"] == pytest.approx(1.0)
+    assert blind["q15_blind_symbols"] == 40_000
+    assert blind["holdout_premix_bytes"] == pytest.approx(0.0, abs=1e-6)

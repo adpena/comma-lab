@@ -178,6 +178,8 @@ def accumulate(
     calib_hits = np.zeros((2, K, miss_bins), dtype=np.int64)
     shipped_bits = 0.0
     total_bits = 0.0
+    blind_bits = 0.0
+    blind_symbols = 0
     seen = 0
     for frame in range(frames):
         path = root / "surface/frames" / f"frame_{frame:04d}.npz"
@@ -194,6 +196,13 @@ def accumulate(
         total_bits += float(
             (-np.log2(frequencies[rows, symbols].astype(np.float64) / TOTAL)).sum()
         )
+        # Where every family rounds to the same Q15 value as the mix, the surface
+        # itself cannot show a disagreement.  Those bits bound what this boundary
+        # hides, whatever a model does with the rest.
+        blind = family.max(axis=1) == family.min(axis=1)
+        blind &= family[:, 0] == mixer
+        blind_bits += float(binary_bits(probability, hit)[blind].sum())
+        blind_symbols += int(blind.sum())
         bins = miss_bin(probability, miss_bins)
         block = min(frame * blocks // frames, blocks - 1)
         context = premix_context(family, mixer, axes) * blocks + block
@@ -241,6 +250,8 @@ def accumulate(
         "calib_hits": calib_hits,
         "shipped_bits": shipped_bits,
         "total_bits": total_bits,
+        "blind_bits": blind_bits,
+        "blind_symbols": blind_symbols,
         "symbols": seen,
         "context_set": context_set,
         "miss_bins": miss_bins,
@@ -326,6 +337,9 @@ def report(state: dict[str, object], frames: int) -> dict[str, object]:
         "shipped_binary_bits": shipped_bits,
         "shipped_binary_bytes": shipped_bits / 8,
         "recalibration_only_bytes": (shipped_bits - calibrated) / 8,
+        "q15_blind_bytes": float(state["blind_bits"]) / 8,
+        "q15_blind_symbols": int(state["blind_symbols"]),
+        "q15_blind_share_of_binary": float(state["blind_bits"]) / max(shipped_bits, 1.0),
         "premix_gross_bytes": premix_bits / 8,
         "premix_overfit_bytes": overfit_bits / 8,
         "premix_net_bytes": (premix_bits - overfit_bits) / 8,
