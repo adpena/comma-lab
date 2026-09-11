@@ -3,7 +3,10 @@
 <!-- FORMALIZATION_PENDING: process/landing record for an in-flight governed burn; the canonical equations it would register are the gate arithmetic already registered under the contest objective, and no new law is claimed until the burn produces a terminal parsed row. -->
 
 Date: 2026-09-11
-Status: `IN FLIGHT — STAGES 0, 1, 7-HARNESS BUILT AND PASSING; THREE GOVERNED RUNS LIVE`
+Status: `DESIGN A CLOSED AT FORMULATION SCOPE — see .omx/research/ddm_obx2_design_a_closure_20260911.md`
+Closure summary: the lattice MECHANISM is validated (MAIN's attribution rule passed at 1.53x its bar;
+53.1% of the render floor captured, 6.4x on Pose for 575 B) and the OBJECT is refused (89.83% of the
+seg error is partition-level, and the render floor alone is 5.77x the seg ceiling).
 Measurement axis: `[macOS-CPU advisory]`
 Score claim: false
 Promotion eligible: false
