@@ -52,6 +52,7 @@ ROOT, RESERVE_BYTES = STORE_ROOTS["vertigo"]
 #: The move-47 promoted tree (SEALED; copy only) and hpr1's in-flight move-48 composition.
 PROMOTED47 = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime")
 COMPOSITION48 = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/price/retrain_frame_even/retained/archive.twin0.zip")
+MOVE47_SHA = "d1fab05d69f31c90ac55173fa87072949e5ea1e069a0b7614337089b7a2a0ce9"
 COMPOSITION48_SHA = "d830edd37164"  # prefix from hpr1's PRICE.json; the full sha is bound at prepare time
 FIELD = Path("/Volumes/APDataStore/pact/ddm_hpr1/inputs/field.u8")
 FIELD_SHA = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
@@ -63,8 +64,8 @@ SEED = 20260911
 #: 40-parameter vectors -- at about 90 MB, after MAIN's 2026-09-11 footprint ruling.
 SAMPLE_STRIDE = 32
 CONTROLS = ("control47", "control48")
-TREATMENTS = CONTROLS + ("refit47", "refit48")
-ON_48 = ("control48", "refit48")
+TREATMENTS = CONTROLS + ("refit47", "refit48", "refit47b", "refit48b")
+ON_48 = ("control48", "refit48", "refit48b")
 
 
 class PriceError(RuntimeError):
@@ -113,12 +114,18 @@ def sample_mask(frame: int, positions: np.ndarray) -> np.ndarray:
 
 def base_tree(tag: str, work: Path) -> tuple[Path, str]:
     """Materialise the base tree this treatment prices against, and bind it by sha."""
-    live_row = live_pointer()
-    live = live_row["archive_sha256"]
+    live = live_pointer()["archive_sha256"]
     pointer47 = fact(PROMOTED47 / "archive.zip")
-    if pointer47["sha256"] != live:
-        raise PriceError(f"POINTER_MOVED: move-47 tree {pointer47['sha256']} is not the live pointer {live}")
+    # The pointer moved to move 48 UNDER this arm, at 23:12 UTC, and this guard is what
+    # caught it.  A CANDIDATE row must price against the live pointer -- that is the ON_48
+    # branch below, which still refuses on a move.  A move-47 row is now a DIAGNOSTIC
+    # against a named, superseded base, so it is bound to the RECORDED move-47 sha rather
+    # than to "whatever is live", and it declares that it is not the live pointer.  Binding
+    # a historical base to a moving pointer would be the opposite error to the one the
+    # ON_48 guard prevents.
     if tag not in ON_48:
+        if pointer47["sha256"] != MOVE47_SHA:
+            raise PriceError(f"move-47 tree {pointer47['sha256']} is not the recorded move-47 archive")
         return PROMOTED47, pointer47["sha256"]
     # The move-48 composition exists only as a bare archive in hpr1's read-only price
     # store.  Its tree is move 47's tree with that archive swapped in: frame_even is a
@@ -186,6 +193,7 @@ def prepare(tag: str, weights: Path | None):
             "base_archive_expected": {"sha256": base_sha, "bytes": fact(tree / "archive.zip")["bytes"]},
             "base_tree": str(tree),
             "live_pointer": {k: live_pointer().get(k) for k in ("archive_sha256", "score")},
+            "prices_against_live_pointer": base_sha == live_pointer()["archive_sha256"],
             "shipped_rider_sha256": hashlib.sha256(shipped).hexdigest(),
             "candidate_rider_sha256": hashlib.sha256(config).hexdigest(),
             "shipped_weights_sha256": hashlib.sha256(shipped[1:41]).hexdigest(),
