@@ -17,6 +17,7 @@ Axis: [macOS-CPU advisory]. No scorer runs. No score is claimed. No seal is writ
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -85,31 +86,62 @@ def compare_bytes(left: Path, right: Path) -> bool:
                 return True
 
 
-def stage_runtime(treatment: str) -> Path:
-    """move 44's receiver tree with ONLY the treatment's archive.zip and its pin swapped in.
+def sha256_file(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
-    `inflate.py` carries `ARCHIVE_SHA256`/`ARCHIVE_BYTES` as a self-check on the artifact it
-    was promoted with, so a new archive cannot decode until they name it. Those two
-    assignments are NOT a receiver change and this is not an opinion: the campaign's own
-    `tac.decode_wall_clock.measure_receiver_digest` "normaliz[es] only the values of explicit
-    archive pin assignments", and this function REFUSES unless the receiver digest of the
-    staged tree equals move 44's. That equality is what lets the seal inherit move 44's
-    t4_direct decode-wall-clock instead of owing a first measurement.
+
+def regenerate_manifest(root: Path) -> bytes:
+    """Rebuild `MANIFEST.sha256` the way the promoted tree's own was built.
+
+    MEASURED rule, falsified against move 44's shipped manifest before use: every file
+    except `MANIFEST.sha256` ITSELF and `archive.zip`, sorted, `sha  relpath` per line.
+    Regenerating move 44's tree by this rule reproduces its shipped 49-row manifest byte
+    for byte; including `archive.zip` gives 50 rows and does not.
+    """
+    rows = "".join(
+        f"{sha256_file(path)}  {path.relative_to(root)}\n"
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+        and path.name not in ("MANIFEST.sha256", "archive.zip")
+        and "__pycache__" not in path.parts
+        and path.suffix != ".pyc"
+    )
+    return rows.encode()
+
+
+def stage_runtime(treatment: str) -> Path:
+    """The PROMOTED tree with the treatment's archive, its pin, and a rebuilt manifest.
+
+    The source is move 44's actually promoted receiver tree, not this arm's working copy:
+    the working copy inherited from the codex arm is byte-identical on all 50 files it
+    holds but is MISSING `MANIFEST.sha256`, which the promoted tree ships. Staging from
+    the working copy produced a tree one file short of the shipped lineage and made this
+    arm's first receiver-digest comparison an equality between two trees that both lacked
+    the file -- which is how MAIN's warned row came to look absent here.
+
+    `inflate.py` carries `ARCHIVE_SHA256`/`ARCHIVE_BYTES` as a self-check on the artifact
+    it was promoted with, so a new archive cannot decode until they name it, and the
+    manifest lists `inflate.py`'s raw hash so it follows. This function therefore asserts
+    the FILE SET that moved, not a digest equality: exactly `archive.zip`, `inflate.py`
+    and `MANIFEST.sha256`, and nothing else.
     """
     runtime = ROOT / treatment / "candidate_runtime"
-    source = control.ROOT / "source_runtime"
-    archive_ready = runtime / "archive.zip"
-    if archive_ready.is_file():
+    source = control.ROOT / "promoted_runtime"
+    if not (source / "MANIFEST.sha256").is_file():
+        raise SystemExit(f"promoted tree missing its manifest: {source}")
+    if (runtime / "MANIFEST.sha256").is_file():
         # Idempotent on resume. Re-staging a tree the receiver has already checkpointed
-        # against makes it refuse with "receiver checkpoint binding or bytes changed",
-        # which is the guard doing its job on a tree that only LOOKED the same.
+        # against makes it refuse with "receiver checkpoint binding or bytes changed".
         return runtime
+    if runtime.exists():
+        shutil.rmtree(runtime)
     shutil.copytree(source, runtime, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     archive = hpac.ROOT / treatment / "retained/archive.twin0.zip"
     if not archive.is_file():
         raise SystemExit(f"no priced archive for {treatment}: {archive}")
     shutil.copy2(archive, runtime / "archive.zip")
-    sha = landed.fact(runtime / "archive.zip")["sha256"]
+    sha = sha256_file(runtime / "archive.zip")
     size = (runtime / "archive.zip").stat().st_size
     inflate = runtime / "inflate.py"
     text = inflate.read_text()
@@ -120,8 +152,20 @@ def stage_runtime(treatment: str) -> Path:
         head, rest = text.split(marker, 1)
         text = head + marker + value + rest[rest.index("\n") :]
     inflate.write_text(text)
-    if measure_receiver_digest(runtime) != measure_receiver_digest(source):
-        raise SystemExit("RECEIVER CHANGED beyond the archive pin; a first measurement is owed")
+    (runtime / "MANIFEST.sha256").write_bytes(regenerate_manifest(runtime))
+    moved = sorted(
+        path.relative_to(runtime).as_posix()
+        for path in runtime.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and path.suffix != ".pyc"
+        and (
+            not (source / path.relative_to(runtime)).is_file()
+            or path.read_bytes() != (source / path.relative_to(runtime)).read_bytes()
+        )
+    )
+    if moved != ["MANIFEST.sha256", "archive.zip", "inflate.py"]:
+        raise SystemExit(f"RECEIVER CHANGED beyond archive + pin + manifest: {moved}")
     return runtime
 
 
