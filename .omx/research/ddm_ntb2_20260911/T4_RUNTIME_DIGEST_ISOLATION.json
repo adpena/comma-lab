@@ -1,0 +1,47 @@
+{
+ "axis": "[macOS-CPU advisory; digest arithmetic, scorer-free]",
+ "conclusion": "measure_receiver_digest normalizes the archive pins and passes; measure_t4_runtime_digest does not normalize them and refuses. The refusal is about the pin, not about anything this candidate changed in the receiver. This is pr14's owed amendment, isolated by a two-cell control rather than by a row count: the same two-constant edit applied to move 44's OWN archive reproduces the candidate's digest byte for byte.",
+ "controls": [
+  {
+   "control": "path coupling",
+   "method": "byte-identical copy of move 44's tree at a DIFFERENT absolute path",
+   "result": "t4 digest e3d23719... IDENTICAL",
+   "verdict": "REFUTES path coupling. The manifest rows runtime_root and the files rows' repo_relative_path do carry absolute paths, but they do not reach the digest. A plausible hypothesis, controlled, and dropped."
+  },
+  {
+   "control": "archive only",
+   "method": "candidate archive.zip swapped into move 44's tree, inflate.py pins left at move 44's",
+   "result": "t4 digest e3d23719... IDENTICAL",
+   "verdict": "the archive itself contributes NOTHING to this digest; it is correctly excluded"
+  },
+  {
+   "control": "pin only",
+   "method": "the two inflate.py pin constants set to the candidate's, archive left as move 44's",
+   "result": "t4 digest 8f02b95c... DIFFERS, and equals the candidate's digest EXACTLY",
+   "verdict": "ISOLATED. The sole cause is the two archive-pin constants, and the candidate's digest is reproduced by that edit alone on move 44's own archive."
+  }
+ ],
+ "measured_utc": "2026-09-11T15:31:16Z",
+ "not_done": "no contract code and no manifest was patched to get past this, per MAIN 2026-09-11; the seal is run once and its typed refusal recorded",
+ "question": "does tools/make_candidate_seal.py --inherit-decode-wall-clock refuse this candidate, and if so on WHICH row and for WHICH cause?",
+ "receiver_digest_measure_receiver_digest": {
+  "candidate": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "equal": true,
+  "move44": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+  "why": "it normalizes the values of explicit archive pin assignments in inflate.py"
+ },
+ "schema": "ddm_ntb2_t4_runtime_digest_isolation.v1",
+ "score_claim": false,
+ "t4_runtime_digest_measure_t4_runtime_digest": {
+  "candidate": "8f02b95c944f5c210f25ae2cd739720bb03a8e7fd25e40fa2a76d91e1bab163b",
+  "equal": false,
+  "matches_pointer_runtime_tree_sha256": true,
+  "move44": "e3d2371917920ce3dad002761203af48cfa72d98b07f82f077ef6dc0115b1891",
+  "why": "the Modal upload projection hashes inflate.py RAW, so the archive pin moves it"
+ },
+ "trees": {
+  "candidate": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/frame_even/candidate_runtime",
+  "controls": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/public/_digest_path_control/",
+  "move44": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/control/source_runtime"
+ }
+}

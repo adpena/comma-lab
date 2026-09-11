@@ -1,0 +1,179 @@
+{
+ "bytes_moved": 708197883,
+ "destination_tier": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints",
+ "files_moved": 12,
+ "moved_at_utc": "2026-09-11T15:29:13Z",
+ "nothing_deleted": true,
+ "reason": "VertigoDataTier reached 40 GiB, exactly the fail-closed reserve the HPAC and renderer producers refuse below, while a 3.66 GB cold parse-back was writing. Certify-and-move, never delete (MAIN 2026-09-11).",
+ "rows": [
+  {
+   "bytes": 71812,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.film.weight/LATEST.json",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.film.weight/checkpoints/LATEST.json",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.film.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "run_completed": true,
+   "sha256": "d4912c3a0e502adbf7ad9e2eca5ce5fc9ee10692bf1c620b12ccba0080b4b424",
+   "treatment": "blocks.1.film.weight"
+  },
+  {
+   "bytes": 117994108,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.film.weight/LATEST.npz",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.film.weight/checkpoints/LATEST.npz",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.film.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "run_completed": true,
+   "sha256": "b54fb739f6315981c705e17d1ca93112d2d27ad958a15b511dfbd2d9efa84137",
+   "treatment": "blocks.1.film.weight"
+  },
+  {
+   "bytes": 7239,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.pw.weight/LATEST.json",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.pw.weight/checkpoints/LATEST.json",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.pw.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "run_completed": false,
+   "sha256": "33406bf799081b2cdb4eaa57beb3592a7e711a8908c854ce76a187a7a2180cd9",
+   "treatment": "blocks.1.pw.weight"
+  },
+  {
+   "bytes": 117994108,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.1.pw.weight/LATEST.npz",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.1.pw.weight/checkpoints/LATEST.npz",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.1.pw.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "run_completed": false,
+   "sha256": "6f4a420f9e2b6546e145f84d4fa9bad4aed83ac5afdab6e992375f7f502f4f2e",
+   "treatment": "blocks.1.pw.weight"
+  },
+  {
+   "bytes": 7301,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.2.pw.weight/LATEST.json",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.2.pw.weight/checkpoints/LATEST.json",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.2.pw.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "run_completed": false,
+   "sha256": "3958d61394274666d3a225b0829ad492cbf7217c73d18fdb57b1446770e159be",
+   "treatment": "blocks.2.pw.weight"
+  },
+  {
+   "bytes": 117994108,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.2.pw.weight/LATEST.npz",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.2.pw.weight/checkpoints/LATEST.npz",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.2.pw.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "run_completed": false,
+   "sha256": "9ee16038c0d16a06223391b810e4f62b39db032b4c816b4bbbe324bd77259ca3",
+   "treatment": "blocks.2.pw.weight"
+  },
+  {
+   "bytes": 71834,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.3.film.weight/LATEST.json",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.3.film.weight/checkpoints/LATEST.json",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.3.film.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "run_completed": true,
+   "sha256": "17beba41230bdbeecfdbec56acc0801794220a9d033d760504a2c63b026b40c3",
+   "treatment": "blocks.3.film.weight"
+  },
+  {
+   "bytes": 117994108,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/blocks.3.film.weight/LATEST.npz",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/blocks.3.film.weight/checkpoints/LATEST.npz",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment blocks.3.film.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "run_completed": true,
+   "sha256": "b8a4f6ce371e96701ceedf37ad01b748e70c0b4946b209c249d1accccd34d8f5",
+   "treatment": "blocks.3.film.weight"
+  },
+  {
+   "bytes": 72537,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/control/LATEST.json",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/control/checkpoints/LATEST.json",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment control --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "run_completed": true,
+   "sha256": "27deea99d11ac193cd277a41924aab78e561d6110fc2ed01e265563ee52ea99f",
+   "treatment": "control"
+  },
+  {
+   "bytes": 117994108,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/control/LATEST.npz",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/control/checkpoints/LATEST.npz",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment control --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "superseded by the run's own RESULT.json + argmax_plane.npz",
+   "run_completed": true,
+   "sha256": "6e7b6698cf8eb67c5b60763d889b31e9da9c23a4615b2d01b3a8c89ca1303bad",
+   "treatment": "control"
+  },
+  {
+   "bytes": 2512,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/coord_mix.weight/LATEST.json",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/coord_mix.weight/checkpoints/LATEST.json",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment coord_mix.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "run_completed": false,
+   "sha256": "94639baa1d97b3dfc911f5d13866b95725fd39b2c40bd68678d9e22d995fe349",
+   "treatment": "coord_mix.weight"
+  },
+  {
+   "bytes": 117994108,
+   "cold_store_destination": "/Volumes/APDataStore/pact/ddm_ntb2_coldstore/renderer_score_checkpoints/coord_mix.weight/LATEST.npz",
+   "false_authority_flags": {
+    "promotion_eligible": false,
+    "score_claim": false
+   },
+   "original_path": "/Volumes/VertigoDataTier/pact/ddm_ntb2_non_tail_lossy_levers/renderer_score/coord_mix.weight/checkpoints/LATEST.npz",
+   "rebuild_command": ".venv/bin/python experiments/ddm_ntb2_renderer_score.py --treatment coord_mix.weight --threads 2 --chunk 5 --no-resume",
+   "rebuildable_because": "resume checkpoint of a run STOPPED on a refutation bound; its scientific content (per-pair d_seg/d_pose rows + per-chunk render shas) is in the retained LATEST.json, which stays on the live tier",
+   "run_completed": false,
+   "sha256": "d993113e25483067ab14545412e3ee5ec01eee88043ee7ac5390f92e817c1aa3",
+   "treatment": "coord_mix.weight"
+  }
+ ],
+ "schema": "ddm_ntb2_coldstore_manifest.v1"
+}

@@ -315,6 +315,56 @@ section is 603 B SMALLER and the coder's work per symbol is unchanged.
 Nothing is sealed and nothing is claimed until the parse-back's `raw_byte_identical_to_move44` is
 true. If it is false, the candidate is dead and every byte stays retained.
 
+## The seal's timing row — a refusal isolated to one cause, by control
+
+MAIN warned that `--inherit-decode-wall-clock` would likely refuse this tree, and pc3 had measured
+a manifest row differing 49-of-50. On THIS tree the diagnosis is different and sharper, and it was
+obtained by controls rather than by a row count. This arm's tree has no `MANIFEST.sha256` at all.
+
+| digest | move 44 | candidate | equal |
+|---|---|---|---:|
+| `measure_receiver_digest` | `9f6e7168…` | `9f6e7168…` | **yes** |
+| `measure_t4_runtime_digest` (Modal upload projection) | `e3d23719…` | `8f02b95c…` | **no** |
+
+`e3d23719…` is exactly the pointer's own `runtime_tree_sha256`, so the measurement is on the right
+object. Three controls, each a copy of move 44's tree with ONE thing changed:
+
+1. **Path coupling — REFUTED.** The manifest's `runtime_root` row and the `files` rows'
+   `repo_relative_path` carry absolute paths, which made path coupling the obvious suspect. A
+   byte-identical copy of move 44's tree at a DIFFERENT absolute path digests to `e3d23719…`,
+   IDENTICAL. Those rows do not reach the digest. Hypothesis dropped.
+2. **Archive only — no effect.** The candidate's `archive.zip` in move 44's tree, pins untouched,
+   digests to `e3d23719…`, IDENTICAL. The archive is correctly excluded.
+3. **Pin only — ISOLATED.** The two `inflate.py` pin constants set to the candidate's, archive left
+   as move 44's, digests to `8f02b95c…` — which is the candidate's digest **exactly**.
+
+**So the refusal is about the archive pin and about nothing else this candidate touches.**
+`measure_receiver_digest` normalizes those two assignments and passes; `measure_t4_runtime_digest`
+does not and refuses. That is pr14's owed amendment, and this is a stronger statement of it than a
+row count: the same two-constant edit, applied to move 44's OWN archive, reproduces the candidate's
+digest byte for byte. Per MAIN, no contract code and no manifest was patched to get past it.
+Receipt: `.omx/research/ddm_ntb2_20260911/T4_RUNTIME_DIGEST_ISOLATION.json`.
+
+## Tier pressure, and what it cost
+
+`/Volumes/VertigoDataTier` reached 40 GiB — exactly the reserve the HPAC producers refuse below —
+while the 3.66 GB cold parse-back was writing. Two things followed, and both are the guards working
+rather than failing:
+
+- **`frame_quad` died at frame 350 with `STORAGE_BLOCK at durable prior checkpoint`.** It stopped AT
+  a checkpoint with nothing corrupted and resumes from `stage_0350`. Per MAIN's sequencing it is
+  therefore a follow-on row, not a candidate for this seal: it can no longer beat `frame_even`
+  before the parse-back finishes. Its question stands open — step 2 bought −603 HPAC B for +358 tail
+  B, and 3,548 of 4,800 values move at step 4 against 2,320 at step 2.
+- **The parse-back survived**, because the receipt-reserve fix landed earlier this unit: a kilobyte
+  receipt written after a multi-hour decode is no longer gated by the 40 GiB reserve that gates the
+  decode itself. Without that fix this unit would have lost the proof to save 3 KB.
+
+708.2 MB of renderer-score resume checkpoints were CERTIFIED AND MOVED to
+`/Volumes/APDataStore/pact/ddm_ntb2_coldstore/` — original path, bytes, sha256, destination, rebuild
+command and rebuildable-reason per file, in `.omx/research/ddm_ntb2_20260911/COLDSTORE_MANIFEST.json`
+and beside the bytes. **Nothing was deleted.**
+
 ## What this arm establishes for the campaign
 
 The non-tail census ntb1 measured is 60,497 B: ZIP 100 / RX1M 14 / HPAC 11,911 / renderer 29,862 /
