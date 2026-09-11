@@ -183,11 +183,36 @@ moves 1.16× to 1.97× between two points, and the real relation is AFFINE,
 token work can remove**. For a witness that regenerates the partition rather than coding tokens, the
 transferable part is the intercept's existence, not the ratio.
 
-**8. The seg leg is 83% PARTITION error, not render floor — design A targets the smaller share.**
-MAIN asked how much of the object's `d_seg` is token-level partition error, which no RGB correction
-reaches, against render floor, which is what the lattice targets. The object ships no token field, so
-the analogue is the generator's own internal class head — the partition it represents BEFORE the
-render turns it into RGB. On a **4-pair smoke** (the n600 pass is running; a prefix is not a verdict):
+**8. The seg leg is 89.8% PARTITION error. MEASURED n600. Design A targets the other 10%.**
+The n600 pass is in and it is stronger than the smoke below. Lattice arm, w2 epoch 30, shipping
+receiver, all 600 pairs, 117,964,800 pixels:
+
+| quantity | value |
+|---|---:|
+| `d_seg` at the scorer | 0.02271701389 |
+| **the generator's OWN partition vs GT** | **0.08993511624** — wrong on 9.0% of pixels |
+| the pointer's token plane vs GT | 0.0001602427165 — **561× better** |
+| the object's partition vs the pointer's tokens | 0.08994645013 |
+| **share of seg error where the partition was already wrong** | **89.83%** |
+| share that is render floor | **10.17%** |
+
+**If the lattice removed the ENTIRE render floor, `d_seg` would move 0.022717 → 0.020407 — 1.113×,
+against the 56.8× the gate needs.** Design A is not aimed at the binding term.
+
+The two error classes also live in different places, which is the hop-count split MAIN asked for:
+
+| class | within 1 px | beyond 4 px | count |
+|---|---:|---:|---:|
+| partition-level | 0.4944 | **0.3597** | 2,407,315 |
+| render floor | **0.6511** | 0.2140 | 272,493 |
+
+The render floor behaves like jitter — two thirds of it within one cell, which is what an edge-local
+correction can reach. The partition error does not: more than a third of it sits deeper than four
+cells, a region wearing the wrong class.
+
+The superseded 4-pair smoke, kept because it is the number I reported before the population arrived:
+The object ships no token field, so the analogue is the generator's own internal class head — the
+partition it represents BEFORE the render turns it into RGB. On a **4-pair smoke**:
 
 | quantity | value |
 |---|---:|
@@ -198,10 +223,8 @@ render turns it into RGB. On a **4-pair smoke** (the n600 pass is running; a pre
 | share of seg error where the partition was ALREADY wrong | **82.7%** |
 | share that is render floor | 17.3% |
 
-If the lattice eliminated the **entire** render floor, `d_seg` would fall 0.026754 → 0.022127, a
-**1.21×** improvement against the ~60× the gate needs. On this reading design A is not aimed at the
-binding term. It also matches md1-md4 without being fitted to them: *"the sites are scorer-hard for
-this generator FORM."*
+The smoke read 82.7% partition-level; the population reads 89.8%. It matches md1-md4 without being
+fitted to them: *"the sites are scorer-hard for this generator FORM."*
 
 One nuance the numbers force, against the word "floor": the render-plus-scorer path **recovers** more
 partition error than it creates. The generator's partition is wrong on 7.9% while the scorer's argmax
