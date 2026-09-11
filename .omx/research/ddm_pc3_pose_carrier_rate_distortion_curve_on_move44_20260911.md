@@ -15,7 +15,7 @@ change**, because the shipped CAP1 AR(1)+bias predictor is not the rate-optimal 
 
 | curve point | Δ carrier B | Δ archive B | d_pose | d_seg | projected S | net vs move 44 |
 |---|---:|---:|---|---|---|---|
-| **predictor refit (SEALED candidate)** | **−164** | **−160** | 4.59e-06 *(identical decode)* | 0.00010345 *(identical decode)* | **0.13713836673884064** | **−1.0653743e-04** |
+| **predictor refit (the candidate)** | **−164** | **−160** | 4.59e-06 *(identical decode)* | 0.00010345 *(identical decode)* | **0.13713836673884064** | **−1.0653743e-04** |
 | move 44 (the pointer) | 0 | 0 | 4.59e-06 | 0.00010345 | 0.1372449041713402 | — |
 | one dimension's lattice ÷2 (cheapest rung) | +54 … +76 | (not built) | needs ≤ 4.5382e-06 | unchanged | — | break-even needs −1.06 % d_pose |
 | global lattice ÷2 | +808 | (not built) | needs ≤ 3.8870e-06 | unchanged | — | break-even needs −15.26 % d_pose |
@@ -167,6 +167,52 @@ the delta is attributable. `ddm_jo2` still files the refit as an open LIVE-HYPOT
 | staging changes exactly `{archive.zip, inflate.py, MANIFEST.sha256}` | yes |
 | receiver CODE digest (manifest removed, same function both trees) | equal to the pointer's |
 
+## 5b. The distortion proof, completed: the decode is the SAME FILE
+
+The cold n600 public `inflate.sh` on the staged candidate emitted `0.raw` with sha
+`2b762eba4a20a315c104f8447d6ea0e604f73c3d8b8b69b3fc63b0fc792d59fc` — **byte-identical to move 44's own retained
+decode across all 3,662,409,600 bytes**, compared byte-for-byte and not by hash alone. Cold start, no checkpoint
+resume, token cache `DISABLED`, 600 pairs, report archive `145e02e21f9a1cbc…` / 180,246 B. Compiler: Apple clang
+21.0.0, sha `12bed45236613070…`. Wall 4,510.8 s on a loaded macOS — **advisory diagnostic only; no timing window is
+claimed here** (the T4 leg is the timing authority). Receipt: `candidate/public/RESULT.json`.
+
+So `d_seg` and `d_pose` are not *estimated* to be unchanged. The decoder emits the same file, and the row is a pure
+rate move of **−160 B** at **net −1.0653743249955383e-04**, **5.33× the −2e-5 bar**.
+
+The seal's smoke pair also passes the seal validator's own checker with **zero problems**: `REACHED_TOKEN_DECODE` on
+both candidate and pointer trees, `REACHED_CUDA_GATE` on both `inflate.sh` legs — the last of which is the leg that
+proves the re-pinned `_verify_input` accepts the candidate's own archive.
+
+## 5c. The one step that is blocked, and the exact evidence that unblocks it
+
+`tools/make_candidate_seal.py --inherit-decode-wall-clock` **refuses**, verbatim:
+
+```
+FATAL: cannot seal this candidate: decode_wall_clock: decode_wall_clock: inherited receiver code differs
+```
+
+That is not a defect in the candidate. `tac.decode_wall_clock.measure_receiver_digest` includes `MANIFEST.sha256`,
+and the manifest lists the archive's own hash, so it moves with ANY new archive — a candidate whose receiver code is
+genuinely byte-identical can never show an identical canonical digest. Measured, row by row, with the digest's own
+skip rules and its own `ARCHIVE_PIN` normalization (`seal_inputs/RECEIVER_DIGEST_ROW_DIFF.json`):
+
+> of **50** normalized receiver-digest rows, **exactly one differs — `MANIFEST.sha256`** — and `inflate.py`'s row is
+> **identical** after pin normalization.
+
+The move-43 → 44 packet already names this as owed: its next-step (1) is *"once pr14 amends the normalized receiver
+digest to exclude/normalize MANIFEST.sha256"*. **This candidate is the first row to actually need it** — move 44
+itself measured its own t4_direct leg from its own fire and never had to inherit one.
+
+Two routes, both MAIN's: land pr14's amendment, after which the normal inherited seal goes through unchanged; or run
+the prefire-intent flow, whose t4_direct leg comes from the fire itself (rlc5's path for move 44). This arm does not
+choose between them and does not bypass the refusal. The complete input set is in `HANDOFF.json`.
+
+**A second tooling finding, same genus.** `tools/make_candidate_seal.py` raises
+`ModuleNotFoundError: No module named 'experiments'` unless `PYTHONPATH` contains the repo:
+`tac.decode_wall_clock.measure_t4_runtime_digest` imports `experiments.contest_auth_eval`, and the tool does not put
+the repo on `sys.path`. Worked around here with `PYTHONPATH=<repo>`; recorded because it is the same class as the
+move-44 packet's "authorize tool import path" finding.
+
 ## 6. Pre-registered falsifiers
 
 1. **Pose base.** The base leg on move 44's own configuration must round to the T4 print 4.59e-06 at its printed
@@ -174,8 +220,10 @@ the delta is attributable. `ddm_jo2` still files the refit as an open LIVE-HYPOT
 2. **Distortion identity.** The cold n600 public decode of the candidate must be byte-identical to move 44's retained
    raw across all 3,662,409,600 bytes — not "identical outside the carrier frames", identical everywhere. Any single
    differing byte refuses the row, because the whole claim is that d_seg and d_pose cannot move.
+   → sha `2b762eba…` both sides, every byte compared, cold, no resume, cache DISABLED. **PASS.**
 3. **Twin identity.** Two independent encodes must agree byte-for-byte, and the identity rebuild (same codes, same
    predictor) must reproduce move 44's archive sha exactly, or the −160 B is the rebuild's and not the refit's.
+   → twins both `145e02e2…` / 180,246 B; identity rebuild `04758c0d…`. **PASS.**
 4. **Ceiling honesty.** The continuous solver must stop on physics (`no_improving_step` /
    `converged_below_materiality_floor`), not on an iteration budget; a ceiling produced by a budget-limited search
    would UNDERSTATE the family's headroom and wrongly close it.
@@ -187,6 +235,9 @@ the delta is attributable. `ddm_jo2` still files the refit as an open LIVE-HYPOT
 
 ## 7. Boundaries — what this arm does NOT claim
 
+- **The seal is NOT produced.** §5c: the inherited-wall-clock step refuses on a documented owed amendment that
+  another arm owns. The arm stops there and hands MAIN the complete input set rather than bypassing the refusal or
+  building a prefire intent inside contract machinery it does not own.
 - **No score.** No exact eval ran here. `0.13713836673884064` is arithmetic on a MEASURED byte delta and a distortion
   pair that is unchanged by construction and confirmed by a byte-identical decode. `score_claim=false` until MAIN fires.
 - **No axis transfer.** Every local pose number is `[macOS-CPU advisory]` and every comparison here is local-to-local.
@@ -219,6 +270,10 @@ Everything under `/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/`:
 | candidate archive | `refit/candidate_archive.zip` (sha `145e02e2…`, 180,246 B) |
 | staged candidate tree | `candidate/candidate_runtime/`, `candidate/STAGE.json` |
 | cold n600 public decode + raw identity | `candidate/public/RESULT.json`, `candidate/public/output/0.raw` |
+| smoke pair + its validator result | `candidate/smoke/public_entrypoint_smoke{,_validation}.json` |
+| receiver-digest row diff (the pr14 input) | `seal_inputs/RECEIVER_DIGEST_ROW_DIFF.json` |
+| MAIN hand-off, machine-readable | `HANDOFF.json` |
+| retention manifest | `RETENTION_MANIFEST.json` |
 | launch manifests and logs | `logs/{base,ceiling,ceiling_smoke,refit,public4}/` |
 
 Producers: `experiments/ddm_pc3_pose_carrier_curve.py` (base / ceiling / reach / project / report),
