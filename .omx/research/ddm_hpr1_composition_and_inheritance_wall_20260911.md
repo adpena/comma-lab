@@ -96,10 +96,30 @@ the inputs already staged.
 
 ## 3. The step-4 variant and the q rung
 
-`retrain_frame_quad` (step 4, 3,543 of 4,800 values moved, hpac 11,146 B, model leg **−1,116 B**) and
-MAIN's queued **q rung** — the coder's scalar q re-solved on the REFIT prior, held out two-fold with
-KT back-off against mxo3's prior negative of **−183.53 B** on the OLD prior — are both in flight on
-the same rail. Their prices land in this file.
+Both are IN FLIGHT on the same rail, detached with done-receipts, and their prices land in this file.
+
+**`retrain_frame_quad`** (step 4): 3,543 of 4,800 values moved, hpac **11,146 B**, model leg
+**−1,116 B** — MEASURED. Its tail cost, and therefore its joint, is owed. Note it must beat the step-2
+row's −248 B, not merely move 47: a bigger model saving is not a win if the tail gives more back.
+Launch history worth carrying: its first run died at frame 400 on the 40 GiB reserve and its RESUME
+then correctly REFUSED, because I had changed the producer in between and the checkpoints were no
+longer bound to it. The immutability guard did its job; the rerun is from zero.
+
+**The q rung** — the coder's scalar q re-solved on the REFIT prior, against mxo3's prior negative of
+**−183.53 B** on the OLD prior. Instrument: `experiments/ddm_hpr1_q_rung.py`, scoring a 64-bin
+calibration table that `--collect-q` accumulates online from the same hook the arithmetic encoder is
+fed from; folds by frame PARITY so they interleave the video; each fold coded under the other fold's
+KT table with back-off, **using mxo3's own `cross_bits`, imported and not re-derived**, because a
+prior negative and its re-test must be one instrument. The scorer carries its own control: on a
+synthetic perfectly-calibrated table it returns **−0.04 B**, so it cannot manufacture a gain.
+
+**I threw away my first version of this statistic.** It collected the probability the coded row gave
+the symbol *actually coded* — an event whose frequency is 1 by construction, so any refit of it is
+degenerate and would have produced a confident number about nothing. I stopped my own 90-minute run
+rather than let it finish into a wrong answer, and replaced it with the row's own confidence against
+whether its argmax was right — an event whose realisation varies. The exact binary baseline is
+accumulated alongside, because binning it after the fact would have left the baseline approximate
+while the challenger stayed exact, a comparison tilted by construction.
 
 ## 4. One storage decision, certified not silent
 
