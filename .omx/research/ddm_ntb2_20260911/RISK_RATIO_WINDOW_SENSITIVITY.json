@@ -1,0 +1,29 @@
+{
+ "action_taken": "a fresh base diagnostic on move 44's promoted tree -- the t4_direct leg's own runtime, whose receiver digest 7e6da183 is what the contract requires of a base -- launched in this arm's window with the same fleet live (load 14, pc3 at four processes). Both legs then share one set of conditions.",
+ "authority": false,
+ "axis": "[macOS-CPU advisory; local diagnostics, never timing authority]",
+ "finding": "the prefire risk ratio's BASE leg is not transferable across measurement windows. Using pc3's base_move44 diagnostic as this arm's denominator projects 1,394.199 s and REFUSES the 1,260 s policy limit; the numerator and denominator were measured under different fleet load, so the ratio is a property of two windows rather than of two archives.",
+ "genus": "cross-regime constant transfer: a constant measured at one window's scope, re-used at another's. The contract is right to refuse -- an unmatched ratio is not evidence -- and the cure is to MEASURE the base leg in this arm's own window, not to argue the numerator down.",
+ "measured_utc": "2026-09-11T18:08:10Z",
+ "not_done": "no contract change, no relaxation of the 1,260 s limit, and no argument that the refusal was wrong. If the matched ratio still projects over the limit, that is a real finding about this candidate and it stops here.",
+ "schema": "ddm_ntb2_risk_ratio_window_sensitivity.v1",
+ "score_claim": false,
+ "the_arithmetic_that_refused": {
+  "base_local_diagnostic": {
+   "source": "pc3's diagnostics/base_move44/LOCAL_DIAGNOSTIC.json",
+   "wall_seconds": 1957.5967032500193,
+   "window": "pc3's, 2026-09-11 ~15:0x UTC"
+  },
+  "candidate_local_diagnostic": {
+   "source": "ddm_ntb2 diagnostics/candidate_move46/LOCAL_DIAGNOSTIC.json",
+   "wall_seconds": 2214.5721771659737,
+   "window": "ddm_ntb2's, ~17:3x-18:0x UTC, five arms live"
+  },
+  "local_cost_fraction_upper": 0.13127089634413536,
+  "passed": false,
+  "policy_limit_seconds": 1260.0,
+  "source_t4_seconds": 1232.418725255,
+  "t4_risk_ceiling_seconds": 1394.1994359905207
+ },
+ "why_the_13_percent_is_not_the_candidate": "the candidate's HPAC section is 603 B SMALLER and its tail 358 B larger, but the arithmetic decoder performs the SAME 117,964,800 symbol decodes either way -- decode work is per symbol, not per byte of code. A 13% change in decode time cannot come from that, and the scoped receiver delta between the two trees is EMPTY (0 differing rows). What differs is the box."
+}
