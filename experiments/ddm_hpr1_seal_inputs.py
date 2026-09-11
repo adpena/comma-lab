@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -30,7 +31,6 @@ sys.path[:0] = [str(REPO), str(REPO / "src")]
 
 from experiments.ddm_ntb2_intent_inputs import (
     MEMBER_NAME,
-    _diagnostic_ref,
     census_files,
     content_diff,
     endpoints,
@@ -48,15 +48,27 @@ from tac.candidate_seal import (
 )
 from tac.decode_wall_clock import measure_receiver_digest
 
-#: The chain's terminating MEASUREMENT: move 46's completed t4_direct leg. Move 47's own
-#: leg is mode "inherited", which the contract forbids as a source, so the lineage runs
-#: past it to the last real measurement -- the same rule ntb2 followed to move 44.
-SOURCE_T4_LEG = Path(
-    ".omx/research/ddm_ntb2_20260911/"
-    "SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json"
-)
+#: The superseded `completed_t4_receiver_delta` mode is DELETED, not kept beside the new
+#: one. It projected source x (1 + local fraction), and pr19 adjudicated that arithmetic
+#: unsound -- a fraction of 0 denies a real unattributed delta. Dead code that computes a
+#: refuted number is an invitation to compute it again.
 POLICY_LIMIT_SECONDS = 1260.0
 HARD_TIMEOUT_SECONDS = 1800.0
+#: pr19's identity-class envelope. The ceiling is the MAX of REAL T4 decodes of the
+#: candidate's identity class; the local ratio is demoted from a projection to a
+#: hard-timeout stress test, because the local instrument spreads 2.83x across cold n600
+#: windows of ONE class and a fraction of 0 would deny a real unattributed delta.
+IDENTITY_CLASS_MODE = "measured_t4_identity_class_envelope"
+IDENTITY_CLASS_DEFINITION = "tac.candidate_seal.validate_prefire_risk.identity_class_envelope.v1"
+IDENTITY_CLASS_LEGS = (
+    Path(".omx/research/ddm_rlc5_20260910/"
+         "SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json"),
+    Path(".omx/research/ddm_ntb2_20260911/"
+         "SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json"),
+)
+#: The DOMINATING leg: move 46 dominates this candidate on both axes (960,913 coded bits
+#: >= 951,228 and 180,001 B >= 179,111 B), so its measured decode bounds this one's work.
+DOMINATING_LEG = IDENTITY_CLASS_LEGS[1]
 
 CANDIDATE_ID = "ddm_hpr1_retrain_control"
 #: The score's rate term, in S per archive byte: 25 / 37,545,489.
@@ -447,35 +459,61 @@ def smoke(candidate: Path, frontier: Path, out: Path, bound_seconds: float) -> d
     return {"problems": problems}
 
 
-def risk(candidate: Path, out: Path, base_diagnostic: Path, candidate_diagnostics: list[Path]) -> dict:
-    """The scoped timing-risk receipt, in the contract's closed 14-key shape.
+def identity_risk(candidate: Path, out: Path, base_diagnostic: Path,
+                  candidate_diagnostics: list[Path], cold_log: Path) -> dict:
+    """The timing-risk receipt in pr19's identity-class envelope mode, 17 keys exactly.
 
-    Every field is one the validator RECOMPUTES, so this computes the same things from the
-    same imported helpers rather than restating them. ntb2's emitter is mechanically right
-    but writes its own lineage (move 44) and its own prose (its 603/358 B legs) into the
-    receipt and the statement beside it, so using it here would put another arm's numbers
-    on this arm's row. The SHAPE is the contract's; the CONTENT is this candidate's.
+    The ceiling is the MAX of REAL T4 decodes in the candidate's identity class, not a
+    local ratio applied to one leg. The local ratio survives only as a hard-timeout stress
+    test. Every field is computed here from the same imported helpers the validator uses.
     """
-    source = json.loads((REPO / SOURCE_T4_LEG).read_text())
-    if source.get("mode") != "t4_direct":
-        raise SealInputsError("the lineage source must be a terminating t4_direct leg")
-    leg_runtime = Path(source["runtime_dir"])
-    leg_copy = write(out / "SOURCE_T4_LEG_move46.json", source)
+    legs, seconds = [], []
+    for leg_path in IDENTITY_CLASS_LEGS:
+        document = json.loads((REPO / leg_path).read_text())
+        if document.get("mode") != "t4_direct":
+            raise SealInputsError(f"identity-class leg is not t4_direct: {leg_path}")
+        legs.append(prefire_file_reference(REPO / leg_path))
+        seconds.append(document["measured_t4_decode_seconds"])
+    dominating = json.loads((REPO / DOMINATING_LEG).read_text())
+    leg_runtime = Path(dominating["runtime_dir"])
 
+    # The five work facts, re-derived from THIS candidate's own cold report. pr19's dry
+    # receipt states them too; re-deriving is the point -- a fact copied from another
+    # arm's file is that arm's fact, not a measurement of mine.
+    log = cold_log.read_text()
+
+    def last(pattern: str) -> str:
+        found = re.findall(pattern, log)
+        if not found:
+            raise SealInputsError(f"cold report does not carry {pattern}")
+        return found[-1]
+
+    archive_reference = prefire_file_reference(candidate / "archive.zip")
+    work_facts = {
+        "archive_sha256": last(r'"archive_sha256":\s*"([0-9a-f]{64})"'),
+        "archive_bytes": archive_reference["bytes"],
+        "raw_sha256": last(r'"raw_sha256":\s*"([0-9a-f]{64})"'),
+        "decoded_token_sha256": last(r'"decoded_token_sha256":\s*"([0-9a-f]{64})"'),
+        "decoder_bit_position": int(last(r'"decoder_bit_position":\s*(\d+)')),
+    }
+    if work_facts["archive_sha256"] != archive_reference["sha256"]:
+        raise SealInputsError("the cold report's archive is not the staged candidate archive")
+
+    candidate_digest = measure_prefire_risk_receiver_digest(candidate)
     source_receiver = {
         "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
         "sha256": measure_prefire_risk_receiver_digest(leg_runtime),
         "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
-        "t4_direct_sha256": source["receiver_sha256"],
+        "t4_direct_sha256": dominating["receiver_sha256"],
     }
     candidate_receiver = {
         "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
-        "sha256": measure_prefire_risk_receiver_digest(candidate),
+        "sha256": candidate_digest,
     }
     diagnostic_reference_receiver = {
         "path": str(candidate),
         "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
-        "sha256": candidate_receiver["sha256"],
+        "sha256": candidate_digest,
         "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
         "receipt_sha256": measure_receiver_digest(candidate),
     }
@@ -486,12 +524,14 @@ def risk(candidate: Path, out: Path, base_diagnostic: Path, candidate_diagnostic
         for key in sorted(smap.keys() | cmap.keys())
     ]
     differing = [row for row in files if row["source"] != row["candidate"]]
+    if differing:
+        raise SealInputsError(f"the identity class requires a ZERO-row delta; {len(differing)} differ")
     delta_path = write(
-        out / "NORMALIZED_RECEIVER_DELTA.json",
+        out / "RECEIVER_DELTA_MANIFEST.json",
         {
             "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
             "source_receiver_sha256": source_receiver["sha256"],
-            "candidate_receiver_sha256": candidate_receiver["sha256"],
+            "candidate_receiver_sha256": candidate_digest,
             "files": files,
             "differing_rows": differing,
             "excluded_paths": ["MANIFEST.sha256"],
@@ -499,19 +539,42 @@ def risk(candidate: Path, out: Path, base_diagnostic: Path, candidate_diagnostic
         },
     )
 
-    base = _diagnostic_ref(base_diagnostic, cold=False)
-    candidates = [_diagnostic_ref(p, cold=True) for p in candidate_diagnostics]
-    ceiling = max(ref["wall_seconds"] for ref in candidates)
-    fraction = max(0, ceiling / base["wall_seconds"] - 1)
-    seconds = source["measured_t4_decode_seconds"]
-    projection = seconds * (1 + fraction)
+    def diagnostic_ref(path: Path, *, cold: bool) -> dict:
+        """The reference pr19's envelope reads, built to ITS shape.
+
+        ntb2's `_diagnostic_ref` reads an `authority` key off the RECEIPT; pr19's cold
+        receipts do not carry one, because in this mode `authority: false` is a property
+        of the REFERENCE (a local wall is never timing authority) rather than a field the
+        producing tool happened to write. Asserting it here says the same thing without
+        requiring the receipt to have said it.
+        """
+        document = json.loads(path.read_text())
+        if document.get("score_claim", False):
+            raise SealInputsError(f"a local diagnostic may not carry a score claim: {path}")
+        reference = {**prefire_file_reference(path),
+                     "wall_seconds": document["wall_seconds"], "authority": False}
+        if cold:
+            if not document.get("cold_start", False) or document.get("checkpoint_resume", True):
+                raise SealInputsError(f"candidate diagnostic is not a cold, unresumed run: {path}")
+            reference["cold"] = True
+            reference["n_samples"] = 600
+        return reference
+
+    base = diagnostic_ref(base_diagnostic, cold=False)
+    candidates = [diagnostic_ref(p, cold=True) for p in candidate_diagnostics]
+    class_max = max(seconds)
+    fraction = max(0.0, max(ref["wall_seconds"] for ref in candidates) / base["wall_seconds"] - 1)
+    stress = class_max * (1 + fraction)
     receipt = {
         "schema": PREFIRE_RISK_SCHEMA,
-        "mode": "completed_t4_receiver_delta",
+        "mode": IDENTITY_CLASS_MODE,
+        "definition": IDENTITY_CLASS_DEFINITION,
         "authority": False,
         "timing_clearance": False,
         "score_claim": False,
-        "source_t4_leg": prefire_file_reference(leg_copy),
+        "identity_class_legs": legs,
+        "source_t4_leg": prefire_file_reference(REPO / DOMINATING_LEG),
+        "candidate_work_facts": work_facts,
         "source_receiver": source_receiver,
         "candidate_receiver": candidate_receiver,
         "diagnostic_reference_receiver": diagnostic_reference_receiver,
@@ -519,57 +582,34 @@ def risk(candidate: Path, out: Path, base_diagnostic: Path, candidate_diagnostic
         "base_local_diagnostic": base,
         "candidate_local_diagnostics": candidates,
         "calculation": {
-            "candidate_local_ceiling_seconds": ceiling,
-            "local_cost_fraction_upper": fraction,
-            "source_t4_seconds": seconds,
-            "t4_risk_ceiling_seconds": projection,
+            "class_max_t4_seconds": class_max,
+            "dominating_leg_t4_seconds": dominating["measured_t4_decode_seconds"],
+            "local_cost_fraction_observed": fraction,
+            "local_ratio_role": "hard_timeout_stress_test",
+            "t4_risk_ceiling_seconds": class_max,
+            "hard_timeout_stress_seconds": stress,
             "policy_limit_seconds": POLICY_LIMIT_SECONDS,
             "hard_timeout_seconds": HARD_TIMEOUT_SECONDS,
-            "passed": projection <= POLICY_LIMIT_SECONDS,
+            "passed": class_max <= POLICY_LIMIT_SECONDS and stress <= HARD_TIMEOUT_SECONDS,
         },
         "risk_sha256": "",
     }
     receipt["risk_sha256"] = prefire_digest(receipt, "risk_sha256")
     write(out / "TIMING_RISK.json", receipt)
-
-    write(
-        out / "TIMING_RISK_STATEMENT.json",
-        {
-            "score_claim": False,
-            "authority": False,
-            "risk_sha256": receipt["risk_sha256"],
-            "lineage": (
-                "move 47's own leg is mode 'inherited', which the contract forbids as a source, so "
-                "the lineage runs to the CHAIN'S TERMINATING MEASUREMENT: move 46's completed "
-                f"t4_direct leg at {seconds} s measured. The scoped receiver delta between that "
-                f"tree and this candidate is EMPTY -- both digest to {candidate_receiver['sha256']} "
-                "-- because the only receiver files that move are the archive pin and the derived "
-                "MANIFEST.sha256 listing, which this digest excludes and pr18 validates separately."
-            ),
-            "candidate_adds_no_decode_work": (
-                "the HPAC section is 633 B SMALLER than move 47's, so materializing the coder's "
-                "prior is cheaper; the decoder performs the same 117,964,800 symbol decodes against "
-                "a different prior; the tail is 385 B longer. No new work is added at decode time."
-            ),
-            "diagnostics_are_not_authority": (
-                "both local diagnostics retain their REFUSED verdict and are used only as the ratio "
-                "that bounds the projection; no local wall is offered as a timing authority. The "
-                "pair was run CONCURRENTLY in one window, because sequential windows were measured "
-                "to differ 20.9 percent on identical bytes."
-            ),
-        },
-    )
     return {
         "risk_sha256": receipt["risk_sha256"],
         "calculation": receipt["calculation"],
+        "top_level_keys": len(receipt),
+        "delta_rows": len(files),
         "differing_rows": len(differing),
-        "receiver_delta_empty": not differing,
+        "work_facts": work_facts,
     }
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("receipts", "smoke", "risk"), default="receipts")
+    parser.add_argument("--mode", choices=("receipts", "smoke", "identity_risk"), default="receipts")
+    parser.add_argument("--cold-log", type=Path)
     parser.add_argument("--base-diagnostic", type=Path)
     parser.add_argument("--candidate-diagnostic", type=Path, action="append", default=[])
     parser.add_argument("--frontier-runtime", type=Path)
@@ -586,13 +626,13 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if str(args.out_dir).startswith("/Volumes/APDataStore"):
         raise SealInputsError("APDataStore is not this producer's tier")
-    if args.mode == "risk":
-        if args.base_diagnostic is None or not args.candidate_diagnostic:
-            raise SealInputsError("risk mode requires --base-diagnostic and --candidate-diagnostic")
-        print(json.dumps(risk(
+    if args.mode == "identity_risk":
+        if args.base_diagnostic is None or not args.candidate_diagnostic or args.cold_log is None:
+            raise SealInputsError("identity_risk needs --base-diagnostic, --candidate-diagnostic, --cold-log")
+        print(json.dumps(identity_risk(
             args.candidate_runtime.resolve(), args.out_dir.resolve(),
-            args.base_diagnostic.resolve(), [p.resolve() for p in args.candidate_diagnostic]),
-            indent=1, sort_keys=True))
+            args.base_diagnostic.resolve(), [p.resolve() for p in args.candidate_diagnostic],
+            args.cold_log.resolve()), indent=1, sort_keys=True))
         return 0
     if args.mode == "smoke":
         if args.frontier_runtime is None:
