@@ -1,0 +1,370 @@
+"""ddm_hpr1 -- exact-byte pricing rail for HPAC receptive-field SHAPE rungs on move 45.
+
+WHAT THIS IS.  The same pricing law ddm_ntb2 used for its HPAC value rungs, re-rooted
+on the move-45 pointer and owned by this arm's store.  Nothing about the coder, the
+mixer, the corrector or the group order is re-implemented: the shipping receiver loop
+runs unchanged and only the arithmetic DECODE call is replaced by the landed native
+ENCODER fed with the known source symbols.  A treatment is priced by exactly two
+numbers, the ``hpac`` member bytes and the re-encoded ``tail`` bytes, because the HPAC
+section is the coder's PRIOR: encoder and decoder build it from the same shipped bytes,
+so changing it changes code LENGTHS and never decoded symbols.  The decoded field is
+asserted byte-identical to the shipped field inside the loop, which is the
+output-lossless proof (no scorer is needed or run).
+
+THE CONTROL IS THE FALSIFIER.  ``--treatment control`` re-encodes the shipped prior and
+must reproduce move 45's archive byte-identically.  No treatment price is admissible
+until it does.
+
+Axis ``[macOS-CPU advisory; exact bytes, scorer-free]``; ``score_claim=false``; this is
+a producer, not a public decode -- a candidate identity proof needs a separate
+unmodified public decode of the built archive.
+
+Usage::
+
+  python experiments/ddm_hpr1_shape_price.py --treatment control --resume-from <root>
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+REPO = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(REPO), str(REPO / "src")]
+for _key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[_key] = "1"
+
+import numpy as np
+
+from experiments import ddm_rlc1_run as landed
+from experiments.ddm_rc1_model_section_adaptive_recode import ck2_interleave
+from experiments.ddm_tc1_public_proof import build_libraries
+
+#: Storage tiers this arm may write.  MAIN re-routed new payloads to Vertigo on
+#: 2026-09-11 while APDataStore sat just above its fail-closed reserve; the legacy
+#: root is kept read-only so the control priced there stays citable.
+STORE_ROOTS = {
+    "vertigo": Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/price"),
+    "apdatastore": Path("/Volumes/APDataStore/pact/ddm_hpr1/price"),
+}
+LEGACY_ROOT = STORE_ROOTS["apdatastore"]
+ROOT = STORE_ROOTS["vertigo"]
+PROMOTED45 = Path("/Volumes/VertigoDataTier/pact/ddm_pc3_pose_carrier_curve/candidate/candidate_runtime")
+POINTER45_SHA = "145e02e21f9a1cbc8276d1ecc34f0b9ae4762afa3fea7811e5836fee770ae60a"
+POINTER45_BYTES = 180_246
+FIELD = Path("/Volumes/APDataStore/pact/ddm_hpr1/inputs/field.u8")
+FIELD_SHA = "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
+#: Free-space floor, matched to the 40 GiB fail-closed reserve the sister HPAC
+#: producers hold.  Never lowered: a refusal here is the guard working.
+RESERVE_BYTES = 40 << 30
+TREATMENTS = ("control",)
+
+
+class PriceError(RuntimeError):
+    """A pricing input or invariant is not what the shipped object says it is."""
+
+
+def fact(path) -> dict:
+    return landed.fact(Path(path))
+
+
+def retain(path: Path, payload: bytes) -> dict:
+    if not path.resolve().is_relative_to(ROOT.resolve()):
+        raise PriceError("write outside this arm's price store")
+    if shutil.disk_usage(ROOT.parent).free < RESERVE_BYTES + len(payload):
+        raise PriceError("STORAGE_BLOCK: keep all existing evidence")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    landed.io.persist_immutable_bytes(path, payload, label="ddm_hpr1 retained payload")
+    return fact(path)
+
+
+def record(path: Path, value: dict) -> dict:
+    retain(path, (json.dumps(value, sort_keys=True, indent=2) + "\n").encode())
+    return value
+
+
+def build_geometry(runtime: Path, work: Path) -> dict:
+    """Compile the RLC1 geometry library exactly as ``inflate.sh`` does."""
+    target = work / "rlc1_geometry.so"
+    source = runtime / "runtime/rlc1_geometry.c"
+    command = [
+        os.environ.get("CC", "cc"), "-O3", "-std=c11", "-shared", "-fPIC", str(source), "-o", str(target)
+    ]
+    work.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        (work / "rlc1_geometry.build.log").write_text(result.stdout + result.stderr)
+        result.check_returncode()
+    os.environ["RLC1_GEOMETRY_LIBRARY"] = str(target)
+    return {"source": fact(source), "library": fact(target), "argv": command}
+
+
+def treatment_body(tag: str, shipped_body: bytes, work: Path) -> bytes:
+    """Return the IHS1 body this treatment ships.
+
+    ``control`` returns the shipped bytes unchanged, which is what makes the archive
+    reproduction a real falsifier.  Shape rungs supply a repacked body built from a
+    retrained checkpoint; each is added here with its own explicit construction.
+    """
+    if tag == "control":
+        return shipped_body
+    raise PriceError(f"no body constructor is registered for treatment {tag}")
+
+
+def prepare(tag: str):
+    """Copy the sealed move-45 tree into this arm's store and bind every input."""
+    import brotli
+    import torch
+
+    pointer = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
+    live = pointer["our_local_frontier_contest_cuda"]["archive_sha256"]
+    if live != POINTER45_SHA:
+        raise PriceError(f"POINTER_MOVED: live {live} is not the move-45 base this rail prices")
+    if fact(FIELD)["sha256"] != FIELD_SHA:
+        raise PriceError("field sha mismatch")
+    work = ROOT / tag
+    runtime = work / "runtime_copy"
+    sources = {}
+    for src in sorted(PROMOTED45.rglob("*")):
+        if src.is_file() and "__pycache__" not in src.parts and src.suffix != ".pyc" and not src.name.startswith("._"):
+            destination = runtime / src.relative_to(PROMOTED45)
+            sources[str(destination.relative_to(runtime))] = retain(destination, src.read_bytes())
+    if sources["archive.zip"]["sha256"] != POINTER45_SHA:
+        raise PriceError("copied archive is not the move-45 archive")
+    rx, renderer, code_dir = landed.io.load_runtime(runtime)
+    from runtime import ihs2
+    from runtime import rc3_shared_mixer as rc3
+
+    parts = rx.read_residual_archive(runtime / "archive.zip")
+    layout = ihs2.layout_from_runtime(renderer)
+    counts = list(layout.row_counts)
+    shipped_body = rx.materialize_ihs1(parts.hpac_blob, renderer)
+    body = treatment_body(tag, shipped_body, work)
+    retain(work / "retained/hpac.ihs1", body)
+    if (body == shipped_body) != (tag == "control"):
+        raise PriceError("treatment is a no-op, or the control body changed")
+    if renderer.load_hpac(body, torch.device("cpu")) is None:
+        raise PriceError("real integer model failed to load")
+    header = rc3.HEADER.unpack_from(parts.hpac_blob)
+    offset = rc3.HEADER.size + header[-3]
+    learning = parts.hpac_blob[offset]
+    weights = np.frombuffer(parts.hpac_blob[offset + 1 : offset + 25], dtype=np.int8)
+    member = landed.io.split_member(landed.io.read_archive_member(runtime / "archive.zip"))
+    containers = []
+    for twin in range(2):
+        rider, details = rc3.encode(body, counts, header[2], weights, learning)
+        retain(work / f"retained/hpac.twin{twin}.rider", rider)
+        retain(work / f"retained/hpac.twin{twin}.range", details["payload"])
+        retain(work / f"retained/hpac.twin{twin}.params", details["parameters"])
+        outer = ck2_interleave(rider)
+        retain(work / f"retained/hpac.twin{twin}.ck2", outer)
+        # The RC3 landing selected brotli q10 / lgwin22; ntb1's window24 variant
+        # preserves the byte COUNT only, not the incumbent compressed bytes.
+        encoded = brotli.compress(outer, quality=10, lgwin=22)
+        retain(work / f"retained/hpac.twin{twin}.br", encoded)
+        if rc3.restore_hpac(rider, counts) != body:
+            raise PriceError("shipping RC3 parser disagrees with the packed body")
+        containers.append(encoded)
+    if containers[0] != containers[1]:
+        raise PriceError("HPAC twin encode differs")
+    if tag == "control" and containers[0] != member["hpac"]:
+        raise PriceError("HPAC_CONTAINER_CONTROL_FAILED")
+    binding = record(
+        work / "INPUTS.json",
+        {
+            "tag": tag,
+            "base_archive": sources["archive.zip"],
+            "base_archive_expected": {"sha256": POINTER45_SHA, "bytes": POINTER45_BYTES},
+            "source_files": sources,
+            "field": fact(FIELD),
+            "producer": fact(Path(__file__)),
+            "body": fact(work / "retained/hpac.ihs1"),
+            "hpac_section_bytes": len(containers[0]),
+            "shipped_hpac_section_bytes": len(member["hpac"]),
+            "seed": 20260911,
+            "axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+            "score_claim": False,
+            "store_root": str(ROOT),
+            "cleanup": "KEEP all payloads; immutable stage checkpoints; 40 GiB reserve",
+        },
+    )
+    from dataclasses import replace
+
+    altered = replace(parts, hpac_blob=(work / "retained/hpac.twin0.rider").read_bytes())
+    return work, runtime, rx, renderer, code_dir, altered, member, binding
+
+
+def encode(tag: str) -> dict:
+    """Run the shipping RLC1 causal loop with known-symbol twin arithmetic encoders."""
+    import torch
+
+    work, runtime, rx, renderer, code_dir, parts, member, binding = prepare(tag)
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+    torch.manual_seed(20260911)
+    np.random.seed(20260911)
+    torch.use_deterministic_algorithms(True)
+    route = landed.io.load_route_b()
+    build_path = work / "ENCODER_BUILD.json"
+    if build_path.exists():
+        build = json.loads(build_path.read_text())
+        for key in ("base_source", "generated", "library"):
+            if fact(build[key]["path"]) != build[key]:
+                raise PriceError("encoder build drift")
+        library = Path(build["library"]["path"])
+    else:
+        library, build = landed.io.compile_rc64(work, route, "hpr1")
+        record(build_path, build)
+    build_libraries(runtime, work / "native")
+    geometry = build_geometry(runtime, work / "native")
+    checkpoints = work / "checkpoints"
+    os.environ["TC1_RECEIVER_CHECKPOINT_DIR"] = str(checkpoints)
+    os.environ["TC1_RECEIVER_STOP_AFTER"] = "600"
+    from runtime.entropy.rc64 import NativeDecoder
+    from runtime.rlc1_mixer import LaneMixer
+    from runtime.tc1_receiver_checkpoint import ReceiverCheckpoint
+
+    field = np.memmap(FIELD, dtype=np.uint8, mode="r", shape=(600, 384, 512))
+    state, start = None, 0
+    latest = checkpoints / "LATEST.json"
+    if latest.exists():
+        start = int(json.loads(latest.read_text())["frame"])
+        state_path = work / "encoder_states" / f"stage_{start:04d}.npz"
+        state_receipt = json.loads(state_path.with_suffix(".json").read_text())
+        if fact(state_path) != state_receipt["payload"] or state_receipt["binding"] != binding:
+            raise PriceError("encoder restart binding mismatch")
+        state = landed.arrays(state_path)
+    twins = [route.NativeRc64Encoder(library, None if state is None else state[f"enc{i}"].tobytes()) for i in range(2)]
+    observed = {"frame": start, "positions": None}
+    original_coding, original_save = LaneMixer.coding, ReceiverCheckpoint.save
+    original_end = LaneMixer.end_frame
+
+    def coding(self, rows, positions, plane, previous):
+        if observed["positions"] is not None or self.frame != observed["frame"]:
+            raise PriceError("known-symbol group order mismatch")
+        observed["positions"] = positions.copy()
+        return original_coding(self, rows, positions, plane, previous)
+
+    def known_symbols(self, probabilities):
+        positions = observed["positions"]
+        if positions is None or len(positions) != len(probabilities):
+            raise PriceError("known-symbol decode call lacks its group")
+        symbols = field[observed["frame"]].reshape(-1)[positions].astype(np.int32)
+        for encoder in twins:
+            encoder.encode(symbols, probabilities)
+        observed["positions"] = None
+        return symbols
+
+    def end(self, plane, previous):
+        # The output-lossless proof: the plane the receiver reconstructs from this
+        # prior is the shipped field, frame by frame, for every treatment.
+        np.testing.assert_array_equal(plane, field[observed["frame"]])
+        original_end(self, plane, previous)
+        observed["frame"] += 1
+
+    def save(self, frame, tokens):
+        if frame != observed["frame"] or observed["positions"] is not None:
+            raise PriceError("encoder checkpoint is not at a frame boundary")
+        if shutil.disk_usage(ROOT.parent).free < RESERVE_BYTES + (256 << 20):
+            raise PriceError("STORAGE_BLOCK at the durable prior checkpoint")
+        # Save the encoder FIRST: a crash before the receiver LATEST commits leaves
+        # the previous matched pair intact and completed stages stay immutable.
+        path = work / "encoder_states" / f"stage_{frame:04d}.npz"
+        landed.ROOT = ROOT
+        payload = landed.save(
+            path, {f"enc{i}": np.frombuffer(e.snapshot(), dtype=np.uint8) for i, e in enumerate(twins)}
+        )
+        record(path.with_suffix(".json"), {"payload": payload, "binding": binding, "frame": frame})
+        original_save(self, frame, tokens)
+
+    LaneMixer.coding, LaneMixer.end_frame = coding, end
+    NativeDecoder.decode, ReceiverCheckpoint.save = known_symbols, save
+    tokens, _ = rx.decode_production_tokens(parts, renderer, code_dir, torch.device("cpu"))
+    field_sha = hashlib.sha256(tokens.numpy().tobytes()).hexdigest()
+    if observed["frame"] != 600 or field_sha != FIELD_SHA:
+        raise PriceError("known-symbol loop did not process the full field")
+    retain(work / "retained/encoded_field.u8", tokens.numpy().tobytes())
+    archives = []
+    for index, encoder in enumerate(twins):
+        envelope = encoder.finish()
+        retain(work / f"retained/tail.twin{index}.envelope", envelope)
+        import ctypes
+
+        raw = ctypes.string_at(
+            encoder.library.rc64_encoder_data(encoder.context),
+            int(encoder.library.rc64_encoder_size(encoder.context)),
+        )
+        retain(work / f"retained/tail.twin{index}.rc64", raw)
+        rider = b"RLC1" + bytes(parts.tc1_weights) + raw
+        retain(work / f"retained/tail.twin{index}.rider", rider)
+        changed = dict(member)
+        changed["hpac"] = (work / f"retained/hpac.twin{index}.br").read_bytes()
+        fields = list(rx.RX1_MODEL_HEADER.unpack(changed["header"]))
+        fields[5] = len(changed["hpac"])
+        changed["header"] = rx.RX1_MODEL_HEADER.pack(*fields)
+        changed["tail"] = member["tail"][:96] + rider
+        body = landed.io.join_member(changed)
+        retain(work / f"retained/member.twin{index}.bin", body)
+        archive = work / f"retained/archive.twin{index}.zip"
+        landed.pack(body, archive, "stored", None)
+        parsed = rx.read_residual_archive(archive)
+        if parsed.hpac_blob != parts.hpac_blob or parsed.token_stream != raw:
+            raise PriceError("archive parser mismatch")
+        for name in ("semantic_blob", "carrier_blob", "tc1_weights", "residual_payload"):
+            if getattr(parts, name) != getattr(parsed, name):
+                raise PriceError(f"unrelated archive component changed: {name}")
+        archives.append(fact(archive))
+    if archives[0]["sha256"] != archives[1]["sha256"]:
+        raise PriceError("tail/archive twins differ")
+    if tag == "control" and archives[0]["sha256"] != POINTER45_SHA:
+        raise PriceError("LIVE_LOOP_CONTROL_FAILED: no treatment prices are admissible")
+    return record(
+        work / "PRICE.json",
+        {
+            "binding": binding,
+            "geometry_build": geometry,
+            "n": 600,
+            "twins": archives,
+            "hpac_section_bytes": len(changed["hpac"]),
+            "shipped_hpac_section_bytes": len(member["hpac"]),
+            "token_stream_bytes": len(raw),
+            "shipped_token_stream_bytes": len(member["tail"]) - 96 - 4 - len(bytes(parts.tc1_weights)),
+            "delta_bytes_vs_move45": archives[0]["bytes"] - POINTER45_BYTES,
+            "decoded_field_sha256": field_sha,
+            "output_lossless": field_sha == FIELD_SHA,
+            "public_decode_verified": False,
+            "score_claim": False,
+        },
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--treatment", choices=TREATMENTS, required=True)
+    parser.add_argument("--resume-from", type=Path, required=True)
+    parser.add_argument("--store-root", choices=tuple(STORE_ROOTS), default="vertigo")
+    args = parser.parse_args()
+    global ROOT
+    ROOT = STORE_ROOTS[args.store_root]
+    if args.resume_from.resolve() != (ROOT / args.treatment).resolve():
+        raise PriceError("wrong resume root")
+    if args.treatment != "control":
+        control_price = ROOT / "control/PRICE.json"
+        if not control_price.exists():
+            control_price = LEGACY_ROOT / "control/PRICE.json"
+        proof = json.loads(control_price.read_text())
+        if proof["twins"][0]["sha256"] != POINTER45_SHA:
+            raise PriceError("live-loop control required before any treatment price")
+    print(json.dumps(encode(args.treatment)), flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
