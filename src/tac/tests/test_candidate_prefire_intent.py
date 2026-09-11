@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 import tac.candidate_seal as cs
+from tac.candidate_seal import SealContractError
 from tac.decode_wall_clock import build_t4_direct_leg, measure_receiver_digest
 from tac.tests.test_candidate_seal import DEFAULT_PAYLOAD, _public_smoke, _stage_candidate, _write_pointer
 from tac.tests.test_decode_wall_clock_t4_direct import _report, _t4_receipt
@@ -1479,3 +1480,320 @@ def test_call_id_ledger_accepts_reconciliation_event_types():
     from tac.deploy.modal import call_id_ledger as L
     assert "reconciled_terminal_failure" in L.VALID_EVENT_TYPES and "reconciled_terminal_success" in L.VALID_EVENT_TYPES
     assert L.EVENT_RECONCILED_TERMINAL_FAILURE == "reconciled_terminal_failure"
+
+
+# ---------------------------------------------------------------------------------------------
+# ddm_pr19 — the identity-class envelope risk mode. The projection stops being a local
+# extrapolation and becomes the MAX of real T4 measurements of the same receiver and the same
+# decoded token plane; the local ratio is retained as a stress test against the 1,800 s hard
+# timeout. Fixture trees and receipts are synthetic; the real-host proof is the test below them.
+
+PR19_TOKEN = "a9" * 32
+PR19_OTHER_TOKEN = "b7" * 32
+PR19_LEG_RAW = "c5" * 32
+
+
+def _pr19_report(archive_sha, archive_bytes, raw_sha, token, bits):
+    return _report(archive_sha256=archive_sha, archive_bytes=archive_bytes, raw_sha256=raw_sha,
+                   token_decoder={"checkpoint_resumed_from_frame": 0, "decoded_token_sha256": token,
+                                  "decoder_bit_position": bits})
+
+
+def _pr19_leg(path, runtime, archive, *, seconds, token, bits):
+    receipt = _t4_receipt(runtime, path.parent / (path.stem + "_receipt.json"), seconds=seconds)
+    doc = json.loads(receipt.read_text())
+    doc["artifacts"]["contest_auth_eval.stdout.log"] = _pr19_report(
+        cs.sha256_file(archive), archive.stat().st_size, PR19_LEG_RAW, token, bits)
+    receipt.write_text(json.dumps(doc))
+    leg = build_t4_direct_leg(t4_receipt_path=receipt, runtime_dir=runtime, archive_path=archive)
+    return write(path, leg), leg
+
+
+def _pr19_diagnostic(store, name, runtime_dir, archive_sha, wall, **extra):
+    ref = write(store / name, {"wall_seconds": wall, "runtime_dir": str(runtime_dir),
+                               "archive_sha256": archive_sha, "score_claim": False, "cold_start": True,
+                               "checkpoint_resume": False, "frames": list(range(600))})
+    return {**ref, "wall_seconds": wall, "authority": False, **extra}
+
+
+def _pr19_intent(fixture, *, candidate_bits=950, candidate_token=PR19_TOKEN,
+                 legs=((900.0, 960),), base_wall=100.0, candidate_wall=110.0, risk_edit=None):
+    """Build a complete identity-class intent on the shared fixture and return (intent, risk)."""
+    import copy
+    store, root = fixture["store"], fixture["root"]
+    intent = copy.deepcopy(fixture["intent"])
+    source = json.loads((store / "source_leg.json").read_text())
+    base, base_archive = Path(source["runtime_dir"]), Path(source["archive_path"])
+    archive = intent["candidate"]["archive"]
+    log = store / "pr19_candidate_public.log"
+    log.write_text(_pr19_report(archive["sha256"], archive["bytes"],
+                                cs.sha256_file(store / "candidate.raw"), candidate_token, candidate_bits))
+    raw_doc = json.loads((store / "raw_identity.json").read_text())
+    raw_doc["candidate_public_stdout"] = cs.prefire_file_reference(log)
+    intent["evidence"]["raw_identity_n600"] = write(store / "raw_identity.json", raw_doc)
+    leg_refs, legs_built = [], []
+    for index, (seconds, bits) in enumerate(legs):
+        ref, leg = _pr19_leg(store / f"pr19_leg{index}.json", base, base_archive, seconds=seconds,
+                             token=PR19_TOKEN, bits=bits)
+        leg_refs.append(ref)
+        legs_built.append(leg)
+    digest = cs.measure_prefire_risk_receiver_digest(root)
+    smap = {r[0]: list(r[1:]) for r in cs.prefire_risk_receiver_rows(base)}
+    cmap = {r[0]: list(r[1:]) for r in cs.prefire_risk_receiver_rows(root)}
+    delta = write(store / "pr19_delta.json", {"source_receiver_sha256": digest, "candidate_receiver_sha256": digest,
+        "files": [{"relative_path": p, "source": smap.get(p), "candidate": cmap.get(p)}
+                  for p in sorted(smap.keys() | cmap.keys())]})
+    base_diag = _pr19_diagnostic(store, "pr19_base_local.json", base, cs.sha256_file(base_archive), base_wall)
+    cand_diag = _pr19_diagnostic(store, "pr19_candidate_local.json", root, archive["sha256"], candidate_wall,
+                                 cold=True, n_samples=600)
+    class_max = max(leg["measured_t4_decode_seconds"] for leg in legs_built)
+    fraction = max(0.0, candidate_wall / base_wall - 1)
+    risk = {"schema": cs.PREFIRE_RISK_SCHEMA, "mode": cs.PREFIRE_RISK_IDENTITY_CLASS_MODE,
+        "authority": False, "timing_clearance": False,
+        "definition": cs.PREFIRE_RISK_IDENTITY_CLASS_DEFINITION,
+        "source_t4_leg": leg_refs[0], "identity_class_legs": leg_refs,
+        "candidate_work_facts": {"archive_sha256": archive["sha256"], "archive_bytes": archive["bytes"],
+            "raw_sha256": cs.sha256_file(store / "candidate.raw"),
+            "decoded_token_sha256": candidate_token, "decoder_bit_position": candidate_bits},
+        "source_receiver": {"digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": digest,
+            "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "t4_direct_sha256": legs_built[0]["receiver_sha256"]},
+        "candidate_receiver": {"digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": digest},
+        "diagnostic_reference_receiver": {"path": str(base),
+            "digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": digest,
+            "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "receipt_sha256": measure_receiver_digest(base)},
+        "receiver_delta_manifest": delta, "base_local_diagnostic": base_diag,
+        "candidate_local_diagnostics": [cand_diag], "score_claim": False,
+        "calculation": {"class_max_t4_seconds": class_max,
+            "dominating_leg_t4_seconds": legs_built[0]["measured_t4_decode_seconds"],
+            "local_cost_fraction_observed": fraction, "local_ratio_role": "hard_timeout_stress_test",
+            "t4_risk_ceiling_seconds": class_max, "hard_timeout_stress_seconds": class_max * (1 + fraction),
+            "policy_limit_seconds": 1260.0, "hard_timeout_seconds": 1800.0, "passed": True}}
+    if risk_edit is not None:
+        risk_edit(risk)
+    risk["risk_sha256"] = cs.prefire_digest(risk, "risk_sha256")
+    intent["evidence"]["timing_risk"] = write(store / "pr19_risk.json", risk)
+    write(fixture["path"], sign(intent))
+    return intent, risk
+
+
+def test_pr19_identity_class_risk_passes_without_a_local_ratio_projection(fixture):
+    """The projection is a REAL measured T4 number; the local ratio only stress-tests 1,800 s."""
+    intent, risk = _pr19_intent(fixture, legs=((900.0, 960), (1000.0, 955)))
+    validated = cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+    assert validated["calculation"]["t4_risk_ceiling_seconds"] == 1000.0  # the class MAX, not the source leg
+    assert validated["calculation"]["local_cost_fraction_observed"] == pytest.approx(0.1)
+    assert validated["calculation"]["hard_timeout_stress_seconds"] == pytest.approx(1100.0)
+    assert validated["calculation"]["local_ratio_role"] == "hard_timeout_stress_test"
+    assert risk["calculation"] == validated["calculation"]
+
+
+def test_pr19_identity_class_risk_validates_through_the_full_intent(fixture):
+    _pr19_intent(fixture, legs=((900.0, 960),))
+    assert validate(fixture)["state"] == "PREFIRE_FIRST_MEASUREMENT_ONLY"
+
+
+@pytest.mark.parametrize("edit, message", [
+    (lambda r: r.pop("definition") or r.update(mode=cs.PREFIRE_RISK_IDENTITY_CLASS_MODE), "shape differs"),
+    (lambda r: r.update(definition="tac.candidate_seal.other.v1"), "risk type/digest differs"),
+    (lambda r: r.update(authority=True), "risk type/digest differs"),
+    (lambda r: r.update(identity_class_legs=[]), "identity class legs absent"),
+    (lambda r: r.update(identity_class_legs=[r["identity_class_legs"][0], r["identity_class_legs"][0]]),
+     "duplicate identity class leg"),
+    (lambda r: r.update(source_t4_leg={**r["source_t4_leg"], "path": r["source_t4_leg"]["path"] + ".x"}),
+     "dominating leg is not declared"),
+])
+def test_pr19_identity_class_shape_refusals(fixture, edit, message):
+    intent, _ = _pr19_intent(fixture, risk_edit=edit)
+    with pytest.raises(cs.PrefireRefusal, match=message):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_refuses_a_leg_that_decoded_a_different_token_plane(fixture):
+    """Same receiver, different token plane: the symbol count is no longer pinned."""
+    intent, _ = _pr19_intent(fixture, candidate_token=PR19_OTHER_TOKEN)
+    with pytest.raises(cs.PrefireRefusal, match="decoded a different token plane"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_refuses_a_candidate_that_consumes_more_coded_bits(fixture):
+    intent, _ = _pr19_intent(fixture, candidate_bits=961, legs=((900.0, 960),))
+    with pytest.raises(cs.PrefireRefusal, match="more coded bits"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_refuses_a_candidate_archive_larger_than_the_dominating_leg(fixture):
+    """The dominating leg must ship at least as many bytes as the candidate."""
+    store = fixture["store"]
+    def shrink(risk):
+        leg = json.loads(Path(risk["identity_class_legs"][0]["path"]).read_text())
+        receipt_path = Path(leg["candidate_t4_receipt"]["path"])
+        doc = json.loads(receipt_path.read_text())
+        report = json.loads(doc["artifacts"]["contest_auth_eval.stdout.log"].split("DWC1_REPORT ")[1].split("\n")[0])
+        report["archive_bytes"] = 1
+        doc["artifacts"]["contest_auth_eval.stdout.log"] = (
+            "[inflate] starting\nDWC1_REPORT " + json.dumps(report) + "\n[inflate] done\n")
+        receipt_path.write_text(json.dumps(doc))
+        leg["candidate_t4_receipt"] = cs.prefire_file_reference(receipt_path)
+        risk["identity_class_legs"] = [write(store / "pr19_leg0.json", leg)]
+        risk["source_t4_leg"] = risk["identity_class_legs"][0]
+    intent, _ = _pr19_intent(fixture, risk_edit=shrink)
+    with pytest.raises(cs.PrefireRefusal, match="archive is larger than the dominating"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_refuses_a_real_receiver_change(fixture):
+    """tc4 stands: a receiver change keeps the legacy mode and needs its own measured wall clock."""
+    root = fixture["root"]
+    (root / "inflate.sh").write_text((root / "inflate.sh").read_text() + "\n# receiver change\n")
+    (root / "MANIFEST.sha256").write_text("".join(
+        f"{cs.sha256_file(path)}  {path.relative_to(root).as_posix()}\n"
+        for path in sorted(root.rglob("*")) if path.is_file() and path.name != "archive.zip"))
+    intent, _ = _pr19_intent(fixture)
+    with pytest.raises(cs.PrefireRefusal, match="receiver"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_keeps_the_1260_policy_limit_and_adds_an_1800_stress_refusal(fixture):
+    """Neither guard is weakened: the ceiling still fails at 1,260, and the ratio now fails at 1,800."""
+    with pytest.raises(SealContractError, match="exceeds 1260"):
+        _pr19_intent(fixture, legs=((1260.5, 960),))  # the t4_direct leg itself refuses first
+    intent, _ = _pr19_intent(fixture, legs=((1250.0, 960),), base_wall=100.0, candidate_wall=145.0)
+    with pytest.raises(cs.PrefireRefusal, match="1800-second stress test"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+    # the same candidate passes when the observed local delta stays inside the hard-timeout reserve
+    intent, _ = _pr19_intent(fixture, legs=((1250.0, 960),), base_wall=100.0, candidate_wall=143.0)
+    assert cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent,
+                                    repo=fixture["repo"])["calculation"]["passed"] is True
+
+
+def test_pr19_refuses_a_warm_or_foreign_local_diagnostic(fixture):
+    def warm(risk):
+        path = Path(risk["candidate_local_diagnostics"][0]["path"])
+        doc = json.loads(path.read_text())
+        doc["checkpoint_resume"] = True
+        risk["candidate_local_diagnostics"] = [{**write(path, doc), "wall_seconds": 110.0,
+            "authority": False, "cold": True, "n_samples": 600}]
+    intent, _ = _pr19_intent(fixture, risk_edit=warm)
+    with pytest.raises(cs.PrefireRefusal, match="cold n600 window"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+    def foreign(risk):
+        path = Path(risk["base_local_diagnostic"]["path"])
+        doc = json.loads(path.read_text())
+        doc["archive_sha256"] = "d" * 64
+        risk["base_local_diagnostic"] = {**write(path, doc), "wall_seconds": 100.0, "authority": False}
+    intent, _ = _pr19_intent(fixture, risk_edit=foreign)
+    with pytest.raises(cs.PrefireRefusal, match="not a declared class archive"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_refuses_a_candidate_cold_report_that_names_another_archive(fixture):
+    intent, _ = _pr19_intent(fixture)
+    store = fixture["store"]
+    log = store / "pr19_candidate_public.log"
+    log.write_text(_pr19_report("e" * 64, intent["candidate"]["archive"]["bytes"],
+                                cs.sha256_file(store / "candidate.raw"), PR19_TOKEN, 950))
+    raw_doc = json.loads((store / "raw_identity.json").read_text())
+    raw_doc["candidate_public_stdout"] = cs.prefire_file_reference(log)
+    intent["evidence"]["raw_identity_n600"] = write(store / "raw_identity.json", raw_doc)
+    with pytest.raises(cs.PrefireRefusal, match="does not name the candidate archive"):
+        cs.validate_prefire_risk(intent["evidence"]["timing_risk"], intent, repo=fixture["repo"])
+
+
+def test_pr19_legacy_risk_mode_is_untouched(fixture):
+    """The pre-pr19 mode validates byte-identically; pr19 adds a mode, it does not replace one."""
+    assert validate(fixture)["evidence"]["timing_risk"] == fixture["intent"]["evidence"]["timing_risk"]
+
+
+# ---------------------------------------------------------------------------------------------
+# ddm_pr19 on the REAL host trees. Everything load-bearing here is measured: the receiver trees,
+# the two completed t4_direct legs and their T4 cold reports, the candidate's own cold n600 report
+# and its retained raw-identity receipt, and the two cold local windows (819.6933833750081 s on
+# the pointer, 982.7723198329913 s on the candidate). Only the small JSON wrappers — the risk
+# document, the delta manifest and the two diagnostic receipts — are written into tmp_path; no arm
+# directory is touched.
+
+PR19_HOST_LEGS = (
+    ".omx/research/ddm_rlc5_20260910/"
+    "SEAL_ddm_rlc2_counted_cure_move43_rlc5_contest_cuda_v3.json.decode_wall_clock.json",
+    ".omx/research/ddm_ntb2_20260911/"
+    "SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json",
+)
+PR19_HOST_CANDIDATE = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime")
+PR19_HOST_RAW_IDENTITY = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/seal_inputs_comp/RAW_IDENTITY_N600.json")
+PR19_HOST_POINTER_RUNTIME = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime")
+
+
+def _pr19_host_ready() -> bool:
+    repo = Path(__file__).resolve().parents[3]
+    if not all((repo / rel).is_file() for rel in PR19_HOST_LEGS):
+        return False
+    if not (PR19_HOST_CANDIDATE.is_dir() and PR19_HOST_RAW_IDENTITY.is_file()
+            and PR19_HOST_POINTER_RUNTIME.is_dir()):
+        return False
+    return all(Path(json.loads((repo / rel).read_text())["runtime_dir"]).is_dir() for rel in PR19_HOST_LEGS)
+
+
+@pytest.mark.skipif(not _pr19_host_ready(), reason="host candidate trees are not mounted")
+def test_pr19_identity_class_passes_on_the_real_move48_candidate(tmp_path):
+    """The move-48 candidate, refused by both inheritance routes, clears the risk gate on measured T4."""
+    repo = Path(__file__).resolve().parents[3]
+    legs = [json.loads((repo / rel).read_text()) for rel in PR19_HOST_LEGS]
+    leg_refs = [cs.prefire_file_reference(repo / rel) for rel in PR19_HOST_LEGS]
+    dominating_index = 1  # move 46: the leg the pointer's own timing descends from
+    dominating, dominating_ref = legs[dominating_index], leg_refs[dominating_index]
+    archive = cs.prefire_file_reference(PR19_HOST_CANDIDATE / "archive.zip")
+    raw = json.loads(PR19_HOST_RAW_IDENTITY.read_text())
+    intent = {"candidate": {"runtime": {"path": str(PR19_HOST_CANDIDATE)}, "archive": archive},
+              "evidence": {"raw_identity_n600": cs.prefire_file_reference(PR19_HOST_RAW_IDENTITY)},
+              "admit_bar": {"pointer_archive_sha256_at_intent": raw["pointer_archive_sha256"]}}
+    digest = cs.measure_prefire_risk_receiver_digest(PR19_HOST_CANDIDATE)
+    assert digest == "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890"
+    dominating_root = Path(dominating["runtime_dir"])
+    smap = {r[0]: list(r[1:]) for r in cs.prefire_risk_receiver_rows(dominating_root)}
+    cmap = {r[0]: list(r[1:]) for r in cs.prefire_risk_receiver_rows(PR19_HOST_CANDIDATE)}
+    assert smap == cmap  # one receiver, five archives
+    delta = write(tmp_path / "delta.json", {"source_receiver_sha256": digest, "candidate_receiver_sha256": digest,
+        "files": [{"relative_path": p, "source": smap.get(p), "candidate": cmap.get(p)}
+                  for p in sorted(smap.keys() | cmap.keys())]})
+    base_wall, candidate_wall = 819.6933833750081, 982.7723198329913
+    base_diag = _pr19_diagnostic(tmp_path, "base_local.json", PR19_HOST_POINTER_RUNTIME,
+                                 raw["pointer_archive_sha256"], base_wall)
+    cand_diag = _pr19_diagnostic(tmp_path, "candidate_local.json", PR19_HOST_CANDIDATE,
+                                 archive["sha256"], candidate_wall, cold=True, n_samples=600)
+    from tac.decode_wall_clock import t4_direct_cold_report
+    report = t4_direct_cold_report(dominating)
+    facts = cs._pf_cold_work_facts(report, "PREFIRE_RISK_EVIDENCE_REFUSED")
+    candidate_facts = cs._pf_candidate_cold_report(intent, "PREFIRE_RISK_EVIDENCE_REFUSED")
+    assert candidate_facts["decoded_token_sha256"] == facts["decoded_token_sha256"]
+    assert candidate_facts["decoder_bit_position"] <= facts["decoder_bit_position"]
+    assert candidate_facts["archive_bytes"] <= facts["archive_bytes"]
+    class_max = max(leg["measured_t4_decode_seconds"] for leg in legs)
+    fraction = max(0.0, candidate_wall / base_wall - 1)
+    risk = {"schema": cs.PREFIRE_RISK_SCHEMA, "mode": cs.PREFIRE_RISK_IDENTITY_CLASS_MODE,
+        "authority": False, "timing_clearance": False, "definition": cs.PREFIRE_RISK_IDENTITY_CLASS_DEFINITION,
+        "source_t4_leg": dominating_ref, "identity_class_legs": leg_refs,
+        "candidate_work_facts": candidate_facts,
+        "source_receiver": {"digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": digest,
+            "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "t4_direct_sha256": dominating["receiver_sha256"]},
+        "candidate_receiver": {"digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": digest},
+        "diagnostic_reference_receiver": {"path": str(PR19_HOST_CANDIDATE),
+            "digest_definition": cs.PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": digest,
+            "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+            "receipt_sha256": measure_receiver_digest(PR19_HOST_CANDIDATE)},
+        "receiver_delta_manifest": delta, "base_local_diagnostic": base_diag,
+        "candidate_local_diagnostics": [cand_diag], "score_claim": False,
+        "calculation": {"class_max_t4_seconds": class_max,
+            "dominating_leg_t4_seconds": dominating["measured_t4_decode_seconds"],
+            "local_cost_fraction_observed": fraction, "local_ratio_role": "hard_timeout_stress_test",
+            "t4_risk_ceiling_seconds": class_max, "hard_timeout_stress_seconds": class_max * (1 + fraction),
+            "policy_limit_seconds": 1260.0, "hard_timeout_seconds": 1800.0, "passed": True}}
+    risk["risk_sha256"] = cs.prefire_digest(risk, "risk_sha256")
+    validated = cs._validate_prefire_risk_identity_class(risk, intent)
+    assert validated["calculation"]["t4_risk_ceiling_seconds"] == 1232.418725255 <= 1260.0
+    assert validated["calculation"]["hard_timeout_stress_seconds"] < 1800.0
+    # the local ratio the legacy mode would have projected refuses this candidate at 1,260
+    assert dominating["measured_t4_decode_seconds"] * (1 + fraction) > 1260.0

@@ -450,6 +450,17 @@ def _t4_direct(ref: object, runtime_dir: Path, archive_path: Path, leg: dict) ->
     return seconds, {"cold_report_pairs": report.get("pair_count"), "t4_hardware": hardware}
 
 
+def t4_direct_cold_report(leg: object) -> dict:
+    """The receiver's OWN cold n600 report out of a t4_direct leg's pinned T4 receipt.
+
+    ddm_pr19 reads work-bearing facts (decoded token plane, coded bit position, archive
+    identity) from this report. Reading goes through ``_receipt``, so a drifted receipt
+    refuses here exactly as it does inside leg validation.
+    """
+    _require(isinstance(leg, dict) and leg.get("mode") == "t4_direct", "cold report needs a t4_direct leg")
+    return _cold_public_report(_receipt(leg.get("candidate_t4_receipt")))
+
+
 def build_t4_direct_leg(*, t4_receipt_path: Path, runtime_dir: Path, archive_path: Path) -> dict:
     """Construct ddm_pr11's t4_direct leg from a retained completed T4 receipt; refuses on any drift."""
     runtime_dir, archive_path = Path(runtime_dir).resolve(), Path(archive_path).resolve()

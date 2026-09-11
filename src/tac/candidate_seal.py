@@ -1611,6 +1611,24 @@ PREFIRE_CONTRACT_AMENDMENT_ID = "ddm_pr14_manifest_in_receiver_risk_digest"
 # licenses both exclusions. A superseding row, unlike a pr14 re-pin snapshot, may follow
 # consumer fixes and MUST pin the row it follows and the definition it replaces.
 PREFIRE_CONTRACT_AMENDMENT_ID_PR18 = "ddm_pr18_manifest_excluded_from_receiver_behavior_digest"
+# ddm_pr19. The legacy risk mode projects a LOCAL cold-n600 ratio onto a measured T4 leg. MEASURED,
+# on cold n600 windows of ONE identity class: 2,317.38 s (ntb2), 1,957.60 s and 1,619.12 s (pc3 and
+# ntb2 on identical move-44 bytes), 819.69 s (move 47) and 982.77 s (the move-48 candidate) — a 2.83x
+# spread, an instrument an order of magnitude noisier than the effect it must resolve, and one-sided
+# (the max(0, ...) clamp lets noise inflate the projection but never deflate it). The identity-class
+# mode projects from REAL T4 measurements of the same receiver and the same decoded token plane, and
+# demotes the local ratio to a stress test against the 1,800 s hard timeout. The 1,260 s policy limit,
+# the t4_direct leg's own requirements, and the inheritance chain refusals are untouched.
+PREFIRE_CONTRACT_AMENDMENT_ID_PR19 = "ddm_pr19_identity_class_envelope_replaces_local_ratio_projection"
+PREFIRE_RISK_IDENTITY_CLASS_MODE = "measured_t4_identity_class_envelope"
+PREFIRE_RISK_IDENTITY_CLASS_DEFINITION = (
+    "tac.candidate_seal.validate_prefire_risk.identity_class_envelope.v1"
+)
+PREFIRE_RISK_IDENTITY_CLASS_FIELDS = frozenset({
+    "schema", "mode", "authority", "timing_clearance", "definition", "source_t4_leg",
+    "identity_class_legs", "candidate_work_facts", "source_receiver", "candidate_receiver",
+    "diagnostic_reference_receiver", "receiver_delta_manifest", "base_local_diagnostic",
+    "candidate_local_diagnostics", "calculation", "score_claim", "risk_sha256"})
 PREFIRE_AMENDMENT_DEFINITIONS = {
     PREFIRE_CONTRACT_AMENDMENT_ID: {
         "scope": "candidate_prefire_timing_risk.v1 only; legacy decode_wall_clock unchanged",
@@ -1625,6 +1643,23 @@ PREFIRE_AMENDMENT_DEFINITIONS = {
         "independent_manifest_validation": "tac.decode_wall_clock.validate_receiver_manifest",
         "stored_digest_definitions_accepted": ["tac.decode_wall_clock.measure_receiver_behavior_digest.v2",
                                                "tac.decode_wall_clock.measure_receiver_digest"],
+        "executable_difference_policy": "REFUSE"},
+    PREFIRE_CONTRACT_AMENDMENT_ID_PR19: {
+        "scope": "candidate_prefire_timing_risk.v1 projection basis only; decode_wall_clock "
+                 "inheritance is UNCHANGED and timing chains stay refused",
+        "risk_mode": PREFIRE_RISK_IDENTITY_CLASS_MODE,
+        "definition": PREFIRE_RISK_IDENTITY_CLASS_DEFINITION,
+        "projection_basis": "max measured_t4_decode_seconds over the declared t4_direct legs of the "
+                            "candidate's identity class; no local extrapolation enters the projection",
+        "identity_class": ["prefire risk receiver digest equal to every declared leg's",
+                           "receiver delta manifest carries zero differing rows",
+                           "decoded_token_sha256 equal to every declared leg's",
+                           "candidate decoder_bit_position <= the dominating leg's",
+                           "candidate archive bytes <= the dominating leg's"],
+        "local_ratio_role": "hard_timeout_stress_test",
+        "policy_limit_seconds": 1260.0, "hard_timeout_seconds": 1800.0,
+        "receiver_change_policy": "REFUSE — a receiver change keeps completed_t4_receiver_delta",
+        "chain_inheritance_policy": "REFUSE",
         "executable_difference_policy": "REFUSE"},
 }
 FIRST_MEASUREMENT_AUTHORIZATION_SCHEMA = "candidate_first_measurement_authorization.v1"
@@ -2244,10 +2279,189 @@ def measure_prefire_risk_receiver_digest(root: Path) -> str:
     return _prefire_receiver_rows_digest(prefire_risk_receiver_rows(root))
 
 
+def _pf_cold_work_facts(report: object, code: str) -> dict:
+    """Reduce a receiver cold n600 report to the facts that bound its decode WORK.
+
+    ``decoded_token_sha256`` is the one identity that crosses the device boundary: the token
+    plane is a pure integer decode, so a local macOS report and a T4 report of the same coded
+    stream carry the same digest (MEASURED: ``a92e7d90…`` on moves 44, 46, 47 and the move-48
+    candidate, on both axes) even though their rendered raws differ by render device.
+    """
+    _pf_require(isinstance(report, dict), code, "cold report must be an object")
+    decoder = report.get("token_decoder")
+    _pf_require(isinstance(decoder, dict), code, "cold report carries no token decoder section")
+    facts = {"archive_sha256": report.get("archive_sha256"), "archive_bytes": report.get("archive_bytes"),
+             "raw_sha256": report.get("raw_sha256"),
+             "decoded_token_sha256": decoder.get("decoded_token_sha256"),
+             "decoder_bit_position": decoder.get("decoder_bit_position")}
+    for key in ("archive_sha256", "raw_sha256", "decoded_token_sha256"):
+        _pf_require(_is_sha256(facts[key]), code, f"cold report {key} is not a sha256")
+    for key in ("archive_bytes", "decoder_bit_position"):
+        _pf_require(type(facts[key]) is int and facts[key] > 0, code, f"cold report {key} absent")
+    return facts
+
+
+def _pf_candidate_cold_report(intent: dict, code: str) -> dict:
+    """The candidate's own cold n600 report, read from the raw-identity evidence the intent pins."""
+    from tac.decode_wall_clock import _cold_public_report
+    raw = _pf_ref(intent["evidence"]["raw_identity_n600"], code)
+    _pf_require(isinstance(raw, dict), code, "raw identity evidence must be an object")
+    log = _pf_ref(raw.get("candidate_public_stdout"), code, parse=False)
+    try:
+        text = Path(log).read_text(encoding="utf-8")
+        report = _cold_public_report({"artifacts": {"contest_auth_eval.stdout.log": text}})
+    except (OSError, UnicodeDecodeError, SealContractError) as exc:
+        raise PrefireRefusal(code, f"candidate cold n600 report refused: {exc}") from exc
+    facts = _pf_cold_work_facts(report, code)
+    archive = intent["candidate"]["archive"]
+    _pf_require(facts["archive_sha256"] == archive.get("sha256")
+                and facts["archive_bytes"] == archive.get("bytes"),
+                code, "candidate cold report does not name the candidate archive")
+    candidate_raw = raw.get("candidate_raw")
+    _pf_require(isinstance(candidate_raw, dict) and facts["raw_sha256"] == candidate_raw.get("sha256"),
+                code, "candidate cold report does not name the retained candidate raw")
+    return facts
+
+
+def _validate_prefire_risk_identity_class(risk: dict, intent: dict) -> dict:
+    """ddm_pr19: project the spend risk from REAL T4 measurements of the candidate's identity class.
+
+    The class is (this receiver, this decoded token plane). A member of it that was actually
+    measured on T4 dominates the candidate's decode work when it consumed at least as many coded
+    bits and shipped at least as many archive bytes: the token stage's symbol count is fixed by
+    the token plane, its per-symbol cost by the receiver code, the render stage by both, and the
+    archive-setup stage by the bytes (MEASURED share of a cold local decode: 0.099 %).
+
+    Nothing here lowers the 1,260 s policy limit. The local ratio is retained and made STRICTER
+    in one direction: it must now prove the candidate cannot reach the 1,800 s hard timeout even
+    if the whole observed local delta is real work.
+    """
+    from tac.decode_wall_clock import (
+        measure_receiver_digest,
+        t4_direct_cold_report,
+        validate_decode_wall_clock,
+    )
+    code = "PREFIRE_RISK_EVIDENCE_REFUSED"
+    _pf_require(set(risk) == set(PREFIRE_RISK_IDENTITY_CLASS_FIELDS), code, "identity-class risk shape differs")
+    _pf_require(risk["schema"] == PREFIRE_RISK_SCHEMA
+                and risk["definition"] == PREFIRE_RISK_IDENTITY_CLASS_DEFINITION
+                and all(risk[k] is False for k in ("authority", "timing_clearance", "score_claim"))
+                and risk["risk_sha256"] == prefire_digest(risk, "risk_sha256"), code, "risk type/digest differs")
+    candidate_root = Path(intent["candidate"]["runtime"]["path"])
+    candidate_digest = measure_prefire_risk_receiver_digest(candidate_root)
+    facts = _pf_candidate_cold_report(intent, code)
+    _pf_require(risk["candidate_work_facts"] == facts, code, "declared candidate work facts differ from the report")
+
+    dominating_ref = risk["source_t4_leg"]
+    _pf_require(isinstance(dominating_ref, dict), code, "dominating leg reference absent")
+    legs, paths, seconds, dominating = risk["identity_class_legs"], set(), [], None
+    class_archives: set[str] = set()
+    _pf_require(isinstance(legs, list) and legs, code, "identity class legs absent")
+    for ref in legs:
+        leg = _pf_ref(ref, code)
+        _pf_require(isinstance(ref, dict) and ref["path"] not in paths, code, "duplicate identity class leg")
+        paths.add(ref["path"])
+        _pf_require(isinstance(leg, dict) and leg.get("mode") == "t4_direct", code, "identity class leg must be t4_direct")
+        problems, _ = validate_decode_wall_clock(leg, runtime_dir=Path(leg["runtime_dir"]),
+                                                 archive_path=Path(leg["archive_path"]))
+        _pf_require(not problems, code, "; ".join(problems))
+        _pf_require(measure_prefire_risk_receiver_digest(Path(leg["runtime_dir"])) == candidate_digest,
+                    code, "identity class leg receiver differs from the candidate receiver")
+        leg_facts = _pf_cold_work_facts(t4_direct_cold_report(leg), code)
+        _pf_require(leg_facts["decoded_token_sha256"] == facts["decoded_token_sha256"],
+                    code, "identity class leg decoded a different token plane")
+        leg_seconds = _pf_number(leg.get("measured_t4_decode_seconds"), code, "leg T4 seconds", positive=True)
+        _pf_require(leg_seconds <= 1260.0, code, "identity class leg exceeds the 1260-second policy limit")
+        seconds.append(leg_seconds)
+        class_archives.add(leg["archive_sha256"])
+        if ref == dominating_ref:
+            dominating = (leg, leg_facts, leg_seconds)
+    _pf_require(dominating is not None, code, "the dominating leg is not declared in the identity class")
+    dominating_leg, dominating_facts, dominating_seconds = dominating
+    _pf_require(facts["decoder_bit_position"] <= dominating_facts["decoder_bit_position"], code,
+                "candidate consumes more coded bits than the dominating measured leg")
+    _pf_require(facts["archive_bytes"] <= dominating_facts["archive_bytes"], code,
+                "candidate archive is larger than the dominating measured leg")
+
+    dominating_root = Path(dominating_leg["runtime_dir"])
+    source_receiver = {
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": measure_prefire_risk_receiver_digest(dominating_root),
+        "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+        "t4_direct_sha256": dominating_leg["receiver_sha256"],
+    }
+    candidate_receiver = {"digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION, "sha256": candidate_digest}
+    diagnostic_root = Path(risk["diagnostic_reference_receiver"]["path"])
+    diagnostic_reference_receiver = {
+        "path": str(diagnostic_root),
+        "digest_definition": PREFIRE_RISK_RECEIVER_DIGEST_DEFINITION,
+        "sha256": candidate_digest,
+        "receipt_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+        "receipt_sha256": measure_receiver_digest(diagnostic_root),
+    }
+    _pf_require(risk["source_receiver"] == source_receiver and risk["candidate_receiver"] == candidate_receiver
+                and risk["diagnostic_reference_receiver"] == diagnostic_reference_receiver
+                and measure_prefire_risk_receiver_digest(diagnostic_root) == candidate_digest,
+                code, "receiver risk endpoints differ")
+
+    delta = _pf_ref(risk["receiver_delta_manifest"], code)
+    smap = {r[0]: list(r[1:]) for r in prefire_risk_receiver_rows(dominating_root)}
+    cmap = {r[0]: list(r[1:]) for r in prefire_risk_receiver_rows(candidate_root)}
+    rows = [{"relative_path": p, "source": smap.get(p), "candidate": cmap.get(p)}
+            for p in sorted(smap.keys() | cmap.keys())]
+    _pf_require(delta.get("files") == rows and delta.get("source_receiver_sha256") == candidate_digest
+                and delta.get("candidate_receiver_sha256") == candidate_digest,
+                code, "complete normalized receiver delta differs")
+    _pf_require(all(row["source"] == row["candidate"] for row in rows), code,
+                "identity-class mode requires a byte-identical normalized receiver; "
+                "a receiver change keeps completed_t4_receiver_delta and its own measurement")
+
+    base, candidates = risk["base_local_diagnostic"], risk["candidate_local_diagnostics"]
+    _pf_require(isinstance(candidates, list) and candidates, code, "candidate diagnostics missing")
+    allowed_base_archives = class_archives | {intent["admit_bar"]["pointer_archive_sha256_at_intent"]}
+    for ref in [base, *candidates]:
+        doc = _pf_ref(ref, code)
+        wall = _pf_number(ref.get("wall_seconds"), code, "diagnostic seconds", positive=True)
+        _pf_require(ref.get("authority") is False and doc.get("wall_seconds") == wall
+                    and doc.get("score_claim") is False,
+                    code, "diagnostic must keep its measured wall and false authority")
+        tree = doc.get("runtime_dir")
+        _pf_require(isinstance(tree, str) and bool(tree)
+                    and measure_prefire_risk_receiver_digest(Path(tree)) == candidate_digest,
+                    code, "local diagnostic was not measured on this receiver")
+        _pf_require(doc.get("cold_start") is True and doc.get("checkpoint_resume") is False
+                    and doc.get("frames") == list(range(600)),
+                    code, "local diagnostic must be a cold n600 window")
+        if ref is base:
+            _pf_require(doc.get("archive_sha256") in allowed_base_archives, code,
+                        "base diagnostic is not a declared class archive or the pointer archive")
+        else:
+            _pf_require(ref.get("cold") is True and ref.get("n_samples") == 600
+                        and doc.get("archive_sha256") == intent["candidate"]["archive"]["sha256"],
+                        code, "candidate diagnostic must be a cold n600 window of the candidate archive")
+
+    class_max = max(seconds)
+    fraction = max(0.0, max(ref["wall_seconds"] for ref in candidates) / base["wall_seconds"] - 1)
+    stress = class_max * (1 + fraction)
+    calculation = {"class_max_t4_seconds": class_max, "dominating_leg_t4_seconds": dominating_seconds,
+                   "local_cost_fraction_observed": fraction, "local_ratio_role": "hard_timeout_stress_test",
+                   "t4_risk_ceiling_seconds": class_max, "hard_timeout_stress_seconds": stress,
+                   "policy_limit_seconds": 1260.0, "hard_timeout_seconds": 1800.0, "passed": True}
+    for key in calculation:
+        if key not in {"passed", "local_ratio_role"}:
+            _pf_number(risk["calculation"].get(key), code, key)
+    _pf_require(risk["calculation"].get("passed") is True and risk["calculation"] == calculation
+                and class_max <= 1260.0 < 1800.0 and stress <= 1800.0,
+                code, "risk arithmetic/1260-second policy/1800-second stress test differs")
+    return risk
+
+
 def validate_prefire_risk(risk_ref: dict, intent: dict, *, repo: Path) -> dict:
     from tac.decode_wall_clock import measure_receiver_digest, validate_decode_wall_clock
     code = "PREFIRE_RISK_EVIDENCE_REFUSED"
     risk = _pf_ref(risk_ref, code)
+    if isinstance(risk, dict) and risk.get("mode") == PREFIRE_RISK_IDENTITY_CLASS_MODE:
+        return _validate_prefire_risk_identity_class(risk, intent)
     _pf_require(isinstance(risk, dict) and set(risk) == {"schema", "mode", "authority", "timing_clearance", "source_t4_leg", "source_receiver", "candidate_receiver", "diagnostic_reference_receiver", "receiver_delta_manifest", "base_local_diagnostic", "candidate_local_diagnostics", "calculation", "score_claim", "risk_sha256"},
         code, "risk shape differs")
     _pf_require(risk["schema"] == PREFIRE_RISK_SCHEMA and risk["mode"] == "completed_t4_receiver_delta"

@@ -153,3 +153,74 @@ def test_inherit_refuses_a_different_receiver(staged, tmp_path):
     with pytest.raises(SealContractError, match="receiver code differs"):
         inherit_decode_wall_clock(source_leg_path=leg_path, runtime_dir=other_runtime, archive_path=other_archive,
                                   pointer_archive_sha256=leg["archive_sha256"])
+
+
+# ---------------------------------------------------------------------------------------------
+# ddm_pr19 — adjudication (B) is REFUSED, so these two refusals are load-bearing contract text
+# and are pinned on the REAL host trees. Moves 44/46/47 and the move-48 candidate share ONE
+# receiver behavior digest (9f6e7168…) and one decoded token plane, and the contract still admits
+# at most ONE inherited row per measured leg. Inheritance saves no dispatch — every candidate is
+# fired on T4 for its exact row anyway — so a chain would buy convenience at the price of an
+# unmeasured, accumulating drift assumption.
+
+HOST_MOVE46_LEG = Path(
+    ".omx/research/ddm_ntb2_20260911/"
+    "SEAL_ddm_ntb2_frame_even_hpac_prior_move45_contest_cuda_v3.json.decode_wall_clock.json")
+HOST_MOVE47_SEAL = Path(".omx/research/ddm_hpr1_20260911/SEAL_ddm_hpr1_retrain_control_contest_cuda.json")
+HOST_MOVE48_RUNTIME = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime")
+
+
+def _repo() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _host_available() -> bool:
+    repo = _repo()
+    if not (repo / HOST_MOVE46_LEG).is_file() or not (repo / HOST_MOVE47_SEAL).is_file():
+        return False
+    leg = json.loads((repo / HOST_MOVE46_LEG).read_text())
+    return Path(leg["runtime_dir"]).is_dir() and HOST_MOVE48_RUNTIME.is_dir()
+
+
+@pytest.mark.skipif(not _host_available(), reason="host candidate trees are not mounted")
+def test_pr19_chain_inheritance_stays_refused_on_the_real_trees(tmp_path):
+    """Both routes the move-48 candidate can take refuse, verbatim, and that is the adjudication."""
+    from tac.decode_wall_clock import measure_receiver_behavior_digest
+    repo = _repo()
+    move46_leg_path = repo / HOST_MOVE46_LEG
+    move46 = json.loads(move46_leg_path.read_text())
+    move47 = json.loads((repo / HOST_MOVE47_SEAL).read_text())["decode_wall_clock"]
+    candidate_archive = HOST_MOVE48_RUNTIME / "archive.zip"
+    pointer_sha = move47["archive_sha256"]
+    # the physics of the inheritance is satisfied: one receiver across every link
+    digest = measure_receiver_behavior_digest(HOST_MOVE48_RUNTIME)
+    assert digest == measure_receiver_behavior_digest(Path(move46["runtime_dir"]))
+    # route A — inherit from the pointer's own (inherited) leg
+    move47_path = tmp_path / "move47_leg.json"
+    move47_path.write_text(json.dumps(move47))
+    with pytest.raises(SealContractError, match="never to an inherited one"):
+        inherit_decode_wall_clock(source_leg_path=move47_path, runtime_dir=HOST_MOVE48_RUNTIME,
+                                  archive_path=candidate_archive, pointer_archive_sha256=pointer_sha)
+    # route B — inherit from the measured leg the pointer already consumed
+    with pytest.raises(SealContractError, match="source measurement is not the pointer archive"):
+        inherit_decode_wall_clock(source_leg_path=move46_leg_path, runtime_dir=HOST_MOVE48_RUNTIME,
+                                  archive_path=candidate_archive, pointer_archive_sha256=pointer_sha)
+    # the control: the same leg still inherits while IT is the pointer, so the refusal is about
+    # the pointer's identity and not about this candidate's tree
+    leg = inherit_decode_wall_clock(source_leg_path=move46_leg_path, runtime_dir=HOST_MOVE48_RUNTIME,
+                                    archive_path=candidate_archive,
+                                    pointer_archive_sha256=move46["archive_sha256"])
+    assert leg["projected_t4_decode_seconds"] == move46["measured_t4_decode_seconds"]
+
+
+@pytest.mark.skipif(not _host_available(), reason="host candidate trees are not mounted")
+def test_pr19_t4_direct_cold_report_exposes_the_work_facts(tmp_path):
+    """The work facts the identity-class rule reads are the receiver's OWN reported fields."""
+    from tac.decode_wall_clock import t4_direct_cold_report
+    leg = json.loads((_repo() / HOST_MOVE46_LEG).read_text())
+    report = t4_direct_cold_report(leg)
+    assert report["archive_sha256"] == leg["archive_sha256"] and report["pair_count"] == 600
+    assert len(report["token_decoder"]["decoded_token_sha256"]) == 64
+    assert report["token_decoder"]["decoder_bit_position"] > 0
+    with pytest.raises(SealContractError, match="needs a t4_direct leg"):
+        t4_direct_cold_report({"mode": "inherited"})
