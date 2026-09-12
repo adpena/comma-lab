@@ -66,6 +66,8 @@ if str(REPO) not in sys.path:
 
 from experiments import ddm_jg2_tail_reencode as jg2
 from experiments import ddm_rx2_mc36_identity_race as rx2
+from tac.candidate_seal import SealContractError
+from tac.receiver_manifest import rebind_receiver_manifest, require_receiver_manifest_rows
 
 STORE = Path("/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder")
 FS2_RUNTIME = Path("/Volumes/VertigoDataTier/pact/ddm_fs2_carrier_resolve/fire_runtime_D_alternation")
@@ -248,19 +250,34 @@ def patch_inflate_pins(runtime_root: Path, archive_sha256: str, archive_bytes: i
     """Patch BOTH pins in the receiver copy's inflate.py (jf2 #1237: a half-updated pin)."""
     path = runtime_root / "inflate.py"
     text = path.read_text(encoding="utf-8")
+    try:
+        require_receiver_manifest_rows(runtime_root, ("inflate.py",))
+    except SealContractError as exc:
+        raise Cl2Error(str(exc)) from exc
     old_sha = f'ARCHIVE_SHA256 = "{FS2_ARCHIVE_SHA256}"'
     old_bytes = f"ARCHIVE_BYTES = {FS2_ARCHIVE_BYTES:_}"
     new_sha = f'ARCHIVE_SHA256 = "{archive_sha256}"'
     new_bytes = f"ARCHIVE_BYTES = {archive_bytes:_}"
     if text.count(old_sha) != 1 or text.count(old_bytes) != 1:
         if text.count(new_sha) == 1 and text.count(new_bytes) == 1:
-            return file_fact(path)
+            try:
+                manifest = rebind_receiver_manifest(runtime_root, ("inflate.py",))
+            except SealContractError as exc:
+                raise Cl2Error(str(exc)) from exc
+            return {**file_fact(path), "manifest_rebind": manifest}
         raise Cl2Error("receiver copy inflate.py pins are absent or ambiguous")
-    text = text.replace(old_sha, new_sha).replace(old_bytes, new_bytes)
-    path.write_text(text, encoding="utf-8")
-    if text.count(new_sha) != 1 or text.count(new_bytes) != 1:
-        raise Cl2Error("inflate.py pin patch did not land exactly once")
-    return file_fact(path)
+    original_manifest = (runtime_root / "MANIFEST.sha256").read_bytes()
+    patched = text.replace(old_sha, new_sha).replace(old_bytes, new_bytes)
+    path.write_text(patched, encoding="utf-8")
+    try:
+        if patched.count(new_sha) != 1 or patched.count(new_bytes) != 1:
+            raise Cl2Error("inflate.py pin patch did not land exactly once")
+        manifest = rebind_receiver_manifest(runtime_root, ("inflate.py",))
+    except Exception:
+        path.write_text(text, encoding="utf-8")
+        (runtime_root / "MANIFEST.sha256").write_bytes(original_manifest)
+        raise
+    return {**file_fact(path), "manifest_rebind": manifest}
 
 
 def load_checkpoint_facts(checkpoint: Path, expected_profile: str) -> dict[str, Any]:
@@ -645,7 +662,7 @@ def stage_verify(args: argparse.Namespace) -> dict[str, Any]:
             for i, (a, b) in enumerate(zip(shipped_lines, cand_lines, strict=True))
             if a != b
         ]
-    tree_ok = set(differing) <= {"archive.zip", "inflate.py"} and len(inflate_diff) == 2
+    tree_ok = set(differing) <= {"MANIFEST.sha256", "archive.zip", "inflate.py"} and len(inflate_diff) == 2
 
     verify = {
         "schema": "ddm_cl2_verify.v1",

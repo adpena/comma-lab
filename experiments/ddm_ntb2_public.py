@@ -35,6 +35,7 @@ from experiments import ddm_ntb2_control as control
 from experiments import ddm_ntb2_hpac as hpac
 from experiments import ddm_rlc1_run as landed
 from experiments.ddm_rlc4_rebase import measure_receiver_digest, measure_runtime_digest
+from tac.receiver_manifest import canonical_receiver_manifest_bytes
 
 # The storage waterfall, not a loosened guard: VertigoDataTier fell to 28 GiB under five
 # live arms while this proof needs 3.66 GB plus headroom, and APDataStore has 63 GiB. Both
@@ -125,12 +126,7 @@ def regenerate_manifest(root: Path) -> bytes:
     Regenerating move 44's tree by this rule reproduces its shipped 49-row manifest byte
     for byte; including `archive.zip` gives 50 rows and does not.
     """
-    rows = "".join(
-        f"{sha256_file(path)}  {path.relative_to(root)}\n"
-        for path in shipped_files(root)
-        if path.name not in ("MANIFEST.sha256", "archive.zip")
-    )
-    return rows.encode()
+    return canonical_receiver_manifest_bytes(root, include_archive=False)
 
 
 PROMOTED = control.ROOT / "promoted_runtime_move45"

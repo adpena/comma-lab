@@ -59,6 +59,8 @@ from experiments import ddm_cl2_hpac_prior_capacity_ladder as cl2
 from experiments import ddm_jg2_tail_reencode as jg2
 from experiments import ddm_rc1_adaptive_section_codec as rc1codec
 from experiments import ddm_rc1_model_section_adaptive_recode as rc1rec
+from tac.candidate_seal import SealContractError
+from tac.receiver_manifest import rebind_receiver_manifest, require_receiver_manifest_rows
 
 STORE = Path("/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection")
 #: Historical ladder control: pc1's x16 rung on rc1's coded model sections.  It was
@@ -268,22 +270,37 @@ def patch_inflate_pins_live(runtime_root: Path, archive_sha256: str, archive_byt
 
     path = runtime_root / "inflate.py"
     text = path.read_text(encoding="utf-8")
+    try:
+        require_receiver_manifest_rows(runtime_root, ("inflate.py",))
+    except SealContractError as exc:
+        raise Cl3Error(str(exc)) from exc
     old_sha = f'ARCHIVE_SHA256 = "{LIVE_ARCHIVE_SHA256}"'
     old_bytes = f"ARCHIVE_BYTES = {LIVE_ARCHIVE_BYTES}"
     new_sha = f'ARCHIVE_SHA256 = "{archive_sha256}"'
     new_bytes = f"ARCHIVE_BYTES = {archive_bytes}"
     if text.count(old_sha) != 1 or text.count(old_bytes) != 1:
         if text.count(new_sha) == 1 and text.count(new_bytes) == 1:
-            return cl2.file_fact(path)  # already patched (idempotent re-run)
+            try:
+                manifest = rebind_receiver_manifest(runtime_root, ("inflate.py",))
+            except SealContractError as exc:
+                raise Cl3Error(str(exc)) from exc
+            return {**cl2.file_fact(path), "manifest_rebind": manifest}
         raise Cl3Error(
             "live receiver copy inflate.py pins are absent or ambiguous: "
             f"sha_hits={text.count(old_sha)} bytes_hits={text.count(old_bytes)}"
         )
-    text = text.replace(old_sha, new_sha).replace(old_bytes, new_bytes)
-    path.write_text(text, encoding="utf-8")
-    if text.count(new_sha) != 1 or text.count(new_bytes) != 1:
-        raise Cl3Error("inflate.py pin patch did not land exactly once")
-    return cl2.file_fact(path)
+    original_manifest = (runtime_root / "MANIFEST.sha256").read_bytes()
+    patched = text.replace(old_sha, new_sha).replace(old_bytes, new_bytes)
+    path.write_text(patched, encoding="utf-8")
+    try:
+        if patched.count(new_sha) != 1 or patched.count(new_bytes) != 1:
+            raise Cl3Error("inflate.py pin patch did not land exactly once")
+        manifest = rebind_receiver_manifest(runtime_root, ("inflate.py",))
+    except Exception:
+        path.write_text(text, encoding="utf-8")
+        (runtime_root / "MANIFEST.sha256").write_bytes(original_manifest)
+        raise
+    return {**cl2.file_fact(path), "manifest_rebind": manifest}
 
 
 def stage_control(args: argparse.Namespace) -> dict[str, Any]:

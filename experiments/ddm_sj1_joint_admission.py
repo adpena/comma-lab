@@ -62,6 +62,9 @@ import ddm_jg5_pose_resolve_on_edited_renders as jg5
 import ddm_sj1_multipass_token_predistortion as sj1
 import ddm_up2_shipping_pose_solve as up2
 
+from tac.candidate_seal import SealContractError
+from tac.receiver_manifest import rebind_receiver_manifest, require_receiver_manifest_rows
+
 N_PAIRS = sj1.N_PAIRS
 CAMERA_H, CAMERA_W = jg1.CAMERA_H, jg1.CAMERA_W
 SCORE_RATE_DENOMINATOR = 37_545_489
@@ -585,6 +588,7 @@ def patch_inflate_pins(runtime_root: Path, archive_sha256: str, archive_bytes: i
 
     path = Path(runtime_root) / "inflate.py"
     text = path.read_text(encoding="utf-8")
+    original_text = text
     sha_pat = re.compile(r'^ARCHIVE_SHA256 = "([0-9a-f]{64})"$', re.MULTILINE)
     bytes_pat = re.compile(r"^ARCHIVE_BYTES = ([0-9_]+)$", re.MULTILINE)
     shas, sizes = sha_pat.findall(text), bytes_pat.findall(text)
@@ -592,6 +596,24 @@ def patch_inflate_pins(runtime_root: Path, archive_sha256: str, archive_bytes: i
         raise Sj1JointError(
             f"{path} pins are absent or ambiguous: {len(shas)} sha, {len(sizes)} size"
         )
+    try:
+        require_receiver_manifest_rows(runtime_root, ("inflate.py",))
+    except SealContractError as exc:
+        raise Sj1JointError(str(exc)) from exc
+    if shas[0] == archive_sha256 and sizes[0] == str(archive_bytes):
+        try:
+            manifest = rebind_receiver_manifest(runtime_root, ("inflate.py",))
+        except SealContractError as exc:
+            raise Sj1JointError(str(exc)) from exc
+        return {
+            "path": str(path),
+            "sha256": _sha256_file(path),
+            "bytes": path.stat().st_size,
+            "pinned_archive_sha256": archive_sha256,
+            "pinned_archive_bytes": archive_bytes,
+            "previous_pinned_sha256": shas[0],
+            "manifest_rebind": manifest,
+        }
     if shas[0] != sj1.POINTER_ARCHIVE_SHA256:
         raise Sj1JointError(
             f"{path} currently pins {shas[0]}, not the live pointer "
@@ -599,13 +621,20 @@ def patch_inflate_pins(runtime_root: Path, archive_sha256: str, archive_bytes: i
         )
     text = sha_pat.sub(f'ARCHIVE_SHA256 = "{archive_sha256}"', text, count=1)
     text = bytes_pat.sub(f"ARCHIVE_BYTES = {archive_bytes}", text, count=1)
+    original_manifest = (Path(runtime_root) / "MANIFEST.sha256").read_bytes()
     path.write_text(text, encoding="utf-8")
 
-    check = path.read_text(encoding="utf-8")
-    if sha_pat.findall(check) != [archive_sha256] or bytes_pat.findall(check) != [
-        str(archive_bytes)
-    ]:
-        raise Sj1JointError("inflate.py pin patch did not land exactly once")
+    try:
+        check = path.read_text(encoding="utf-8")
+        if sha_pat.findall(check) != [archive_sha256] or bytes_pat.findall(check) != [
+            str(archive_bytes)
+        ]:
+            raise Sj1JointError("inflate.py pin patch did not land exactly once")
+        manifest = rebind_receiver_manifest(runtime_root, ("inflate.py",))
+    except Exception:
+        path.write_text(original_text, encoding="utf-8")
+        (Path(runtime_root) / "MANIFEST.sha256").write_bytes(original_manifest)
+        raise
     return {
         "path": str(path),
         "sha256": _sha256_file(path),
@@ -613,6 +642,7 @@ def patch_inflate_pins(runtime_root: Path, archive_sha256: str, archive_bytes: i
         "pinned_archive_sha256": archive_sha256,
         "pinned_archive_bytes": archive_bytes,
         "previous_pinned_sha256": shas[0],
+        "manifest_rebind": manifest,
     }
 
 
@@ -699,10 +729,10 @@ def cmd_stage_tail(args) -> int:
         and (pointer / f.relative_to(staged)).is_file()
         and f.read_bytes() != (pointer / f.relative_to(staged)).read_bytes()
     )
-    if differing != ["archive.zip", "inflate.py"]:
+    if differing != ["MANIFEST.sha256", "archive.zip", "inflate.py"]:
         raise Sj1JointError(
             f"staged tree differs from the pointer in {differing}, expected exactly "
-            "['archive.zip', 'inflate.py']"
+            "['MANIFEST.sha256', 'archive.zip', 'inflate.py']"
         )
 
     report = {

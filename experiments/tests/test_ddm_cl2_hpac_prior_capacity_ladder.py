@@ -14,6 +14,7 @@ import pytest
 
 from experiments import ddm_cl2_hpac_prior_capacity_ladder as cl2
 from experiments import ddm_jg2_tail_reencode as jg2
+from tac.receiver_manifest import canonical_receiver_manifest_bytes
 
 
 def _member(hpac: bytes, semantic: bytes, carrier: bytes, tail: bytes) -> bytes:
@@ -43,6 +44,7 @@ def test_replace_hpac_section_refuses_a_section_the_header_cannot_carry() -> Non
 def test_patch_inflate_pins_rewrites_both_pins_exactly_once(tmp_path: Path) -> None:
     text = f'ARCHIVE_SHA256 = "{cl2.FS2_ARCHIVE_SHA256}"\nARCHIVE_BYTES = {cl2.FS2_ARCHIVE_BYTES:_}\n'
     (tmp_path / "inflate.py").write_text(text, encoding="utf-8")
+    (tmp_path / "MANIFEST.sha256").write_bytes(canonical_receiver_manifest_bytes(tmp_path))
     fact = cl2.patch_inflate_pins(tmp_path, "ab" * 32, 123_456)
     patched = (tmp_path / "inflate.py").read_text(encoding="utf-8")
     assert patched.count('ARCHIVE_SHA256 = "' + "ab" * 32 + '"') == 1
@@ -55,6 +57,7 @@ def test_patch_inflate_pins_rewrites_both_pins_exactly_once(tmp_path: Path) -> N
 
 def test_patch_inflate_pins_refuses_an_ambiguous_or_foreign_pin(tmp_path: Path) -> None:
     (tmp_path / "inflate.py").write_text('ARCHIVE_SHA256 = "deadbeef"\nARCHIVE_BYTES = 1\n', encoding="utf-8")
+    (tmp_path / "MANIFEST.sha256").write_bytes(canonical_receiver_manifest_bytes(tmp_path))
     with pytest.raises(cl2.Cl2Error, match="absent or ambiguous"):
         cl2.patch_inflate_pins(tmp_path, "ab" * 32, 2)
 

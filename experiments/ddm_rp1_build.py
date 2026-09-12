@@ -38,12 +38,12 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
 
-import ddm_jg2_tail_reencode as jg2  # noqa: E402
-import ddm_rp1_pose as rp1pose  # noqa: E402
-import ddm_rp1_rate_rank as rp1  # noqa: E402
-import ddm_sj1_joint_admission as sj1ja  # noqa: E402  (READ-ONLY: inflate-pin patcher)
-import ddm_tc1_mixer_codec as tc1  # noqa: E402
-import ddm_up2_shipping_pose_solve as up2  # noqa: E402
+import ddm_jg2_tail_reencode as jg2
+import ddm_rp1_pose as rp1pose
+import ddm_rp1_rate_rank as rp1
+import ddm_sj1_joint_admission as sj1ja
+import ddm_tc1_mixer_codec as tc1
+import ddm_up2_shipping_pose_solve as up2
 
 RESIDUAL_COMPACT_BYTES = jg2.RESIDUAL_COMPACT_BYTES  # 96
 #: The counted TC1M weights the pointer ships, read from the pointer's own rider.
@@ -170,10 +170,10 @@ def cmd_stage(args: argparse.Namespace) -> int:
         and (pointer / f.relative_to(staged)).is_file()
         and f.read_bytes() != (pointer / f.relative_to(staged)).read_bytes()
     )
-    if differing != ["archive.zip", "inflate.py"]:
+    if differing != ["MANIFEST.sha256", "archive.zip", "inflate.py"]:
         raise rp1.Rp1Error(
             f"staged tree differs from the pointer in {differing}, expected exactly "
-            "['archive.zip', 'inflate.py']"
+            "['MANIFEST.sha256', 'archive.zip', 'inflate.py']"
         )
 
     report = {

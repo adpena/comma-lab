@@ -526,8 +526,9 @@ def cmd_stage(args) -> int:
     (out_dir / "archive.zip").write_bytes(archive_bytes)
     pins = sj1_joint.patch_inflate_pins(out_dir, archive_sha, len(archive_bytes))
 
-    # Census: everything except archive.zip and inflate.py must be byte-identical to the
-    # live tree, so the candidate differs only where it means to.
+    # Census: everything except archive.zip, inflate.py, and its derived manifest row
+    # must be byte-identical to the live tree, so the candidate differs only where it
+    # means to.
     changed = []
     for path in sorted(out_dir.rglob("*")):
         if not path.is_file() or "__pycache__" in path.parts:
@@ -539,7 +540,7 @@ def cmd_stage(args) -> int:
             continue
         if path.read_bytes() != live.read_bytes():
             changed.append({"path": str(rel), "why": "bytes differ"})
-    expected = {"archive.zip", "inflate.py"}
+    expected = {"MANIFEST.sha256", "archive.zip", "inflate.py"}
     unexpected = [c for c in changed if c["path"] not in expected]
     if unexpected:
         raise fe1.Fe1Error(f"staged tree differs outside {sorted(expected)}: {unexpected}")
