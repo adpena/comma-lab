@@ -611,6 +611,32 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=4.59e-06,
         score_t4=0.13638261682704697,
     ),
+    #: MOVE 49 -- LIVE.  This arm's PASS 7, promoted.  Lane
+    #: ddm_sj1_t4_token_predistortion_pass7_20260912, call fc-01M2AZ6G51VZH39QQ0XQGPM84M,
+    #: -5.9619e-05 S on +42 B: a 42-pair / 69-cell / 67-token Lagrange subset on move 48's
+    #: field, closed by a carrier re-solve that moved 232 coordinates at ZERO byte cost.
+    #:
+    #: This is the FIRST row since move 43 whose token FIELD differs from its predecessor's:
+    #: moves 44..48 were rate-only.  MEASURED on the shipped bytes, through the candidate
+    #: tree's own inflate.py: decoded_token_sha256 fdf2255f... (move 48's was a92e7d90...),
+    #: decoder_bit_position 951,563, and the decoded plane is byte-identical to this arm's
+    #: own admission_pass7/field_admitted.npz spliced onto BODY_TOKENS (600/600 planes, 0
+    #: differing).  A successor's base therefore comes from THIS row's parse-back, not from
+    #: the a92e7d90 field, and a successor's price must be re-measured on THIS body: the
+    #: tail is 118,938 B where move 48's was 118,896.
+    PointerRow(
+        label="sj1_token_predistortion_pass7",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_pass7/candidate/candidate_runtime"
+        ),
+        archive_sha256=(
+            "73e41a6620bd4ea3aaf236eff9de46391857907527358e8eb40ded0925a1c214"
+        ),
+        archive_bytes=179_153,
+        d_seg_t4=0.00010287,
+        d_pose_t4=4.55e-06,
+        score_t4=0.13632299781031237,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
