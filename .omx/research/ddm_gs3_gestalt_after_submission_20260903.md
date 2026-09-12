@@ -1855,3 +1855,24 @@ The lead: cb1's deeper per-pair re-solve of the SHIPPED basis (up2's solver) imp
 bytes (55 % of the bar) — pass 7's control had called the carrier converged under jg5's lighter re-solve (2 of 600 improve), so
 "converged" was solver-relative (authority substitution priced by the incumbent, lb1's genus). Composed with pass 8's admitted subset
 (−1.42e-5, 0.71 bars) it projects ≈ 1.2–1.3 bars: the object's last priced rung, chartered as cr1.
+
+## Addendum 59 (2026-09-13, host ~00:40Z) — cr1: the "deeper" re-solve was already inside pass 8; the object is exhausted at the exchange
+
+cr1 (Opus; commits b22a048a2, 1d2bb5ff6; retained 0.8 MiB + APDataStore copy) ran the per-pair carrier re-solve on all 600 pairs of move 49
+from the shipped codes: 598 pairs gain exactly 0 (574 no_improving_step, 26 lattice_floor); one pair reports a gain with UNMOVED codes
+(387: 6.8e-9 = 2.6× pp1's band — a solver artefact; acceptance now requires a moved code, re-read at the base's batch); one pair moves
+(391: −4.03e-7, 2 of 12 coords). Population gain 0.0148 % of d_pose vs the 0.15 % falsifier (10× short); archive 179,153 B EXACT (Δ 0,
+sha 3d94e5fd…, identity control passing). Composition with pass 8's subset is MEASURED disjoint (fraction of the sum 1.0000007) and reaches
+0.737 bars at the most flattering accounting; ADMISSION_NOT_MET; nothing built. Two facts outlive the row: (i) pass 8's `cmd_refine` already
+ran `jg5.refine_pair` from the shipped codes at identical budgets — 504/504 untouched pairs reproduce bit-identically, so "deeper" was a label
+(cb1 had compared against pass 7's lighter control, which pass 8 had already superseded: authority substitution priced by the incumbent, lb1);
+(ii) cb1's "−0.32 % at zero bytes" was ONE pair of 48 — a ratio estimator on a sample whose base mean was 0.554× the population's inflated
+it 21.8× (prefix/sample bias on the pose axis, m88's genus, now with a carrier instance).
+
+Closure at this move. Every axis of the live object has a measured closure at the exchange rate 6.66e-7 S/B: renderer weights (ren2) and
+realization both ways (rq1); prior at its λ knee (cl2) with its depth state restored (dpi1); mixer (tmx1); token-stream coder and container
+(jt23); tail oracle short (ls1/ls2); accuracy intercept (md1); carrier lattice, rank, basis span (pc2/pc3/br1/cb1) and coefficient re-solve
+(cr1); per-pair pose actuators (pp1); the field's single-token family (pass 8); the successor-object first rung (so1). No door on the books
+nets −2e-5 S. The pointer's demand for sub-0.12 is −24,514 B at held distortion. The honest state: sub-0.12 requires a successor
+construction (the cross), and the day's synthesis is that the live object is a conditional optimum of the joint problem, with moves 45–49
+(−9.2e-4 S) being what its knees still had to give.
