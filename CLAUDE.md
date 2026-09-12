@@ -1,4 +1,5 @@
 # AGENTS
+<!-- # CATALOG_QUOTA_EXCEEDED_OK: ddm_mpg1 operator charter 2026-09-12 explicitly requires new gate 420 as the enforcement landing for archive-pin patches leaving MANIFEST.sha256 stale; existing gates validate trees only after the defective producer has materialized one. -->
 <!-- # CATALOG_QUOTA_EXCEEDED_OK: ddm_vr8 operator charter 2026-09-10 explicitly requires new gate 419 as the enforcement landing for stale MOVED destination custody after certified reclaim; existing gates do not inspect live destination files. -->
 <!-- # CATALOG_QUOTA_EXCEEDED_OK: gates 401,402,404,406,407,408 each landed as the enforcement half of an operator-directed two-landing cure (confound self-protection family, operator binding 2026-07-05; telemetry/provenance P0 gates, operator 2026-07-10; timed-shell-wrapper group-kill class, operator determinization mandate 2026-08-14) during the 842 enforcement-blind window, so the quota brake never fired at their landing time. Retirement would remove live protection (408 caught a real orphan-grandchild bug on 2026-08-25). Consolidation review of the full catalog remains owed and is tracked in the task ledger (filed 2026-08-25). -->
 

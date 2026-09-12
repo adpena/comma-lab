@@ -5199,6 +5199,7 @@ def preflight_all(
         check_instrument_binds_to_live_pointer(strict=True, verbose=verbose)
         check_no_bare_cross_arm_artifact_reads(strict=False, verbose=verbose)
         check_moved_payload_destinations(strict=True, verbose=verbose)
+        check_inflate_pin_patch_rebinds_manifest(strict=True, verbose=verbose)
         check_ddm_ledger_before_optional_dump(strict=True, verbose=verbose)
         check_no_unvalidated_required_component_jsonl_readers(
             strict=False, verbose=verbose,
@@ -95293,6 +95294,136 @@ def check_moved_payload_destinations(*, roots=None, certificate_paths=None,
         raise PreflightError('Catalog #419 / CLAUDE.md certify-or-block + ALWAYS KEEP THE PAYLOAD: '
                              + '\n'.join(found))
     return found
+
+
+_MANIFEST_REBIND_WAIVER = "MANIFEST_REBIND_OK"
+_INFLATE_PIN_PATCH_NAME = re.compile(r"^patch_inflate_pins(?:_live)?$")
+
+
+def _inflate_pin_patch_name(call: ast.Call) -> str | None:
+    if isinstance(call.func, ast.Name):
+        return call.func.id
+    if isinstance(call.func, ast.Attribute):
+        return call.func.attr
+    return None
+
+
+def _manifest_rebind_scope(root: Path) -> tuple[Path, ...]:
+    paths: set[Path] = set()
+    for base in (root / "src" / "tac", root / "tools"):
+        if base.is_dir():
+            paths.update(base.rglob("*.py"))
+    experiments = root / "experiments"
+    if experiments.is_dir():
+        paths.update(experiments.glob("*.py"))
+    return tuple(
+        sorted(
+            (
+                path
+                for path in paths
+                if path.is_file()
+                and "tests" not in path.relative_to(root).parts
+                and not path.name.startswith("test_")
+            ),
+            key=str,
+        )
+    )
+
+
+def check_inflate_pin_patch_rebinds_manifest(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """Catalog #420: every ``patch_inflate_pins*`` producer rebinds its manifest.
+
+    The scan covers definitions and every call site in production Python. A producer is
+    safe only when its own function body calls the helper imported specifically from
+    ``tac.receiver_manifest``. A same-line ``# MANIFEST_REBIND_OK:<rationale>`` waiver
+    is accepted on a producer definition or call; placeholder rationales are rejected.
+    """
+
+    root = Path(repo_root or REPO_ROOT).resolve()
+    parsed: list[tuple[Path, str, ast.Module]] = []
+    violations: list[str] = []
+    scope = _manifest_rebind_scope(root)
+    for path in scope:
+        rel = path.relative_to(root).as_posix()
+        try:
+            source = path.read_text(encoding="utf-8")
+            if "patch_inflate_pins" not in source:
+                continue
+            parsed.append((path, source, ast.parse(source, filename=rel)))
+        except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+            violations.append(f"{rel}: unable to AST-audit inflate-pin manifest rebind: {exc}")
+
+    safe_names: set[str] = set()
+    producer_count = 0
+    call_count = 0
+    for path, source, tree in parsed:
+        lines = source.splitlines()
+        canonical_names = {
+            alias.asname or alias.name
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom) and node.module == "tac.receiver_manifest"
+            for alias in node.names
+            if alias.name == "rebind_receiver_manifest"
+        }
+        for function in (
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and _INFLATE_PIN_PATCH_NAME.fullmatch(node.name)
+        ):
+            producer_count += 1
+            calls_canonical = any(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id in canonical_names
+                for node in ast.walk(function)
+            )
+            definition_line = lines[function.lineno - 1] if function.lineno <= len(lines) else ""
+            waived = _has_substantive_same_line_waiver(
+                definition_line, _MANIFEST_REBIND_WAIVER
+            )
+            if calls_canonical or waived:
+                safe_names.add(function.name)
+            else:
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{function.lineno}: {function.name} rewrites inflate.py pins without "
+                    "tac.receiver_manifest.rebind_receiver_manifest; route through the canonical "
+                    "writer or add same-line # MANIFEST_REBIND_OK:<substantive rationale>"
+                )
+
+    for path, source, tree in parsed:
+        lines = source.splitlines()
+        rel = path.relative_to(root).as_posix()
+        for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
+            name = _inflate_pin_patch_name(call)
+            if name is None or not _INFLATE_PIN_PATCH_NAME.fullmatch(name):
+                continue
+            call_count += 1
+            line = lines[call.lineno - 1] if call.lineno <= len(lines) else ""
+            if name in safe_names or _has_substantive_same_line_waiver(
+                line, _MANIFEST_REBIND_WAIVER
+            ):
+                continue
+            violations.append(
+                f"{rel}:{call.lineno}: call to {name} has no manifest-rebinding producer; "
+                "use the canonical helper or add same-line "
+                "# MANIFEST_REBIND_OK:<substantive rationale>"
+            )
+
+    if verbose:
+        print(
+            f"  [catalog-420] {len(violations)} violation(s); scanned {len(scope)} production "
+            f"Python file(s), parsed {len(parsed)} candidates, {producer_count} producer(s), "
+            f"{call_count} call site(s)"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "Catalog #420 / archive-pin manifest custody: " + "\n".join(violations[:20])
+        )
+    return violations
 
 
 if __name__ == "__main__":
