@@ -1,0 +1,40 @@
+{
+  "archive_path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass7/candidate/candidate_runtime/archive.zip",
+  "archive_sha256": "73e41a6620bd4ea3aaf236eff9de46391857907527358e8eb40ded0925a1c214",
+  "candidate_t4_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass7_fire/run1/MODAL_REMOTE_RESULT.json",
+    "sha256": "f3dff9fc37a764c8f4cf104df14c70af62ebfff1e5ebba73830607bb826319e4"
+  },
+  "limit_seconds": 1260.0,
+  "measured_t4_decode_seconds": 1106.219164097,
+  "mode": "t4_direct",
+  "projected_t4_decode_seconds": 1106.219164097,
+  "receiver_sha256": "7d2a86ea1bab300f2fc3e5d1719240d11391e3eb103c121c04b6fe8c49e72b6d",
+  "runtime_dir": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass7/candidate/candidate_runtime",
+  "schema": "candidate_decode_wall_clock.v2",
+  "score_claim": false,
+  "t4_archive_sha256_field": [
+    "expected_archive_sha256"
+  ],
+  "t4_cuda_available_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_available"
+  ],
+  "t4_hardware_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_device_name"
+  ],
+  "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+  "t4_runtime_sha256": "8f3c50266bebbca440af0690bfe0976e8096d420db3804ed72199d6a6aa64707",
+  "t4_runtime_sha256_field": [
+    "expected_runtime_tree_sha256"
+  ],
+  "t4_seconds_field": [
+    "artifacts",
+    "contest_auth_eval.json",
+    "inflate_elapsed_seconds"
+  ],
+  "t4_timing_scope": "cold_public_entrypoint_decode"
+}
