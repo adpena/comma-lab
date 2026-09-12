@@ -46,6 +46,16 @@ from typing import Any
 
 import numpy as np
 
+#: A READ-ONLY tree must come back untouched, and importing FROM one writes bytecode into
+#: it.  MEASURED 2026-09-12 on move 49's shipped tree: a parse-back and one carrier-splice
+#: control together left 29 .pyc files in 3 new __pycache__ directories.  No counted digest
+#: moved -- the runtime, receiver, risk and T4 manifests all skip bytecode caches, and the
+#: archive was untouched -- so nothing downstream would have refused; the next arm's "the
+#: frontier tree came back untouched" claim would simply have been false, silently.
+#: ``_public_path_probe`` already set this for its own subprocess; the module-level setting
+#: is what covers the IN-PROCESS imports ``parseback`` and the splice controls make.
+sys.dont_write_bytecode = True
+
 from comma_lab.instrument_gates import (
     add_pose_gate_argument,
     check_pose_base,
