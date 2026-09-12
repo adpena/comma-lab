@@ -16,14 +16,27 @@ sha `73e41a6620bd4ea3aaf236eff9de46391857907527358e8eb40ded0925a1c214`.
 
 | leg | value | how |
 |---|---:|---|
-| seg | **−1.87528e−04** | 12,196 → 12,127 flipped cells, MEASURED on the candidate's OWN parse-back decode |
+| seg | **−5.85278e−05** | 12,196 → 12,127 flipped cells, MEASURED on the candidate's OWN parse-back decode |
+| pose | **−3.43540e−05** | RESOLVED 4.543569e−06 vs the pointer's 4.59e−06 print, after the carrier re-solve |
 | rate | **+2.79661e−05** | +42 B, EXACT container delta from the subset's own real re-encode |
-| pose | **+9.72977e−05** | RESOLVED 4.543569e−06 vs base 4.586763e−06, after the carrier re-solve |
 | **net** | **−6.49157e−05** | 3.25× the −2e−05 bar |
 
 Projected S **0.1363177011168108**. Carrying the local pose DELTA onto the T4 print instead of the
-local pose VALUE gives **0.13632010144620363** (net −6.2515e−05); the spread is **2.400e−06**, the
-pose-print class the last four packets each measured. Both clear the bar by more than 3×.
+local pose VALUE gives **0.13632010144620363** (legs −5.85278e−05 / −3.19537e−05 / +2.79661e−05, net
+−6.2515e−05); the spread is **2.400e−06**, the pose-print class the last four packets each measured.
+Both clear the bar by more than 3×.
+
+**Pose is a CREDIT here, and that is the sweep's doing, not luck.** The FULL 130-pair field resolves
+to 4.724976e−06 — a COST of +9.7e−05, which is why the full field LOSES at +5.77e−05 net. The
+Lagrange multiplier keeps only the pose-favourable pairs, and the surviving 42 resolve to
+**4.543569e−06, below the 4.586763e−06 base**. The subset is not a smaller version of the full field;
+it is a different object.
+
+*(Correction, same landing: the first draft of this table carried −1.875e−04 for seg and +9.730e−05
+for pose. Both were wrong — the seg figure was mis-scaled and the pose figure was the FULL field's,
+not the subset's. The net was right because it came from `CLOSE.json`, which is exactly how a wrong
+decomposition survives: the headline is measured, the split is retyped. Re-derived from components
+above; `pointer recompute == published` to 1e−15 as the control.)*
 
 Subset: **42 of 130 edited pairs, 69 of 221 cells, 67 tokens.** Price **5.0149 bits/token** against a
 **10.4889** break-even — margin **2.092×**. The carrier re-solve moved **232 coordinates over 42
