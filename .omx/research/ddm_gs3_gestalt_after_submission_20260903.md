@@ -1776,3 +1776,22 @@ packet) was off by more than 1.8× at the first measurable stage. The lesson is 
 label plane does not approach a learned context model on the fine plane; the incumbent HPAC prior IS that model, and any two-layer
 lossless recode must beat it on the same information. Verdict scope: FORMULATION (one stencil, the generic coder race). The cross
 stands unchanged; sub-0.12 still needs a construction nobody has measured feasible.
+
+## Addendum 55 (2026-09-12, host ~15:20Z) — MOVE 49: sj1 pass 7 lands −5.96e-5 S; the field axis is the last live axis, and it is still open
+
+Exact row (Modal T4 call fc-01M2AZ6G51VZH39QQ0XQGPM84M; commit 810e2781a): **S 0.13632299781031237 @ 179,153 B [contest-CUDA T4 n600]**,
+d_seg 0.00010287, d_pose 4.55e-6, archive sha 73e41a66…; Δ −5.9619e-5 vs move 48 (projected −6.49e-5; +5.3e-6 = the T4 pose-print class).
+Pass 7 found 221 repairable cells by 218 token moves on 130 pairs = 1.812 % of the residual — above the family's 1 %/pass convergence rule,
+so the family is NOT closed on this object — and the Lagrange admission on the RESOLVED pose kept 42 pairs / 69 cells / 67 tokens: seg
+−5.85e-5, pose −3.44e-5 (a CREDIT — the full 130-pair field resolves to a pose cost of +5.77e-5 and loses; the subset keeps only the
+pose-favourable pairs), rate +2.80e-5 (+42 B exact, twins). Reach decomposition: 66 cells on the 161 pairs pass 6 re-rendered (0.410
+cells/pair — 2.82× below pass 6's 1.156 on argmax-neutral re-renders: a repair CONSUMES the local slack, a neutral edit only jostles it,
+n=2) and 155 on stale pairs, of which 154 were pass 6's Lagrange-dropped carryover and ZERO new (F11 pre-registered; 154/154 re-found).
+The seal took the normal path inheriting move 48's measured leg — that leg's one permitted inheritance is now SPENT; every successor takes
+the first-measurement chain. CPU sibling: REFUSED_BY_DESIGN (call fc-01M2B0KX7R2BCSYRMDXEG733QG, rc 1 in 7.3 s; adjudication committed).
+
+Apparatus facts from the pass: tc1's pricer re-encodes the pointer's OWN field to 118,929 B ≠ the shipped 118,896 (its gate refused it);
+the new RLC1 pricer proves itself by byte-identical repack of the pointer, twice. `patch_inflate_pins` leaves MANIFEST.sha256 stale (class
+defect; pass 6's tree carries it; guard arm mpg1 live). The pass-6-era admission harness lacks the four native-library exports inflate.sh
+sets and fails on the known-good frontier tree too (harness, not candidate). Rate corner at this move: cap 154,638.8 B; demand −24,514 B.
+Next: pass 8 on this field (first-measurement chain; pre-registered band 0.5–1.2 %).
