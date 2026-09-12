@@ -1711,3 +1711,20 @@ sites (ren1's 9,179 was ft1-era); `--film-row-dropout` is degenerate on the prun
 The day's counted-section refit ledger is now complete: prior field refit −887 B (move 47), prior even rounding −248 B
 (move 48), mixer +20 B, prior restored depths +37 B, renderer +4.09e-4 S. Every section is priced; the pointer's final position
 for the day is move 48. Demand at held distortion stays −24,604 B; the day paid 1,295 B of it.
+
+## Addendum 52 (2026-09-12, host ~05:20Z) — swp5: PR #140 restaged on move 48; a two-definitions defect in the terminal claim row, cured at the source
+
+swp5 (Opus; commit 968878df7) restaged the swap packet on move 48 (`submissions/_staging_move48_pr140_swap/`, 51 members byte-exact
+from the promoted tree; report.txt recomputed 0.13638261682704697 from the receipt's components; vs move 47 exactly four members
+differ: archive, two pins in inflate.py, one line of MANIFEST.sha256, report). Strict `--contest-final` read 89/93: the two known
+open items plus a NEW failure — the move-48 terminal claim row bound `runtime_tree_sha256=a8bc13af…` (the timing leg's
+`measure_t4_runtime_digest`, the receipt's top-level `expected_runtime_tree_sha256`) while the checker's
+`auth_eval_runtime_tree_expected_match` reads the auth-eval provenance value 61d618ba… (`provenance.inflate_runtime_manifest`
+of the embedded contest_auth_eval.json). On a normal receipt the two agree; on a first-measurement receipt they do not, so no pin
+could satisfy both checks (swp5 measured both: 89/93 either way) and a fourth check withheld its policy review as a consequence.
+MAIN cured it at the source (da66353b7): `canonical_terminal_claim_notes` now binds the auth-eval value as `runtime_tree_sha256=`
+and carries a differing timing digest as `t4_runtime_digest_sha256=`; test added (20 pass). The corrected move-48 row was generated
+from the real receipt by the fixed function and appended (never typed). Re-run: **91/93, PASS 91, FAIL 2** — the receiver
+`experiments` fallback-import hygiene (operator's receiver-change decision) and the hosted manifest (at publish). The packet sits on
+the day's final pointer; publish stays gated on the operator's one-line confirm. Genus: one name, two digest definitions — the
+r9m/pr14 class (m123), now n+1, cured by carrying both values under their own names.
