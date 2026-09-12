@@ -1888,3 +1888,11 @@ epoch 38 (497 KB) had already said so. Mechanism: an invertible lifting cannot l
 difference planes whose spatial contexts the prior models far worse than the labels themselves (the "uniform interiors share zeros" hope is
 already what the incumbent's context model exploits on F). The cross stays measured empty at n=5 (NR1, bz2/qx, so1, so2). so2r1's memo
 carries the exact J_Z and the closure at instance/formulation scope.
+
+### Addendum 60, appended from so2r1's final handback (memo 018ad77af; commits 4befac644, 1c11d48cf)
+Exact J_Z = **429,447 B** (prior 11,139 — 490 B SMALLER than the incumbent's — + stream 418,300 + prefix 8) vs the 123,998 B ceiling: 3.46×;
+margin −8,777 lottery sd. Inverse equality over all 117,964,800 bytes; two independent processes reproduced archive sha fc623943…; the
+trained prior's cross-entropy vs real price +0.43 B (the surrogate was honest; the object is expensive). Mechanism from two n600 diagnostics:
+in-place lifting with no packing costs 3.14× F; SO2's quadrant packing recovers 20 % (2.50×); the 99.2 %-zero detail quadrants are WORSE per
+symbol (2.57×) than the anchors (1.83×) — modulo-five differencing trades a smooth, predictable class contour for scattered context-free
+nonzeros. No layout refinement rescues the family. Retained 1.43 GiB on APDataStore, sha'd on the destination; lane closed completed_fail_verdict.
