@@ -1632,3 +1632,38 @@ defect is real and stays registered (cons3's anti-pattern); its cure is not a ra
 n=3 with one positive (hpr1 −887 B) and two negatives (tmx1 +20 B, dpi1 +37 B): after the field refit, the counted
 sections of this object have no further refit rung that nets at the current λ. Remaining on the HPAC prior: nothing
 at this law; a λ change is a capacity question cl2 closed (+0.446 secant). Renderer refit (ren1) is the last section.
+
+## Addendum 50 (2026-09-12, host ~03:20Z) — ren1: the renderer gate PASSES; pose absorption is a capacity; two priors invert on this object
+
+ren1 (Opus; commits 2a0dc8f24, d64b3301e; memo sha 063b5dd1…) reconstructed the shipped SM3R renderer off move 48's archive
+(66,339 params, mode 6, 3-bit on two tensors and 4-bit on fourteen, keep_percent 1 leaving 2 of 192 FiLM rows in three blocks)
+and its provenance: a banked PR130 third-party artifact, seg-only, no EMA, trained on GT-ORACLE tokens, never on any coded
+field (the shipped field differs from DALI GT at 9,179 sites), producer commit and argv unknown after search. MAIN's init-drop
+law reproduced on this object: the warm-start init flattens the depth table to a scalar, drops keep_percent and the prune
+mask, and binds to an old archive — the measured reason ft1 refit a different object (+31.23 % is not this renderer's verdict)
+and rw1 searched 150 code steps without the depth table in the loop.
+
+The step-0 probe at n600 (control reproduces the T4 row to 0.06 % seg / 0.07 % pose):
+
+| treatment | d_seg | ×ctl | d_pose | ×ctl |
+|---|---:|---:|---:|---:|
+| control | 1.03387e-04 | 1.000 | 4.58676e-06 | 1.00 |
+| gt_partition | 2.92096e-04 | **2.825** | 5.30441e-03 | 1156 |
+| noise_p05 | 1.17908e-04 | 1.140 | 3.38132e-05 | 7.37 |
+| smooth_p05 | 1.21960e-04 | 1.180 | 6.55372e-04 | 142.9 |
+
+Two inversions. (i) Rendering the TRUE partition is 2.825× WORSE on seg than rendering the shipped coded field: the token
+field is an optimized pre-image of renderer∘scorer, not an approximation of the partition; the render floor nonetheless clears
+obx2's pre-registered gate. (ii) obx2's smooth-vs-noise law inverts here (smooth 19.4× worse than noise at p05, where obx2
+measured noise 9.40× worse at matched scorer-plane RMSE): the ratio belongs to an object and an amplitude, never to the campaign.
+
+The gate. Three n600 arms of the canonical unforked re-solve (control: 2 of 600 pairs improve, Δ 0 B — the shipped carrier is
+converged): noise_p05 → d_pose 4.699e-06 (1.025× ctl), k_post 0.0078, +2 B; smooth_p05 → 4.938e-06 (1.077×), k_post 0.0190,
++4 B; k_payable at move 48 = 0.135451. Both land 17.4× and 7.1× INSIDE. The re-solve removes 140.6× / 291.4× of the pose leg
+for 2–4 B. Pose absorption is a CAPACITY (amplitude-bounded), not a ratio; neither 170–220 nor 13.82 is "the coupling" —
+each belongs to an amplitude regime. A refit's target is a d_seg cut ≥ 1.006 % (noise-spectrum render change) or ≥ 2.682 %
+(smooth) plus the member's re-encode (all 59,376 codes change; fe1's +70 B fee does not extrapolate; measure on the first
+checkpoint). Half 2 did not fire: the trainer has no pose term (MAIN's call), the amplitude bound was not built, and the three
+n600 arms took 16.5 ks. MAIN's decision: seg objective with pose MEASURED after re-solve at every priced checkpoint and a hard
+0.5-LSB bound — ren2 chartered (22173671f) and live. With tmx1 and dpi1 closed, the renderer is the last counted section with a
+refit rung that is not yet priced.
