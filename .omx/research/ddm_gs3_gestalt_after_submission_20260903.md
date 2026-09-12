@@ -1817,3 +1817,23 @@ Where this leaves the object. Every axis now has a measured closure at the curre
 directions), prior (λ knee; restored depths), mixer, carrier lattice, coder axis, container, tail oracle, accuracy intercept, and now the
 field's single-token family. Remaining doors are formulation changes on the field (multi-token / joint proposals under the same admission),
 not rungs of a closed family. The day's take on the object: moves 45–49, −9.2e-4 S (0.13724 → 0.13632). Demand −24,514 B.
+
+## Addendum 57 (2026-09-12, host ~21:10Z) — pp1: the hard pairs' pose is a FLOOR outside both per-pair actuators' reach
+
+pp1 (Opus; commits 49d0fbb34, 08f97184e; custody /Volumes/APDataStore/pact/ddm_pp1, 31 MB) reproduced move 49's per-pair pose base
+(4.5436e-6; T4 ratio 0.99859) and the top-12 pair set exactly (52.49 % of the mass; max/median 636×), then aimed both per-pair actuators at
+them. Actuator A (per-pair frame_embed pose-descent, single/two/all-eight codes): best seg-neutral fall 0.45 % (pair 88: 2.1284e-4 →
+2.1188e-4 at 0 cells); the best anywhere −2.59e-6 S (pair 66, −8.2 % d_pose) costs 4 seg cells. Actuator B (pose-ranked token edits):
+best 0.25 %. A+B realized as one object delivers 0.39 of the sum of its parts — the two actuators compete for the same residual. With
+the live-shape container fee (+44.0 B mean, sd 33.1 — the 34.8 B lottery reproduced on a different coder) every row is a loss: 0 of 24
+admit; family supply 1.5e-6 S vs 3.99e-5 required (26× short). Falsifier (≥ 5 % resolved fall) FIRED 11× short. Controls: render,
+carrier render and argmax reproduce the shipped decode exactly on 5 pairs; unmoved re-solve moves 0.000 on pairs 88/87/316 (not carrier
+slack); shipped codes repack byte-identically (29,862 B). Base-gate tolerance re-calibrated from a MEASURED per-pair band (max relative
+gap 3.29e-5 across batch orders; gate 10×) — a population-wide tolerance would have been 10× too loose.
+
+Mechanism: 24 perturbations with stale rises of 1.0–740× ALL resolve back to 0.93–1.70× base — the resolved per-pair pose is a floor the
+frame-1 render cannot lower, and the carrier's twelve coefficients cannot lower it either. The hard pairs' residual is outside the reach
+of the carrier's BASIS (twelve shared atoms over the frame-0 warp), not a solve problem and not a render problem. Routing: stop proposing
+render-side pose actuators for these pairs; the only open pose door on this object is the carrier's reach — a basis question (receiver
+change: `CARRIER_DIM`/basis are receiver constants; pc3 priced twelve more atoms at 12,277 B = 1.2× the pose term, but never ONE atom fit
+to the hard-pair residual), which needs the first-measurement chain. Pose term at stake in the top-12: ~0.0035 S ≈ 5,300 B at the exchange.
