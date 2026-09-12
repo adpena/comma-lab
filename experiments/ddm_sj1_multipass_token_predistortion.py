@@ -559,6 +559,58 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=4.66e-06,
         score_t4=0.1374765052591843,
     ),
+    #: MOVE 43 -- this arm's PASS 6, promoted.  Lane
+    #: ddm_sj1_t4_token_predistortion_pass6_20260910, call fc-01M2691VTJYKNCXX01CKKTN44N,
+    #: -1.9165e-04 S on +228 B: a 161-pair / 344-cell / 335-token Lagrange subset re-based
+    #: onto move 42's field, closed by a carrier re-solve, seg 12,540 -> 12,196 on the
+    #: shipped decode (predicted == measured, zero cells disagreeing).
+    PointerRow(
+        label="sj1_token_predistortion_pass6",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/candidate/candidate_runtime"
+        ),
+        archive_sha256=(
+            "7beb6a5fc7c2bf477d04a107ab0cf4113d3bd74b2c5a6b94ff77f7ff61971c1e"
+        ),
+        archive_bytes=180_466,
+        d_seg_t4=0.00010345,
+        d_pose_t4=4.59e-06,
+        score_t4=0.1372848557085275,
+    ),
+    #: MOVE 48 -- LIVE.  Moves 44..48 are RATE-ONLY: every one of them holds d_seg
+    #: 0.00010345 and d_pose 4.59e-06 EXACTLY (each packet recomputes S from those two
+    #: legs plus its own byte count), so the token FIELD this arm searches is unchanged
+    #: from move 43.  MEASURED here, not assumed: move 48's decoded token plane is
+    #: byte-identical to pass 6's shipped ``admission_pass6/field_admitted.npz`` (600/600
+    #: planes equal; the same object hpr1 encoded from, field sha
+    #: a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8).
+    #:
+    #: The intermediate rows, for the record (lane, archive sha, bytes, S):
+    #:   44 rlc5 counted-rider rebase        04758c0d.. 180,406  0.1372449041713402
+    #:   45 pc3 cap1 predictor refit         145e02e2.. 180,246  0.1371383667388406
+    #:   46 ntb2 frame-even hpac prior       a0de607d.. 180,001  0.1369752312953257
+    #:   47 hpr1 retrain control             d1fab05d.. 179,359  0.13654774984742127
+    #:
+    #: WHAT MOVED IN THE BODY between move 43 and move 48, MEASURED by RX1 section split:
+    #: hpac 11,911 -> 11,629 B (the refit prior), carrier 18,610 -> 18,450 B (rlc5's
+    #: counted rider), tail 119,969 -> 119,056 B (the SAME token field recoded under the
+    #: new prior), semantic 29,862 B BYTE-IDENTICAL.  The semantic section is what
+    #: ``RENDER_TREE`` reads, which is why this arm's render instrument is untouched by
+    #: moves 44..48; the tail and carrier are not, which is why a pass-7 price must be
+    #: re-measured on THIS body rather than carried from pass 6 (the price is per object).
+    PointerRow(
+        label="hpr1_comp_even_on_refit_move47",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime"
+        ),
+        archive_sha256=(
+            "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+        ),
+        archive_bytes=179_111,
+        d_seg_t4=0.00010345,
+        d_pose_t4=4.59e-06,
+        score_t4=0.13638261682704697,
+    ),
 )
 
 for _row in POINTER_LINEAGE:

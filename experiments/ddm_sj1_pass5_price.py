@@ -117,18 +117,56 @@ def runtime_facts(root: Path) -> dict:
 # init -- pin the pointer, the tree, the rider and both fields
 # ----------------------------------------------------------------------------------
 
-def split_tail(tail: bytes) -> tuple[bytes, bytes, bytes]:
-    """Return (prefix, weights, stream) for the shipped TC1M tail layout."""
+def split_tail(tail: bytes, rider_bytes: int | None = None) -> tuple[bytes, bytes, bytes]:
+    """Return (prefix, RIDER, stream) for the shipped tail layout.
+
+    The rider is returned as its OWN EXACT BYTES, not as the 35 unpacked mixer weights,
+    because the rider's ENCODING is a pointer-owned object this arm must reproduce and
+    must not re-derive.  Move 44 (rlc5's counted-rider rebase) replaced the raw ``TC1M``
+    rider with a counted ``RLC1`` one -- same 35 weights, different container, 40 B -> 64 B
+    here -- and the old signature could not express that: it rebuilt the tail as
+    ``TC1M + weights + stream`` and would have silently reverted move 44's cure inside a
+    tail that still parsed.  That is the silent-revert genus this arm already paid for once
+    ([[moved_labels_are_not_custody...]] / 42d5fc651), so the rider now travels verbatim.
+
+    ``rider_bytes`` is AUTHORITATIVE and comes from the receiver's own reader (the tail
+    length minus the token stream the tree itself returns), pinned into INPUTS.json at
+    init.  Omitting it is the legacy path and only parses a raw TC1M rider.
+    """
     prefix = tail[:TAIL_PREFIX_BYTES]
-    rider = tail[TAIL_PREFIX_BYTES:]
-    if rider[:len(tc1.MAGIC)] != tc1.MAGIC:
-        raise RuntimeError('shipped tail does not carry a raw TC1M rider at the 96 B prefix')
-    weights, stream = tc1.unpack_rider(rider)
-    return prefix, bytes(weights), stream
+    body = tail[TAIL_PREFIX_BYTES:]
+    if rider_bytes is None:
+        if body[:len(tc1.MAGIC)] != tc1.MAGIC:
+            raise RuntimeError(
+                'shipped tail does not carry a raw TC1M rider at the 96 B prefix, and no '
+                'receiver-derived rider length was supplied'
+            )
+        _weights, stream = tc1.unpack_rider(body)
+        rider_bytes = len(body) - len(stream)
+    if not 0 < rider_bytes < len(body):
+        raise RuntimeError(f'implausible rider length {rider_bytes} in a {len(body)} B tail body')
+    rider, stream = body[:rider_bytes], body[rider_bytes:]
+    if TC1_WEIGHTS.read_bytes() not in rider:
+        raise RuntimeError('shipped rider does not carry tc1 mixer/weights_i8.bin verbatim')
+    return prefix, rider, stream
 
 
-def build_tail(prefix: bytes, weights: bytes, stream: bytes) -> bytes:
-    return prefix + tc1.MAGIC + weights + stream
+def build_tail(prefix: bytes, rider: bytes, stream: bytes) -> bytes:
+    return prefix + rider + stream
+
+
+def receiver_stream_bytes() -> int:
+    """The token-stream length the LIVE tree's OWN reader returns.
+
+    This is the only authority on where the rider ends: the rider's container is the
+    receiver's private business (``TC1M`` before move 44, ``RLC1`` after), and this arm
+    re-implementing its length rule is exactly the hidden-fork that would let a future
+    rider change pass unnoticed.  Asking the receiver costs one runtime load, once, at
+    init, and the answer is pinned into INPUTS.json for every later stage.
+    """
+    residual, _renderer, _dir = jg2.load_runtime(LIVE)
+    parts = residual.read_residual_archive(LIVE / 'archive.zip')
+    return len(bytes(parts.token_stream))
 
 
 def field_to_u8(npz_path: Path, destination: Path) -> dict:
@@ -191,10 +229,9 @@ def initialize() -> dict:
         raise RuntimeError('configured tree is not the live pointer')
 
     parts = jg2.split_member(jg2.read_archive_member(LIVE / 'archive.zip'))
-    prefix, weights, stream = split_tail(parts['tail'])
-    if weights != TC1_WEIGHTS.read_bytes():
-        raise RuntimeError('shipped rider weights are not tc1 mixer/weights_i8.bin')
-    if build_tail(prefix, weights, stream) != parts['tail']:
+    rider_bytes = len(parts['tail']) - TAIL_PREFIX_BYTES - receiver_stream_bytes()
+    prefix, rider, stream = split_tail(parts['tail'], rider_bytes)
+    if build_tail(prefix, rider, stream) != parts['tail']:
         raise RuntimeError('tail split is not lossless')
 
     null = ROOT / 'retained/null_archive.zip'
@@ -216,9 +253,11 @@ def initialize() -> dict:
         schema='ddm_sj1_pass5_price_inputs.v1', axis=AXIS, score_claim=False, seed=20260909,
         pointer=pointer, pointer_archive=archive, live_tree=str(LIVE),
         runtime_sources=runtime_facts(LIVE), census=census,
-        tail=dict(bytes=len(parts['tail']), prefix_bytes=len(prefix), weight_bytes=len(weights),
+        tail=dict(bytes=len(parts['tail']), prefix_bytes=len(prefix),
+                  rider_bytes=len(rider), rider_sha256=jg2.sha256_bytes(rider),
+                  rider_magic=rider[:5].hex(),
                   stream_bytes=len(stream), stream_sha256=jg2.sha256_bytes(stream),
-                  weights_sha256=jg2.sha256_bytes(weights)),
+                  weights_sha256=jg2.sha256_bytes(TC1_WEIGHTS.read_bytes())),
         fields=fields,
         field_delta=dict(tokens_changed=int(per_pair.sum()),
                          pairs_changed=int((per_pair > 0).sum()),
@@ -394,7 +433,9 @@ def price(tags: tuple[str, ...], candidate: str = 'candidate', seg_gain_bytes: f
           seg_cells: float | None = None) -> dict:
     inputs = guard()
     parts = jg2.split_member(jg2.read_archive_member(LIVE / 'archive.zip'))
-    prefix, weights, shipped_stream = split_tail(parts['tail'])
+    prefix, rider, shipped_stream = split_tail(parts['tail'], inputs['tail'].get('rider_bytes'))
+    if jg2.sha256_bytes(rider) != inputs['tail'].get('rider_sha256', jg2.sha256_bytes(rider)):
+        raise RuntimeError('the live rider is not the one pinned at init')
     live_bytes = inputs['pointer_archive']['bytes']
     fields = ('control', candidate)
 
@@ -414,7 +455,7 @@ def price(tags: tuple[str, ...], candidate: str = 'candidate', seg_gain_bytes: f
 
     archives = {}
     for name in fields:
-        member = jg2.join_member(dict(parts, tail=build_tail(prefix, weights, streams[name])))
+        member = jg2.join_member(dict(parts, tail=build_tail(prefix, rider, streams[name])))
         destination = ROOT / 'retained' / f'archive_{name}.zip'
         preflight(destination, len(member) + 4096)
         jg2.pack_archive(member, destination)
