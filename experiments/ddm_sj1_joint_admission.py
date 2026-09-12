@@ -870,21 +870,103 @@ def cmd_close(args) -> int:
     return 0
 
 
+def build_receiver_libraries(runtime_root: Path, build_dir: Path) -> dict[str, Any]:
+    """Build and export the native libraries EXACTLY as the tree's own ``inflate.sh`` does.
+
+    Pass 7 lost two launches -- a parse-back and a public smoke -- to
+    ``KeyError: 'RLC1_GEOMETRY_LIBRARY'``, and what proved it was the HARNESS rather than
+    the candidate is that the FRONTIER's own shipped bytes failed identically.  The cure
+    that pass ran was an external export before each launch, which cures the run and
+    leaves the class alive for the next arm; the cure here is that no caller has to know
+    the list at all.
+
+    The list is not a memory: it is read off ``inflate.sh``'s own build block.  Under the
+    default ``F26_TOKEN_DECODER=python`` the receiver needs THREE libraries -- the RC64
+    backend, the float64 free corrector and the RLC1 lane geometry.  ``f26_hpac_native``
+    is built by ``inflate.sh`` only when the decoder is ``native-hpac``, and is built here
+    on the same condition, so a harness run never compiles something the shipped path
+    would not.  ``-ffp-contract=off -fno-fast-math`` on the corrector is load-bearing:
+    FMA contraction fuses a multiply and an add into one rounding step, which would move
+    the emitted probabilities and desynchronise the arithmetic decoder.
+
+    The corrector is BEST-EFFORT for the same reason inflate.sh puts it inside an ``if``
+    condition: a compiler that cannot build it must cost the speedup, never the decode.
+    The other two are unconditional there and refuse here.
+    """
+    import os
+    import subprocess
+
+    runtime_root = Path(runtime_root).resolve()
+    build_dir = Path(build_dir)
+    build_dir.mkdir(parents=True, exist_ok=True)
+    cc = shutil.which(os.environ.get("CC", "cc"))
+    if cc is None:
+        raise Sj1JointError("a C compiler is required for the receiver libraries (inflate.sh contract)")
+
+    def compile_one(source: str, name: str, extra: tuple[str, ...], link: tuple[str, ...]) -> tuple[Path, list[str]]:
+        out = build_dir / name
+        argv = [cc, "-O3", "-std=c11", "-shared", "-fPIC", *extra,
+                str(runtime_root / source), *link, "-o", str(out)]
+        subprocess.run(argv, check=True, capture_output=True)
+        return out, argv
+
+    exported: dict[str, str] = {}
+    commands: dict[str, list[str]] = {}
+    rc64, argv = compile_one("runtime/entropy/rc64_backend.c", "rc64_backend.so", (), ())
+    exported["CPR1_RC64_LIBRARY"] = str(rc64)
+    commands["CPR1_RC64_LIBRARY"] = argv
+    geometry, argv = compile_one("runtime/rlc1_geometry.c", "rlc1_geometry.so", (), ())
+    exported["RLC1_GEOMETRY_LIBRARY"] = str(geometry)
+    commands["RLC1_GEOMETRY_LIBRARY"] = argv
+    corrector_note = None
+    try:
+        corrector, argv = compile_one(
+            "runtime/f26_corrector_native.c", "f26_corrector_native.so",
+            ("-ffp-contract=off", "-fno-fast-math"), ("-lm",),
+        )
+        exported["F26_CORRECTOR_NATIVE_LIBRARY"] = str(corrector)
+        commands["F26_CORRECTOR_NATIVE_LIBRARY"] = argv
+    except subprocess.CalledProcessError as exc:
+        corrector_note = (
+            "f26 corrector native build unavailable; the receiver falls back to the python "
+            f"corrector exactly as inflate.sh does ({exc.stderr.decode('utf-8', 'replace')[:200]})"
+        )
+    decoder = os.environ.get("F26_TOKEN_DECODER", "python")
+    if decoder == "native-hpac" and not os.environ.get("F26_HPAC_NATIVE_LIBRARY"):
+        raise Sj1JointError(
+            "F26_TOKEN_DECODER=native-hpac needs F26_HPAC_NATIVE_LIBRARY built with "
+            "inflate.sh's libomp recipe; this harness does not guess at that build"
+        )
+    return {
+        "exported": exported,
+        "commands": commands,
+        "f26_token_decoder": decoder,
+        "corrector_note": corrector_note,
+        "contract": (
+            "built with inflate.sh's own argv; the list is the shipped script's, not this "
+            "harness's memory of it"
+        ),
+    }
+
+
 def cmd_parseback(args) -> int:
     """Decode the candidate through the RECEIVER TREE'S OWN inflate path, on CPU.
 
-    This is ``ddm_cl2.stage_parseback``'s contract on this arm's tree: build the RC64
-    backend and the native f26 corrector exactly as ``inflate.sh`` does, run the tree's
-    own ``_verify_input`` pin check, then ``runtime.f26_inflate.inflate_archive`` with
-    ``device_name="cpu"``.  It proves the candidate is decodable by the bytes that ship
-    with it AND produces the ``0.raw`` the seg leg must finally be measured on -- a
-    distortion claim read off the encoder's own field rather than the receiver's render
-    would be measuring the wrong object.
+    This is ``ddm_cl2.stage_parseback``'s contract on this arm's tree: build EVERY native
+    library ``inflate.sh`` builds, run the tree's own ``_verify_input`` pin check, then
+    ``runtime.f26_inflate.inflate_archive`` with ``device_name="cpu"``.  It proves the
+    candidate is decodable by the bytes that ship with it AND produces the ``0.raw`` the
+    seg leg must finally be measured on -- a distortion claim read off the encoder's own
+    field rather than the receiver's render would be measuring the wrong object.
+
+    The library list comes from ``build_receiver_libraries``, not from this function: it
+    used to build two of the three and died on the third
+    (``KeyError: 'RLC1_GEOMETRY_LIBRARY'``) on the FRONTIER's own shipped bytes as well as
+    on a candidate's.
     """
     import importlib
     import importlib.util
     import os
-    import subprocess
     import zipfile
 
     runtime = Path(args.runtime)
@@ -896,25 +978,9 @@ def cmd_parseback(args) -> int:
     with zipfile.ZipFile(archive) as zf:
         (data_dir / "p").write_bytes(zf.read("p"))
     build = root / "build"
-    build.mkdir(exist_ok=True)
-    cc = shutil.which(os.environ.get("CC", "cc"))
-    if cc is None:
-        raise Sj1JointError("a C compiler is required for the RC64 backend (inflate.sh contract)")
-    rc64_so = build / "rc64_backend.so"
-    subprocess.run(
-        [cc, "-O3", "-std=c11", "-shared", "-fPIC",
-         str(runtime / "runtime/entropy/rc64_backend.c"), "-o", str(rc64_so)],
-        check=True,
-    )
-    os.environ["CPR1_RC64_LIBRARY"] = str(rc64_so)
-    corrector_so = build / "f26_corrector_native.so"
-    subprocess.run(
-        [cc, "-O3", "-std=c11", "-shared", "-fPIC", "-ffp-contract=off", "-fno-fast-math",
-         str(runtime / "runtime/f26_corrector_native.c"), "-lm", "-o", str(corrector_so)],
-        check=True,
-    )
-    os.environ["F26_CORRECTOR_NATIVE_LIBRARY"] = str(corrector_so)
     os.environ.setdefault("F26_TOKEN_DECODER", "python")
+    libraries = build_receiver_libraries(runtime, build)
+    os.environ.update(libraries["exported"])
 
     spec = importlib.util.spec_from_file_location("sj1_receiver_inflate", runtime / "inflate.py")
     if spec is None or spec.loader is None:
@@ -957,8 +1023,7 @@ def cmd_parseback(args) -> int:
         "decoded_field_matches_admitted": field_identity,
         "wall_clock_seconds": elapsed,
         "device": "cpu",
-        "libraries": {"CPR1_RC64_LIBRARY": str(rc64_so),
-                      "F26_CORRECTOR_NATIVE_LIBRARY": str(corrector_so)},
+        "libraries": libraries,
         "inflate_report": report,
         "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
         "score_claim": False,
@@ -1016,20 +1081,17 @@ def _public_path_probe(runtime_root: Path, *, timeout_s: float) -> dict[str, Any
         "                      'exception_message': str(error)}))\n"
     )
     with tempfile.TemporaryDirectory() as scratch:
-        library = Path(scratch) / "rc64_backend.so"
-        subprocess.run(
-            [
-                os.environ.get("CC", "cc"), "-O3", "-std=c11", "-shared", "-fPIC",
-                str(runtime_root / "runtime" / "entropy" / "rc64_backend.c"),
-                "-o", str(library),
-            ],
-            check=True, capture_output=True,
-        )
+        # Every library inflate.sh builds, built the way it builds them.  Building only the
+        # RC64 backend made this probe die inside the RLC1 lane geometry on the FRONTIER's
+        # own shipped bytes -- a harness failure that looks exactly like a candidate defect.
+        libraries = build_receiver_libraries(runtime_root, Path(scratch) / "build")
         # PYTHONDONTWRITEBYTECODE: the probe imports FROM the tree, which would drop
         # __pycache__ into it.  The seal digest skips bytecode caches so identity is safe
         # either way, but a frontier tree handed over READ ONLY must come back untouched.
         environment = dict(
-            os.environ, CPR1_RC64_LIBRARY=str(library), PYTHONDONTWRITEBYTECODE="1"
+            os.environ, **libraries["exported"],
+            F26_TOKEN_DECODER=os.environ.get("F26_TOKEN_DECODER", "python"),
+            PYTHONDONTWRITEBYTECODE="1",
         )
         started = time.time()
         try:
