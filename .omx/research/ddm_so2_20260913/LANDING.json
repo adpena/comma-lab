@@ -1,0 +1,295 @@
+{
+  "schema": "ddm_so2_serializer_attempt.v1",
+  "attempt_count": 1,
+  "returncode": 19,
+  "args": [
+    ".venv/bin/python",
+    "tools/subagent_commit_serializer.py",
+    "--label",
+    "ddm_so2",
+    "--message",
+    "research: specify lossless lifting HPAC successor rung [no-triality] [p0-ledger-ok]",
+    "--no-co-author",
+    "--fallback-receipt-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_so2/receipts/serializer",
+    "--files",
+    ".omx/research/ddm_so2_successor_object_priced_with_the_learned_prior_20260913.md",
+    ".omx/research/ddm_so2_20260913/FIRE_ORDERS.json",
+    ".omx/research/ddm_so2_20260913/HEAD_BEFORE.txt",
+    ".omx/research/ddm_so2_20260913/INDEX_BEFORE.txt",
+    ".omx/research/ddm_so2_20260913/INDEX_PRE_SERIALIZER.txt",
+    ".omx/research/ddm_so2_20260913/REVIEW.md",
+    ".omx/research/ddm_so2_20260913/VERIFICATION.json",
+    ".omx/research/ddm_so2_20260913/arithmetic.json",
+    ".omx/research/ddm_so2_20260913/content_recall_paths.txt",
+    ".omx/research/ddm_so2_20260913/equations_recall.json",
+    ".omx/research/ddm_so2_20260913/equations_relevant.json",
+    ".omx/research/ddm_so2_20260913/focused_recall.txt",
+    ".omx/research/ddm_so2_20260913/index_dag_tasks_recall.txt",
+    ".omx/research/ddm_so2_20260913/input_pins.json",
+    ".omx/research/ddm_so2_20260913/source_pins.json",
+    ".omx/research/ddm_so2_20260913/FINAL_FILES.json",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_successor_object_priced_with_the_learned_prior_20260913.md=2c43b02002a9c0b71abdbb7c2201bff4bad3dea1c0857342eb784e9381ae0a2f",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/FIRE_ORDERS.json=fa59214e4b84b52fdcb6c5d3b0036de5053ee1f80248ef854447c585f7f155b3",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/HEAD_BEFORE.txt=b630a13c5577d993813278f871450bb79da09019569f6b21f774985b03877cab",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/INDEX_BEFORE.txt=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/INDEX_PRE_SERIALIZER.txt=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/REVIEW.md=f96531fc63d63d9b21dec956fd6d8c8521f6ce72dd5372a266ad87075a17a0b9",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/VERIFICATION.json=3d66f9d9cf77bb988a5ea58f4b587524e8b1f287576299493a6d35871e285772",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/arithmetic.json=3a7dde05251611716eebf8ce39144c4ea2f38249f07345e76fcb44fb882aff73",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/content_recall_paths.txt=3a58d71cbe9d664f8e54af4fff2f80878861012700b2fb226dc833d460bd0c68",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/equations_recall.json=e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/equations_relevant.json=56dfb78822c62cabae65bc2d0e7a39b6c715743c10deff287dfe48781e02c438",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/focused_recall.txt=1ef210a67ec0f893520cb40415e902f0b9db739e774db2520d2225849e5bb98f",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/index_dag_tasks_recall.txt=7e15f88faba3cae260d3e1d2f945fed0716e0a4b883d55c331447d01c718b6ec",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/input_pins.json=f56b6d7aebd35d3a2a47ded49ab8ee1468d60f3de8e75c20b20197f57a3e836b",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/source_pins.json=436418d47cc85bce86ad4bd71bd13e43edd587a8d09feb764233ead9ef331ad9",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so2_20260913/FINAL_FILES.json=e34e0824da02dfb054fd176480bf78855cb6c5078b72f8c109662a9d268be4fb"
+  ],
+  "declared_file_shas": [
+    {
+      "path": ".omx/research/ddm_so2_successor_object_priced_with_the_learned_prior_20260913.md",
+      "bytes": 31332,
+      "sha256": "2c43b02002a9c0b71abdbb7c2201bff4bad3dea1c0857342eb784e9381ae0a2f"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/FIRE_ORDERS.json",
+      "bytes": 1337,
+      "sha256": "fa59214e4b84b52fdcb6c5d3b0036de5053ee1f80248ef854447c585f7f155b3"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/HEAD_BEFORE.txt",
+      "bytes": 41,
+      "sha256": "b630a13c5577d993813278f871450bb79da09019569f6b21f774985b03877cab"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/INDEX_BEFORE.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/INDEX_PRE_SERIALIZER.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/REVIEW.md",
+      "bytes": 3871,
+      "sha256": "f96531fc63d63d9b21dec956fd6d8c8521f6ce72dd5372a266ad87075a17a0b9"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/VERIFICATION.json",
+      "bytes": 2253,
+      "sha256": "3d66f9d9cf77bb988a5ea58f4b587524e8b1f287576299493a6d35871e285772"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/arithmetic.json",
+      "bytes": 530,
+      "sha256": "3a7dde05251611716eebf8ce39144c4ea2f38249f07345e76fcb44fb882aff73"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/content_recall_paths.txt",
+      "bytes": 15385,
+      "sha256": "3a58d71cbe9d664f8e54af4fff2f80878861012700b2fb226dc833d460bd0c68"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/equations_recall.json",
+      "bytes": 3787485,
+      "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/equations_relevant.json",
+      "bytes": 200592,
+      "sha256": "56dfb78822c62cabae65bc2d0e7a39b6c715743c10deff287dfe48781e02c438"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/focused_recall.txt",
+      "bytes": 24104,
+      "sha256": "1ef210a67ec0f893520cb40415e902f0b9db739e774db2520d2225849e5bb98f"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/index_dag_tasks_recall.txt",
+      "bytes": 100169,
+      "sha256": "7e15f88faba3cae260d3e1d2f945fed0716e0a4b883d55c331447d01c718b6ec"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/input_pins.json",
+      "bytes": 1183,
+      "sha256": "f56b6d7aebd35d3a2a47ded49ab8ee1468d60f3de8e75c20b20197f57a3e836b"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/source_pins.json",
+      "bytes": 15331,
+      "sha256": "436418d47cc85bce86ad4bd71bd13e43edd587a8d09feb764233ead9ef331ad9"
+    },
+    {
+      "path": ".omx/research/ddm_so2_20260913/FINAL_FILES.json",
+      "bytes": 2649,
+      "sha256": "e34e0824da02dfb054fd176480bf78855cb6c5078b72f8c109662a9d268be4fb"
+    }
+  ],
+  "score_claim": false,
+  "custody_only_storage_retry": {
+    "schema": "subagent_commit_bundle_fallback.v1",
+    "event_type": "git_object_write_denial_bundle_fallback",
+    "status": "BUNDLE_READY_MAIN_MUST_LAND",
+    "written_at_utc": "2026-09-12T19:47:22Z",
+    "label": "ddm_so2",
+    "base_head": "72d389f458cebcc6fcde17812251e1994616252a",
+    "fallback_commit": "e6c42367a1bbb56ed30776ab7d101a4f765428c6",
+    "bundle_path": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer/20260912T194721.291782Z-96654/intended-commit.bundle",
+    "bundle_bytes": 810471,
+    "bundle_sha256": "b923f3a6fa44ad714103497cbc3e7f1d15db6aa7722dfa5693c10aa4952a63a0",
+    "format_patch_path": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer/20260912T194721.291782Z-96654/intended-commit.format-patch",
+    "format_patch_bytes": 4269980,
+    "format_patch_sha256": "827d4c0259fb218ac3b8a564e42f49c4c828ad5b07e04bd172e63e83b95102b5",
+    "intended_patch_path": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer/20260912T194721.291782Z-96654/intended-tree.patch",
+    "intended_patch_bytes": 4267590,
+    "intended_patch_sha256": "69af25f93343f3655d3e45b3259d3352497c34a4b34c90cf4fb9345ac5a6c698",
+    "construction_mode": "isolated_git_plumbing_no_checkout",
+    "artifact_cap_bytes": 67108864,
+    "projected_artifact_bytes": 9479113,
+    "storage_reserve": {
+      "selected": {
+        "candidate": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer",
+        "probe_path": "/Volumes/APDataStore/pact",
+        "free_bytes": 53598093312,
+        "projected_bytes": 9479113,
+        "reserve_bytes": 42949672960,
+        "writable": true,
+        "eligible": true,
+        "error": null
+      },
+      "candidates": [
+        {
+          "candidate": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer",
+          "probe_path": "/Volumes/APDataStore/pact",
+          "free_bytes": 53598093312,
+          "projected_bytes": 9479113,
+          "reserve_bytes": 42949672960,
+          "writable": true,
+          "eligible": true,
+          "error": null
+        }
+      ]
+    },
+    "files": [
+      {
+        "path": ".omx/research/ddm_so2_successor_object_priced_with_the_learned_prior_20260913.md",
+        "content_sha256": "2c43b02002a9c0b71abdbb7c2201bff4bad3dea1c0857342eb784e9381ae0a2f"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/FIRE_ORDERS.json",
+        "content_sha256": "fa59214e4b84b52fdcb6c5d3b0036de5053ee1f80248ef854447c585f7f155b3"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/HEAD_BEFORE.txt",
+        "content_sha256": "b630a13c5577d993813278f871450bb79da09019569f6b21f774985b03877cab"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/INDEX_BEFORE.txt",
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/INDEX_PRE_SERIALIZER.txt",
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/REVIEW.md",
+        "content_sha256": "f96531fc63d63d9b21dec956fd6d8c8521f6ce72dd5372a266ad87075a17a0b9"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/VERIFICATION.json",
+        "content_sha256": "3d66f9d9cf77bb988a5ea58f4b587524e8b1f287576299493a6d35871e285772"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/arithmetic.json",
+        "content_sha256": "3a7dde05251611716eebf8ce39144c4ea2f38249f07345e76fcb44fb882aff73"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/content_recall_paths.txt",
+        "content_sha256": "3a58d71cbe9d664f8e54af4fff2f80878861012700b2fb226dc833d460bd0c68"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/equations_recall.json",
+        "content_sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/equations_relevant.json",
+        "content_sha256": "56dfb78822c62cabae65bc2d0e7a39b6c715743c10deff287dfe48781e02c438"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/focused_recall.txt",
+        "content_sha256": "1ef210a67ec0f893520cb40415e902f0b9db739e774db2520d2225849e5bb98f"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/index_dag_tasks_recall.txt",
+        "content_sha256": "7e15f88faba3cae260d3e1d2f945fed0716e0a4b883d55c331447d01c718b6ec"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/input_pins.json",
+        "content_sha256": "f56b6d7aebd35d3a2a47ded49ab8ee1468d60f3de8e75c20b20197f57a3e836b"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/source_pins.json",
+        "content_sha256": "436418d47cc85bce86ad4bd71bd13e43edd587a8d09feb764233ead9ef331ad9"
+      },
+      {
+        "path": ".omx/research/ddm_so2_20260913/FINAL_FILES.json",
+        "content_sha256": "e34e0824da02dfb054fd176480bf78855cb6c5078b72f8c109662a9d268be4fb"
+      }
+    ],
+    "failure": {
+      "serializer_rc": 19,
+      "output": "[subagent-commit-serializer] git add failed (rc=128):\nerror: unable to create temporary file: Operation not permitted\nerror: .omx/research/ddm_so2_20260913/FINAL_FILES.json: failed to insert into database\nerror: unable to index file '.omx/research/ddm_so2_20260913/FINAL_FILES.json'\nfatal: adding files failed\nBUNDLE_FALLBACK_STORAGE_REFUSED rc=19 phase=git_add receipt=/Users/adpena/Projects/pact/.omx/state/commit_serializer_fallback_refusals/20260912T194623.897258Z-96082/receipts.jsonl error=fallback storage reserve refused projected_bytes=9479477 reserve_bytes=42949672960\n"
+    },
+    "environment": {
+      "cwd": "/Users/adpena/Projects/pact",
+      "repo_root": "/Users/adpena/Projects/pact",
+      "uid": 501,
+      "gid": 20,
+      "platform": "darwin",
+      "sandbox_markers": {
+        "CODEX_SANDBOX": "seatbelt",
+        "CODEX_SANDBOX_NETWORK_DISABLED": "1"
+      },
+      "git_dir": "/Users/adpena/Projects/pact/.git",
+      "git_objects": "/Users/adpena/Projects/pact/.git/objects",
+      "git_objects_mode": "0o755",
+      "repo_mount": {
+        "path": "/Users/adpena/Projects/pact",
+        "mountpoint": "/System/Volumes/Data",
+        "mount_line": "/dev/disk3s5 on /System/Volumes/Data (apfs, local, journaled, nobrowse, protect, root data)"
+      },
+      "receipt_mount": {
+        "path": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer/20260912T194721.291782Z-96654",
+        "mountpoint": "/Volumes/APDataStore",
+        "mount_line": "/dev/disk6s1 on /Volumes/APDataStore (exfat, local, nodev, nosuid, noowners, noatime, fskit)"
+      }
+    },
+    "receipt_path": "/Volumes/APDataStore/pact/ddm_so2/receipts/serializer/20260912T194721.291782Z-96654/receipts.jsonl"
+  },
+  "serializer_attempt_count": 1,
+  "commit_returncode": 19,
+  "readiness": "BUNDLE_READY_MAIN_MUST_LAND",
+  "resolved_landing_fire_trigger": "Git-object denial with verified bundle retained on admitted APDataStore tier; includes storage-refusal rc19",
+  "retained_bundle_verified": true,
+  "bundle_file_shas_match_declared": true,
+  "staged_index_unchanged": true
+}

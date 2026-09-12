@@ -1,0 +1,27 @@
+[
+  {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN / SO2 byte-rung owner",
+    "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_so2_first_rung/RESULT.json",
+    "fire_trigger": "Harvest; current move49/source pins; reviewed composition adapter; admitted storage and system resources; free Metal slot",
+    "action": "Build the specified reversible representation and run ONE cl2 lambda1 terminal-EMA fit, real RC3/RLC1 price, twins and independent inverse decode",
+    "related_existing_lead": "ddm_no1_row2_learned_model_falsifier",
+    "score_claim": false
+  },
+  {
+    "disposition": "FOLDED",
+    "owner": "MAIN / receiver owner",
+    "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_so2_first_rung/receiver/",
+    "fire_trigger": "Joint bytes <= 123998; n600 inverse equality; twin identity",
+    "action": "Build inverse before rendering, prove raw equality and timing, then follow existing immutable candidate process",
+    "score_claim": false
+  },
+  {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN / serializer landing owner",
+    "consumer_store": ".omx/research/ddm_so2_20260913/LANDING.json",
+    "fire_trigger": "Serializer rc17 and verified fallback bundle",
+    "action": "Land precisely the declared hashes while preserving unrelated work",
+    "score_claim": false
+  }
+]

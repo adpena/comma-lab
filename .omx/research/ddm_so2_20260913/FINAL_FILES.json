@@ -1,0 +1,77 @@
+[
+  {
+    "path": ".omx/research/ddm_so2_successor_object_priced_with_the_learned_prior_20260913.md",
+    "bytes": 31332,
+    "sha256": "2c43b02002a9c0b71abdbb7c2201bff4bad3dea1c0857342eb784e9381ae0a2f"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/FIRE_ORDERS.json",
+    "bytes": 1337,
+    "sha256": "fa59214e4b84b52fdcb6c5d3b0036de5053ee1f80248ef854447c585f7f155b3"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/HEAD_BEFORE.txt",
+    "bytes": 41,
+    "sha256": "b630a13c5577d993813278f871450bb79da09019569f6b21f774985b03877cab"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/INDEX_BEFORE.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/INDEX_PRE_SERIALIZER.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/REVIEW.md",
+    "bytes": 3871,
+    "sha256": "f96531fc63d63d9b21dec956fd6d8c8521f6ce72dd5372a266ad87075a17a0b9"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/VERIFICATION.json",
+    "bytes": 2253,
+    "sha256": "3d66f9d9cf77bb988a5ea58f4b587524e8b1f287576299493a6d35871e285772"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/arithmetic.json",
+    "bytes": 530,
+    "sha256": "3a7dde05251611716eebf8ce39144c4ea2f38249f07345e76fcb44fb882aff73"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/content_recall_paths.txt",
+    "bytes": 15385,
+    "sha256": "3a58d71cbe9d664f8e54af4fff2f80878861012700b2fb226dc833d460bd0c68"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/equations_recall.json",
+    "bytes": 3787485,
+    "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/equations_relevant.json",
+    "bytes": 200592,
+    "sha256": "56dfb78822c62cabae65bc2d0e7a39b6c715743c10deff287dfe48781e02c438"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/focused_recall.txt",
+    "bytes": 24104,
+    "sha256": "1ef210a67ec0f893520cb40415e902f0b9db739e774db2520d2225849e5bb98f"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/index_dag_tasks_recall.txt",
+    "bytes": 100169,
+    "sha256": "7e15f88faba3cae260d3e1d2f945fed0716e0a4b883d55c331447d01c718b6ec"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/input_pins.json",
+    "bytes": 1183,
+    "sha256": "f56b6d7aebd35d3a2a47ded49ab8ee1468d60f3de8e75c20b20197f57a3e836b"
+  },
+  {
+    "path": ".omx/research/ddm_so2_20260913/source_pins.json",
+    "bytes": 15331,
+    "sha256": "436418d47cc85bce86ad4bd71bd13e43edd587a8d09feb764233ead9ef331ad9"
+  }
+]

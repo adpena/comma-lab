@@ -1,0 +1,6 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: .omx/research/ddm_so2_20260913/FINAL_FILES.json: failed to insert into database
+error: unable to index file '.omx/research/ddm_so2_20260913/FINAL_FILES.json'
+fatal: adding files failed
+BUNDLE_FALLBACK_STORAGE_REFUSED rc=19 phase=git_add receipt=/Users/adpena/Projects/pact/.omx/state/commit_serializer_fallback_refusals/20260912T194623.897258Z-96082/receipts.jsonl error=fallback storage reserve refused projected_bytes=9479477 reserve_bytes=42949672960

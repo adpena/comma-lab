@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass7/candidate/candidate_runtime/archive.zip",
+    "bytes": 179153,
+    "sha256": "73e41a6620bd4ea3aaf236eff9de46391857907527358e8eb40ded0925a1c214"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_sj1_pass7/rlc1/fields/subset7.u8",
+    "bytes": 117964800,
+    "sha256": "fdf2255f60364dcd1e67fb7de107c0640f5fe3a39a7b575c76c86636660efd1d"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass7/admission_pass7/field_admitted.npz",
+    "bytes": 853712,
+    "sha256": "6056c90585763078e2bea8dea32b14abf57462d39eb56c17d46fd21bd702ae0f"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/train_inputs/init.pt",
+    "bytes": 162409,
+    "sha256": "cf41112788757f877d8d729d4bd7900772817cda8e06f6fd7fcb0129dc1f8383"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/train_inputs/TRAIN_INPUTS.json",
+    "bytes": 2062,
+    "sha256": "0556fac9ca4ad3f6ef1f2a0dc579a6e0b8ed8efed6bc64da7cf103157ea3aca1"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_dpi1/train_inputs/init_depths.pt",
+    "bytes": 169056,
+    "sha256": "f05bae5b2696b1e96817c214d9b1d94ecb64ca18f1c6c30b6e398cd5d4b22072"
+  }
+]

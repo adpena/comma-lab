@@ -1,0 +1,21 @@
+{
+  "rate": 6.658589531221714e-07,
+  "seg": 0.00010287,
+  "pose": 4.55e-06,
+  "archive": 179153,
+  "model": 11629,
+  "stream": 118938,
+  "charter_joint": 130525,
+  "D": 0.01703236878161602,
+  "score": 0.13632299781031237,
+  "actual_joint": 130567,
+  "fixed": 48586,
+  "pass_gate": 123998,
+  "cross_joint_gate": 106052,
+  "pass_score": 0.13194897034725284,
+  "pass_saving": 6569,
+  "headroom_at_pass": -0.01194897034725284,
+  "header_bytes": 8,
+  "stream_gate_if_prior_11629": 112361,
+  "cross_stream_gate_if_prior_11629": 94415
+}
