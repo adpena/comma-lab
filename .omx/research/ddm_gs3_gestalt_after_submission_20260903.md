@@ -1876,3 +1876,15 @@ realization both ways (rq1); prior at its λ knee (cl2) with its depth state res
 nets −2e-5 S. The pointer's demand for sub-0.12 is −24,514 B at held distortion. The honest state: sub-0.12 requires a successor
 construction (the cross), and the day's synthesis is that the live object is a conditional optimum of the joint problem, with moves 45–49
 (−9.2e-4 S) being what its knees still had to give.
+
+## Addendum 60 (2026-09-13, host ~05:10Z) — so2's lifting rung: the exact price refuses by 3.5×; the cross stands (n=5)
+
+so2r1 (Opus) executed so2's one $0 rung on APDataStore: Z = the reversible modulo-5 lifting of move 49's exact field (inverse equality over
+all 117,964,800 bytes), the HPAC prior retrained on Z under cl2's law (60 epochs, 3,073 s Metal; terminal EMA packed through the real
+rail), and the real RLC1 known-symbol encode of Z under the new prior through so2's adapter. Controls: the stock rail reproduces move 49's
+archive on F (twins, 118,938 B); the INCUMBENT prior on Z prices 866,516 B. The exact candidate: **stream 418,300 B, twins agreeing**
+(ideal 418,299.57) — 3.52× the incumbent's stream before adding the prior; J_Z ≫ the 123,998 B falsifier. The trainer's own estimate at
+epoch 38 (497 KB) had already said so. Mechanism: an invertible lifting cannot lower the field's entropy; it moved the information into
+difference planes whose spatial contexts the prior models far worse than the labels themselves (the "uniform interiors share zeros" hope is
+already what the incumbent's context model exploits on F). The cross stays measured empty at n=5 (NR1, bz2/qx, so1, so2). so2r1's memo
+carries the exact J_Z and the closure at instance/formulation scope.
