@@ -1795,3 +1795,25 @@ the new RLC1 pricer proves itself by byte-identical repack of the pointer, twice
 defect; pass 6's tree carries it; guard arm mpg1 live). The pass-6-era admission harness lacks the four native-library exports inflate.sh
 sets and fails on the known-good frontier tree too (harness, not candidate). Rate corner at this move: cap 154,638.8 B; demand −24,514 B.
 Next: pass 8 on this field (first-measurement chain; pre-registered band 0.5–1.2 %).
+
+## Addendum 56 (2026-09-12, host ~19:10Z) — pass 8 closes the pre-distortion family on this object; an inherited leg blocks its own successor
+
+Pass 8 (Opus; memo d0ad7f408; commits a28ce6920, 95a7ae42f) on the move-49 field: reach 165 cells / 163 tokens / 96 pairs = 1.361 % (above
+the 0.5–1.2 % band; 151 of 165 were pass 7's Lagrange-dropped positions re-found; F14: ZERO new repairs on a stale pair for the third pass;
+fresh-repair rate 1.156 → 0.410 → 0.310 cells/pair). The admission failed, not the reach: the field prices at 8.93 bits/changed token
+against a 10.31 break-even, so 165 reach cells bought 19 admitted (fraction 0.115 vs 0.312 / 0.689 on passes 7/6). Best subset 11 pairs /
+19 cells: seg −1.61e-5, pose −4.86e-6, rate +6.74e-6, net **−1.424e-5 = 0.71× the bar**. Frame 0 loses (+9.4e-7; fixed point breaks
+on 2 of 12). Nothing built, nothing sealed. The single-token pre-distortion family is CLOSED on this object at formulation scope (three
+consecutive same-object declines in yield, admitted fraction and fresh-repair rate; verdict scope: this family, this object, this exchange).
+
+Contract fact, measured three ways on real objects: the first-measurement route admits RATE-ONLY candidates (`candidate_seal.py` demands
+candidate raw == pointer raw and prices admission without d_seg/d_pose — move 49 itself would have been refused as a +2.8e-5 loss while it
+lowered the exact score by 5.96e-5), and pr19 forbids inheriting an inherited leg — so a distortion-moving row that sealed by inheritance
+BLOCKS its own successor. Cure: mint the row's OWN `t4_direct` leg from its already-paid T4 harvest. MAIN adopted move 49's (1,106.2 s
+≤ 1,260; behaviour digest 9f6e7168…; validator 0 problems) as the seal sidecar (committed copy in the packet-inputs dir); LAW: mint the
+leg AT HARVEST for every row from here.
+
+Where this leaves the object. Every axis now has a measured closure at the current exchange: renderer weights and realization (both
+directions), prior (λ knee; restored depths), mixer, carrier lattice, coder axis, container, tail oracle, accuracy intercept, and now the
+field's single-token family. Remaining doors are formulation changes on the field (multi-token / joint proposals under the same admission),
+not rungs of a closed family. The day's take on the object: moves 45–49, −9.2e-4 S (0.13724 → 0.13632). Demand −24,514 B.
