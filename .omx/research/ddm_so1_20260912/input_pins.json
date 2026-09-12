@@ -1,0 +1,17 @@
+[
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+    "bytes": 179111,
+    "sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c"
+  },
+  {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_pass6/retained/fields/subset6.u8",
+    "bytes": 117964800,
+    "sha256": "a92e7d902a4498961217f02c2b90d3fb9025901ba6d047201ff3bf297fa2f7a8"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_gf1_generator_form_on_lb1_field/RESULT.json",
+    "bytes": 5332,
+    "sha256": "f9e805800b4206324e6787837297836e41956b88c0d114243cd6b6ddcb3664c2"
+  }
+]

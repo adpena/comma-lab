@@ -1,0 +1,129 @@
+{
+  "schema": "ddm_so1_serializer_attempt.v1",
+  "attempt_count": 1,
+  "returncode": 17,
+  "args": [
+    ".venv/bin/python",
+    "tools/subagent_commit_serializer.py",
+    "--label",
+    "ddm_so1",
+    "--message",
+    "research: price successor preimage descriptions and queue exact byte rung [no-triality] [p0-ledger-ok]",
+    "--fallback-receipt-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_so1/receipts/serializer",
+    "--files",
+    ".omx/research/ddm_so1_successor_object_with_preimage_freedom_20260912.md",
+    ".omx/research/ddm_so1_20260912/REVIEW.md",
+    ".omx/research/ddm_so1_20260912/VERIFICATION.json",
+    ".omx/research/ddm_so1_20260912/arithmetic.json",
+    ".omx/research/ddm_so1_20260912/content_recall_paths.txt",
+    ".omx/research/ddm_so1_20260912/equations_recall.json",
+    ".omx/research/ddm_so1_20260912/equations_relevant.json",
+    ".omx/research/ddm_so1_20260912/focused_recall.txt",
+    ".omx/research/ddm_so1_20260912/index_dag_tasks_recall.txt",
+    ".omx/research/ddm_so1_20260912/input_pins.json",
+    ".omx/research/ddm_so1_20260912/source_pins.json",
+    ".omx/research/ddm_so1_20260912/FINAL_FILES.json",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_successor_object_with_preimage_freedom_20260912.md=f482fe77c19d66a5034a838aa832d9cd037c66e0130fb424b6a81bfb1a8ca7d9",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/REVIEW.md=35b6b972fd6226c689baf3fd5abcff73beeb20353869cf1d47588f428b96ace9",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/VERIFICATION.json=b3c40486dd12a2409bbf453474190622edd86cf707de7ddbb22716c00ab210e1",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/arithmetic.json=d8e5b467794bcecc6e13c8dc2511d8802176aa401c34d63df1060395aa8de822",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/content_recall_paths.txt=09ab4f9150833380dc80f15c5094bf0bff7c72668519132b6ccf25a1f600dfc5",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/equations_recall.json=e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/equations_relevant.json=afc7de87fd860becb9c79db3334e9702bb23fdca11cd582718e60435a6e90b6b",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/focused_recall.txt=38b2ea8eed4966dce9ed54fb5a0ceaf32fb992c333742c8e96013e424351ce37",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/index_dag_tasks_recall.txt=e03967a7ff48b850651b7167a48496695da53f1ab7dfd3ff5572814a343f408d",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/input_pins.json=c7a528a3f4c3b2fdfbd89f62d48d522282eff00455628ab9d5058cef7f026d39",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/source_pins.json=e3485d6c4cb7eab4edfb103fd76796830a255b6094239dbc32f8b121d3e33b9d",
+    "--expected-content-sha256",
+    ".omx/research/ddm_so1_20260912/FINAL_FILES.json=93f54268e0c1535396967eedcb7e5e36f3e534a58a5a46d481743e896cd64748"
+  ],
+  "declared_file_shas": [
+    {
+      "path": ".omx/research/ddm_so1_successor_object_with_preimage_freedom_20260912.md",
+      "bytes": 41825,
+      "sha256": "f482fe77c19d66a5034a838aa832d9cd037c66e0130fb424b6a81bfb1a8ca7d9"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/REVIEW.md",
+      "bytes": 3209,
+      "sha256": "35b6b972fd6226c689baf3fd5abcff73beeb20353869cf1d47588f428b96ace9"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/VERIFICATION.json",
+      "bytes": 778,
+      "sha256": "b3c40486dd12a2409bbf453474190622edd86cf707de7ddbb22716c00ab210e1"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/arithmetic.json",
+      "bytes": 1737,
+      "sha256": "d8e5b467794bcecc6e13c8dc2511d8802176aa401c34d63df1060395aa8de822"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/content_recall_paths.txt",
+      "bytes": 87731,
+      "sha256": "09ab4f9150833380dc80f15c5094bf0bff7c72668519132b6ccf25a1f600dfc5"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/equations_recall.json",
+      "bytes": 3787485,
+      "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/equations_relevant.json",
+      "bytes": 350518,
+      "sha256": "afc7de87fd860becb9c79db3334e9702bb23fdca11cd582718e60435a6e90b6b"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/focused_recall.txt",
+      "bytes": 44965,
+      "sha256": "38b2ea8eed4966dce9ed54fb5a0ceaf32fb992c333742c8e96013e424351ce37"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/index_dag_tasks_recall.txt",
+      "bytes": 1207113,
+      "sha256": "e03967a7ff48b850651b7167a48496695da53f1ab7dfd3ff5572814a343f408d"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/input_pins.json",
+      "bytes": 622,
+      "sha256": "c7a528a3f4c3b2fdfbd89f62d48d522282eff00455628ab9d5058cef7f026d39"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/source_pins.json",
+      "bytes": 9093,
+      "sha256": "e3485d6c4cb7eab4edfb103fd76796830a255b6094239dbc32f8b121d3e33b9d"
+    },
+    {
+      "path": ".omx/research/ddm_so1_20260912/FINAL_FILES.json",
+      "sha256": "93f54268e0c1535396967eedcb7e5e36f3e534a58a5a46d481743e896cd64748"
+    }
+  ],
+  "shared_index_unchanged": true,
+  "head_after": "3df631ee38b2f82c2bc609063f79d4b58d8f33ab",
+  "bundle_verified": true,
+  "bundle_verification_rc": 0,
+  "bundle_verification_stdout": "The bundle contains this ref:\ne071c05dffd1826cd5d2bbc6e516c0c1544d0a77 refs/heads/serializer-fallback\nThe bundle requires this ref:\n3df631ee38b2f82c2bc609063f79d4b58d8f33ab \nThe bundle uses this hash algorithm: sha1\n",
+  "bundle_verification_stderr": "/Volumes/VertigoDataTier/pact/ddm_so1/receipts/serializer/20260912T125832.306742Z-19519/intended-commit.bundle is okay\n",
+  "verified_declared_files": 12,
+  "bundle_path": "/Volumes/VertigoDataTier/pact/ddm_so1/receipts/serializer/20260912T125832.306742Z-19519/intended-commit.bundle",
+  "bundle_sha256": "bb9ed5a3b37e7fd13ded876cd448dc1aaf23a5bd40b5c8801ec7b28c41ff51d8",
+  "bundle_bytes": 1248760,
+  "fallback_commit": "e071c05dffd1826cd5d2bbc6e516c0c1544d0a77",
+  "base_head": "3df631ee38b2f82c2bc609063f79d4b58d8f33ab",
+  "main_landing_required": true,
+  "index_before_sha256": "186e7d9fa3819451abd1e145f510ab217d32e33623b251d09c02671341f7f22a",
+  "index_after_sha256": "186e7d9fa3819451abd1e145f510ab217d32e33623b251d09c02671341f7f22a",
+  "scientific_rung_launched": false
+}

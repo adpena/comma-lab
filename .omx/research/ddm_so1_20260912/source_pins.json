@@ -1,0 +1,252 @@
+[
+  {
+    "path": "AGENTS.md",
+    "bytes": 439297,
+    "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+  },
+  {
+    "path": "CLAUDE.md",
+    "bytes": 439297,
+    "sha256": "62a27f9e69144c2c9d38de539d0a953e0641d82de209c0fda942ef6ed7dfb71f"
+  },
+  {
+    "path": "PROGRAM.md",
+    "bytes": 5784,
+    "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+  },
+  {
+    "path": "docs/operating_manual_craft_handoff.md",
+    "bytes": 15577,
+    "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+  },
+  {
+    "path": ".omx/tmp/codex_runs/_common_contract.md",
+    "bytes": 4124,
+    "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+  },
+  {
+    "path": ".omx/research/charters/ddm_so1_successor_object_with_preimage_freedom_charter_20260912.md",
+    "bytes": 5852,
+    "sha256": "a58e7ead08964c084114d2bc04791590762c419344265a7270b204265a7617ae"
+  },
+  {
+    "path": ".omx/state/main_hot_state.md",
+    "bytes": 65699,
+    "sha256": "40c9102878af93411610e7f3f66c76279726728db8959e6b6b1784cd85799d74"
+  },
+  {
+    "path": ".omx/state/canonical_frontier_pointer.json",
+    "bytes": 19662,
+    "sha256": "deaa4f66a436417c7e4acaef289edec068188402277e9eb4215c76f3784a679e"
+  },
+  {
+    "path": "upstream/evaluate.py",
+    "bytes": 6005,
+    "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+  },
+  {
+    "path": "upstream/README.md",
+    "bytes": 11378,
+    "sha256": "68ea239d7333696e79716e47a9c4288d2918efbcd8912f78932b0befe0af872b"
+  },
+  {
+    "path": "experiments/ddm_hg1_heterogeneous_analytic_generator_gate.py",
+    "bytes": 45507,
+    "sha256": "eb0047180abd3485d5894d7852f15b2593ef6669bfecbcb0133e39e9f251db64"
+  },
+  {
+    "path": "experiments/ddm_gf1_generator_form_on_lb1_field.py",
+    "bytes": 10793,
+    "sha256": "d0016ad9d29b101b08338c1350feebe5923ba9272e696d70aa51e3fa59b399aa"
+  },
+  {
+    "path": "experiments/ddm_gdc3_geometry_law_probe.py",
+    "bytes": 22625,
+    "sha256": "be8495a3e339eed0b11c1e9b5cca5bf3534572a31edc778977941a10d682490a"
+  },
+  {
+    "path": "tools/subagent_checkpoint.py",
+    "bytes": 27672,
+    "sha256": "000d1dda30d3f3a78edca9966d09b2a2488cdddf37266978fefabc8d676f3fb6"
+  },
+  {
+    "path": "tools/subagent_commit_serializer.py",
+    "bytes": 156721,
+    "sha256": "a9998cf4c07c70d4ad86abb7572af0a8a283e6fd4710386ab921bc13437a916d"
+  },
+  {
+    "path": "tools/launch_detached_process.py",
+    "bytes": 73676,
+    "sha256": "8e8cb0dd64c2a21690343de602791293577f8ed2933a964a0335684b39f24cfa"
+  },
+  {
+    "path": ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md",
+    "bytes": 218580,
+    "sha256": "534aba8c8bee0c7df508915a59262ac7236e9d8eefa33047a656621722613560"
+  },
+  {
+    "path": ".omx/research/ddm_ren1_renderer_provenance_and_refit_in_place_20260911.md",
+    "bytes": 44708,
+    "sha256": "063b5dd1f5f978608df1a5bd12fbcba085b696c70712ec44a2280b62f8efc54f"
+  },
+  {
+    "path": ".omx/research/ddm_ren2_renderer_refit_in_place_on_the_coded_field_20260912.md",
+    "bytes": 38751,
+    "sha256": "3b9cdbbdb6a7bfdf6d046f6bc8f185b268946e547d6c71f19a332307f05bfeb1"
+  },
+  {
+    "path": ".omx/research/ddm_rq1_renderer_coarsening_then_field_reabsorption_20260912.md",
+    "bytes": 26017,
+    "sha256": "f5426cf9ed6d92e559f44c333f28434bdc854c66289157aab7d089620633aa83"
+  },
+  {
+    "path": ".omx/research/ddm_tmx1_refit_tail_mixer_tc1_on_current_field_20260911.md",
+    "bytes": 18643,
+    "sha256": "568c96defb6b1eaeb0b18e2dfb57db87a38dcfffc31fa6daf65cf55bd6b071d7"
+  },
+  {
+    "path": ".omx/research/ddm_dpi1_hpac_depth_state_restored_warm_start_20260912.md",
+    "bytes": 17953,
+    "sha256": "153d9516da2be2590bdb6a3e7dd475d4211e1a1333a635b53bda86e5c557b683"
+  },
+  {
+    "path": ".omx/research/ddm_qbt2b_r10_doubling_adjudication_20260829.md",
+    "bytes": 8837,
+    "sha256": "724fd59d7dbd72164ec66bbd594344903753c07dd5e3bcb77b24d895ae07029d"
+  },
+  {
+    "path": ".omx/research/ddm_xo1_MAIN_adjudication_20260830.md",
+    "bytes": 22239,
+    "sha256": "03f7fd384ddc4e385cf16cfcd194a8fce464b8ef1ff929fd21b8d7072f2cf116"
+  },
+  {
+    "path": ".omx/research/ddm_bz2_bornsmall_capacity_ceiling_20260829.md",
+    "bytes": 10529,
+    "sha256": "9beec32a98e75cb079e6635f11d3f7c8ae2a31e420052d5f60b36c53a9578ad9"
+  },
+  {
+    "path": ".omx/research/ddm_bz2d_distortion_verdict_20260830.md",
+    "bytes": 11552,
+    "sha256": "2c1bbe7b5ae43751bb387dcc7ed6bcc8585bfdd537698f1f6a8b7c3504ef9b69"
+  },
+  {
+    "path": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md",
+    "bytes": 133864,
+    "sha256": "3d848e593881b864c57eaa6dc0eca991c9a7b030300d87f912e2c29278652dba"
+  },
+  {
+    "path": ".omx/research/ddm_gf1_generator_form_capacity_verdict_20260830.md",
+    "bytes": 10053,
+    "sha256": "0e8d3226fc92282335a5c5142d27194090ef55670f7c40b6d01f23de46e75a54"
+  },
+  {
+    "path": ".omx/research/ddm_gf1_capacity_gap_decomposition_20260831.md",
+    "bytes": 14232,
+    "sha256": "448cb98e9a661e4b97fbd45fca2cc00a362d36a391c816cd9798045ed5dc95ed"
+  },
+  {
+    "path": ".omx/research/ddm_gdc1_generator_door_construction_design_20260910.md",
+    "bytes": 24774,
+    "sha256": "c924bb6a831e7a8fa1a48e5f8d8e2f5433ef64e95fea84cbf06bca7f6e67c439"
+  },
+  {
+    "path": ".omx/research/ddm_gdc4_run_native_endpoint_generator_20260910.md",
+    "bytes": 23458,
+    "sha256": "4cd0187b2f6d2c486da8f9cf4e0944402fc04917b0e05f3886ff75dbeedfa9da"
+  },
+  {
+    "path": ".omx/research/ddm_obx1_successor_object_under_the_cross_design_20260911.md",
+    "bytes": 30855,
+    "sha256": "9f49b2dcacd788fcd4e3f1f18a4a269b0cbb7cfd4aca90c8dc3a0f1b2b993f3b"
+  },
+  {
+    "path": ".omx/research/ddm_ls1_lane_conditioned_surprise_atlas_on_the_shipped_field_20260911.md",
+    "bytes": 24078,
+    "sha256": "b729faa146b62ea394ec502be37fb0d66d11f577202431cfcd9d5618f79f40bc"
+  },
+  {
+    "path": ".omx/research/ddm_ls2_full_resolution_lane_probability_bound_20260911.md",
+    "bytes": 14191,
+    "sha256": "225db0ec75bd20b3e219378e732767112b8c165d846dafc48a0a3d7e1a576737"
+  },
+  {
+    "path": ".omx/research/ddm_ltg1_lane_topology_generator_floor_20260831.md",
+    "bytes": 10534,
+    "sha256": "33a3a666788ab65d77cd3d67f6eaa2dd1aeca2cd1fb7de5e224ac6f2e74cb073"
+  },
+  {
+    "path": ".omx/research/ddm_blp1_born_lane_predictor_20260831.md",
+    "bytes": 14422,
+    "sha256": "a4d3cb8128dc83759072b01c4206d5ba8a006370be95fd4faea187a76cd33323"
+  },
+  {
+    "path": ".omx/research/ddm_d3b_lossless_lane_factorization_20260826.md",
+    "bytes": 14381,
+    "sha256": "bf2d7ca91fe690c5f73d2ae81e579a107b5391bcc7ae3469790e2a65b2f96868"
+  },
+  {
+    "path": ".omx/research/ddm_d3c_class_pyramid_peel_order_20260826.md",
+    "bytes": 14449,
+    "sha256": "6bac568b921bcecdd9ff46bcb0b4dfb8f97ad06ff6b456b1db890908aaff2fa1"
+  },
+  {
+    "path": ".omx/research/ddm_mxo1_free_decode_time_online_context_mixing_20260911.md",
+    "bytes": 17900,
+    "sha256": "60b5a34bb6146af82b346b591cfb836694f3736a9e7b1e2083d024fda223f565"
+  },
+  {
+    "path": ".omx/research/ddm_md1_micro_to_macro_dynamics_20260904.md",
+    "bytes": 39435,
+    "sha256": "2c6a8c33d2b4894f8732a1c6ef6a3857ab6fd34ae02b9b7994b1a245fd25ba4b"
+  },
+  {
+    "path": ".omx/research/ddm_mc1_motion_compensated_previous_plane_20260904.md",
+    "bytes": 22707,
+    "sha256": "2ca6129a66ffdaed3a1b513ac575d4ba0ef082ed7494cbcab18cc5c82da7d2a6"
+  },
+  {
+    "path": ".omx/research/ddm_bd1_bidirectional_pyramid_context_20260905.md",
+    "bytes": 15225,
+    "sha256": "f5f27bc63497660077c128e83d568a5c4c37008ecfca33beb6854fd2bcbb8e27"
+  },
+  {
+    "path": ".omx/research/ddm_fb1_sub012_feasibility_bound_20260823.md",
+    "bytes": 12535,
+    "sha256": "ae8ae3afddb758610dbf23b74aefeb1e42225d565939826ef276fbb9b398010e"
+  },
+  {
+    "path": ".omx/research/ddm_rl1_roadlane_interface_price_20260803.md",
+    "bytes": 3618,
+    "sha256": "e9bdbca7aee4c6d9f1f4ad9f4f9a6f42fbc9de8c208080220c4f34e69622ca6a"
+  },
+  {
+    "path": ".omx/research/ddm_sp1_contour_support_coder_20260728.md",
+    "bytes": 10277,
+    "sha256": "6bf5dcfd8398236cd46028fed0994d12811e2f90747245af3bbf442a7db1bbda"
+  },
+  {
+    "path": ".omx/research/ddm_jg4_reencoder_mirror_fix_20260819.md",
+    "bytes": 11065,
+    "sha256": "e32d66caa1b1a24a6aecdac57b53ecd3744943858250a7387a7e10c5c61d2984"
+  },
+  {
+    "path": ".omx/research/ddm_hpr1_20260911/v2/SEAL_ddm_hpr1_comp_even_on_refit_contest_cuda_v3.json.decode_wall_clock.json",
+    "bytes": 4763,
+    "sha256": "f4c700adc0f3d479771d2a606e846e0e1b1109c46b1f1318160527340cbd90c4"
+  },
+  {
+    "path": ".omx/research/ddm_se3_20260804/se3_receipt.md",
+    "bytes": 10104,
+    "sha256": "a61bfb845a81190ff65006c4c9db27e55ffd7cfa32d50a3c39f7f00290263b64"
+  },
+  {
+    "path": "experiments/ddm_et1_edge_topology_container_gate.py",
+    "bytes": 30974,
+    "sha256": "734658ea74b0297834c682e958c432dad4b78db2c101b3ac2d9b6d9cf952723c"
+  },
+  {
+    "path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_hpr1_first_measurement_t4_run1_20260911.json",
+    "bytes": 1616,
+    "sha256": "3e4f34bbaaf5a8f9262bd0f437d3a7bfdb6cea2a5725e9c7f7e57a0d7c3dbedc"
+  }
+]

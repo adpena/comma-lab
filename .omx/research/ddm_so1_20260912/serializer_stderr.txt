@@ -1,0 +1,5 @@
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: .omx/research/ddm_so1_20260912/FINAL_FILES.json: failed to insert into database
+error: unable to index file '.omx/research/ddm_so1_20260912/FINAL_FILES.json'
+fatal: adding files failed

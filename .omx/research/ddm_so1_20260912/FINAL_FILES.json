@@ -1,0 +1,57 @@
+[
+  {
+    "path": ".omx/research/ddm_so1_successor_object_with_preimage_freedom_20260912.md",
+    "bytes": 41825,
+    "sha256": "f482fe77c19d66a5034a838aa832d9cd037c66e0130fb424b6a81bfb1a8ca7d9"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/REVIEW.md",
+    "bytes": 3209,
+    "sha256": "35b6b972fd6226c689baf3fd5abcff73beeb20353869cf1d47588f428b96ace9"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/VERIFICATION.json",
+    "bytes": 778,
+    "sha256": "b3c40486dd12a2409bbf453474190622edd86cf707de7ddbb22716c00ab210e1"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/arithmetic.json",
+    "bytes": 1737,
+    "sha256": "d8e5b467794bcecc6e13c8dc2511d8802176aa401c34d63df1060395aa8de822"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/content_recall_paths.txt",
+    "bytes": 87731,
+    "sha256": "09ab4f9150833380dc80f15c5094bf0bff7c72668519132b6ccf25a1f600dfc5"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/equations_recall.json",
+    "bytes": 3787485,
+    "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/equations_relevant.json",
+    "bytes": 350518,
+    "sha256": "afc7de87fd860becb9c79db3334e9702bb23fdca11cd582718e60435a6e90b6b"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/focused_recall.txt",
+    "bytes": 44965,
+    "sha256": "38b2ea8eed4966dce9ed54fb5a0ceaf32fb992c333742c8e96013e424351ce37"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/index_dag_tasks_recall.txt",
+    "bytes": 1207113,
+    "sha256": "e03967a7ff48b850651b7167a48496695da53f1ab7dfd3ff5572814a343f408d"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/input_pins.json",
+    "bytes": 622,
+    "sha256": "c7a528a3f4c3b2fdfbd89f62d48d522282eff00455628ab9d5058cef7f026d39"
+  },
+  {
+    "path": ".omx/research/ddm_so1_20260912/source_pins.json",
+    "bytes": 9093,
+    "sha256": "e3485d6c4cb7eab4edfb103fd76796830a255b6094239dbc32f8b121d3e33b9d"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "schema": "ddm_so1_design_review.v1",
+  "scientific_rung_executed": false,
+  "paid_launches": 0,
+  "scorer_launches": 0,
+  "checks": {
+    "arithmetic": "PASS",
+    "source_api_ast": "PASS",
+    "command_sketch_syntax": "PASS",
+    "candidate_source_receipt_hashes": "PASS",
+    "no_pass7_reference_in_sketch": "PASS"
+  },
+  "mutable_source_drift": [],
+  "memo_sha256": "f482fe77c19d66a5034a838aa832d9cd037c66e0130fb424b6a81bfb1a8ca7d9",
+  "sketch_sha256": "236411a1459ed892d40de8b42f71a4273738665ffb246058720e448a3d49d30a",
+  "limitations": [
+    "No new coded payload or argmax cells measured",
+    "Scenario bands depend on coarse-rate and residual transfer assumptions",
+    "Sketch not runtime tested; governed launcher binding still belongs to queued successor"
+  ]
+}
