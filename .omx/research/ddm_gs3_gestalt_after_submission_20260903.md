@@ -1675,3 +1675,39 @@ break-even for a model reduction. The trainer's ideal-code surrogate predicted �
 swing with the sign included — the surrogate may not rank priors on the model-vs-tail axis. 5.89 bits/row is where λ = 1.0 puts
 the split on the current field, flat to about one σ across a 1.84 bit/row swing. Verdict scope FORMULATION (one λ, one budget,
 one source, one composition). Retained 0.3137 GiB, 19 payload rows, sha-verified; lane closed completed_do_not_fire.
+
+## Addendum 51 (2026-09-12, host ~04:40Z) — ren2: the renderer refit in place LOSES at every checkpoint; the field is the renderer's pre-image
+
+ren2 (Opus; commits 0215c504d, b6432e528) ran the refit ren1 specified: restored init (depth table, keep_percent 1, kept rows
+[11,13]/[34,119]/[30,189], scale rule + 5.96e-08 floor, archive re-bound), the shipped quantizer realized in the loop
+(`--weight-qat-q3q4` with its low-bit set corrected to the shipped table; `--fixed-zero-mask` because `--film-row-dropout`
+degenerates to a deterministic gain on a 190-of-192-pruned tensor), coded-field conditioning, a 0.5-LSB render-delta bound.
+Control PASSED on every leg: member byte-identical (29,862 B, 786950a5…), n600 d_seg 1.03386773e-4 (11 figures to ren1),
+d_pose 4.58684e-6. Price table, n600 exact through R:
+
+| checkpoint | LSB | member Δ | d_seg vs control | net cells | pairs improved / worse |
+|---|---:|---:|---:|---:|---|
+| step 25 (lr 2e-7) | 0.143 | +71 B | **+2.525 %** | −308 | 0 / 242 |
+| step 100 | 0.256 | +27 B | +4.239 % | −517 | 2 / 333 |
+| step 375 | 0.424 | +97 B | +6.969 % | −850 | 6 / 450 |
+| random ±1 dither at 0.143 | 0.143 | — | +2.624 % | −320 | 5 / 251 |
+
+Step-25 full price: seg +2.61e-4 S (13.1 bars), pose after re-solve +1.01e-4 (5.0 bars), member +4.7e-5 (2.4 bars): net
+**+4.09e-4 S, 20.5× the bar the wrong way**. Twenty steps at lr 2e-7 change zero realized values: there is no smaller nonzero
+rung. 1,500 gradient steps bought 12 cells over a coin flip (0.51 bars) while 430 were needed. The per-pair oracle selector is
+priced shut (75 B buys 0–6 cells). Pose: on a real refit delta the terminal re-solve removes 38.2× of the pose leg (1.0302×
+shipped at 131 int12 coords), matching ren1's synthetic noise arm at 3.5× the amplitude — ren1's capacity law holds; it was never
+the wall. Nothing staged; MAIN fires nothing.
+
+Closure and what outlives it. The refit-in-place family closes at formulation scope on this object: the coded field is an
+optimized PRE-IMAGE of renderer∘scorer (Addendum 50: the true partition renders 2.825× worse), so the renderer's realized
+grid is at a local optimum FOR THIS FIELD and the smallest expressible weight action moves 240–455 cells the wrong way. The
+remaining formulation is JOINT: a renderer step followed by the field's re-pre-distortion (sj1 multipass, which re-opens on
+re-rendered pairs), a much heavier object with no measured sign. Three corrections owed upward and recorded: the shipped
+semantic container is Brotli q10 / lgwin 16 + CK2, not fe1's pinned (ck2, 11, 24) — the pinned shape would cost +91 B (3.03
+bars), so fe1's recoverable-fee table was computed against the wrong shape; the coded field differs from DALI GT at 18,900
+sites (ren1's 9,179 was ft1-era); `--film-row-dropout` is degenerate on the pruned FiLM tensors.
+
+The day's counted-section refit ledger is now complete: prior field refit −887 B (move 47), prior even rounding −248 B
+(move 48), mixer +20 B, prior restored depths +37 B, renderer +4.09e-4 S. Every section is priced; the pointer's final position
+for the day is move 48. Demand at held distortion stays −24,604 B; the day paid 1,295 B of it.
