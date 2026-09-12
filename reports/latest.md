@@ -42,7 +42,7 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-09-12T23:48:46Z
+### Current best - last rechecked 2026-09-12T23:51:16Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
