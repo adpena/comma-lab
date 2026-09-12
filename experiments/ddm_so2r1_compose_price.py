@@ -295,7 +295,6 @@ def verify_checkpoint(checkpoint_path: Path, manifest: dict) -> dict:
 
 def pack(checkpoint_path: Path) -> dict:
     import torch
-    from runtime import ihs2
 
     from experiments import ddm_rx2_mc36_identity_race as rx2
 
@@ -306,6 +305,10 @@ def pack(checkpoint_path: Path) -> dict:
 
     runtime = runtime_copy()
     rx, renderer, _code_dir = jg2.load_runtime(runtime)
+    # ``runtime`` only becomes importable once load_runtime has put the runtime COPY on the
+    # path, so every import out of it belongs after this line, not in the function header.
+    from runtime import ihs2
+
     parts = rx.read_residual_archive(runtime / "archive.zip")
     member = jg2.split_member(jg2.read_archive_member(runtime / "archive.zip"))
     layout = ihs2.layout_from_runtime(renderer)
@@ -617,6 +620,7 @@ def decode(tag: str) -> dict:
     (work / "checkpoints").mkdir(parents=True, exist_ok=True)
     os.environ["TC1_RECEIVER_CHECKPOINT_DIR"] = str(work / "checkpoints")
     os.environ["TC1_RECEIVER_STOP_AFTER"] = str(N_PAIRS)
+    rx, renderer, code_dir = jg2.load_runtime(runtime)
     # "No known-symbol injection" is a CLAIM unless it is checked: assert the arithmetic decoder
     # this process will run is the runtime's own function and not one of this module's closures.
     from runtime.entropy.rc64 import NativeDecoder
@@ -624,7 +628,6 @@ def decode(tag: str) -> dict:
     if NativeDecoder.decode.__module__ != "runtime.entropy.rc64":
         raise ComposeError(
             f"the decoder is patched to {NativeDecoder.decode.__module__}; this is not an independent decode")
-    rx, renderer, code_dir = jg2.load_runtime(runtime)
     parts = rx.read_residual_archive(inner)
     if bytes(parts.hpac_blob) != Path(
             json.loads((ROOT / "pack/PACK.json").read_text())["candidate"]["artifacts"][
