@@ -1728,3 +1728,38 @@ from the real receipt by the fixed function and appended (never typed). Re-run: 
 `experiments` fallback-import hygiene (operator's receiver-change decision) and the hosted manifest (at publish). The packet sits on
 the day's final pointer; publish stays gated on the operator's one-line confirm. Genus: one name, two digest definitions — the
 r9m/pr14 class (m123), now n+1, cured by carrying both values under their own names.
+
+## Addendum 53 (2026-09-12, host ~07:00Z) — rq1: the realization is a conditional optimum of the joint problem in BOTH directions; the rate-first door closes at Stage A
+
+rq1 (Opus; commits f419b14cd, 49839e2d1; retained 2.6 MB) re-encoded the shipped float weights at the shipped realization and reproduced
+the member byte-for-byte (29,862 B, 786950a5…) with n600 d_seg equal to ren2's control to 17 figures; then priced eight realizations of the
+SAME weights at the FIXED field a92e7d90…:
+
+| variant | member Δ | net wrong cells | debt (S) | cells per byte |
+|---|---:|---:|---:|---:|
+| all 14 tensors → 3-bit | −7,999 B | +1,045,533 | +0.886 | 131 |
+| largest 8 → 3-bit | −7,541 B | +1,322,713 | +1.121 | 175 |
+| head + blocks.3 → 3-bit | −1,914 B | +221,994 | +0.188 | 116 |
+| coord_mix → 3-bit | −1,409 B | +977,246 | +0.828 | 694 |
+| token_embed → 3-bit | −16 B | +33,192 | +0.028 | 2,075 |
+| both 3-bit FiLM → 4-bit | +77 B | +1,189 | +0.0010 | — |
+| blocks.0.film → 4-bit | +22 B | +881 | +0.00075 | — |
+
+The exchange allows 0.7855 cells per byte; the cheapest coarsening is 148× underwater and the curve DEGRADES toward small rungs (the
+−16 B rung is the worst per byte). Deeper FiLM pruning is not expressible (keep_percent is at the format floor; the pruned family is
+24 B of codes); re-fitting the scales is a byte-identical no-op. Repair fractions read from the sj1/jg receipts: best single pass 40.39 %,
+best cumulative 45.8 %; required 99.3–99.96 %. Granting 100 % repair, the token-byte bill at the most favourable measured efficiency
+(1.308 cells/token, 5.25 bits/token) is 111,457 B to buy back 1,914 B (58× underwater) and 524,935 B for the −7,999 B rung. STOP fired;
+Stage B did not run. Two facts outlive the row: (i) ntb2's named prize (recover the +4.92e-5 S the 3-bit blocks.0.film choice "cost") is
+FALSIFIED — 3→4 bits costs +22 B AND +881 wrong cells (+7.47e-4 S; sign inverted, 15× off): moves 24–48 solved 600 planes against this
+exact realization, so the 3-bit rounding is inside the pre-image; (ii) Lane is 12.8–46× over-represented among damaged cells and the
+over-representation RISES as the rung shrinks — the Lane 40× law reproduced by a new actuator (grid change, not token change).
+
+Synthesis at this move. With ren2 (renderer moves at fixed field lose) and rq1 (realization moves in either direction lose, and the
+field cannot afford to re-absorb), the live object is a measured conditional optimum of the joint (renderer, field, prior, mixer,
+carrier) problem at the exchange rate 6.66e-7 S/B: every counted section sits on its knee, the container is minimal, the tail's best
+oracle is 8,365 B short, pose's family slack is 350 B-eq, and the accuracy half is closed by the round-trip intercept. Sub-0.12 is not
+reachable on this object by any measured door; the cross stands (a successor must inherit byte feasibility from a different
+construction while starting inside a reachable distortion regime). Remaining rungs on this object are tens to hundreds of bytes: rq1's
+§6 doors (pass 7 on a SUCCESSOR field only — the field has not changed since move 43; the counted-rider cure; the frame-0 selector
+splice). The day's pointer stays move 48; the packet sits on it at 91/93.
