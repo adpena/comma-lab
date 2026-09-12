@@ -1763,3 +1763,16 @@ reachable on this object by any measured door; the cross stands (a successor mus
 construction while starting inside a reachable distortion regime). Remaining rungs on this object are tens to hundreds of bytes: rq1's
 §6 doors (pass 7 on a SUCCESSOR field only — the field has not changed since move 43; the counted-rider cure; the frame-0 selector
 splice). The day's pointer stays move 48; the packet sits on it at 91/93.
+
+## Addendum 54 (2026-09-12, host ~13:20Z) — so1's successor-object design: the first $0 rung refuses at stage one
+
+so1 (codex astra xhigh; landed 72be96443) priced four successor constructions on paper and named one $0 rung: recode the exact move-48
+field as a coarse stencil plane + residual with the real coder race, exact n600 reconstruction, falsifier "packet > 94,292 B" (the cap
+154,507 B minus the 60,215 B of renderer + carrier + prior + container). MAIN fired the script verbatim from the memo
+(`/Volumes/VertigoDataTier/pact/ddm_so1_first_rung/so1_first_rung.py`, sha eb862eb7…). Result (`/Volumes/VertigoDataTier/pact/ddm_so1_first_rung/RESULT.json`, sha 09419bb9ed0a72b2…): disposition
+INSTANCE_REFUSED_COARSE_BYTES_ALONE — the COARSE plane alone codes to **169,100 B** under the coder race, 1.79× the gate and 1.42× the
+incumbent's whole fine-field stream (118,896 B); the fine stages did not run. The design's byte estimate (112–151 KB for the complete
+packet) was off by more than 1.8× at the first measurable stage. The lesson is the paper-vs-bytes genus: a generic coder race on a coarse
+label plane does not approach a learned context model on the fine plane; the incumbent HPAC prior IS that model, and any two-layer
+lossless recode must beat it on the same information. Verdict scope: FORMULATION (one stencil, the generic coder race). The cross
+stands unchanged; sub-0.12 still needs a construction nobody has measured feasible.
