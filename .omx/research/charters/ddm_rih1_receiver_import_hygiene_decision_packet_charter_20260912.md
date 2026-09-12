@@ -1,8 +1,7 @@
 # ddm_rih1 — the PR #140 receiver import-hygiene item: a decision packet for the operator ($0; charter, MAIN 2026-09-12; codex sol medium)
 
 ## Why
-The PR #140 swap packet is staged on move 48 at 91/93 (`submissions/_staging_move48_pr140_swap/`, swp5 memo
-`.omx/research/ddm_swp5_restage_pr140_swap_on_move48_20260912.md`, `_packet/COMPLIANCE_after_row.json`). One of the two open items is
+The PR #140 swap packet (owning memo: `.omx/research/ddm_swp5_restage_pr140_swap_on_move48_20260912.md`) is staged on move 48 at 91/93 (`submissions/_staging_move48_pr140_swap/`, `_packet/COMPLIANCE_after_row.json`). One of the two open items is
 `submission_runtime_imports_within_allowlist` — the shipped receiver carries fallback imports the strict allowlist refuses. Whether to
 clean them is the operator's receiver-change decision; this arm makes that decision a one-liner by pricing it exactly.
 
@@ -19,6 +18,9 @@ clean them is the operator's receiver-change decision; this arm makes that decis
 3. Write `.omx/research/ddm_rih1_receiver_import_hygiene_decision_packet_20260912.md`: the import table, the minimal diff (verbatim), the
    digest/timing verdicts, the cost of each option (publish as-is with the item open; clean + inherit; clean + first-measurement fire), and
    ONE recommended line for the operator. `# FORMALIZATION_PENDING:<rationale>`.
+
+## OPTIMAL FORM
+`# OPTIMAL_FORM_NA: audit/decision packet over an existing shipped receiver and an existing compliance receipt; nothing is built, raced, or trained; the reference form is the shipped receiver itself and swp5's compliance run, both pinned by sha in the memo.`
 
 ## Process (codex arm rules)
 Serializer commits only with post-edit shas; `REVIEW_GATE_OVERRIDE=1` for the .md; NO co-author trailer, NO AI attribution anywhere. A
