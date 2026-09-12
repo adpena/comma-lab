@@ -1,0 +1,110 @@
+{
+  "schema": "candidate_decode_wall_clock.v2",
+  "mode": "t4_direct",
+  "score_claim": false,
+  "candidate_t4_receipt": {
+    "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/run1/MODAL_REMOTE_RESULT.json",
+    "sha256": "9bd402caccc1648c3de44fe59b0364b0ddac0decf51fe2bf2163361685220328"
+  },
+  "runtime_dir": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime",
+  "archive_path": "/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime/archive.zip",
+  "archive_sha256": "d830edd371641e1968765ae6be27120a6c55a9b1ca4b3747158e603a43ef149c",
+  "receiver_sha256": "9c0699015d36e3c8b90738d27152fc7adf9ac61297dd1801059245a464b49bdf",
+  "t4_runtime_sha256": "a8bc13af6d8573dc292bbcd22b125ecb252c4d66ff6d15630f95b4c528487426",
+  "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+  "t4_seconds_field": [
+    "artifacts",
+    "contest_auth_eval.json",
+    "inflate_elapsed_seconds"
+  ],
+  "t4_archive_sha256_field": [
+    "expected_archive_sha256"
+  ],
+  "t4_runtime_sha256_field": [
+    "expected_runtime_tree_sha256"
+  ],
+  "t4_hardware_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_device_name"
+  ],
+  "t4_cuda_available_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_available"
+  ],
+  "t4_timing_scope": "cold_public_entrypoint_decode",
+  "measured_t4_decode_seconds": 1023.2616024870001,
+  "projected_t4_decode_seconds": 1023.2616024870001,
+  "limit_seconds": 1260.0,
+  "first_measurement_runtime_custody": {
+    "schema": "first_measurement_runtime_custody.v1",
+    "content_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_content_tree_sha256",
+    "path_tree_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest.runtime_tree_sha256",
+    "files_digest_definition": "experiments.contest_auth_eval._runtime_dependency_manifest.runtime_files_sha256",
+    "expected_runtime_content_tree_sha256": "0ff50f286730087ba0e6521a9fbc8b995f1c44932f2a695c559dbb6e22832c97",
+    "worker_runtime_content_tree_sha256": "0ff50f286730087ba0e6521a9fbc8b995f1c44932f2a695c559dbb6e22832c97",
+    "runtime_files_sha256": "deecb092a660c72a034e530a283fea97d7047aea2fc396eae1860df6dae61959",
+    "runtime_file_count": 48,
+    "normal_projected_runtime_tree_sha256": "a8bc13af6d8573dc292bbcd22b125ecb252c4d66ff6d15630f95b4c528487426",
+    "retained_runtime_root": "/__modal/volumes/vo-zoj1rbuhqjsksSFDAg2dtr/first_measurements/06853de1c880e6fbef59a46524e58797d6a5ff49b9453d0c137c59dfbfb92794/out/submission_dir",
+    "retained_runtime_tree_sha256": "61d618bac5ed0a36f8759c21f5f8a65c10848fe04f60d38ae11912dbb61b3029",
+    "sources": {
+      "context": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/run1/FIRST_MEASUREMENT_CONTEXT.json",
+          "bytes": 5009,
+          "sha256": "8c5fd8fe06e829505d6ce52a9392a97be1bad23d3901d5d579bb7e20c83ac480"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "request": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/run1/modal_cuda_auth_eval_local_request.json",
+          "bytes": 7291,
+          "sha256": "ec35f32b04127c87628e6aa1b56d1c64f339285463bd9c6737e533f3e2e3390b"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "result": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/run1/MODAL_REMOTE_RESULT.json",
+          "bytes": 242361,
+          "sha256": "9bd402caccc1648c3de44fe59b0364b0ddac0decf51fe2bf2163361685220328"
+        },
+        "field_path": [
+          "expected_runtime_content_tree_sha256"
+        ]
+      },
+      "argv": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/run1/modal_cuda_auth_eval_local_request.json",
+          "bytes": 7291,
+          "sha256": "ec35f32b04127c87628e6aa1b56d1c64f339285463bd9c6737e533f3e2e3390b"
+        },
+        "field_path": [
+          "exact_argv"
+        ],
+        "flag": "--expected-runtime-content-tree-sha256"
+      },
+      "provenance": {
+        "file": {
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hpr1_first_measurement/run1/MODAL_REMOTE_RESULT.json",
+          "bytes": 242361,
+          "sha256": "9bd402caccc1648c3de44fe59b0364b0ddac0decf51fe2bf2163361685220328"
+        },
+        "field_path": [
+          "artifacts",
+          "provenance.json"
+        ],
+        "manifest_field_path": [
+          "inflate_runtime_manifest"
+        ]
+      }
+    }
+  }
+}
