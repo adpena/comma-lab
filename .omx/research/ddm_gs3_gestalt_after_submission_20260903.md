@@ -1896,3 +1896,21 @@ trained prior's cross-entropy vs real price +0.43 B (the surrogate was honest; t
 in-place lifting with no packing costs 3.14× F; SO2's quadrant packing recovers 20 % (2.50×); the 99.2 %-zero detail quadrants are WORSE per
 symbol (2.57×) than the anchors (1.83×) — modulo-five differencing trades a smooth, predictable class contour for scattered context-free
 nonzeros. No layout refinement rescues the family. Retained 1.43 GiB on APDataStore, sha'd on the destination; lane closed completed_fail_verdict.
+
+## Addendum 61 (2026-09-13, host ~14:20Z) — MOVE 50: the pose-directed field axis pays; the floor law does not generalize
+
+pd1 (Opus; commits 9e54d17b8/377bda890/fa09daecc; memo `ddm_pd1_pose_directed_token_predistortion_all_pairs_20260913.md`) ran the
+carrier-re-solve credit as the objective over all 600 pairs: 730 pose-saliency-ranked single-token proposals screened (render + frozen
+argmax), the ≤2-cell survivors refined (3 per pair; re-render + per-pair carrier re-solve with frame-0 repair inside). 41 pairs carried a
+credit — median −21.6 % of the pair's own d_pose, best −96 %; 26 of 41 at zero or negative seg cost. pp1's floor law (0.25–0.45 % on
+the 12 hard pairs) does NOT generalize off them. The three-leg Lagrange admission on the RESOLVED pose kept 20 pairs: pose −7.06e-5,
+seg +6.8e-6 (+8 cells), rate +2.66e-5 (+42 B exact; the modelled ledger was 1.9× optimistic at 16.98 bits/token) ⇒ net −4.06e-5. Exact
+T4 row (call fc-01M2BYVCXGYTFC2BN8WZSF5PAS; commit 87f4670e8): **S 0.13628342713679067 @ 179,195 B**, d_seg 0.00010294, d_pose 4.45e-6;
+Δ −3.957e-5 (gap +1.0e-6 = the T4 pose-print class). Realized fraction of the sum 0.9999 on pose; the 559 unedited pairs bit-identical.
+
+Corrections to the day's synthesis (Addendum 59 said "every axis closed"): one axis was NOT closed — the FIELD as a POSE actuator. The
+pose credit had moved the pointer twice as a side effect (moves 42, 49) and pp1 had tested the objective only where it is a floor. The
+law that outlives the row: on a pre-image object, a per-pair render change is payable on pose (fe1) and the field is the only actuator
+that can supply it per pair; the credit lives on ordinary pairs, not the hard ones. Timing fact at the mint: this T4 decode took 1,375.8 s
+(> 1,260 s t4_direct limit; receiver byte-identical to moves 46–49 at 1,023–1,141 s) — T4 variance; successors take the first-measurement
+chain under the identity-class envelope. Day's take: moves 45–50, −9.6e-4 S. Demand −24,494 B. Next: pd2 (more refines per pair).
