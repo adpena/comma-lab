@@ -24,9 +24,15 @@
    correct number under a wrong label.
 
 3. ``warm_start_init_dropped_the_quantization_state_v1`` (MEASURED by MAIN 2026-09-12; the price
-   row is ddm_dpi1's and is PENDING).
+   row is ddm_dpi1's and is PENDING).  **CORRECTED 2026-09-12 by ddm_dpi1's own measurement, which
+   landed after this module was first written -- see the second falsification: the count is NINE
+   tensors, not ten, and the charter's named SOURCE is falsified.  init.pt was never cut from
+   epoch_0634; its own metadata says ``source == "move45 shipped hpac member"``, and epoch_0634's
+   depths deploy at 4.2186 bits, missing the shipped 4.1160541586073505 by 0.1026.  The state that
+   restores exactly is cl2's lambda=1.0 TERMINAL EMA checkpoint.  The DEFECT is unchanged -- the
+   init carries zero depth keys and every refit relearns from 8 bits -- only its lineage is.**
    The reference refit law warm-starts from an EMA init that carries **zero** ``*.bit_depth``
-   keys, while the source checkpoint it was cut from carries ten.  The trainer registers every
+   keys, while the checkpoint lineage behind it carries nine.  The trainer registers every
    row at ``init_bits = 8.0``, calls ``load_state_dict(strict=False)`` and explicitly tolerates
    the missing keys -- so every refit under this law starts its per-row depths at 8 bits and has
    30 QAT epochs to descend.  The consequence was MEASURED by hpr1 without the cause being named:
@@ -68,6 +74,7 @@ _UTC = "2026-09-12T00:00:00Z"
 _RESERVE_MEMO = ".omx/research/ddm_sr5_reserve_derivation_20260911.md"
 _SR5_LEDGER = ".omx/research/ddm_sr5_certified_rebuildable_deletion_20260911.md"
 _DPI1_CHARTER = ".omx/research/ddm_dpi1_hpac_depth_state_restored_warm_start_charter_20260912.md"
+_DPI1_MEMO = ".omx/research/ddm_dpi1_hpac_depth_state_restored_warm_start_20260912.md"
 _HPR1_SHAPE = ".omx/research/ddm_hpr1_hpac_receptive_field_shape_rung_20260911.md"
 _TIERS = "src/comma_lab/storage_tiers.py"
 _LAUNCHER = "tools/launch_detached_process.py"
@@ -95,7 +102,7 @@ GIB_PER_GB = 2**30 / 10**9
 
 # MEASURED (warm start): the dropped state and its packed price.
 INIT_BIT_DEPTH_KEYS = 0
-SOURCE_BIT_DEPTH_TENSORS = 10
+SOURCE_BIT_DEPTH_TENSORS = 9  # CORRECTED from the charter's 10 by dpi1's zip-scan
 INIT_BITS_DEFAULT = 8.0
 SHIPPED_MEAN_ROW_DEPTH_BITS = 4.116
 RETRAINED_MEAN_ROW_DEPTH_BITS = (5.888, 5.890)
@@ -104,6 +111,15 @@ HPAC_BYTES_RETRAINED = 12_262
 HPAC_BYTES_RETRAINED_AFTER_EVEN_ROUNDING = 11_629
 PACKED_PRICE_OF_INFLATION_BYTES = HPAC_BYTES_RETRAINED - HPAC_BYTES_SHIPPED
 INIT_SHA_PREFIX = "cf411127"
+INIT_SOURCE_FIELD = "move45 shipped hpac member"  # MEASURED by dpi1 from init.pt's own metadata
+DEPTH_MODULES = (
+    "conv_a", "conv_b1", "conv_b2", "conv_past", "frame_scale", "frame_shift",
+    "head", "spm_dw", "spm_pw",
+)
+PACKED_BODY_ROWS = 517
+EPOCH_0634_DEPLOYED_MEAN_BITS = 4.2186
+CL2_TERMINAL_DEPLOYED_MEAN_BITS = 4.1160541586073505
+TRUE_DEPTH_SOURCE = "cl2 rungs/lambda_1p0/retained/terminal_checkpoint.pt['state_dict']"
 SOURCE_CKPT_SHA_PREFIX = "5007beae"
 
 
@@ -367,6 +383,76 @@ def build_display_unit_label_read_as_the_true_unit_v1() -> AntiPattern:
     )
 
 
+def _dpi1_lineage_correction(anti_pattern_id: str, provenance: Provenance) -> EmpiricalFalsification:
+    """ddm_dpi1's own measurement, correcting two facts this anti-pattern first carried.
+
+    It landed AFTER the registration and is recorded here rather than silently patched, because a
+    canonical row that quietly changes its numbers is worse than one that shows the correction.
+    The DEFECT is unchanged; its LINEAGE is.
+    """
+    return EmpiricalFalsification(
+        anti_pattern_id=anti_pattern_id,
+        falsification_id="dpi1_depth_source_and_tensor_count_corrected_20260912",
+        measurement_method=(
+            "zip-scan every candidate checkpoint for *.bit_depth keys, read init.pt's own `source` "
+            "metadata field, and DEPLOY each candidate's depths to compare the resulting mean row "
+            "depth against move 45's shipped IHS1 body read through the receiver"
+        ),
+        empirical_artifact_path=_DPI1_MEMO,
+        empirical_output={
+            "correction_1_tensor_count": {
+                "charter_said": 10,
+                "measured": SOURCE_BIT_DEPTH_TENSORS,
+                "the_nine": list(DEPTH_MODULES),
+                "why_there_is_no_tenth": (
+                    "frame_embed is a plain embedding and not a COMPRESSIBLE_TYPE"
+                ),
+                "cross_check": (
+                    f"{SOURCE_BIT_DEPTH_TENSORS} x (8 x 64 + 5) = {PACKED_BODY_ROWS} rows, exactly "
+                    "the packed body's row count"
+                ),
+            },
+            "correction_2_source_falsified": {
+                "charter_said": (
+                    "the state was dropped when the EMA init was cut from epoch_0634"
+                ),
+                "measured": f"init.pt['source'] == '{INIT_SOURCE_FIELD}' -- it was never cut from "
+                "epoch_0634, it was reconstructed by unpacking move 45's shipped hpac member",
+                "deployed_mean_row_depth_bits": {
+                    "epoch_0634_ema_shadow": EPOCH_0634_DEPLOYED_MEAN_BITS,
+                    "epoch_0634_live_state": 4.2650,
+                    "cl2_lambda_1p0_terminal": CL2_TERMINAL_DEPLOYED_MEAN_BITS,
+                    "move45_shipped_body": CL2_TERMINAL_DEPLOYED_MEAN_BITS,
+                },
+                "the_charters_own_acceptance_test_settles_it": (
+                    "'prove the depths you loaded reproduce the shipped mean row depth (~4.116 "
+                    "bits)' is met EXACTLY by cl2's lambda=1.0 terminal EMA state and missed by "
+                    "0.1026 bits by the source the charter names"
+                ),
+            },
+            "what_is_unchanged": (
+                "the DEFECT: init.pt carries ZERO bit_depth keys, the trainer defaults every row "
+                "to 8.0 bits and tolerates the missing keys, and every refit relearns depths from "
+                "there. The measured consequence (5.888-5.890 against 4.116) and the +351 B packed "
+                "price stand"
+            ),
+            "the_price_of_the_cure_is_still_pending": True,
+        },
+        # DERIVED: how far the charter's named source sits from the shipped multiset, in bits.
+        falsification_residual=(
+            EPOCH_0634_DEPLOYED_MEAN_BITS - CL2_TERMINAL_DEPLOYED_MEAN_BITS
+        ),
+        captured_at_utc=_UTC,
+        canonical_provenance=provenance,
+        incident_classification=INCIDENT_IMPLEMENTATION_LEVEL_CONFIRMATION,
+        severity_observed=SEVERITY_OBSERVED_MEDIUM,
+        operator_routable_unwind_path=(
+            "select the restoring checkpoint by the ACCEPTANCE TEST (it must reproduce the shipped "
+            "mean row depth), never by the lineage a charter asserts"
+        ),
+    )
+
+
 def build_warm_start_init_dropped_the_quantization_state_v1() -> AntiPattern:
     """A warm-start checkpoint that silently lost the state every refit then relearns from 8 bits."""
     anti_pattern_id = "warm_start_init_dropped_the_quantization_state_v1"
@@ -397,9 +483,19 @@ def build_warm_start_init_dropped_the_quantization_state_v1() -> AntiPattern:
                 "sha_prefix": INIT_SHA_PREFIX,
                 "bit_depth_keys": INIT_BIT_DEPTH_KEYS,
             },
-            "source_checkpoint_it_was_cut_from": {
+            "checkpoint_lineage_behind_it": {
                 "sha_prefix": SOURCE_CKPT_SHA_PREFIX,
                 "bit_depth_tensors": SOURCE_BIT_DEPTH_TENSORS,
+                "corrected_by_dpi1": (
+                    "the charter said TEN; dpi1's zip-scan measured NINE, and named them: "
+                    f"{', '.join(DEPTH_MODULES)}. There is no tenth -- frame_embed is a plain "
+                    "embedding and not a COMPRESSIBLE_TYPE. Nine x (8 x 64 + 5) = "
+                    f"{PACKED_BODY_ROWS} rows, exactly the packed body's row count"
+                ),
+                "and_it_is_not_the_right_source": (
+                    "init.pt was never cut from it: init.pt['source'] == "
+                    f"'{INIT_SOURCE_FIELD}'. See the second falsification"
+                ),
             },
             "trainer_behaviour": (
                 "registers every row's bit depth at init_bits = 8.0, then load_state_dict("
@@ -478,19 +574,25 @@ def build_warm_start_init_dropped_the_quantization_state_v1() -> AntiPattern:
         ),
         canonical_source_anchor=f"{_DPI1_CHARTER} -- 'The measured defect this rung cures'",
         canonical_unwind_path=(
-            "Build an OWNED initializer: the EMA state plus the state keys the law's source "
-            "checkpoint carries, with the same keys and shapes, asserting that every compressible "
-            "row has one. Prove it at epoch 0 by the trainer's own histogram -- the loaded depths "
-            "must reproduce the shipped section's mean row depth before a single epoch runs -- "
-            "and record both source hashes and the new file's. Then change NOTHING else, so the "
-            "price of the restoration is measured alone."
+            "Build an OWNED initializer: the EMA state plus the missing state keys, with the same "
+            "keys and shapes, asserting that every compressible row has one. Take those keys from "
+            "the checkpoint the ACCEPTANCE TEST selects, never from the one a charter names: here "
+            f"{TRUE_DEPTH_SOURCE} deploys at {CL2_TERMINAL_DEPLOYED_MEAN_BITS} bits and reproduces "
+            f"the shipped multiset exactly, while epoch_0634 deploys at "
+            f"{EPOCH_0634_DEPLOYED_MEAN_BITS} and misses it by 0.1026. Prove it at epoch 0 by the "
+            "trainer's own histogram before a single epoch runs, and record both source hashes and "
+            "the new file's. Then change NOTHING else, so the price of the restoration is measured "
+            "alone."
         ),
-        canonical_producers=("tools/train_ddm_cl1_hpac_capacity.py",),
-        canonical_consumers=(_DPI1_CHARTER, _HPR1_SHAPE),
+        canonical_producers=(
+            "tools/train_ddm_cl1_hpac_capacity.py",
+            "experiments/ddm_dpi1_build_init_depths.py",
+        ),
+        canonical_consumers=(_DPI1_CHARTER, _DPI1_MEMO, _HPR1_SHAPE),
         paradigm_class=PARADIGM_DATA_SOURCE,
         severity=SEVERITY_HIGH,
         provenance=provenance,
-        empirical_falsifications=(incident,),
+        empirical_falsifications=(incident, _dpi1_lineage_correction(anti_pattern_id, provenance)),
         last_recalibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_FALSIFICATIONS,
     )

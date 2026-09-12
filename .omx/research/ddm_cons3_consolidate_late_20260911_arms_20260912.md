@@ -264,3 +264,36 @@ means appending a corrected lifecycle for someone else's task; the dangling-tran
   simultaneous cold decodes would need ~42 GiB and would *vindicate* 40. Somebody should measure that
   distribution before any value moves.
 * **Nothing here moved the exact score.** The pointer sits where MAIN left it, at move 48.
+
+---
+
+## 9. Postscript, same session: ddm_dpi1 corrected two of my numbers, and the correction is appended not patched
+
+Minutes after `75668dfae` landed, the LIVE `ddm_dpi1` committed its own memo and **falsified two facts my
+warm-start anti-pattern had taken from MAIN's charter**:
+
+* **NINE `bit_depth` tensors, not ten.** dpi1's zip-scan names them — `conv_a`, `conv_b1`, `conv_b2`,
+  `conv_past`, `frame_scale`, `frame_shift`, `head`, `spm_dw`, `spm_pw` — and there is no tenth, because
+  `frame_embed` is a plain embedding and not a `COMPRESSIBLE_TYPE`. The cross-check is exact:
+  `9 × (8 × 64 + 5) = 517` rows, which is the packed body's row count.
+* **The charter's SOURCE is falsified.** `init.pt` was never cut from `epoch_0634`: its own metadata says
+  `source == "move45 shipped hpac member"`. And `epoch_0634`'s depths **do not restore the shipped state** —
+  they deploy at **4.2186** bits against the shipped **4.1160541586073505**, missing by 0.1026. The state that
+  reproduces the shipped multiset exactly is **cl2's λ=1.0 terminal EMA checkpoint**, which is what the
+  charter's *own acceptance test* selects. The two halves of the charter disagreed and the measurement settled
+  it.
+
+**The defect is unchanged**: `init.pt` carries zero depth keys, the trainer defaults every row to 8.0 bits and
+tolerates the missing ones, every refit relearns from there, and the measured consequence (5.888–5.890 against
+4.116, +351 B packed) stands. Only the **lineage** moved.
+
+I appended a second falsification (`dpi1_depth_source_and_tensor_count_corrected_20260912`) and re-registered
+the row rather than quietly editing the numbers, because a canonical row that silently changes what it says is
+worse than one that shows its correction. The unwind path now reads: **select the restoring checkpoint by the
+acceptance test, never by the lineage a charter asserts.** The cure's price is still dpi1's and still PENDING.
+
+This is also the honest shape of the registration I made: I registered a defect from a charter's receipts while
+the arm measuring it was still running, and within the hour the arm found two of those receipts wrong. That was
+the right trade — the defect is real and the anti-pattern is what stops it recurring — but it is worth saying
+plainly that a charter's receipts are not the arm's measurement, and a registration built on them inherits
+whatever the charter got wrong.
