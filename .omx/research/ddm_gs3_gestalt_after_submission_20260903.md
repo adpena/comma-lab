@@ -1609,3 +1609,26 @@ was reverted hash-verified; no reserve was lowered.
 
 Remaining refit rungs in priority by fitted capacity: ren1's renderer (provenance + gated QAT refit, live), then
 hpr1's temporal tap sets against the RETRAINED control. Demand −24,604 B; the day's take stays 1,295 B.
+
+## Addendum 49 (2026-09-12, host ~02:55Z) — dpi1: the restored bit-depth state LOSES +37 B; the prior sits on its joint knee
+
+MAIN measured a silent defect in the HPAC refit law: the warm-start file carries no bit-depth state (0 keys; the source
+carries 9 over 517 rows), the trainer tolerates the omission, and every refit re-learned depths from 8 bits in 30 QAT
+epochs (5.89 bits vs the shipped 4.116). dpi1 corrected the lineage (init.pt was cut from cl2's λ=1.0 terminal EMA, not
+epoch 634; the restored initializer reproduces the shipped depths exactly and packs to move 45's body byte-identically)
+and ran the law with only that delta. control48 PASSED at Δ 0 (179,111 B, sha d830edd3…). The candidate, real coder,
+600 frames, twins agreeing, output-lossless (receipt `/Volumes/VertigoDataTier/pact/ddm_dpi1/price/retrain_depths_frame_even/PRICE.json` sha 121881d1a4ad97cf…):
+
+| leg | candidate | move 48 | Δ |
+|---|---:|---:|---:|
+| hpac member | 11,229 B (mean depth 4.052 bits) | 11,629 B (5.890) | **−400 B** |
+| RLC1 token stream | 119,333 B | 118,896 B | **+437 B** |
+| archive | **179,148 B** (sha a4dab237…) | 179,111 B | **+37 B — LOSES; fire bar −30.04 B** |
+
+What outlives the row. The model bytes the depths gave back were paid out again in the token stream at 1:1. Under the
+law's λ the prior already sits on its joint model-vs-tail knee; restoring a dropped state moves the solution ALONG the
+curve, not off it, and the trainer's own terminal estimate said so at epoch 42 (joint within 16 B of the control). The
+defect is real and stays registered (cons3's anti-pattern); its cure is not a rate rung at this law. The refit law is now
+n=3 with one positive (hpr1 −887 B) and two negatives (tmx1 +20 B, dpi1 +37 B): after the field refit, the counted
+sections of this object have no further refit rung that nets at the current λ. Remaining on the HPAC prior: nothing
+at this law; a λ change is a capacity question cl2 closed (+0.446 secant). Renderer refit (ren1) is the last section.
