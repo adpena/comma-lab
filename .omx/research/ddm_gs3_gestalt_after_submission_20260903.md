@@ -1667,3 +1667,11 @@ checkpoint). Half 2 did not fire: the trainer has no pose term (MAIN's call), th
 n600 arms took 16.5 ks. MAIN's decision: seg objective with pose MEASURED after re-solve at every priced checkpoint and a hard
 0.5-LSB bound — ren2 chartered (22173671f) and live. With tmx1 and dpi1 closed, the renderer is the last counted section with a
 refit rung that is not yet priced.
+
+### Addendum 49, appended from dpi1's final handback (memo commit a6f70a802)
+Margins: +37 B is 67.04 B the wrong side of the −30.04 B bar = 1.93 σ of the 34.8 B lottery; the loss alone is 1.06 σ (sign not
+over-read); the legs are 11.5 σ (model) and 12.6 σ (tail) and carry the finding. Secant Δtail/Δmodel = −1.0925 against the −1
+break-even for a model reduction. The trainer's ideal-code surrogate predicted −772 B and the price delivered +37 B: an 809 B
+swing with the sign included — the surrogate may not rank priors on the model-vs-tail axis. 5.89 bits/row is where λ = 1.0 puts
+the split on the current field, flat to about one σ across a 1.84 bit/row swing. Verdict scope FORMULATION (one λ, one budget,
+one source, one composition). Retained 0.3137 GiB, 19 payload rows, sha-verified; lane closed completed_do_not_fire.
