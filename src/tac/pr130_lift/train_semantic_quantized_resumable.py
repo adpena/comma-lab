@@ -109,6 +109,63 @@ def _load_lifted_qat() -> ModuleType:
     return module
 
 
+def _deployed_q3_names_from_init(
+    init_checkpoint: Mapping[str, Any], *, high_bits: int
+) -> tuple[tuple[str, ...] | None, dict[str, Any]]:
+    """Derive F2's low-bit tensor set from a DEPLOYED depth table carried by the init.
+
+    ``ddm_ren2`` restores the shipped renderer's per-tensor depth table by reading the
+    archive member's own packed bytes and stores it at
+    ``init["deployed_representation"]["bit_allocation"]``.  When that block is present
+    the mixed-QAT grid becomes an INPUT bound to the same object the weights came from,
+    instead of a module-level constant that can silently disagree with the receiver.
+
+    Returns ``(None, provenance)`` for a legacy init, which keeps the historical
+    default (``SELECTED_MIXED_Q3_NAMES``) and therefore keeps such runs byte-identical.
+    """
+
+    representation = init_checkpoint.get("deployed_representation")
+    if representation is None:
+        return None, {
+            "source": "absent",
+            "reason": "init carries no deployed_representation; F2 keeps its default set",
+        }
+    if not isinstance(representation, Mapping):
+        raise ValueError("init deployed_representation must be a mapping")
+    allocation = representation.get("bit_allocation")
+    if not isinstance(allocation, Mapping) or not allocation:
+        raise ValueError("init deployed_representation requires a non-empty bit_allocation")
+    depths = {str(name): int(bits) for name, bits in allocation.items()}
+    observed = sorted(set(depths.values()))
+    low_bits = int(representation.get("low_bits", 3))
+    declared_high = int(representation.get("high_bits", high_bits))
+    if declared_high != int(high_bits):
+        raise ValueError(
+            f"init deployed_representation high_bits {declared_high} != --bits {high_bits}"
+        )
+    unexpected = [bits for bits in observed if bits not in (low_bits, declared_high)]
+    if unexpected:
+        raise ValueError(
+            f"init depth table carries depths {unexpected} outside "
+            f"{{{low_bits}, {declared_high}}}; F2 expresses exactly two depths"
+        )
+    if low_bits != 3:
+        raise ValueError("F2's low depth is pinned at 3 bits by the deployed packer")
+    names = tuple(sorted(name for name, bits in depths.items() if bits == low_bits))
+    if not names:
+        raise ValueError(
+            "init depth table selects no low-bit tensor; a uniform table must not be "
+            "presented as a mixed one"
+        )
+    return names, {
+        "source": "init.deployed_representation.bit_allocation",
+        "low_bits": low_bits,
+        "high_bits": declared_high,
+        "q3_names": list(names),
+        "table_tensors": len(depths),
+    }
+
+
 def resolve_ema_policy(
     updates_per_run: int | None,
     *,
@@ -1038,6 +1095,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     for parameter in segnet.parameters():
         parameter.requires_grad_(False)
 
+    # ddm_ren2: when the init carries the DEPLOYED depth table (read out of the shipped
+    # archive's own packed bytes, never inferred from a flag), F2 trains through THAT
+    # grid instead of the mp2 default set.  A warm start whose depth table disagrees
+    # with the receiver's is the measured realized-vs-trained divergence that made
+    # ddm_ft1 refit a different object; see editability_levers.weight_qat_q3_names.
+    deployed_q3_names, deployed_depth_provenance = _deployed_q3_names_from_init(
+        init_checkpoint, high_bits=args.bits
+    )
     lever_config = EditabilityLeverConfig(
         weight_perturb_robustness=args.weight_perturb_robustness,
         weight_perturb_shape=args.weight_perturb_shape,
@@ -1045,6 +1110,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         weight_qat_q3q4=args.weight_qat_q3q4,
         weight_qat_low_bits=3,
         weight_qat_high_bits=args.bits,
+        weight_qat_q3_names=deployed_q3_names,
         film_row_dropout=args.film_row_dropout,
         film_row_dropout_protect_top=args.film_row_dropout_protect_top,
         carrier_rank_penalty=args.carrier_rank_penalty,
@@ -1514,6 +1580,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         },
         "history": history,
         "checkpoints_written": checkpoints_written,
+        # "off is a tracked, reasoned, surfaced state": the per-lever ledger plus the
+        # measured fire count, so a lever that is configured on but never actually
+        # perturbs the model is detectable in the receipt rather than silent.
+        "editability_levers": {
+            **lever_config.activation_ledger(),
+            "steps_applied": levers.steps_applied,
+            "deployed_depth_table_provenance": deployed_depth_provenance,
+        },
     }
     # ddm_av3 F2, ALWAYS KEEP THE PAYLOAD: the result JSON is the CHEAP,
     # IRREPLACEABLE artifact (final_seg, parity, packed bytes, the full history);

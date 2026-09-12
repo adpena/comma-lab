@@ -216,6 +216,23 @@ class EditabilityLeverConfig:
     weight_qat_low_bits: int = 3
     weight_qat_high_bits: int = 4
 
+    weight_qat_q3_names: tuple[str, ...] | None = None
+    """Tensors that take :attr:`weight_qat_low_bits`.  ``None`` keeps the historical
+    default :data:`SELECTED_MIXED_Q3_NAMES`, so every pre-existing config is
+    byte-identical.
+
+    WHY THIS EXISTS (ddm_ren2, MEASURED 2026-09-12).  :data:`SELECTED_MIXED_Q3_NAMES`
+    mirrors ``sm3.SELECTED_MIXED_Q3_NAMES`` -- the q3 set of the mp2 MODE_ROW_PRUNE
+    candidate family.  The object that actually SHIPS at move 48 is packed by
+    ``pack_prune_mixed_candidate`` and its depth table, read out of the archive's own
+    bytes, is ``{frame_embed.weight: 3, blocks.0.film.weight: 3, the other 14: 4}`` --
+    i.e. ``sm3.PRUNE_MIXED_Q3_NAMES``, a DIFFERENT set.  Training through the default
+    set therefore trains ``blocks.0.film.weight`` at 4 bits while the receiver realizes
+    it at 3, and trains ``blocks.{1,2,3}.film.weight`` at 3 bits while the receiver
+    realizes them at 4: the realized-vs-trained divergence this lever exists to close,
+    relocated rather than removed.  A flag and a constant can disagree silently
+    (``rp1`` r2), so the depth set is now an INPUT, sourced from the packed bytes."""
+
     # --- F3: FiLM structured row dropout -----------------------------------
     film_row_dropout: float = 0.0
     """Probability of dropping a whole FiLM output row per step (inverted
@@ -255,6 +272,26 @@ class EditabilityLeverConfig:
         for bits in (self.weight_qat_low_bits, self.weight_qat_high_bits):
             if not 2 <= bits <= 8:
                 raise LeverError("weight QAT bit depths must be in [2, 8]")
+        if self.weight_qat_q3_names is not None:
+            names = self.weight_qat_q3_names
+            if not isinstance(names, tuple):
+                raise LeverError("weight_qat_q3_names must be a tuple or None")
+            if not names:
+                raise LeverError(
+                    "weight_qat_q3_names must be None (use the default set) rather than "
+                    "empty; an empty set silently degrades F2 to uniform quantization"
+                )
+            if len(set(names)) != len(names):
+                raise LeverError("weight_qat_q3_names must not repeat a tensor name")
+            if any(not isinstance(name, str) or not name.strip() for name in names):
+                raise LeverError("weight_qat_q3_names entries must be non-empty strings")
+
+    @property
+    def effective_q3_names(self) -> frozenset[str]:
+        """The tensor set F2 actually quantizes at :attr:`weight_qat_low_bits`."""
+        if self.weight_qat_q3_names is None:
+            return SELECTED_MIXED_Q3_NAMES
+        return frozenset(self.weight_qat_q3_names)
 
     # -- activation predicates (the "off is a tracked state" surface) --------
 
@@ -300,7 +337,9 @@ class EditabilityLeverConfig:
                     "active": self.f2_active,
                     "low_bits": self.weight_qat_low_bits,
                     "high_bits": self.weight_qat_high_bits,
-                    "q3_names": sorted(SELECTED_MIXED_Q3_NAMES),
+                    "q3_names": sorted(self.effective_q3_names),
+                    "q3_names_are_default": self.weight_qat_q3_names is None,
+                    "q3_names_default": sorted(SELECTED_MIXED_Q3_NAMES),
                     "reason_if_off": None if self.f2_active else "flag unset (default)",
                 },
                 "F3_film_row_dropout": {
@@ -376,12 +415,7 @@ class EditabilityLevers:
     # -- F2 -----------------------------------------------------------------
 
     def _quantize(self, name: str, value: torch.Tensor) -> torch.Tensor:
-        allocation = mixed_bit_allocation(
-            [name],
-            low_bits=self._config.weight_qat_low_bits,
-            high_bits=self._config.weight_qat_high_bits,
-        )
-        return deployed_fake_quant(name, value, allocation[name])
+        return deployed_fake_quant(name, value, self._mixed_bits(name))
 
     # -- F1 -----------------------------------------------------------------
 
@@ -510,6 +544,7 @@ class EditabilityLevers:
     def _mixed_bits(self, name: str) -> int:
         return mixed_bit_allocation(
             [name],
+            q3_names=self._config.effective_q3_names,
             low_bits=self._config.weight_qat_low_bits,
             high_bits=self._config.weight_qat_high_bits,
         )[name]

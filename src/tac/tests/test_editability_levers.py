@@ -470,3 +470,124 @@ def test_activation_ledger_clears_reason_when_active() -> None:
     assert ledger["any_active"] is True
     assert ledger["levers"]["F2_weight_qat_q3q4"]["active"] is True
     assert ledger["levers"]["F2_weight_qat_q3q4"]["reason_if_off"] is None
+
+
+# ---------------------------------------------------------------------------
+# ddm_ren2: F2's low-bit tensor set is an INPUT, sourced from the packed bytes.
+#
+# The default set mirrors mp2's MODE_ROW_PRUNE candidate family.  The object that
+# SHIPS at move 48 is packed by ``pack_prune_mixed_candidate`` and its measured depth
+# table is ``sm3.PRUNE_MIXED_Q3_NAMES`` -- a different set.  These tests verify that
+# (a) the default is unchanged, so every pre-existing config stays byte-identical, and
+# (b) an explicit set actually changes which tensor is coarsened, which is the whole
+# point: a flag and a constant must not be able to disagree silently.
+# ---------------------------------------------------------------------------
+
+
+def test_effective_q3_names_defaults_to_the_mp2_set() -> None:
+    assert EditabilityLeverConfig().effective_q3_names == SELECTED_MIXED_Q3_NAMES
+    assert (
+        EditabilityLeverConfig(weight_qat_q3q4=True).effective_q3_names
+        == SELECTED_MIXED_Q3_NAMES
+    )
+
+
+def test_explicit_q3_names_change_the_realized_depth() -> None:
+    """The shipped table coarsens blocks.0.film and leaves blocks.1.film at q4."""
+    shipped = ("blocks.0.film.weight", "frame_embed.weight")
+    levers = EditabilityLevers(
+        EditabilityLeverConfig(weight_qat_q3q4=True, weight_qat_q3_names=shipped)
+    )
+    generator = torch.Generator()
+    generator.manual_seed(11)
+    value = torch.randn(32, 8, generator=generator)
+
+    block0 = levers.transform("blocks.0.film.weight", value)
+    block1 = levers.transform("blocks.1.film.weight", value)
+
+    torch.testing.assert_close(
+        block0, deployed_fake_quant("blocks.0.film.weight", value, 3)
+    )
+    torch.testing.assert_close(
+        block1, deployed_fake_quant("blocks.1.film.weight", value, 4)
+    )
+    # Under the DEFAULT set the two depths are swapped; if the override were inert
+    # this assertion would fail, so the test cannot pass on a stub.
+    assert (block0 - value).abs().mean() > (block1 - value).abs().mean()
+
+
+def test_explicit_q3_names_flow_through_parameter_overrides() -> None:
+    """The primary integration point honours the override, not just ``transform``."""
+    shipped = ("blocks.0.film.weight", "frame_embed.weight")
+    model = _toy_model()
+    default_overrides = EditabilityLevers(
+        EditabilityLeverConfig(weight_qat_q3q4=True)
+    ).parameter_overrides(model, base_bits=4)
+    shipped_overrides = EditabilityLevers(
+        EditabilityLeverConfig(weight_qat_q3q4=True, weight_qat_q3_names=shipped)
+    ).parameter_overrides(model, base_bits=4)
+    name = "blocks.1.film.weight"
+    assert name in default_overrides and name in shipped_overrides
+    assert not torch.equal(default_overrides[name], shipped_overrides[name])
+
+
+def test_explicit_q3_names_reject_degenerate_inputs() -> None:
+    for bad in ((), ("a", "a"), ("",), ["a"]):
+        with pytest.raises(LeverError):
+            EditabilityLeverConfig(weight_qat_q3_names=bad)  # type: ignore[arg-type]
+
+
+def test_activation_ledger_reports_the_effective_q3_set() -> None:
+    shipped = ("blocks.0.film.weight", "frame_embed.weight")
+    ledger = EditabilityLeverConfig(
+        weight_qat_q3q4=True, weight_qat_q3_names=shipped
+    ).activation_ledger()["levers"]["F2_weight_qat_q3q4"]
+    assert ledger["q3_names"] == sorted(shipped)
+    assert ledger["q3_names_are_default"] is False
+    assert ledger["q3_names_default"] == sorted(SELECTED_MIXED_Q3_NAMES)
+    default_ledger = EditabilityLeverConfig(weight_qat_q3q4=True).activation_ledger()
+    assert default_ledger["levers"]["F2_weight_qat_q3q4"]["q3_names_are_default"] is True
+
+
+def test_shipped_depth_table_differs_from_the_default_set() -> None:
+    """The measured reason this input exists.  If mp2's sets ever converge, say so."""
+    sm3 = importlib.import_module("experiments.ddm_sm3_semantic_representation")
+    assert frozenset(sm3.PRUNE_MIXED_Q3_NAMES) != frozenset(sm3.SELECTED_MIXED_Q3_NAMES)
+    assert frozenset(sm3.PRUNE_MIXED_Q3_NAMES) == {
+        "frame_embed.weight",
+        "blocks.0.film.weight",
+    }
+
+
+def test_f3_row_dropout_degenerates_to_a_constant_gain_on_a_pruned_tensor() -> None:
+    """ddm_ren2, MEASURED on the shipped renderer: F3 is inert-but-not-harmless here.
+
+    The deployed object row-prunes ``blocks.{1,2,3}.film.weight`` to 2 of 192 rows, so
+    190 rows are EXACTLY zero.  Dropping a zero row is a no-op, and ``protect_top=2``
+    selects precisely the two surviving rows -- so every draw keeps the same rows and
+    the inverted-dropout rescale ``1/(1-p)`` lands on them DETERMINISTICALLY.  F3 then
+    carries no stochastic content at all; it is a constant multiplicative gain that the
+    receiver does not apply, i.e. exactly the trained-vs-realized divergence F3 exists
+    to remove, reintroduced by a different route.
+
+    This test fails if the rescale is ever made conditional on a row actually being
+    dropped, which is the cure -- so it is a live guard, not a monument.
+    """
+    value = torch.zeros(192, 8)
+    value[11] = torch.arange(1.0, 9.0)
+    value[13] = torch.arange(2.0, 10.0)
+    assert film_row_order(value)[:2] == [13, 11]
+    live = [11, 13]
+    for probability in (0.1, 0.5, 0.9):
+        levers = EditabilityLevers(
+            EditabilityLeverConfig(
+                film_row_dropout=probability, film_row_dropout_protect_top=2
+            )
+        )
+        for _ in range(4):
+            out = levers.transform("blocks.1.film.weight", value)
+            gain = out[live] / value[live]
+            torch.testing.assert_close(
+                gain, torch.full_like(gain, 1.0 / (1.0 - probability))
+            )
+            assert float(out[[i for i in range(192) if i not in live]].abs().sum()) == 0.0
