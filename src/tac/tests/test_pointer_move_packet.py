@@ -267,6 +267,41 @@ def test_terminal_claim_note_omits_a_sha_the_receipt_lacks() -> None:
     assert FS1["expected_archive_sha256"] in note
 
 
+def test_terminal_claim_note_binds_the_auth_eval_runtime_tree_on_a_first_measurement_receipt() -> None:
+    """MEASURED 2026-09-12 (swp5 on the move-48 packet): a first-measurement receipt's
+    top-level ``expected_runtime_tree_sha256`` is the timing leg's T4 digest, while the
+    compliance checker reads the auth-eval provenance tree sha. The row must bind the
+    auth-eval value under ``runtime_tree_sha256=`` and carry the timing digest separately."""
+
+    import json as _json
+    import re
+
+    auth_tree = "61d618bac5ed0a36f8759c21f5f8a65c10848fe04f60d38ae11912dbb61b3029"
+    t4_digest = "a8bc13af6d8573dc292bbcd22b125ecb252c4d66ff6d15630f95b4c528487426"
+    payload = dict(FS1)
+    payload["expected_runtime_tree_sha256"] = t4_digest
+    payload["artifacts"] = {
+        "contest_auth_eval.json": _json.dumps(
+            {"provenance": {"inflate_runtime_manifest": {"runtime_tree_sha256": auth_tree}}}
+        )
+    }
+    note = _poller_module().canonical_terminal_claim_notes(payload, "fc-TEST")
+    assert f"runtime_tree_sha256={auth_tree}" in note
+    assert f"t4_runtime_digest_sha256={t4_digest}" in note
+    assert f"runtime_tree_sha256={t4_digest}" not in note
+    # A normal receipt (both definitions agree) carries the value once, unchanged.
+    payload["expected_runtime_tree_sha256"] = auth_tree
+    note = _poller_module().canonical_terminal_claim_notes(payload, "fc-TEST")
+    assert f"runtime_tree_sha256={auth_tree}" in note
+    assert "t4_runtime_digest_sha256" not in note
+    # An unparsable embedded auth-eval falls back to the receipt's own field, never forges.
+    payload["artifacts"] = {"contest_auth_eval.json": "{not json"}
+    payload["expected_runtime_tree_sha256"] = t4_digest
+    note = _poller_module().canonical_terminal_claim_notes(payload, "fc-TEST")
+    assert f"runtime_tree_sha256={t4_digest}" in note
+    assert len(re.findall(r"[0-9a-f]{64}", note)) == 2  # archive + runtime, nothing invented
+
+
 def test_accepts_a_receipt_that_differs_by_summation_order_ulps() -> None:
     """Move 27 (2026-09-05): the receipt printed 0.14666350774473783 and the packet's
     own sum gave 0.1466635077447378 — the same number, one ulp apart. That must NOT

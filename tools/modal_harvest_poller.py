@@ -349,6 +349,41 @@ def _harvest_outcome_facts(result: Any) -> dict[str, Any]:
     return facts
 
 
+def _auth_eval_provenance_runtime_tree_sha256(result: Any) -> str | None:
+    """The runtime-tree sha the compliance checker reads off the embedded auth-eval JSON.
+
+    Mirrors ``scripts/pre_submission_compliance_check.py::_runtime_tree_candidates``:
+    ``runtime_tree_sha256`` at the root or under ``provenance``, or inside an
+    ``inflate_runtime_manifest`` at either scope. The auth-eval JSON is carried by the
+    harvested receipt as ``artifacts["contest_auth_eval.json"]`` (a JSON string or an
+    already-parsed object). Absent, unparsable, or non-64-hex values return ``None`` so
+    the caller falls back to the receipt's own field rather than forging a binding.
+    """
+
+    if not isinstance(result, dict):
+        return None
+    artifacts = result.get("artifacts")
+    raw = artifacts.get("contest_auth_eval.json") if isinstance(artifacts, dict) else None
+    payload: Any = raw
+    if isinstance(raw, str):
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(payload, dict):
+        return None
+    provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
+    for obj in (payload, provenance):
+        runtime = obj.get("inflate_runtime_manifest") if isinstance(obj, dict) else None
+        for candidate in (
+            runtime.get("runtime_tree_sha256") if isinstance(runtime, dict) else None,
+            obj.get("runtime_tree_sha256") if isinstance(obj, dict) else None,
+        ):
+            if isinstance(candidate, str) and re.fullmatch(r"[0-9a-fA-F]{64}", candidate):
+                return candidate
+    return None
+
+
 def canonical_terminal_claim_notes(result: Any, call_id: str) -> str:
     """The terminal claim-row note, in the shape the compliance checker binds on.
 
@@ -379,9 +414,30 @@ def canonical_terminal_claim_notes(result: Any, call_id: str) -> str:
     archive_bytes = result.get("archive_size_bytes") or result.get("expected_archive_size_bytes")
     if archive_bytes is not None:
         parts.append(f"archive_bytes={archive_bytes}")
-    runtime_tree = result.get("expected_runtime_tree_sha256") or result.get("runtime_tree_sha256")
+    # THE SECOND DEFECT (2026-09-12, measured by swp5 against the move-48 packet). A
+    # first-measurement receipt carries TWO runtime-tree digests under different
+    # definitions: the top-level ``expected_runtime_tree_sha256`` is the timing leg's
+    # ``tac.decode_wall_clock.measure_t4_runtime_digest``, while the compliance checker's
+    # ``auth_eval_runtime_tree_expected_match`` reads the AUTH-EVAL provenance value
+    # (``provenance.inflate_runtime_manifest.runtime_tree_sha256`` of the embedded
+    # ``contest_auth_eval.json``). On a normal receipt they agree; on move 48 they did
+    # not, and the row bound the timing digest, so no ``--expected-runtime-tree-sha256``
+    # could satisfy both checks (89/93 either way). The row now binds the auth-eval
+    # value as ``runtime_tree_sha256=`` and, when the timing digest differs, ALSO carries
+    # it as ``t4_runtime_digest_sha256=`` — copied, never re-derived, never truncated.
+    auth_runtime_tree = _auth_eval_provenance_runtime_tree_sha256(result)
+    expected_runtime_tree = result.get("expected_runtime_tree_sha256") or result.get("runtime_tree_sha256")
+    runtime_tree = auth_runtime_tree or expected_runtime_tree
     if isinstance(runtime_tree, str) and runtime_tree:
         parts.append(f"runtime_tree_sha256={runtime_tree}")
+    if (
+        isinstance(expected_runtime_tree, str)
+        and expected_runtime_tree
+        and isinstance(auth_runtime_tree, str)
+        and auth_runtime_tree
+        and expected_runtime_tree != auth_runtime_tree
+    ):
+        parts.append(f"t4_runtime_digest_sha256={expected_runtime_tree}")
     parts.append(f"call_id={call_id}")
     score = result.get("score_recomputed_from_components")
     if isinstance(score, (int, float)) and not isinstance(score, bool):
