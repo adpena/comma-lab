@@ -53,6 +53,9 @@ from experiments.ddm_tc1_public_proof import build_libraries
 STORE_ROOTS = {
     "vertigo": Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/price"),
     "apdatastore": Path("/Volumes/APDataStore/pact/ddm_hpr1/price"),
+    # ddm_dpi1 (2026-09-12) prices the depth-restored refit on this rail and owns its own
+    # payloads: a successor arm writes under its OWN store, never into hpr1's.
+    "dpi1": Path("/Volumes/VertigoDataTier/pact/ddm_dpi1/price"),
 }
 LEGACY_ROOT = STORE_ROOTS["apdatastore"]
 ROOT = STORE_ROOTS["vertigo"]
@@ -64,6 +67,11 @@ POINTER45_BYTES = 180_246
 #: named by the live pointer rather than by a constant -- the pointer moved twice under this
 #: arm already and each time a hardcoded sha went stale the moment it did.
 PROMOTED47 = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_control/candidate_runtime")
+#: The move-48 promoted tree: the frame-even rounding of move 47's refit prior, sealed and
+#: now the live pointer. A treatment that replaces the prior OUTRIGHT still prices against
+#: this tree, because every unrelated member (semantic, carrier, tc1_weights, residual
+#: payload) is move 48's and the rate term reads the whole archive.
+PROMOTED48 = Path("/Volumes/VertigoDataTier/pact/ddm_hpr1/public/retrain_frame_even/candidate_runtime")
 
 
 def live_pointer() -> dict:
@@ -84,11 +92,24 @@ TREATMENTS = (
     # is that it must reproduce move 47's archive byte-identically, which is what makes the
     # q values collected alongside it the SHIPPED mixer's own opinion and not an artefact.
     "control47",
+    # ddm_dpi1 (2026-09-12). ``control48`` is the move-48 falsifier: the shipped prior
+    # re-encoded unchanged, which must reproduce move 48's archive byte-identically.
+    # ``retrain_depths_frame_even`` packs the DEPTH-RESTORED refit and applies ntb2's
+    # frame-even rounding to THAT prior, priced on the move-48 base.
+    "control48", "retrain_depths_frame_even",
 )
 #: Treatments whose base is the move-47 promoted tree rather than move 45's.
 ON_MOVE47 = ("retrain_frame_even", "retrain_frame_quad", "control47")
+#: Treatments whose base is the move-48 promoted tree (the live pointer).
+ON_MOVE48 = ("control48", "retrain_depths_frame_even")
+#: Every treatment that must reproduce its own base archive byte-identically.
+CONTROLS = ("control", "control47", "control48")
 #: The rounding step each composition row applies to `frame_embed.weight`.
-FRAME_STEP = {"retrain_frame_even": 2, "retrain_frame_quad": 4}
+FRAME_STEP = {
+    "retrain_frame_even": 2,
+    "retrain_frame_quad": 4,
+    "retrain_depths_frame_even": 2,
+}
 
 
 class PriceError(RuntimeError):
@@ -141,6 +162,7 @@ def build_geometry(runtime: Path, work: Path) -> dict:
 TREATMENT_PAST_DILATION = {
     "control": 1, "retrain": 1, "past_dil2": 2, "past_dil3": 3, "cone_dil2": 1, "cone_dil3": 1,
     "retrain_frame_even": 1, "retrain_frame_quad": 1, "control47": 1,
+    "control48": 1, "retrain_depths_frame_even": 1,
 }
 #: conv_a's spacing.  The receiver reaches conv_a's taps through geometry-general code in
 #: BOTH the optimized torch path (``hpac_inference._conv_a_features`` builds its gather
@@ -150,6 +172,7 @@ TREATMENT_PAST_DILATION = {
 TREATMENT_CONE_DILATION = {
     "control": 1, "retrain": 1, "past_dil2": 1, "past_dil3": 1, "cone_dil2": 2, "cone_dil3": 3,
     "retrain_frame_even": 1, "retrain_frame_quad": 1, "control47": 1,
+    "control48": 1, "retrain_depths_frame_even": 1,
 }
 
 
@@ -181,6 +204,52 @@ def assert_layout_held(body: bytes, shipped_body: bytes, counts: list[int]) -> d
     }
 
 
+def frame_rounded_body(body: bytes, step: int, renderer, tag: str, work: Path, base: str) -> bytes:
+    """ntb2's value rounding of ``frame_embed.weight``, applied to ANY IHS1 body.
+
+    Factored out of the move-47 composition branch so a row whose prior comes from a
+    RETRAINED checkpoint can receive the identical edit.  Nothing but the frame field
+    moves: the rows, their depths and the rest of the tail are copied through.
+    """
+    import numpy as _np
+    from runtime import ihs2 as _ihs2
+    from runtime import rc2_hpac_semistatic_mixing as _rc2
+
+    layout = _ihs2.layout_from_runtime(renderer)
+    counts = list(layout.row_counts)
+    rows, depths = _rc2.unpack_rows(body, counts)
+    if _np.any((depths < 0) | (depths > 15)):
+        raise PriceError("IHS1 depth is outside the counted nibble domain")
+    depths = depths.astype(_np.uint8)
+    _, _, tail, _ = _rc2.split_ihs1(body, counts)
+    frame = layout.frame_field
+    if layout.tail_fields[0].name != frame.name:
+        raise PriceError("frame embedding tail offset changed")
+    values = _np.frombuffer(tail[: frame.byte_count], dtype=_np.int8).astype(_np.int16)
+    limit = 128 - (128 % step)
+    coarse = _np.clip(_np.rint(values / step) * step, -128, limit - step).astype(_np.int8)
+    changed = int(_np.count_nonzero(values != coarse))
+    tail = coarse.tobytes() + tail[frame.byte_count :]
+    packed_depths = _np.zeros((len(depths) + 1) // 2, dtype=_np.uint8)
+    packed_depths[:] = depths[::2]
+    packed_depths[: len(depths) // 2] |= depths[1::2] << 4
+    rounded = b"IHS1" + packed_depths.tobytes() + _rc2.pack_rows(rows, depths) + tail
+    record(
+        work / "COMPOSITION.json",
+        {
+            "tag": tag,
+            "step": step,
+            "field": frame.name,
+            "values": int(values.size),
+            "changed": changed,
+            "quantization": f"nearest multiple of {step}; ties to even",
+            "base": base,
+            "score_claim": False,
+        },
+    )
+    return rounded
+
+
 def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path | None, renderer=None) -> bytes:
     """Return the IHS1 body this treatment ships.
 
@@ -189,57 +258,40 @@ def treatment_body(tag: str, shipped_body: bytes, work: Path, checkpoint: Path |
     checkpoint through the landed IHS1 packer -- the same call cl2's ladder used -- so
     no serialization is re-implemented here either.
     """
-    if tag in ("control", "control47"):
+    if tag in CONTROLS:
         return shipped_body
     if tag in ON_MOVE47:
         # ntb2's frame_even, re-applied on top of whatever prior the base archive ships.
         # `shipped_body` here IS the move-47 body, i.e. the retrained prior, so this
         # composes rather than re-does: the rounding is a value edit on one tail field and
         # touches nothing else.
-        import numpy as _np
-        from runtime import ihs2 as _ihs2
-        from runtime import rc2_hpac_semistatic_mixing as _rc2
-
-        step = FRAME_STEP[tag]
-        layout = _ihs2.layout_from_runtime(renderer)
-        counts = list(layout.row_counts)
-        rows, depths = _rc2.unpack_rows(shipped_body, counts)
-        if _np.any((depths < 0) | (depths > 15)):
-            raise PriceError("IHS1 depth is outside the counted nibble domain")
-        depths = depths.astype(_np.uint8)
-        _, _, tail, _ = _rc2.split_ihs1(shipped_body, counts)
-        frame = layout.frame_field
-        if layout.tail_fields[0].name != frame.name:
-            raise PriceError("frame embedding tail offset changed")
-        values = _np.frombuffer(tail[: frame.byte_count], dtype=_np.int8).astype(_np.int16)
-        limit = 128 - (128 % step)
-        coarse = _np.clip(_np.rint(values / step) * step, -128, limit - step).astype(_np.int8)
-        changed = int(_np.count_nonzero(values != coarse))
-        tail = coarse.tobytes() + tail[frame.byte_count :]
-        packed_depths = _np.zeros((len(depths) + 1) // 2, dtype=_np.uint8)
-        packed_depths[:] = depths[::2]
-        packed_depths[: len(depths) // 2] |= depths[1::2] << 4
-        body = b"IHS1" + packed_depths.tobytes() + _rc2.pack_rows(rows, depths) + tail
-        record(
-            work / "COMPOSITION.json",
-            {
-                "tag": tag,
-                "step": step,
-                "field": frame.name,
-                "values": int(values.size),
-                "changed": changed,
-                "quantization": f"nearest multiple of {step}; ties to even",
-                "base": "the move-47 promoted archive's own IHS1 body (the retrained prior)",
-                "score_claim": False,
-            },
+        return frame_rounded_body(
+            shipped_body,
+            FRAME_STEP[tag],
+            renderer,
+            tag,
+            work,
+            "the move-47 promoted archive's own IHS1 body (the retrained prior)",
         )
-        return body
     if checkpoint is None:
         raise PriceError(f"treatment {tag} requires --checkpoint")
     from experiments import ddm_rx2_mc36_identity_race as rx2
 
     packed = rx2._pack_terminal_ihs1(checkpoint, work / "model")
-    return Path(packed["raw"]["path"]).read_bytes()
+    body = Path(packed["raw"]["path"]).read_bytes()
+    if tag in FRAME_STEP:
+        # ddm_dpi1: the prior comes from a RETRAINED checkpoint and then receives the same
+        # rounding move 48 ships, so the row is the composition of the two edits and not a
+        # sum of their separately-measured deltas.
+        body = frame_rounded_body(
+            body,
+            FRAME_STEP[tag],
+            renderer,
+            tag,
+            work,
+            f"this arm's own terminal EMA QAT checkpoint, packed through the landed IHS1 packer ({tag})",
+        )
+    return body
 
 
 def patch_receiver_cone(runtime: Path, dilation: int) -> dict:
@@ -354,9 +406,10 @@ def prepare(tag: str, checkpoint: Path | None = None):
     live_row = live_pointer()
     live = live_row["archive_sha256"]
     on_47 = tag in ON_MOVE47
-    base_tree = PROMOTED47 if on_47 else PROMOTED45
+    on_48 = tag in ON_MOVE48
+    base_tree = PROMOTED48 if on_48 else (PROMOTED47 if on_47 else PROMOTED45)
     base_sha = fact(base_tree / "archive.zip")["sha256"]
-    if on_47:
+    if on_47 or on_48:
         # A composition row prices against the LIVE pointer, so its base must BE the live
         # pointer; a move underneath refuses rather than silently pricing a stale base.
         if base_sha != live:
@@ -398,7 +451,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
     body = treatment_body(tag, shipped_body, work, checkpoint, renderer)
     layout_held = assert_layout_held(body, shipped_body, counts)
     retain(work / "retained/hpac.ihs1", body)
-    if (body == shipped_body) != (tag in ("control", "control47")):
+    if (body == shipped_body) != (tag in CONTROLS):
         raise PriceError("treatment is a no-op, or the control body changed")
     if renderer.load_hpac(body, torch.device("cpu")) is None:
         raise PriceError("real integer model failed to load")
@@ -424,7 +477,7 @@ def prepare(tag: str, checkpoint: Path | None = None):
         containers.append(encoded)
     if containers[0] != containers[1]:
         raise PriceError("HPAC twin encode differs")
-    if tag in ("control", "control47") and containers[0] != member["hpac"]:
+    if tag in CONTROLS and containers[0] != member["hpac"]:
         raise PriceError("HPAC_CONTAINER_CONTROL_FAILED")
     binding = record(
         work / "INPUTS.json",
@@ -658,7 +711,7 @@ def encode(tag: str, checkpoint: Path | None = None, collect_q: bool = False) ->
         archives.append(fact(archive))
     if archives[0]["sha256"] != archives[1]["sha256"]:
         raise PriceError("tail/archive twins differ")
-    if tag in ("control", "control47") and archives[0]["sha256"] != binding["base_archive_expected"]["sha256"]:
+    if tag in CONTROLS and archives[0]["sha256"] != binding["base_archive_expected"]["sha256"]:
         raise PriceError("LIVE_LOOP_CONTROL_FAILED: no treatment prices are admissible")
     return record(
         work / "PRICE.json",
@@ -693,13 +746,23 @@ def main() -> int:
     ROOT = STORE_ROOTS[args.store_root]
     if args.resume_from.resolve() != (ROOT / args.treatment).resolve():
         raise PriceError("wrong resume root")
-    if args.treatment not in ("control", "control47"):
+    if args.treatment not in CONTROLS:
         control_price = ROOT / "control/PRICE.json"
         if not control_price.exists():
             control_price = LEGACY_ROOT / "control/PRICE.json"
         proof = json.loads(control_price.read_text())
         if proof["twins"][0]["sha256"] != POINTER45_SHA:
             raise PriceError("live-loop control required before any treatment price")
+    if args.treatment in ON_MOVE48 and args.treatment not in CONTROLS:
+        # ddm_dpi1: a row priced on the move-48 base is admissible only after THIS rail has
+        # reproduced move 48's archive byte-identically in THIS store. The move-45 control
+        # above proves the loop; only control48 proves the loop on the base being priced.
+        control48 = ROOT / "control48/PRICE.json"
+        if not control48.exists():
+            raise PriceError("control48 required before any move-48 treatment price")
+        proof48 = json.loads(control48.read_text())
+        if proof48["twins"][0]["sha256"] != live_pointer()["archive_sha256"]:
+            raise PriceError("control48 did not reproduce the live pointer archive")
     print(json.dumps(encode(args.treatment, args.checkpoint, args.collect_q)), flush=True)
     return 0
 
