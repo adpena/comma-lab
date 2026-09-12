@@ -1837,3 +1837,21 @@ of the carrier's BASIS (twelve shared atoms over the frame-0 warp), not a solve 
 render-side pose actuators for these pairs; the only open pose door on this object is the carrier's reach — a basis question (receiver
 change: `CARRIER_DIM`/basis are receiver constants; pc3 priced twelve more atoms at 12,277 B = 1.2× the pose term, but never ONE atom fit
 to the hard-pair residual), which needs the first-measurement chain. Pose term at stake in the top-12: ~0.0035 S ≈ 5,300 B at the exchange.
+
+## Addendum 58 (2026-09-12, host ~23:30Z) — cb1: the carrier basis axis closes (bytes buy a position, not a spectrum); one zero-byte lead
+
+cb1 (Opus; commits 2c03a3584, 4c4463c71; retained 43.9 MiB incl. 13 byte-exact archives) measured the pose-mass-weighted residual subspace
+on move 49: the shipped 12-atom span captures 100.0 % of the realized field but only 2.4 % of the pose-weighted residual; a residual-fit
+12-atom span captures 96 %; principal angles between the spans 74.8°–89.9° (a genuine span change, outside br1's null orbit); up2's basis
+penalty re-derives at 6.30× and the refit cuts the linearized demanded step 5.87× — the screen PASSES. The receiver refuses anyway: on the
+same 24 pairs the α ladder is strictly monotone WORSE (α 0.125 → 1.560× d_pose at +2 B; 0.25 → 4.33×; 0.50 → 7.15×), residual keep-11
+3.90× at −209 B, keep-8 26.8× at −1,277 B, br1's target directions 59×; every pair stops at no_improving_step; per-atom pose-damage shares
+are flat (3.2–13.5 %), no atom expendable. Controls: base bit-identical to pp1; twins; keep-12 rebuild byte-identical; the pose-targeted
+warm start is catastrophic on the SHIPPED basis too (reproducing up2 §3). Recall gap owned: pc1 (09-05) had priced three span changes at
+three scopes and the index line compressed them to "family scope" — the charter did not cite pc1. LAW (n=2 with pc2's lattice): the
+carrier's bytes buy a POSITION on a fitted lattice/span, not a spectrum; a linearized screen cannot rank span changes on this object.
+
+The lead: cb1's deeper per-pair re-solve of the SHIPPED basis (up2's solver) improved 24 of 48 random pairs for −0.32 % of d_pose at zero
+bytes (55 % of the bar) — pass 7's control had called the carrier converged under jg5's lighter re-solve (2 of 600 improve), so
+"converged" was solver-relative (authority substitution priced by the incumbent, lb1's genus). Composed with pass 8's admitted subset
+(−1.42e-5, 0.71 bars) it projects ≈ 1.2–1.3 bars: the object's last priced rung, chartered as cr1.
