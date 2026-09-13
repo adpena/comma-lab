@@ -1,0 +1,1 @@
+Not claimed: any CPU-axis score (declaration + typed refusal receipt after this harvest). Not claimed: that deeper search pays further — pd3 measured the single-token pose family draining on depth; the unpriced lever is the token PRICE (12.9–17 bits per changed token vs 8.9 for clustered edits). Not claimed: any renderer, frame_embed, prior, basis, or carrier-lattice change.

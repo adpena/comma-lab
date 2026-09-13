@@ -1943,3 +1943,13 @@ run's 1,375.8 s) to mint its leg; pd2 inherited it on the normal seal path; move
 Two contract laws are now measured: a distortion-moving row seals only by inheriting the pointer's measured leg (the first-fire intent is
 rate-only); when the pointer's only T4 reading exceeds 1,260 s, re-measure the pointer (~$0.30) — T4 instance variance on this receiver
 spans 1,023–1,376 s. Day's take: moves 45–51, −1.07e-3 S (0.13724 → 0.13623). Demand −24,527 B. Next: pd3 (tier-2 pairs; K_refine ≥ 12).
+
+## Addendum 64 (2026-09-13, host ~15:15Z) — MOVE 52: pass 3 lands; the family drains on depth, and the price is the lever
+
+Exact row (call fc-01M2D1J97K1QPBQ4KASFH1SG96): **S 0.13620226906030858 @ 179,332 B**, d_seg 0.00010304, d_pose 4.21e-6; Δ −3.11e-5 vs
+move 51 (projected −3.28e-5). pd3 (K_refine 12; 283 pairs; 271 carried, median credit −27 %; 26 admitted, median −62 %, 21 of 26 at ≤ 0
+cells; seg one cell better; +47 B). Its own decode (1,067.8 s) minted its leg at harvest. The decay is measured: admitted-per-walked
+0.49 (pd1) → 0.24 (pd2) → 0.09 (pd3); tier 2 poor (4 of 100); K=12 beat K=8 on 24 of 125 shared pairs and lost on none, so depth is
+not the binding term — the token PRICE is: admitted edits cost 12.9–17 bits/token against 8.9 for clustered edits (pass 8), and rate is now
+the largest cost in every admitted subset (+3.1e-5 of a −6.4e-5 pose credit here). Day's take: moves 45–52, −1.10e-3 S (0.13724 →
+0.13620). Demand −24,526 B. Next: pd4 — rank by resolved-pose credit per REAL bit and prefer clustered proposals.
