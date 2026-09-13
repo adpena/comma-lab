@@ -393,6 +393,11 @@ def cmd_run(args) -> int:
         import ddm_sj1_joint_admission as target
     elif args.module == "pp1":
         import ddm_pp1_pose_actuation as target
+    elif args.module == "tree":
+        # pd1's candidate-tree builder calls sj1.patch_inflate_pins, which checks the tree's
+        # CURRENT pins against the LIVE pointer; unbound it reports move 49 and refuses the
+        # move-50 tree as "not the tree it claims to be".
+        import ddm_pd1_candidate_tree as target
     else:  # pragma: no cover - argparse restricts the choices
         raise Pd2Error(f"unknown module {args.module}")
     argv = list(args.argv)
@@ -578,7 +583,7 @@ def build_parser() -> argparse.ArgumentParser:
     pre.set_defaults(func=cmd_prereg)
 
     run = sub.add_parser("run", help="bind, then dispatch a pd1 / sj1 argv in this process")
-    run.add_argument("--module", choices=("pd1", "joint", "pp1"), required=True)
+    run.add_argument("--module", choices=("pd1", "joint", "pp1", "tree"), required=True)
     run.add_argument("argv", nargs=argparse.REMAINDER)
     run.set_defaults(func=cmd_run)
 
