@@ -1932,3 +1932,14 @@ laws: (i) a distortion-moving row can ONLY seal by inheriting a measured leg of 
 mintable leg, and a T4 reading above 1,260 s on the pointer blocks ALL distortion successors until re-measured. Cure: re-measure move 50's
 exact archive on T4 (the identity class decoded in 1,023 / 1,106 / 1,141 / 1,376 s on archives within 890 B; pd2's candidate decodes 11 %
 faster than move 50 locally) — MAIN fires it; a leg ≤ 1,260 s unblocks pd2 through ordinary inheritance.
+
+## Addendum 63 (2026-09-13, host ~05:15Z) — MOVE 51: pass 2 of the pose-directed family; the timing cure held
+
+Exact row (call fc-01M2CDRQXPWPYVJT0QAPHMJF1P; commit 1d172eb4e): **S 0.1362333315680336 @ 179,285 B**, d_seg 0.00010305, d_pose 4.29e-6;
+Δ −5.01e-5 vs move 50 (projected −5.62e-5; the T4 print rounds d_pose to 4.29e-6 against a resolved 4.282e-6). pd2 (K_refine 8; 166 pairs
+walked; 40-pair subset; median credit −52.7 % of the pair's pose; 8 of the 40 are pairs move 50 itself edited — pose credits do not consume
+local slack the way seg repairs do). The route: MAIN re-measured move 50's exact bytes on T4 (identical score; decode 1,123.3 s vs the first
+run's 1,375.8 s) to mint its leg; pd2 inherited it on the normal seal path; move 51's own T4 decode (1,164.9 s) mints its leg at harvest.
+Two contract laws are now measured: a distortion-moving row seals only by inheriting the pointer's measured leg (the first-fire intent is
+rate-only); when the pointer's only T4 reading exceeds 1,260 s, re-measure the pointer (~$0.30) — T4 instance variance on this receiver
+spans 1,023–1,376 s. Day's take: moves 45–51, −1.07e-3 S (0.13724 → 0.13623). Demand −24,527 B. Next: pd3 (tier-2 pairs; K_refine ≥ 12).
