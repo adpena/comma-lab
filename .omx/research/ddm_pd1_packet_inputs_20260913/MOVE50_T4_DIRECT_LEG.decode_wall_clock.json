@@ -1,0 +1,40 @@
+{
+  "archive_path": "/Volumes/APDataStore/pact/ddm_pd1/candidate/candidate_runtime/archive.zip",
+  "archive_sha256": "1ea274f612a26183f31f6d439505d0289bd3751b4da9467343fc156203503cd7",
+  "candidate_t4_receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd1_fire/run2_timing/MODAL_REMOTE_RESULT.json",
+    "sha256": "3cb61acbc194b5931e950fda569a5c8fefdcd055efc7f4a5518a0b9952a20d4b"
+  },
+  "limit_seconds": 1260.0,
+  "measured_t4_decode_seconds": 1123.3287576769999,
+  "mode": "t4_direct",
+  "projected_t4_decode_seconds": 1123.3287576769999,
+  "receiver_sha256": "f7733ad1aa2d5378fbdb418004da8290e20946c36f3b597a2dc5d6ff09b63eb6",
+  "runtime_dir": "/Volumes/APDataStore/pact/ddm_pd1/candidate/candidate_runtime",
+  "schema": "candidate_decode_wall_clock.v2",
+  "score_claim": false,
+  "t4_archive_sha256_field": [
+    "expected_archive_sha256"
+  ],
+  "t4_cuda_available_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_available"
+  ],
+  "t4_hardware_field": [
+    "artifacts",
+    "modal_cuda_preflight.json",
+    "torch_cuda_device_name"
+  ],
+  "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+  "t4_runtime_sha256": "87a343e7b1272b193a340ddb5a1a5ff5daec4e86c69b6d92111015ed413569a9",
+  "t4_runtime_sha256_field": [
+    "expected_runtime_tree_sha256"
+  ],
+  "t4_seconds_field": [
+    "artifacts",
+    "contest_auth_eval.json",
+    "inflate_elapsed_seconds"
+  ],
+  "t4_timing_scope": "cold_public_entrypoint_decode"
+}
