@@ -25,12 +25,19 @@ from `ddm_up2_shipping_pose_solve.measure_pose` at batch 8 on move 50's own cold
 0.13622721373953445 — net −5.6213e−05 vs move 50, 2.81 bars, clearing the −2e−05 bar. 40 pairs, 40
 changed tokens, 416 re-solved carrier coordinates.**
 
-**And it cannot be sealed, because move 50 cannot hold a timing leg.** `build_t4_direct_leg` on move
-50's own retained T4 harvest raises `measured T4 decode 1375.753169s exceeds 1260.0s`; inheritance
-then refuses with `source measurement is not the pointer archive`; and the first-measurement intent
-is a rate-only instrument that requires the candidate's decode to be byte-identical to the pointer's.
-Every door was EXECUTED and every refusal is retained (§9). The cure is a re-measurement of bytes we
-already hold, and it is MAIN's.
+**It is SEALED, on the NORMAL inheritance path.**
+`/Volumes/APDataStore/pact/ddm_pd2/SEAL_ddm_pd2_pose_directed_pass2_contest_cuda.json` — file sha
+`e52bb733c9191b3b4bf8a28d8d18c09dfc3adeb66835e74bc466f7976f21d908`, 10,590 B, seal sha
+`6e4e9131b1434988c71d39085a007f1653aac360e8264a70dc42c01075b9d685`, **SEAL_VALID with zero problems**,
+inheriting move 50's own `t4_direct` leg. **NO Modal, NO fire: MAIN fires.**
+
+That sentence had to be rewritten. When this arm finished its build, every seal door refused, and the
+blocker was move 50's own 1,375.753 s T4 decode — measured, executed, and reported as closed (§9).
+MAIN then did the one thing this arm named as the cure: **re-measured move 50's exact archive on the
+T4** (call `fc-01M2CC2116RHEAJ3B37C9Z2EGW`, identical score components, decode **1,123.329 s** ≤
+1,260) and minted the leg. The prediction underneath the closure — that move 50's +269.5 s over move
+49 was host variance and not decode work — held: the re-measurement came in 252.4 s faster, and this
+arm's own candidate had already decoded 11.2 % faster than move 50 locally.
 
 | leg | value | how |
 |---|---:|---|
@@ -318,11 +325,16 @@ candidate decodes **11.2 % FASTER** than the row it is built on.
 
 ---
 
-## 9. The contract route — CLOSED, and the blocker is move 50's own decode
+## 9. The contract route — measured CLOSED, then OPENED by the measurement it named
 
-**The headline of this section: under the frozen contract there is no route today that can seal
-ANY distortion-moving candidate built on move 50, and the cause is move 50's own T4 decode, not
-this arm's candidate.** Four doors, each read at source and one of them EXECUTED:
+**Read this section as a sequence, because the verdict changed.** When the candidate was built,
+every seal door refused and the cause was move 50's own T4 decode — not this candidate. This arm
+executed each door, recorded each typed refusal, and named the one cure that was a MEASUREMENT
+rather than an amendment. MAIN then took that cure, and the route reopened. Both halves are kept:
+the closure is what made the cure legible, and a reader who only sees the seal would not know which
+door had to be opened or why.
+
+### 9a. The state at build time — four doors, each EXECUTED, all four refusing
 
 | door | requirement | status |
 |---|---|---|
@@ -342,7 +354,7 @@ identity class is EMPTY by construction.** The charter's declared mode is unavai
 token-changing row, not merely to this one — and its declared envelope maximum, move 50's
 1,375.8 s, is itself inadmissible as a leg.
 
-### The cure is a MEASUREMENT, not an amendment — and it is MAIN's
+### 9b. The cure is a MEASUREMENT, not an amendment — and it is MAIN's
 
 Mint move 50's `t4_direct` leg by re-measuring its EXACT archive on T4. The class's own measured
 decode spread on the same receiver is **1,023.2616 s** (move 48, 179,111 B), **1,106.2192 s**
@@ -359,7 +371,7 @@ not what put move 50 over the limit. This arm fires nothing; the call and the di
 
 Receipts: `SEAL_ROUTE_CLOSURE.json`, `DOOR_CONTROL_MOVE50_LEG.json`, `TIMING_ROUTE_FINDING.json`.
 
-### The doors, EXECUTED
+#### The doors, EXECUTED
 
 | attempt | outcome |
 |---|---|
@@ -376,7 +388,7 @@ unreachable for any distortion move, at any byte count, on any hardware.
 
 Receipt: `REAL_DOOR_CONTROL.json`, and the four refusal transcripts under `door/`.
 
-### What this arm did NOT do about it
+#### What this arm did NOT do at the time
 
 It did not amend the contract, did not edit `src/tac/candidate_seal.py` or
 `src/tac/decode_wall_clock.py`, and did not manufacture a risk object in the one mode still
@@ -386,6 +398,54 @@ the raw-identity gate this candidate cannot pass either. Choosing a route is an 
 about the contract, not a measurement. The doors, the refusals, the legs and the arithmetic go
 to MAIN; the candidate sits byte-closed and retained, ready for the ordinary inheritance route
 the moment move 50 has a leg.
+
+
+### 9c. The seal, on the NORMAL inheritance path
+
+MAIN re-measured move 50's exact archive on the T4 — call `fc-01M2CC2116RHEAJ3B37C9Z2EGW`, identical
+score components (S 0.13628342713679067), **decode 1,123.3287576769999 s ≤ 1,260** — minted its own
+`t4_direct` leg with `build_t4_direct_leg`, and adopted it as move 50's sidecar. Committed copy:
+`.omx/research/ddm_pd1_packet_inputs_20260913/MOVE50_T4_DIRECT_LEG.decode_wall_clock.json` (commit
+`f880398e2`).
+
+**The prediction this arm staked the closure on held.** The claim was that move 50's +269.5 s over
+move 49 could not be decode work — 42 B more than move 49 and 806 B LESS than move 46 — and was host
+variance. The re-measurement of the SAME bytes came back **252.4 s faster** (1,375.753 → 1,123.329 s),
+and the candidate's own local decode had already measured 11.2 % faster than move 50's.
+
+**Re-validated independently before use**, not trusted: `validate_decode_wall_clock` on the sidecar
+returns **0 problems** — mode `t4_direct`, completed, 600 pairs, Tesla T4, 1,123.329 s against the
+1,260 s limit, on move 50's archive `1ea274f6…`.
+
+**Seal inputs staged from OUTSIDE the candidate tree** (the manifest must not verify itself):
+
+| input | what |
+|---|---|
+| `seal_inputs/CANDIDATE_MANIFEST.json` | 51 rows regenerated from the bytes on disk through `tac.candidate_seal.measure_runtime_digest`, with the normalized-receiver digest |
+| `seal_inputs/MANIFEST_VALIDATION.json` | `all_hashes_passed: true`, `all_runtime_dependencies_listed: true`, plus the Catalog #420 derived-listing re-derivation `tac.decode_wall_clock.validate_receiver_manifest` on the tree |
+| `seal_inputs/TWIN_ENCODE.json` + `ENCODER_EXECUTION_{0,1}.json` | two independent encoder PROCESSES, each with its own natively compiled rc64 backend, produced **byte-identical members** (179,172 B, sha `7a2898e7…`) |
+| `PUBLIC_SMOKE.json` | the symmetric candidate/frontier entrypoint smoke measured in §8 |
+| receiver pins | `inflate.py` (2,735 B, `4e32b448…`) and `inflate.sh` (3,380 B, `0a1820f2…`) |
+| retained paths | the whole store, hashed in `RETENTION_MANIFEST.json` |
+| falsifiers | the eight pre-registered rows, each carrying its MEASURED outcome |
+
+**The seal**
+
+```
+/Volumes/APDataStore/pact/ddm_pd2/SEAL_ddm_pd2_pose_directed_pass2_contest_cuda.json
+file sha  e52bb733c9191b3b4bf8a28d8d18c09dfc3adeb66835e74bc466f7976f21d908   (10,590 B)
+seal sha  6e4e9131b1434988c71d39085a007f1653aac360e8264a70dc42c01075b9d685
+VALIDATED SEAL_VALID, problems []   (validate_seal, require_decode_wall_clock=True)
+```
+
+candidate `ddm_pd2_pose_directed_pass2`, axis `contest_cuda`; archive 179,285 B sha `42e47d0b…`;
+runtime 51 files / 1,008,644 B, digest `4e0792bc…`; leg mode **inherited**, scope *"identical
+normalized receiver code; candidate payload-dependent time not remeasured"*, source the move-50
+sidecar sha `8653c407…`; admit bar **net ΔS < −2e−05** against the LIVE pointer move 50
+(`1ea274f6…`, 0.13628342713679067) at tolerance 0.
+
+**The candidate was NOT changed to seal it** — the archive, the runtime digest and both pins are the
+same objects §8 measured. **NO Modal, NO fire, NO completion, NO packet: MAIN fires.**
 
 ---
 
@@ -420,8 +480,12 @@ the moment move 50 has a leg.
    pair, so two proposals on one pair are charged the same; where they really do cost different
    numbers of bits this ranking cannot see the difference. Said plainly rather than dressed up.
 9. **pp1's twelve floor pairs stay excluded** on pp1's measurement. Nothing here reopens them.
-10. **No seal and no intent exist.** Every door refused (§9), each refusal is retained, and this arm
-    did not manufacture an object the contract refuses.
+10. **The seal is a seal, not a score.** `SEAL_VALID` says the candidate's identity, timing leg,
+    smoke, pins and admit bar are coherent; it says nothing about what the T4 will measure. The
+    build-time closure in §9a is preserved rather than deleted: it is what named the cure MAIN then
+    ran, and its four typed refusals remain true of the state they were measured in.
+11. **This arm fired nothing.** No Modal call, no authorization, no completion, no packet. MAIN
+    fires.
 
 ---
 
@@ -431,7 +495,7 @@ Store **`/Volumes/APDataStore/pact/ddm_pd2/`**. APDataStore rather than Vertigo 
 **38 GiB** free — below its 40 GiB reserve. **The reserve was never lowered and nothing was written
 there.**
 
-**MEASURED: 6,021,428,924 B over 761 files, every one hashed — under the 8 GiB cap.**
+**MEASURED: 6,021,453,230 B over 767 files, every one hashed — under the 8 GiB cap.**
 `RETENTION_MANIFEST.json` carries bytes and sha256 for each, including the losers: all 1,079 realized
 search rows and all 3,091 screened proposals, not only the 40 that shipped.
 
@@ -448,6 +512,8 @@ search rows and all 3,091 screened proposals, not only the 40 that shipped.
 | `rlc1_price/` | the pricer's INPUTS, both control encodes, both full-field encodes, both subset encodes, the per-pair bit ledgers |
 | `BIND_RECEIPT.json` · `PREREGISTRATION.json` · `SMOKE_TIMING.json` · `STOP_RULE.json` · `SEARCH_PLAN.json` · `F6_CONTROL_ENCODE.json` · `F_REPRODUCTION_VS_PD1.json` · `F_FLIPS_IDENTITY.json` · `YIELD_HISTOGRAM.json` · `PUBLIC_SMOKE.json` · `LITERAL_CENSUS.json` | the pre-registration and every control receipt |
 | `SEAL_ROUTE_CLOSURE.json` · `DOOR_CONTROL_MOVE50_LEG.json` · `REAL_DOOR_CONTROL.json` · `TIMING_ROUTE_FINDING.json` · `door/` | the contract-route finding and every executed refusal |
+| `SEAL_ddm_pd2_pose_directed_pass2_contest_cuda.json` | **SEAL_VALID**, file sha `e52bb733…` (10,590 B), seal sha `6e4e9131…` |
+| `seal_inputs/` | the candidate manifest regenerated from outside the tree, its validation, the twin-encode receipt and both encoder-execution receipts |
 | `PIPELINE_PLAN.md` | the chain as exact commands, written while the search ran |
 
 Producers: `experiments/ddm_pd2_pose_directed_pass2.py` (`bind | base | prereg | run | carry`),
@@ -459,10 +525,9 @@ from a custody tree sets `sys.dont_write_bytecode = True`.
 
 ## 12. What this hands the next arm
 
-1. **The candidate is built and byte-closed and waits on ONE measurement.** The moment move 50 has a
-   `t4_direct` leg, this candidate seals through the ordinary inheritance route: its receiver is
-   byte-identical to move 50's, so the only thing inheritance asks for is a direct leg on the
-   pointer's archive.
+1. **The candidate is built, byte-closed and SEALED; the only thing left is the fire.** MAIN minted
+   move 50's leg and this candidate inherited it on the ordinary route, because its receiver is
+   byte-identical to move 50's.
 2. **K_refine is the cheap lever and it is not exhausted.** Every admitted row came from a refine
    pd1 did not run. The screen still throws away survivors past rank 8 on the pairs that have them.
 3. **The rate leg is still what decides the size of the win.** 15.4 bits for an isolated token; pd1's
