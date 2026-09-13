@@ -18,6 +18,29 @@ from `ddm_up2_shipping_pose_solve.measure_pose` at batch 8 on move 50's own cold
 
 ---
 
+## 0. The headline
+
+**A candidate is built, byte-closed and retained: 179,285 B, archive sha
+`42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f`, projected S
+0.13622721373953445 — net −5.6213e−05 vs move 50, 2.81 bars, clearing the −2e−05 bar. 40 pairs, 40
+changed tokens, 416 re-solved carrier coordinates.**
+
+**And it cannot be sealed, because move 50 cannot hold a timing leg.** `build_t4_direct_leg` on move
+50's own retained T4 harvest raises `measured T4 decode 1375.753169s exceeds 1260.0s`; inheritance
+then refuses with `source measurement is not the pointer archive`; and the first-measurement intent
+is a rate-only instrument that requires the candidate's decode to be byte-identical to the pointer's.
+Every door was EXECUTED and every refusal is retained (§9). The cure is a re-measurement of bytes we
+already hold, and it is MAIN's.
+
+| leg | value | how |
+|---|---:|---|
+| seg | **+1.10278e−05** | 12,135 → **12,148** flipped cells, MEASURED on the candidate's own cold parse-back; the admission predicted 12,148 with **zero cells disagreeing** |
+| pose | **−1.27168e−04** | RESOLVED 4.281953276180728e−06 against the base 4.448947350080121e−06, re-verified n600 on the composed object |
+| rate | **+5.99273e−05** | **+90 B EXACT** (tail +77 by the subset's own real encode, twins byte-identical; carrier +13 from the splice) |
+| **net vs the pointer** | **−5.6213e−05** | **2.81 bars** |
+
+---
+
 ## 1. The binding, and why it is the first thing this arm did
 
 `ddm_pp1_pose_actuation` and `ddm_sj1_multipass_token_predistortion` pin the live pointer at
@@ -162,13 +185,136 @@ Receipt: `rlc1_price/INPUTS.json`.
 
 ## 7. The search
 
-<!-- SEARCH -->
+Eight shards, `--threads 2`, walking tier 1 in DESCENDING d_pose so a prefix stop keeps the pairs
+that can pay. pd1's actuator unchanged; **K_refine = 8** the only search delta.
+
+| quantity | measured |
+|---|---:|
+| pairs walked | **166** (all 156 of tier 1, then 10 of tier 2) |
+| pairs with at least one realized row | **157** |
+| realized rows (render + frozen argmax + carrier re-solve, each) | **1,079** |
+| screened proposals (render + frozen argmax only) | **3,091** |
+| rows inside the MEASURED absolute base band | **165 / 165 carried**, 0 rejected |
+| pairs whose best row is negative on the modelled arithmetic at 16.98 bits/token | **34** |
+
+**The per-pair credit histogram**, over the 165 pairs carried into the candidate field — the best
+realized credit as a fraction of that pair's own d_pose:
+
+| band | pairs |
+|---|---:|
+| −100 % … −50 % | **40** |
+| −50 % … −25 % | 30 |
+| −25 % … −10 % | 30 |
+| −10 % … −5 % | 18 |
+| −5 % … −2 % | 13 |
+| −2 % … 0 % | 14 |
+| ≥ 0 % | 20 |
+
+Median **−18.48 %**, best **−99.31 %** — a pair whose resolved pose is very nearly erased.
+
+**And the seg cost the screen buys down:**
+
+| d_cells of the carried edit | pairs |
+|---|---:|
+| −1 (a seg REPAIR) | **8** |
+| 0 | **74** |
+| +1 | 57 |
+| +2 | 26 |
+
+82 of 165 carried pairs cost zero or negative seg cells; +101 cells across the whole field.
+
+**Two things this search settles that the charter left open.**
+
+1. **K_refine = 8 is what produced the win, and it is attributable.** pd1's own rows on pairs whose
+   render did not move were fed into the carry alongside this arm's. **All 165 carried rows and all
+   40 admitted rows are this arm's** — every pd1 row was dominated by a deeper refine on the same
+   pair, or refused by the base band. pd1 refined the 3 cheapest-on-seg survivors per pair; the best
+   POSE credit is regularly not among them.
+2. **"A repair consumes local slack, so expect less on the re-searched pairs" is REFUTED on this
+   object.** Eight of the 40 admitted pairs are pairs move 50 itself edited, re-searched from their
+   NEW renders — and pairs 548 and 591 are among the four largest single finds in the whole arm.
 
 ---
 
-## 8. The admission
+## 8. The admission, and the composition re-verified rather than summed
 
-<!-- ADMISSION -->
+### The composition, MEASURED on one object
+
+The per-pair search realizes each edit alone, so the composed object was RE-MEASURED: a 600-pair
+overlay rendered from the candidate field, an n600 pose leg on it, and a carrier re-solve that
+starts from the **SHIPPED** codes, never from the search's own.
+
+| leg | per-pair sum | composed, re-verified | realized fraction |
+|---|---:|---:|---:|
+| pose, all 165 carried | −1.472077e−04 | **−1.472120e−04** | **1.000030** |
+| pose, the 40 ADMITTED | −1.001836e−04 | **−1.001964e−04** | **1.000129** |
+| seg, the 40 admitted | +13 cells | **+13 cells** | 1.000000 |
+
+Per-pair ratio over the admitted 40: min 0.997862, median 0.999967, max 1.003280. **Falsifier F2
+(composition realizes < 0.8 of the sum) does not fire.**
+
+**The two null controls that make those numbers mean something:**
+
+* the **435 unedited pairs** are bit-identical to their base on BOTH legs — max |stale − base| =
+  **0.000e+00** and max |resolved − base| = **0.000e+00** — so nothing leaks from an edited pair to
+  an untouched one;
+* the STALE pose (candidate renders, shipped carrier) is **214.3× the base**. The re-solve recovers
+  all of it and then some: composed resolved 4.2035940284384715e−06 against base
+  4.448947350080121e−06, **−5.51 % on the population mean from 165 single-token edits.**
+
+### The rate leg, by REAL encode, twins
+
+| field | pairs / tokens | exact archive | Δ vs move 50 | bits/changed token | realized ÷ first-order ideal | twins |
+|---|---:|---:|---:|---:|---:|---|
+| control (move 50's own field) | 0 / 0 | **179,195 B** sha `1ea274f6…` | 0 | — | — | **byte-identical, 2 processes** |
+| full candidate field | 165 / 165 | **179,538 B** sha `110d98b3…` | **+343 B** | **16.630** | 0.99927 | **byte-identical, 2 processes** |
+| admitted subset | 40 / 40 | **179,272 B** sha `d4ea52b0…` | **+77 B** | **15.400** | 0.99093 | **byte-identical, 2 processes** |
+| the built candidate (subset tail + re-solved carrier) | 40 / 40 | **179,285 B** sha `42e47d0b…` | **+90 B** | — | — | the staged archive reproduces the pricer's repack byte for byte |
+
+The container did not draw a lottery here either: realized ÷ first-order-ideal is 0.99927 on the
+full field and 0.99093 on the subset, so the ±34.8 B break term is absent on this object at this
+edit shape. That is a measurement on two fields, not a law.
+
+### The three-leg Lagrange admission
+
+40 of 165 pairs kept, on the RESOLVED pose, with the rate leg taken from the MEASURED per-pair bit
+ledgers rather than apportioned. Credit fraction among the admitted: median **−52.74 %**, best
+−99.31 %; **26 of 40 cost zero or negative seg cells** (3 repairs, 23 neutral).
+
+### The candidate, and its legs on the SHIPPED bytes
+
+| leg | value | how |
+|---|---:|---|
+| rate | 0.11937852241050849 | **179,285 B EXACT** — the subset's own real encode (+77 B) plus the carrier splice (+13 B over 40 pairs / 416 coordinates) |
+| seg | 0.01030502777091059 | **12,148 flipped cells MEASURED on the candidate's own cold parse-back** — the admission predicted 12,148, **zero cells disagreeing** |
+| pose | 0.0065436635581153837 | RESOLVED 4.281953276180728e−06, re-verified n600 on the composed object |
+| **S projected** | **0.13622721373953445** | |
+| **net vs move 50** | **−5.621340e−05** | **2.81 bars** |
+
+Archive sha **`42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f`**, 179,285 B.
+
+**Proved on the shipped bytes, not on the plan:**
+
+* the candidate's own cold parse-back decodes a token plane **byte-identical to the admitted
+  field** (`decoded_field_matches_admitted: true`), raw sha `b46351f8…`, 3,662,409,600 B;
+* the seg leg above is measured on THAT decode, not on the overlay;
+* the public entrypoint smoke is **symmetric** between candidate and frontier — both reach the CUDA
+  gate through `inflate.sh` in 1.88 s and both reach the token decode through the public path inside
+  the 240 s bound, with the four native-library exports set as `inflate.sh` sets them;
+* the literal census is **CLEAR at rule 118**: 51 files, **three differ from the pointer tree** —
+  `archive.zip`, `inflate.py` and the derived `MANIFEST.sha256` — and the ENTIRE `inflate.py` diff is
+  the two pins that name the archive:
+
+```
+-ARCHIVE_SHA256 = "1ea274f612a26183f31f6d439505d0289bd3751b4da9467343fc156203503cd7"
+-ARCHIVE_BYTES = 179195
++ARCHIVE_SHA256 = "42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f"
++ARCHIVE_BYTES = 179285
+```
+
+**And one measurement that bears directly on §9:** the candidate's cold n600 local decode is
+**999.008 s** against move 50's **1,124.751 s** on the same host and the same receiver — the
+candidate decodes **11.2 % FASTER** than the row it is built on.
 
 ---
 
@@ -204,10 +350,31 @@ decode spread on the same receiver is **1,023.2616 s** (move 48, 179,111 B), **1
 179,195 B). Move 50 is 42 B larger than move 49 and 806 B SMALLER than move 46, so +269.5 s over
 move 49 cannot be payload work — most of it is host variance, and the class straddles the
 1,260 s limit. One re-measurement of bytes we already hold would unblock every successor of move
-50 through the ordinary inheritance route the pointer has used since move 43. This arm fires
-nothing; the call and the dispatch are MAIN's.
+50 through the ordinary inheritance route the pointer has used since move 43.
+
+And there is a second, independent measurement pointing the same way. On THIS host, through the
+SAME receiver, this arm's candidate decodes n600 cold in **999.008 s** where move 50 decodes in
+**1,124.751 s** — **11.2 % faster**, on 90 MORE archive bytes and 622 more coded bits. Decode work is
+not what put move 50 over the limit. This arm fires nothing; the call and the dispatch are MAIN's.
 
 Receipts: `SEAL_ROUTE_CLOSURE.json`, `DOOR_CONTROL_MOVE50_LEG.json`, `TIMING_ROUTE_FINDING.json`.
+
+### The doors, EXECUTED
+
+| attempt | outcome |
+|---|---|
+| `make_candidate_seal.py --inherit-decode-wall-clock <move 49 t4_direct leg>` | no seal written; `FATAL: cannot seal this candidate: decode_wall_clock: decode_wall_clock: source measurement is not the pointer archive` |
+| `make_candidate_seal.py --decode-wall-clock <move 49 t4_direct leg>` | no seal written; `FATAL: cannot seal this candidate: decode wall-clock refused: decode_wall_clock: candidate receiver differs from measurement` |
+| `make_candidate_seal.py --first-fire-intent …` | no intent written; `FIRST_MEASUREMENT_ARGUMENT_REFUSED: intent accepts only frozen CUDA contract flags` |
+| `tac.decode_wall_clock.build_t4_direct_leg` on move 50's own harvest | `SealContractError: decode_wall_clock: measured T4 decode 1375.753169s exceeds 1260.0s` |
+
+And the gate that closes the intent route for good, MEASURED rather than argued: the candidate's own
+cold n600 decode is sha `b46351f8bee766481a3c1aca9c8d9781a34d11d0377c70aa145944353356202f`, move
+50's is `135c9b3a580fcc84d74da8e2ac547f6ba06059b5e2148c8a2086ef843bd72fb7`. `_pf_evidence` requires
+them EQUAL. A pose-directed edit changes the rendered frames by construction, so that equality is
+unreachable for any distortion move, at any byte count, on any hardware.
+
+Receipt: `REAL_DOOR_CONTROL.json`, and the four refusal transcripts under `door/`.
 
 ### What this arm did NOT do about it
 
@@ -224,12 +391,84 @@ the moment move 50 has a leg.
 
 ## 10. What this does NOT claim
 
-<!-- NOT_CLAIMED -->
+1. **No score of any kind.** Every S here is a PROJECTION on measured legs. Only
+   `upstream/evaluate.py` on the shipped bytes is a score, and MAIN fires. This arm ran no Modal
+   call, wrote no authorization, no completion and no packet.
+2. **The pose numbers are `[macOS-CPU advisory]`,** measured on a frozen CPU-torch PoseNet against
+   DALI-lineage GT. The instrument's base is 4.448947350080121e−06 against the T4 print 4.45e−06
+   (ratio 0.999763) — the tightest agreement this lineage has recorded — but the last several
+   packets each measured a local-versus-T4 pose-print class of a few e−06 in the OPTIMISTIC
+   direction, and the exact row decides.
+3. **The seg leg is carried onto T4 by the same-instrument ratio** (1.0006836845488258), not
+   measured there. What IS measured on the shipped bytes is the instrument leg: 12,148 cells.
+4. **The container-break lottery is measured, not removed.** The campaign's standing sd is 34.8 B =
+   2.32e−05 S ≈ 1.16 bars, and this object drew 0.99093–0.99927 of its first-order ideal on two
+   fields. A successor field draws again.
+5. **verdict_scope: FORMULATION, on this object.** What is measured is pose-directed single-token
+   pre-distortion on move 50's field, proposals ranked by pose saliency masked to argmax-interior
+   cells, refined 8-deep, admitted on the resolved pose. Multi-token edits per pair, a clustered
+   search (pd1's own §11 lever), and any other carrier parametrisation are untouched.
+6. **The population is DERIVED-bounded, not exhausted.** Tier 1 (164 pairs able to pay on pose
+   alone at the measured price) was searched to completion; tier 2 (83 pairs that need a repaired
+   cell) was searched only 10 deep. The ideal bound on what tier 2 could still hold is small but it
+   is NOT zero, and the 341 pairs below both tiers were excluded by the DERIVED bound
+   `|credit| ≤ base`, which says they cannot pay at this price — not that no edit there does
+   anything.
+7. **15.400 bits/token is THIS subset at THIS edit shape**, measured once, as 16.630 is this field's
+   and 16.98 was pd1's. None of the three is a law.
+8. **The per-bit ranking prices a PAIR, not a proposal.** The rlc1 ledger's `delta_bits` is per
+   pair, so two proposals on one pair are charged the same; where they really do cost different
+   numbers of bits this ranking cannot see the difference. Said plainly rather than dressed up.
+9. **pp1's twelve floor pairs stay excluded** on pp1's measurement. Nothing here reopens them.
+10. **No seal and no intent exist.** Every door refused (§9), each refusal is retained, and this arm
+    did not manufacture an object the contract refuses.
 
 ---
 
 ## 11. Custody
 
-<!-- CUSTODY -->
+Store **`/Volumes/APDataStore/pact/ddm_pd2/`**. APDataStore rather than Vertigo because Vertigo held
+**38 GiB** free — below its 40 GiB reserve. **The reserve was never lowered and nothing was written
+there.**
+
+**MEASURED: 6,021,428,924 B over 761 files, every one hashed — under the 8 GiB cap.**
+`RETENTION_MANIFEST.json` carries bytes and sha256 for each, including the losers: all 1,079 realized
+search rows and all 3,091 screened proposals, not only the 40 that shipped.
+
+| path | what |
+|---|---|
+| `candidate/candidate_archive.zip` · `candidate/candidate_runtime/` | **179,285 B sha `42e47d0b…`** and the 51-file runtime |
+| `parseback/0.raw` · `parseback/PARSEBACK_RESULT.json` | the cold decode (3,662,409,600 B sha `b46351f8…`) and its receipt |
+| `seg_final/argmax_n600.npy` · `STEP0_RESULT.json` | the seg leg on that decode: 12,148 cells |
+| `pose/overlay_pd2/` | the 600-pair odd-frame overlay the pose leg scored (1,831,204,800 B) |
+| `pose/pose_stale.npy` · `pose/pose_resolved.npy` · `base/pose_base_move50.npy` | the three n600 pose vectors |
+| `refine/refine_rows_*.jsonl` · `refine/codes_resolved.npy` | the composed re-solve, per pair |
+| `search/search_b_*.jsonl` · `search/screen_*.jsonl` · `smoke/` | **every realized row and every screened proposal, winners and losers** |
+| `assemble/` · `assemble_perbit/` · `admission/` · `stage/` | the candidate field, the per-bit carry ranking, the Lagrange sweep and its trace, the staged tail |
+| `rlc1_price/` | the pricer's INPUTS, both control encodes, both full-field encodes, both subset encodes, the per-pair bit ledgers |
+| `BIND_RECEIPT.json` · `PREREGISTRATION.json` · `SMOKE_TIMING.json` · `STOP_RULE.json` · `SEARCH_PLAN.json` · `F6_CONTROL_ENCODE.json` · `F_REPRODUCTION_VS_PD1.json` · `F_FLIPS_IDENTITY.json` · `YIELD_HISTOGRAM.json` · `PUBLIC_SMOKE.json` · `LITERAL_CENSUS.json` | the pre-registration and every control receipt |
+| `SEAL_ROUTE_CLOSURE.json` · `DOOR_CONTROL_MOVE50_LEG.json` · `REAL_DOOR_CONTROL.json` · `TIMING_ROUTE_FINDING.json` · `door/` | the contract-route finding and every executed refusal |
+| `PIPELINE_PLAN.md` | the chain as exact commands, written while the search ran |
+
+Producers: `experiments/ddm_pd2_pose_directed_pass2.py` (`bind | base | prereg | run | carry`),
+ruff-clean, plus pd1's `ddm_pd1_pose_directed.py search|assemble` and `ddm_pd1_candidate_tree.py
+build`, and sj1's `ddm_sj1_rlc1_price.py` and `ddm_sj1_joint_admission.py`, all unchanged. Nothing
+under `/Volumes/APDataStore/pact/ddm_pd1`, `/Volumes/VertigoDataTier/pact/ddm_sj1_pass7`,
+`ddm_sj1_pass8`, `ddm_pp1`, `ddm_cb1`, `ddm_cr1` or `ddm_so2` was written; every module that imports
+from a custody tree sets `sys.dont_write_bytecode = True`.
+
+## 12. What this hands the next arm
+
+1. **The candidate is built and byte-closed and waits on ONE measurement.** The moment move 50 has a
+   `t4_direct` leg, this candidate seals through the ordinary inheritance route: its receiver is
+   byte-identical to move 50's, so the only thing inheritance asks for is a direct leg on the
+   pointer's archive.
+2. **K_refine is the cheap lever and it is not exhausted.** Every admitted row came from a refine
+   pd1 did not run. The screen still throws away survivors past rank 8 on the pairs that have them.
+3. **The rate leg is still what decides the size of the win.** 15.4 bits for an isolated token; pd1's
+   §11 lever — CLUSTER the edits, or spend a second token on a pair already open — is untouched, and
+   pass 8's 8.93 bits/token on a clustered field is the number to beat.
+4. **Tier 2 is barely searched** (10 of 83), and its pairs pay only through a seg repair — which this
+   arm measured on 8 of 165 carried edits.
 
 <!-- # FORMALIZATION_PENDING: the equations leg is written by tools/pointer_move_packet.py --equations-leg at harvest, and only on an exact row. The score arithmetic used throughout is the registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
