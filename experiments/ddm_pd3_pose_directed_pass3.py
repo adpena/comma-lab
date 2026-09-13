@@ -152,6 +152,7 @@ def bind_move51(*, verify_raw: bool = False) -> dict[str, Any]:
     against its declared sha BEFORE it is bound and the pointer's own score arithmetic is
     re-derived from its three components afterwards.
     """
+    import ddm_pd1_pose_directed as pd1
     import ddm_pp1_pose_actuation as pp1
     import ddm_sj1_multipass_token_predistortion as sj1
 
@@ -226,6 +227,18 @@ def bind_move51(*, verify_raw: bool = False) -> dict[str, Any]:
     pd2.MOVE50_INSTRUMENT_D_SEG = MOVE51_INSTRUMENT_D_SEG
     pd2.MOVE50_EDITED_PAIRS = str(MOVE51_EDITED_PAIRS)
 
+    # pd1 carries MOVE-49 constants of its own, and `assemble` reads its seg-cell price from
+    # them.  With `--carry-all` and one row per pair that price cannot change which row is
+    # kept -- MEASURED: the move-49 ratio is 1.000663 against move 51's 1.000681, 0.0018 %
+    # apart -- but leaving a stale pointer bound in a module this arm calls is exactly the
+    # silent-rebinding hazard, so it is re-pointed and re-asserted like the others.
+    pd1.POINTER_ARCHIVE_SHA256 = MOVE51_ARCHIVE_SHA256
+    pd1.POINTER_ARCHIVE_BYTES = MOVE51_ARCHIVE_BYTES
+    pd1.POINTER_SCORE_T4 = MOVE51_SCORE_T4
+    pd1.POINTER_D_SEG_T4 = MOVE51_D_SEG_T4
+    pd1.POINTER_D_POSE_T4 = MOVE51_D_POSE_T4
+    pd1.INSTRUMENT_BASE_D_SEG = MOVE51_INSTRUMENT_D_SEG
+
     # Re-assert THROUGH the module that will be used, not through this one's copy of the
     # facts: if any global above were missed, this call still reports its predecessor.
     receipts = pp1.assert_pointer_identity()
@@ -241,6 +254,8 @@ def bind_move51(*, verify_raw: bool = False) -> dict[str, Any]:
         raise Pd3Error("sj1's carrier anchor did not re-bind to move 51")
     if pd2.seg_s_per_cell() != seg_s_per_cell():
         raise Pd3Error("pd2's seg cell price did not re-bind to move 51")
+    if pd1.seg_s_per_cell() != seg_s_per_cell():
+        raise Pd3Error("pd1's seg cell price did not re-bind to move 51")
     receipts.update({
         "bound_move": 51,
         "argmax_sha256": argmax_sha,
