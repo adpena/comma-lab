@@ -457,9 +457,15 @@ def cmd_carry(args) -> int:
     rows = read_rows([Path(p) for p in args.rows])
     scored: dict[int, dict[str, Any]] = {}
     skipped_band = 0
+    skipped_unrefined = 0
     for row in rows:
         pair = int(row["pair"])
         if pair in FLOOR_PAIRS:
+            continue
+        # A SCREEN row carries the seg cost only; it was never refined, so it has no
+        # realized credit and cannot be ranked beside a refined one.  Skipped, and counted.
+        if "credit_d_pose" not in row or "d_pose_base" not in row:
+            skipped_unrefined += 1
             continue
         gap = abs(float(row["d_pose_base"]) - float(base[pair]))
         if gap > BASE_BAND_ABS:
@@ -500,6 +506,7 @@ def cmd_carry(args) -> int:
         ),
         "rows_read": len(rows),
         "rows_outside_base_band": skipped_band,
+        "rows_screen_only_not_refined": skipped_unrefined,
         "pairs_scored": len(scored),
         "pairs_carried": len(keep),
         "sum_credit_d_pose": float(sum(e["credit_d_pose"] for e in keep.values())),
@@ -539,6 +546,7 @@ def cmd_carry(args) -> int:
     print(json.dumps({
         "pairs_scored": len(scored), "pairs_carried": len(keep),
         "rows_outside_base_band": skipped_band,
+        "rows_screen_only_not_refined": skipped_unrefined,
         "sum_credit_d_pose": float(sum(e["credit_d_pose"] for e in keep.values())),
         "sum_d_cells": int(sum(int(e["d_cells"]) for e in keep.values())),
         "carry_rows": str(selected),
