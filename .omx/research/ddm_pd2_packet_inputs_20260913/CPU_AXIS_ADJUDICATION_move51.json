@@ -1,0 +1,33 @@
+{
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "archive_bytes": 179285,
+  "archive_sha256": "42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f",
+  "axis": "contest_cpu",
+  "call": "fc-01M2CF3VYDYXPNEVS1K53J2DK9",
+  "cpu_metrics_absent_by_design": true,
+  "instance_job_id": "ddm_pd2_cpu_20260913",
+  "lane_id": "ddm_pd2_pose_directed_pass2_first_measurement_20260913",
+  "modal_elapsed_seconds": 11.544878300999997,
+  "packet_requirement": "runtime declaration + this refusal receipt; --submission-score-axis contest_cuda",
+  "pair_group_id": "ddm_pd2_pair_20260913",
+  "pointer_move": 51,
+  "receipt": {
+    "bytes": 48036,
+    "path": "/Volumes/APDataStore/pact/ddm_pd2_fire/cpu1/MODAL_REMOTE_RESULT.json",
+    "sha256": "3d78fc60abff6c03a3e77ac04deef2755f8be4745a50e9b60d2cef3023ca1d87"
+  },
+  "receiver_declaration": "linux-nvidia-t4; inflate.sh raises on the CPU path (CUDA guard in inflate.py reached through inflate.sh) \u2014 receiver unchanged from moves 44\u201347 (behavior digest 9f6e7168\u2026)",
+  "recorded_at_utc": "2026-09-11T23:02:44.873896+00:00",
+  "returncode": 1,
+  "schema": "cpu_axis_adjudication.v1",
+  "score_claim": false,
+  "validation_errors": [
+    "inflated_outputs_volume_manifest was not produced",
+    "contest_auth_eval.json was not produced"
+  ],
+  "verdict": "REFUSED_BY_DESIGN"
+}
