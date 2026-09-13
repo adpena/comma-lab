@@ -1914,3 +1914,21 @@ law that outlives the row: on a pre-image object, a per-pair render change is pa
 that can supply it per pair; the credit lives on ordinary pairs, not the hard ones. Timing fact at the mint: this T4 decode took 1,375.8 s
 (> 1,260 s t4_direct limit; receiver byte-identical to moves 46–49 at 1,023–1,141 s) — T4 variance; successors take the first-measurement
 chain under the identity-class envelope. Day's take: moves 45–50, −9.6e-4 S. Demand −24,494 B. Next: pd2 (more refines per pair).
+
+## Addendum 62 (2026-09-13, host ~04:30Z) — pd2: a 2.8-bar candidate with no contract door; the door is a timing re-measurement
+
+pd2 (Opus; commits bada7183e…7532000d4) ran the pose-directed pass with K_refine 8 (declared from a timing smoke: 33.3 s per refine + 27.2 s
+per pair) over 166 pairs: 1,079 refined rows, 165 carried (median credit −18.5 % of the pair's own d_pose, best −99.3 %; 82 of 165 at ≤ 0
+seg cells), admitted 40 (median −52.7 %; 26 of 40 at ≤ 0 cells; 8 of the 40 are pairs move 50 itself edited — "a repair consumes local
+slack" is REFUTED for pose credits). Exact: archive 179,285 B (sha 42e47d0b…; +77 B tail at 15.4 bits/token + 13 B carrier splice), seg
+12,148 cells on its own cold parse-back (zero disagreeing), resolved pose 4.2820e-6 composed at 1.000129 of the per-pair sum ⇒
+**S 0.13622721373953445, net −5.62e-5 = 2.81 bars = 2.4 lotteries**.
+
+The contract fact, executed on all four doors: no route. `build_t4_direct_leg` on move 50's harvest refuses (1,375.8 s > 1,260); inheritance
+refuses (source is not the pointer); `--decode-wall-clock` refuses (receiver differs from the measured tree? — a candidate-tree identity);
+`--first-fire-intent` refuses because the intent's evidence gate demands candidate raw == pointer raw — the first-measurement instrument is
+RATE-ONLY by construction and pr19's identity class is (receiver, decoded plane), so a token-changing candidate's class is empty of legs. The
+laws: (i) a distortion-moving row can ONLY seal by inheriting a measured leg of the pointer; (ii) therefore every pointer needs its own
+mintable leg, and a T4 reading above 1,260 s on the pointer blocks ALL distortion successors until re-measured. Cure: re-measure move 50's
+exact archive on T4 (the identity class decoded in 1,023 / 1,106 / 1,141 / 1,376 s on archives within 890 B; pd2's candidate decodes 11 %
+faster than move 50 locally) — MAIN fires it; a leg ≤ 1,260 s unblocks pd2 through ordinary inheritance.
