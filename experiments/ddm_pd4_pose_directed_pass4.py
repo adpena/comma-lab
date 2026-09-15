@@ -439,9 +439,27 @@ def load_pool(
     96 %-effective proxy for "this render did not move", not a proof of it.  The explicit
     exclusion below is the cure; the band stays as the second gate.
     """
-    stats = {"rows_read": 0, "unrefined": 0, "excluded_edited_pair": 0, "outside_band": 0,
-             "floor_pair": 0, "duplicates": 0}
-    rows = read_rows(list(row_paths))
+    stats = {"rows_read": 0, "unrefined": 0, "excluded_stale_row_on_edited_pair": 0,
+             "outside_band": 0, "floor_pair": 0, "duplicates": 0, "fresh_rows": 0}
+    # Read the files here rather than through ``read_rows`` so every row carries the STORE
+    # it came from.  That distinction is load-bearing: the 26 pairs move 52 itself edited
+    # were RE-SEARCHED by this arm from their new renders, so this arm's own rows on those
+    # pairs are current and must be kept, while a predecessor's rows on the same pairs were
+    # measured on a render that no longer exists and must go -- and the base band catches
+    # only 25 of the 26 (pair 569 slips through at 9.311e-10).
+    rows: list[dict[str, Any]] = []
+    for path in row_paths:
+        store = Path(path).resolve()
+        fresh = "ddm_pd4" in store.parts
+        source = next((part for part in store.parts if part.startswith("ddm_pd")), "unknown")
+        for line in Path(path).read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            row.setdefault("row_source", source)
+            row["row_is_this_arms_own"] = fresh
+            rows.append(row)
     stats["rows_read"] = len(rows)
     pool: dict[int, dict[tuple, dict[str, Any]]] = {}
     for row in rows:
@@ -452,9 +470,11 @@ def load_pool(
         if pair in FLOOR_PAIRS:
             stats["floor_pair"] += 1
             continue
-        if pair in exclude_pairs:
-            stats["excluded_edited_pair"] += 1
+        if pair in exclude_pairs and not row["row_is_this_arms_own"]:
+            stats["excluded_stale_row_on_edited_pair"] += 1
             continue
+        if row["row_is_this_arms_own"]:
+            stats["fresh_rows"] += 1
         gap = abs(float(row["d_pose_base"]) - float(base[pair]))
         if gap > band_abs:
             stats["outside_band"] += 1
@@ -1119,17 +1139,21 @@ def cmd_price_merge(args) -> int:
     # sheet that changes ~140.  The difference is the spill a crowd of neighbours causes on
     # a price, measured on a different object from the held-fixed repeats.
     cross: dict[str, Any] = {}
-    if args.cross_check_field:
+    if args.cross_check_field and args.cross_check_sheets:
         sparse = _encode_bits(args.rlc1_root, args.cross_check_field, args.sheet_tag)
+        sparse_manifest = json.loads(Path(args.cross_check_sheets).read_text())
+        # Match on the PROPOSAL, never on the rank: the sparse field was built before the
+        # cluster rows existed, so a pair's rank-0 proposal is not the same object in both.
+        sparse_keys = {
+            (int(e["pair"]), tuple(tuple(v) for v in e["edits"])): int(e["pair"])
+            for e in sparse_manifest["manifest"]
+        }
         pairs_checked, diffs = [], []
         for row in rows:
+            key = (int(row["pair"]), tuple(tuple(e) for e in row["edits"]))
+            if key not in sparse_keys:
+                continue
             pair = int(row["pair"])
-            if args.cross_check_pairs and pair not in {
-                int(x) for x in args.cross_check_pairs.split(",") if x.strip()
-            }:
-                continue
-            if int(row["rank"]) != 0:
-                continue
             delta = float(sparse[pair] - control[pair])
             pairs_checked.append(pair)
             diffs.append(row["real_delta_bits"] - delta)
@@ -1137,6 +1161,7 @@ def cmd_price_merge(args) -> int:
             arr = np.asarray(diffs, dtype=np.float64)
             cross = {
                 "field": args.cross_check_field,
+                "matched_on": "the proposal's own (pair, edits) identity, not its rank",
                 "pairs": pairs_checked,
                 "sheet_minus_sparse_bits": [float(d) for d in arr],
                 "max_abs_bits": float(np.abs(arr).max()),
@@ -1511,7 +1536,7 @@ def build_parser() -> argparse.ArgumentParser:
     pm.add_argument("--control-tag", default="primary")
     pm.add_argument("--sheet-tag", default="primary")
     pm.add_argument("--cross-check-field", default="")
-    pm.add_argument("--cross-check-pairs", default="")
+    pm.add_argument("--cross-check-sheets", type=Path, default=None)
     pm.add_argument("--raw", type=Path, default=None)
     pm.add_argument("--out-dir", type=Path, required=True)
     pm.set_defaults(func=cmd_price_merge)
