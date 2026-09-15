@@ -101585,6 +101585,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "ddm_pd1_pose_directed_token_predistortion_all_pairs_20260913",
+      "name": "ddm_pd1 pose-directed token pre-distortion over all 600 pairs (20-pair Lagrange subset; carrier re-solve credit as the objective) on move 49",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13628342713679067 @ 179,195 B; archive sha 1ea274f612a26183f31f6d439505d0289bd3751b4da9467343fc156203503cd7; harvest /Volumes/APDataStore/pact/ddm_pd1_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13628342713679067 @ 179,195 B; archive sha 1ea274f612a26183f31f6d439505d0289bd3751b4da9467343fc156203503cd7; harvest /Volumes/APDataStore/pact/ddm_pd1_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13628342713679067 @ 179,195 B; archive sha 1ea274f612a26183f31f6d439505d0289bd3751b4da9467343fc156203503cd7; harvest /Volumes/APDataStore/pact/ddm_pd1_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_pd2_pose_directed_pass2_first_measurement_20260913",
+      "name": "ddm_pd2 pose-directed token pre-distortion pass 2 (40-pair subset, K_refine 8) on move 50; normal seal inheriting move 50's re-measured leg",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.1362333315680336 @ 179,285 B; archive sha 42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f; harvest /Volumes/APDataStore/pact/ddm_pd2_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.1362333315680336 @ 179,285 B; archive sha 42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f; harvest /Volumes/APDataStore/pact/ddm_pd2_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.1362333315680336 @ 179,285 B; archive sha 42e47d0bae1b0647d08db8a5061fe3eec6368b2169d89eb62b14f832fdb0978f; harvest /Volumes/APDataStore/pact/ddm_pd2_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+      "name": "ddm_pd3 pose-directed token pre-distortion pass 3 (26-pair subset, K_refine 12) on move 51; normal seal inheriting move 51's minted leg",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13620226906030858 @ 179,332 B; archive sha ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e; harvest /Volumes/APDataStore/pact/ddm_pd3_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13620226906030858 @ 179,332 B; archive sha ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e; harvest /Volumes/APDataStore/pact/ddm_pd3_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.13620226906030858 @ 179,332 B; archive sha ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e; harvest /Volumes/APDataStore/pact/ddm_pd3_fire/run1/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -101594,5 +101717,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-12T14:29:45Z"
+  "updated_at": "2026-09-13T09:50:41Z"
 }
