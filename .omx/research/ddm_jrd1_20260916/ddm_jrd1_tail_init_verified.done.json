@@ -1,0 +1,14 @@
+{
+  "adjudicated_at_launch": false,
+  "detail": "",
+  "elapsed_s": 5.548041,
+  "generated_utc": "2026-09-16T00:37:48Z",
+  "launch_id": {
+    "manifest_path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/launch_manifest.json",
+    "monotonic_launch_counter": 1998,
+    "pid": 58299
+  },
+  "rc": 0,
+  "receipt_name": "ddm_jrd1_tail_init_verified",
+  "schema": "detached_local_process_done.v2"
+}

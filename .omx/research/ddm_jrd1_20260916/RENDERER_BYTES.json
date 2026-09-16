@@ -1,0 +1,268 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free exact byte measurement]",
+  "checkpoint_policy": "immutable per-action results; repeat same command to resume",
+  "container": {
+    "ck2": true,
+    "lgwin": 16,
+    "quality": 10
+  },
+  "helpers": [
+    {
+      "bytes": 59527,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jg2_tail_reencode.py",
+      "sha256": "628b2a2b459dfc9650d0238ce6867559ccd40d5bd158fba1dc7e6a73afba1cf5"
+    },
+    {
+      "bytes": 23785,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_ren2_restore_init.py",
+      "sha256": "5f65294f26b475b8178be11fa5d1ccec003254819ff0857a1fa76124241e674c"
+    },
+    {
+      "bytes": 9693,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "bytes": 20916,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 13389,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    }
+  ],
+  "no_exchange_verdict": true,
+  "numpy_version": "1.26.4",
+  "producer": {
+    "bytes": 14600,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_jrd1_byte_preflight.py",
+    "sha256": "d097041e3917c5b7b32ce1317651bbb6495dfdbeacb1843bc0dd192f861b8db3"
+  },
+  "results": [
+    {
+      "action": null,
+      "archives": [
+        {
+          "bytes": 179332,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/archive.zip",
+          "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+        },
+        {
+          "bytes": 179332,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/archive.zip",
+          "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+        }
+      ],
+      "delta_archive_bytes": 0,
+      "delta_coded_bits": 0,
+      "exchange_S_per_B": null,
+      "label": "control",
+      "rate_delta_S": 0.0,
+      "resolved_pose": null,
+      "seg_credit": null
+    },
+    {
+      "action": {
+        "changed_codes": 1,
+        "flat_index": 1713,
+        "new": 2,
+        "old": 3,
+        "selection": "seeded instrumentation; NOT a gradient",
+        "tensor": "head.weight"
+      },
+      "archives": [
+        {
+          "bytes": 179342,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/archive.zip",
+          "sha256": "5607e9d12d6bf6211ea72d9134e86b3b66a07569686d1adf7f33bb7febfe57a1"
+        },
+        {
+          "bytes": 179342,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/archive.zip",
+          "sha256": "5607e9d12d6bf6211ea72d9134e86b3b66a07569686d1adf7f33bb7febfe57a1"
+        }
+      ],
+      "delta_archive_bytes": 10,
+      "delta_coded_bits": 80,
+      "exchange_S_per_B": null,
+      "label": "head_weight_minus",
+      "rate_delta_S": 6.658589531221714e-06,
+      "resolved_pose": null,
+      "seg_credit": null
+    },
+    {
+      "action": {
+        "changed_codes": 1,
+        "flat_index": 1713,
+        "new": 4,
+        "old": 3,
+        "selection": "seeded instrumentation; NOT a gradient",
+        "tensor": "head.weight"
+      },
+      "archives": [
+        {
+          "bytes": 179357,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/archive.zip",
+          "sha256": "5d0d5084859fed76653283e7c42351ca685e2c4e749e190ba8118779245ebce3"
+        },
+        {
+          "bytes": 179357,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/archive.zip",
+          "sha256": "5d0d5084859fed76653283e7c42351ca685e2c4e749e190ba8118779245ebce3"
+        }
+      ],
+      "delta_archive_bytes": 25,
+      "delta_coded_bits": 200,
+      "exchange_S_per_B": null,
+      "label": "head_weight_plus",
+      "rate_delta_S": 1.6646473828054283e-05,
+      "resolved_pose": null,
+      "seg_credit": null
+    },
+    {
+      "action": {
+        "changed_codes": 1,
+        "flat_index": 131,
+        "new": 2,
+        "old": 3,
+        "selection": "seeded instrumentation; NOT a gradient",
+        "tensor": "blocks.3.dw.weight"
+      },
+      "archives": [
+        {
+          "bytes": 179329,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/archive.zip",
+          "sha256": "383add0211e5033477863be70d41f8cd5f22760d97dcda660b5b2eb9d24b3884"
+        },
+        {
+          "bytes": 179329,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/archive.zip",
+          "sha256": "383add0211e5033477863be70d41f8cd5f22760d97dcda660b5b2eb9d24b3884"
+        }
+      ],
+      "delta_archive_bytes": -3,
+      "delta_coded_bits": -24,
+      "exchange_S_per_B": null,
+      "label": "blocks_3_dw_weight_minus",
+      "rate_delta_S": -1.997576859366514e-06,
+      "resolved_pose": null,
+      "seg_credit": null
+    },
+    {
+      "action": {
+        "changed_codes": 1,
+        "flat_index": 131,
+        "new": 4,
+        "old": 3,
+        "selection": "seeded instrumentation; NOT a gradient",
+        "tensor": "blocks.3.dw.weight"
+      },
+      "archives": [
+        {
+          "bytes": 179335,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/archive.zip",
+          "sha256": "263b6f31fbc3a655b7edb43a5adf93f5297127bd0f93154cf2f489668d3c96fb"
+        },
+        {
+          "bytes": 179335,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/archive.zip",
+          "sha256": "263b6f31fbc3a655b7edb43a5adf93f5297127bd0f93154cf2f489668d3c96fb"
+        }
+      ],
+      "delta_archive_bytes": 3,
+      "delta_coded_bits": 24,
+      "exchange_S_per_B": null,
+      "label": "blocks_3_dw_weight_plus",
+      "rate_delta_S": 1.997576859366514e-06,
+      "resolved_pose": null,
+      "seg_credit": null
+    },
+    {
+      "action": {
+        "changed_codes": 1,
+        "flat_index": 6661,
+        "new": 1,
+        "old": 2,
+        "selection": "seeded instrumentation; NOT a gradient",
+        "tensor": "blocks.3.pw.weight"
+      },
+      "archives": [
+        {
+          "bytes": 179361,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/archive.zip",
+          "sha256": "9f4964ce77d771f90faa005c59b0052410d9ee25c38d7c7955a15d4db2715c85"
+        },
+        {
+          "bytes": 179361,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/archive.zip",
+          "sha256": "9f4964ce77d771f90faa005c59b0052410d9ee25c38d7c7955a15d4db2715c85"
+        }
+      ],
+      "delta_archive_bytes": 29,
+      "delta_coded_bits": 232,
+      "exchange_S_per_B": null,
+      "label": "blocks_3_pw_weight_minus",
+      "rate_delta_S": 1.9309909640542968e-05,
+      "resolved_pose": null,
+      "seg_credit": null
+    },
+    {
+      "action": {
+        "changed_codes": 1,
+        "flat_index": 6661,
+        "new": 3,
+        "old": 2,
+        "selection": "seeded instrumentation; NOT a gradient",
+        "tensor": "blocks.3.pw.weight"
+      },
+      "archives": [
+        {
+          "bytes": 179328,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/archive.zip",
+          "sha256": "08fdff1a9ecae65c2986e57c9a21bd006528cfb7a97e0b31f5e6c9793babfd1d"
+        },
+        {
+          "bytes": 179328,
+          "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/archive.zip",
+          "sha256": "08fdff1a9ecae65c2986e57c9a21bd006528cfb7a97e0b31f5e6c9793babfd1d"
+        }
+      ],
+      "delta_archive_bytes": -4,
+      "delta_coded_bits": -32,
+      "exchange_S_per_B": null,
+      "label": "blocks_3_pw_weight_plus",
+      "rate_delta_S": -2.6634358124886856e-06,
+      "resolved_pose": null,
+      "seg_credit": null
+    }
+  ],
+  "schema": "ddm_jrd1_renderer_byte_instrument.v1",
+  "scope": "instrument checks only; these random actions are NOT charter renderer-row gradients",
+  "score_claim": false,
+  "seed": 20260916,
+  "source_facts": {
+    "body": {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/body.bin",
+      "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+    },
+    "member": {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/member.bin",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    "rider": {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/rider.bin",
+      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
+    },
+    "staged": {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/staged.bin",
+      "sha256": "a04ddfc34f22fa257cc3c99df5932c2de80d0f9397b09af3c2d183535767300c"
+    }
+  },
+  "torch_version": "2.12.1"
+}

@@ -1,0 +1,96 @@
+[
+  {
+    "scope": "memos",
+    "argv": [
+      "rg",
+      "-n",
+      "-l",
+      "joint.{0,50}(renderer|field)|renderer.{0,50}collateral|selection.on.{0,15}price|UNION.{0,8}SUM",
+      ".omx/research",
+      "--glob",
+      "*.md",
+      "--glob",
+      "!ddm_jrd1*"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrd1_20260916/memos_recall.txt",
+    "bytes": 14189,
+    "sha256": "e78848f56ac840cf86e77f4557c45bea5f9cc56919dbb6eca603c935b3d30633",
+    "line_count": 210
+  },
+  {
+    "scope": "index_dag",
+    "argv": [
+      "rg",
+      "-n",
+      "joint.{0,45}(renderer|field)|collateral|exchange|rate.aware",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      "-m",
+      "8"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrd1_20260916/index_dag_recall.txt",
+    "bytes": 4249,
+    "sha256": "0e6aa77a6296392c7fa2582e8ad1c2eba87b227e3aefcc03e9016c06eeac26a6",
+    "line_count": 8
+  },
+  {
+    "scope": "spec_design",
+    "argv": [
+      "rg",
+      "-n",
+      "-l",
+      "joint.{0,45}(renderer|field)|collateral|rate.aware",
+      "docs",
+      ".omx/research",
+      "--glob",
+      "*SPEC*",
+      "--glob",
+      "*spec*",
+      "--glob",
+      "*design*"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrd1_20260916/spec_design_recall.txt",
+    "bytes": 2510,
+    "sha256": "ad567905af97747bff314aecb0322de184a41ab1cc2154ef19a6ac977f8fa828",
+    "line_count": 35
+  },
+  {
+    "scope": "ledger",
+    "argv": [
+      "rg",
+      "-n",
+      "ddm_jrd1|ddm_pd4|ddm_rw1|ddm_ren2|joint.{0,35}(renderer|field)",
+      ".omx/state/canonical_task_status.jsonl",
+      "-m",
+      "6"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrd1_20260916/ledger_recall.txt",
+    "bytes": 2394,
+    "sha256": "797333bddeb31110dd1ffb903c8fd7b2b459cac38e17c16a83344b05d5bb45ac",
+    "line_count": 3
+  },
+  {
+    "scope": "all_sub015_DAG_and_CANONICAL_RESEARCH_INDEX",
+    "argv": [
+      "rg",
+      "-n",
+      "-m",
+      "4",
+      "joint.{0,45}(renderer|field)|collateral|exchange|rate.aware",
+      ".omx/research",
+      "--glob",
+      "sub015_DAG_*",
+      "--glob",
+      "CANONICAL_RESEARCH_INDEX*"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrd1_20260916/all_dag_index_recall.txt",
+    "bytes": 2806,
+    "sha256": "0748b8a1fba178ee4c7df84351147d3f56950b06b2ceaab852e8acbff6bcb184",
+    "line_count": 5
+  }
+]

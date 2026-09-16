@@ -1,0 +1,24 @@
+{
+  "chunk_max_pairs": 120,
+  "consumer_store": "/Volumes/APDataStore/pact/ddm_jrd1",
+  "contract_scope_boundary": "K24 charter diagnostic does not itself meet common n>=32 threshold for banking a sampled negative",
+  "details": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/FIRE_ORDER.md",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "executing_owner": "ddm_jrd1 successor",
+  "fire_trigger": "Explicit MAIN scorer-slot assignment after pd5 and every full-n600 scorer owner release it; reverify move-52 input pins and operationalize the complete probe described in FIRE_ORDER.md.",
+  "full_probe_implemented": false,
+  "gate_status": "UNMEASURED",
+  "lane_id": "ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916",
+  "no_modal": true,
+  "no_packet": true,
+  "no_training": true,
+  "owner": "MAIN",
+  "preregister_before_scoring": [
+    "per-pair pd4 knee reference and tolerance",
+    "handling of literal zero-byte exchange quotient and nonpositive comparison rows"
+  ],
+  "schema": "ddm_jrd1_scorer_fire_order.v1",
+  "scorer_jobs_launched": 0,
+  "scorer_slot_assigned": false,
+  "task_id": "ddm_jrd1_joint_exchange_scorer_phase_20260916"
+}

@@ -1,0 +1,14 @@
+{
+  "archive_integrity_checked": 14,
+  "matching_twins": 7,
+  "negative_tests": {
+    "retention_overflow": "REFUSED",
+    "unowned_Vertigo_write": "REFUSED_BEFORE_WRITE",
+    "wrong_base_pin": "REFUSED"
+  },
+  "null_archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+  "producer_sha256": "d097041e3917c5b7b32ce1317651bbb6495dfdbeacb1843bc0dd192f861b8db3",
+  "review_passes": 2,
+  "schema": "ddm_jrd1_actual_byte_checks.v1",
+  "scientific_scope": "byte instrument only; no Seg/Pose/gradient/exchange test"
+}

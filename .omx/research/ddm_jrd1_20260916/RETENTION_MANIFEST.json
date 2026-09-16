@@ -1,0 +1,3656 @@
+{
+  "allocated_bytes": 254410752,
+  "authority": "scorer-free byte artifacts only; modified archives have UNMEASURED distortion",
+  "cleanup": "KEEP_ALL; no bytes deleted or moved; no full raw materialized",
+  "command_provenance": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/LAUNCH_REPRODUCTION.json",
+  "file_count": 728,
+  "files": [
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/._SAMPLE.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/._inputs",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/._renderer",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/._rlc1_bulk",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/._rlc1_price",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/._stages",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 6928,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/SAMPLE.json",
+      "sha256": "b905cbabf06ca4a9dc78c1f9ed49a929e0c15d5f2b580a55fa769c23a5256613"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/inputs/._pd4_priced_rows.jsonl",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/inputs/._selected_planes.npy",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 314751,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/inputs/pd4_priced_rows.jsonl",
+      "sha256": "67c779eb5d1db645e27693b935cf975606c22695f5c9fca4a2469f221502f944"
+    },
+    {
+      "bytes": 4718720,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/inputs/selected_planes.npy",
+      "sha256": "6c5dc041c9eecea6e8334f80bf10bbf200e98df87d31c0727ee056fe915f26d1"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._blocks_3_dw_weight_minus",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._blocks_3_dw_weight_plus",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._blocks_3_pw_weight_minus",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._blocks_3_pw_weight_plus",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._container_controls",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._control",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._head_weight_minus",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._head_weight_plus",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/._source",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 9280,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/RESULT.json",
+      "sha256": "fc0b821bd3d6805684e9a3b9fa65029a0c2a55e0408b4f4fbf2127867d9ffd07"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/._action_body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/._code_run.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 873,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/RESULT.json",
+      "sha256": "68d20418f2642b776f9fdcbf72b897b822d9d17c4371f4bd3870251a2102b216"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/action_body.sm3r",
+      "sha256": "1d3a1271e35aad5e676af05c64391c1dc73b3addd644ecadb59f97bcecfef657"
+    },
+    {
+      "bytes": 432,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/code_run.bin",
+      "sha256": "8e1195610579ce82cb8cd15d545b26df9857317d93813040596a1ad6405d13de"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179329,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/archive.zip",
+      "sha256": "383add0211e5033477863be70d41f8cd5f22760d97dcda660b5b2eb9d24b3884"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/body.sm3r",
+      "sha256": "1d3a1271e35aad5e676af05c64391c1dc73b3addd644ecadb59f97bcecfef657"
+    },
+    {
+      "bytes": 29859,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/member.br",
+      "sha256": "16d475f3532f16a220a93a56025e439d900880b6e6e676448131fa39af8a686b"
+    },
+    {
+      "bytes": 179229,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/member.p",
+      "sha256": "bb75088c27b2cf99aff45e0151b242a5959782e382d1f6430f5a6bcf42fb8925"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/range_payload.bin",
+      "sha256": "098d0f685c69e85c5250aa00f7983de276a7069d27d3e92f6c966cef8bb37d4f"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/rider.sm1s",
+      "sha256": "bfcb659c98bf587d1582d45844a730cd48820fe16c9a273528066bee062cd8ee"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat0/staged.bin",
+      "sha256": "a34a455f023212acce2fd364e20efeba60ef85ea5667a74f2b453f170518910a"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179329,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/archive.zip",
+      "sha256": "383add0211e5033477863be70d41f8cd5f22760d97dcda660b5b2eb9d24b3884"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/body.sm3r",
+      "sha256": "1d3a1271e35aad5e676af05c64391c1dc73b3addd644ecadb59f97bcecfef657"
+    },
+    {
+      "bytes": 29859,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/member.br",
+      "sha256": "16d475f3532f16a220a93a56025e439d900880b6e6e676448131fa39af8a686b"
+    },
+    {
+      "bytes": 179229,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/member.p",
+      "sha256": "bb75088c27b2cf99aff45e0151b242a5959782e382d1f6430f5a6bcf42fb8925"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/range_payload.bin",
+      "sha256": "098d0f685c69e85c5250aa00f7983de276a7069d27d3e92f6c966cef8bb37d4f"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/rider.sm1s",
+      "sha256": "bfcb659c98bf587d1582d45844a730cd48820fe16c9a273528066bee062cd8ee"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_minus/repeat1/staged.bin",
+      "sha256": "a34a455f023212acce2fd364e20efeba60ef85ea5667a74f2b453f170518910a"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/._action_body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/._code_run.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 867,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/RESULT.json",
+      "sha256": "21ea6aad65fd59721c0b458425cbee00d6b155af58b810bff4e055b0318c9fc5"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/action_body.sm3r",
+      "sha256": "b5e65d780a0f7fddf6b9a5fefa46f53255c90d43deb86e344d7a4304e83005f5"
+    },
+    {
+      "bytes": 432,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/code_run.bin",
+      "sha256": "53471ac6d9f172417a13203f014188c0178f391dc58aa312a8decd14701e2990"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179335,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/archive.zip",
+      "sha256": "263b6f31fbc3a655b7edb43a5adf93f5297127bd0f93154cf2f489668d3c96fb"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/body.sm3r",
+      "sha256": "b5e65d780a0f7fddf6b9a5fefa46f53255c90d43deb86e344d7a4304e83005f5"
+    },
+    {
+      "bytes": 29865,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/member.br",
+      "sha256": "6be66f3775aec164094cd664ebd1fac55916cbe4551255ea55e3c5d29c53c155"
+    },
+    {
+      "bytes": 179235,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/member.p",
+      "sha256": "bc318ba9c113658439ca0b7cc3a7e0a970365d1370dc3318542b9da5eeb2c8d6"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/range_payload.bin",
+      "sha256": "bb9e188880db18f33af3161f5c751fecb219aaa079d69feb8256477e4289a945"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/rider.sm1s",
+      "sha256": "5f441dd8c14b336036628eb1c783577df4ca9687527fbdb0cbd4d92819b80618"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat0/staged.bin",
+      "sha256": "da70ff1848f31f6256d1a8b2972de2d905eb69c7aa3ef8b64bd6b2bd2daa40ce"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179335,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/archive.zip",
+      "sha256": "263b6f31fbc3a655b7edb43a5adf93f5297127bd0f93154cf2f489668d3c96fb"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/body.sm3r",
+      "sha256": "b5e65d780a0f7fddf6b9a5fefa46f53255c90d43deb86e344d7a4304e83005f5"
+    },
+    {
+      "bytes": 29865,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/member.br",
+      "sha256": "6be66f3775aec164094cd664ebd1fac55916cbe4551255ea55e3c5d29c53c155"
+    },
+    {
+      "bytes": 179235,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/member.p",
+      "sha256": "bc318ba9c113658439ca0b7cc3a7e0a970365d1370dc3318542b9da5eeb2c8d6"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/range_payload.bin",
+      "sha256": "bb9e188880db18f33af3161f5c751fecb219aaa079d69feb8256477e4289a945"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/rider.sm1s",
+      "sha256": "5f441dd8c14b336036628eb1c783577df4ca9687527fbdb0cbd4d92819b80618"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_dw_weight_plus/repeat1/staged.bin",
+      "sha256": "da70ff1848f31f6256d1a8b2972de2d905eb69c7aa3ef8b64bd6b2bd2daa40ce"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/._action_body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/._code_run.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 874,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/RESULT.json",
+      "sha256": "bad8d26026395c92b58448a5dcfc6e313f6eeed430f57d18e8d61e59485ab0b6"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/action_body.sm3r",
+      "sha256": "acff9864e2043de9a8974d9c43baa9ec2244b051059a6d1de09382eb5fe66624"
+    },
+    {
+      "bytes": 4608,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/code_run.bin",
+      "sha256": "390721ee32974e282a3962edb74100079036131833b117e163c4d857f34568dc"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179361,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/archive.zip",
+      "sha256": "9f4964ce77d771f90faa005c59b0052410d9ee25c38d7c7955a15d4db2715c85"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/body.sm3r",
+      "sha256": "acff9864e2043de9a8974d9c43baa9ec2244b051059a6d1de09382eb5fe66624"
+    },
+    {
+      "bytes": 29891,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/member.br",
+      "sha256": "b9df969d41871bcbf2cbcdcae33880055d17cb57ebc4be2cf8847921661c9f29"
+    },
+    {
+      "bytes": 179261,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/member.p",
+      "sha256": "7c44d6079513ce711810d7ed0c0d5fa5cbe497b3d9b1962da0d0e8190c83e789"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/range_payload.bin",
+      "sha256": "78a2c5e25ae0cd582caa920f3b3988d5cf3f62d4105fc2738ff515c7b89c7da6"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/rider.sm1s",
+      "sha256": "706afa8cd6ae7a42c7bb193ec7415c173da4267bcf68f29068fd8c68b19c038c"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat0/staged.bin",
+      "sha256": "b63647bba33f10aa683f03994a3807199faf9aed3ff9a06f64fd8de29c4b0d70"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179361,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/archive.zip",
+      "sha256": "9f4964ce77d771f90faa005c59b0052410d9ee25c38d7c7955a15d4db2715c85"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/body.sm3r",
+      "sha256": "acff9864e2043de9a8974d9c43baa9ec2244b051059a6d1de09382eb5fe66624"
+    },
+    {
+      "bytes": 29891,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/member.br",
+      "sha256": "b9df969d41871bcbf2cbcdcae33880055d17cb57ebc4be2cf8847921661c9f29"
+    },
+    {
+      "bytes": 179261,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/member.p",
+      "sha256": "7c44d6079513ce711810d7ed0c0d5fa5cbe497b3d9b1962da0d0e8190c83e789"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/range_payload.bin",
+      "sha256": "78a2c5e25ae0cd582caa920f3b3988d5cf3f62d4105fc2738ff515c7b89c7da6"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/rider.sm1s",
+      "sha256": "706afa8cd6ae7a42c7bb193ec7415c173da4267bcf68f29068fd8c68b19c038c"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_minus/repeat1/staged.bin",
+      "sha256": "b63647bba33f10aa683f03994a3807199faf9aed3ff9a06f64fd8de29c4b0d70"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/._action_body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/._code_run.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 872,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/RESULT.json",
+      "sha256": "a8ea98861b24136d1aa8c2fcc41ab4c22f2f4552e0a019edd3dea33f51796468"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/action_body.sm3r",
+      "sha256": "67196dca82e9cf6fcbaf74634784a514e53d19ae9f911aac089c8e6e0ca44c3b"
+    },
+    {
+      "bytes": 4608,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/code_run.bin",
+      "sha256": "e13402a1794425033713b7d1c95df6a99a968744558c68616baa5664a948f1c9"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179328,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/archive.zip",
+      "sha256": "08fdff1a9ecae65c2986e57c9a21bd006528cfb7a97e0b31f5e6c9793babfd1d"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/body.sm3r",
+      "sha256": "67196dca82e9cf6fcbaf74634784a514e53d19ae9f911aac089c8e6e0ca44c3b"
+    },
+    {
+      "bytes": 29858,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/member.br",
+      "sha256": "12465a288766e8d2a51903c0afad0f35847f5ccc6e81dadb561792aff5cb1674"
+    },
+    {
+      "bytes": 179228,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/member.p",
+      "sha256": "8720908767ea5708cdd2cff14e1cf9e69e0d5f733944cd7edd00d64109e17eea"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/range_payload.bin",
+      "sha256": "05388719ceb63c5669d7deb6472a45a3a15bdb90d7bc992895f21431e1f7ba05"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/rider.sm1s",
+      "sha256": "6ce158048e4abf896fd66b98833f00717cbe4e11c9dd6fe1ae7c1db1c02d1736"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat0/staged.bin",
+      "sha256": "8ba9e7bf269e224a089eba5afe80cb1854040c0aa2fad5d3557a96b02cccf06c"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179328,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/archive.zip",
+      "sha256": "08fdff1a9ecae65c2986e57c9a21bd006528cfb7a97e0b31f5e6c9793babfd1d"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/body.sm3r",
+      "sha256": "67196dca82e9cf6fcbaf74634784a514e53d19ae9f911aac089c8e6e0ca44c3b"
+    },
+    {
+      "bytes": 29858,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/member.br",
+      "sha256": "12465a288766e8d2a51903c0afad0f35847f5ccc6e81dadb561792aff5cb1674"
+    },
+    {
+      "bytes": 179228,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/member.p",
+      "sha256": "8720908767ea5708cdd2cff14e1cf9e69e0d5f733944cd7edd00d64109e17eea"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/range_payload.bin",
+      "sha256": "05388719ceb63c5669d7deb6472a45a3a15bdb90d7bc992895f21431e1f7ba05"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/rider.sm1s",
+      "sha256": "6ce158048e4abf896fd66b98833f00717cbe4e11c9dd6fe1ae7c1db1c02d1736"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/blocks_3_pw_weight_plus/repeat1/staged.bin",
+      "sha256": "8ba9e7bf269e224a089eba5afe80cb1854040c0aa2fad5d3557a96b02cccf06c"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/._q10_w16.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/._q9_w16.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/._q9_w18.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/._q9_w20.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/._q9_w22.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/._q9_w24.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/q10_w16.br",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "bytes": 30489,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/q9_w16.br",
+      "sha256": "5d3fae0ef457d8750c4c584097c5c73fed8716e407198e0bd0c6474245fb13a4"
+    },
+    {
+      "bytes": 30475,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/q9_w18.br",
+      "sha256": "0fe9b9cf5f81260cab7b6112c9de05ce6aa267701c6aa5f0f20e2d90fd4b5f4f"
+    },
+    {
+      "bytes": 30475,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/q9_w20.br",
+      "sha256": "c34f7b8095c35f61aea7f7b01a26b9f47179427a36cc628a038eccd51e5a29b4"
+    },
+    {
+      "bytes": 30475,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/q9_w22.br",
+      "sha256": "7f81e6e1b1071ccdd9b7a540429dd7efe27e1576cf3f7d54016dd94cddd16313"
+    },
+    {
+      "bytes": 30475,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/container_controls/q9_w24.br",
+      "sha256": "3531e8cbd6808272ccbffefe33226d6fca2c0ceff98034ccd1860f965e36c3bb"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 630,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/RESULT.json",
+      "sha256": "9b1336b47a496f3a09506dfb8c84298729589047485340e6e831a66f4e8bce83"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/archive.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/body.sm3r",
+      "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+    },
+    {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/member.br",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "bytes": 179232,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/member.p",
+      "sha256": "1d544af744d1937cf57df376059ea36ec2ba83a44ce19882b32385e610de9034"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/range_payload.bin",
+      "sha256": "6ed88b01586df72f12c1180655ff3aa7d36eec4a2f18b4bcc6987fd516d583be"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/rider.sm1s",
+      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat0/staged.bin",
+      "sha256": "a04ddfc34f22fa257cc3c99df5932c2de80d0f9397b09af3c2d183535767300c"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/archive.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/body.sm3r",
+      "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+    },
+    {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/member.br",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "bytes": 179232,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/member.p",
+      "sha256": "1d544af744d1937cf57df376059ea36ec2ba83a44ce19882b32385e610de9034"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/range_payload.bin",
+      "sha256": "6ed88b01586df72f12c1180655ff3aa7d36eec4a2f18b4bcc6987fd516d583be"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/rider.sm1s",
+      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/control/repeat1/staged.bin",
+      "sha256": "a04ddfc34f22fa257cc3c99df5932c2de80d0f9397b09af3c2d183535767300c"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/._action_body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/._code_run.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 844,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/RESULT.json",
+      "sha256": "35ddecb986626b58924863fe71c017cc823a14d6e797c29c6218cecf5d6052a6"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/action_body.sm3r",
+      "sha256": "1221ddcb052671d071a3d3daae7a5421d41ec6f3379e4fac8af77cee8a183b49"
+    },
+    {
+      "bytes": 1296,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/code_run.bin",
+      "sha256": "e1ee8287ca7a47d76dc30f40065f5f8e7d088da54a5d9c13427d39ffff3c1fe2"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179342,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/archive.zip",
+      "sha256": "5607e9d12d6bf6211ea72d9134e86b3b66a07569686d1adf7f33bb7febfe57a1"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/body.sm3r",
+      "sha256": "1221ddcb052671d071a3d3daae7a5421d41ec6f3379e4fac8af77cee8a183b49"
+    },
+    {
+      "bytes": 29872,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/member.br",
+      "sha256": "6471ef9d2260b75e47018b801d9e57e3dc172bc24bbec259623fa128b421eeb4"
+    },
+    {
+      "bytes": 179242,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/member.p",
+      "sha256": "fd21cce266b59b90bf07b1bfa8afc7f028a174a46c0c6197cd031fcc7ecb44f4"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/range_payload.bin",
+      "sha256": "5d837426efb29b014948e47b97318d0367311010643154f945c7489edd80ab46"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/rider.sm1s",
+      "sha256": "2679cd55c97dc4c16033d03b75fe09f09b255f0d41243e647150b507507ed1ec"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat0/staged.bin",
+      "sha256": "35160b289956ac979c34ed5984cac79368b539f2eb76573495e3e2f939fea7ca"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179342,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/archive.zip",
+      "sha256": "5607e9d12d6bf6211ea72d9134e86b3b66a07569686d1adf7f33bb7febfe57a1"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/body.sm3r",
+      "sha256": "1221ddcb052671d071a3d3daae7a5421d41ec6f3379e4fac8af77cee8a183b49"
+    },
+    {
+      "bytes": 29872,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/member.br",
+      "sha256": "6471ef9d2260b75e47018b801d9e57e3dc172bc24bbec259623fa128b421eeb4"
+    },
+    {
+      "bytes": 179242,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/member.p",
+      "sha256": "fd21cce266b59b90bf07b1bfa8afc7f028a174a46c0c6197cd031fcc7ecb44f4"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/range_payload.bin",
+      "sha256": "5d837426efb29b014948e47b97318d0367311010643154f945c7489edd80ab46"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/rider.sm1s",
+      "sha256": "2679cd55c97dc4c16033d03b75fe09f09b255f0d41243e647150b507507ed1ec"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_minus/repeat1/staged.bin",
+      "sha256": "35160b289956ac979c34ed5984cac79368b539f2eb76573495e3e2f939fea7ca"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/._RESULT.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/._action_body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/._code_run.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/._repeat0",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/._repeat1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/RESULT.json",
+      "sha256": "eba14f3f7207cdaa4a54c2bfa96ba1c01a642283a52c1832ccfa5521fa938b45"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/action_body.sm3r",
+      "sha256": "654521a476b360befdc0fd053370d60b1df83d390af67ed3e90c723fbb2b8d24"
+    },
+    {
+      "bytes": 1296,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/code_run.bin",
+      "sha256": "bc9700c39cadeb3d8eb22dbd82ab303eaf3501f82db028b701c85fc044fcdaac"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179357,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/archive.zip",
+      "sha256": "5d0d5084859fed76653283e7c42351ca685e2c4e749e190ba8118779245ebce3"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/body.sm3r",
+      "sha256": "654521a476b360befdc0fd053370d60b1df83d390af67ed3e90c723fbb2b8d24"
+    },
+    {
+      "bytes": 29887,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/member.br",
+      "sha256": "637af51f74c2004200a6f074c4adc8ffc0d0933b3c61fd1437ff6b9459940ee6"
+    },
+    {
+      "bytes": 179257,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/member.p",
+      "sha256": "2801cecac6a6586295b0f28dbb8064f0e48bb6895cc57a056b1b0bf415150974"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/range_payload.bin",
+      "sha256": "30dad63c01bcf981dd5f5ef26c9ae3dc48e5b1cfb36665946bf7c78a76e5c54d"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/rider.sm1s",
+      "sha256": "be5c6fb79e8e37fe9293cba52f8b3c589ea3deade643b813aed6cc38ddba5b61"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat0/staged.bin",
+      "sha256": "ddc07077c84ef913c7ff0d39ede0a48220244cf6c69a68ca0db596cf734b101f"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._body.sm3r",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._member.br",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._member.p",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._metadata.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._range_payload.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._rider.sm1s",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179357,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/archive.zip",
+      "sha256": "5d0d5084859fed76653283e7c42351ca685e2c4e749e190ba8118779245ebce3"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/body.sm3r",
+      "sha256": "654521a476b360befdc0fd053370d60b1df83d390af67ed3e90c723fbb2b8d24"
+    },
+    {
+      "bytes": 29887,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/member.br",
+      "sha256": "637af51f74c2004200a6f074c4adc8ffc0d0933b3c61fd1437ff6b9459940ee6"
+    },
+    {
+      "bytes": 179257,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/member.p",
+      "sha256": "2801cecac6a6586295b0f28dbb8064f0e48bb6895cc57a056b1b0bf415150974"
+    },
+    {
+      "bytes": 7234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/metadata.bin",
+      "sha256": "f77a9ce110f5a28dbfeebc4d1afa00324c231d0e41cdda7f0fe11fce9291028c"
+    },
+    {
+      "bytes": 24181,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/range_payload.bin",
+      "sha256": "30dad63c01bcf981dd5f5ef26c9ae3dc48e5b1cfb36665946bf7c78a76e5c54d"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/rider.sm1s",
+      "sha256": "be5c6fb79e8e37fe9293cba52f8b3c589ea3deade643b813aed6cc38ddba5b61"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/head_weight_plus/repeat1/staged.bin",
+      "sha256": "ddc07077c84ef913c7ff0d39ede0a48220244cf6c69a68ca0db596cf734b101f"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/._body.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/._member.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/._rider.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/._staged.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 36130,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/body.bin",
+      "sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50"
+    },
+    {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/member.bin",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/rider.bin",
+      "sha256": "9c0b579cc1c67757256177354c388f95058a12c773bc64e1aa8bbc89a29c1a08"
+    },
+    {
+      "bytes": 31451,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/renderer/source/staged.bin",
+      "sha256": "a04ddfc34f22fa257cc3c99df5932c2de80d0f9397b09af3c2d183535767300c"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/._encoder_states",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/._fields",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/._control",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/._primary",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0025.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0025.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0050.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0050.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0075.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0075.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0100.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0100.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0125.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0125.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0150.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0150.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0175.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0175.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0200.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0200.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0225.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0225.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0250.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0250.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0275.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0275.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0300.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0300.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0325.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0325.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0350.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0350.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0375.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0375.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0400.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0400.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0425.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0425.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0450.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0450.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0475.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0475.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0500.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0500.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0525.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0525.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0550.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0550.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0575.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0575.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0600.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/._stage_0600.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 7201,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0025.json",
+      "sha256": "f88fb737551af5582dc77ee87f1496e5f627845ea22fc06d7b4d0cc8e6c37dfd"
+    },
+    {
+      "bytes": 15684,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0025.npz",
+      "sha256": "20d2098c4bdf4e16b9b695cf270165452f9e0687840265097b6e917ee77b2c21"
+    },
+    {
+      "bytes": 7201,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0050.json",
+      "sha256": "d83e2789474213e07cd97bd316444a1047ba8bd0f2f12c42de9a1d57a9635a87"
+    },
+    {
+      "bytes": 25260,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0050.npz",
+      "sha256": "206b9c3a3c216b6cbc3fa8576e0934aa49a01fb2291fe5c600164ecbfb272909"
+    },
+    {
+      "bytes": 7201,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0075.json",
+      "sha256": "40bc5c2ac4217258c9ea9f28937f3bd6d658469cc03dd1f5a7ccc2f0cfa8065b"
+    },
+    {
+      "bytes": 37002,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0075.npz",
+      "sha256": "132f925ac7120e09162c494cb7df444ed5394a526d8b2ad854aa41612dc91093"
+    },
+    {
+      "bytes": 7202,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0100.json",
+      "sha256": "f96669cfa35f6797f8f72c4106041d716cb142cfaba11da1f10277e66ec9e06e"
+    },
+    {
+      "bytes": 47094,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0100.npz",
+      "sha256": "2c99d6243b4fdcbe6f4ab53d8ae4d7661b7e64a7d697cf95725d7c7d0c077d06"
+    },
+    {
+      "bytes": 7202,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0125.json",
+      "sha256": "99997db831065b8a30f50f98bd87ee186bdbf30fd216ebb47cb964b41671c571"
+    },
+    {
+      "bytes": 57316,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0125.npz",
+      "sha256": "fdb674d7802eb1c88f2bf9fb2431cd6c181503c30f182c1eda33169ec7ba4daf"
+    },
+    {
+      "bytes": 7202,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0150.json",
+      "sha256": "d18c340ca7f464bf7e64c6796d9af5667305ecba243d575d5a4d9174f6d9307c"
+    },
+    {
+      "bytes": 67676,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0150.npz",
+      "sha256": "f18c3d0dfb3b3776b9f8e687547ae0068c220d7271152684ab9262f77dbc2bab"
+    },
+    {
+      "bytes": 7202,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0175.json",
+      "sha256": "47cba98f1f4e8d513caee654aa1ee966e449b4eeddfbbd71a664378c4472a4e2"
+    },
+    {
+      "bytes": 77692,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0175.npz",
+      "sha256": "7809160a43617a2a0b67c1b1b993924fe1f3422d94c91502f70b19e9bfc09dbc"
+    },
+    {
+      "bytes": 7202,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0200.json",
+      "sha256": "991ff13b74111e55450712b5b378ab1cb27325c9e0c6b01f40768a77b96d2559"
+    },
+    {
+      "bytes": 87676,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0200.npz",
+      "sha256": "0778ef1cdca19ef13c9b7a5a46325664816fb7a87f1282e848453495bbabb405"
+    },
+    {
+      "bytes": 7202,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0225.json",
+      "sha256": "cf91ad33fe88fe6d56314a017fbf3b25f38f5acae5ea4eefbb2eda373a756a79"
+    },
+    {
+      "bytes": 96644,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0225.npz",
+      "sha256": "2835ed1c3da5af23a87e378b79009d7a633713e1782db164f32e0f7d1d1aedd0"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0250.json",
+      "sha256": "6783970a6859bdf0f033f25498bae41cb5bfb032f82255ed872f9b461d17cb03"
+    },
+    {
+      "bytes": 105118,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0250.npz",
+      "sha256": "ad114c22f31003ff3e5c0457dd9910fd46bde18e827e4dff5acc25b5c03f907e"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0275.json",
+      "sha256": "f8091b132a314c0f86e0df6ccefe9f23dc017554366adaf30d49bdcf4348092e"
+    },
+    {
+      "bytes": 113850,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0275.npz",
+      "sha256": "3018608ee2af74c9c1be993d157e56ea42a65344f5b6890d45cf1a9639d516e7"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0300.json",
+      "sha256": "8b36516523b83a6aebe62671380ce3d4b54f41b7cfc6df6e58897e3b255326bb"
+    },
+    {
+      "bytes": 123148,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0300.npz",
+      "sha256": "33b6f6b58813389a4f4f811f4d1c15d5be2bd9ea8cfb2f47c635eaf615be1cf0"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0325.json",
+      "sha256": "9f170320fca0a4e6bcab790bf80d08e57d6f4b9db3084c12267bcb51baec3f7e"
+    },
+    {
+      "bytes": 132608,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0325.npz",
+      "sha256": "aac1cf8cc87ea17cdc3a2e8fa8057b7002eae889a30375ccacbedb1c5bd5966d"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0350.json",
+      "sha256": "42d94886b023be86b24f0e12d4edb399d7e13dc52a964d5e00ef636281a51094"
+    },
+    {
+      "bytes": 141646,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0350.npz",
+      "sha256": "2d0ea52f55fdc2a07db1c8da6dc7e2c13c720d8e643b0e2752afb37e21e7283a"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0375.json",
+      "sha256": "43a05270f848a22c15ef0a9d0714ba0a8b183f0a192db12a0b413ae6aae51ae5"
+    },
+    {
+      "bytes": 150018,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0375.npz",
+      "sha256": "3aeac48d8a9589652b48e75837800f2a29e28a2fef9ad992074f4733ce7c00fa"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0400.json",
+      "sha256": "c17d96dc86e1c6ff9882e8dccb36b56de650cbb27e64bf035547404b6a3a3321"
+    },
+    {
+      "bytes": 158140,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0400.npz",
+      "sha256": "6af17239ea10571925007032336aa1f6b190754ae5f1d05df85a3707159d1621"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0425.json",
+      "sha256": "8b2ed4c789ee49c413d79f8ddae61cedaad75e1a22be08da0796fd960a554225"
+    },
+    {
+      "bytes": 167084,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0425.npz",
+      "sha256": "7cb4aa9186ff3a738bf7d86fc59e2364341478abacf13e3164e6024a873dc78c"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0450.json",
+      "sha256": "68686f4d8a20987bf426a80e8e0f9161ef214cfe4354b26fbfcc5cd1c78fc6cf"
+    },
+    {
+      "bytes": 176414,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0450.npz",
+      "sha256": "e0149f6d0f9979ece5ef341cb562fe5e24237ff4617031004a45148440b28114"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0475.json",
+      "sha256": "a5c33627bf73c291061cece742350650e3d29e651c130b9609160286156cc1e9"
+    },
+    {
+      "bytes": 187138,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0475.npz",
+      "sha256": "241041c73398e82b701ed4c869a63f3232a096f7ce881eac208e0977ddd57f63"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0500.json",
+      "sha256": "72b7d73cd2384ffc96e184202814a6a2403c178d2374e0fd79ff41c2244c441f"
+    },
+    {
+      "bytes": 197578,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0500.npz",
+      "sha256": "32bac207d55f6e8449223b70474e174c223222d1a08d1a8dfa3dc27e3bc3ef13"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0525.json",
+      "sha256": "4706ccc5538a843d8b94e8c01e3f99a24b1496981a056e3c6806357527d922d6"
+    },
+    {
+      "bytes": 210318,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0525.npz",
+      "sha256": "06d44a4acb75644c4922b96d60fac468c6e56bdb9447def2264482e3f99a8599"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0550.json",
+      "sha256": "26c7cd82aa7b74c6467a6ffab9d7c8374ad7c2dad748b8e0af9e6310b7776ee3"
+    },
+    {
+      "bytes": 221678,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0550.npz",
+      "sha256": "886b00ecfcb136cdb396a757514424235adc454b913c2756a31da5b2129f9d51"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0575.json",
+      "sha256": "eb9b3dbc1882c57d47f18abe6b7452d7f65a8d5ec9bd2ec0d4395dbfa31cacd7"
+    },
+    {
+      "bytes": 232686,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0575.npz",
+      "sha256": "edec0ae0d3ff790a756c608df2cf42915a7a113695fe45fe2a7e8b6d5b4615c9"
+    },
+    {
+      "bytes": 7203,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0600.json",
+      "sha256": "7bfaf87290b6b9cc8a03fc8b28a69160744278b982dbf402e1e909fcdc4198ce"
+    },
+    {
+      "bytes": 243830,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/encoder_states/control/primary/stage_0600.npz",
+      "sha256": "baa70ea3be2fa01e5f2d0cc7cb013da0382ba14c51f6fbeff811789c3cc08da6"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/fields/._control.u8",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 117964800,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/fields/control.u8",
+      "sha256": "117951bbd6800949556b185566f8e9efbd83a7cc00ae542cc4febff842f12e11"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/._INPUTS.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/._encode",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/._retained",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/._runtime_copy",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 36282,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/INPUTS.json",
+      "sha256": "ee254b6cd9bee1b8b58d33aba01c3b016f428f4d101267031b269d5f8e3f1dd2"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/._control",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/._primary",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._ENCODE.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._ENCODER_BUILD.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._archive_0.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._archive_1.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._checkpoints",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._envelope_0.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._envelope_1.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._member_0.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._member_1.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._native",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._rc64_sj1rlc1_control_primary",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._stream_0.rc64",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/._stream_1.rc64",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 23869,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/ENCODE.json",
+      "sha256": "7666c1059373b493cfc05c2dc9c943f4d4e93cf383b6efad045b96a898480b6d"
+    },
+    {
+      "bytes": 1153,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/ENCODER_BUILD.json",
+      "sha256": "12665dce3936dda74a73e5a95007bb3a5cf9b0040a249cfb83cd1fac83e07ff0"
+    },
+    {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/archive_0.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/archive_1.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._LATEST.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0025.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0025.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0050.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0050.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0075.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0075.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0100.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0100.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0125.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0125.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0150.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0150.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0175.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0175.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0200.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0200.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0225.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0225.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0250.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0250.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0275.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0275.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0300.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0300.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0325.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0325.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0350.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0350.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0375.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0375.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0400.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0400.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0425.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0425.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0450.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0450.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0475.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0475.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0500.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0500.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0525.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0525.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0550.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0550.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0575.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0575.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0600.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/._stage_0600.npz",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/LATEST.json",
+      "sha256": "dbf8026036303d969dffe87e801b39544c4b29724f5f23212651b6ddca82e7aa"
+    },
+    {
+      "bytes": 15841,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0025.json",
+      "sha256": "d1779239fcb8d145df410d77ed26aeba9118fde09e0fe1c4799a98500ee4d650"
+    },
+    {
+      "bytes": 549951,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0025.npz",
+      "sha256": "371dda17885910c62dc2e9986fac966e35ab2f89d5477dae31e60438d8bf7486"
+    },
+    {
+      "bytes": 15841,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0050.json",
+      "sha256": "1010d83926a7e09b68b6f12d738944678e08c5103f0a6ed1f10e589bdadb94e0"
+    },
+    {
+      "bytes": 624990,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0050.npz",
+      "sha256": "bc712cb48548d47462045930afc8c4bda97d636e441f6deb5eaf5eddd293d8a0"
+    },
+    {
+      "bytes": 15841,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0075.json",
+      "sha256": "aa3b027a6d641a98e2bbe7e76224d9d8aa8a7f52c9c1ff4ab1c2df43728e5940"
+    },
+    {
+      "bytes": 702405,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0075.npz",
+      "sha256": "8a9f99a5f8aaeedb31f637c3c9c11f74c7b9a3408ce992a368d91bf39ec9f79c"
+    },
+    {
+      "bytes": 15842,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0100.json",
+      "sha256": "d3c5a6476bcc4706a2877d7b93f099486d3b07ae36902936546ce0d3d59b5730"
+    },
+    {
+      "bytes": 759819,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0100.npz",
+      "sha256": "ce2cc2089959c8791de70bb72beb4c14c64dc0734d36dc7aabec421ba0f3359e"
+    },
+    {
+      "bytes": 15842,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0125.json",
+      "sha256": "d064ab48995053777df5eda9ed54a4dc6e75aaacc89095696c1c5f8382c750c3"
+    },
+    {
+      "bytes": 813725,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0125.npz",
+      "sha256": "5f8d6a512309baae714d0ab56c6ccc1b31b018424b93ce928850bd3699893cba"
+    },
+    {
+      "bytes": 15842,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0150.json",
+      "sha256": "c66466f0ce69a2d9df9fbb9e2d6c72e6a3bbcc4e170f5a20688aeac0444c43a7"
+    },
+    {
+      "bytes": 866066,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0150.npz",
+      "sha256": "00d14d0cee1f177a3b6f33899b7fc76edf132908eef28d921e40b96ec456d8ce"
+    },
+    {
+      "bytes": 15842,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0175.json",
+      "sha256": "85d5e324d1bcf7457a79a92735661b47402fd149d12e0d4de036668fa81bab81"
+    },
+    {
+      "bytes": 911063,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0175.npz",
+      "sha256": "6459dafca2c08e6ec9f4dcc24e2aa3a6e57f65e7b858c1e1eeb15d6be8569d64"
+    },
+    {
+      "bytes": 15842,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0200.json",
+      "sha256": "032bc117df2dfbd6ac44a6ac136e9d8e58c750c0f6ead861319f8aae9c1512c0"
+    },
+    {
+      "bytes": 949622,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0200.npz",
+      "sha256": "99f16cff59ae28941422dc7fee39a7162c20b78290b719290a33ce0e2eef4339"
+    },
+    {
+      "bytes": 15842,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0225.json",
+      "sha256": "3d5721404a0c582c7b17e679706e50b414c0d52046a4708b7f8730f53792a181"
+    },
+    {
+      "bytes": 981555,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0225.npz",
+      "sha256": "f4c433c436cdc6f7c3bbb1207d6f523ed8f8690b70b176a83b43bea1f97d77c8"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0250.json",
+      "sha256": "689eb692b4306ca845d4c50af148934b1280299de64c7f3e78dc0ead6ae8973d"
+    },
+    {
+      "bytes": 1012845,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0250.npz",
+      "sha256": "566d51f830a94291e9c41cf2d2084b64da542d849a03539af7dd1ad6d6466ee4"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0275.json",
+      "sha256": "e15bd276a763aab90de48e34210be471d018d389d1cc7d7309af7dc6632a6755"
+    },
+    {
+      "bytes": 1044535,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0275.npz",
+      "sha256": "44d983f2bc7c37962cce5e468d56a732eda2178d9d1a599a8ab078aacee48aaa"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0300.json",
+      "sha256": "d6d2f5e953c17d9734e5303acbeeff8e7bb1c56bb4951046adb192fa5471dde2"
+    },
+    {
+      "bytes": 1076916,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0300.npz",
+      "sha256": "ba542e7aaaf1340d143ae94070db4602ff7f9087b57bc6e8de72d33fae16222f"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0325.json",
+      "sha256": "79e5bfef76690f546f1aa39e033e48e4c0cdb769531fc53110ef73b73a4e55db"
+    },
+    {
+      "bytes": 1109849,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0325.npz",
+      "sha256": "ef2fdc24c25b5ed6eac27e379a9bae41568b76199a745bb26cbdfcc25b2fe14b"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0350.json",
+      "sha256": "55f707f43de3829e8defcab916f602ef2ab7af25c6df89e1e4ca90f160508cee"
+    },
+    {
+      "bytes": 1139187,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0350.npz",
+      "sha256": "2c46c4bddfd1763febdb377db71662bc359a22c14d429a8e2731efa715db98b7"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0375.json",
+      "sha256": "604ddfed88e2f656c8bf4aa21cedf598048b9a9385d6ed9d2692d00c54c9908f"
+    },
+    {
+      "bytes": 1167146,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0375.npz",
+      "sha256": "ce6560b7c53e9d5f30fca6cc7a7f90e023f8c7242091d666935e1b748b8c4bcd"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0400.json",
+      "sha256": "d64ee9b575911acddac92d064e16eaca0d0bde13e2228bc9b7322ac9224c3f3b"
+    },
+    {
+      "bytes": 1195882,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0400.npz",
+      "sha256": "396e5c0f76f3f7fc70996db33d291a0583ab27cee55de47a495c73ffd5c5697c"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0425.json",
+      "sha256": "efcbf52e8f33c97023e35438ad3c28c7b078cf6515ee204fa9ed21037ecb2450"
+    },
+    {
+      "bytes": 1226487,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0425.npz",
+      "sha256": "9426c7b59c6a32d0fa5cdd1d2288e7df08508e740964fab1c4445b8e5de01661"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0450.json",
+      "sha256": "bfefbbcbe9e954728b1167fe48713da145653b60855186d5d72226a4d4c2dfee"
+    },
+    {
+      "bytes": 1260603,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0450.npz",
+      "sha256": "7d584357355c4ed7520345f91d81a79cef03bf5cea85106e782d16d48d3f1e22"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0475.json",
+      "sha256": "a02537729ca7dfdc7c796b8969fa153863d381d69c723afc2f96dcb756d5c25d"
+    },
+    {
+      "bytes": 1306237,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0475.npz",
+      "sha256": "0bbd59e3f6387c2880b83746e201cd4d1d64ff8b87df62e08e661fc36d015603"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0500.json",
+      "sha256": "1e19d2fd9bc8e4a887d1fb2503d384ae455b6dcf17d324e356141fdc372fe46e"
+    },
+    {
+      "bytes": 1338581,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0500.npz",
+      "sha256": "6b098b07aa3bc9efb5faef111dac8cbcfdc699fed752690dd1dc96b29bc91d2d"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0525.json",
+      "sha256": "e10790753f2ae240136fa9fee528424bab7fc079dc7801cf3ce11a7b63b8c4d5"
+    },
+    {
+      "bytes": 1385123,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0525.npz",
+      "sha256": "fa3420d0cba4e6cbf5c43e60ba3324e81b3b3d57adbe82e3e7b2f6c3f425bf2d"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0550.json",
+      "sha256": "899530838b84ddfad093b10d2657bb1369d3b25acdc7e53df0490f10cca542ff"
+    },
+    {
+      "bytes": 1421877,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0550.npz",
+      "sha256": "581724e6a9d8a8772a023893b8599fe2f0cc857e7ea16e7252a7942effee4dfd"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0575.json",
+      "sha256": "89331e9aac29f3004b510a5e1ddb7f6892a5da63aa8e338121e9e97560030303"
+    },
+    {
+      "bytes": 1458416,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0575.npz",
+      "sha256": "cc58965daa79227d876bed1696360492fe406c256775647ee29dc2b426d8e85f"
+    },
+    {
+      "bytes": 15843,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0600.json",
+      "sha256": "dbf8026036303d969dffe87e801b39544c4b29724f5f23212651b6ddca82e7aa"
+    },
+    {
+      "bytes": 1497351,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/checkpoints/stage_0600.npz",
+      "sha256": "a6bf38f09ba37beabd7cf34de9041d7e2c7902eaeca014acb4233ad122579081"
+    },
+    {
+      "bytes": 119104,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/envelope_0.bin",
+      "sha256": "03cb2f716156a2d8e700797a19724e6a9ffbd9d6acfd97ea033b93e50b07aa43"
+    },
+    {
+      "bytes": 119104,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/envelope_1.bin",
+      "sha256": "03cb2f716156a2d8e700797a19724e6a9ffbd9d6acfd97ea033b93e50b07aa43"
+    },
+    {
+      "bytes": 179232,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/member_0.bin",
+      "sha256": "1d544af744d1937cf57df376059ea36ec2ba83a44ce19882b32385e610de9034"
+    },
+    {
+      "bytes": 179232,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/member_1.bin",
+      "sha256": "1d544af744d1937cf57df376059ea36ec2ba83a44ce19882b32385e610de9034"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._libcorrector.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._libcorrector.so",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._libcorrector.so.build.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._librc64.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._librc64.so",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._librc64.so.build.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._rlc1_geometry.build.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/._rlc1_geometry.so",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 800,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/libcorrector.json",
+      "sha256": "3781c350f3f1affee8a8555e5cee450f8b9f62ca7d582fbd6253f8a23649bf45"
+    },
+    {
+      "bytes": 34560,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/libcorrector.so",
+      "sha256": "a22c59b6807254b4095190d9e39e085f3f356aa528c9a2f05fec1384e28fe004"
+    },
+    {
+      "bytes": 0,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/libcorrector.so.build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 731,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/librc64.json",
+      "sha256": "1117078dac8ec5831bc5c4c87e69d3d944d6dc03b2d0bda95e3d1ec8381f3f93"
+    },
+    {
+      "bytes": 33880,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/librc64.so",
+      "sha256": "bb69696cccdccf45b5ac3123e510c2714d58834e56c832fd65562ba12e819850"
+    },
+    {
+      "bytes": 0,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/librc64.so.build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/rlc1_geometry.build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 33824,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/native/rlc1_geometry.so",
+      "sha256": "3d4d485b4530e80fa2ced232c3dc0cf46e37a0cd2ce9b5546f70ba6c599d9279"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/rc64_sj1rlc1_control_primary/._librc64_jg2.dylib",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/rc64_sj1rlc1_control_primary/._rc64_backend_jg2.c",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/rc64_sj1rlc1_control_primary/._rc64_base.c",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 34688,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/rc64_sj1rlc1_control_primary/librc64_jg2.dylib",
+      "sha256": "1013c4804eb74966ac19f8de42b7adaf675c8818d0aeca911bf06969b5ae3d0a"
+    },
+    {
+      "bytes": 14825,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/rc64_sj1rlc1_control_primary/rc64_backend_jg2.c",
+      "sha256": "1941923a94e4e0a191a43ab2330349195fcb0942756bb03e71e887375bd53eb2"
+    },
+    {
+      "bytes": 12222,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/rc64_sj1rlc1_control_primary/rc64_base.c",
+      "sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6"
+    },
+    {
+      "bytes": 119097,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/stream_0.rc64",
+      "sha256": "1ba05d88f800f20128f9bcd57b4434067368f00bb01dfa532a8c6553b3d47915"
+    },
+    {
+      "bytes": 119097,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/encode/control/primary/stream_1.rc64",
+      "sha256": "1ba05d88f800f20128f9bcd57b4434067368f00bb01dfa532a8c6553b3d47915"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/._null_archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/._source",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/null_archive.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/._carrier.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/._header.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/._hpac.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/._semantic.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/._tail.bin",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 18470,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/carrier.bin",
+      "sha256": "81510ec9fc02a6098d05a0f2712bb1624f3f174c372ce6ec06ae7faa588ba836"
+    },
+    {
+      "bytes": 14,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/header.bin",
+      "sha256": "0d6b9f7f280ff880366107684bbd6d5e92ff2b09c3d1af2387a6d4eed27e4580"
+    },
+    {
+      "bytes": 11629,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/hpac.bin",
+      "sha256": "925adb48dca8a77e74b0f988164a377d7f6945d3e78b97c4abec10c96bdc28b2"
+    },
+    {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/semantic.bin",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    {
+      "bytes": 119257,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/tail.bin",
+      "sha256": "50138b1bbce80ebac18a87a65b2f7188bb36b12bb82d6a9c5b46a34145d0a4b0"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._MANIFEST.sha256",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._README.md",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._archive.zip",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._compress.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._cpr1",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._inflate.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._inflate.sh",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/._runtime",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4570,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/MANIFEST.sha256",
+      "sha256": "f3f60585b2d22c84c8886e6a0a54d40ed859bd965f1db4671d3effa5fe0be5d8"
+    },
+    {
+      "bytes": 3667,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/README.md",
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/archive.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "bytes": 183043,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/compress.py",
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._carrier_codec.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._ddm_mp2_semantic_receiver.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._hpac_integer.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._hpac_integer_sparse.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._inflate.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._integer_model_io.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/._rc1_adaptive_model_sections.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 7353,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "bytes": 13389,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    {
+      "bytes": 17471,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "bytes": 8282,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "bytes": 13810,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "bytes": 5881,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "bytes": 20916,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 2735,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/inflate.py",
+      "sha256": "eafbdec241d250304146ebe97f51028f02b7612affc6e82c91bf4470244fea4e"
+    },
+    {
+      "bytes": 3380,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/inflate.sh",
+      "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/.___init__.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._baseline.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._bits.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._carrier_repack.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._compensation_overlay.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._ddm_wc1_advisory_runtime.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._dx2_cabac_coefficients.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._entropy",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._f26_corrector_native.c",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._f26_hpac_native.c",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._f26_hpac_native.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._f26_inflate.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._frame0_selector.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._free_corrector.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._fx1_logistic_mixer_corrector.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._fx2_model_axis_corrector.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._hpac_inference.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._ihs2.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._ihs2_gate_a.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._native_free_corrector.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rc1_adaptive_model_sections.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rc2_hpac_semistatic_mixing.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rc3_shared_mixer.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._residual_archive.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rlc1_geometry.c",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rlc1_geometry.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rlc1_mixer.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rr4_free_corrector.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._rr5_arith_basis.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._sm1_semantic_mixer.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._tc1_receiver_checkpoint.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/._tc1_shared_mixer.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 57,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "bytes": 2058,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "bytes": 1578,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "bytes": 8206,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "bytes": 7074,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "bytes": 25232,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "bytes": 12929,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/.___init__.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/._adaptive_ans.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/._coefficient_ar1_codec.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/._coefficient_predictor.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/._rc64.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/._rc64_backend.c",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/._renderer_weight_codec.py",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 54,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "bytes": 4230,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "bytes": 4875,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "bytes": 4027,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "bytes": 2904,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "bytes": 5638,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "bytes": 9656,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "bytes": 50299,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "bytes": 40911,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "bytes": 26781,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "bytes": 29176,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "bytes": 4964,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "bytes": 14709,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "bytes": 34979,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "bytes": 31470,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "bytes": 10952,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "bytes": 13327,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    {
+      "bytes": 10527,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "bytes": 15952,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "bytes": 20916,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "bytes": 31341,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    {
+      "bytes": 8010,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    {
+      "bytes": 34460,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/residual_archive.py",
+      "sha256": "15333b33264093641d096af25efe38ab6e62549bc6eb57e515e5d2a78b3fbae4"
+    },
+    {
+      "bytes": 4238,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rlc1_geometry.c",
+      "sha256": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5"
+    },
+    {
+      "bytes": 4552,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rlc1_geometry.py",
+      "sha256": "c6fc46dd647725bd3fa256c7e712e255e135bd1928e93f70bad53c0ef56c451f"
+    },
+    {
+      "bytes": 5530,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rlc1_mixer.py",
+      "sha256": "80dd1a6be9541f833924675e9596633486e82db0ec2e09c4463161d4f100bb4d"
+    },
+    {
+      "bytes": 15421,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "bytes": 20793,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    {
+      "bytes": 9693,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "bytes": 8753,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    {
+      "bytes": 8590,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy/runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/._renderer_bytes",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/._tail_init",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/._tail_init_verified",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/._tail_primary",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/._.launch_start_gate",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/._.watchers_start_gate",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/._launch_manifest.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/._run.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/._run.pid",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 234,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/.launch_start_gate",
+      "sha256": "6c392e77a793afc1184e0a05f56e412059c58898c6390d3f595a73a74213f8d7"
+    },
+    {
+      "bytes": 243,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/.watchers_start_gate",
+      "sha256": "132b9f74e21508981d4cce558e0e55f27f7d3b2d7081dc84eea15c0391ef01f6"
+    },
+    {
+      "bytes": 3470,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/launch_manifest.json",
+      "sha256": "8757ce10f022fe3c177d2c541b561e24ad2bee2d1886a2536f344946e02b1464"
+    },
+    {
+      "bytes": 7615,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/run.log",
+      "sha256": "bc43cc48984347907ac4ed01d88d802689bcc5a0e0846fa3405a5cef03debc28"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/run.pid",
+      "sha256": "12cd774b6739b2834b6159fa3e4406c67563eb684f82fafb3e221fd54bfe865d"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/._launch_manifest.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/._run.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/._run.pid",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 3211,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/launch_manifest.json",
+      "sha256": "7bd9ff38f38b518323e92e99757315392415ad4108473911b311fb85017a1ed0"
+    },
+    {
+      "bytes": 0,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/run.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/run.pid",
+      "sha256": "d7bf271c9b1c06a5e1899ac96b0e49977acb1f82d07890863d123c2bc84b8b16"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/._.launch_start_gate",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/._.watchers_start_gate",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/._launch_manifest.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/._run.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/._run.pid",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 238,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/.launch_start_gate",
+      "sha256": "c7ad7dd9acc59145761545aeb8d8e30add50cfb9b1399631349ea45d51b7c910"
+    },
+    {
+      "bytes": 247,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/.watchers_start_gate",
+      "sha256": "e4ce8c7c7bf94005ac68979d91180ecf32b3a5e507c8d7e54ddb4b8fd14b53fb"
+    },
+    {
+      "bytes": 4048,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/launch_manifest.json",
+      "sha256": "2220ff3303151693bdc7da8f8cff435a21c2d78dc21793112501918d1639881f"
+    },
+    {
+      "bytes": 2028,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/run.log",
+      "sha256": "33e0da89ebefcd9ed244ffb06bd2e1602e55edea31b6b6b4fdc9502e028eb429"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/run.pid",
+      "sha256": "fe268e41a966f667464649d57336cd82ba84740445caf1b711da55448da022bd"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/._.launch_start_gate",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/._.watchers_start_gate",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/._launch_manifest.json",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/._run.log",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 4096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/._run.pid",
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "bytes": 232,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/.launch_start_gate",
+      "sha256": "460172212790bded72a9f951ddd88c5cd4f0f84e804bf1170245ac8f81266c16"
+    },
+    {
+      "bytes": 241,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/.watchers_start_gate",
+      "sha256": "f58f625b6d110557f46051e3175a73d20bc1c15ab33dd3c1f2e9a869b7733708"
+    },
+    {
+      "bytes": 4216,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/launch_manifest.json",
+      "sha256": "d41b4c6cf6432a6a50b601a82af6722cca5d9800936de68617da21b032397c30"
+    },
+    {
+      "bytes": 6830,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/run.log",
+      "sha256": "62ec16729f12c5fc4650c46a06d605d08db4b5584a0c2a0a52f0d9f60a2fd31e"
+    },
+    {
+      "bytes": 6,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/run.pid",
+      "sha256": "47eeba47f37a43d223e0bf56d0e941704c215fb0727117ac4955f6a1422544e0"
+    }
+  ],
+  "free_bytes": 23324917760,
+  "limit_bytes": 3221225472,
+  "logical_bytes": 164677657,
+  "measurement_utc": "2026-09-16T01:08:26.215468+00:00",
+  "root": "/Volumes/APDataStore/pact/ddm_jrd1",
+  "schema": "ddm_jrd1_retention_manifest.v1",
+  "score_claim": false
+}

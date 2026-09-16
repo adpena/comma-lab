@@ -1,0 +1,14 @@
+{
+  "base_archive": {
+    "bytes": 179332,
+    "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/archive.zip",
+    "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+  },
+  "git_index_staged_paths": [],
+  "head_at_recheck": "1c1aba7cecfb77af068d9203666e2dd8c84d4a52",
+  "measurement_utc": "2026-09-16T00:52:23.107250+00:00",
+  "runtime_source_files": 51,
+  "schema": "ddm_jrd1_input_integrity_recheck.v1",
+  "source_mutations_found": [],
+  "source_tree": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime"
+}

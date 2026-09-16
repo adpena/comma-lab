@@ -1,0 +1,913 @@
+{
+  "admit_bar_net_dS": -2e-05,
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "census": {
+    "carrier": {
+      "bytes": 18470,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/carrier.bin",
+      "sha256": "81510ec9fc02a6098d05a0f2712bb1624f3f174c372ce6ec06ae7faa588ba836"
+    },
+    "header": {
+      "bytes": 14,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/header.bin",
+      "sha256": "0d6b9f7f280ff880366107684bbd6d5e92ff2b09c3d1af2387a6d4eed27e4580"
+    },
+    "hpac": {
+      "bytes": 11629,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/hpac.bin",
+      "sha256": "925adb48dca8a77e74b0f988164a377d7f6945d3e78b97c4abec10c96bdc28b2"
+    },
+    "semantic": {
+      "bytes": 29862,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/semantic.bin",
+      "sha256": "786950a5b0b2e746d537229a0b42ccf843c7ebb4eb27e3524ba5deb62626d268"
+    },
+    "tail": {
+      "bytes": 119257,
+      "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/retained/source/tail.bin",
+      "sha256": "50138b1bbce80ebac18a87a65b2f7188bb36b12bb82d6a9c5b46a34145d0a4b0"
+    }
+  },
+  "fields": {
+    "control": {
+      "npz": {
+        "bytes": 853943,
+        "path": "/Volumes/APDataStore/pact/ddm_pd3/admission/field_admitted.npz",
+        "sha256": "0577bbb88e7218c70ae00876d5992de0859353c080776d4952b6cd3f2566e8d8"
+      },
+      "u8": {
+        "bytes": 117964800,
+        "path": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk/fields/control.u8",
+        "sha256": "117951bbd6800949556b185566f8e9efbd83a7cc00ae542cc4febff842f12e11"
+      }
+    }
+  },
+  "live_tree": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime",
+  "pointer": {
+    "auto_update_on_dispatch_completion": true,
+    "disqualified_rows": [
+      {
+        "action": "disqualify",
+        "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+        "evidence": ".omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md",
+        "evidence_sha256": "f15160ba4f8437f46534b6ba892caeb7ee7236ddeb704efab422c9ae24c372e9",
+        "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
+        "rationale": "pr8 traces Lane class 1 and rows 128..319 to video-selected constants embedded in free receiver code; gs3 Addendum 22 retracts move 41.",
+        "reason_class": "rule118_content_in_code",
+        "reinstated_at": null,
+        "score_claim": false,
+        "when": "2026-09-10T08:07:04.222131+00:00",
+        "who": "MAIN",
+        "why": null
+      }
+    ],
+    "effective_frontier": {
+      "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+      "axis": "contest_cuda",
+      "custody": "local_anchor_record; inspect lane policy before submission",
+      "evidence_grade": "contest-CUDA",
+      "hardware_substrate": "linux_x86_64_t4",
+      "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+      "measured_at_utc": null,
+      "role": "competitive_score_to_beat",
+      "score": 0.13620226906030858,
+      "selection_rule": "min(our_local_frontier_contest_cpu, our_local_frontier_contest_cuda, upstream_official_leaderboard.best_entry)",
+      "source": "our_local_frontier_contest_cuda",
+      "source_kind": "owned_or_banked_local_exact_anchor"
+    },
+    "last_refreshed_utc": "2026-09-13T09:50:41.113754+00:00",
+    "our_local_frontier_contest_cpu": {
+      "archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+      "axis": "contest_cpu",
+      "evidence_grade": "[contest-CPU]",
+      "extra": {
+        "architecture_class": "lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712",
+        "archive_bytes": 176564,
+        "archive_id": null,
+        "disqualified": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-07-12T06:35:14.268665+00:00"
+      },
+      "hardware_substrate": "linux_x86_64_cpu",
+      "lane_id": null,
+      "measured_at_utc": "2026-07-12T06:35:14.268665+00:00",
+      "score": 0.1880443979880752,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    "our_local_frontier_contest_cuda": {
+      "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+      "axis": "contest_cuda",
+      "evidence_grade": "contest-CUDA",
+      "extra": {
+        "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+        "archive_bytes": 179332,
+        "disqualified": null,
+        "evidence_grade": "contest-CUDA",
+        "inflate_device_policy": "auto",
+        "inflate_sh_rel": "inflate.sh",
+        "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+        "measured_at_utc": null,
+        "promotion_eligible": false,
+        "runtime_custody": "pinned",
+        "runtime_tree_sha256": "7cb2c609c8e8f55cb8c67e061b2fcb49e471410769cf5530484335f3ee385d64",
+        "source_receipt_sha256": "27627b966aa91282dc4cf8b670f5e18bbcb9a7fb456e1d9b93422c534be65c0c"
+      },
+      "hardware_substrate": "linux_x86_64_t4",
+      "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+      "measured_at_utc": null,
+      "score": 0.13620226906030858,
+      "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_pd3_cuda_20260913.json"
+    },
+    "pointer_refresh_command": ".venv/bin/python tools/refresh_canonical_frontier.py",
+    "refresh_provenance": {
+      "checkpoint_maturity_refusals": [],
+      "disqualification_journal": ".omx/state/frontier_disqualifications.jsonl",
+      "disqualified_rows": [
+        {
+          "action": "disqualify",
+          "archive_sha256": "299a8201662c8a407881a63214d944d0c8da25bf244ca4af034ecb730f5a7936",
+          "evidence": ".omx/research/ddm_pr8_receiver_code_compliance_review_20260910.md",
+          "evidence_sha256": "f15160ba4f8437f46534b6ba892caeb7ee7236ddeb704efab422c9ae24c372e9",
+          "lane_id": "ddm_tc3_t4_lane_predictor_tail_20260910",
+          "rationale": "pr8 traces Lane class 1 and rows 128..319 to video-selected constants embedded in free receiver code; gs3 Addendum 22 retracts move 41.",
+          "reason_class": "rule118_content_in_code",
+          "reinstated_at": null,
+          "score_claim": false,
+          "when": "2026-09-10T08:07:04.222131+00:00",
+          "who": "MAIN",
+          "why": null
+        }
+      ],
+      "refresh_kind": "local_state",
+      "refreshed_at_utc": "2026-09-13T09:50:41.113895+00:00",
+      "refresher_host": "mac.lan",
+      "refresher_pid": 49864,
+      "scan_stats": {
+        "excluded": 86,
+        "qualifying": 398,
+        "total_anchors": 484
+      }
+    },
+    "schema_version": "canonical_frontier_pointer_v1_20260519",
+    "submitted_pr_number_for_current_frontier": 140,
+    "upstream_leaderboard_snapshot": {
+      "best_entry": {
+        "name": "semantic-pose-HPAC_CPR1_polished",
+        "pr_number": 135,
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/135",
+        "rank": 1,
+        "score": 0.162
+      },
+      "entries": [
+        {
+          "name": "semantic-pose-HPAC_CPR1_polished",
+          "pr_number": 135,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/135",
+          "rank": 1,
+          "score": 0.162
+        },
+        {
+          "name": "cpr1_cbq_matched8",
+          "pr_number": 133,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/133",
+          "rank": 2,
+          "score": 0.166
+        },
+        {
+          "name": "semantic-pose-HPAC_CPR1",
+          "pr_number": 130,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/130",
+          "rank": 3,
+          "score": 0.172
+        },
+        {
+          "name": "rhnerv_latent_polish",
+          "pr_number": 128,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/128",
+          "rank": 4,
+          "score": 0.187
+        },
+        {
+          "name": "qlp_exactgrid",
+          "pr_number": 129,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/129",
+          "rank": 5,
+          "score": 0.19
+        },
+        {
+          "name": "qlp_exactgrid",
+          "pr_number": 127,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/127",
+          "rank": 6,
+          "score": 0.191
+        },
+        {
+          "name": "hnerv_qlp",
+          "pr_number": 125,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/125",
+          "rank": 7,
+          "score": 0.191
+        },
+        {
+          "name": "rhnerv_comma",
+          "pr_number": 112,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/112",
+          "rank": 8,
+          "score": 0.191
+        },
+        {
+          "name": "hnerv_fec6_fixed_huffman_k16",
+          "pr_number": 110,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/110",
+          "rank": 9,
+          "score": 0.192
+        },
+        {
+          "name": "hnerv_ft_microcodec \ud83d\udc51",
+          "pr_number": 101,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/101",
+          "rank": 10,
+          "score": 0.193
+        },
+        {
+          "name": "hnerv_lc_ac \ud83d\udc51",
+          "pr_number": 103,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/103",
+          "rank": 11,
+          "score": 0.195
+        },
+        {
+          "name": "hnerv_lc_v2_scale095_rplus1 \ud83d\udc51",
+          "pr_number": 102,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
+          "rank": 12,
+          "score": 0.195
+        },
+        {
+          "name": "hnerv_lc_v2 \ud83d\udca1",
+          "pr_number": 100,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/100",
+          "rank": 13,
+          "score": 0.195
+        },
+        {
+          "name": "hnerv_muon_finetuned_from_pr95",
+          "pr_number": 98,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/98",
+          "rank": 14,
+          "score": 0.197
+        },
+        {
+          "name": "kitchen_sink",
+          "pr_number": 105,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/105",
+          "rank": 15,
+          "score": 0.198
+        },
+        {
+          "name": "hnerv_muon \ud83d\udca1 \ud83d\udcd6",
+          "pr_number": 95,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+          "rank": 16,
+          "score": 0.199
+        },
+        {
+          "name": "rem2_HNeRV",
+          "pr_number": 96,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/96",
+          "rank": 17,
+          "score": 0.206
+        },
+        {
+          "name": "belt_and_suspenders",
+          "pr_number": 106,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/106",
+          "rank": 18,
+          "score": 0.209
+        },
+        {
+          "name": "vibe_coder_final_boss",
+          "pr_number": 97,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/97",
+          "rank": 19,
+          "score": 0.229
+        },
+        {
+          "name": "apogee",
+          "pr_number": 107,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/107",
+          "rank": 20,
+          "score": 0.229
+        },
+        {
+          "name": "qhnerv_ft_best",
+          "pr_number": 104,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/104",
+          "rank": 21,
+          "score": 0.231
+        },
+        {
+          "name": "hpac_coder_hybrid",
+          "pr_number": 91,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/91",
+          "rank": 22,
+          "score": 0.249
+        },
+        {
+          "name": "adaptive_masking_joint_frame_model",
+          "pr_number": 85,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/85",
+          "rank": 23,
+          "score": 0.258
+        },
+        {
+          "name": "qzs3_range_joint_r258",
+          "pr_number": 92,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/92",
+          "rank": 24,
+          "score": 0.26
+        },
+        {
+          "name": "jas0xf_adversarial_neural_representation \ud83d\udca1",
+          "pr_number": 86,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/86",
+          "rank": 25,
+          "score": 0.274
+        },
+        {
+          "name": "adaptive_range_mask",
+          "pr_number": 84,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/84",
+          "rank": 26,
+          "score": 0.275
+        },
+        {
+          "name": "qrepro \ud83d\udca1",
+          "pr_number": 90,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/90",
+          "rank": 27,
+          "score": 0.28
+        },
+        {
+          "name": "qzs3_range_mask \ud83d\udca1",
+          "pr_number": 81,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/81",
+          "rank": 28,
+          "score": 0.288
+        },
+        {
+          "name": "qpose14_r55_segactions_minp",
+          "pr_number": 79,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/79",
+          "rank": 29,
+          "score": 0.315
+        },
+        {
+          "name": "qzs3_tile_delta_r147",
+          "pr_number": 77,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/77",
+          "rank": 30,
+          "score": 0.315
+        },
+        {
+          "name": "qpose14_qzs3_filmq9g_slsb1_r55",
+          "pr_number": 67,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/67",
+          "rank": 31,
+          "score": 0.316
+        },
+        {
+          "name": "henosis_qz_n3z_r25_clean",
+          "pr_number": 65,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/65",
+          "rank": 32,
+          "score": 0.32
+        },
+        {
+          "name": "flatpup",
+          "pr_number": 93,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/93",
+          "rank": 33,
+          "score": 0.321
+        },
+        {
+          "name": "qpose14",
+          "pr_number": 63,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/63",
+          "rank": 34,
+          "score": 0.325
+        },
+        {
+          "name": "unified_brotli",
+          "pr_number": 64,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/64",
+          "rank": 35,
+          "score": 0.331
+        },
+        {
+          "name": "quantizr \ud83d\udca1",
+          "pr_number": 55,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/55",
+          "rank": 36,
+          "score": 0.333
+        },
+        {
+          "name": "qpose14_poseq6",
+          "pr_number": 76,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/76",
+          "rank": 37,
+          "score": 0.344
+        },
+        {
+          "name": "ph4ntom_drv",
+          "pr_number": 74,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/74",
+          "rank": 38,
+          "score": 0.368
+        },
+        {
+          "name": "fp4_mask_gen",
+          "pr_number": 62,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/62",
+          "rank": 39,
+          "score": 0.375
+        },
+        {
+          "name": "selfcomp",
+          "pr_number": 56,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/56",
+          "rank": 40,
+          "score": 0.382
+        },
+        {
+          "name": "roro_perframe_hnerv",
+          "pr_number": 119,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/119",
+          "rank": 41,
+          "score": 0.481
+        },
+        {
+          "name": "mask2mask \ud83d\udca1",
+          "pr_number": 53,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/53",
+          "rank": 42,
+          "score": 0.602
+        },
+        {
+          "name": "tomasdousek",
+          "pr_number": 71,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/71",
+          "rank": 43,
+          "score": 0.717
+        },
+        {
+          "name": "codex_metric_yshift_av1 \ud83d\udca1",
+          "pr_number": 60,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/60",
+          "rank": 44,
+          "score": 1.236
+        },
+        {
+          "name": "neural_inflate \ud83d\udca1",
+          "pr_number": 49,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/49",
+          "rank": 45,
+          "score": 1.891
+        },
+        {
+          "name": "svtav1_dilated_ren",
+          "pr_number": 58,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/58",
+          "rank": 46,
+          "score": 1.914
+        },
+        {
+          "name": "roi_v2",
+          "pr_number": 48,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/48",
+          "rank": 47,
+          "score": 1.944
+        },
+        {
+          "name": "av1_roi_lanczos_unsharp",
+          "pr_number": 31,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/31",
+          "rank": 48,
+          "score": 1.947
+        },
+        {
+          "name": "svtav1_av1grain_10bit",
+          "pr_number": 51,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/51",
+          "rank": 49,
+          "score": 1.979
+        },
+        {
+          "name": "damir_bearclaw_002 \ud83d\udca1",
+          "pr_number": 30,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/30",
+          "rank": 50,
+          "score": 1.981
+        },
+        {
+          "name": "roi_gop300_c34",
+          "pr_number": 43,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/43",
+          "rank": 51,
+          "score": 2.005
+        },
+        {
+          "name": "v4_qp_aq2_roi \ud83d\udca1",
+          "pr_number": 44,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/44",
+          "rank": 52,
+          "score": 2.02
+        },
+        {
+          "name": "av1_crf31_bicubic",
+          "pr_number": 52,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/52",
+          "rank": 53,
+          "score": 2.033
+        },
+        {
+          "name": "svtav1_cheetah",
+          "pr_number": 24,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/24",
+          "rank": 54,
+          "score": 2.052
+        },
+        {
+          "name": "svtav1_45pct_unsharp20_direct",
+          "pr_number": 27,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/27",
+          "rank": 55,
+          "score": 2.07
+        },
+        {
+          "name": "svtav1_gop360_binomial_unsharp",
+          "pr_number": 26,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/26",
+          "rank": 56,
+          "score": 2.083
+        },
+        {
+          "name": "av1_sharp1_adaptive",
+          "pr_number": 23,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/23",
+          "rank": 57,
+          "score": 2.083
+        },
+        {
+          "name": "svtav1_45pct_unsharp \ud83d\udca1",
+          "pr_number": 20,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/20",
+          "rank": 58,
+          "score": 2.086
+        },
+        {
+          "name": "svtav1_spline_fg22",
+          "pr_number": 37,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/37",
+          "rank": 59,
+          "score": 2.158
+        },
+        {
+          "name": "svt_av1_lanczos_fg",
+          "pr_number": 18,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/18",
+          "rank": 60,
+          "score": 2.2
+        },
+        {
+          "name": "h265_g16_512x384_veryslow",
+          "pr_number": 21,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/21",
+          "rank": 61,
+          "score": 2.553
+        },
+        {
+          "name": "optimized",
+          "pr_number": 22,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/22",
+          "rank": 62,
+          "score": 3.323
+        },
+        {
+          "name": "delta_codec \ud83d\udca1",
+          "pr_number": 61,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/61",
+          "rank": 63,
+          "score": 3.833
+        },
+        {
+          "name": "baseline_fast",
+          "pr_number": null,
+          "pr_url": null,
+          "rank": 64,
+          "score": 4.39
+        },
+        {
+          "name": "damir_bearclaw_003",
+          "pr_number": 39,
+          "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/39",
+          "rank": 65,
+          "score": 5.086
+        },
+        {
+          "name": "no_compress",
+          "pr_number": null,
+          "pr_url": null,
+          "rank": 66,
+          "score": 25.0
+        }
+      ],
+      "entry_count": 66,
+      "fetch_status": "ok",
+      "fetched_at_utc": "2026-09-13T09:48:37.330198+00:00",
+      "score_precision": "official_display",
+      "source": "official_leaderboard",
+      "url": "https://comma.ai/leaderboard"
+    },
+    "upstream_leaderboard_snapshot_at_utc": "2026-09-13T09:48:37.330198+00:00"
+  },
+  "pointer_archive": {
+    "bytes": 179332,
+    "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/archive.zip",
+    "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+  },
+  "runtime_copy": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price/runtime_copy",
+  "runtime_sources": {
+    "MANIFEST.sha256": {
+      "bytes": 4570,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/MANIFEST.sha256",
+      "sha256": "f3f60585b2d22c84c8886e6a0a54d40ed859bd965f1db4671d3effa5fe0be5d8"
+    },
+    "README.md": {
+      "bytes": 3667,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/README.md",
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    "archive.zip": {
+      "bytes": 179332,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/archive.zip",
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    "compress.py": {
+      "bytes": 183043,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/compress.py",
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    "cpr1/carrier_codec.py": {
+      "bytes": 7353,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/carrier_codec.py",
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    "cpr1/ddm_mp2_semantic_receiver.py": {
+      "bytes": 13389,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    "cpr1/hpac_integer.py": {
+      "bytes": 17471,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/hpac_integer.py",
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    "cpr1/hpac_integer_sparse.py": {
+      "bytes": 8282,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/hpac_integer_sparse.py",
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    "cpr1/inflate.py": {
+      "bytes": 13810,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/inflate.py",
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    "cpr1/integer_model_io.py": {
+      "bytes": 5881,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/integer_model_io.py",
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    "cpr1/rc1_adaptive_model_sections.py": {
+      "bytes": 20916,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    "inflate.py": {
+      "bytes": 2735,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/inflate.py",
+      "sha256": "eafbdec241d250304146ebe97f51028f02b7612affc6e82c91bf4470244fea4e"
+    },
+    "inflate.sh": {
+      "bytes": 3380,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/inflate.sh",
+      "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+    },
+    "runtime/__init__.py": {
+      "bytes": 57,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/__init__.py",
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    "runtime/baseline.py": {
+      "bytes": 2058,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/baseline.py",
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    "runtime/bits.py": {
+      "bytes": 1578,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/bits.py",
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    "runtime/carrier_repack.py": {
+      "bytes": 8206,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/carrier_repack.py",
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    "runtime/compensation_overlay.py": {
+      "bytes": 7074,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/compensation_overlay.py",
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    "runtime/ddm_wc1_advisory_runtime.py": {
+      "bytes": 25232,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/ddm_wc1_advisory_runtime.py",
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    "runtime/dx2_cabac_coefficients.py": {
+      "bytes": 12929,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/dx2_cabac_coefficients.py",
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    "runtime/entropy/__init__.py": {
+      "bytes": 54,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/__init__.py",
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    "runtime/entropy/adaptive_ans.py": {
+      "bytes": 4230,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/adaptive_ans.py",
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    "runtime/entropy/coefficient_ar1_codec.py": {
+      "bytes": 4875,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/coefficient_ar1_codec.py",
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    "runtime/entropy/coefficient_predictor.py": {
+      "bytes": 4027,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/coefficient_predictor.py",
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    "runtime/entropy/rc64.py": {
+      "bytes": 2904,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/rc64.py",
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    "runtime/entropy/rc64_backend.c": {
+      "bytes": 5638,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/rc64_backend.c",
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    "runtime/entropy/renderer_weight_codec.py": {
+      "bytes": 9656,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/renderer_weight_codec.py",
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    "runtime/f26_corrector_native.c": {
+      "bytes": 50299,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_corrector_native.c",
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    "runtime/f26_hpac_native.c": {
+      "bytes": 40911,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_hpac_native.c",
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    "runtime/f26_hpac_native.py": {
+      "bytes": 26781,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_hpac_native.py",
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    "runtime/f26_inflate.py": {
+      "bytes": 29176,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_inflate.py",
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    "runtime/frame0_selector.py": {
+      "bytes": 4964,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/frame0_selector.py",
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    "runtime/free_corrector.py": {
+      "bytes": 14709,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/free_corrector.py",
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    "runtime/fx1_logistic_mixer_corrector.py": {
+      "bytes": 34979,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/fx1_logistic_mixer_corrector.py",
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    "runtime/fx2_model_axis_corrector.py": {
+      "bytes": 31470,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/fx2_model_axis_corrector.py",
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    "runtime/hpac_inference.py": {
+      "bytes": 10952,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/hpac_inference.py",
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    "runtime/ihs2.py": {
+      "bytes": 13327,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/ihs2.py",
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    "runtime/ihs2_gate_a.py": {
+      "bytes": 10527,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/ihs2_gate_a.py",
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    "runtime/native_free_corrector.py": {
+      "bytes": 15952,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/native_free_corrector.py",
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    "runtime/rc1_adaptive_model_sections.py": {
+      "bytes": 20916,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rc1_adaptive_model_sections.py",
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    "runtime/rc2_hpac_semistatic_mixing.py": {
+      "bytes": 31341,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rc2_hpac_semistatic_mixing.py",
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    "runtime/rc3_shared_mixer.py": {
+      "bytes": 8010,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rc3_shared_mixer.py",
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    "runtime/residual_archive.py": {
+      "bytes": 34460,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/residual_archive.py",
+      "sha256": "15333b33264093641d096af25efe38ab6e62549bc6eb57e515e5d2a78b3fbae4"
+    },
+    "runtime/rlc1_geometry.c": {
+      "bytes": 4238,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rlc1_geometry.c",
+      "sha256": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5"
+    },
+    "runtime/rlc1_geometry.py": {
+      "bytes": 4552,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rlc1_geometry.py",
+      "sha256": "c6fc46dd647725bd3fa256c7e712e255e135bd1928e93f70bad53c0ef56c451f"
+    },
+    "runtime/rlc1_mixer.py": {
+      "bytes": 5530,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rlc1_mixer.py",
+      "sha256": "80dd1a6be9541f833924675e9596633486e82db0ec2e09c4463161d4f100bb4d"
+    },
+    "runtime/rr4_free_corrector.py": {
+      "bytes": 15421,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rr4_free_corrector.py",
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    "runtime/rr5_arith_basis.py": {
+      "bytes": 20793,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rr5_arith_basis.py",
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    "runtime/sm1_semantic_mixer.py": {
+      "bytes": 9693,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/sm1_semantic_mixer.py",
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    "runtime/tc1_receiver_checkpoint.py": {
+      "bytes": 8753,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/tc1_receiver_checkpoint.py",
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    "runtime/tc1_shared_mixer.py": {
+      "bytes": 8590,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/tc1_shared_mixer.py",
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    }
+  },
+  "schema": "ddm_sj1_rlc1_price_inputs.v1",
+  "score_claim": false,
+  "seed": 20260912,
+  "storage_policy": "Vertigo receipts + streams + archives; APDataStore fields and encoder states",
+  "tail": {
+    "bytes": 119257,
+    "prefix_bytes": 96,
+    "rider_bytes": 64,
+    "rider_magic": "RLC1",
+    "rider_sha256": "0ebda10015b6c15b3d9166d1f3099fd27e2c860222708c1daa0eca57cd19a90c",
+    "stream_bytes": 119097,
+    "stream_sha256": "1ba05d88f800f20128f9bcd57b4434067368f00bb01dfa532a8c6553b3d47915"
+  }
+}

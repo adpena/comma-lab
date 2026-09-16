@@ -2008,6 +2008,20 @@
      "sha256": "5b1d86b28515488219099faa1e624e35dc554d452f0806dcc36226d792cf6df1"
     }
    ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_jrd1_20260916__canonical_equations_snapshot.tar",
+   "tar_bytes": 3799040,
+   "tar_sha256": "c18f9173031ce9b6f187591929998d105c1814c907030ccb333bb6ddc72eadc4",
+   "files": [
+    {
+     "path": ".omx/research/ddm_jrd1_20260916/canonical_equations_snapshot.json",
+     "bytes": 3787485,
+     "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68",
+     "reason": "3.8 MB recall snapshot of the canonical equations registry; rebuildable from tools/list_canonical_equations.py --json at the pinned HEAD"
+    }
+   ],
+   "added_utc": "2026-09-16T01:16:29Z"
   }
  ]
 }

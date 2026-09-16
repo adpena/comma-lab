@@ -1,0 +1,109 @@
+{
+  "charter_head": "59bcc5a9f",
+  "derived": {
+    "continuous_cap_bytes": 154999.11540884574,
+    "held_distortion_max_bytes_strict_sub012": 154999,
+    "rate_S_per_B": 6.658589531221714e-07,
+    "required_cut_bytes": 24333,
+    "score": 0.13620226906030858
+  },
+  "head_at_start": "1c1aba7cecfb77af068d9203666e2dd8c84d4a52",
+  "live_frontier": {
+    "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 179332,
+      "disqualified": null,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "7cb2c609c8e8f55cb8c67e061b2fcb49e471410769cf5530484335f3ee385d64",
+      "source_receipt_sha256": "27627b966aa91282dc4cf8b670f5e18bbcb9a7fb456e1d9b93422c534be65c0c"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+    "measured_at_utc": null,
+    "score": 0.13620226906030858,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_pd3_cuda_20260913.json"
+  },
+  "schema": "ddm_jrd1_provenance.v1",
+  "score_claim": false,
+  "sources": [
+    {
+      "bytes": 439573,
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "bytes": 439573,
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "bytes": 5784,
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "bytes": 15577,
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "bytes": 78269,
+      "path": "/Users/adpena/Projects/pact/.omx/state/main_hot_state.md",
+      "sha256": "d45c985e4f8c0f7ee5bb4dca51c260485c251a80611b1089a03fb2ddb4657704"
+    },
+    {
+      "bytes": 19597,
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "sha256": "9c8c8d7cd095268f7eb18b6463f643d8252fccfc6932a8f20232bf996efc6283"
+    },
+    {
+      "bytes": 8257,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_on_move52_charter_20260916.md",
+      "sha256": "847f004c5beab281a9a7fc7d732a4904e48fa3635d6705b41c9d093666934f1a"
+    },
+    {
+      "bytes": 4124,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "bytes": 33965,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pd4_pose_directed_pass4_price_lever_on_move52_20260913.md",
+      "sha256": "48767941b8a9cf1e22e5815732a51bf3fc3a81b992e711103816239f7d6657f3"
+    },
+    {
+      "bytes": 65008,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "sha256": "233ed1b53a35585b3c83116fad93de8c19c835238aec13e38976834ec7dd6e13"
+    },
+    {
+      "bytes": 38751,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ren2_renderer_refit_in_place_on_the_coded_field_20260912.md",
+      "sha256": "3b9cdbbdb6a7bfdf6d046f6bc8f185b268946e547d6c71f19a332307f05bfeb1"
+    },
+    {
+      "bytes": 32712,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cb1_carrier_basis_refit_to_pose_residual_subspace_20260912.md",
+      "sha256": "07b6e9ecdc91111693b2a45e46299db1fb1892ffe6334d005487357be192e265"
+    },
+    {
+      "bytes": 10851,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/SEAL_ddm_pd3_pose_directed_pass3_contest_cuda.json",
+      "sha256": "9905cb9238cccf29f738ab71c28a073eb06bc90512e777db509ce49d3c45bf9e"
+    },
+    {
+      "bytes": 1492,
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/SEAL_ddm_pd3_pose_directed_pass3_contest_cuda.json.decode_wall_clock.json",
+      "sha256": "8e1e2a314e33a91bdb84bd52d12ebf17ad30beaab206d85cca9499d0a3f095df"
+    }
+  ]
+}

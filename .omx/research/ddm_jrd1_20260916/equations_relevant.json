@@ -1,0 +1,1159 @@
+[
+  {
+    "canonical_consumers": [
+      "tac.witness_control.shadow_controller",
+      "tools/click_polish_exact_search.py"
+    ],
+    "canonical_producers": [
+      ".omx/research/einstein_pass_models_equations_20260710.md"
+    ],
+    "domain_of_validity": {
+      "axes": [
+        "seg axis quantized in pixel-pair flips; rate axis in bytes; pose axis NOT quantized (continuous MSE, concave sqrt coupling)"
+      ],
+      "covariance_class": "SCORER_FRAME_STRUCTURAL",
+      "derivation_status": "DERIVED_EXACT (pure arithmetic of the score law)",
+      "excluded": [
+        "any change to eval grid / pair count / N (the constants shift)",
+        "pose-axis break-evens (use costate_lambda_marginal_ds_v1)"
+      ],
+      "score_law": [
+        "upstream/evaluate.py:96; seg grid modules.py:113 (384x512)"
+      ],
+      "sisters": [
+        "leverd_flicker_residual_reactivation_economics_v1 (0.65 B/flip GO = this exchange with ~2x safety margin)",
+        "resize_exploit_flip_fix_frontier_v1 (flips are uniform-DS)",
+        "clickpolish_exact_gated_discrete_latent_ratchet_v1 (DB=0 special case)"
+      ]
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "clickpolish_pointer_move_is_20_flip_quanta_20260710",
+        "empirical_output": {
+          "consistency": "within the reported-component rounding (d_seg 5 sig figs)",
+          "implied_flip_quanta": 20.054015999987314,
+          "residual_vs_nearest_int_S_units": 4.578993054480074e-08
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "byte_quantum": 6.658589531221714e-07,
+          "delta_archive_bytes": 0,
+          "flip_quantum": 8.477105034722222e-07,
+          "n_clicks": 8,
+          "pointer_move_delta_S": -1.6999999999989246e-05,
+          "source_row": "clickpolish_exact_gated_discrete_latent_ratchet_v1 anchor"
+        },
+        "measurement_method": "exact arithmetic from upstream/evaluate.py:96 + modules.py:113-117 grid (384x512, 600 pairs, N=37545489); cross-checked on the 2026-07-10 [contest-CPU] pointer-move row (\u0394S=-1.7e-5 at \u0394B=0 \u21d2 \u224820.05 flip quanta)",
+        "measurement_utc": "2026-07-10T21:30:00Z",
+        "predicted_output": {
+          "exchange_bytes_per_flip": 1.273108215332031,
+          "pointer_move_in_flip_quanta_nearest_int": 20
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-07-10T21:30:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_macos_cpu",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "promote anchors when a derived-law-driven arm lands a byte-closed exact row",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/einstein_pass_models_equations_20260710.md",
+          "source_sha256": "fce33c4190fba6823b78d83c6915d957614a860fd6c147a689b5d052c1213fc0"
+        },
+        "residual": 0.0027007999993656994,
+        "source_artifact": ".omx/research/einstein_pass_models_equations_20260710.md"
+      }
+    ],
+    "equation_id": "score_atomic_flip_byte_exchange_v1",
+    "last_calibration_utc": "2026-07-10T21:30:00Z",
+    "latex_form": "\\Delta S_{\\text{flip}}=\\frac{100}{600\\cdot196608},\\ \\Delta S_{\\text{byte}}=\\frac{25}{37545489};\\ \\frac{\\Delta S_{\\text{flip}}}{\\Delta S_{\\text{byte}}}=1.27311\\ \\text{B/flip}",
+    "name": "Score atomic units: one pixel-pair flip = 1.27311 archive bytes (exact flip/byte exchange rate)",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "S is atomic: DS_flip=100/(600*196608)=8.477e-7, DS_byte=25/37545489=6.659e-7; 1 flip=1.27311 B => store B bytes fixing f flips iff B<1.273*f.",
+    "predicted_vs_empirical_residual": {
+      "clickpolish_20_quanta": 0.0027007999993656994
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-07-10T21:30:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "m5_max_macos_cpu",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "promote anchors when a derived-law-driven arm lands a byte-closed exact row",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/einstein_pass_models_equations_20260710.md",
+      "source_sha256": "fce33c4190fba6823b78d83c6915d957614a860fd6c147a689b5d052c1213fc0"
+    },
+    "python_callable_module_path": "tac.canonical_equations.einstein_pass_covariance_laws_20260710:flip_byte_exchange_rate",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "bytes_added": "bytes",
+      "flips_fixed": "pixel_pair_flips"
+    },
+    "units_out": {
+      "delta_S": "score_units",
+      "exchange_rate": "bytes_per_flip"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "any successor rung of the compensated-edit family: call project_at_mass() for its expected net before sealing, instead of assuming linear scaling",
+      "fire-order falsifier bands for semantic-quantization candidates (the pose bar is a fraction of the credit, not an absolute)",
+      "routing decisions between axes \u2014 family_cannot_close_alone() is why this family is composed rather than pursued to the gap",
+      "ddm_asym1's three-axis asymmetry: this is the worked case where concavity helps rather than hurts, because the damage is paid upward"
+    ],
+    "canonical_producers": [
+      ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+      "/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/MODAL_REMOTE_RESULT.json",
+      ".omx/research/ddm_asym1_three_axis_asymmetry_and_dynamics_20260818.md",
+      ".omx/research/ddm_sa1_uncompensated_semantic_edit_family_refused_20260818.md (the uncompensated control: 68-512x, 3/3 refused)"
+    ],
+    "domain_of_validity": {
+      "applies_to": "members of the compensated lossy-semantic-edit family: coarser semantic quantization for rate, repaired by an in-compile Schur pose compensation solved against the EDITED object",
+      "axis": "[contest-CUDA T4 n600] measured legs; exchange arithmetic DERIVED-EXACT",
+      "does_not_apply_to": "UNCOMPENSATED lossy semantic edits \u2014 sa1 refused that family 3/3 with pose damage 68-512x the rate credit. The compensation is what makes the ratio 0.508 instead of two orders of magnitude worse. Also does not apply to a compensation carried from a DIFFERENT object: qs4 did exactly that and paid +2.396e-4 (cross-regime constant transfer).",
+      "extrapolation_rule": "scale d_pose, THEN take sqrt(10*d_pose). Scaling the pose S-leg directly assumes a linearity the score function does not have and under-states the family at every mass above 1.",
+      "ratios_are_instance_scoped": "one measured member at one operating point; the SHAPE (rate/seg linear, pose concave, retention rising with mass) is DERIVED-EXACT and carries further than the ratios do",
+      "research_only": false
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "sa3_compensated_edit_leg_split_20260818",
+        "empirical_output": {
+          "falsifiers": {
+            "F1": "PASS \u2014 net -5.506e-05 is 15.7x the -3.5e-6 band",
+            "F2": "PASS \u2014 measured d_seg delta +2.04e-6 = 1.19x predicted, under 2x",
+            "F3": "PASS \u2014 pose damage +2.670e-4 consumed 51% of the rate credit",
+            "F4": "PASS \u2014 passed=True, rc=0, validation_errors=[]"
+          },
+          "family_ceiling": {
+            "mass_to_close_gap_alone": 52.1017,
+            "rate_credit_bytes_required": 41160.3,
+            "semantic_section_bytes": 34243,
+            "verdict": "INFEASIBLE \u2014 the demand is 1.20x the entire semantic section, so the family contributes but cannot route"
+          },
+          "legs_S": {
+            "net": -5.50632e-05,
+            "pose": 0.0002669654,
+            "rate": -0.0005260286,
+            "seg": 0.000204
+          },
+          "ratios_of_credit": {
+            "pose_damage": 0.50751,
+            "retained": 0.10468,
+            "seg_damage": 0.38781
+          },
+          "verdict": "ADMITTED \u2014 eighth pointer move, 0.71% of the sub-0.15 gap"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "axis": "[contest-CUDA T4 n600]",
+          "base": {
+            "S": 0.15771357797660338,
+            "archive_bytes": 179930,
+            "d_pose": 6.88e-06,
+            "d_seg": 0.00029611,
+            "sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a"
+          },
+          "candidate": {
+            "S": 0.15765851477950737,
+            "archive_bytes": 179140,
+            "d_pose": 7.33e-06,
+            "d_seg": 0.00029815,
+            "sha256": "d2ad58ee28b84388a262bd5c8b11611a163dcc2694ad3c29a1283605a206b992"
+          },
+          "gpu_t4_match": true,
+          "mechanism": "lossy semantic-FiLM quantization (rate) + in-compile Schur pose compensation solved against the EDITED object (qs5's proven form, re-based onto the live sz1 pointer)",
+          "n_samples": 600
+        },
+        "measurement_method": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda on a Tesla T4, n=600, gpu_t4_match=True. Legs recomputed at 40-digit decimal precision from the harness's reported components; their sum reproduces the harness's own score_recomputed_from_components to 17 digits.",
+        "measurement_utc": "2026-08-18T06:00:00Z",
+        "predicted_output": {
+          "sealed_falsifiers": {
+            "F1_net_below_band": "net < -3.5e-6",
+            "F2_seg_within_2x_of_predicted": "predicted d_seg delta +1.72e-6",
+            "F3_pose_damage_under_bar": "pose damage < +5.226e-4 S",
+            "F4_clean_row": "passed=True, validation_errors=[]"
+          }
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-08-18T06:00:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "linux_x86_64_t4",
+          "measurement_axis": "[contest-CUDA T4 n600] measured legs; exchange arithmetic DERIVED-EXACT",
+          "promotion_eligible": false,
+          "rejection_reason": "re-calibrate when any member of this family lands a T4 row at a materially different edit mass, or when the pointer's d_pose moves enough that the pose marginal 5/sqrt(10*d_pose) shifts by more than ~10%; the SHAPE never needs recalibration, only the unit-mass legs do",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+          "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "residual": 0.0,
+        "source_artifact": "/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/MODAL_REMOTE_RESULT.json"
+      }
+    ],
+    "equation_id": "compensated_semantic_edit_exchange_v1",
+    "last_calibration_utc": "2026-08-18T06:00:00Z",
+    "latex_form": "\\Delta S(m)=\\Big[\\sqrt{10\\,(d_p^{0}+m\\,\\delta_p)}-\\sqrt{10\\,d_p^{0}}\\Big]+m\\,\\Delta S_{seg}-m\\,\\Delta S_{rate}",
+    "name": "Compensated lossy-semantic-edit exchange rate: what a byte of rate credit costs in pose and seg, and why the family gets more efficient with mass",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "per S of rate credit: 0.508 back as pose, 0.388 as seg, 0.105 net; retention RISES with mass (concave pose leg); the gap alone needs 1.20x the whole semantic section \u2014 contributes, never routes",
+    "predicted_vs_empirical_residual": {
+      "registration": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-08-18T06:00:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "linux_x86_64_t4",
+      "measurement_axis": "[contest-CUDA T4 n600] measured legs; exchange arithmetic DERIVED-EXACT",
+      "promotion_eligible": false,
+      "rejection_reason": "re-calibrate when any member of this family lands a T4 row at a materially different edit mass, or when the pointer's d_pose moves enough that the pose marginal 5/sqrt(10*d_pose) shifts by more than ~10%; the SHAPE never needs recalibration, only the unit-mass legs do",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "python_callable_module_path": "tac.canonical_equations.compensated_semantic_edit_exchange_20260818:project_at_mass",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "base_d_pose": "PoseNet MSE over the first 6 pose dims",
+      "mass": "multiple of the sa3 edit (dimensionless)",
+      "unit_rate_credit_S": "S",
+      "unit_seg_damage_S": "S"
+    },
+    "units_out": {
+      "net_S": "S",
+      "rate_credit_bytes_required": "bytes",
+      "retention_fraction": "dimensionless"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+      ".omx/research/ddm_rn1_n600_reopen_sweep_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_xr1_exchange_ratio_noise_floor.py"
+    ],
+    "domain_of_validity": {
+      "constants_mirror": "experiments/ddm_xr1_exchange_ratio_noise_floor.py (drift-guarded by the test)",
+      "forbidden_resampling": [
+        "site-level resampling (ddm_fs3 measured AVERAGE != MARGINAL by 2.24x)",
+        "any contiguous prefix subset (pose prefixes measure 2.54-4.21x harder)"
+      ],
+      "known_boundary": "the 25 B fixed pose-carrier term is held constant across resamples because no per-pair breakdown of it was retained; its own dispersion is not modelled",
+      "measurement_axis": [
+        "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]"
+      ],
+      "population": [
+        "full n600 pair population; seeded random resampling only"
+      ],
+      "result_type": "APPARATUS / measurement-discipline law; NOT a d_seg / d_pose / rate lever; moves no pointer",
+      "transfer_rule": "an interval is valid ONLY for its own physical object and pair population; a row without matched same-object n600 per-pair byte AND distortion receipts is UNGRADABLE"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "physical_null_reencode_x3_sigma_b_20260903",
+        "empirical_output": {
+          "all_archives_byte_identical": true,
+          "all_streams_byte_identical": true,
+          "consequence": "the exchange-ratio noise floor is ENTIRELY statistical (which 600 pairs), not physical; a re-encode adds no dispersion to a byte claim",
+          "sigma_b_bytes": 0.0
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "edit_tokens_changed": 0,
+          "object": "afr1 shipped field, shipped model, shipped causal schedule; null overlay",
+          "physical_repeats": 3,
+          "repeat_unit": "one complete physical n600 RC64 re-encode via the RXC1 exact coder",
+          "scorer_runs": 0
+        },
+        "measurement_method": "three_complete_physical_rc64_null_reencodes_byte_compared",
+        "measurement_utc": "2026-09-03T00:00:00Z",
+        "predicted_output": {
+          "all_repeats_byte_identical": true,
+          "prior_law": "the RC64 coder is deterministic, so physical byte noise is exactly zero",
+          "sigma_b_bytes": 0.0
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-03T21:05:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure sigma_B whenever the coder, the RC64 build, the shipped model, or the causal schedule changes; a nonzero sigma_B refutes the determinism premise every byte claim in the campaign rests on",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          "source_sha256": "799945b19f8ae7fa80773e23219a92914cc4a75722c08bce4c2da251b864a3d2"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md"
+      },
+      {
+        "anchor_id": "jbp1_row_a_pair_bootstrap_delta_bytes_20260903",
+        "empirical_output": {
+          "half_width_bytes": 200.47762043826356,
+          "interval_95_bytes": [
+            -3159.273548761239,
+            -2758.318307884712
+          ],
+          "interval_excludes_zero": true,
+          "monte_carlo_residual_bytes": 1.65706,
+          "prediction_held": true,
+          "resample_sd_bytes": 105.225891
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "calibration_constant_bytes": 0.4534463945501557,
+          "exact_delta_bytes": -2950,
+          "object": "JBP1 row A -- 5,506 XOV1 B/H/W edits across 567 of 600 pairs",
+          "per_pair_ledger": "retained/exact/{null,xov1_bhw5506}/bits_per_frame_exact.npy",
+          "resamples": 200,
+          "seed": 20260903
+        },
+        "measurement_method": "seeded_pair_level_bootstrap_of_retained_per_frame_byte_ledger",
+        "measurement_utc": "2026-09-03T00:00:00Z",
+        "predicted_output": {
+          "charter_prior_law": "narrower than +/-600 B, so the rate credit is real",
+          "interval_half_width_bytes_below": 600.0
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-03T21:05:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+          "promotion_eligible": false,
+          "rejection_reason": "recompute when JBP1's retained per-frame ledger or its exact -2,950 B receipt changes; raise the resample count if the Monte-Carlo residual matters at the precision a decision needs",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          "source_sha256": "799945b19f8ae7fa80773e23219a92914cc4a75722c08bce4c2da251b864a3d2"
+        },
+        "residual": 1.65706,
+        "source_artifact": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md"
+      },
+      {
+        "anchor_id": "fcd3_pair_bootstrap_delta_s_and_exchange_ratio_20260903",
+        "empirical_output": {
+          "admissible": false,
+          "delta_s_half_width": 0.00024150572709057724,
+          "delta_s_interval_95": [
+            0.0017151288265233415,
+            0.002198140280704496
+          ],
+          "delta_s_resample_sd": 0.000125289,
+          "exchange_ratio_denominator_sign_stable": true,
+          "exchange_ratio_interval_95": [
+            -0.5310976728579913,
+            -0.4732671579713654
+          ],
+          "exchange_ratio_point": -0.5018330063791281,
+          "falsifier_fired": false,
+          "interval_excludes_zero": true,
+          "monte_carlo_residual_delta_s": 6.621e-06,
+          "reading": "r = -0.50 +/- 0.029: the rate credit pays back only about half the distortion it buys, and the interval never reaches the break-even r = -1"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base_d_pose": 0.0001470109127694741,
+          "base_d_seg": 0.0003474002587608993,
+          "body_exact_delta_bytes": -2965,
+          "candidate_d_pose": 0.00014620431466028094,
+          "candidate_d_seg": 0.0003874630492646247,
+          "exact_delta_bytes": -2940,
+          "fixed_pose_carrier_bytes": 25,
+          "object": "FCD3 published tau_1e-6 -- 4,194-edit field plus 448-pair pose carrier",
+          "resamples": 200,
+          "scorer_runs": 0,
+          "seed": 20260903
+        },
+        "measurement_method": "seeded_pair_level_bootstrap_coupling_the_same_resample_across_bytes_and_both_retained_n600_distortion_axes",
+        "measurement_utc": "2026-09-03T00:00:00Z",
+        "predicted_output": {
+          "charter_prior_law": "the interval EXCLUDES zero, so the win-win cone stays refused",
+          "delta_s_point": 0.0019433243907622244,
+          "falsifier": "an interval that includes zero reopens the cone at n600"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-03T21:05:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+          "promotion_eligible": false,
+          "rejection_reason": "recompute against a fresh n600 scorer order if FCD3's retained per-pair receipts are superseded; the interval is object-specific and must never be transferred to another edit set",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          "source_sha256": "799945b19f8ae7fa80773e23219a92914cc4a75722c08bce4c2da251b864a3d2"
+        },
+        "residual": 6.621e-06,
+        "source_artifact": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md"
+      },
+      {
+        "anchor_id": "fs1_frame0_selector_pure_pose_near_win_pair_bootstrap_20260904",
+        "empirical_output": {
+          "admissible": true,
+          "consequence": "ADMISSIBLE: the 95% upper edge is -5.663e-05, well clear of zero. But the half-width is 6.613e-05 -- 0.599x the point estimate -- so even a pure-pose edit with ZERO byte dispersion and ZERO seg leg carries a pair-sampling interval of the same ORDER as its own effect. The pose mean is owned by a handful of pairs (ddm_pr1 sec 5: ten pairs own 69% of it), and resampling 600 pairs with replacement moves that tail. A pose near win therefore needs the bootstrap even when nothing about its bytes is uncertain.",
+          "half_width": 6.61253615486505e-05,
+          "half_width_over_point": 0.5991732826702064,
+          "interval_95_high": -5.663172266623939e-05,
+          "interval_95_low": -0.0001888824457635404,
+          "point_net_delta_S": -0.00011036099816394324
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "batch_size": 8,
+          "delta_bytes_exact": 20,
+          "delta_bytes_is_per_pair": false,
+          "delta_d_seg": 0.0,
+          "edit_kind": "frame-0 selector blob re-selection (no carrier, renderer or token change)",
+          "n_pairs": 600,
+          "object": "afr1 frontier archive cbb8d928... (180,002 B) vs the ddm_fs1 frame-0 selector re-selection 50fcaf1a... (180,022 B); 21 changed pairs, k=24 active, byte-optimal set under ddm_pr1's >1% robustness gate",
+          "resamples": 200,
+          "scorer_runs": 2,
+          "seed": 20260903
+        },
+        "measurement_method": "seeded n600 pair bootstrap (200 resamples, seed 20260903) over the retained per-pair d_pose vectors of two batch-8 n600 measures taken on ONE instrument (frozen CPU-torch PoseNet, DALI-lineage GT), with the SAME draw matrix driving both vectors; dB held constant per the law's fixed calibration term",
+        "measurement_utc": "2026-09-04T00:00:00Z",
+        "predicted_output": {
+          "predicted_admissible": true,
+          "prior_law": "the law's two prior anchors both carry a PER-PAIR byte stream, so dB resamples and widens the interval. This edit's dB is a whole-archive constant and d_seg is zero by construction, so the interval should be driven by the pose leg ALONE and should be the narrowest case the law has yet seen relative to its point estimate."
+        },
+        "provenance": {
+          "artifact_kind": "predicted_from_model",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+          "captured_at_utc": "2026-09-04T16:17:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "predicted",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "<predictor:exchange_ratio_noise_floor.v1>",
+          "source_sha256": "dc4d397f7eedb6836dbe189655b75a05dd873eba7be3cf9e1f0d5f4faa103d71"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_fs1_frame0_selector_reselection_20260904.md"
+      }
+    ],
+    "equation_id": "exchange_ratio_noise_floor_v1",
+    "last_calibration_utc": "2026-09-04T16:17:38Z",
+    "latex_form": "\\Delta B_b=\\sum_{i\\in b}\\delta_i+c,\\ c=\\Delta B_{\\mathrm{exact}}-\\sum_i \\delta_i;\\ \\Delta S_b=100\\Delta d_{\\mathrm{seg},b}+\\sqrt{10 d^{\\mathrm{cand}}_{\\mathrm{pose},b}}-\\sqrt{10 d^{\\mathrm{base}}_{\\mathrm{pose},b}}+\\frac{25\\Delta B_b}{37545489};\\ \\mathrm{ADMIT}\\iff Q_{0.975}(\\Delta S_b)<0",
+    "name": "Exchange-ratio noise floor -- the pair-bootstrap interval a byte<->distortion near-win margin must clear before it is admissible",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "sigma_B = 0 (deterministic coder), so the floor is the PAIR bootstrap: +/-200 B on a ~3,000 B rate credit, +/-0.00024 S on a realized dS; admit iff the 95% upper dS < 0",
+    "predicted_vs_empirical_residual": {
+      "fcd3_pair_bootstrap_delta_s_and_exchange_ratio_20260903": 6.621e-06,
+      "jbp1_row_a_pair_bootstrap_delta_bytes_20260903": 1.65706,
+      "physical_null_reencode_x3_sigma_b_20260903": 0.0,
+      "seeded n600 pair bootstrap (200 resamples, seed 20260903) over the retained per-pair d_pose vectors of two batch-8 n600 measures taken on ONE instrument (frozen CPU-torch PoseNet, DALI-lineage GT), with the SAME draw matrix driving both vectors; dB held constant per the law's fixed calibration term": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "predicted_from_model",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+      "captured_at_utc": "2026-09-03T21:05:38Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "predicted",
+      "hardware_substrate": "m5_max_128gib_cpu",
+      "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "<predictor:exchange_ratio_noise_floor.v1>",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "python_callable_module_path": "tac.canonical_equations.exchange_ratio_noise_floor_20260903:near_win_is_admissible",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "base_d_pose": "mean_squared_error",
+      "base_d_seg": "argmax_disagreement_fraction",
+      "exact_delta_bytes": "bytes",
+      "pair_delta_bytes": "bytes_per_pair"
+    },
+    "units_out": {
+      "delta_bytes_interval": "bytes",
+      "delta_s_interval": "score_units",
+      "near_win_is_admissible": "bool"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md",
+      ".omx/research/charters/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_fe1_pose_price.py",
+      ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+    ],
+    "domain_of_validity": {
+      "excluded": [
+        "use as a d_seg / d_pose claim: this is a scorer-free byte law",
+        "sections that are NOT range-coded under a match-finding compressor -- the mechanism is the re-randomised payload, so a raw or Huffman-coded section need not pay it",
+        "the hpac section: same container family and the same rider magic, but the fee is NOT measured there (predicted to apply, owed as fe1 ITEM 2)",
+        "extrapolation past N = 200 changed codes"
+      ],
+      "included": [
+        "RX1 model sections stored as brotli(optional CK2 interleave(range-coded rider)) on the live pass-3 body 06c44dc4...",
+        "the semantic section's RC1 rider, measured on frame_embed code edits at N = 1..200",
+        "encoder-side container choice: brotli quality, lgwin, and the CK2 interleave, none of which is transmitted"
+      ],
+      "known_boundary": "one section, one body, one edit family; the draw-to-draw spread is +-35 B (sd measured over 133 real single-move builds), so a SPECIFIC edit must still be priced by a real encode -- and the delta does NOT accumulate over edits, see the one-sample-lottery anchor",
+      "measurement_axis": [
+        "[macOS-CPU advisory / scorer-free EXACT byte measurement]"
+      ],
+      "result_type": "RATE law; it prices an edit, it does not authorise one",
+      "sister_laws": [
+        "ddm_hp4 -- frame-embedding CODING is closed (+167..+583 B for every predictor); this law is about the CONTAINER, not the predictor",
+        "ddm_rc1 -- the adaptive model-section recode that put the RC1 rider on this body",
+        "reordering-pays-iff-the-coder-has-no-context-model -- the sister statement about what a coder's model does to a permutation"
+      ],
+      "verdict_scope": "measurement (exact bytes), not a family verdict"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "fe1_semantic_section_container_break_fee_58p6_bytes_20260909",
+        "empirical_output": {
+          "length_preserving_edits_still_cost_bytes": 40,
+          "reading": "the cost is a fixed container-break fee, not a per-code price: 1 code and 200 codes cost the same to within the draw-to-draw spread, because the RC1 payload is range-coded and one changed symbol re-randomises every bit after it",
+          "shipped_shape_at_N1": 62.5,
+          "shipped_shape_at_N200": 100.6,
+          "shipped_shape_fit": "dB = 0.2134*N + 58.89 B (rms 7.09)"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "N": [
+            1,
+            2,
+            5,
+            10,
+            25,
+            50,
+            72,
+            100,
+            150,
+            200
+          ],
+          "archive_bytes": 181645,
+          "archive_sha256": "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3",
+          "edit": "random single-code changes to frame_embed.weight (600x8, 3-bit codes), steps in {-1, +1, +2}",
+          "producer": "experiments/ddm_fe1_pose_price.py rate-law",
+          "receipt": "ddm_fe1_frame_embedding_predistortion/admission/RATE_LAW.json",
+          "repeats": 10,
+          "section": "RX1 semantic, brotli(CK2-interleave(RC1 rider)), 30,246 B shipped",
+          "seed": 20260909
+        },
+        "measurement_method": "exact re-encode of the whole semantic section through the shipped RC1 coder and brotli container; the shipped codes reproduce the archive header's 30,246 B",
+        "measurement_utc": "2026-09-09T13:05:00Z",
+        "predicted_output": {
+          "naive_prior": "an edit costs bits proportional to how many codes moved"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T17:37:50Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+          "promotion_eligible": false,
+          "rejection_reason": "a body whose model section is NOT range-coded, or whose container is not brotli, re-opens the fee -- the mechanism is specific to a range-coded payload under a match-finding compressor",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md",
+          "source_sha256": "f28719584cd4a029740ea0428b9c1ec82708d7c3a70c824c9e3b843ce7f51934"
+        },
+        "residual": 7.09,
+        "source_artifact": ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+      },
+      {
+        "anchor_id": "fe1_container_search_recovers_63p5_bytes_at_n1_20260909",
+        "empirical_output": {
+          "cells_to_break_even_N72_searched": 16.5,
+          "cells_to_break_even_N72_shipped_shape": 60.7,
+          "reading": "the shipped shape is optimal for the SHIPPED codes and poor for any edit of them; re-searching it is an encoder-only change the receiver never sees, and skipping it prices a model-section edit about 3x too high",
+          "recovered_at_N1": 69.7,
+          "recovered_at_N72": 56.3,
+          "searched_at_N1": -7.2,
+          "searched_at_N72": 21.0,
+          "searched_fit": "dB = 0.1677*N - 1.92 B (rms 5.26)"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "receipt": "ddm_fe1_frame_embedding_predistortion/admission/RATE_LAW.json",
+          "shapes_searched": "q in {9,10,11} x lgwin in {16,18,20,22,24} x {ck2, plain} = 30",
+          "shipped_shape": [
+            "ck2",
+            11,
+            24
+          ],
+          "transmitted": "none -- brotli streams are self-describing and CK2 rides in RX1 reserved bit 0x2"
+        },
+        "measurement_method": "same exact re-encodes, minimum over the 30 container shapes; the SHIPPED codes' own minimum equals the archive header's 30,246 B, so the search is anchored",
+        "measurement_utc": "2026-09-09T13:05:00Z",
+        "predicted_output": {
+          "prior": "the shipped container shape is the right shape for edited bytes too"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T17:37:50Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+          "promotion_eligible": false,
+          "rejection_reason": "a receiver that pins the brotli parameters or the interleave would close the search; nothing in the live receiver does",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md",
+          "source_sha256": "f28719584cd4a029740ea0428b9c1ec82708d7c3a70c824c9e3b843ce7f51934"
+        },
+        "residual": 5.26,
+        "source_artifact": ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+      },
+      {
+        "anchor_id": "fe1_container_break_delta_is_a_one_sample_lottery_20260909",
+        "empirical_output": {
+          "best_single": -61,
+          "best_subset_after_117_greedy_builds": -61,
+          "moves_in_the_winning_set": 1,
+          "neutrality_verified": "pair 331 re-rendered, 21 -> 21 flips, delta 0",
+          "operational": "do not build a byte-search arm on this axis; DO take one cheap sample -- price a handful of seg-neutral variants of whatever edit you are already making and ship the smallest",
+          "reading": "the delta is a property of the PERTURBED PAYLOAD, not of the number of perturbations: a ONE-SAMPLE LOTTERY, not an additive budget. Adding a second move to a good draw RE-SAMPLES rather than compounds, and 117 builds conditioned on the best draw never beat it -- there is no gradient because there is no landscape. It also explains why a 23-cell FiLM edit (-68 B) and a zero-distortion single move (-61 B) land so close: both are one ticket in the same lottery.",
+          "single_move_distribution": "mean +0.1 B, sd 34.8 B; min -61, p5 -50, median -1, max +98; 67 of 133 reduce"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "archive": "pc2 move 34, 181,373 B, sha e138ee09...",
+          "builds": "250 REAL archive builds with the container searched on every one: 133 singles, then 117 greedy-accumulation and neighbourhood builds",
+          "candidate_moves": "133 seg-NEUTRAL single frame_embed code moves, one per pair, each measured by the n600 realized search to leave the pair's SegNet argmax flip count exactly unchanged",
+          "producer": "experiments/ddm_fe1_item5_neutral_rate.py run/verify"
+        },
+        "measurement_method": "250 real archive builds on the live pointer, container searched on each; the winning move's seg-neutrality re-verified through the receiver's own render",
+        "measurement_utc": "2026-09-09T12:45:00Z",
+        "predicted_output": {
+          "prior": "a greedy search over 133+ reducing moves compounds and reaches <= -150 B"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T17:37:50Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+          "promotion_eligible": false,
+          "rejection_reason": "a section whose coder has synchronisation points (so a symbol change does NOT re-randomise everything downstream) could have an additive structure this one lacks",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md",
+          "source_sha256": "f28719584cd4a029740ea0428b9c1ec82708d7c3a70c824c9e3b843ce7f51934"
+        },
+        "residual": 89.0,
+        "source_artifact": ".omx/research/ddm_fe1_per_pair_frame_embedding_realized_search_20260908.md"
+      },
+      {
+        "anchor_id": "ddm_cmp2_single_code_B_20260909",
+        "empirical_output": {
+          "B_unresolved": {
+            "bytes": 180372,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_B_runtime/archive.zip",
+            "sha256": "6e500244bf4dc4cc78e6afc7473cf44d95b73ff6977178d7299ece9a0e808fbf"
+          },
+          "original_mixer": {
+            "actual_range_delta_bytes": 0,
+            "changed_symbol_delta_bits": -1.418239268813044,
+            "matched_shape_delta_bytes": -29,
+            "searched_B_minus_A_sample0_bytes": -78,
+            "symbol_bit_start": 9882,
+            "symbol_bits": 3,
+            "whole_stream_delta_bits": -1.3286082414404667
+          },
+          "scope": "integer encoder decisions and full archives; no seg or pose claim; Brotli lottery persists",
+          "selected_mixer": {
+            "archive_delta_bytes": -16,
+            "changed_symbol_delta_bits": -1.537546598593062,
+            "range_delta_bytes": 0,
+            "whole_stream_delta_bits": -1.3030581070318468
+          }
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base": {
+            "bytes": 180772,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+            "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+          },
+          "moved_dim": 6,
+          "moved_pair": 331,
+          "seed": 20260909
+        },
+        "measurement_method": "retained real twin encodes plus actual integer encoder frequencies, 300 full archives, public 38-tensor identity/difference; no scorers; interval residual is zero inside preregistered interval",
+        "measurement_utc": "2026-09-09T20:06:35.234485+00:00",
+        "predicted_output": {
+          "B_additional_saving_interval_bytes": [
+            0,
+            80
+          ]
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-09T20:06:35.234485+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json",
+          "source_sha256": "d38b34848ad19ffa316295e88421e1bbab9165525841ab8fc18c3f27dc9f6b8f"
+        },
+        "residual": 0.0,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json"
+      },
+      {
+        "anchor_id": "tmx1_store_member_stream_to_archive_one_for_one_20260911",
+        "empirical_output": {
+          "consequence": "these are exact deterministic byte counts, NOT draws; the standing +-34.8 B container-break lottery does not govern this axis and must not be quoted as a margin on it",
+          "pass_through": "one-for-one on every row; the twins prove it reproducible",
+          "stream_to_archive_delta_pairs": {
+            "refit47_full_sample": [
+              22,
+              22
+            ],
+            "refit47_stride4": [
+              203,
+              203
+            ],
+            "refit48_full_sample": [
+              20,
+              20
+            ],
+            "refit48_stride4": [
+              155,
+              155
+            ]
+          },
+          "where_the_lottery_still_governs": "any edit that moves a brotli'd member -- the hpac section, which is what hpr1's refit moved and this arm's did not"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "container": "the candidate archive holds 1 member, 'p', compress_type 0 (STORE), with exactly 100 B of ZIP overhead",
+          "edit_family": "40 int8 mixer values inside a 60 B rider whose length the schema fixes: no re-segmentation, no recompression, no length change in the rider itself",
+          "law_clause_under_test": "the fee law's own EXCLUSION -- 'sections that are NOT range-coded under a match-finding compressor need not pay it' -- which was reasoned, not measured"
+        },
+        "measurement_method": "exact ZIP member census on the candidate archive plus four paired (stream bytes, archive bytes) rows from real 600-frame encodes with twin agreement",
+        "measurement_utc": "2026-09-12T00:00:00Z",
+        "predicted_output": {
+          "if_the_lottery_governed": "an edit's archive delta would be a draw with sd 34.8 B around its stream delta, and a +20 B stream change could not be called"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-12T00:00:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS CPU, real coder, exact ZIP byte accounting",
+          "measurement_axis": "[macOS-CPU advisory; exact bytes, scorer-free]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure the moment the archive stops holding exactly one STORE member, or the rider's length stops being fixed by the schema. The fee law returns in full for any edit that moves a brotli'd member -- the hpac section is the live example, and hpr1's refit paid there while this arm's did not",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_tmx1_refit_tail_mixer_tc1_on_current_field_20260911.md",
+          "source_sha256": "568c96defb6b1eaeb0b18e2dfb57db87a38dcfffc31fa6daf65cf55bd6b071d7"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_tmx1_falsifiers_preregistered_20260911.md"
+      }
+    ],
+    "equation_id": "model_section_edit_container_break_fee_v1",
+    "last_calibration_utc": "2026-09-12T00:27:43Z",
+    "latex_form": "\\Delta B(N)=\\underbrace{58.89}_{\\text{break fee}}\\cdot\\mathbb{1}[\\text{shape not re-searched}]+m N,\\quad m_{\\text{shipped}}=0.2134,\\ m_{\\text{searched}}=0.1677;\\quad\\text{cells to break even}=\\Delta B\\cdot\\frac{25/37{,}545{,}489}{100/117{,}964{,}800}",
+    "name": "Container-break fee on an edited range-coded model section -- an edit costs a fixed ~58.6 B, not a per-code price, and an encoder-side container search pays most of it back",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "fe1: an edit costs 0.2134*N + 58.89 B at the shipped brotli/CK2 shape but only 0.1677*N - 1.92 B re-searched; 69.7 B recovered at N=1, 56.3 B at N=72",
+    "predicted_vs_empirical_residual": {
+      "exact ZIP member census on the candidate archive plus four paired (stream bytes, archive bytes) rows from real 600-frame encodes with twin agreement": 0.0,
+      "fe1_container_break_delta_is_a_one_sample_lottery_20260909": 89.0,
+      "fe1_container_search_recovers_63p5_bytes_at_n1_20260909": 5.26,
+      "fe1_semantic_section_container_break_fee_58p6_bytes_20260909": 7.09,
+      "retained real twin encodes plus actual integer encoder frequencies, 300 full archives, public 38-tensor identity/difference; no scorers; interval residual is zero inside preregistered interval": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "predicted_from_model",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+      "captured_at_utc": "2026-09-09T17:37:50Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "predicted",
+      "hardware_substrate": "m5_max_128gib_cpu",
+      "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "<predictor:model_section_edit_container_break_fee.v1>",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "python_callable_module_path": "tac.canonical_equations.model_section_edit_container_break_fee_20260909:section_delta_bytes",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "changed_codes": "count",
+      "container_search": "bool"
+    },
+    "units_out": {
+      "cells_to_break_even": "seg_cells",
+      "container_search_recovers_bytes": "bytes",
+      "section_delta_bytes": "bytes"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "experiments/ddm_rw1_renderer_edge_foldback.py",
+      ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_rw1_renderer_edge_foldback.py"
+    ],
+    "domain_of_validity": {
+      "excluded": [
+        "FINER grids: depth 5-8 on these tensors is a packer change the receiver already supports and is NOT measured here",
+        "the per-row fp16 SCALES, which move a whole row by a FRACTION of a code step and are untried",
+        "the row-pruned blocks.{1,2,3}.film runs (2 of 192 rows kept), which this arm refuses to edit",
+        "any claim about the PARADIGM: a per-pair-admitted renderer change is untouched -- the rate leg is nearly free and the pose re-solve has full rank on all 600 pairs"
+      ],
+      "included": [
+        "the shipped SemanticTokenRenderer(96) SM3R section, depth-4 un-pruned runs of head.weight / blocks.3.dw.weight / blocks.3.pw.weight, fp16 scales frozen",
+        "the pc2 34th-move body (e138ee09..., 181,373 B) whose semantic section is byte-identical back through rc2 and sj1 pass-3",
+        "the expected-flip surrogate sigmoid(-margin/tau), tau in [0.05, 0.15], through the exact R, DALI GT"
+      ],
+      "known_boundary": "one body, one surrogate; a different objective could reorder the codes but cannot make the grid finer",
+      "measurement_axis": [
+        "[macOS-MPS research-signal]",
+        "[macOS-CPU advisory, cpu_torch n600, DALI]"
+      ],
+      "recalibration_meaning": "the domain admits a DIFFERENT grid depth on these tensors or a sub-code actuator (the fp16 scales); three such anchors re-open the law",
+      "result_type": "DISTORTION-reach law; it bounds an actuator, it does not authorise one",
+      "sister_laws": [
+        "model_section_edit_container_break_fee_v1 -- the RATE half: 0.0139 B per changed code",
+        "renderer_seg_pose_coupling_shipped_object_v1 -- the pre-re-solve coupling this arm pose geometry re-scoped",
+        "token_predistortion_multipass_yield_v1 -- sj1 1.081 cells per changed TOKEN"
+      ],
+      "verdict_scope": "formulation (this actuator at this grid resolution), NOT the family"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "rw1_int4_code_minimum_action_costs_240_to_455_cells_20260909",
+        "empirical_output": {
+          "cells_broken_per_code_by_rule": {
+            "abs_asc": [
+              8.06,
+              75.2
+            ],
+            "abs_desc": [
+              1914,
+              55746
+            ],
+            "adamw_accumulated": [
+              27,
+              123
+            ],
+            "random": [
+              84,
+              366
+            ]
+          },
+          "discrete_search": {
+            "accepts": 0,
+            "cells_repaired_n600": 0,
+            "codes_changed": 0,
+            "dS": 0.0,
+            "evaluations": 150
+          },
+          "law": "one int4 code step already costs 240-455 flipped cells, so no search finds a move below the grid resolution; the gradient 238x ordering ranks DAMAGE, not benefit",
+          "minimum_quantum_of_action_cells": [
+            240,
+            455
+          ],
+          "reach_at_66_codes": -0.1137,
+          "stake_at_operating_point": {
+            "full_rewrite_rate_S": 0.00011766,
+            "full_rewrite_share_of_gap": 0.00625,
+            "residual_S": 0.01090664333767361,
+            "share_of_gap_to_0_12": 0.5794235869308744
+          }
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "actuator": "shipped signed-int4 codes of head.weight + blocks.3.dw.weight + blocks.3.pw.weight (12,672 codes, fp16 scales FROZEN)",
+          "body": "pc2 34th move, e138ee09..., 181,373 B, S 0.13882326433317044",
+          "producers": "experiments/ddm_rw1_renderer_edge_foldback.py {train, perturb-control, gradient-topk, code-search}",
+          "residual": "12,866 cells (d_seg 0.00010906643337673611, DALI, cpu_torch n600)",
+          "selection_rules_tried": [
+            "abs_desc",
+            "random",
+            "AdamW-accumulated 3000 steps",
+            "abs_asc",
+            "discrete realized search 150 evals bisecting to size 1"
+          ]
+        },
+        "measurement_method": "realized argmax over all 600 pairs through the receiver own forward (identity-controlled byte-exact at batch 1) against the DALI GT; the n600 seg instrument reproduces sj1 leg EXACTLY on the base decode (12,866 cells, 600/600 pairs unchanged); the MPS monitor device gap to the cpu_torch instrument is a measured +5 cells over four identical evaluations",
+        "measurement_utc": "2026-09-09T16:05:00Z",
+        "predicted_output": {
+          "charter": "8-20% residual cut (1,000-2,600 cells)",
+          "prereg_discrete_search": "120 / 340 / 1,500 cells at 66 / 200 / 1,000 accepted codes"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T16:05:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_mps",
+          "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+          "promotion_eligible": false,
+          "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+          "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+        },
+        "residual": 1.0,
+        "source_artifact": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md"
+      }
+    ],
+    "equation_id": "renderer_edge_layer_foldback_reach_v1",
+    "last_calibration_utc": "2026-09-09T16:05:00Z",
+    "latex_form": "\\min_{one code} \\Delta flips \\approx 240-455 \\gg 0",
+    "name": "Renderer edge-layer int4 code fold-back: minimum quantum of action",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "One int4 code step in head/blocks.3 already moves 240-455 argmax cells, so a renderer-weight fold-back is limited by the grid resolution, not by the search",
+    "predicted_vs_empirical_residual": {
+      "cells_repaired": 1.0,
+      "reach_fraction": 1.8121
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-09T16:05:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "m5_max_128gib_mps",
+      "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+      "promotion_eligible": false,
+      "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+    },
+    "python_callable_module_path": "experiments.ddm_rw1_renderer_edge_foldback",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "changed_int4_codes": "count",
+      "selection_rule": "categorical"
+    },
+    "units_out": {
+      "flipped_segnet_argmax_cells_n600": "count"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_sj1_t4_compose39_rp1_union_20260910_pointer_move_40_20260910.md",
+      "experiments/ddm_rp1_rebase.py",
+      ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_sj1_compose_segcheck.py",
+      "experiments/ddm_rp1_segcheck.py"
+    ],
+    "domain_of_validity": {
+      "excluded": "the NUMBERS. 6-of-80 and 7.5 % are one composition's; do not carry them to a different overlap, a different field, or cell-COLLIDING edits (a different and worse case this equation does not cover). Also excluded: the pose leg, which was near-neutral here (+6.887478e-07) and is not claimed to be sub-additive",
+      "generalizes_to": "any two actuators whose credit is a property of the RENDER rather than of the symbol they write -- the sign and the locus (the shared pairs) transfer",
+      "object": "two token-field edit sets composed onto one field, cell-disjoint, each with its own measured seg and rate legs, under the shipped coder and receiver",
+      "support": "n = 1 cross-arm composition, n600, with a byte-exact cross-arm control and an EXACT contest-CUDA T4 row (move 40) confirming sign and scale",
+      "verdict_this_priced": "the composition was still WORTH firing -- it became pointer move 40 at 1.54x the bar. The law is about PREDICTION, not admission: a composition whose margin is thinner than its overlap's seg loss must be re-measured before it is fired"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "sj1_compose39_rp1_union_subadditive_seg_n600_20260910",
+        "empirical_output": {
+          "decomposition_s": {
+            "bytes_47_measured_vs_48_assumed": -6.66e-07,
+            "memo_restatements_its_own_numbers_do_not_support": "'the seg loss is four times the byte effect' is 7.64x; the memory index's 'four fifths' does not hold for +5.086e-06 against a +1.62e-06 miss",
+            "note": "the two NAMED terms sum to +4.42e-06 against a measured miss of +1.62e-06, so the remainder the memo prints as the word 'remainder' is -2.80e-06 -- 1.7x the miss. The decomposition does NOT close; the seg term is still the largest contributor and still lives entirely on the overlap",
+            "six_seg_repairs_lost_on_the_overlap": 5.086e-06,
+            "unnamed_remainder_t4_seg_carry_and_rounding": -2.8e-06
+          },
+          "exact_row_the_composition_became": {
+            "archive_bytes": 180233,
+            "archive_sha256_prefix": "986d536b",
+            "delta_s_vs_move_39": -3.070463e-05,
+            "pointer_move": 40,
+            "projection_miss_vs_t4_print_s": 2.84e-06,
+            "s": 0.13763861019288715
+          },
+          "losing_pairs": 4,
+          "losing_pairs_inside_the_overlap": 4,
+          "miss_s": 1.62e-06,
+          "pair_overlap_fraction": 0.046,
+          "projected_composition_s": 0.1376357708,
+          "rate_leg": {
+            "anti_synergy_fraction": 0.064,
+            "bits_per_token": {
+              "move_37_field": 4.8205,
+              "move_39_field": 5.1282
+            },
+            "container_refund": {
+              "closed_bytes": 180233,
+              "note": "the +3 B was handed back; fe1's lottery is two-sided",
+              "tail_splice_bytes": 180236
+            },
+            "mechanism": "the yield law's mirror -- writing surprise into a field surprise was REMOVED from costs more per token",
+            "token_cost_bytes": {
+              "move_37_field": 47,
+              "move_39_field": 50
+            }
+          },
+          "repairs": {
+            "after": 74,
+            "before": 80
+          },
+          "seg_credit_lost_fraction": 0.075
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "arm_a": "rp1's move 39 -- 473 argmax-neutral token changes over 253 pairs, 180,186 B",
+          "arm_b": "sj1's move-38 subset -- 78 token writes over 42 pairs",
+          "cross_arm_control": "rp1's shipped field re-encoded through sj1's OWN loop emits 119,568 B sha 26e9eba5209495a0... byte-identical to rp1's retained rider body",
+          "overlap_pair_ids": [
+            7,
+            118,
+            165,
+            167,
+            202,
+            237,
+            293,
+            398,
+            502,
+            546,
+            565,
+            584,
+            593
+          ],
+          "overlap_pairs": 13,
+          "position_collisions": 0,
+          "union_pairs": 282,
+          "well_definedness": "MEASURED, not assumed: zero position collisions, and the builder asserts no cell outside either edit set moved"
+        },
+        "measurement_method": "rebuild the composed field, re-encode it through the shipped coder, and RECOMPUTE every repair through the receiver's own render_frame1 at batch 1 against the frozen CPU SegNet -- never carrying a repair from either parent",
+        "measurement_utc": "2026-09-10T00:00:00Z",
+        "predicted_output": {
+          "assumption": "token-disjoint edits compose additively",
+          "naive_sum_s": 0.1376341479
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-11T00:00:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS CPU (frozen SegNet recount, exact encodes) + contest-CUDA T4 for move 40",
+          "measurement_axis": "[contest-CUDA T4 n600 exact rows; exact archive bytes; frozen CPU SegNet repair recount]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure the seg leg of EVERY composition by recompute on the shared pairs -- this equation gives the sign and the locus, never a number to carry. It widens (support n = 1 composition) when a second cross-arm composition with a different overlap fraction is measured; a measured composition with shared pairs and NO repair loss would falsify the mechanism, not merely the coefficient",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md",
+          "source_sha256": "3d848e593881b864c57eaa6dc0eca991c9a7b030300d87f912e2c29278652dba"
+        },
+        "residual": 1.179e-05,
+        "source_artifact": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md"
+      }
+    ],
+    "equation_id": "token_edit_composition_subadditive_on_pair_overlap_v1",
+    "last_calibration_utc": "2026-09-11T00:00:00Z",
+    "latex_form": "\\Delta S_{a\\oplus b} = \\Delta S_a + \\Delta S_b + \\varepsilon_{\\mathrm{seg}}(\\mathcal{P}_a \\cap \\mathcal{P}_b) + \\varepsilon_{\\mathrm{rate}},\\quad \\varepsilon_{\\mathrm{seg}} > 0 \\ \\text{and supported on the shared pairs}",
+    "name": "Token-edit compositions are sub-additive on seg in proportion to pair overlap",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "Two token arms with ZERO cell collisions lost 6 of 80 seg repairs, all four losing pairs inside their 13-pair overlap: +5.086e-06 S of a +1.62e-06 miss",
+    "predicted_vs_empirical_residual": {
+      "naive_additivity_relative_error": 1.179e-05,
+      "named_decomposition_remainder_abs_s": 2.8e-06,
+      "seg_term_over_byte_term": 7.64
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-11T00:00:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "macOS CPU (frozen SegNet recount, exact encodes) + contest-CUDA T4 for move 40",
+      "measurement_axis": "[contest-CUDA T4 n600 exact rows; exact archive bytes; frozen CPU SegNet repair recount]",
+      "promotion_eligible": false,
+      "rejection_reason": "re-measure the seg leg of EVERY composition by recompute on the shared pairs -- this equation gives the sign and the locus, never a number to carry. It widens (support n = 1 composition) when a second cross-arm composition with a different overlap fraction is measured; a measured composition with shared pairs and NO repair loss would falsify the mechanism, not merely the coefficient",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md",
+      "source_sha256": "3d848e593881b864c57eaa6dc0eca991c9a7b030300d87f912e2c29278652dba"
+    },
+    "python_callable_module_path": "tac.canonical_equations.sj1_composition_subadditive_on_pair_overlap_20260911:predict_subadditive",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "overlap_pairs": "count",
+      "union_pairs": "count"
+    },
+    "units_out": {
+      "composition_miss_s": "score units, positive = composition worse than the naive sum",
+      "predict_subadditive": "boolean -- must the seg leg be recomputed?"
+    }
+  }
+]

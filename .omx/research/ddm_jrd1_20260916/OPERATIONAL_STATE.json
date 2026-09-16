@@ -1,0 +1,110 @@
+{
+  "claim_rows": [
+    "| 2026-09-16T01:09:20Z | ddm_jrd1 | ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916 | local_macos_cpu | ddm_jrd1_byte_preflight_20260916 |  | completed_byte_preflight_partial_scorer_queued | Byte control harvested rc0; exact move52 twin archive 179332 B; 728 retained files, 164677657 logical B. Scientific three-row probe remains UNMEASURED; no scorer slot assigned; MAIN fire order and canonical pending task retained. No burn, scorer, Modal, fire or packet. |",
+    "| 2026-09-16T00:34:04Z | ddm_jrd1 | ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916 | local_macos_cpu | ddm_jrd1_byte_preflight_20260916 |  | active_byte_only_scorer_unassigned | Joint exchange charter; byte-only input custody and real-coder controls. Scorer phase queued per common contract; pd5 active. No Modal, fire, training, packet, or Vertigo writes. |"
+  ],
+  "landing_boundary": "Only these owned rows are captured; shared state files are not whole-file staged because pd5 and other agents own concurrent changes.",
+  "lane": {
+    "gates": {
+      "contest_cpu": {
+        "evidence": "",
+        "status": false
+      },
+      "contest_cuda": {
+        "evidence": "",
+        "status": false
+      },
+      "deploy_runbook": {
+        "evidence": "",
+        "status": false
+      },
+      "impl_complete": {
+        "evidence": "",
+        "status": false
+      },
+      "memory_entry": {
+        "evidence": "",
+        "status": false
+      },
+      "real_archive_empirical": {
+        "evidence": "",
+        "status": false
+      },
+      "strict_preflight": {
+        "evidence": "",
+        "status": false
+      },
+      "three_clean_review": {
+        "evidence": "",
+        "status": false
+      }
+    },
+    "id": "ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916",
+    "level": 0,
+    "name": "Joint rate-aware descent step-0 exchange probe on move 52",
+    "notes": "PARTIAL, research_only=true: byte preflight PASS, full-stream twins reproduce move52 archive; six int4 byte controls -4..+29 B. Three exchange rows, gradients, resolved pose and all-600 collateral UNMEASURED and full probe not implemented. Scorer slot unassigned; MAIN-owned fire order .omx/research/ddm_jrd1_20260916/FIRE_ORDER.md, canonical task ddm_jrd1_joint_exchange_scorer_phase_20260916. No formulation closure or score claim.",
+    "phase": 1.0,
+    "research_only": true
+  },
+  "lane_audit_rows": [
+    {
+      "after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916\", \"level\": 0, \"name\": \"Joint rate-aware descent step-0 exchange probe on move 52\", \"notes\": \"research_only=true; charter-directed K24 probe; byte-only phase until scorer slot assigned; no empirical exchange verdict yet.\", \"phase\": 1.0}",
+      "args": {
+        "lane_id": "ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916",
+        "name": "Joint rate-aware descent step-0 exchange probe on move 52",
+        "notes": "research_only=true; charter-directed K24 probe; byte-only phase until scorer slot assigned; no empirical exchange verdict yet.",
+        "phase": 1.0
+      },
+      "before_state": "null",
+      "command": "add-lane",
+      "timestamp": "2026-09-16T00:34:04Z"
+    },
+    {
+      "after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916\", \"level\": 0, \"name\": \"Joint rate-aware descent step-0 exchange probe on move 52\", \"notes\": \"research_only=true; charter-directed K24 probe; byte-only phase until scorer slot assigned; no empirical exchange verdict yet.\", \"phase\": 1.0, \"research_only\": true}",
+      "args": {
+        "field": "research_only",
+        "lane_id": "ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916",
+        "value": true
+      },
+      "before_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916\", \"level\": 0, \"name\": \"Joint rate-aware descent step-0 exchange probe on move 52\", \"notes\": \"research_only=true; charter-directed K24 probe; byte-only phase until scorer slot assigned; no empirical exchange verdict yet.\", \"phase\": 1.0}",
+      "command": "set-field",
+      "timestamp": "2026-09-16T00:47:32Z"
+    },
+    {
+      "after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916\", \"level\": 0, \"name\": \"Joint rate-aware descent step-0 exchange probe on move 52\", \"notes\": \"PARTIAL, research_only=true: byte preflight PASS, full-stream twins reproduce move52 archive; six int4 byte controls -4..+29 B. Three exchange rows, gradients, resolved pose and all-600 collateral UNMEASURED and full probe not implemented. Scorer slot unassigned; MAIN-owned fire order .omx/research/ddm_jrd1_20260916/FIRE_ORDER.md, canonical task ddm_jrd1_joint_exchange_scorer_phase_20260916. No formulation closure or score claim.\", \"phase\": 1.0, \"research_only\": true}",
+      "args": {
+        "field": "notes",
+        "lane_id": "ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916",
+        "value": "PARTIAL, research_only=true: byte preflight PASS, full-stream twins reproduce move52 archive; six int4 byte controls -4..+29 B. Three exchange rows, gradients, resolved pose and all-600 collateral UNMEASURED and full probe not implemented. Scorer slot unassigned; MAIN-owned fire order .omx/research/ddm_jrd1_20260916/FIRE_ORDER.md, canonical task ddm_jrd1_joint_exchange_scorer_phase_20260916. No formulation closure or score claim."
+      },
+      "before_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916\", \"level\": 0, \"name\": \"Joint rate-aware descent step-0 exchange probe on move 52\", \"notes\": \"research_only=true; charter-directed K24 probe; byte-only phase until scorer slot assigned; no empirical exchange verdict yet.\", \"phase\": 1.0, \"research_only\": true}",
+      "command": "set-field",
+      "timestamp": "2026-09-16T01:09:20Z"
+    }
+  ],
+  "schema": "ddm_jrd1_owned_operational_state.v1",
+  "task_registration": {
+    "actual_delta_s": null,
+    "blockers": [],
+    "commit_shas": [],
+    "completed_at_utc": null,
+    "event_actor": "ddm_jrd1",
+    "event_notes": "QUEUED-WITH-A-FIRE-ORDER. Consumer store /Volumes/APDataStore/pact/ddm_jrd1; trigger explicit scorer assignment after pd5 release and current-pin validation. Full measurement not implemented; details .omx/research/ddm_jrd1_20260916/FIRE_ORDER.md. No score claim or negative verdict.",
+    "event_timestamp_utc": "2026-09-16T00:47:32.523882Z",
+    "event_type": "registered",
+    "owner": "MAIN",
+    "predicted_cost_usd": 0.0,
+    "predicted_delta_s_band": null,
+    "schema_version": "canonical_task_status_v1_20260518",
+    "session_id": "ddm_jrd1_20260916",
+    "source_design_memo": ".omx/research/ddm_jrd1_20260916/FIRE_ORDER.md",
+    "started_at_utc": null,
+    "status": "pending",
+    "task_id": "ddm_jrd1_joint_exchange_scorer_phase_20260916",
+    "test_status": "pending",
+    "title": "Measure jrd1 joint exchange after explicit scorer-slot assignment",
+    "written_at_utc": "2026-09-16T00:47:32.523882Z",
+    "written_host": "mac.lan",
+    "written_pid": 70560
+  }
+}

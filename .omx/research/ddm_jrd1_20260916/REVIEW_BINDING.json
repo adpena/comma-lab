@@ -1,0 +1,9 @@
+{
+  "schema": "ddm_jrd1_review_binding.v1",
+  "path": "experiments/ddm_jrd1_byte_preflight.py",
+  "sha256": "d097041e3917c5b7b32ce1317651bbb6495dfdbeacb1843bc0dd192f861b8db3",
+  "passes": 2,
+  "review_record": ".omx/research/ddm_jrd1_20260916/REVIEWS.md",
+  "current_entities": 9,
+  "review_override": false
+}

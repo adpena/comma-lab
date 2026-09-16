@@ -1,0 +1,65 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free exact byte measurement]",
+  "exchange_rows": [
+    {
+      "iqr_S_per_B": null,
+      "iqr_bits": null,
+      "median_S_per_B": null,
+      "median_bits": null,
+      "pairs_measured": 0,
+      "pairs_required": 24,
+      "row": "field_only"
+    },
+    {
+      "iqr_S_per_B": null,
+      "iqr_bits": null,
+      "median_S_per_B": null,
+      "median_bits": null,
+      "pairs_measured": 0,
+      "pairs_required": 24,
+      "row": "renderer_only"
+    },
+    {
+      "iqr_S_per_B": null,
+      "iqr_bits": null,
+      "median_S_per_B": null,
+      "median_bits": null,
+      "pairs_measured": 0,
+      "pairs_required": 24,
+      "row": "joint"
+    }
+  ],
+  "future_action": {
+    "bytes": 1174,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/FIRE_ORDER.json",
+    "sha256": "77a409ab87caf3a73ab7d3bad8f08df1b0d0af586a2b87ae37985d7469d4575f"
+  },
+  "gate_verdict": "UNMEASURED",
+  "global_collateral": null,
+  "joint_vs_best_single_ratio": null,
+  "pointer_moved": false,
+  "renderer_byte_controls": {
+    "bytes": 9280,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/RENDERER_BYTES.json",
+    "sha256": "fc0b821bd3d6805684e9a3b9fa65029a0c2a55e0408b4f4fbf2127867d9ffd07"
+  },
+  "retention": {
+    "bytes": 160496,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/RETENTION_MANIFEST.json",
+    "sha256": "3aa4b68667ed24997163e58266648d53c696eb554aa77007f62f19b145211a3c"
+  },
+  "sample": {
+    "bytes": 6928,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/SAMPLE.json",
+    "sha256": "b905cbabf06ca4a9dc78c1f9ed49a929e0c15d5f2b580a55fa769c23a5256613"
+  },
+  "schema": "ddm_jrd1_partial_result.v1",
+  "score_claim": false,
+  "status": "PARTIAL_SCORER_PHASE_QUEUED",
+  "tail_control": "PASS_BYTE_IDENTICAL",
+  "tail_control_receipt": {
+    "bytes": 23869,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/TAIL_CONTROL.json",
+    "sha256": "7666c1059373b493cfc05c2dc9c943f4d4e93cf383b6efad045b96a898480b6d"
+  }
+}

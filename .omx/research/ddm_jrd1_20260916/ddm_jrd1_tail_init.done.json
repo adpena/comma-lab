@@ -1,0 +1,14 @@
+{
+  "adjudicated_at_launch": true,
+  "detail": "requested niceness could not be applied",
+  "elapsed_s": 0.010624,
+  "generated_utc": "2026-09-16T00:36:33Z",
+  "launch_id": {
+    "manifest_path": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/launch_manifest.json",
+    "monotonic_launch_counter": 1997,
+    "pid": 57540
+  },
+  "rc": 8,
+  "receipt_name": "ddm_jrd1_tail_init",
+  "schema": "detached_local_process_done.v2"
+}

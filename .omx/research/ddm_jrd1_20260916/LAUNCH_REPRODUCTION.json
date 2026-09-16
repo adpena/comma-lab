@@ -1,0 +1,182 @@
+{
+  "argv": [
+    {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_sj1_rlc1_price.py",
+        "init"
+      ],
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrd1_tail_init.done",
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_sj1_rlc1_price.py",
+        "init"
+      ],
+      "launch_error": {
+        "error": "PermissionError: [Errno 1] Operation not permitted",
+        "pid": 57540,
+        "requested_nice": 0
+      },
+      "launch_manifest": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init/launch_manifest.json",
+      "nice_status": null,
+      "requested_nice": 0,
+      "stage": "tail_init",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.5,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 235.86,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 22.25,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 22.25,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,runpy; n=os.getpriority(os.PRIO_PROCESS,0); print({\"verified_child_nice\":n},flush=True); n==0 or sys.exit(\"NICENESS_REFUSED\"); sys.argv=[\"experiments/ddm_sj1_rlc1_price.py\",\"init\"]; runpy.run_path(sys.argv[0],run_name=\"__main__\")"
+      ],
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrd1_tail_init_verified.done",
+      "effective_argv": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,runpy; n=os.getpriority(os.PRIO_PROCESS,0); print({\"verified_child_nice\":n},flush=True); n==0 or sys.exit(\"NICENESS_REFUSED\"); sys.argv=[\"experiments/ddm_sj1_rlc1_price.py\",\"init\"]; runpy.run_path(sys.argv[0],run_name=\"__main__\")"
+      ],
+      "launch_error": null,
+      "launch_manifest": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified/launch_manifest.json",
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "requested_nice": 0,
+      "stage": "tail_init_verified",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.5,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 235.85,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_init_verified",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 22.25,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 22.25,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,runpy; n=os.getpriority(os.PRIO_PROCESS,0); print({\"verified_child_nice\":n},flush=True); n==0 or sys.exit(\"NICENESS_REFUSED\"); sys.argv=[\"experiments/ddm_sj1_rlc1_price.py\",\"encode\",\"--field\",\"control\",\"--tag\",\"primary\"]; runpy.run_path(sys.argv[0],run_name=\"__main__\")"
+      ],
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrd1_tail_primary.done",
+      "effective_argv": [
+        ".venv/bin/python",
+        "-c",
+        "import os,sys,runpy; n=os.getpriority(os.PRIO_PROCESS,0); print({\"verified_child_nice\":n},flush=True); n==0 or sys.exit(\"NICENESS_REFUSED\"); sys.argv=[\"experiments/ddm_sj1_rlc1_price.py\",\"encode\",\"--field\",\"control\",\"--tag\",\"primary\"]; runpy.run_path(sys.argv[0],run_name=\"__main__\")"
+      ],
+      "launch_error": null,
+      "launch_manifest": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary/launch_manifest.json",
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "requested_nice": 0,
+      "stage": "tail_primary",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.5,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 235.85,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrd1/stages/tail_primary",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 22.12,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 22.12,
+        "verdict": "PASS"
+      }
+    },
+    {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrd1_byte_preflight.py",
+        "renderer",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrd1"
+      ],
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrd1_renderer_bytes.done",
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrd1_byte_preflight.py",
+        "renderer",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrd1"
+      ],
+      "launch_error": null,
+      "launch_manifest": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes/launch_manifest.json",
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "requested_nice": 0,
+      "stage": "renderer_bytes",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.05,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 235.7,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrd1/stages/renderer_bytes",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 21.92,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 21.92,
+        "verdict": "PASS"
+      }
+    }
+  ],
+  "retention": "No deletion or moving; native stage checkpoints retained; guard caps owned byte-probe writes at 3 GiB. Existing coder measured at about 31 MB per control on pd4; launch reserved 0.5 GiB.",
+  "schema": "ddm_jrd1_launch_reproduction.v1",
+  "score_claim": false,
+  "tail_env": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "SJ1_RLC1_BULK": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_bulk",
+    "SJ1_RLC1_CONTROL_NPZ": "/Volumes/APDataStore/pact/ddm_pd3/admission/field_admitted.npz",
+    "SJ1_RLC1_LIVE": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime",
+    "SJ1_RLC1_ROOT": "/Volumes/APDataStore/pact/ddm_jrd1/rlc1_price"
+  }
+}
