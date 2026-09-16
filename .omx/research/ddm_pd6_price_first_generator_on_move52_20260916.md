@@ -131,7 +131,88 @@ cells it discards the rows the heavy pairs can afford, at 2 cells it spends a 25
 light pairs that could never pay. Every refused row is written to disk with its own `d_cells`, so the
 screen's cost is a measurement rather than an assumption.
 
-<!-- RESULTS SECTIONS 6..N ARE WRITTEN FROM THE MEASURED ROWS AND ARE NOT DRAFTED IN ADVANCE -->
+## 6. THE CHARGE — eight sheets, 4,291 proposals, one real 600-frame encode each
+
+Every candidate was charged before any credit was measured. Each sheet carries one proposal per
+pair, so one encode charges the whole sheet frame-locally; twins byte-identical inside every encode,
+every encode output-lossless.
+
+| sheet | family | tokens | Δ bytes vs move 52 | **bits/token at sheet density** |
+|---|---|---:|---:|---:|
+| 00 | single, rank 0 | 588 | **+159** | **2.163** |
+| 01 | single, rank 1 | 588 | +429 | 5.837 |
+| 02 | single, rank 2 | 588 | +521 | 7.088 |
+| 03 | single, rank 3 | 588 | +551 | 7.497 |
+| 04 | single, rank 4 | 588 | +572 | 7.782 |
+| 05 | single, rank 5 | 588 | +586 | 7.973 |
+| **06** | **two-token, rank 6** | **1,117** | **+452** | **3.237** |
+| **07** | **two-token, rank 7** | **1,117** | **+520** | **3.724** |
+
+**pd5's eight sheets came back at 12.900 – 14.271 bits/token at the same kind of density. This arm's
+cheapest sheet is 2.163, and its two-token sheets are 3.237 and 3.724.** pd4 DERIVED that 10.891
+bits per changed token would clear the −2e−05 bar; the price lever is no longer the constraint —
+it is beaten by a factor of five.
+
+Per PROPOSAL, frame-locally:
+
+| family | proposals | tokens | pooled bits/token | median | min |
+|---|---:|---:|---:|---:|---:|
+| single-token | 3,233 | 3,233 | 6.636 | 7.020 | −31.934 |
+| **two-token** | 1,058 | 2,116 | **3.496** | **3.621** | −30.619 |
+
+The context discount pd5 measured on the SECOND token survives being the generator rather than an
+afterthought, and it is larger here: a two-token proposal costs about half as much per token as a
+single one, because both members are cheap AND adjacent 97.7 % of the time.
+
+**The cheap half is literally half.** Over all 4,291 charged proposals the median is 6.065
+bits/token; 2,119 (49.4 %) price at ≤ 6. **389 proposals (9.1 %) carry a NEGATIVE real charge** —
+the coder spends fewer bits on the changed field than on move 52's own.
+
+| threshold | proposals | pairs | fraction of charged | median bits/token |
+|---|---:|---:|---:|---:|
+| ≤ 3 bits/token | 1,033 | 388 | 24.1 % | 0.943 |
+| **≤ 5** | 1,728 | 506 | 40.3 % | 2.491 |
+| **≤ 6 (the charter's threshold)** | **2,119** | **544** | **49.4 %** | **3.094** |
+| ≤ 8 | 2,876 | 575 | 67.0 % | 4.244 |
+| ≤ 12 | 3,830 | 585 | 89.3 % | 5.443 |
+
+**The price's own noise floor, MEASURED and WORSE than pd5's.** 59 held-fixed control pairs are
+repeated across all eight sheets: median spread **6.758 bits** (mean 6.851, max 14.867) against a
+within-pair price range of median **12.424 bits** over 529 pairs. Signal is **1.84×** the noise,
+where pd5 measured 3.3× (2.905 against 9.555). The reason is structural and worth saying plainly:
+this arm's sheets edit **588** pairs where pd5's edited ~156, so every proposal's frame-local price
+carries more spill from a crowd of neighbours. F3 does not fire, but the per-proposal price here is
+a coarser instrument than pd5's, which is exactly why the SET re-price below is load-bearing rather
+than a formality.
+
+## 7. CREDIT AFTERWARDS — the wave
+
+4,307 screens (render + frozen argmax), 3,104 refused by the per-pair seg budget, **1,203 realized
+rows over 414 pairs**, seven shards, no prefix stop.
+
+| quantity | MEASURED |
+|---|---|
+| credit improves the pair | **571 of 1,203 (47.5 %)** — the coin flip a pose-blind generator predicts (pre-registered 0.45–0.70) |
+| best single credit | **−4.064e−06** d_pose |
+| recovered fraction of the pair's own d_pose, per row | median −1.2 %, p75 **+17.5 %**, p90 **+56.5 %**, max **+98.5 %** |
+| **best-of-n per pair** | **67.4 % of the 414 pairs improve**; recovered median **+10.9 %**, p75 **+46.2 %** |
+| seg cells on realized rows | **51 repaid**, 687 neutral, 272 cost one, 193 cost two |
+| seg screen pass rate | 27.9 % (single 30.8 %, two-token 19.2 %); refused rows' median d_cells 3 |
+| **pairs with ANY positive resolved-pose credit** | **279** — F4's bar is 50 |
+| **pairs whose best row pays at its OWN real price** | **128** |
+| modelled net at the sheet price | **−1.2461e−04 S** |
+
+**The carrier re-solve is doing almost all of the work, and this is the control that says so.**
+Before the re-solve, a cheap token change makes the pair's pose **56.99× worse at the median** and
+up to 2.4 million× worse; the re-solve recovers **98.0 %** of that damage. The credit this arm
+reports is what survives AFTER the re-solve, never the stale number.
+
+**The generator is pose-blind and the measurement says so.** Per row the median recovery is slightly
+negative; the value is entirely in the tail and in being allowed eight shots per pair. That is the
+honest shape of a price-first pool: it does not know where the pose is, it is simply cheap enough
+that a coin flip can pay.
+
+<!-- SET PRICE, LADDER, COMPOSITION AND THE THREE LEGS FOLLOW FROM THE SET ENCODES -->
 
 <!-- # FORMALIZATION_PENDING: a measurement pass; the score arithmetic used throughout is the
 registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
