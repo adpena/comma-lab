@@ -1,0 +1,34 @@
+{
+ "schema": "cpu_axis_adjudication.v1",
+ "verdict": "REFUSED_BY_DESIGN",
+ "axis": "contest_cpu",
+ "pointer_move": 53,
+ "lane_id": "ddm_pd6_price_first_generator_on_move52_20260916",
+ "instance_job_id": "ddm_pd6_cpu_20260916",
+ "pair_group_id": "ddm_pd6_pair_20260916",
+ "call": "fc-01M2N54XN36N614R1238PNKBPR",
+ "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+ "archive_bytes": 179286,
+ "returncode": 1,
+ "modal_elapsed_seconds": 10.424681854,
+ "cpu_metrics_absent_by_design": true,
+ "score_claim": false,
+ "allowed_use": [
+  "debug",
+  "no_score_claim",
+  "no_promotion"
+ ],
+ "receipt": {
+  "path": "/Volumes/APDataStore/pact/ddm_pd6_fire/cpu1/MODAL_REMOTE_RESULT.json",
+  "bytes": 48024,
+  "sha256": "64a48f86830d57938abfe87a8f9069798cfa96959dc9ebd822af0ab76bdcbf8b"
+ },
+ "validation_errors": [
+  "inflated_outputs_volume_manifest was not produced",
+  "contest_auth_eval.json was not produced"
+ ],
+ "receiver_declaration": "linux-nvidia-t4; inflate.sh raises on the CPU path (CUDA guard in inflate.py reached through inflate.sh) \u2014 receiver unchanged from moves 44\u201352 (behaviour digest 9f6e7168\u2026, verified by the pd6 seal)",
+ "packet_requirement": "runtime declaration + this refusal receipt; --submission-score-axis contest_cuda",
+ "note": "the CPU sibling dispatched BEFORE the CUDA fire this time (single-flight race; memory fire_cuda_first_then_the_cpu_sibling_single_flight_race_20260916); same 10 s by-design refusal as moves 49\u201352",
+ "recorded_at_utc": "2026-09-16T13:08:03+00:00"
+}
