@@ -705,6 +705,16 @@ def cmd_realize(args) -> int:
     The call sequence is pd4's ``cluster-search`` inner loop verbatim -- one render, one
     frozen argmax, one carrier re-solve, credited against the PAIR's own base and never
     summed from parts.  The only difference is where the proposal came from.
+
+    THE SEG SCREEN IS PER PAIR, and it is DERIVED rather than picked.  One flipped cell costs
+    8.482752943113527e-07 S at move 52's operating point; a pair can credit at most its own
+    d_pose, worth ``base[pair] * pose_unit`` S.  So the number of cells a pair could EVER pay
+    for is ``floor(base[pair] * pose_unit / seg_cell)``, capped at ``--cell-budget-cap``.
+    MEASURED over the 588 non-floor pairs: 398 can pay for none, 65 for one, 125 for two or
+    more.  A flat screen is wrong in both directions -- at 0 cells it throws away the rows the
+    heavy pairs could afford, and at 2 cells it spends a 25-second refine on light pairs that
+    could never pay.  Every refused row is written with its own d_cells, so the screen's cost
+    is a measurement, not an assumption.
     """
     pd4.bind_move52(verify_raw=False, raw=args.raw)
     import ddm_br1_pose_basis_reorientation as br1
@@ -730,6 +740,12 @@ def cmd_realize(args) -> int:
     base_mean = float(base.mean())
     pose_unit = pose_s_per_pair_unit(base_mean)
     seg_cell = seg_s_per_cell()
+
+    def cell_budget(pair: int) -> int:
+        """The most cells this pair could EVER pay for, capped. DERIVED, not picked."""
+        payable = float(base[pair]) * pose_unit * float(args.cell_budget_frac) / seg_cell
+        return int(min(int(args.cell_budget_cap), math.floor(payable)))
+
     body = pp1.load_body(with_raw=True, with_segnet=True)
     raw = body.raw
     base_inst = pp1.build_pose_instrument(raw)
@@ -747,13 +763,15 @@ def cmd_realize(args) -> int:
                 row = json.loads(line)
                 done.add((int(row["pair"]),
                           tuple(tuple(int(x) for x in e) for e in row["edits"])))
+    refused_cells: dict[tuple, int] = {}
     if args.resume and screen_path.exists():
         for line in screen_path.read_text().splitlines():
             if line.strip():
                 row = json.loads(line)
                 if row.get("refused_by_seg_screen"):
-                    done.add((int(row["pair"]),
-                              tuple(tuple(int(x) for x in e) for e in row["edits"])))
+                    refused_cells[(int(row["pair"]),
+                                   tuple(tuple(int(x) for x in e)
+                                         for e in row["edits"]))] = int(row["d_cells"])
     handle = rows_path.open("a")
     screen_handle = screen_path.open("a")
     counters = {"pairs": 0, "screened": 0, "refined": 0, "seg_refused": 0, "skipped_done": 0}
@@ -762,6 +780,12 @@ def cmd_realize(args) -> int:
         # a pair whose every proposal is already on disk costs a render, an argmax and a
         # batch-1 pose evaluation before the loop can discover that; skip it outright so a
         # resume or a top-up wave does not re-pay the per-pair base cost 600 times
+        budget = cell_budget(pair)
+        # a row REFUSED under an earlier, tighter screen is only still refused if its own
+        # d_cells still exceeds THIS pair's budget; otherwise it is re-screened and refined
+        for key, cells_then in refused_cells.items():
+            if key[0] == pair and cells_then > budget:
+                done.add(key)
         if all((pair, tuple(tuple(int(x) for x in e) for e in row["edits"])) in done
                for row in todo[pair]):
             counters["skipped_done"] += len(todo[pair])
@@ -798,8 +822,8 @@ def cmd_realize(args) -> int:
             entry = dict(row)
             entry.update({"base_flips": base_flips, "flips": moved_flips,
                           "d_cells": int(d_cells), "edits": [list(e) for e in edits],
-                          "interior": True})
-            if d_cells > int(args.max_cells):
+                          "interior": True, "cell_budget": budget})
+            if d_cells > budget:
                 for r, c, old, _new in edits:
                     body.tokens[pair][r, c] = old
                 counters["seg_refused"] += 1
@@ -856,7 +880,11 @@ def cmd_realize(args) -> int:
         "proposal_origin": "PRICE FIRST: the coder charged these before any credit was known",
         "shard_index": shard, "shard_count": count,
         "pairs": sorted(todo), "counters": counters,
-        "max_cells": int(args.max_cells), "refine_rounds": int(args.outer_rounds),
+        "cell_budget_cap": int(args.cell_budget_cap),
+        "cell_budget_frac": float(args.cell_budget_frac),
+        "cell_budget_rule": ("floor(base[pair] * pose_unit * frac / seg_cell), capped -- the "
+                             "most cells the pair could EVER pay for"),
+        "refine_rounds": int(args.outer_rounds),
         "rows_path": str(rows_path), "screen_path": str(screen_path),
         "elapsed_seconds": time.time() - started,
     }, indent=1, sort_keys=True))
@@ -1071,7 +1099,8 @@ def build_parser() -> argparse.ArgumentParser:
     rz.add_argument("--base-pose", required=True)
     rz.add_argument("--base-band-abs", type=float, default=BASE_BAND_ABS)
     rz.add_argument("--raw", required=True)
-    rz.add_argument("--max-cells", type=int, default=2)
+    rz.add_argument("--cell-budget-cap", type=int, default=2)
+    rz.add_argument("--cell-budget-frac", type=float, default=1.0)
     rz.add_argument("--outer-rounds", type=int, default=40)
     rz.add_argument("--max-gn-iterations", type=int, default=400)
     rz.add_argument("--threads", type=int, default=2)
