@@ -642,6 +642,36 @@
         "sha256": "1a7e363f1ed546552a6272f8ae79fc200715686fb77382db5e70dc0a692f7c82"
       },
       "score_claim": false
+    },
+    {
+      "schema": "prefire_contract_consumer_fix.v1",
+      "fix_batch_id": "ffi6_poller_auth_eval_runtime_tree_pin_20260916",
+      "previous_row_sha256": "d9553f662a04428f630a090c06e24267c08aeefc85afceb4d3b4d11f1ea47e7f",
+      "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+      "definition_change": false,
+      "consumer_fixes": [
+        {
+          "fix_id": "ffi6-poller-auth-eval-runtime-tree-pin",
+          "scope": "tools/modal_harvest_poller.py canonical_terminal_claim_notes and its new _auth_eval_provenance_runtime_tree_sha256 helper",
+          "reason": "a first-measurement receipt carries TWO runtime-tree digests under different definitions: the top-level expected_runtime_tree_sha256 is the timing leg's tac.decode_wall_clock.measure_t4_runtime_digest, while the compliance checker's auth_eval_runtime_tree_expected_match reads the auth-eval provenance value (provenance.inflate_runtime_manifest.runtime_tree_sha256 of the embedded contest_auth_eval.json). On move 48 they differed and the terminal claim row bound the timing digest, so no single --expected-runtime-tree-sha256 could satisfy both checks (89/93 either way). The row now binds the auth-eval value and, when the timing digest differs, carries it separately as t4_runtime_digest_sha256 -- copied, never re-derived. Harvest-side note writer only: no digest definition, intent object, authorization or fire path is touched. MEASURED drift cured here: the pr19 row pinned this consumer at 2a98ab62 (36,333 B); live is bc733834 (39,394 B) from da66353b7, the only commit that touched it since a9fd1270.",
+          "causal_commit": "da66353b7ac0e884e5da71ee5f342e38c0f8e4be",
+          "tests": [
+            "src/tac/tests/test_pointer_move_packet.py::test_terminal_claim_note_binds_the_auth_eval_runtime_tree_on_a_first_measurement_receipt"
+          ]
+        }
+      ],
+      "implementation_commit": "afc2b294b8709a7031eddb8cc49a90457ce996b6",
+      "implementation_manifest": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260916/PREFIRE_IMPLEMENTATION_MANIFEST_FFI6_POLLER.json",
+        "bytes": 2251,
+        "sha256": "849e47963952983f74945e112bb018b79b484a90bc9949d2cc981e4a43dec687"
+      },
+      "adjudication_memo": {
+        "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ffi6_20260916/CONSUMER_FIX_poller_binds_auth_eval_runtime_tree_20260916.md",
+        "bytes": 7447,
+        "sha256": "a39aacb8d3c42b66931b9077be3ca06c0bca725c26508172ca739ec0bdfa1876"
+      },
+      "score_claim": false
     }
   ]
 }
