@@ -303,7 +303,55 @@ side.
 stream, staged and closed in separate directories — and both produce
 **179,287 B sha `18b7e729505deb88524c922c4579cc631fcf699a6962032ccc374e374d4be00f`**.
 
-<!-- PARSE-BACK, TWINS, SMOKES, CENSUS, RETENTION AND THE SEAL FOLLOW -->
+## 11. THE COLD PARSE-BACK — and the control that changed the verdict
+
+The candidate tree was decoded cold on CPU at the contest thread count (4), through the tree's
+own `inflate.py` and `runtime.f26_inflate`, 1,471.1 s (token decode 572.0 s, neural render
+845.6 s), raw 3,662,409,600 B sha `baca511f93f8f6b53c3f70b189539ecaed4c9111aaeb635b1911e476c05589fc`.
+
+| control | outcome |
+|---|---|
+| the decoded TOKEN PLANE is the admitted field | **PASSES** — 129 tokens over 110 pairs, plane sha `e4d1a999bfe9eab59fc451100c65fd43a94c2b0ea302c80ff5ae032ae4594b92`, **zero cells differing** |
+| **d_seg on the DECODE** (`step0 --raw`, the same jg1 instrument move 52's leg was measured with) | **12,129 flips against move 52's 12,147 — 18 cells repaired**, where the per-pair census predicted 19 |
+| **d_pose on the DECODE** (`up2.measure_pose` batch 8 on the candidate's own `0.raw` and its own carrier) | **2.0241378451781925e−05 — 4.90× the overlay's 4.130731e−06, and 4.81× move 52's own base** |
+
+**That third row is the pass's most important measurement, and it is a REFUTATION of the
+candidate.** pd5 named this gap and could not reach it ("the seg leg was never measured on a
+decode, because no candidate was decoded"); pd4's F9 was "not reached" twice. This arm reached it,
+and the answer is that the composed-overlay pose leg is NOT the shipped pose leg.
+
+### Where the disagreement lives, MEASURED
+
+| pairs | decode vs admission |
+|---|---|
+| all 490 UNKEPT pairs | **identical to all digits** (Σ|Δ| = 0.0) |
+| 101 of the 110 kept pairs | **identical to all digits** |
+| **9 kept pairs** (82, 154, 167, 238, 268, 305, 487, 508, 532) | decode pose is **10³–10⁴× worse**; Σ|Δ| = 9.666e−03 |
+
+And the cause is not the carrier: those nine pairs' re-solved codes move by 1–15 units, the same
+range as the pairs that reproduce, and nothing is near the int12 rail. It is the RENDER. Comparing
+the decoded odd frame against the overlay's own odd frame:
+
+| pair | odd-frame max |Δ| decode vs overlay |
+|---|---:|
+| 238 / 487 / 268 (bad) | **114 / 154 / 117 grey levels** |
+| 397 / 398 / 14 (good) | **0 / 0 / 0** |
+
+**LAW, measured here for the first time on this object: `render-edits` reproduces the receiver's
+own odd frame EXACTLY for most edited pairs and NOT for all of them, so a pose credit measured on
+the overlay is only valid for the pairs whose overlay render the decode reproduces. The overlay is
+a PROPOSAL; the decode is the charge.** Every prior pass on this object bought its pose leg from
+the overlay and never checked. This one checked, and 9 pairs of 110 were bought on a render the
+shipped bytes do not produce.
+
+### What that does to the candidate
+
+On its own decoded bytes the 110-pair archive scores
+100·0.00010288731044702396 + √(10·2.0241378451781925e−05) + 25·179,287/37,545,489 — the pose leg
+alone is **+7.739e−03 S**. The 110-pair candidate **does NOT clear the bar**; it is far worse than
+move 52. The −1.066e−04 net of §10 was real arithmetic on an unreal pose leg.
+
+<!-- THE 101-PAIR SUCCESSOR, ITS OWN DECODE, AND THE SEAL FOLLOW -->
 
 <!-- # FORMALIZATION_PENDING: a measurement pass; the score arithmetic used throughout is the
 registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
