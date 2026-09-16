@@ -115,7 +115,6 @@ admission existed, with ten pre-registered falsifiers), `SEARCH_PLAN.json`.
 
 ---
 
-<!-- SECTIONS 4 ONWARD ARE WRITTEN WHEN THEIR MEASUREMENTS LAND -->
 ## 4. The smoke: K_refine, the pair budget, and the PRICE method, all declared from measurement
 
 Eight pairs drawn at ranks 0/20/40/60/80/100/120/139 of the expected-credit order, run as **8
@@ -208,3 +207,332 @@ encodes, about **280× cheaper**, and the sheet construction keeps the edit DENS
 across sheets so the neighbour spill is common to every sheet and cancels in the per-pair
 comparison.
 
+---
+
+## 5. The two searches
+
+**(a) The 26 pairs move 52 itself edited, re-searched from their NEW renders** — single token,
+K_refine 12, pd1's reference form otherwise unchanged (cells 16, interior radius 3, max-cells
+2, deltas −1/+1). All 26 walked to completion: **265 realized rows**. Only **4 of 26** carry a
+break-even above the measured ~17.5-bit price — 591 at **65.0** bits, 324 at **42.8**, 59 at
+**31.4**, 465 at **24.6** — but those four are the richest assets in the entire pass, and all
+four come from re-rendered pairs. pd3's finding that a re-render re-opens credit holds a
+fourth time.
+
+**(b) The clustered family** — a second token in the 8-neighbourhood of the pair's best
+single-token move, realized JOINTLY (one render, one frozen-argmax, one carrier re-solve),
+its credit measured against the pair's OWN base and never summed from two rows. **PREFIX
+STOP** per the pre-registered `STOP_RULE.json`: **63 of the 140 anchor pairs (45 %)** were
+walked before the cluster shards were stopped by PID to free the cores for the six price
+encodes. Because the walk order is round-robin over 8 shards in descending benefit, that 45 %
+is a near-uniform prefix of the GLOBAL ranking, not the top of one shard — but every cluster
+verdict below is scoped to that prefix.
+
+---
+
+## 6. THE PRICE, measured per PROPOSAL — the charter's rung
+
+Six sheets, 156 pairs, **496 proposals**, one real 600-frame encode each, twins byte-identical
+inside every encode. Sheet archives came back at 179,668–179,686 B (+336…+354 B over move 52).
+
+| family | proposals | tokens | total Δbits | **bits/token pooled** | median | min | max |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| single-token | 374 | 374 | 5,923.73 | **15.839** | 15.418 | **−17.173** | 33.443 |
+| **clustered (2 tokens)** | 122 | 244 | 3,368.14 | **13.804** | **11.416** | 4.502 | 29.453 |
+
+**Falsifier F5 does NOT fire: clustered edits are measurably cheaper per token** — 13.804
+against 15.839 pooled (−12.9 %), 11.416 against 15.418 by median (−26.0 %). It is not pass 8's
+8.93 — that was a different field, a different edit shape and a different pointer — but the
+DIRECTION pass 8 measured reproduces on this vehicle, on 122 jointly-realized proposals.
+
+**And the price resolves.** Three independent measurements of its noise:
+
+| control | measured |
+|---|---:|
+| the SAME proposal priced in ≥2 sheets that differ at other pairs (116 proposals) | spread median **2.518** bits, mean 2.507, max 5.587 |
+| the same 8 proposals priced in an 8-token SPARSE field vs a 156-pair sheet | max \|Δ\| **2.643** bits, median 1.166, mean +0.196 |
+| spill onto UNEDITED frames | 5.3 % of the signed total here, 2.79 % on pd3's 271-token field |
+
+against a **within-pair price range of median 6.73 bits (max 45.30) over 110 pairs**. The
+signal is 2.7× the noise at the median. **F3 does not fire.**
+
+### What ranking by credit per REAL bit actually changed
+
+| ranking | pairs that pay | tokens | Δbits | **bits/token** | modelled net ΔS |
+|---|---:|---:|---:|---:|---:|
+| by benefit alone (pd3's rule) | 13 | 20 | 231.98 | 11.599 | −1.1073e−05 |
+| **by resolved-pose credit per REAL bit** | **18** | **24** | 211.36 | **8.807** | **−1.4682e−05** |
+
+**The rankings disagree on 31 of 156 pairs.** The per-bit rule finds **5 more payable pairs**,
+spends **20.6 fewer bits**, and improves the modelled net by **+32.6 %** — and it drops the
+admitted subset's price to **8.807 bits/token**, below pd3's shipped **12.923** and essentially
+at pass 8's **8.93**. **Falsifier F7 does NOT fire: the price lever works, and it is the first
+thing in this family that has.** Six of the 18 payable pairs are CLUSTERS; three proposals
+(pairs 409, 476, 7) carry a NEGATIVE price — they shorten the stream while gaining pose.
+
+---
+
+## 7. The composition, re-verified on one object, and the admission
+
+The per-pair search realizes each edit alone, so the composed object was RE-MEASURED: a
+600-pair overlay rendered from the 40-pair carried field (1,831,204,800 B, 200.4 s), an n600
+pose leg on it, and a carrier re-solve over all 600 pairs that starts from the **SHIPPED**
+codes, never from the search's own.
+
+| leg | per-pair sum | composed, re-verified | realized fraction |
+|---|---:|---:|---:|
+| pose, all 40 carried | −4.5904610e−05 | **−4.5866457e−05** | **0.999169** |
+
+**Falsifier F6 does not fire.** The two null controls:
+
+* the STALE pose — candidate renders, shipped carrier — is **2.0403e−04**, **48.5×** the base.
+  The re-solve recovers all of it: composed resolved **4.1304e−06** against base 4.2075e−06.
+* of the **560 unedited pairs, 559 are bit-identical to their base** (|resolved − base| =
+  0.000e+00) and the stale leg is bit-identical on all 560. **One** unedited pair is not: its
+  carrier re-solve found **−4.063e−07** of d_pose on a render that did not move. That is a
+  real, small, SEPARATE lever — a carrier-only re-solve worth about −5.2e−07 S against a
+  splice cost of roughly 0.19 B (≈ +1.3e−07 S) at pd3's measured splice rate — and this arm
+  does NOT take it: the admission gates on `edited`, so the pair keeps its base leg and its
+  shipped codes. It is handed to the next arm, not banked here.
+
+### The three-leg Lagrange admission, on the RESOLVED pose
+
+The sweep keeps **18 of the 40 carried pairs** at λ = 1.2735, with the rate leg taken from the
+MEASURED per-frame bit ledgers (`rate_leg_is_modelled_not_measured: false`) rather than
+apportioned. Admitted pairs: 7, 14, 48, 59, 82, 168, 170, 217, 221, 228, 265, 324, 407, 409,
+465, 476, 499, 591 — **exactly the 18 the per-bit carry said would pay**, reached
+independently by a sweep over the composed object.
+
+| quantity | modelled |
+|---|---:|
+| pairs kept | 18 (24 tokens; 6 of them clustered pairs) |
+| d_seg instrument | 0.00010297139 → 0.00010301378 (**+5 cells: the pose-directed edits COST seg here**) |
+| d_pose | 4.2075358e−06 → **4.1601727e−06** |
+| archive bytes | 179,332 → 179,358.42 (**+26.42 B**, from the spliced per-sheet ledgers) |
+| **net vs move 52** | **−1.6678e−05** | 
+
+**That is 0.83 bars of the −2e−05 admit bar.** The rate leg above is a splice of per-sheet
+frame-local measurements and is NOT the charge; the admitted subset's own full real encode is,
+and it is measured next.
+
+---
+
+## 8. The rate leg by REAL encode — the authority, and it fires the bar
+
+`ddm_sj1_rlc1_price` re-encoded the 18-pair / 24-token ADMITTED field through the shipped
+RLC1 loop, twice, in two independent processes each with its own natively compiled rc64
+backend:
+
+| field | pairs / tokens | exact archive | Δ vs move 52 | bits/changed token | realized ÷ first-order ideal | twins |
+|---|---:|---:|---:|---:|---:|---|
+| control (move 52's own field) | 0 / 0 | **179,332 B** sha `ae59c510…3b20e` | 0 | — | — | **byte-identical, 2 processes** |
+| the six price sheets | 156 / 176–184 | 179,668 – 179,686 B | +336 … +354 B | **14.957 – 15.514** | — | byte-identical within each |
+| the 8-token SPARSE smoke field | 8 / 8 | 179,350 B | +18 B | 18.000 | 0.972 | byte-identical, 1 process |
+| **the ADMITTED subset** | **18 / 24** | **179,368 B** sha `d4b52ebc91c05d881cd96ee6aaa081a5f0f46be73697c387fe2a5a77f8cca5ba` | **+36 B** | **12.000** | 0.98797 | **byte-identical, 2 processes** |
+
+### The three legs on those exact bytes
+
+| leg | value | how |
+|---|---:|---|
+| rate | **+2.39709e−05** | **+36 B EXACT**, the subset's own real encode, twins |
+| seg | **+4.24138e−06** | **+5 flipped cells** — the admitted edits COST seg on this field |
+| pose | **−3.66120e−05** | RESOLVED 4.1601727e−06 against the base 4.2075358e−06, re-verified n600 on the composed object at 0.999169 of the per-pair sum |
+| **S projected** | **0.13619197013064016** | 100·0.00010308241376471558 + √(10·4.1601727e−06) + 25·179,368/37,545,489 |
+| **net vs move 52** | **−1.029893e−05** | **0.515 bars** · **0.444× the 34.8 B container-break sd** |
+
+**Falsifier F8 FIRES. The pass does not clear the −2e−05 bar, and it is not close: the margin
+is smaller than the campaign's standing container-break lottery.** No candidate was built, no
+archive staged, no parse-back run, nothing sealed. Building past this would have been spending
+on a row MAIN cannot fire — pass 8's precedent, applied.
+
+### The ledger's own error, measured
+
+The spliced per-sheet ledger predicted **211.363 bits** for these 18 pairs; the real encode
+says **288 bits**. The ledger **under-charged by 36.3 %** — far more than pd3's 2.57 B
+(+0.0014 %) or sj1's +19.6 B (+0.0108 %). The cause is not the frame-local rail, which the
+controls show is 95–97 % complete with a ≈2.5-bit noise floor. **It is SELECTION on a noisy
+estimator**: the per-bit rule takes the argmin of ~3 prices per pair, and the argmin of noisy
+draws is biased low — about the noise floor per pair, ≈ 2.5 × 18 ≈ 45 bits, plus the spill.
+Three of the 18 winners carried a NEGATIVE frame-local price; none of them can actually pay
+the container back. **A successor that ranks by a measured per-proposal price must debias the
+selection, or price the chosen subset before it believes the subset's number.**
+
+Re-running the sweep with the ledger rescaled by the measured 1.3626 — a single-point
+calibration, labelled as such — moves the optimum to **11 pairs** and **−1.1810e−05 (0.59
+bars)**. The verdict does not depend on which of the two rate legs is used.
+
+---
+
+## 9. The yield, and what price would have cleared the bar
+
+The best proposal per pair over all 156 priced pairs, as a fraction of that pair's own d_pose:
+
+| band | pairs | admitted |
+|---|---:|---:|
+| −100 % … −50 % | **74** | **8** |
+| −50 % … −25 % | 31 | 7 |
+| −25 % … −10 % | 17 | 2 |
+| −10 % … −5 % | 10 | 0 |
+| −5 % … −2 % | 11 | 0 |
+| −2 % … 0 % | 10 | 1 |
+| ≥ 0 % | 3 | 0 |
+
+Median carried **−45.78 %**, median admitted **−44.82 %**, best **−99.25 %**. The seg cost of
+each pair's best proposal: **−2** on 1 pair, **−1** on 11, **0** on 114, **+1** on 20, **+2**
+on 10 — 126 of 156 cost zero or negative cells, and 13 of the 18 admitted do.
+
+**The pass is not short of credit. It is short of PRICE.** The same pool, re-run against the
+ladder with the tokens each proposal actually moves:
+
+| price, bits/changed token | pairs that pay | modelled net ΔS | bars |
+|---:|---:|---:|---:|
+| 16.443 (pd3's full field) | 10 | −8.901e−06 | 0.45 |
+| 12.923 (pd3's shipped subset) | 21 | −1.455e−05 | 0.73 |
+| **12.000 (THIS subset, MEASURED)** | **25** | **−1.674e−05** | **0.84** |
+| **10.891 (DERIVED: the bar)** | **32** | **−2.000e−05** | **1.00** |
+| 8.930 (pass 8's clustered field) | 49 | −2.782e−05 | 1.39 |
+| 7.000 | 67 | −3.914e−05 | 1.96 |
+
+**DERIVED by bisection: this pool clears −2e−05 at 10.891 bits per changed token. The measured
+price is 12.000. The pass misses by 1.109 bits per token — 9.2 %.**
+
+---
+
+## 10. The verdict on the price lever
+
+**The price lever is REAL, it is MEASURED, and on the move-52 field it is 9.2 % short.**
+
+| falsifier | outcome |
+|---|---|
+| F1 the pricer reproduces move 52's own archive | **does not fire** — 179,332 B sha `ae59c510…`, twins, `control_identity_passed` |
+| F2 frame-local pricing is ≥ 90 % of the signed delta | **does not fire** — 97.21 % on pd3's 271-token field, 94.7 % here |
+| F3 the per-proposal price resolves above its noise | **does not fire** — noise median 2.518 bits (116 repeated proposals), sparse-vs-dense max 2.643 bits, against a within-pair range of median 6.73 bits |
+| F4 the per-bit ranking changes the admitted set | **does not fire** — the two rankings disagree on 31 of 156 pairs; the per-bit rule finds 5 more payable pairs |
+| F5 clustered edits are cheaper per token | **does not fire** — 13.804 pooled / 11.416 median against 15.839 / 15.418 for isolated tokens |
+| F6 composition is realized, not summed | **does not fire** — realized fraction 0.999169 over 40 pairs; 559 of 560 unedited pairs bit-identical |
+| F7 the subset beats pd3's 12.923 bits/token | **does not fire, but only just** — **12.000** measured, a 7.1 % improvement, not the 8.807 the frame-local ranking predicted |
+| **F8 the admitted set clears −2e−05** | **FIRES** — **−1.029893e−05, 0.515 bars** |
+| F9 seg on the shipped bytes equals the admission's | **not reached** — no candidate was built |
+| F10 the base is move 52's own decode | **does not fire** — this arm's own parse-back reproduces `ccb89e3e…`, and its pose reproduces pd3's at max abs difference **0.000e+00** |
+
+**What this pass settles.**
+
+1. **The price on this field is 12–18 bits per changed token, not 8.93.** An isolated token
+   costs 15.839 pooled (374 proposals); the best-selected 24-token subset costs **12.000** by
+   its own real encode. Four passes of pre-distortion have spent the cheap tokens. pass 8's
+   8.93 was measured on the move-49 field with a seg-repair edit shape, and it does not
+   transfer — the number is a HYPOTHESIS on any other field until re-measured, which is
+   exactly what this arm did.
+2. **Ranking by credit per REAL bit is worth +32.6 % of modelled net and 5 extra payable
+   pairs**, and it is the first thing in this family that lowered the price rather than
+   chasing more credit. It is a keeper.
+3. **Clustering is cheaper per token — measured, on this vehicle, at −12.9 % pooled and
+   −26.0 % by median** — and 6 of the 18 admitted pairs are clusters. But the second token
+   usually costs seg cells: of 8 smoke pairs, 5 produced ≤ 5 refinable proposals and one
+   produced none, because `max-cells 2` refuses the rest.
+4. **Selection on a measured price needs debiasing.** The argmin of ~3 noisy prices per pair
+   under-charged the chosen subset by **36.3 %**. That is the single most useful thing a
+   successor can take from this pass, and it is a new failure mode for this campaign: not a
+   wrong estimator, a wrongly-SELECTED one.
+5. **The gap is 1.109 bits per token.** At 10.891 the same pool clears the bar with 32 pairs.
+   Every lever that lowers the price by ~10 % — a larger cluster (3 tokens), edits packed into
+   one coder context, a token whose neighbours already moved, or a re-ordering of the stream —
+   is now worth more than any lever that finds more pose credit.
+
+**verdict_scope: FORMULATION, on the move-52 field.** What is measured is pose-directed
+single-token and 8-neighbourhood two-token pre-distortion on move 52's field, proposals ranked
+by resolved-pose credit per REAL measured bit, admitted on the resolved pose against a real
+subset encode. The cluster family was walked to **45 % of its 140-pair population** under a
+pre-registered prefix stop, so its verdict is scoped to that prefix. Three-token clusters, a
+re-ordered stream, and a price-first (rather than credit-first) proposal generator are
+untouched.
+
+---
+
+## 11. What this does NOT claim
+
+1. **No score of any kind.** Every S here is a PROJECTION on measured legs. Only
+   `upstream/evaluate.py` on the shipped bytes is a score, and MAIN fires. This arm ran no
+   Modal call, wrote no authorization, no completion and no packet.
+2. **No candidate, no archive, no seal.** Nothing was built past the admission, because the
+   admission does not clear the bar. `179,368 B sha d4b52ebc…` is the PRICER's archive — the
+   object that measured the rate leg — not a staged candidate: it carries move 52's own
+   carrier, not a re-solved one, and no runtime tree was built around it.
+3. **The pose numbers are `[macOS-CPU advisory]`**, measured on a frozen CPU-torch PoseNet
+   against DALI-lineage GT. The instrument's base is 4.207535785085938e−06 against the T4
+   print 4.21e−06 (ratio 0.999415).
+4. **The seg leg is carried onto T4 by the same-instrument ratio** (1.0006662543837985), not
+   measured there, and it was never measured on a decode because no candidate was decoded.
+5. **12.000 bits/token is THIS subset at THIS edit shape on THIS field**, measured once, as
+   15.839 is this pool's isolated-token price and 13.804 its clustered price. None is a law.
+6. **The 10.891-bit threshold is DERIVED**, by bisection on the modelled ladder over the best
+   proposal per pair — it assumes each pair's best proposal keeps its credit at a lower price,
+   which is true by construction, and that the subset's real encode tracks the ladder, which
+   this pass measured to be wrong by 36.3 % in the optimistic direction when the subset is
+   chosen by argmin. Read it as the ORDER of the gap, not as a target.
+7. **The cluster verdict is scoped to a 45 % prefix** of the 140-pair anchor population.
+8. **pp1's twelve floor pairs stay excluded** on pp1's measurement. Nothing here reopens them.
+9. **The one unedited pair whose carrier re-solve found −4.063e−07 was NOT banked** and is not
+   counted anywhere in this pass's arithmetic.
+10. **This arm fired nothing.** MAIN fires.
+
+---
+
+## 12. Custody
+
+Store **`/Volumes/APDataStore/pact/ddm_pd4/`**. APDataStore rather than Vertigo because
+Vertigo held **38 GiB** free — below its 40 GiB reserve. **The reserve was never lowered and
+nothing was written there.** APDataStore free space MEASURED at each heavy step: 29 GiB at
+start, 26 GiB before the searches, 25 GiB before the sheets, 24 GiB before the overlay,
+**22 GiB at landing**.
+
+**MEASURED: 5,929,016,619 B over 1,026 files, every one hashed — under the 6 GiB cap.**
+`RETENTION_MANIFEST.json` carries bytes and sha256 for each, including the losers: every
+realized search row and every screened proposal, not only the 18 that would have shipped.
+
+| path | what |
+|---|---|
+| `base/move52_runtime/` · `parseback/0.raw` · `PARSEBACK_RESULT.json` | this arm's verified copy of move 52's 51-file tree and its own cold decode (3,662,409,600 B sha `ccb89e3e…`, 1,148.57 s) |
+| `base/pose_base_move52.npy` · `codes_move52.npy` · `POSE_BASE_MOVE52.json` | the base pose (4.207535785085938e−06) and carrier |
+| `search/` · `smoke/` | **every realized row and every screened proposal** — 265 re-search rows over all 26 pairs, 336 cluster rows over 63 pairs, winners and losers |
+| `sheets/sheet_0{0..5}.npz` · `SHEETS.json` · `priced_rows.jsonl` · `PRICE_MERGE.json` | the six price sheets, their manifest and the 496 per-proposal REAL prices |
+| `rlc1_price/` | the pricer's INPUTS, both control encodes, the smoke-price encode, all six sheet encodes, both subset encodes, the per-pair bit ledgers, `PRICE_pd4sub.json` |
+| `assemble/` · `admission/` · `admission_calibrated/` | the carry ranking, the candidate field, the pass rows, the spliced and calibrated ledgers, both Lagrange sweeps and their traces |
+| `pose/overlay_pd4/` · `pose_stale.npy` · `pose_resolved.npy` · `refine/` | the 600-pair overlay the pose leg scored, the two n600 vectors and the per-pair re-solve |
+| `PREREGISTRATION.json` · `SEARCH_PLAN.json` · `SMOKE_TIMING.json` · `STOP_RULE.json` · `PREFIX_STOP.json` · `YIELD_HISTOGRAM.json` · `PRICE_THRESHOLD.json` · `LEDGER_CALIBRATION.json` | the pre-registration and every control receipt |
+| `PIPELINE_PLAN.md` · `make_retention.py` · `make_census.py` · `make_seal_inputs.py` · `pose_on_decode.py` | the chain as exact commands and the producers the branch that did not fire would have used |
+
+Producer: `experiments/ddm_pd4_pose_directed_pass4.py` (`bind | base | run | prereg | plan |
+smoke-timing | cluster-search | sheets | price-merge | carry | histogram | assemble`),
+ruff-clean, plus pd1's `ddm_pd1_pose_directed.py search`, sj1's `ddm_sj1_rlc1_price.py` and
+`ddm_sj1_joint_admission.py`, all unchanged. Nothing under
+`/Volumes/APDataStore/pact/ddm_pd1`, `ddm_pd2`, `ddm_pd3`, `/Volumes/VertigoDataTier/pact/…`
+was written; every module that imports from a custody tree sets `sys.dont_write_bytecode = True`.
+
+## 13. What this hands the next arm
+
+1. **Stop paying for credit; start paying for price.** The pool has 74 pairs whose best
+   proposal removes more than half that pair's own d_pose. At 12.000 bits/token 25 of 156 can
+   pay; at 10.891 the pool clears the bar. **A 10 % price cut is worth more than any amount of
+   further search on this field.**
+2. **Three concrete price levers this arm did not run:** a THREE-token cluster (the 2-token
+   discount measured −26 % by median, and the mechanism is context sharing, so it should
+   compound); a proposal generator that ranks by PRICE first and only then checks credit
+   (this arm generated by pose saliency and priced afterwards, so the cheap half of the token
+   plane was never proposed); and packing admitted edits into adjacent coder contexts across
+   PAIRS rather than within one.
+3. **Debias the selection.** The argmin of ~3 noisy per-proposal prices under-charged by
+   36.3 %. Either price each pair's chosen proposal a second time in a field where it is the
+   only edit, or shrink the candidate set per pair, or apply a measured −2.5-bit-per-pair
+   selection penalty before the sweep.
+4. **The sheet rail is cheap and it is reusable.** Six 600-frame encodes priced 496 proposals
+   — 13.7 s per priced proposal against 267 s when a field carries only eight. Any successor
+   that wants per-proposal prices should build sheets, not fields.
+5. **One unedited pair's carrier re-solve found −4.063e−07 with no token edit at all.** 559 of
+   560 were bit-identical, so this is one pair, not a family — but it is free pose credit at
+   roughly 0.19 B of splice, and nobody has swept the carrier alone on this pointer.
+
+<!-- # FORMALIZATION_PENDING: a measurement and a closure verdict; no pointer row is produced, so there is no equations leg for tools/pointer_move_packet.py to write. The score arithmetic used throughout is the registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
+
+Own-vehicle frontier (unchanged by this arm):
+**S 0.13620226906030858 @ 179,332 B [contest-CUDA T4 n600]** (move 52).

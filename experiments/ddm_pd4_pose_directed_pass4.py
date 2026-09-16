@@ -1283,10 +1283,19 @@ def cmd_carry(args) -> int:
             "modelled_net_dS": float(sum(e["dS_modelled_real_price"] for e in keep)),
         }
 
-    carried = sorted(
-        (e for e in per_bit_wins.values() if e["dS_modelled_real_price"] < 0.0),
-        key=lambda e: e["dS_modelled_real_price"],
-    )
+    ranked_all = sorted(per_bit_wins.values(), key=lambda e: e["dS_modelled_real_price"])
+    carried = [e for e in ranked_all if e["dS_modelled_real_price"] < 0.0]
+    relaxed = False
+    if args.top_n and len(carried) < args.top_n:
+        # THE SUBSET PRICE IS NOT THE FIELD PRICE.  pd3 MEASURED its 271-token field at
+        # 16.443 bits/token and the 26-token SUBSET it shipped at 12.923 -- the same edits,
+        # a different price, because a sparse field pays a different context cost.  The
+        # sheet price is measured on a ~156-pair field, so a pair that does not pay AT THAT
+        # DENSITY may still pay in a small subset.  Carrying the top N regardless of sign
+        # exists only so that hypothesis can be tested by the subset's OWN real encode; it
+        # is labelled, never treated as if the pairs had already paid.
+        carried = ranked_all[: args.top_n]
+        relaxed = True
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     carry_path = out_dir / "carry_rows.jsonl"
@@ -1305,6 +1314,14 @@ def cmd_carry(args) -> int:
         "disagreements": changed,
         "carry_rows": str(carry_path),
         "carried": len(carried),
+        "carry_relaxed_to_top_n": relaxed,
+        "carry_relaxation_scope": (
+            "the carried set is the top-N by modelled dS at the SHEET's edit density, not a "
+            "set that has paid; the subset's own real encode decides"
+        ) if relaxed else None,
+        "pairs_paying_at_the_sheet_price": len(
+            [e for e in ranked_all if e["dS_modelled_real_price"] < 0.0]
+        ),
     }
     (out_dir / "CARRY_RANKING.json").write_text(json.dumps(report, indent=1, sort_keys=True))
     print(json.dumps({k: v for k, v in report.items() if k != "disagreements"},
@@ -1442,6 +1459,91 @@ def cmd_assemble(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# stage: histogram -- what the walk actually yielded, per pair and per price
+# ----------------------------------------------------------------------------------
+
+
+def cmd_histogram(args) -> int:
+    """The per-pair credit and seg-cost histogram, and the price ladder re-run on the
+    MEASURED prices rather than on a declared scalar."""
+    bind_move52(verify_raw=False, raw=args.raw)
+    base = np.load(args.base_pose)
+    base_mean = float(base.mean())
+    pose_unit = pose_s_per_pair_unit(base_mean)
+    seg_cell = seg_s_per_cell()
+    rows = [json.loads(line) for line in Path(args.priced).read_text().splitlines()
+            if line.strip()]
+    per_pair: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        pair = int(row["pair"])
+        benefit = (-(float(row["credit_d_pose"]) * pose_unit)
+                   - float(row["d_cells"]) * seg_cell)
+        entry = dict(row)
+        entry["benefit_S"] = benefit
+        entry["fraction_of_pair_d_pose"] = (
+            float(row["credit_d_pose"]) / float(base[pair]) if base[pair] > 0 else math.nan
+        )
+        best = per_pair.get(pair)
+        if best is None or benefit > best["benefit_S"]:
+            per_pair[pair] = entry
+
+    admitted = set(json.loads(Path(args.admitted_pairs).read_text())) if args.admitted_pairs else set()
+    bands = [(-1.01, -0.50), (-0.50, -0.25), (-0.25, -0.10), (-0.10, -0.05),
+             (-0.05, -0.02), (-0.02, 0.0), (0.0, 1e9)]
+    credit_hist = []
+    for low, high in bands:
+        members = [p for p, e in per_pair.items()
+                   if low <= e["fraction_of_pair_d_pose"] < high]
+        credit_hist.append({
+            "band": [low, high],
+            "pairs": len(members),
+            "admitted": len([p for p in members if p in admitted]),
+        })
+    cells_hist: dict[str, dict[str, int]] = {}
+    for pair, entry in per_pair.items():
+        key = str(int(entry["d_cells"]))
+        slot = cells_hist.setdefault(key, {"pairs": 0, "admitted": 0})
+        slot["pairs"] += 1
+        slot["admitted"] += int(pair in admitted)
+    fractions = np.array([e["fraction_of_pair_d_pose"] for e in per_pair.values()],
+                         dtype=np.float64)
+    adm = np.array([per_pair[p]["fraction_of_pair_d_pose"] for p in sorted(admitted)
+                    if p in per_pair], dtype=np.float64)
+
+    ladder = []
+    for bits in (16.443, 12.923, 12.0, PASS8_MEASURED_BITS_PER_TOKEN_CLUSTERED, 7.0):
+        fee = (bits / 8.0) * S_PER_BYTE
+        payers = [e for e in per_pair.values()
+                  if e["benefit_S"] > fee * int(e["tokens_changed"])]
+        ladder.append({
+            "bits_per_token": bits,
+            "pairs_able_to_pay_with_their_best_benefit_proposal": len(payers),
+            "modelled_net_dS": float(
+                -sum(e["benefit_S"] - fee * int(e["tokens_changed"]) for e in payers)
+            ),
+        })
+
+    report = {
+        "schema": "ddm_pd4_yield_histogram.v1",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet + SegNet, DALI GT lineage]",
+        "score_claim": False,
+        "pairs_with_a_priced_proposal": len(per_pair),
+        "admitted_pairs": sorted(admitted),
+        "credit_as_a_fraction_of_the_pairs_own_d_pose": credit_hist,
+        "median_carried_fraction": float(np.median(fractions)) if fractions.size else None,
+        "median_admitted_fraction": float(np.median(adm)) if adm.size else None,
+        "best_carried_fraction": float(fractions.min()) if fractions.size else None,
+        "seg_cost_of_the_best_proposal_per_pair": cells_hist,
+        "price_ladder_on_the_FULL_pass4_pool": ladder,
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=1, sort_keys=True))
+    print(json.dumps(report, indent=1, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1545,8 +1647,17 @@ def build_parser() -> argparse.ArgumentParser:
     ca.add_argument("--priced", type=Path, required=True)
     ca.add_argument("--base-pose", type=Path, required=True)
     ca.add_argument("--raw", type=Path, default=None)
+    ca.add_argument("--top-n", type=int, default=0)
     ca.add_argument("--out-dir", type=Path, required=True)
     ca.set_defaults(func=cmd_carry)
+
+    hi = sub.add_parser("histogram", help="per-pair credit/seg histogram + the measured ladder")
+    hi.add_argument("--priced", type=Path, required=True)
+    hi.add_argument("--base-pose", type=Path, required=True)
+    hi.add_argument("--admitted-pairs", type=Path, default=None)
+    hi.add_argument("--raw", type=Path, default=None)
+    hi.add_argument("--out", type=Path, required=True)
+    hi.set_defaults(func=cmd_histogram)
 
     asm = sub.add_parser("assemble", help="carry rows -> candidate field + pass rows (multi-edit)")
     asm.add_argument("--carry-rows", type=Path, required=True)
