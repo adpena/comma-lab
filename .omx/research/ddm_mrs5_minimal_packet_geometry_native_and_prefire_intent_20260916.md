@@ -73,6 +73,26 @@ configuration the 1,185.9 s T4 leg actually ran (`rc64_backend.c` + `f26_correct
 - The cold n600 wall clock of 1,631.44 s is recorded as **correctness-run metadata only**
   (`wall_is_comparative_timing_evidence: false`) — pd7 loaded the host throughout.
 
+**A fresh-eyes review of those three instruments found six issues; I verified each myself against the
+primary artifacts.** Full detail in `.omx/research/ddm_mrs5_20260916/INSTRUMENT_REVIEW_FINDINGS.md`.
+The two that matter to a reader of this memo:
+
+- **One of the two geometry comparisons in the parity proof cannot fail** (`ddm_mrs5_proof.py:67`
+  compares two class planes that both sides write with the *same* pure-Python line). The 9,437,184
+  figure quoted above comes from the *other* comparison (`:62`, inside `ShadowGeometry.contexts`), and
+  I confirmed `NativeGeometry.contexts` reads the **C library's own moment state through the handle**
+  — so the geometry C arithmetic is genuinely covered, by `bins` and not by `plane`.
+- **The smoke accepts the parity result on pair count alone, without binding it to the receiver it
+  smokes.** The parity ran in `development_public/`, the smoke in `submissions/mrs5/`. I compared all
+  five source files sha-for-sha: **identical**. So the 48-pair parity was measured on exactly the
+  shipped bytes — verified by me, not by the gate.
+
+Two further findings are latent resume-path hazards (`stale_library_removed` and
+`cold_public_subprocess` are written unconditionally while the stages that earn them can be served from
+cache). I checked `attempts/` in both smokes: **exactly one attempt per stage, nothing cached**, so both
+claims were earned here. The remaining two are cosmetic (a missing `promotable=False`, and a "bare venv"
+flag asserted over a three-package probe). None invalidates a number in this memo.
+
 ## 3. Host state at measurement time (MEASURED)
 
 `/Volumes/APDataStore` free: **15 GiB** (the tier is at 100% capacity; the arm's own store is 1.6 GiB,
