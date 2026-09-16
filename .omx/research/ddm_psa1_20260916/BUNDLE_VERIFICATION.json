@@ -1,0 +1,170 @@
+{
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/intended-commit.bundle",
+    "bytes": 207973,
+    "sha256": "8b87776e2db25f9dce0cd29616a669dbe0e0ad00cf95792e5f172366a5d00f49"
+  },
+  "fallback_commit": "a2b75e124e6b85f483731e4a96c9c2cece8bb1ec",
+  "base_head": "3432141b439a714dafae4f312144e56b40115498",
+  "bundle_verify_rc": 0,
+  "blob_hashes_verified": {
+    "experiments/ddm_psa1_byte_price.py": "df30b52dcc2dc7392f89749261728f8a537765be01baccb1388c34a0f4fcb5d7",
+    ".omx/research/ddm_psa1_20260916/DELIVERY_MANIFEST.json": "d345cb85a3cb2e2034dd902b7586b42821d64bf0c65c8edd7cc9e608d4528e0c",
+    ".omx/research/ddm_psa1_20260916/EQUATIONS_RECALL.json": "72b90f82fcd2b0dc9c86a9e3ccd8b1b631c75acca0f38084ac79ef08c8b76d19",
+    ".omx/research/ddm_psa1_20260916/FIRE_ORDER.json": "ca01f3508ec653ef9dbb3c497789bc36fdd33949ba264beb0df6e92e87d83b95",
+    ".omx/research/ddm_psa1_20260916/FIRE_ORDER.md": "1a35c3b5f4637f07b981d12149235b03edbacf031b52f9158cc565ee9e90778e",
+    ".omx/research/ddm_psa1_20260916/HARVEST.sh": "97d1de4bccee66a024cf5ea3bfb342e9a8adc244e461683e8d889a920d4e4ac9",
+    ".omx/research/ddm_psa1_20260916/METHOD.md": "416a8df6c10e71257cfbea0f400025a6e95c358fe82f5e7bfe9d2618930adae2",
+    ".omx/research/ddm_psa1_20260916/PARSER_VERIFICATION.json": "6fbea8e2a3acc9d3aca2068505ffe3bf1254203d5a749d581ede50ba1bfaf640",
+    ".omx/research/ddm_psa1_20260916/PRE_SERIALIZER.json": "191372dccaedecf7d8ff0362d6ba20d248eaa43104334e8c00aa26b81bc9d00a",
+    ".omx/research/ddm_psa1_20260916/RECALL_SEARCHES.json": "492ebfc4cd2b5884c558133fd3723c211568e28bcf94d666ea6885690f8e7ea5",
+    ".omx/research/ddm_psa1_20260916/RECEIPT.md": "941fdd1bbe4476d4d24046c216bf1ce6a2526f1b37bee5c49654097f8898cc46",
+    ".omx/research/ddm_psa1_20260916/RESULT.json": "1bca441fb1a222ea8cb4878d0945a992eaac6a42d14770ec4a9c2f374cd370d3",
+    ".omx/research/ddm_psa1_20260916/RETENTION_MANIFEST.json": "3a11d2755cc29a44a251bfacef8ae0144554989690623d353c9b766b8b18842e",
+    ".omx/research/ddm_psa1_20260916/REVIEWS.md": "cde4a6edd2e275e4d75ca72f3b74ff5e7d7f82d0efa3d85747029d0b9928e312",
+    ".omx/research/ddm_psa1_20260916/SOURCE_INTEGRITY.json": "cad1b2263f8589629797225ab9a6e26b656188617b9ecaf1ac19a8afa3be19ce",
+    ".omx/research/ddm_psa1_20260916/START.json": "e5d999727b0ae0286ee48e3974f431ea71f9257cf3b205d511d28246b1d2c1a1",
+    ".omx/research/ddm_psa1_20260916/STATE_UPDATES.json": "b54380a22533be01c80fbfca8979d5fefb68457762372b4cae050980a15d8e9d",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_A.done.json": "380382fa65968e06905252e607d33982092e6259a3b7ed2247ccf8e79f5c6d7b",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_B3.done.json": "c3dfac36b71edd70f8ac4c4b50636db2eaf902eccffdf6f07b9949e9d1a3e62b",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_B5_control.done.json": "b06075495bb741695a67329850cc630f0e4e36095a5ee7f074ad9a34d71d9419",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_C.done.json": "bbeb580168c4fbcc2f6b8496d5ce0d32463fbc30903870c20ac939d40b93e845",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_D.done.json": "ccc3750936c9da4f9f33ddf1fa594db3f3eac9c8a01e4ba7e0c1cbd456734385",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_control.done.json": "6fb8399b0ca58b0cb5cf2b1eac9f0d38759363104ebcfde5b6e0ce205718c98d",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_harvest.done.json": "4c234e10e7288a60d71f11b2ca7828a21b2596cb09aa286fcf7c335587a69ffe",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_prepare.done.json": "598ae54b510b1249fe96fee435dac8e57798fa4a20df600b093e09e1bc9e64db",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_resume_A.done.json": "c9123c9a68ccb24899e9b2d64aec5ca3e5c418d014ffa9951a6f33a4e71e0ed8",
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_serializer_bundle_landing_20260916.json": "5f71daf2fb434f4531c63bd46f4d8c4c6174bf54ed775f3acba6d710e6c7c0cf",
+    ".omx/research/ddm_psa1_20260916/ddm_psa2_pair_selective_rgb_bias_realization_20260916.json": "dc88578588c53ce28262c3871558e73bedfcf356546ba7952aa8135d73643e5e",
+    ".omx/research/ddm_psa1_20260916/design_recall.txt": "302374abf4ffe54c6d1ba768e8a37e2b21765b1130346ff594808cb5802b706a",
+    ".omx/research/ddm_psa1_20260916/index_dag_recall.txt": "20458ead244169977f47cbc63cf66991f6e26f0ab3b9ae48a75b3309f618247b",
+    ".omx/research/ddm_psa1_20260916/ledger_recall.txt": "db8403e2d2b49b951e7de29241e6206d1b05340ab5706841a8ca051029d3bb70",
+    ".omx/research/ddm_psa1_20260916/memos_recall.txt": "4a4bd67905bebf0de668d6907028fbd670afd07a4c8f876c5914d897981aaea9"
+  },
+  "changed_paths_exact": true,
+  "shared_index_sha_unchanged": true,
+  "main_head": "3432141b439a714dafae4f312144e56b40115498",
+  "landed": false,
+  "verification_objects": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/FETCH_HEAD",
+      "bytes": 198,
+      "sha256": "65b45b3bf9b5ead37f9ab730278c1422d0aae8e8c9cbfe950f3a9a290fa2265c"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/HEAD",
+      "bytes": 21,
+      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/config",
+      "bytes": 112,
+      "sha256": "bd1bb9e32251a5e905656f0b0a4b56ebd11c4dcbee4b9c08cd2bd1fe061230e2"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/description",
+      "bytes": 73,
+      "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/applypatch-msg.sample",
+      "bytes": 478,
+      "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/commit-msg.sample",
+      "bytes": 896,
+      "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/fsmonitor-watchman.sample",
+      "bytes": 4726,
+      "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/post-update.sample",
+      "bytes": 189,
+      "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/pre-applypatch.sample",
+      "bytes": 424,
+      "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/pre-commit.sample",
+      "bytes": 1649,
+      "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/pre-merge-commit.sample",
+      "bytes": 416,
+      "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/pre-push.sample",
+      "bytes": 1374,
+      "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/pre-rebase.sample",
+      "bytes": 4898,
+      "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/pre-receive.sample",
+      "bytes": 544,
+      "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/prepare-commit-msg.sample",
+      "bytes": 1492,
+      "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/push-to-checkout.sample",
+      "bytes": 2783,
+      "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/sendemail-validate.sample",
+      "bytes": 2308,
+      "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/hooks/update.sample",
+      "bytes": 3650,
+      "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/info/exclude",
+      "bytes": 240,
+      "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/objects/info/alternates",
+      "bytes": 41,
+      "sha256": "8051ccb10902f8085600cf47b87e035e10177b668421766c38a95f0d99070eb5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/objects/pack/pack-071607ddd3fa04b300bcd4b0887873b671e43fc9.idx",
+      "bytes": 2248,
+      "sha256": "db98d368186893325084c9e201344d0cb45a83ab269973386a8b611afdbf47de"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/objects/pack/pack-071607ddd3fa04b300bcd4b0887873b671e43fc9.pack",
+      "bytes": 720320,
+      "sha256": "fc21f2987259308f72ad291c542aef3c0f6b2176ce3cf73284b52627210377a2"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/objects/pack/pack-071607ddd3fa04b300bcd4b0887873b671e43fc9.rev",
+      "bytes": 220,
+      "sha256": "15fad8217d66a0be27df5aa58b20fe61c1372d4c26f8ba730737716887eca10f"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_psa1/serializer_verify.git/refs/heads/verified",
+      "bytes": 41,
+      "sha256": "6992e97ffddf0edbcf815236bfd5a3e324cef54d1a08f154fdea7da31ce0f4f3"
+    }
+  ]
+}

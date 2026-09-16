@@ -1,0 +1,20 @@
+{
+  "task_id": "ddm_psa1_serializer_bundle_landing_20260916",
+  "owner": "MAIN",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "fire_trigger_satisfied": true,
+  "consumer_store": "committed repository",
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/intended-commit.bundle",
+    "bytes": 207973,
+    "sha256": "8b87776e2db25f9dce0cd29616a669dbe0e0ad00cf95792e5f172366a5d00f49"
+  },
+  "fallback_commit": "a2b75e124e6b85f483731e4a96c9c2cece8bb1ec",
+  "landed": false,
+  "verified": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/BUNDLE_VERIFICATION.json",
+    "bytes": 9954,
+    "sha256": "f3b55480d1726acdacb755b59e7c0ce1bb178aa5db68871219555cb6f5d455a9"
+  },
+  "canonical_task_still_pending": true
+}

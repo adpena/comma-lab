@@ -1,0 +1,25 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/subagent_checkpoint.py",
+    "--subagent-id",
+    "ddm_jrx2",
+    "--step",
+    "complete",
+    "--status",
+    "complete",
+    "--lane-id",
+    "ddm_jrx2_joint_exchange_probe_repaired_row1_20260916",
+    "--files-touched",
+    "experiments/ddm_jrx2_control.py,experiments/ddm_jrx2_renderer.py,experiments/ddm_jrx2_harvest.py,.omx/research/ddm_jrx2_20260916/RECEIPT.md",
+    "--next-action",
+    "MAIN landing task ddm_jrx2_verified_bundle_landing_20260916, fire on Git-write-capable harvest; no scientific continuation queued.",
+    "--finding",
+    "Charter executed through STOP_COLLATERAL_SEG: Row1 passes12/12,30 twin price jobs verified,all41 detached children rc0. Joint ratios unmeasured. Serializer rc17 fallback verified60/60 blobs; main and index unchanged.",
+    "--notes",
+    "Scientific unit terminal at scoped falsifier; no exact-score progress. LANDING_FIRE_ORDER.json is sole new queued action. Finer-precision retry closed by prior rw1 evidence; spatially selective representation folded into existing OWED1f. All payloads retained and final manifest complete."
+  ],
+  "rc": 0,
+  "stdout": "{\"expected_outputs\": null, \"files_touched\": [\"experiments/ddm_jrx2_control.py\", \"experiments/ddm_jrx2_renderer.py\", \"experiments/ddm_jrx2_harvest.py\", \".omx/research/ddm_jrx2_20260916/RECEIPT.md\"], \"findings\": [\"Charter executed through STOP_COLLATERAL_SEG: Row1 passes12/12,30 twin price jobs verified,all41 detached children rc0. Joint ratios unmeasured. Serializer rc17 fallback verified60/60 blobs; main and index unchanged.\"], \"host\": \"mac.lan\", \"lane_id\": \"ddm_jrx2_joint_exchange_probe_repaired_row1_20260916\", \"next_action\": \"MAIN landing task ddm_jrx2_verified_bundle_landing_20260916, fire on Git-write-capable harvest; no scientific continuation queued.\", \"notes\": \"Scientific unit terminal at scoped falsifier; no exact-score progress. LANDING_FIRE_ORDER.json is sole new queued action. Finer-precision retry closed by prior rw1 evidence; spatially selective representation folded into existing OWED1f. All payloads retained and final manifest complete.\", \"parent_id_or_session\": \"01a0a8a1-2b53-7ad0-bebe-6f91a9221f67\", \"pid\": 25206, \"respawn_context\": null, \"status\": \"complete\", \"step\": \"complete\", \"subagent_id\": \"ddm_jrx2\", \"written_at_utc\": \"2026-09-16T07:42:42.355324+00:00\"}\n",
+  "stderr": ""
+}

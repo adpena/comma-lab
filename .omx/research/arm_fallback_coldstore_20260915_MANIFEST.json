@@ -2143,6 +2143,175 @@
    ],
    "reason": "jrx1 serializer fallback bundle + verify objects; content landed on main (3c5669723)",
    "added_utc": "2026-09-16T08:18:58Z"
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_jrx2_psa1_20260916__post_landing_bundles.tar",
+   "tar_bytes": 8837120,
+   "tar_sha256": "075bfb14cd6aedf17baf51e708a4ec2934c6aebc8f70aef5f3916f7ea0579595",
+   "files": [
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/receipts.jsonl",
+     "bytes": 12252,
+     "sha256": "2e8d014ea9189a27294b26a71ee4632b8bcb6d4e6d3574d6c516a602b80260cb"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.bundle",
+     "bytes": 480706,
+     "sha256": "198d1c509a3d729e8a1244ef1e37d8ff825aafb30683a39a10bed230498f32d5"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-tree.patch",
+     "bytes": 2321599,
+     "sha256": "55f0e02c0f3208f4552c400dd354633449b89ecde9c3fea91df7248722a6f7af"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.format-patch",
+     "bytes": 2329985,
+     "sha256": "666a5640100f78044c1fe0b5205541b38cc384e21af3285ce8edf95f2acc1f76"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/FETCH_HEAD",
+     "bytes": 198,
+     "sha256": "d137fe06273fd13f15a6cecd6cc9440c46d1c4f329e077b6fc610f30d8d67a17"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/objects/pack/pack-f56d171a7fec62b3df67e4045356dbacde08a337.rev",
+     "bytes": 332,
+     "sha256": "1c8f260d631a06d21a48712092aa660a55392bd3224190ddca1668cca723a3ca"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/objects/pack/pack-f56d171a7fec62b3df67e4045356dbacde08a337.pack",
+     "bytes": 993202,
+     "sha256": "fc7a138cac7f3290bf7a9f4b74d78268cfd92f891c2b665873ba2c5f0ea9ee19"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/objects/pack/pack-f56d171a7fec62b3df67e4045356dbacde08a337.idx",
+     "bytes": 3032,
+     "sha256": "79aeed0aa980936571982f322559e45a80a104dd907f0f7e04e3649a419195d7"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/objects/info/alternates",
+     "bytes": 41,
+     "sha256": "8051ccb10902f8085600cf47b87e035e10177b668421766c38a95f0d99070eb5"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/serializer_verify_objects.git/refs/heads/verified",
+     "bytes": 41,
+     "sha256": "a384468331b30b306d75151ab0391a61af3b6e388f19f8bacae28d0e14990994"
+    },
+    {
+     "path": ".omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/receipts.jsonl",
+     "bytes": 7980,
+     "sha256": "2ae5ab1684d91f3ad72123a828a0cb534448404b852e0592f63dfa1f5b8c6341"
+    },
+    {
+     "path": ".omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/intended-commit.bundle",
+     "bytes": 207973,
+     "sha256": "8b87776e2db25f9dce0cd29616a669dbe0e0ad00cf95792e5f172366a5d00f49"
+    },
+    {
+     "path": ".omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/intended-tree.patch",
+     "bytes": 1193137,
+     "sha256": "0742d9c9b2c052958aee2faf091740c4b0304bd2fd96a0ca05b7db7068ae91f6"
+    },
+    {
+     "path": ".omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/intended-commit.format-patch",
+     "bytes": 1197872,
+     "sha256": "efeb56ec5175cf35009f77e5c1d9f05b2abc5b3db366c2bb8e7e6e2f9fa9e818"
+    }
+   ],
+   "reason": "jrx2/psa1 serializer fallback bundles and verify objects; content landed on main (8a689a70d, b702a1b82)",
+   "added_utc": "2026-09-16T08:19:28Z"
   }
  ]
 }

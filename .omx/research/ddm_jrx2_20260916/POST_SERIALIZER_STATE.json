@@ -1,0 +1,52 @@
+{
+  "landing_task_events": [
+    {
+      "actual_delta_s": null,
+      "blockers": [],
+      "commit_shas": [],
+      "completed_at_utc": null,
+      "event_actor": "ddm_jrx2",
+      "event_notes": "QUEUED-WITH-A-FIRE-ORDER after actual serializer rc17. Verified60 owned blobs and regenerated format-patch match fallback commit5952a6e0d7709a3ff26e26f3736f63dbb79b78a5. Fire on Git-write-capable MAIN harvest; consumer .omx/research/ddm_jrx2_20260916/serializer. Scientific work terminal; no new experiment queued.",
+      "event_timestamp_utc": "2026-09-16T07:42:42.335997Z",
+      "event_type": "registered",
+      "owner": "MAIN",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "schema_version": "canonical_task_status_v1_20260518",
+      "session_id": "ddm_jrx2_20260916",
+      "source_design_memo": ".omx/research/ddm_jrx2_20260916/LANDING_FIRE_ORDER.json",
+      "started_at_utc": null,
+      "status": "pending",
+      "task_id": "ddm_jrx2_verified_bundle_landing_20260916",
+      "test_status": "pending",
+      "title": "Land verified jrx2 repaired-control and named-collateral bundle",
+      "written_at_utc": "2026-09-16T07:42:42.335997Z",
+      "written_host": "mac.lan",
+      "written_pid": 25205
+    }
+  ],
+  "final_checkpoint": {
+    "expected_outputs": null,
+    "files_touched": [
+      "experiments/ddm_jrx2_control.py",
+      "experiments/ddm_jrx2_renderer.py",
+      "experiments/ddm_jrx2_harvest.py",
+      ".omx/research/ddm_jrx2_20260916/RECEIPT.md"
+    ],
+    "findings": [
+      "Charter executed through STOP_COLLATERAL_SEG: Row1 passes12/12,30 twin price jobs verified,all41 detached children rc0. Joint ratios unmeasured. Serializer rc17 fallback verified60/60 blobs; main and index unchanged."
+    ],
+    "host": "mac.lan",
+    "lane_id": "ddm_jrx2_joint_exchange_probe_repaired_row1_20260916",
+    "next_action": "MAIN landing task ddm_jrx2_verified_bundle_landing_20260916, fire on Git-write-capable harvest; no scientific continuation queued.",
+    "notes": "Scientific unit terminal at scoped falsifier; no exact-score progress. LANDING_FIRE_ORDER.json is sole new queued action. Finer-precision retry closed by prior rw1 evidence; spatially selective representation folded into existing OWED1f. All payloads retained and final manifest complete.",
+    "parent_id_or_session": "01a0a8a1-2b53-7ad0-bebe-6f91a9221f67",
+    "pid": 25206,
+    "respawn_context": null,
+    "status": "complete",
+    "step": "complete",
+    "subagent_id": "ddm_jrx2",
+    "written_at_utc": "2026-09-16T07:42:42.355324+00:00"
+  },
+  "bundle_boundary": "These post-serializer events are not among the60 verified bundled files."
+}

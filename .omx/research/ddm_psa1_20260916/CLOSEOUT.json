@@ -1,0 +1,59 @@
+{
+  "science_complete": true,
+  "serializer_rc": 17,
+  "landed": false,
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/serializer/20260916T081314.151673Z-51024/intended-commit.bundle",
+    "bytes": 207973,
+    "sha256": "8b87776e2db25f9dce0cd29616a669dbe0e0ad00cf95792e5f172366a5d00f49"
+  },
+  "fallback_commit": "a2b75e124e6b85f483731e4a96c9c2cece8bb1ec",
+  "shared_index_unchanged": true,
+  "payload_store": "/Volumes/APDataStore/pact/ddm_psa1",
+  "storage_final": {
+    "retained_bytes": 321963062,
+    "free_bytes": 13522042880,
+    "limit_bytes": 1073741824,
+    "reserve_bytes": 8589934592
+  },
+  "result": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RESULT.json",
+    "bytes": 11015,
+    "sha256": "1bca441fb1a222ea8cb4878d0945a992eaac6a42d14770ec4a9c2f374cd370d3"
+  },
+  "receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RECEIPT.md",
+    "bytes": 5907,
+    "sha256": "941fdd1bbe4476d4d24046c216bf1ce6a2526f1b37bee5c49654097f8898cc46"
+  },
+  "main_landing_task": "ddm_psa1_serializer_bundle_landing_20260916",
+  "scorer_task": "ddm_psa2_pair_selective_rgb_bias_realization_20260916",
+  "remaining_arm_jobs": 0,
+  "score_claim": false,
+  "verification_note": "Git on ExFAT warned about AppleDouble ._*.idx sidecars; verification completed rc0 and all32 committed blob hashes matched. No files removed.",
+  "landing_task_status": "pending; already registered with a fire order. Same-state note update was refused without a ledger mutation.",
+  "final_pointer": {
+    "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 179332,
+      "disqualified": null,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "7cb2c609c8e8f55cb8c67e061b2fcb49e471410769cf5530484335f3ee385d64",
+      "source_receipt_sha256": "27627b966aa91282dc4cf8b670f5e18bbcb9a7fb456e1d9b93422c534be65c0c"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_pd3_pose_directed_pass3_on_move51_20260913",
+    "measured_at_utc": null,
+    "score": 0.13620226906030858,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_pd3_cuda_20260913.json"
+  }
+}

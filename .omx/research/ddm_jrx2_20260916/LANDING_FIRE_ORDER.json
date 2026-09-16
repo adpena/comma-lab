@@ -1,0 +1,25 @@
+{
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "task_id": "ddm_jrx2_verified_bundle_landing_20260916",
+  "consumer_store": ".omx/research/ddm_jrx2_20260916/serializer",
+  "fire_trigger": "On harvest by Git-write-capable MAIN: reverify the bundle and format-patch hashes, all60 owned blobs and shared-state custody against BUNDLE_VERIFICATION.json.",
+  "action": "Land verified fallback commit5952a6e0d7709a3ff26e26f3736f63dbb79b78a5 using the required serializer/landing workflow; reconcile only owned operational events and preserve unrelated dirty files. Preserve post-serializer closeout receipts, which are explicitly outside the60-file bundle.",
+  "serializer_rc": 17,
+  "main_commit_landed": false,
+  "fallback_commit": "5952a6e0d7709a3ff26e26f3736f63dbb79b78a5",
+  "base_head": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.bundle",
+    "bytes": 480706,
+    "sha256": "198d1c509a3d729e8a1244ef1e37d8ff825aafb30683a39a10bed230498f32d5"
+  },
+  "format_patch": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.format-patch",
+    "bytes": 2329985,
+    "sha256": "666a5640100f78044c1fe0b5205541b38cc384e21af3285ce8edf95f2acc1f76"
+  },
+  "verification": ".omx/research/ddm_jrx2_20260916/BUNDLE_VERIFICATION.json",
+  "owned_state_export": ".omx/research/ddm_jrx2_20260916/OPERATIONAL_ROWS.json",
+  "scientific_scope": "STOP_COLLATERAL_SEG on three named actions; instrument passes12/12; joint ratio unmeasured; no score or frontier move."
+}

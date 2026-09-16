@@ -1,0 +1,54 @@
+{
+  "utc": "2026-09-16T07:42:42.575344+00:00",
+  "scientific_status": "STOP_COLLATERAL_SEG",
+  "all_children_terminal_rc0": 41,
+  "row1_pass": "12/12",
+  "field_prices": "22/24;positive-cost ratios18/24",
+  "renderer_censuses": "3/24 actions,600 pairs each",
+  "joint_ratio": null,
+  "score_claim": false,
+  "frontier_moved": false,
+  "serializer_rc": 17,
+  "bundle_commit": "5952a6e0d7709a3ff26e26f3736f63dbb79b78a5",
+  "bundle_verified_files": 60,
+  "main_commit_landed": false,
+  "shared_index_sha256": "0aafdb48c5ece33e64a0c950cfe2b4a449efc990c7bf7eefe4de23482dd698e5",
+  "head": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+  "future_action": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "task_id": "ddm_jrx2_verified_bundle_landing_20260916",
+    "consumer_store": ".omx/research/ddm_jrx2_20260916/serializer",
+    "fire_trigger": "On harvest by Git-write-capable MAIN: reverify the bundle and format-patch hashes, all60 owned blobs and shared-state custody against BUNDLE_VERIFICATION.json.",
+    "action": "Land verified fallback commit5952a6e0d7709a3ff26e26f3736f63dbb79b78a5 using the required serializer/landing workflow; reconcile only owned operational events and preserve unrelated dirty files. Preserve post-serializer closeout receipts, which are explicitly outside the60-file bundle.",
+    "serializer_rc": 17,
+    "main_commit_landed": false,
+    "fallback_commit": "5952a6e0d7709a3ff26e26f3736f63dbb79b78a5",
+    "base_head": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+    "bundle": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.bundle",
+      "bytes": 480706,
+      "sha256": "198d1c509a3d729e8a1244ef1e37d8ff825aafb30683a39a10bed230498f32d5"
+    },
+    "format_patch": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.format-patch",
+      "bytes": 2329985,
+      "sha256": "666a5640100f78044c1fe0b5205541b38cc384e21af3285ce8edf95f2acc1f76"
+    },
+    "verification": ".omx/research/ddm_jrx2_20260916/BUNDLE_VERIFICATION.json",
+    "owned_state_export": ".omx/research/ddm_jrx2_20260916/OPERATIONAL_ROWS.json",
+    "scientific_scope": "STOP_COLLATERAL_SEG on three named actions; instrument passes12/12; joint ratio unmeasured; no score or frontier move."
+  },
+  "post_serializer_files_not_in_bundle": [
+    "SERIALIZER_RESULT.json",
+    "SERIALIZER_OUTPUT.txt",
+    "BUNDLE_VERIFICATION.json",
+    "LANDING_FIRE_ORDER.json",
+    "LANDING_TASK.json",
+    "CHECKPOINT_FINAL.json",
+    "POST_SERIALIZER_STATE.json",
+    "CLOSEOUT.json",
+    "CLOSEOUT_MANIFEST.json"
+  ],
+  "final_git_status": " M .omx/state/active_lane_dispatch_claims.md\n M .omx/state/canonical_equations_registry.jsonl\n M .omx/state/canonical_task_status.jsonl\n M .omx/state/lane_maturity_audit.log\n M .omx/state/lane_registry.json\n M .omx/state/operator_p0_ledger.jsonl\n?? .omx/research/ddm_jrx1_20260916/BUNDLE_VERIFICATION.json\n?? .omx/research/ddm_jrx1_20260916/CLOSEOUT.json\n?? .omx/research/ddm_jrx1_20260916/LANDING_FIRE_ORDER.json\n?? .omx/research/ddm_jrx1_20260916/LANDING_TASK.json\n?? .omx/research/ddm_jrx1_20260916/SERIALIZER_OUTPUT.txt\n?? .omx/research/ddm_jrx1_20260916/SERIALIZER_RESULT.json\n?? .omx/research/ddm_jrx1_20260916/serializer/\n?? .omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/\n?? .omx/research/ddm_jrx2_20260916/\n?? experiments/ddm_jrx2_control.py\n?? experiments/ddm_jrx2_harvest.py\n?? experiments/ddm_jrx2_renderer.py\n?? submissions/_staging_move40_pr140_swap/\n?? submissions/_staging_move43_pr140_swap/\n?? submissions/_staging_move44_pr140_swap/\n?? submissions/_staging_move47_pr140_swap/\n?? submissions/_staging_move48_pr140_swap/\n"
+}

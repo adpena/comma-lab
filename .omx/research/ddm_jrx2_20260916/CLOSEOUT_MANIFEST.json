@@ -1,0 +1,63 @@
+{
+  "self_excluded": true,
+  "post_serializer_files": [
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/SERIALIZER_RESULT.json",
+      "bytes": 27074,
+      "sha256": "d0e43ee9368c1c820c6e94f9837f4142b65d7d5cb9ca083c447d152aa3a96891"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/SERIALIZER_OUTPUT.txt",
+      "bytes": 805,
+      "sha256": "47de19382234cf9e429f1eca0b3ee2031653b2af2db0909cf5bdd75a009f2629"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/BUNDLE_VERIFICATION.json",
+      "bytes": 12520,
+      "sha256": "91c8ab72b140bad6997f021f74ebba123a9c49e4a1a818e090fb728139d25bb7"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/LANDING_FIRE_ORDER.json",
+      "bytes": 1687,
+      "sha256": "1ad63342b3cccb2833daacccf78108323ba6af35f381b776ef7300c6e9ae8ab9"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/LANDING_TASK.json",
+      "bytes": 1122,
+      "sha256": "76eb90a6de085e07dd48cb6323e32e92807cb8fd0d5ee9d6b973e5bc2e86c354"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/CHECKPOINT_FINAL.json",
+      "bytes": 2430,
+      "sha256": "303d6e7ce20e3d8f8ee38bc06a9d4d7d44319975c54f64a849e9a062f886b344"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/POST_SERIALIZER_STATE.json",
+      "bytes": 2669,
+      "sha256": "d8de6068ac0337b95e111baf36da24c7e68cc43cf456014718db4d656d32fd22"
+    },
+    {
+      "path": ".omx/research/ddm_jrx2_20260916/CLOSEOUT.json",
+      "bytes": 3793,
+      "sha256": "97d4aace2d2fe66067d67dc7327f96ed2fee8fc2ef2740acf41f643fb742cdd8"
+    }
+  ],
+  "bundle_artifacts": {
+    "bundle": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.bundle",
+      "bytes": 480706,
+      "sha256": "198d1c509a3d729e8a1244ef1e37d8ff825aafb30683a39a10bed230498f32d5"
+    },
+    "format_patch": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-commit.format-patch",
+      "bytes": 2329985,
+      "sha256": "666a5640100f78044c1fe0b5205541b38cc384e21af3285ce8edf95f2acc1f76"
+    },
+    "intended_patch": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/serializer/20260916T074027.836408Z-23717/intended-tree.patch",
+      "bytes": 2321599,
+      "sha256": "55f0e02c0f3208f4552c400dd354633449b89ecde9c3fea91df7248722a6f7af"
+    }
+  },
+  "verification_object_store": "serializer_verify_objects.git contains only verification objects plus a read-only alternates reference to main; not a landing or a copied worktree."
+}
