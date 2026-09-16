@@ -1,0 +1,299 @@
+"""Retained real-pair differential proof and independent stage profile.
+
+The only native state access is external ctypes inspection of the source-bound C
+record. Nothing from this proof harness is needed by the public receiver.
+"""
+from __future__ import annotations
+
+import argparse
+from collections import defaultdict
+import ctypes as C
+import fcntl
+import gzip
+import importlib.util
+import json
+from pathlib import Path
+import pickle
+import platform
+import random
+import re
+import shutil
+import sys
+import time
+
+import numpy as np
+import torch
+
+from ddm_mrs1_validate import atomic_json, fact, restore
+from ddm_mrs2_profile import install_timers, render_pair
+
+ROOT = Path('/Volumes/APDataStore/pact/ddm_mrs4')
+BANK = Path('/Volumes/APDataStore/pact/ddm_mrs2/profile_python/RESULT.json')
+REPO = Path(__file__).resolve().parents[1]
+
+
+def load_module(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def native_record(source):
+    """Read, rather than guess, the private record layout of this exact source."""
+    types = dict(int64_t=C.c_int64, uint8_t=C.c_uint8, double=C.c_double, int=C.c_int)
+    records = {}
+    for body, name in re.findall(r'typedef struct \{(.*?)\} (Family|Corrector);', source, re.S):
+        fields = []
+        for declaration in body.split(';'):
+            declaration = declaration.strip()
+            if not declaration:
+                continue
+            kind, members = declaration.split(None, 1)
+            for member in members.split(','):
+                member = member.strip()
+                field_type = types[kind]
+                if member.startswith('*'):
+                    field_type, member = C.POINTER(field_type), member[1:]
+                if '[' in member:
+                    member, count = member.split('[')
+                    if count != 'N_FAMILIES]':
+                        raise ValueError('unexpected native record extent')
+                    field_type = field_type * 23
+                fields.append((member, field_type))
+        record = type(name, (C.Structure,), dict(_fields_=fields))
+        records[name] = types[name] = record
+    return records['Corrector']
+
+
+def native_arrays(record, reference):
+    for name in ('prev1', 'prev2', 'run', 'boundary', 'current', 'known', 'weights'):
+        value = getattr(reference, name)
+        yield name, np.ctypeslib.as_array(getattr(record, name), shape=(value.size,)), value.reshape(-1)
+    for name in ('miss_counts', 'miss_expect', 'miss_seen'):
+        value = getattr(reference, '_' + name)
+        yield name, np.ctypeslib.as_array(getattr(record, name), shape=(value.size,)), value.reshape(-1)
+    if len(reference.families) != 23:
+        raise ValueError('wrong family generation')
+    for index, family in enumerate(reference.families):
+        native = record.families[index]
+        if native.size != family.counts.size or native.count_limit != family.count_limit:
+            raise ValueError('family shape or recency mismatch')
+        for name in ('counts', 'hits', 'phat_q'):
+            value = getattr(family, name)
+            yield f'family_{index}_{name}', np.ctypeslib.as_array(getattr(native, name), shape=value.shape), value
+
+
+def restore_pair(path, decoder, module, record_type):
+    with gzip.open(path, 'rb') as stream:
+        state = pickle.load(stream)  # Caller verifies this trusted local checkpoint hash.
+    decoder.frame = state['frame']
+    decoder.previous = torch.from_numpy(state['previous'])
+    restore(decoder.mixer, state['mixer'])
+    restore(decoder.range_decoder, state['range'])
+    reference = module.miss_FreeCorrector(384 * 512)
+    restore(reference, state['corrector'])
+    if isinstance(decoder.corrector, module.NativeCorrector):
+        record = record_type.from_address(decoder.corrector.handle)
+        record.have_prev = reference.have_prev
+        for _, native, python in native_arrays(record, reference):
+            native[:] = python
+        return reference, record
+    restore(decoder.corrector, state['corrector'])
+    return reference, None
+
+
+def compare_bits(a, b, label):
+    if a.shape != b.shape or a.dtype != b.dtype or a.tobytes() != b.tobytes():
+        raise ValueError('bit identity failed: ' + label)
+
+
+class ShadowCorrector:
+    def __init__(self, native, reference, record):
+        self.native, self.reference, self.record = native, reference, record
+        self.rows = []
+        self.groups = 0
+
+    def begin_frame(self, boundary):
+        self.native.begin_frame(boundary)
+        self.reference.begin_frame(boundary)
+
+    def group_state(self, *args):
+        return self.native.group_state(*args), self.reference.group_state(*args)
+
+    def coding_row(self, state):
+        native, reference = self.native.coding_row(state[0]), self.reference.coding_row(state[1])
+        # Persisted together even on mismatch by the pair-level failure handler.
+        self.rows.append((native.copy(), reference.copy()))
+        compare_bits(native, reference, 'corrector output')
+        self.groups += 1
+        return native
+
+    def observe(self, state, symbols):
+        self.native.observe(state[0], symbols)
+        self.reference.observe(state[1], symbols)
+
+    def end_frame(self, tokens):
+        self.native.end_frame(tokens)
+        self.reference.end_frame(tokens)
+        for name, native, reference in native_arrays(self.record, self.reference):
+            if not np.array_equal(native, reference):
+                raise ValueError('persistent corrector state mismatch: ' + name)
+        if self.record.have_prev != self.reference.have_prev:
+            raise ValueError('native have_prev mismatch')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--resume-from', required=True, type=Path)
+    parser.add_argument('--receiver', required=True, type=Path)
+    parser.add_argument('--mode', choices=('parity', 'profile', 'python'), required=True)
+    parser.add_argument('--limit', type=int, default=48)
+    args = parser.parse_args()
+    run, receiver = args.resume_from.resolve(), args.receiver.resolve()
+    if not run.is_relative_to(ROOT) or run == ROOT or not receiver.is_relative_to(ROOT):
+        raise ValueError('proof escaped charter root')
+    if not 1 <= args.limit <= 48:
+        raise ValueError('pair count outside the registered bank')
+    run.mkdir(parents=True, exist_ok=True)
+    lock = (run / 'RUN.lock').open('a')
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    if shutil.disk_usage(ROOT).free < 2 * 1024**3:
+        raise ValueError('need 2 GiB of proof space')
+    sys.dont_write_bytecode = True
+    random.seed(20260916)
+    np.random.seed(20260916)
+    torch.manual_seed(20260916)
+    torch.set_num_threads(4)
+    torch.set_num_interop_threads(1)
+    torch.use_deterministic_algorithms(True)
+    bank = json.loads(BANK.read_text())
+    rng = np.random.default_rng(20260916)
+    expected = [int(i) for start in range(0, 600, 25) for i in sorted(rng.choice(25, 2, replace=False) + start)]
+    if [row['frame'] for row in bank['rows']] != expected:
+        raise ValueError('bank does not match seeded stratified selection')
+    binding = dict(source=[fact(p) for p in sorted(receiver.parent.iterdir()) if p.is_file() and not p.name.startswith('._')],
+        bank=fact(BANK), runner=fact(Path(__file__).resolve()),
+        helpers=[fact(REPO / 'experiments' / name) for name in ('ddm_mrs1_validate.py', 'ddm_mrs2_profile.py')],
+        mode=args.mode, limit=args.limit, axis='[macOS-CPU advisory]', seed=20260916,
+        python=sys.version, numpy=np.__version__, torch=torch.__version__, platform=platform.platform(),
+        threads=4, score_claim=False, promotable=False)
+    inputs = run / 'INPUTS.json'
+    if inputs.exists() and json.loads(inputs.read_text()) != binding:
+        raise ValueError('proof generation changed; use a new output directory')
+    atomic_json(inputs, binding)
+    module = load_module(receiver, 'mrs4_receiver')
+    if (module._CORRECTOR_LIBRARY is None) != (args.mode == 'python'):
+        raise ValueError('unexpected corrector backend')
+    record_type = native_record(receiver.with_name('corrector.c').read_text())
+    totals, enabled = install_timers(module)
+    if args.mode != 'python':
+        for name in ('begin_frame', 'group_state', 'coding_row', 'observe', 'end_frame'):
+            original = getattr(module.NativeCorrector, name)
+            def measured(self, *values, _original=original):
+                start = time.perf_counter()
+                try:
+                    return _original(self, *values)
+                finally:
+                    if enabled[0]:
+                        totals['prior_context_statistics'] += time.perf_counter() - start
+            setattr(module.NativeCorrector, name, measured)
+    reference_module = load_module(REPO / 'submissions/mrs2/inflate.py', 'mrs4_python_reference') if args.mode == 'parity' else None
+    mixer_rows, mixer_checks = [], [0]
+    if reference_module:
+        for name in ('shared_log2_fixed', 'shared_mix_probabilities'):
+            native, reference = getattr(module, name), getattr(reference_module, name)
+            def checked(*values, _native=native, _reference=reference, _name=name, **kwargs):
+                a, b = _native(*values, **kwargs), _reference(*values, **kwargs)
+                if _name == 'shared_mix_probabilities':
+                    mixer_rows.append((a.copy(), b.copy()))
+                compare_bits(a, b, _name)
+                mixer_checks[0] += 1
+                return a
+            setattr(module, name, checked)
+    rows = []
+    with torch.inference_mode():
+        parts, model, basis, coefficients, selector = module.read_models(receiver.with_name('archive.zip'))
+        basis = module.render_normalized_basis(basis)
+        modes, labels = module.selector_decode_selector(selector)
+        for original in bank['rows'][:args.limit]:
+            index = original['frame']
+            receipt = run / f'pair_{index:04d}.json'
+            state = Path(original['state']['path'])
+            if fact(state) != original['state']:
+                raise ValueError('pre-pair state changed')
+            if receipt.exists():
+                row = json.loads(receipt.read_text())
+                if row['binding'] != binding or row['frame'] != index or row['state'] != original['state']:
+                    raise ValueError('resume receipt differs')
+                for item in row['artifacts']:
+                    if fact(Path(item['path'])) != item:
+                        raise ValueError('retained proof bytes changed')
+                if row['token']['sha256'] != original['token']['sha256'] or row['raw']['sha256'] != original['raw']['sha256']:
+                    raise ValueError('resume oracle differs')
+                rows.append(row)
+                continue
+            decoder = module.TokenDecoder(parts, torch.device('cpu'))
+            reference, record = restore_pair(state, decoder, module, record_type)
+            if decoder.frame != index:
+                raise ValueError('pre-pair index mismatch')
+            shadow = ShadowCorrector(decoder.corrector, reference, record) if reference_module else None
+            if shadow:
+                decoder.corrector = shadow
+            totals.clear()
+            mixer_rows.clear()
+            mixer_checks[0] = 0
+            enabled[0] = True
+            start = time.perf_counter()
+            try:
+                token = next(decoder)
+            finally:
+                token_seconds = time.perf_counter() - start
+                enabled[0] = False
+                if shadow:
+                    vectors = run / f'pair_{index:04d}.probabilities.npz'
+                    arrays = {}
+                    for label, values in (('corrector', shadow.rows), ('mixer', mixer_rows)):
+                        if values:
+                            arrays[label + '_native'] = np.concatenate([v[0] for v in values])
+                            arrays[label + '_python'] = np.concatenate([v[1] for v in values])
+                    np.savez_compressed(vectors, **arrays)
+            token_path = run / f'pair_{index:04d}.tokens.u8'
+            token_path.write_bytes(token.numpy().tobytes())
+            pair, render_seconds, pose_seconds = render_pair(module, model, basis, coefficients, modes, labels, token, index)
+            raw_path = run / f'pair_{index:04d}.raw'
+            raw_path.write_bytes(pair.tobytes())
+            token_fact, raw_fact = fact(token_path), fact(raw_path)
+            if token_fact['sha256'] != original['token']['sha256'] or raw_fact['sha256'] != original['raw']['sha256']:
+                raise ValueError(f'pair {index} differs; all materialized bytes retained')
+            artifacts = [token_fact, raw_fact] + ([fact(vectors)] if shadow else [])
+            row = dict(binding=binding, frame=index, state=original['state'], token=token_fact, raw=raw_fact,
+                artifacts=artifacts, timings=dict(totals), token_seconds=token_seconds,
+                renderer_seconds=render_seconds, pose_seconds=pose_seconds,
+                corrector_groups=shadow.groups if shadow else None,
+                corrector_state_arrays=79 if shadow else None, mixer_checks=mixer_checks[0], matched=True)
+            atomic_json(receipt, row)
+            rows.append(row)
+            print(json.dumps(dict(mode=args.mode, completed_pairs=len(rows), frame=index)), flush=True)
+            if shadow:
+                shadow.native.close()
+            elif record is not None:
+                decoder.corrector.close()
+        seconds = defaultdict(float)
+        for row in rows:
+            for name, value in row['timings'].items():
+                seconds[name] += value
+            seconds['token_total'] += row['token_seconds']
+            seconds['renderer'] += row['renderer_seconds']
+            seconds['pose_carrier_and_selector'] += row['pose_seconds']
+        seconds['other_token_work'] = seconds['token_total'] - sum(seconds[k] for k in
+            ('arithmetic_and_frequency_table', 'prior_context_statistics', 'prior_network'))
+        seconds['total_measured_pair_work'] = seconds['token_total'] + seconds['renderer'] + seconds['pose_carrier_and_selector']
+        atomic_json(run / 'RESULT.json', dict(binding=binding, rows=rows, seconds=dict(seconds), matched_pairs=len(rows),
+            timing_valid=args.mode != 'parity', sample=expected[:args.limit],
+            timing_scope='pair computations only; excludes setup, state loading, output writes; parity includes shadow work'))
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,32 @@
+{
+  "axis": "[projection only; not T4 measurement]",
+  "threshold_seconds": 1200,
+  "required_stage_speedup": 10,
+  "rounded_ratio": 1.2661058383664079,
+  "full_precision_ratio": 1.2660954973462792,
+  "whole_process_formulas": [
+    "current cold host process seconds * 1760.9 / 1390.8",
+    "current cold host process seconds * 1185.899645171 / 936.6589231670368"
+  ],
+  "stage_cpu_formula": "(arithmetic_and_frequency_table + prior_context_statistics + other_token_work) * 600/48 * full_precision_ratio",
+  "stage_gpu_prior_upper_seconds": 1114.79454226,
+  "original_t4_total_seconds": 1185.899645171,
+  "stage_remaining_original_seconds": 71.1051029109999,
+  "stage_upper_formula": "scaled current serial CPU token work + original T4 total (original token stage bounds the unknown GPU prior, conservatively including its old CPU work)",
+  "stage_interval_formula": "[scaled current serial CPU token work + original T4 non-token remainder, scaled current serial CPU token work + original T4 total]",
+  "assumptions": [
+    "The two whole-process ratios are rounded/full-precision forms of one transfer assumption, not independent calibrations.",
+    "The selected 48-pair mean transfers to all 600 pairs; one observation per pair, no timing noise floor.",
+    "The whole-process host/T4 ratio is applied to all current serial CPU token work, including C; this is an assumption, not an independently measured CPU ratio.",
+    "The GPU prior on the rewritten receiver does not exceed the entire original T4 token stage. That stage also includes original CPU work, so this is a deliberately loose upper envelope, not an isolated GPU measurement.",
+    "The remaining original T4 work (renderer, setup, I/O and outer overhead) transfers unchanged; current receiver T4 overhead is unmeasured.",
+    "No claim that the conditional stage envelope bounds arbitrary hosts, contention, filesystem behavior or dependency versions."
+  ],
+  "original_stage_source": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs3/ORIGINAL_T4_STAGE_EXTRACTION.json",
+    "bytes": 1953,
+    "sha256": "f4cd12d575529e7c586c14146d4b745d80661a5f48a9ae7b5c265149efbbbef8"
+  },
+  "score_claim": false,
+  "promotable": false
+}

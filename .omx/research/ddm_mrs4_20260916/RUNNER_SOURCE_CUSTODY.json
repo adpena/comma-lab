@@ -1,0 +1,6 @@
+{
+  "parity_runner_sha256": "7d9c619e8a614bd3ba313d1b8cf1f10190f780e2767c6f4dfabf170cc26bf311",
+  "retained_exact_original_source": "/Volumes/APDataStore/pact/ddm_mrs4/proof_source_7d9c619e8a614bd3ba313d1b8cf1f10190f780e2767c6f4dfabf170cc26bf311.txt",
+  "subsequent_change": "Only nested attribution for profile/python mode added after the completed parity run; original retained source is the parity authority",
+  "current_runner_sha256": "7a86e3846ea893f0a7317d719fefcea2abda87fe3fde5c33b953dc6af758cb9f"
+}

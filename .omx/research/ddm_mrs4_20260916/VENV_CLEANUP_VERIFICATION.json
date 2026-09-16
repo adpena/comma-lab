@@ -1,0 +1,17 @@
+{
+  "apfs_venv_removed": true,
+  "receipts": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/bootstrap/VENV_CLEANUP.json",
+      "bytes": 4784831,
+      "sha256": "530eadee5a047d39b90d4969e2339b6f3c65f874e79374e4387364900500bbac"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/bootstrap/VENV_CLEANUP_DONE.json",
+      "bytes": 285,
+      "sha256": "ad70451ed797c55ed49a4999caf516b55ffe63bd7b4a026b840c88b805d5e67e"
+    }
+  ],
+  "retained_wheels": true,
+  "score_claim": false
+}

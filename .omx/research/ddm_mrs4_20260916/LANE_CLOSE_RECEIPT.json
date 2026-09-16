@@ -1,0 +1,10 @@
+{
+  "lane": "ddm_mrs4_minimal_packet_adaptive_corrector_native_20260916",
+  "research_only": true,
+  "promotable": false,
+  "score_claim": false,
+  "latest_claim": "| 2026-09-16T18:17:59Z | codex | ddm_mrs4_minimal_packet_adaptive_corrector_native_20260916 | local | ddm_mrs4 |  | completed_local_proofs_timing_screen_failed | Close existing local job: all proofs pass; timing screens fail. No remote/scorer launch. Serializer19 with source tar to MAIN; three follow-ons registered in canonical task store. Handoff .omx/research/ddm_mrs4_20260916/HANDOFF.md |",
+  "source": ".omx/state/active_lane_dispatch_claims.md",
+  "followon_store": ".omx/state/canonical_task_status.jsonl",
+  "source_landing": "Unlanded serializer19; MAIN source delivery"
+}

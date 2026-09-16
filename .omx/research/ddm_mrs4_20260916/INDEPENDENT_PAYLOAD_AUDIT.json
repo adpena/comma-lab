@@ -1,0 +1,25 @@
+{
+  "result": {
+    "matched_pairs": 48,
+    "corrector_groups": 9120,
+    "probability_rows": 28311552,
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false
+  },
+  "script": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_mrs4_audit/python_reference_equivalence_test.py",
+    "bytes": 3131,
+    "sha256": "478b51e4bd9124a3841c8f196bbabbbdd69ae6b253bb077b8378ae242d6f0e14"
+  },
+  "log": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs4/launch_audit/run.log",
+    "bytes": 132,
+    "sha256": "4de1e5d24d60bf2d436456dcd9d38dcd6d48cdd4da316fabf77c9052aef94c4c"
+  },
+  "done_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mrs4_audit.done",
+    "bytes": 385,
+    "sha256": "aa2d438d01bb08f566a54794b4797c409cbc609dc46fee7aa19887156cd96507"
+  },
+  "scope": "Independent executable rehash and retained vector comparison, run by the root agent; not an independent human or agent review."
+}

@@ -1,0 +1,32 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotable": false,
+  "cold": {
+    "receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/public_native/IDENTITY.json",
+      "bytes": 53932,
+      "sha256": "b30433dfaa3b44b06e5ba34af14c36bab5cdd9bb5c3f14f680bd33e658996d1a"
+    },
+    "matched_pairs": 600,
+    "seconds": 1474.0110964999767,
+    "raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/public_native/output/0.raw",
+      "sha256": "8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b"
+    },
+    "raw_rebuildable_scratch_cleaned": true
+  },
+  "compiler_present_bare_smoke": "PASS; same full cold public subprocess; both libraries loaded",
+  "compiler_absent_bare_smoke": {
+    "receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/public_fallback/RESULT.json",
+      "bytes": 9837,
+      "sha256": "ef7580ab1a18614e7c713291a1f6cf1bbe5b454ecddef80cc9309bfcebbabd7a"
+    },
+    "matched_pairs": 48,
+    "stale_library_removed": true,
+    "full_cold_n600": false
+  },
+  "proof_order": "48 differential pairs, full cold n600 and present-compiler smoke, absent-compiler smoke, then profiles"
+}

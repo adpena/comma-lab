@@ -1,0 +1,8 @@
+{
+  "first_launch": "/Volumes/APDataStore/pact/ddm_mrs4/launch_retention/launch_manifest.json",
+  "first_failure": "Census verifier addressed fallback tokens as token; KeyError after hashing, before census receipt. No byte identity mismatch and no payload deletion.",
+  "corrected_launch": "/Volumes/APDataStore/pact/ddm_mrs4/launch_retention_retry/launch_manifest.json",
+  "change": "Read fallback tokens field; checkpoint every hashed artifact for resumability; use explicit newline generation.",
+  "implementation_changed": false,
+  "score_claim": false
+}

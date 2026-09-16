@@ -1,0 +1,35 @@
+{
+  "files": [
+    {
+      "path": "submissions/mrs4/._range_decoder.c",
+      "bytes": 4096,
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "path": "submissions/mrs4/._archive.zip",
+      "bytes": 4096,
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "path": "submissions/mrs4/._inflate.py",
+      "bytes": 4096,
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "path": "submissions/mrs4/._corrector.c",
+      "bytes": 4096,
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "path": "submissions/mrs4/._README.md",
+      "bytes": 4096,
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    },
+    {
+      "path": "submissions/mrs4/._inflate.sh",
+      "bytes": 4096,
+      "sha256": "c3065f4a499bcf2d556ee97234a36e648e8e4c3d32da4839f5a2e706da11b521"
+    }
+  ],
+  "reason": "AppleDouble filesystem metadata copied from ExFAT; trivial filesystem cache, no decoder or payload content"
+}

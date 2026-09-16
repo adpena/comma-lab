@@ -1,0 +1,42 @@
+{
+  "scope": "Two root-agent self-review passes; no independent fresh reader is claimed",
+  "files": [
+    {
+      "path": "submissions/mrs4/inflate.py",
+      "sha256": "af9ab3639b3241186bfb839982873f24cc0aa40e576aff1f53fab152b500ad90",
+      "passes": 2,
+      "override_used": false
+    },
+    {
+      "path": "experiments/ddm_mrs4_proof.py",
+      "sha256": "7a86e3846ea893f0a7317d719fefcea2abda87fe3fde5c33b953dc6af758cb9f",
+      "passes": 2,
+      "override_used": false
+    },
+    {
+      "path": "experiments/ddm_mrs4_bootstrap.py",
+      "sha256": "4e6b412fec9ab5c0c8f76c44d8ac5402207e75ca4c26a01e743805abe3be66ae",
+      "passes": 2,
+      "override_used": false
+    },
+    {
+      "path": "experiments/ddm_mrs4_smoke.py",
+      "sha256": "0aa645bbff592f0ac2a4ae3bc71d0cb4624d35900ba08a7ede9f7fb1ca0830b9",
+      "passes": 2,
+      "override_used": false
+    },
+    {
+      "path": "experiments/ddm_mrs4_audit/python_reference_equivalence_test.py",
+      "sha256": "478b51e4bd9124a3841c8f196bbabbbdd69ae6b253bb077b8378ae242d6f0e14",
+      "passes": 2,
+      "override_used": false
+    }
+  ],
+  "pass_1": "Numeric evaluation order, archive/config family, actual native call sites; harness source binding, retention and isolation",
+  "pass_2": "Native ownership and failure modes, persistent-state completeness, integer bounds, resume receipt revalidation, stale-library compiler absence, timing overlap and authority labels",
+  "fixes_before_clean_passes": [
+    "Fallback resume now rechecks frame, state, token and raw against the registered stratified oracle"
+  ],
+  "c_checks": "C11 pedantic-errors, Wall Wextra Werror; native compile fp-contract=off; 48 real-pair differential proof",
+  "fresh_reader": "Queued to MAIN using FRESH_READER_PROMPT.md; not run here"
+}

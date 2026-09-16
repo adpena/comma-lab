@@ -1,0 +1,38 @@
+[
+  {
+    "path": "submissions/mrs4/README.md",
+    "bytes": 1687,
+    "sha256": "ea930573383983208bc986faa7cf8cf5327788e31111b0680dea137b5be9a691",
+    "lines": 24
+  },
+  {
+    "path": "submissions/mrs4/archive.zip",
+    "bytes": 179286,
+    "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+    "lines": null
+  },
+  {
+    "path": "submissions/mrs4/corrector.c",
+    "bytes": 31190,
+    "sha256": "71f632bc59893cb33673e44f8baa9bac588586463ab057f917fc0fa16b5bed77",
+    "lines": 693
+  },
+  {
+    "path": "submissions/mrs4/inflate.py",
+    "bytes": 144586,
+    "sha256": "af9ab3639b3241186bfb839982873f24cc0aa40e576aff1f53fab152b500ad90",
+    "lines": 2831
+  },
+  {
+    "path": "submissions/mrs4/inflate.sh",
+    "bytes": 337,
+    "sha256": "c093e4a6eb6b1324f4cac942caba678455737da0d5ad512a6cd7b209e66c9978",
+    "lines": 7
+  },
+  {
+    "path": "submissions/mrs4/range_decoder.c",
+    "bytes": 4018,
+    "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec",
+    "lines": 100
+  }
+]

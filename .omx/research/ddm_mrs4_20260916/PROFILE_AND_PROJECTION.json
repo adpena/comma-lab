@@ -1,0 +1,190 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotable": false,
+  "verdict_scope": "INSTANCE: exact mrs4 sources, selected archive, this host and predeclared timing screen",
+  "sources": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/profile_python/RESULT.json",
+      "bytes": 276539,
+      "sha256": "003f7b9a6092c75c9260a9f71a036d2e30d8b55aa40076715f1c0871b038c1d9"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/profile_native/RESULT.json",
+      "bytes": 286429,
+      "sha256": "bda7956496c6a318d8d178bccda3e70facc077871a91f74c69d57566b911b465"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs4/public_native/IDENTITY.json",
+      "bytes": 53932,
+      "sha256": "b30433dfaa3b44b06e5ba34af14c36bab5cdd9bb5c3f14f680bd33e658996d1a"
+    }
+  ],
+  "sample": [
+    3,
+    15,
+    32,
+    33,
+    58,
+    64,
+    79,
+    85,
+    104,
+    124,
+    136,
+    144,
+    150,
+    167,
+    175,
+    179,
+    201,
+    223,
+    232,
+    240,
+    263,
+    271,
+    276,
+    280,
+    314,
+    317,
+    329,
+    341,
+    355,
+    361,
+    379,
+    395,
+    418,
+    419,
+    428,
+    429,
+    465,
+    474,
+    482,
+    498,
+    502,
+    508,
+    525,
+    527,
+    555,
+    557,
+    585,
+    594
+  ],
+  "sample_size": 48,
+  "population": 600,
+  "seed": 20260916,
+  "threads": 4,
+  "stages": [
+    {
+      "stage": "arithmetic_and_frequency_table",
+      "python_seconds": 0.6499110985314474,
+      "native_seconds": 0.43465069658122957,
+      "speedup": 1.495249182029066
+    },
+    {
+      "stage": "prior_context_statistics",
+      "python_seconds": 82.54260172543582,
+      "native_seconds": 25.175382585730404,
+      "speedup": 3.278702972808905
+    },
+    {
+      "stage": "prior_network",
+      "python_seconds": 82.38627628900576,
+      "native_seconds": 77.27293330791872,
+      "speedup": 1.0661724974346618
+    },
+    {
+      "stage": "renderer",
+      "python_seconds": 25.5906959582353,
+      "native_seconds": 24.973090123967268,
+      "speedup": 1.024730853538838
+    },
+    {
+      "stage": "pose_carrier_and_selector",
+      "python_seconds": 0.5111669159960002,
+      "native_seconds": 0.49018183536827564,
+      "speedup": 1.04281080838493
+    },
+    {
+      "stage": "other_token_work",
+      "python_seconds": 3.9015170101774856,
+      "native_seconds": 3.3862667405046523,
+      "speedup": 1.152158795853172
+    },
+    {
+      "stage": "total_measured_pair_work",
+      "python_seconds": 195.5821689973818,
+      "native_seconds": 131.73250529007055,
+      "speedup": 1.4846917893705616
+    }
+  ],
+  "python_nested_seconds": {
+    "nested:CausalGeometry.__init__": 0.07592941739130765,
+    "nested:CausalGeometry.contexts": 6.620134780416265,
+    "nested:CausalGeometry.observe": 0.6957288042176515,
+    "nested:geometry_mixer_LaneMixer.begin_frame": 0.03217903745826334,
+    "nested:geometry_mixer_LaneMixer.coding": 17.14100425981451,
+    "nested:geometry_mixer_LaneMixer.end_frame": 2.4022981241578236,
+    "nested:geometry_mixer_LaneMixer.observe": 0.7198271062225103,
+    "nested:miss_FreeCorrector.begin_frame": 0.003454457502812147,
+    "nested:miss_FreeCorrector.coding_row": 25.73203121777624,
+    "nested:miss_FreeCorrector.end_frame": 0.012458706158213317,
+    "nested:miss_FreeCorrector.group_state": 4.658766724169254,
+    "nested:miss_FreeCorrector.observe": 31.9653738924535,
+    "nested:shared_SharedMixer.begin_frame": 0.029008126468397677,
+    "nested:shared_SharedMixer.end_frame": 2.0364108751527965,
+    "nested:shared_SharedMixer.features": 5.7281678025610745
+  },
+  "native_nested_seconds": {
+    "nested:CausalGeometry.__init__": 0.0740457036299631,
+    "nested:CausalGeometry.contexts": 6.702898205607198,
+    "nested:CausalGeometry.observe": 0.7287244552280754,
+    "nested:NativeCorrector.begin_frame": 0.006643624510616064,
+    "nested:NativeCorrector.coding_row": 2.8967654892476276,
+    "nested:NativeCorrector.end_frame": 0.007852581911720335,
+    "nested:NativeCorrector.group_state": 2.1089132288470864,
+    "nested:NativeCorrector.observe": 2.8582642916589975,
+    "nested:geometry_mixer_LaneMixer.begin_frame": 0.010634954669512808,
+    "nested:geometry_mixer_LaneMixer.coding": 14.237208073027432,
+    "nested:geometry_mixer_LaneMixer.end_frame": 2.392212370876223,
+    "nested:geometry_mixer_LaneMixer.observe": 0.750906293396838,
+    "nested:shared_SharedMixer.begin_frame": 0.009433837840333581,
+    "nested:shared_SharedMixer.end_frame": 2.0254078343277797,
+    "nested:shared_SharedMixer.features": 4.574721830897033
+  },
+  "nested_rows_overlap": true,
+  "corrector_mixer_speedup": 3.278702972808905,
+  "required_speedup": 10,
+  "stage_gate_pass": false,
+  "cold_host_seconds": 1474.0110964999767,
+  "projection_axis": "[projection only; not T4 measurement]",
+  "ratio_rounded_seconds": 1866.2540550954911,
+  "ratio_full_precision_seconds": 1866.2388123170724,
+  "stage_serial_cpu_seconds": 458.90106123236893,
+  "stage_conditional_lower_seconds": 530.0061641433688,
+  "stage_conditional_upper_seconds": 1644.8007064033688,
+  "projection_gate_pass": false,
+  "required_projection_seconds": 1200,
+  "assumptions": [
+    "The two whole-process ratios are rounded/full-precision forms of one transfer assumption, not independent calibrations.",
+    "The selected 48-pair mean transfers to all 600 pairs; one observation per pair, no timing noise floor.",
+    "The whole-process host/T4 ratio is applied to all current serial CPU token work, including C; this is an assumption, not an independently measured CPU ratio.",
+    "The GPU prior on the rewritten receiver does not exceed the entire original T4 token stage. That stage also includes original CPU work, so this is a deliberately loose upper envelope, not an isolated GPU measurement.",
+    "The remaining original T4 work (renderer, setup, I/O and outer overhead) transfers unchanged; current receiver T4 overhead is unmeasured.",
+    "No claim that the conditional stage envelope bounds arbitrary hosts, contention, filesystem behavior or dependency versions."
+  ],
+  "timing_scope": "pair computations only; excludes setup, state loading, output writes; parity includes shadow work",
+  "limitations": [
+    "Sequential runs on a shared host; same inputs and timers, no exclusive-host guarantee, timing repeats or noise floor.",
+    "Changes in the unchanged prior/renderer stages are not attributed to the native port.",
+    "The cold process has no stage split; no measured attribution of its overhead or historical difference.",
+    "No T4 receiver timing or scorer measurement; the original T4 GPU prior share is unknown.",
+    "The two-pair diagnostic was concurrent with parity and is excluded from these speedup and projection verdicts."
+  ],
+  "native_corrector_seconds": 7.878439216176048,
+  "python_corrector_seconds": 62.37208499806002,
+  "native_lane_mixer_seconds": 17.390961691970006,
+  "native_geometry_seconds": 7.505668364465237,
+  "native_statistics_target_seconds": 8.254260172543582,
+  "additional_statistics_seconds_to_remove": 16.921122413186822
+}

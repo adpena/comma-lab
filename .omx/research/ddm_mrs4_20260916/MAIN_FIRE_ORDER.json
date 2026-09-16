@@ -1,0 +1,52 @@
+{
+  "lane": "ddm_mrs4_minimal_packet_adaptive_corrector_native_20260916",
+  "rows": [
+    {
+      "task_id": "ddm_mrs4_source_landing_20260916",
+      "action": "Verify and land the exact delivered mrs4 sources and evidence via MAIN custody.",
+      "owner": "MAIN",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "evidence_store": ".omx/research/ddm_mrs4_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "Harvest SOURCE_DELIVERY.json and verify the tar digest, all member hashes, and serializer outcome; preserve the unchanged archive payload."
+    },
+    {
+      "task_id": "ddm_mrs4_fresh_reader_20260916",
+      "action": "Run the source-first fresh-reader review and retain its response with the six source hashes.",
+      "owner": "MAIN",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "evidence_store": ".omx/research/ddm_mrs4_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "The exact source delivery is landed or independently frozen under MAIN custody; use FRESH_READER_PROMPT.md."
+    },
+    {
+      "task_id": "ddm_mrs4_timing_gate_resolution_20260916",
+      "action": "Resolve the failed local timing handoff gate using the retained stage costs before considering a T4 measurement.",
+      "owner": "MAIN",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "evidence_store": ".omx/research/ddm_mrs4_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "Harvest PROFILE_AND_PROJECTION.json with failed 1200-second projection; commission a bounded cure under the existing two-C-file and 700-line limits, or explicitly revise the charter. No dispatch is authorized by this row."
+    }
+  ],
+  "folded": [
+    {
+      "action": "Any new T4 measurement",
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mrs4_20260916/MAIN_FIRE_ORDER.json",
+      "folded_into": "ddm_mrs4_timing_gate_resolution_20260916",
+      "fire_trigger": "Only after MAIN resolves the timing gate, obtains fresh-reader acceptance and independently authorizes the authority measurement."
+    },
+    {
+      "action": "Explore remaining native corrector or Lane overhead",
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mrs4_20260916/MAIN_FIRE_ORDER.json",
+      "folded_into": "ddm_mrs4_timing_gate_resolution_20260916",
+      "fire_trigger": "MAIN chooses a bounded stage-targeted cure using the final matched 48-pair attribution."
+    }
+  ],
+  "remote_authorization": false,
+  "publication_authorization": false
+}

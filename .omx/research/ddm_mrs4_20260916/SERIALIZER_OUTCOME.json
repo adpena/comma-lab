@@ -1,0 +1,37 @@
+{
+  "result": {
+    "returncode": 19,
+    "head_before": "26d9a59ef52c2c1f74f7a9ce2c412f897cf6f6b6",
+    "head_after": "26d9a59ef52c2c1f74f7a9ce2c412f897cf6f6b6",
+    "staged_diff_unchanged": true,
+    "request_sha256": "8f56722c8d8140fa5cd92730a27caf1562566d50db37809e04305861c70c9cda",
+    "seconds": 5.275850057601929,
+    "landed": false,
+    "score_claim": false
+  },
+  "receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs4/serializer/RESULT.json",
+    "bytes": 340,
+    "sha256": "c5bf0ef7b16d9b5bf01b9f2a5ee0f417731b7007bdf8a40ccc61973a63a22153"
+  },
+  "request": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs4/serializer/REQUEST.json",
+    "bytes": 14863,
+    "sha256": "8f56722c8d8140fa5cd92730a27caf1562566d50db37809e04305861c70c9cda"
+  },
+  "stderr": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs4/serializer/stderr.log",
+    "bytes": 592,
+    "sha256": "dd3e8959640fbb4ee3b3974bb555255c0e18c090bee389121d6b1d77d1fdd05f"
+  },
+  "storage_refusal": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs4/serializer/storage_refusal.jsonl",
+    "bytes": 676,
+    "sha256": "7e20e49519480e7faac7b395b43c5ed794b7b517842e8c83e7fccfa0e0f1f2f6"
+  },
+  "reason": "Git object writes denied; fallback storage reserve of 40 GiB refused.",
+  "disposition": "Unlanded; mandatory verified source tar goes to MAIN.",
+  "archive_in_tar": true,
+  "no_coauthor": true,
+  "post_edit_hashes_per_file": true
+}

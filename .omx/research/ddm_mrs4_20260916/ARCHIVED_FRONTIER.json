@@ -1,0 +1,15 @@
+{
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd6_fire/run2/MODAL_REMOTE_RESULT.json",
+    "bytes": 162834,
+    "sha256": "fbea310f35317683800cf57b6dd17ef28b5dc16f819f7d7df51b4625642f24ba"
+  },
+  "axis": "[contest-CUDA T4 n600]",
+  "archive_bytes": 179286,
+  "d_seg": 0.00010288,
+  "d_pose": 4.14e-06,
+  "denominator": 37545489,
+  "score_recomputed": 0.1361014714463198,
+  "new_measurement": false,
+  "scope": "Archived move53 receiver; no transfer of score authority to mrs4"
+}

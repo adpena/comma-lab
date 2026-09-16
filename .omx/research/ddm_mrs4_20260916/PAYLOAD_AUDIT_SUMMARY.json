@@ -1,0 +1,16 @@
+{
+  "receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs4/PAYLOAD_CENSUS.json",
+    "bytes": 453310,
+    "sha256": "5ddcb44ee281bbc209b49cbaac954d826085f9bb968ffafffbefe98b0cdf3e95"
+  },
+  "verified_pair_stores": {
+    "parity": 48,
+    "profile_python": 48,
+    "profile_native": 48,
+    "public_fallback": 48
+  },
+  "hash_census_bytes": 1892594594,
+  "final_total_location": "/Volumes/APDataStore/pact/ddm_mrs4/RETENTION_SUMMARY.json",
+  "score_claim": false
+}

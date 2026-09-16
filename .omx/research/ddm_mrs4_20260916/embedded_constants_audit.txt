@@ -1,0 +1,10 @@
+Native data are algorithm configuration, dimensions, generic dyadic arithmetic,
+causal-neighbor offsets, context extents, probability clamps, and round-to-even
+sqrt self-checks from the sealed Python/C reference. All adaptive tables begin
+at zero or the documented first-family unit weight and learn only from decoded
+symbols. The Lane mixer receives its counted weights from archive.zip.
+No per-frame table, learned network weight, scorer, target mask, pose target,
+selector, video-dependent codebook or source-video payload is embedded in C.
+The pre-existing archive identity check is unchanged; no dependency version pin
+or runtime environment switch is added. The fallback uses the existing Python
+arithmetic. Source derivation is not an originality or score-improvement claim.
