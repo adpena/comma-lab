@@ -1,0 +1,42 @@
+{
+ "schema": "ffi6_gate0_receipt.v1",
+ "phase": "BEFORE",
+ "axis": "[source + exact digest arithmetic]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "measured_at_utc": "2026-09-16T19:45:00Z",
+ "head_commit": "92afd5cf7f0d39d893c0e5d6d69ceb64f4a709b7",
+ "frozen_amendment_rows": 11,
+ "latest_row_implementation_commit": "a9fd1270495522f5335737ac56643cf8ace8e670",
+ "latest_row_fix_batch_id": "pr19_identity_class_envelope_consumers_20260911",
+ "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+ "latest_row_sha256": "d9553f662a04428f630a090c06e24267c08aeefc85afceb4d3b4d11f1ea47e7f",
+ "consumer_pins_checked": 15,
+ "consumer_pins_clean": 14,
+ "drifted": [
+  {
+   "path": "tools/modal_harvest_poller.py",
+   "pinned_sha256": "2a98ab6276a7b1692d822b7eb1cd0a41f77cdfc419c7155a758258839905ef4f",
+   "pinned_bytes": 36333,
+   "live_sha256": "bc7383343a5f918b946d358f64bb18d79328da45dad556bc2604a26349324e8e",
+   "live_bytes": 39394,
+   "clean": false
+  }
+ ],
+ "poller_blob_at_a9fd1270": "a9fd1270495522f5335737ac56643cf8ace8e670",
+ "poller_moving_commits_a9fd1270_to_HEAD": [
+  "da66353b7ac0e884e5da71ee5f342e38c0f8e4be"
+ ],
+ "synthetic_live_contract_probe": {
+  "gate": "REFUSED",
+  "code": "PREFIRE_CONTRACT_DRIFT_REFUSED",
+  "detail": "live file differs from committed blob: /Users/adpena/Projects/pact/tools/modal_harvest_poller.py"
+ },
+ "note": "contract block built exactly as tac.candidate_seal.build_prefire_intent builds it, from the LIVE frozen file; this reproduces the mrs5 producer refusal detail verbatim.",
+ "mrs5_producer_refusal": {
+  "path": ".omx/research/ddm_mrs5_20260916/prefire_attempt/PREFIRE_REFUSAL_43ca2b00aebd4c4296d8356283327f0c.json",
+  "code": "PREFIRE_CONTRACT_DRIFT_REFUSED",
+  "detail": "live file differs from committed blob: /Users/adpena/Projects/pact/tools/modal_harvest_poller.py"
+ },
+ "implementation_paths_count": 15
+}
