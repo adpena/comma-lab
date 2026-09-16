@@ -1,0 +1,145 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "c_warnings": {
+    "corrector": {
+      "argv": [
+        "cc",
+        "-O2",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-shared",
+        "-fPIC",
+        "/Users/adpena/Projects/pact/submissions/mrs6/corrector.c",
+        "-o",
+        "/dev/null",
+        "-lm"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "warning_lines": 0
+    },
+    "geometry": {
+      "argv": [
+        "cc",
+        "-O2",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-shared",
+        "-fPIC",
+        "/Users/adpena/Projects/pact/submissions/mrs6/geometry.c",
+        "-o",
+        "/dev/null"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "warning_lines": 0
+    },
+    "range_decoder": {
+      "argv": [
+        "cc",
+        "-O2",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-shared",
+        "-fPIC",
+        "/Users/adpena/Projects/pact/submissions/mrs6/range_decoder.c",
+        "-o",
+        "/dev/null"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "warning_lines": 0
+    }
+  },
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "line_counts": {
+    "FORMAT.md": 80,
+    "README.md": 40,
+    "corrector.c": 693,
+    "geometry.c": 145,
+    "inflate.py": 2080,
+    "inflate.sh": 10,
+    "range_decoder.c": 100
+  },
+  "model_load_parity_vs_mrs5": {
+    "basis_sha256": "4d206ac78404956a4d018fb42f90a18d5aa4248b6204e4c360152aa563f2a3d4",
+    "coefficients_sha256": "e9e19d840927106d7a4af296e3bfa50d3ce226b0c3de9e8a44621560c0da8238",
+    "equal_to_mrs5": true,
+    "note": "Same four digests from submissions/mrs5 and submissions/mrs6 read_models on the same archive",
+    "prior_state_sha256": "f28d8ee87824d506405148b691892968a30419c587511ac166352241c8cf6a0a",
+    "renderer_state_sha256": "3dbd0a38cb75dd5e310bc37415418f87ea0b478cd4093240b43da9bac7b576dd"
+  },
+  "packet": [
+    {
+      "bytes": 644,
+      "path": "submissions/mrs6/inflate.sh",
+      "sha256": "06b1c9821d753efcdc68679c1f26eebb6e023b9118cdea7780ee76027b37265e"
+    },
+    {
+      "bytes": 97489,
+      "path": "submissions/mrs6/inflate.py",
+      "sha256": "3f09d597f0c3ee15e0a771808a6ebb4e08bb64c19822299d7dccb74e7a954382"
+    },
+    {
+      "bytes": 31190,
+      "path": "submissions/mrs6/corrector.c",
+      "sha256": "71f632bc59893cb33673e44f8baa9bac588586463ab057f917fc0fa16b5bed77"
+    },
+    {
+      "bytes": 5643,
+      "path": "submissions/mrs6/geometry.c",
+      "sha256": "ac99ab49efbc9fce9bab177b70a62b8e32b576caea16a03d78326b61bf9a0e63"
+    },
+    {
+      "bytes": 4018,
+      "path": "submissions/mrs6/range_decoder.c",
+      "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec"
+    },
+    {
+      "bytes": 2838,
+      "path": "submissions/mrs6/README.md",
+      "sha256": "6644cb6bcd3bfef479ad3c43bb1a238625de3379459d8e5b04af3bef806e0701"
+    },
+    {
+      "bytes": 5180,
+      "path": "submissions/mrs6/FORMAT.md",
+      "sha256": "df92248e9bd593c7a227f4f651430ef12d92274557094b529c1f90bc8854f933"
+    },
+    {
+      "bytes": 179286,
+      "path": "submissions/mrs6/archive.zip",
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+    }
+  ],
+  "promotable": false,
+  "rename_projection_diff_hunks": 42,
+  "ruff": {
+    "argv": [
+      ".venv/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "--select",
+      "F,ARG",
+      "submissions/mrs6/inflate.py",
+      "experiments/ddm_mrs6_proof.py"
+    ],
+    "returncode": 0,
+    "stdout": "All checks passed!"
+  },
+  "score_claim": false,
+  "ste_round_equivalence": {
+    "claim": "value + (value.round() - value).detach() equals value.round() bitwise on float32",
+    "mismatches": 0,
+    "samples": 28080000
+  }
+}
