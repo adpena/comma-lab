@@ -1,0 +1,10 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "root_independent_payload_recheck": true,
+  "independent_reader_claim": false,
+  "matched_pairs": 48,
+  "rehash_artifacts": 144,
+  "geometry_bins_per_path": 9437184,
+  "result_sha256": "58264ea793d6b665a2f9a93ec1d23d89a4f64bb30164c89b3b21cb1a99e04cc0",
+  "score_claim": false
+}

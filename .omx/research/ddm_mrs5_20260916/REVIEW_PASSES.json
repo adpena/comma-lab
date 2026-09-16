@@ -1,0 +1,56 @@
+{
+  "files": [
+    {
+      "path": "submissions/mrs5/inflate.py",
+      "sha256": "f79f1e3f0ef897df0f2f010646b0fe27fb453c6a7585e98e2769df1ece413e12",
+      "review_tracker_passes": [
+        "mrs5-pass1",
+        "mrs5-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs5_proof.py",
+      "sha256": "08b56a9ba3d97bfb1854034359f60532440e634f846106c60c28d17c7250cb8a",
+      "review_tracker_passes": [
+        "mrs5-pass1",
+        "mrs5-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs5_smoke.py",
+      "sha256": "c5cdd9a8f03779616dcf7b03763707fad490469c9bb0ef105d56ccb88f366670",
+      "review_tracker_passes": [
+        "mrs5-pass1",
+        "mrs5-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs5_bootstrap.py",
+      "sha256": "a61e48f27ec7db6f4cf6efb7f00631d352c2e86f82fa25e79933c8faf7bdb7ee",
+      "review_tracker_passes": [
+        "mrs5-pass1",
+        "mrs5-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs5_timing.py",
+      "sha256": "5c12f752b03ce376ac58596e206eb1aefb3ab1cf7b0bd84d02a3f23df80ec798",
+      "review_tracker_passes": [
+        "mrs5-timing-pass1",
+        "mrs5-timing-pass2"
+      ],
+      "independent_receipt": "/Volumes/APDataStore/pact/ddm_mrs5/timing_REVIEW_final.json",
+      "root_pass_1": "AST extraction, causal restore, exact state translations, own shell build and worker source custody",
+      "root_pass_2": "Full-group cancellation, restart/reuse, retained outputs, scope labels, median ratio and spread arithmetic"
+    }
+  ],
+  "root_review_1": "Source delta versus unchanged mrs4; ctypes types, complete-group guards, handle lifetime and native selector wiring; source-bound resume and payload writes",
+  "root_review_2": "Signed-wide bounds and division semantics; review fixes/reintroduction scan; fallback native removal, checkpoint compatibility and certify-before-cleanup",
+  "independent_source_review": {
+    "agent": "geometry_review",
+    "passes": 2,
+    "verdict": "No defects found in requested delta and helper compatibility scope",
+    "tests": "Strict C11 syntax and Python AST parsing; heavy tests not run by reviewer"
+  },
+  "review_override": false
+}

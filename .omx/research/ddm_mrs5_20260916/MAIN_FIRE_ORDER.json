@@ -1,0 +1,34 @@
+{
+  "rows": [
+    {
+      "task_id": "ddm_mrs5_source_landing_20260916",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "evidence_store": ".omx/research/ddm_mrs5_20260916/MAIN_FIRE_ORDER.json",
+      "action": "Verify and land the exact mrs5 source delivery and scorer-free evidence.",
+      "fire_trigger": "Harvest SOURCE_DELIVERY.json, verify tar and member hashes and serializer outcome; preserve unrelated shared work."
+    },
+    {
+      "task_id": "ddm_mrs5_fresh_reader_20260916",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "evidence_store": ".omx/research/ddm_mrs5_20260916/MAIN_FIRE_ORDER.json",
+      "action": "Run FRESH_READER_PROMPT.md and retain source-bound findings.",
+      "fire_trigger": "The exact seven-file source is landed or independently frozen in MAIN custody."
+    },
+    {
+      "task_id": "ddm_mrs5_gate_resolution_20260916",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/state/canonical_task_status.jsonl",
+      "evidence_store": ".omx/research/ddm_mrs5_20260916/MAIN_FIRE_ORDER.json",
+      "action": "Resolve the actual timing or producer-contract stop before the receiver first measurement.",
+      "fire_trigger": "Harvest the completed A/B/A/B receipt plus the timing STOP or typed producer refusal; no bypass or T4 fire is authorized by this row."
+    }
+  ],
+  "t4_action_disposition": "FOLDED into gate_resolution and the existing MAIN-owned mrs1 receiver T4 row; source and valid intent must be committed BEFORE authorization",
+  "hypotheses_disposition": "FOLDED into gate_resolution; no independent dispatch",
+  "score_claim": false
+}

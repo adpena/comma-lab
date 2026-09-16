@@ -1,0 +1,48 @@
+{
+  "files": [
+    {
+      "relative_path": "README.md",
+      "bytes": 1925,
+      "sha256": "d9d426b0288cf09a43d217686c920ca5d215c2e2fb1cceea605fa3d934795277",
+      "loc": 28
+    },
+    {
+      "relative_path": "archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+      "loc": null
+    },
+    {
+      "relative_path": "corrector.c",
+      "bytes": 31190,
+      "sha256": "71f632bc59893cb33673e44f8baa9bac588586463ab057f917fc0fa16b5bed77",
+      "loc": 693
+    },
+    {
+      "relative_path": "geometry.c",
+      "bytes": 5643,
+      "sha256": "ac99ab49efbc9fce9bab177b70a62b8e32b576caea16a03d78326b61bf9a0e63",
+      "loc": 145
+    },
+    {
+      "relative_path": "inflate.py",
+      "bytes": 147776,
+      "sha256": "f79f1e3f0ef897df0f2f010646b0fe27fb453c6a7585e98e2769df1ece413e12",
+      "loc": 2891
+    },
+    {
+      "relative_path": "inflate.sh",
+      "bytes": 470,
+      "sha256": "f7f1b608640bc9e5bdebfa6a1fe08fe89bd13d6c01374b00b83357dd8f8d399e",
+      "loc": 8
+    },
+    {
+      "relative_path": "range_decoder.c",
+      "bytes": 4018,
+      "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec",
+      "loc": 100
+    }
+  ],
+  "score_claim": false,
+  "producer_source_commit": "d555073f3cac64b481450ee2afc7541eb0ce491a"
+}

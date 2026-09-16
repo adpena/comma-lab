@@ -1,0 +1,65 @@
+{
+  "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+  "runtime_sha256": "609ed1efb1bd465cbe1cafd07c38de8cab3c707fa27a70a4043102450ba9d5db",
+  "receiver_sha256": "6ee7beeeee7ee4ec893d71a3126e84b47be2a5cda9233b718a58ae8b2266dccc",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "compiler_present": {
+    "cold_n600": true,
+    "matched_pairs": 600,
+    "identity": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_native/IDENTITY.json",
+      "bytes": 54991,
+      "sha256": "ec5c963a11bbdea9a0a9ea87736028466d5e6e654a70e56cf0992b24f82aae11"
+    },
+    "wall_seconds": 1631.4409122089855,
+    "wall_is_comparative_timing_evidence": false
+  },
+  "compiler_absent": {
+    "cold_n600": false,
+    "matched_pairs": 48,
+    "stale_libraries_removed": true,
+    "result": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_fallback/RESULT.json",
+      "bytes": 10696,
+      "sha256": "0f12a8c97b55116254139faea23fd2fff1d1a3025cd62f67669f4add890866c8"
+    }
+  },
+  "public_path_probes": {
+    "frontier": {
+      "archive_path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/archive.zip",
+      "historical_reference": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/IDENTITY.json",
+        "bytes": 64821,
+        "sha256": "5fa221bb1b84416500895e1a89e4b4c41f0b3ac7ab661191a5310d9d8d75df9f"
+      }
+    },
+    "candidate": {
+      "archive_path": "/Users/adpena/Projects/pact/submissions/mrs5/archive.zip",
+      "cold_public_identity": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_native/IDENTITY.json",
+        "bytes": 54991,
+        "sha256": "ec5c963a11bbdea9a0a9ea87736028466d5e6e654a70e56cf0992b24f82aae11"
+      }
+    }
+  },
+  "inflate_sh_smokes": {
+    "actual_guard": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_native/default_guard.DONE.json",
+      "bytes": 5253,
+      "sha256": "68c82da83317bafa843fb67a2ac8b8510d825d36f10e5b14869ab6b5f9500b09"
+    },
+    "compiler_present": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_native/help.DONE.json",
+      "bytes": 5060,
+      "sha256": "82a047c2bac08054d48d63fc543554105e90f30b559c8b87f451fb0a4b12aaa4"
+    },
+    "compiler_absent": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_fallback/help.DONE.json",
+      "bytes": 5131,
+      "sha256": "f796b9b9d00a7126124997eb5c3e76c5b89dc60a400a7aedb93c34a215900b1b"
+    }
+  },
+  "contract_shape_equivalent": false,
+  "limitation": "Actual minimal-public receiver receipts; no sealed-runtime report or exception schema is fabricated."
+}

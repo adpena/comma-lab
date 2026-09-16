@@ -1,0 +1,88 @@
+{
+  "source_manifest_sha256": "b6b81727bbf6f051b7f640011313c12cbe35cebfd172fa9a72cd9f3ce25cd10c",
+  "public_files": [
+    "README.md",
+    "archive.zip",
+    "corrector.c",
+    "geometry.c",
+    "inflate.py",
+    "inflate.sh",
+    "range_decoder.c"
+  ],
+  "compile_results": [
+    {
+      "argv": [
+        "cc",
+        "-std=c11",
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsyntax-only",
+        "submissions/mrs5/range_decoder.c"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c11",
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsyntax-only",
+        "submissions/mrs5/corrector.c"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c11",
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsyntax-only",
+        "submissions/mrs5/geometry.c"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "imports": [
+    "argparse",
+    "bisect",
+    "brotli",
+    "collections",
+    "ctypes",
+    "dataclasses",
+    "hashlib",
+    "lzma",
+    "math",
+    "numpy",
+    "pathlib",
+    "struct",
+    "sys",
+    "torch",
+    "torch.nn",
+    "torch.nn.functional",
+    "types",
+    "zipfile"
+  ],
+  "three_native_compiles": true,
+  "no_public_generated_files": true,
+  "no_internal_names_regex_hits": true,
+  "no_openmp_or_native_flags": true,
+  "no_compiler_integer_extension": true,
+  "software_dependency_pins_added": false,
+  "top_level_archive_pins_added": false,
+  "archive_unchanged": true,
+  "score_claim": false
+}

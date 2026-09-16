@@ -1,0 +1,112 @@
+{
+  "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+  "runtime_sha256": "609ed1efb1bd465cbe1cafd07c38de8cab3c707fa27a70a4043102450ba9d5db",
+  "receiver_sha256": "6ee7beeeee7ee4ec893d71a3126e84b47be2a5cda9233b718a58ae8b2266dccc",
+  "scope": "All AST constants in exact public inflate.py; string/byte literals length >=64 listed for review. This census does not claim the sealed runtime-specific schema.",
+  "source_sha256": "f79f1e3f0ef897df0f2f010646b0fe27fb453c6a7585e98e2769df1ece413e12",
+  "ast_constant_count": 2445,
+  "long_literals": [
+    {
+      "lineno": 1,
+      "kind": "str",
+      "length": 77
+    },
+    {
+      "lineno": 27,
+      "kind": "str",
+      "length": 72
+    },
+    {
+      "lineno": 45,
+      "kind": "str",
+      "length": 69
+    },
+    {
+      "lineno": 134,
+      "kind": "str",
+      "length": 72
+    },
+    {
+      "lineno": 147,
+      "kind": "str",
+      "length": 73
+    },
+    {
+      "lineno": 153,
+      "kind": "str",
+      "length": 70
+    },
+    {
+      "lineno": 259,
+      "kind": "str",
+      "length": 68
+    },
+    {
+      "lineno": 2597,
+      "kind": "str",
+      "length": 73
+    },
+    {
+      "lineno": 2624,
+      "kind": "str",
+      "length": 64
+    },
+    {
+      "lineno": 2776,
+      "kind": "str",
+      "length": 70
+    },
+    {
+      "lineno": 2803,
+      "kind": "str",
+      "length": 72
+    },
+    {
+      "lineno": 2835,
+      "kind": "str",
+      "length": 67
+    },
+    {
+      "lineno": 66,
+      "kind": "str",
+      "length": 66
+    },
+    {
+      "lineno": 2860,
+      "kind": "str",
+      "length": 64
+    },
+    {
+      "lineno": 2866,
+      "kind": "str",
+      "length": 90
+    },
+    {
+      "lineno": 39,
+      "kind": "str",
+      "length": 69
+    },
+    {
+      "lineno": 253,
+      "kind": "str",
+      "length": 65
+    },
+    {
+      "lineno": 2618,
+      "kind": "str",
+      "length": 77
+    },
+    {
+      "lineno": 2631,
+      "kind": "str",
+      "length": 65
+    },
+    {
+      "lineno": 2699,
+      "kind": "str",
+      "length": 68
+    }
+  ],
+  "inheritance": "mrs4 source plus NativeGeometry algorithm wrapper; learned archive unchanged",
+  "score_claim": false
+}

@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+  "runtime_sha256": "609ed1efb1bd465cbe1cafd07c38de8cab3c707fa27a70a4043102450ba9d5db",
+  "receiver_sha256": "6ee7beeeee7ee4ec893d71a3126e84b47be2a5cda9233b718a58ae8b2266dccc",
+  "status": "NOT_PERFORMED",
+  "independent_n600_encoder_executions": 0,
+  "reason": "Receiver-only port copies unchanged move53 archive; extraction and copies are not independent encoder executions.",
+  "score_claim": false
+}

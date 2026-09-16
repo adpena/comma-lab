@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_CONTRACT_DRIFT_REFUSED",
+  "detail": "live file differs from committed blob: /Users/adpena/Projects/pact/tools/modal_harvest_poller.py",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-16T19:17:58.437347+00:00"
+}

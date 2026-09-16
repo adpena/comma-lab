@@ -1,0 +1,10 @@
+{
+  "source_t4_seconds": 1185.899645171,
+  "risk_ceiling_seconds": 1260,
+  "maximum_ratio": 1.062484507125656,
+  "ratio_definition": "median(B)/median(A), two n48 runs per arm, fixed A/B/A/B order",
+  "above_ceiling": "STOP before producer; MAIN decides",
+  "at_or_below_ceiling": "Attempt original producer with truthful evidence; STOP on typed refusal",
+  "projection_authority": false,
+  "score_claim": false
+}

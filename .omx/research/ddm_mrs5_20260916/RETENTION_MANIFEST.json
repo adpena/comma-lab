@@ -1,0 +1,36 @@
+{
+  "arm": "ddm_mrs5",
+  "reclaimed": [
+    {
+      "bytes": 3662409600,
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/public_native/output/0.raw",
+      "reason": "certified duplicate: byte-identical to move 53's retained raw, proven by the cold n600 identity receipt before reclaim; reproducible from the retained archive",
+      "sha256": "8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b"
+    }
+  ],
+  "retained": [
+    {
+      "bytes": 179186,
+      "path": "/Volumes/APDataStore/pact/ddm_mrs5/retained/p",
+      "sha256": "a26208c5cf890d81f23cc083bbf3cd85baf34123c28f4d850e9066d7fce0ba9c"
+    },
+    {
+      "bytes": 179286,
+      "path": "/Users/adpena/Projects/pact/submissions/mrs5/archive.zip",
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+    },
+    {
+      "bytes": 400,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs5_20260916/ARCHIVE_PARSEBACK.json",
+      "sha256": "e5a6c7f3939d556d1063b5273ce2890ddd26692974ddda2f993080aed277ca48"
+    },
+    {
+      "bytes": 44188,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs5_20260916/RAW_IDENTITY_N600.json",
+      "sha256": "e89cf0c6b0744aeb0f5cc73028a680ccbca1b5d5ca0cba64685f1c16611f5e28"
+    }
+  ],
+  "schema": "candidate_retention_manifest.v1",
+  "score_claim": false,
+  "store_root": "/Volumes/APDataStore/pact/ddm_mrs5"
+}

@@ -1,0 +1,12 @@
+{
+  "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+  "archive_bytes": 179286,
+  "member": {
+    "name": "p",
+    "bytes": 179186,
+    "sha256": "a26208c5cf890d81f23cc083bbf3cd85baf34123c28f4d850e9066d7fce0ba9c"
+  },
+  "retained_path": "/Volumes/APDataStore/pact/ddm_mrs5/retained/p",
+  "unchanged_from": "submissions/mrs4/archive.zip",
+  "score_claim": false
+}

@@ -1,0 +1,188 @@
+{
+  "authority": false,
+  "calculation": {
+    "assumption": "serial-Python scaling transfers to the T4 host; the GPU stages are unchanged code; host load approximately stationary across the interleave (pd7 shares the host)",
+    "contract_clamped_projection_seconds": 1185.899645171,
+    "contract_clamped_within_policy_limit": true,
+    "hard_timeout_seconds": 1800.0,
+    "policy_limit_seconds": 1260.0,
+    "ratio_median_b_over_median_a": 0.932439601662899,
+    "source_t4_seconds": 1185.899645171,
+    "t4_risk_ceiling_seconds": 1105.7797927554204,
+    "within_policy_limit": true
+  },
+  "candidate_receiver": {
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "legacy_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+    "path": "/Users/adpena/Projects/pact/submissions/mrs5",
+    "refusal": {
+      "code": "PREFIRE_RISK_EVIDENCE_REFUSED",
+      "exception_type": "PrefireRefusal",
+      "message": "PREFIRE_RISK_EVIDENCE_REFUSED: both archive pins required"
+    },
+    "row_count": null,
+    "rows_refusal": {
+      "code": "PREFIRE_RISK_EVIDENCE_REFUSED",
+      "exception_type": "PrefireRefusal",
+      "message": "PREFIRE_RISK_EVIDENCE_REFUSED: both archive pins required"
+    },
+    "sha256": null
+  },
+  "contract_conformance": {
+    "mode_arithmetic_note": "the frozen mode computes source_t4 * (1 + max(0, ceiling/base - 1)) from cold-n600 candidate_decode_wall_clock diagnostics whose retained verdict is REFUSED; the charter's instrument is a sampled 48-pair interleave with a ratio below 1, which that arithmetic has no field for and its clamp cannot represent",
+    "root_control": {
+      "code": "PREFIRE_RISK_EVIDENCE_REFUSED",
+      "exception_type": "PrefireRefusal",
+      "message": "PREFIRE_RISK_EVIDENCE_REFUSED: both archive pins required"
+    },
+    "shape_note": "validate_prefire_risk checks the exact field set before anything else, so a receipt carrying these honest extra fields refuses on shape; the ROOT control is the digest refusal above, which fires for this tree under any receipt shape",
+    "uncomputable_required_field": "candidate_receiver.sha256",
+    "validated": false,
+    "validator": "tac.candidate_seal.validate_prefire_risk"
+  },
+  "contract_validated": false,
+  "interleaved_ratio": {
+    "adjacent_ratio_half_range": 0.007476362839296924,
+    "adjacent_ratios": [
+      0.9398669008351387,
+      0.9249141751565448
+    ],
+    "arm_a": "sealed receiver /Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime",
+    "arm_b": "submissions/mrs5 (the minimal seven-file packet)",
+    "authority": false,
+    "definition": "ratio = median(B)/median(A) over four cold same-host runs in fixed A/B/A/B order",
+    "median_a_seconds": 107.05223262502113,
+    "median_b_seconds": 99.8197411459987,
+    "n_pairs_per_run": 48,
+    "no_statistical_confidence_interval": true,
+    "pair_compute_ratio_sensitivity": 0.9329306350262468,
+    "ratio_extreme_range": [
+      0.912853813897801,
+      0.9522841512060474
+    ],
+    "ratio_median_b_over_median_a": 0.932439601662899,
+    "runs": [
+      {
+        "arm": "A",
+        "finished_utc": "2026-09-16T19:08:10Z",
+        "load_1min_after": 15.62939453125,
+        "load_1min_before": 15.92041015625,
+        "pair_compute_seconds": 91.80728591035586,
+        "process_cold": true,
+        "returncode": 0,
+        "sequence_index": 0,
+        "started_utc": "2026-09-16T19:06:22Z",
+        "wall_seconds": 107.75476341601461
+      },
+      {
+        "arm": "B",
+        "finished_utc": "2026-09-16T19:09:51Z",
+        "load_1min_after": 16.04443359375,
+        "load_1min_before": 15.62939453125,
+        "pair_compute_seconds": 86.19731266412418,
+        "process_cold": true,
+        "returncode": 0,
+        "sequence_index": 1,
+        "started_utc": "2026-09-16T19:08:10Z",
+        "wall_seconds": 101.27513554203324
+      },
+      {
+        "arm": "A",
+        "finished_utc": "2026-09-16T19:11:38Z",
+        "load_1min_after": 15.35302734375,
+        "load_1min_before": 16.04443359375,
+        "pair_compute_seconds": 89.64074808452278,
+        "process_cold": true,
+        "returncode": 0,
+        "sequence_index": 2,
+        "started_utc": "2026-09-16T19:09:51Z",
+        "wall_seconds": 106.34970183402766
+      },
+      {
+        "arm": "B",
+        "finished_utc": "2026-09-16T19:13:16Z",
+        "load_1min_after": 13.49560546875,
+        "load_1min_before": 15.35302734375,
+        "pair_compute_seconds": 83.08111691498198,
+        "process_cold": true,
+        "returncode": 0,
+        "sequence_index": 3,
+        "started_utc": "2026-09-16T19:11:38Z",
+        "wall_seconds": 98.36434674996417
+      }
+    ],
+    "scope": "cold process and own public shell native builds; intercepted Python entrypoint; 48 seeded stratified pairs restored from pre-pair checkpoints; includes model setup, state load, token decode, own renderer, selector, payload compression/verification and writes; excludes archive extraction and source preflight; NOT cold n600, NOT an unmodified public replay",
+    "score_claim": false
+  },
+  "mode": "completed_t4_receiver_delta",
+  "receiver_delta": {
+    "candidate_file_count": 7,
+    "candidate_total_bytes": 370308,
+    "definition": "the seven shipped packet files with sha256; NOT the contract's normalized receiver_delta_manifest, which cannot be built while the candidate's risk rows refuse",
+    "files": [
+      {
+        "bytes": 1925,
+        "relative_path": "README.md",
+        "sha256": "d9d426b0288cf09a43d217686c920ca5d215c2e2fb1cceea605fa3d934795277"
+      },
+      {
+        "bytes": 179286,
+        "relative_path": "archive.zip",
+        "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+      },
+      {
+        "bytes": 31190,
+        "relative_path": "corrector.c",
+        "sha256": "71f632bc59893cb33673e44f8baa9bac588586463ab057f917fc0fa16b5bed77"
+      },
+      {
+        "bytes": 5643,
+        "relative_path": "geometry.c",
+        "sha256": "ac99ab49efbc9fce9bab177b70a62b8e32b576caea16a03d78326b61bf9a0e63"
+      },
+      {
+        "bytes": 147776,
+        "relative_path": "inflate.py",
+        "sha256": "f79f1e3f0ef897df0f2f010646b0fe27fb453c6a7585e98e2769df1ece413e12"
+      },
+      {
+        "bytes": 470,
+        "relative_path": "inflate.sh",
+        "sha256": "f7f1b608640bc9e5bdebfa6a1fe08fe89bd13d6c01374b00b83357dd8f8d399e"
+      },
+      {
+        "bytes": 4018,
+        "relative_path": "range_decoder.c",
+        "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec"
+      }
+    ],
+    "source_row_count": 49,
+    "source_rows_refusal": null
+  },
+  "risk_sha256": "c8aabdf72ff7f41df3ce62823e6e7f4ef64d7c350e95827d3562de19c41b7589",
+  "schema": "candidate_prefire_timing_risk.v1",
+  "score_claim": false,
+  "source_receiver": {
+    "digest_definition": "tac.candidate_seal.measure_prefire_risk_receiver_digest.v1",
+    "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime",
+    "refusal": null,
+    "row_count": 49,
+    "sha256": "9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890",
+    "t4_direct_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+    "t4_direct_sha256": "fdef3b001dbdfc76ebeccfcf1fd1b33928e619fbc018bd2cb323cc67de566cbb"
+  },
+  "source_t4_leg": {
+    "bytes": 1443,
+    "path": "/Volumes/APDataStore/pact/ddm_pd6/SEAL_ddm_pd6_price_first_generator_contest_cuda.json.decode_wall_clock.json",
+    "sha256": "97373a987b4208860ef8b596c8d0417942d340f82640bfa1932031c093f4c8b4"
+  },
+  "source_t4_leg_facts": {
+    "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+    "limit_seconds": 1260.0,
+    "measured_t4_decode_seconds": 1185.899645171,
+    "receiver_sha256": "fdef3b001dbdfc76ebeccfcf1fd1b33928e619fbc018bd2cb323cc67de566cbb",
+    "runtime_dir": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime",
+    "t4_timing_scope": "cold_public_entrypoint_decode"
+  },
+  "timing_clearance": false
+}

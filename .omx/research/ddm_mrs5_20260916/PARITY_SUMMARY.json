@@ -1,0 +1,14 @@
+{
+  "result": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs5/parity/RESULT.json",
+    "bytes": 245030,
+    "sha256": "58264ea793d6b665a2f9a93ec1d23d89a4f64bb30164c89b3b21cb1a99e04cc0"
+  },
+  "matched_pairs": 48,
+  "geometry_groups": 9120,
+  "geometry_bin_values_per_path": 9437184,
+  "tokens_bytes_per_path": 9437184,
+  "raw_bytes_per_path": 292992768,
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false
+}

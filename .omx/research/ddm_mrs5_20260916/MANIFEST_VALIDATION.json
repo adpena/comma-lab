@@ -1,0 +1,44 @@
+{
+  "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+  "runtime_sha256": "609ed1efb1bd465cbe1cafd07c38de8cab3c707fa27a70a4043102450ba9d5db",
+  "receiver_sha256": "6ee7beeeee7ee4ec893d71a3126e84b47be2a5cda9233b718a58ae8b2266dccc",
+  "source_manifest_sha256": "b6b81727bbf6f051b7f640011313c12cbe35cebfd172fa9a72cd9f3ce25cd10c",
+  "seven_source_files_match": true,
+  "runtime": {
+    "sha256": "609ed1efb1bd465cbe1cafd07c38de8cab3c707fa27a70a4043102450ba9d5db",
+    "digest_definition": "tac.candidate_seal.measure_runtime_digest",
+    "file_count": 7,
+    "total_bytes": 370308
+  },
+  "ordinary_receiver_digest_definition": "tac.decode_wall_clock.measure_receiver_digest",
+  "internal_manifest": {
+    "schema": "receiver_manifest_validation.v1",
+    "relative_path": "MANIFEST.sha256",
+    "present": false,
+    "listed_file_count": 0,
+    "covered_file_count": 0,
+    "archive_listed": false,
+    "listing_sha256": null,
+    "excluded_from_behavior_digest": false
+  },
+  "top_level_pin_consistency": {
+    "verdict": "PIN_ABSENT",
+    "runtime_dir": "/Users/adpena/Projects/pact/submissions/mrs5",
+    "receiver_path": "/Users/adpena/Projects/pact/submissions/mrs5/inflate.py",
+    "archive_path": "/Users/adpena/Projects/pact/submissions/mrs5/archive.zip",
+    "measured_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+    "measured_bytes": 179286,
+    "pinned_sha256": null,
+    "pinned_bytes": null,
+    "problems": [
+      "inflate.py declares no ARCHIVE_SHA256 and no ARCHIVE_BYTES \u2014 this tree is UNPINNED, so the archive+runtime seal is weaker than the rr4 lineage's and this check is vacuous for it (reported, never silently passed)"
+    ]
+  },
+  "risk_digest_control": {
+    "digest": null,
+    "refusal": "PREFIRE_RISK_EVIDENCE_REFUSED: both archive pins required",
+    "exception_type": "PrefireRefusal"
+  },
+  "score_claim": false,
+  "all_contract_gates_passed": false
+}
