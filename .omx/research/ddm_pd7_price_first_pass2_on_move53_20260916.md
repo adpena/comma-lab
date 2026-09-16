@@ -65,11 +65,25 @@ unit of one pair's d_pose **1.2957025872757242**. All three EXPIRE at the next p
 | 10 % | 105 pairs, **−8.903e−05** | 68 pairs, −6.791e−05 | 53 pairs, −5.785e−05 |
 | 20 % | 150 pairs, −2.085e−04 | 105 pairs, −1.781e−04 | 93 pairs, −1.616e−04 |
 
-**The bar is −2e−05 S, and it is TIGHTER here than it was for pd6.** pd6's move-52 headroom
-paid −2.76e−05 at 5 %/3 bits with 55 pairs; move 53's base d_pose is lower (4.136e−06 against
-4.208e−06) precisely because pd6 already took some, so there is less pose left to recover. At
-5 % recovery the 8-bit column does NOT clear the bar on its own — the widened threshold has to
-earn its place through the pairs it adds, not through its price.
+**The bar is −2e−05 S, and it is TIGHTER here than it was for pd6.** Cell for cell against
+pd6's own `HEADROOM.json` (the artifact, not its memo table — the two disagree, and the artifact
+is what this arm cites):
+
+| recovered / price | pd6 (move 52) | pd7 (move 53) | shift |
+|---|---:|---:|---:|
+| 5 % @ 3 bits | 70 pairs, −3.484e−05 | 68 pairs, −3.396e−05 | −2.5 % |
+| 5 % @ 6 bits | 35 pairs, −2.249e−05 | 34 pairs, −2.217e−05 | −1.4 % |
+| 10 % @ 3 bits | 108 pairs, −9.170e−05 | 105 pairs, −8.903e−05 | −2.9 % |
+| 10 % @ 6 bits | 70 pairs, −6.967e−05 | 68 pairs, −6.791e−05 | −2.5 % |
+| 20 % @ 3 bits | 158 pairs, −2.148e−04 | 150 pairs, −2.085e−04 | −2.9 % |
+| 20 % @ 6 bits | 108 pairs, −1.834e−04 | 105 pairs, −1.781e−04 | −2.9 % |
+
+**The headroom shrinks 2–3 % per move**, because each pass lowers the base d_pose its successor
+would have to recover from (4.2075e−06 → 4.1364e−06, −1.7 %), only partly offset by the pose
+unit rising (1.2847 → 1.2957, +0.9 %). That is a horizon on this family: the price-first
+generator makes its own successor harder by exactly the amount it succeeds. And the 8-bit column
+pd6 never computed does NOT clear the bar at 5 % recovery (24 pairs, −1.731e−05) — the widened
+threshold has to earn its place through the pairs it ADDS, not through its price.
 
 The per-pair seg budget (`floor(base[pair]·pose_unit / seg_cell)`) over the 588 non-floor pairs:
 **407 pairs can pay for no cells at all, 58 for one, 123 for two or more** (pd6: 398 / 65 / 125).
