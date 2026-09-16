@@ -1,0 +1,8 @@
+BUNDLE_FALLBACK rc=17 phase=git_add bundle=/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.bundle format_patch=/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.format-patch receipt=/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/receipts.jsonl fallback_commit=594eaaa86d0a0cdd9e0ea7e9e774b2567e5c6065
+
+STDERR
+[subagent-commit-serializer] git add failed (rc=128):
+error: unable to create temporary file: Operation not permitted
+error: .omx/research/ddm_jrx1_20260916/ALL_LAUNCHES.json: failed to insert into database
+error: unable to index file '.omx/research/ddm_jrx1_20260916/ALL_LAUNCHES.json'
+fatal: adding files failed

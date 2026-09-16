@@ -2089,6 +2089,60 @@
    ],
    "reason": "recall snapshot of the DAG index; rebuildable at HEAD",
    "added_utc": "2026-09-16T07:45:49Z"
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_jrx1_20260916__serializer_bundles.tar",
+   "tar_bytes": 16363520,
+   "tar_sha256": "59df9fbac896b822b0c5879128a325dad404664c798adf5b25b498eef2bbe6c5",
+   "files": [
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/receipts.jsonl",
+     "bytes": 9315,
+     "sha256": "a6e487d81758de461fd0637def8fad231c494698686413184ade2ccaab780d63"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.bundle",
+     "bytes": 1149865,
+     "sha256": "426cd9191f0931ec380c7f0e81992c42cfb38cc8abdebc76d94e7ecaf391ddf4"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-tree.patch",
+     "bytes": 6753610,
+     "sha256": "635df07b050fb89d54b4ad0b705ff0b115fd000431784d96326925356138e78d"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.format-patch",
+     "bytes": 6759482,
+     "sha256": "3d260125062042f6261fd407b6ad1723254e3ffa726b05731667cc999edaac20"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/objects/pack/pack-2ab68a6ed5b096397181203ec6821383dbf48708.pack",
+     "bytes": 1662190,
+     "sha256": "9d86db1ba51fed19b9aa0d718347b555fb6ac0f650ab211a2721283a97077cf9"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/objects/pack/pack-2ab68a6ed5b096397181203ec6821383dbf48708.rev",
+     "bytes": 260,
+     "sha256": "1c6cb035f188864bc8691f1a7d64af81026d5b17d9bf25622eb942dbcf6ff99f"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/objects/pack/pack-2ab68a6ed5b096397181203ec6821383dbf48708.idx",
+     "bytes": 2528,
+     "sha256": "ddd6be2b7fb7074e53c0ecdb0fa4fb3e135a380291c3bef7c2d4792581a34669"
+    }
+   ],
+   "reason": "jrx1 serializer fallback bundle + verify objects; content landed on main (3c5669723)",
+   "added_utc": "2026-09-16T08:18:58Z"
   }
  ]
 }

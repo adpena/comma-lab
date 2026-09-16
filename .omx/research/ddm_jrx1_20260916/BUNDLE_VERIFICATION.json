@@ -1,0 +1,199 @@
+{
+  "status": "VERIFIED_BUNDLE_NOT_LANDED",
+  "serializer_rc": 17,
+  "fallback_commit": "594eaaa86d0a0cdd9e0ea7e9e774b2567e5c6065",
+  "base_head": "840e323fd63b4c09e0f7b756aa80310403ebd867",
+  "current_main_head": "840e323fd63b4c09e0f7b756aa80310403ebd867",
+  "bundle_verify_rc": 0,
+  "bundle_verify_output": "The bundle contains this ref:\n594eaaa86d0a0cdd9e0ea7e9e774b2567e5c6065 refs/heads/serializer-fallback\nThe bundle requires this ref:\n840e323fd63b4c09e0f7b756aa80310403ebd867 \nThe bundle uses this hash algorithm: sha1\n/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.bundle is okay\n",
+  "artifacts": {
+    "bundle": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.bundle",
+      "bytes": 1149865,
+      "sha256": "426cd9191f0931ec380c7f0e81992c42cfb38cc8abdebc76d94e7ecaf391ddf4"
+    },
+    "format_patch": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.format-patch",
+      "bytes": 6759482,
+      "sha256": "3d260125062042f6261fd407b6ad1723254e3ffa726b05731667cc999edaac20"
+    },
+    "intended_patch": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-tree.patch",
+      "bytes": 6753610,
+      "sha256": "635df07b050fb89d54b4ad0b705ff0b115fd000431784d96326925356138e78d"
+    }
+  },
+  "files_verified_against_bundled_commit_and_worktree": [
+    {
+      "path": "experiments/ddm_jrx1_field_control.py",
+      "sha256": "f4074aa5152d851e3334a71b0d979686ec96e1cb4d2cf5ec9da5535f160cfa2c"
+    },
+    {
+      "path": "experiments/ddm_jrx1_price_control.py",
+      "sha256": "1497df53eec66d3a3ff76478a5e4ae8217664ba70f196d3132429e82a9014322"
+    },
+    {
+      "path": "experiments/test_ddm_jrx1_field_control.py",
+      "sha256": "fbd5c623b9eee946bee46f987fe1c863e3f026caff5187df1b5c4f576ca905cb"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/ALL_LAUNCHES.json",
+      "sha256": "d41043808df0c46637be66e76639eca5f3a3c4ca675a999c747ac3077b561b48"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/CONTROL_GATE_LAUNCH.json",
+      "sha256": "6435a3b194c5cd392bf467aa946c54a6092d171a4e847da796f3d8f1c4640057"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/CONTROL_REPAIR_PROPOSAL.md",
+      "sha256": "0771c3870b3480299610ffb0b436ef36f23fe12b03023e41bb834defecf88141"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/DONE_RECEIPTS.json",
+      "sha256": "46877207c35dde53534fdf3ffdd32a7448a6cd2cc5c6a23e1e98eb2fc8b10fbc"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/FIELD_CONTROL.json",
+      "sha256": "63b10857488fb2b3a375a33779acc1a9d420d9f228f7d514334eebb7beb3ff90"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/FINAL_REVIEW.json",
+      "sha256": "16f9fed4e47eb843f548d75d9f56471ae31a3501667c2463776f069b214fa891"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/HANDOFF.json",
+      "sha256": "72ac2a004b5634285d5e9cdefce1c5004db20dd15ef6a006a4c07bea718651e9"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/OPERATIONAL_ROWS.json",
+      "sha256": "f0b3f52326f2bb350b3f35fa2de1d95def5670bb2afa6eca1596e880f8659683"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/PD4_REFERENCE_AUDIT.json",
+      "sha256": "2abe51056525b2b60f5c77e11aa0f18660bcd703f0fdab97c0767e8cdf4704f9"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/PREREGISTRATION.json",
+      "sha256": "6c9dec3d49ed1a6f46e5b08b70980d2bdb8b4e765cc2f8e97c42b8497912bcf4"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/PROGRESS_COUNT_CORRECTION.json",
+      "sha256": "dd80c5fbd91a21d67d611ab26f87ac0c240d5fca460f0ff68e7203f8cf430fd4"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/PROVENANCE_FINISH.json",
+      "sha256": "2a1a029e02d260292072f37040eadb41d35d46f38c06b08428ec18b6f59a16b6"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/PROVENANCE_START.json",
+      "sha256": "869be79715b4619f3bdbcbe39888b8ab9eb96aea92ca557502b16c329a4cd53e"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RECALL_EVIDENCE.md",
+      "sha256": "8c4eebd5d55fc325daa423e4450b96e64c74705495515a9aff4da1a2057f6dfa"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RECALL_SEARCHES.json",
+      "sha256": "0756940d66c924c165004efc377af7757cd7f5a860deafc635dba7a06cd1115d"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RECEIPT.md",
+      "sha256": "9b45418c12d81dc7feefe0169cfb12e4ffe9407cce77875706b3fefecdf8ee98"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/REGRESSION_EVIDENCE.json",
+      "sha256": "037fb73dd34c5379fa9840d210ec461452fd495db70787fea16777793eca4365"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RETENTION_MANIFEST.json",
+      "sha256": "2939cf35dfc322a709fc5e25e5abcbc189246578c0252b6697cc53e3c7cfcff2"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RETENTION_RACE_INCIDENT.json",
+      "sha256": "80cf4f548610d36a81d5e06498e53867eeb022b192001bf4bb9de066ec456b7c"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RETENTION_VERIFICATION.json",
+      "sha256": "853892e14e9f7d13724f225db63704c1109cd3d2ee9edf41aa17c3d4a1ab4561"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/REVIEWS_FINAL.json",
+      "sha256": "bae7211ca7c5795183e7f8c7cf1c09b2ed2ccb24e5a7a14cc8e9025dcb68fa21"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/REVIEW_PASS1.json",
+      "sha256": "68c908eaff49e5dbf3d88a2aa24de70175865a2ad6fd557f222a76dd414140ee"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/REVIEW_PASS2.json",
+      "sha256": "bb01a906c38dc5305ea059c23f9858fb76cb6338bf1ada9ac545c9270b9de175"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/SCORER_TASK_CONSUMPTION.json",
+      "sha256": "b33634df6455ea2f564d609c21054ce81f4da80ca6829f3267a4504b825ea3dd"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/SEARCH_LAUNCHES.json",
+      "sha256": "81dcec7cc53bf10977ec87665e4a2222b6e54b691fa80df254870d37723bcc98"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/SEARCH_LAUNCHES_V2.json",
+      "sha256": "7054d05cb6789350c65418f384736d4736ac95211ee10deafc8220ee170ef37a"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/SEARCH_LAUNCH_V2_LAST.json",
+      "sha256": "8ace5ed692c2caf8861cfa9260faeab596575363a6968e3fb84f687c00977236"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/SHARD_SPLIT.json",
+      "sha256": "b5138ea85011a607ebdbe58516042dda70c1b53f1fde67344bf519e670adb077"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/TASK_DISPOSITIONS.json",
+      "sha256": "ddbda92f0ea5545a0728957cfe5074c5ce3517be62d5868e05ba2e3ebf00f539"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/VERIFY_LAUNCH.json",
+      "sha256": "2faf21a82d552d7e73d7540d088a1283f82c03386b5b7969102756a47cdce1f6"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/VERIFY_PLAN.json",
+      "sha256": "110ed8a3897387dc4846efa4f722c0cad5385da2280d4eec7f3cb0ea8e852b06"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/recall/design.txt",
+      "sha256": "37abe8ebb18dc25606350bf7dfba058cbcb2de46c562ddd396e86a5f6979c609"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/recall/equations.txt",
+      "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/recall/index_dag.txt",
+      "sha256": "0fe4456766de217a108fcddfa84e1a06c780628cf216b870996781db5da7bff3"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/recall/memos.txt",
+      "sha256": "f21126d34e476c997a6479d642f124360a2e04252b61aa35ddfac35d4b66ebaf"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/recall/selected_equations.json",
+      "sha256": "abf8beba797bef42af9f9774c9878717026bd1293c4fa34f2cccf991260ae854"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/recall/tasks.txt",
+      "sha256": "fcfa0ef1b09ebac0b2da413b02e9232beffb9e6039aca4014c54f2184d2ee420"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/DELIVERY_MANIFEST.json",
+      "sha256": "508e7e9e91d17b0caee2b43f930d09d710aa277780728c6076bb8e3c468ce216"
+    }
+  ],
+  "file_count": 41,
+  "exact_changed_file_set_matches": true,
+  "commit_message": "Record ddm_jrx1 K24 instrument gap with retained reference search [no-triality] [p0-ledger-ok]\n\n# CHECKPOINT_DISCIPLINE_WAIVED:keeper-arm 'ddm_jrx1' landing; resume custody = keeper apparatus (charter + done-receipt + persisted final message), not commit-body checkpoints (auto-appended by the serializer)\n\n",
+  "no_attribution_trailer": true,
+  "shared_index_unchanged_sha256": "d1a90de8c66035fe7d6a9b5238c4b0ba9c9d2eaeadb042dd5f816b2597a19dde",
+  "verification_git_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer_verify_objects.git",
+  "utc": "2026-09-16T05:07:34.201042+00:00"
+}

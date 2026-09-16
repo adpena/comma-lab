@@ -1,0 +1,24 @@
+{
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "task_id": "ddm_jrx1_verified_bundle_landing_20260916",
+  "consumer_store": ".omx/research/ddm_jrx1_20260916/serializer",
+  "fire_trigger": "Git-write-capable MAIN; reverify bundle, format-patch and all41 owned file hashes against BUNDLE_VERIFICATION.json",
+  "action": "Land fallback commit594eaaa86d0a0cdd9e0ea7e9e774b2567e5c6065 via required serializer/landing workflow; reconcile only own operational rows, preserving unrelated dirty files",
+  "serializer_rc": 17,
+  "main_commit_landed": false,
+  "fallback_commit": "594eaaa86d0a0cdd9e0ea7e9e774b2567e5c6065",
+  "base_head": "840e323fd63b4c09e0f7b756aa80310403ebd867",
+  "bundle": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.bundle",
+    "bytes": 1149865,
+    "sha256": "426cd9191f0931ec380c7f0e81992c42cfb38cc8abdebc76d94e7ecaf391ddf4"
+  },
+  "format_patch": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/serializer/20260916T050617.155434Z-38023/intended-commit.format-patch",
+    "bytes": 6759482,
+    "sha256": "3d260125062042f6261fd407b6ad1723254e3ffa726b05731667cc999edaac20"
+  },
+  "verification": ".omx/research/ddm_jrx1_20260916/BUNDLE_VERIFICATION.json",
+  "scientific_scope": "Instrument incomplete; landing does not complete the joint probe or move the frontier"
+}

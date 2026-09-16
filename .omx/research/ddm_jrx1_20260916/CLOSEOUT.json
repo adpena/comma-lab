@@ -1,0 +1,42 @@
+{
+  "utc": "2026-09-16T05:08:49.810419+00:00",
+  "scientific_verdict": "INSTRUMENT_INCOMPLETE",
+  "fixed_sample_search_complete": true,
+  "probe_complete": false,
+  "all18_launches_terminal": true,
+  "scorer_slot": "RELEASED",
+  "new_score_claim": false,
+  "serializer_rc": 17,
+  "bundle_verified_files": 41,
+  "main_landing": "PENDING_MAIN",
+  "owned_SSD_bytes": 616401965,
+  "owned_local_metadata_and_verification_bytes_before_this_receipt": 22966277,
+  "owned_source_bytes": 29877,
+  "total_owned_bytes_before_this_receipt": 639398119,
+  "under3GiB": true,
+  "shared_index_unchanged_sha256": "d1a90de8c66035fe7d6a9b5238c4b0ba9c9d2eaeadb042dd5f816b2597a19dde",
+  "post_serializer_receipts": [
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/SERIALIZER_RESULT.json",
+      "bytes": 13268,
+      "sha256": "58cc5ea23f9fe109ac96a0f727bb3959b87e94db4ba3ba843bd13567e8eb5356"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/BUNDLE_VERIFICATION.json",
+      "bytes": 9067,
+      "sha256": "811c47493b1dfa8272ea756127dcb6e46c1f3727bcebd408aabebd47f016d63f"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/LANDING_FIRE_ORDER.json",
+      "bytes": 1416,
+      "sha256": "ed29ede5be13b5ce372eec6cb62b815b5c28afda5101cea979d5cff335deb2aa"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/LANDING_TASK.json",
+      "bytes": 10738,
+      "sha256": "ce495b62aa4ff584003964794f45676683d53b49ba940736eb7b3d354952f0f0"
+    }
+  ],
+  "scientific_payload_manifest": ".omx/research/ddm_jrx1_20260916/RETENTION_MANIFEST.json",
+  "delivery_manifest_for_bundled_files": ".omx/research/ddm_jrx1_20260916/DELIVERY_MANIFEST.json"
+}
