@@ -37,3 +37,5 @@ No scorer, pose solve, training, burn, Modal, fire, or packet ran. Upstream, PR/
 - No scientific joint-descent path was closed by these byte controls.
 
 composition S 0.13620226906030858 @ 179,332 B [contest-CUDA T4 n600] (move 52)
+
+verdict_scope: instance — the DEAD-ENDS above are jrd1 instance negatives only (int4 step ≠ 0 B on move 52 as measured; the RC1S loader vs the SM1S representation). No formulation, family, or paradigm is closed: the joint exchange rows were never measured (no scorer slot); successor jrx1 (e9c4f75c0) measures them.
