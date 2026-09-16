@@ -431,9 +431,11 @@ registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
 Store **`/Volumes/APDataStore/pact/ddm_pd6/`**. APDataStore free space MEASURED at every heavy step:
 14 GiB at start, 11 GiB through the wave, 8.8 GiB at the first parse-back, 5.2 GiB when the
 pricer's own 8 GiB reserve correctly refused the repeat encode, 22 GiB after MAIN certified and
-removed three August raw trees, 26.8 GiB after this arm's own certified prune. Retained **3.2 GB**
-against the charter's 3 GiB cap, hashed in `RETENTION_MANIFEST.json` (2,412 files, 950 MB hashed;
-the rlc1 u8 planes and encoder states are excluded as rebuildable from hashed npz inputs).
+removed three August raw trees, 26.8 GiB after this arm's own certified prune. Retained **1.5 GiB**
+against the charter's 3 GiB cap, hashed in `RETENTION_MANIFEST.json` (2,414 files, 950,659,278 B
+hashed — every retained byte). The pricer's u8 planes and encoder states were removed AFTER the
+seal was built and are certified rebuildable: each npz they derive from is hashed in the retention
+manifest and each u8's own sha256 is recorded inside `rlc1_price/INPUTS.json`.
 **Vertigo was never opened for writing.**
 
 **Incident 1 — deletion before certification.** This arm's own duplicate-process cleanup
@@ -501,6 +503,23 @@ written (Incident 2 above, restored).
    mechanism (a selector mode? an adaptive state?) and therefore whether a screen could predict it
    cheaply; and whether a second price-first wave over the 3,104 proposals this arm's seg budget
    refused would find more, if the seg debt were paid elsewhere.
+
+## 18. verdict_scope
+
+**verdict_scope: INSTANCE.** What is RETRACTED is exactly one object: the **110-pair build of this
+arm's price-first set on the move-52 field**, retracted by its own cold parse-back, whose measured
+d_pose (2.0241378451781925e−05) is 4.90× the overlay-composed leg its admission used. Nothing
+about the price-first FAMILY is closed by that retraction — its successor, the 101-pair build, is
+sealed and its pose leg reproduces the admission to all digits.
+
+**verdict_scope: FORMULATION, for the measurement discipline.** What is MEASURED and now binding is
+that on THIS object, with THIS renderer, `ddm_sj1_joint_admission render-edits` reproduces the
+receiver's own odd frame for most edited pairs and not for all of them (101 of 110 here, and every
+one of the 490 unedited pairs). That is a statement about the overlay rail, not about any lever,
+and it applies to every arm that admits on an overlay-composed pose leg.
+
+**Nothing here closes pd5's multi-token formulation, reopens it, or touches it.** This arm changed
+the GENERATOR, not the run length; its admitted set is 84 single-token and 17 two-token proposals.
 
 <!-- # FORMALIZATION_PENDING: a measurement pass and a byte-closed candidate; the score arithmetic
 used throughout is the registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
