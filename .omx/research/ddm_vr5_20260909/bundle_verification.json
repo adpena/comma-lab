@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "git",
+    "bundle",
+    "verify",
+    "/Users/adpena/Projects/pact/.omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-commit.bundle"
+  ],
+  "returncode": 0,
+  "stdout": "The bundle contains this ref:\n43c4a084639a7ad96c097b857e47a0b510aaf613 refs/heads/serializer-fallback\nThe bundle requires this ref:\n32620e7c46d47d5408207ac60b408872aeb397fa \nThe bundle uses this hash algorithm: sha1\n",
+  "stderr": "/Users/adpena/Projects/pact/.omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-commit.bundle is okay\n",
+  "files_verified": 16,
+  "no_attribution_trailer": true
+}
