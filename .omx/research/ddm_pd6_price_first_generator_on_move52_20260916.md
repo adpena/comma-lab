@@ -389,3 +389,121 @@ an overlay: it is what the bytes do.
 
 <!-- # FORMALIZATION_PENDING: a measurement pass; the score arithmetic used throughout is the
 registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
+## 13. The chartered chain, closed
+
+| step | outcome |
+|---|---|
+| byte-close on the move-52 base | **179,286 B sha `aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957`**, identity control passed |
+| twins | encoder members byte-identical in **two processes** (`b3d5c52988f2a182…`); the CLOSED archive rebuilt from each stream in separate directories is byte-identical too |
+| cold n600 public parse-back | 936.7 s CPU at the contest thread count, `decoded_field_matches_admitted: true`, raw sha `8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b` |
+| manifest (Catalog #420) | 51 rows, all hashes re-verified from OUTSIDE the tree, all runtime dependencies listed, derived listing validated |
+| literal census (rule 118) | **CLEAR** — the only files differing from move 52 are `archive.zip`, the two archive pins inside `inflate.py`, and the derived `MANIFEST.sha256` that restates them. Both added literals are properties of the archive the receiver must refuse to open if they disagree; nothing video-derived entered the receiver code |
+| candidate + frontier public smokes | **identical behaviour**: both `REACHED_CUDA_GATE` on `inflate.sh` (2.06 s) and both `REACHED_TOKEN_DECODE` on the 300 s public-path probe |
+| decode wall clock | **INHERITED** from move 52's own `t4_direct` leg, 1,067.804398441 s against the 1,260 s limit; the pr18 **behaviour** digest matches exactly (`9f6e71680a13d8598974ee13f78a1a72759a758681e6d86b7b288cc105442890`). The legacy raw identity digest differs, as it must: it includes the two archive pins |
+| **seal** | **`SEAL_ddm_pd6_price_first_generator_contest_cuda.json`, seal sha `85f68538d0475537f7f1d832c52c101406c4c59e257926ab546c7968e9fcc658`**, axis `contest_cuda`, admit bar −2e−05 |
+
+**MAIN fires.** This arm ran no Modal call, wrote no authorization, no completion and no packet.
+
+## 14. Falsifiers, as pre-registered
+
+| falsifier | outcome |
+|---|---|
+| F1 the pricer does not reproduce move 52's own archive | **does not fire** — 179,332 B sha `ae59c510…`, twins in-process AND a second process, WITH the capture wrappers installed |
+| F2 the inherited decode is not move 52's own | **does not fire** — raw re-hashed to `ccb89e3e…eced` |
+| F3 the per-proposal price does not resolve above its noise | **does not fire, but barely** — noise floor 6.758 bits (59 held-fixed controls) against a 12.424-bit within-pair range: **1.84×**, where pd5 had 3.3×. This arm's sheets edit 588 pairs, not 156 |
+| F4 fewer than 50 pairs carry a cheap proposal with positive resolved-pose credit | **does not fire** — **279** pairs do, and 128 pay at their own real price |
+| F5 the admitted set nets worse than −2e−05 S | **does not fire** — **−1.036809e−04**, 5.184 bars, on legs measured on the shipped bytes' own decode |
+| F6 the set re-price differs from the ledger by >10 % after iteration | **does not fire** — −23.24 % → **−5.75 %** in one iteration |
+| (unregistered, and the one that mattered) the overlay pose leg is the shipped pose leg | **FIRED** on the 110-pair build, was diagnosed to 9 pairs, and the 101-pair successor reproduces the admission to **all digits** |
+
+## 15. What this does NOT claim
+
+1. **No score of any kind.** Every S here is a PROJECTION on measured legs. Only `upstream/evaluate.py` on shipped bytes is a score, and MAIN fires. No Modal call, no authorization, no completion, no packet.
+2. **The distortion legs are `[macOS-CPU advisory]`**, frozen CPU-torch PoseNet and SegNet against DALI-lineage GT. The seg leg is the jg1 instrument's count carried to T4 by the same-instrument ratio 1.0006662543837985 — the same carry move 52's own leg uses, not an independent T4 measurement.
+3. **The decode wall clock is INHERITED, not measured on this candidate.** Its scope is stated in the seal: identical normalized receiver code; the candidate's payload-dependent time was not re-measured on T4. The CPU decode did run, in 936.7 s.
+4. **The 110-pair candidate is RETRACTED**, and every number attached to it (179,287 B, S 0.13609481, 5.373 bars) with it. It is left in the memo because the refutation is the finding.
+5. **The nine bad pairs have no identified mechanism.** They do not differ from the 101 in token count, token move, or seg cost. What is measured is that their decoded odd frame differs from the overlay's and their pose credit does not survive; what is NOT measured is why. A successor must decode, not predict.
+6. **9.647 → 2.163 bits/token is THIS pool at THIS edit shape on THIS field**, measured once. None of it is a law.
+7. **pp1's twelve floor pairs stay excluded** on pp1's measurement, and they are 56.7 % of the n600 pose mass.
+
+## 16. Custody, and two incidents recorded rather than hidden
+
+Store **`/Volumes/APDataStore/pact/ddm_pd6/`**. APDataStore free space MEASURED at every heavy step:
+14 GiB at start, 11 GiB through the wave, 8.8 GiB at the first parse-back, 5.2 GiB when the
+pricer's own 8 GiB reserve correctly refused the repeat encode, 22 GiB after MAIN certified and
+removed three August raw trees, 26.8 GiB after this arm's own certified prune. Retained **3.2 GB**
+against the charter's 3 GiB cap, hashed in `RETENTION_MANIFEST.json` (2,412 files, 950 MB hashed;
+the rlc1 u8 planes and encoder states are excluded as rebuildable from hashed npz inputs).
+**Vertigo was never opened for writing.**
+
+**Incident 1 — deletion before certification.** This arm's own duplicate-process cleanup
+SIGTERMed three sheet encodes: `pgrep -f "encode --field X"` matches BOTH the launcher supervisor
+and its python child, and killing the supervisor tears down the group. Their partial checkpoints
+were then bound to a superseded `INPUTS.json` (registering sheets 05–07 had rewritten it), so the
+pricer's own resume guard refused them — correctly. This arm deleted those checkpoints and
+certified AFTERWARDS, which is the wrong order: `DELETION_CERTIFICATE.json` records the gap
+plainly, along with the positive control that makes the deletion visibly unnecessary (sheet 07,
+NOT deleted, resumed cleanly from its own frame-50 checkpoint). **LAW: never pgrep-kill a detached
+launcher's process group, and never register a field while an encode is in flight.**
+
+**Incident 2 — a write into a sister store.** A `sed -i.bak` aimed at adapting pd3's census
+producer wrote into `/Volumes/APDataStore/pact/ddm_pd3/make_census.py`. It was restored from the
+untouched `.bak` inside the same minute, and `find -newermt` over pd1–pd5, jrd1, jrx1 and jrx2
+reports **0 files newer than this arm's start**. Recorded because a boundary that is only honoured
+when nobody looks is not a boundary.
+
+Every bulk payload deleted for the retention cap was hashed first, with the exact command that
+rebuilds it, in `BULK_CERTIFICATE.json`: the two 3.66 GB decodes and the 1.83 GB overlay.
+
+| path | what |
+|---|---|
+| `BIND_RECEIPT.json` · `PREREGISTRATION.json` · `SMOKE_TIMING.json` · `PREFIX_BIAS.json` | the binding, the prediction + falsifiers written before any credit, the declared budget, and the anti-conservative-prefix warning |
+| `capture/frames/frame_????.npz` · `capture/CAPTURE.json` | the coder's own price rows, 600 frames |
+| `plan/CANDIDATES.json` · `CANDIDATE_CENSUS.json` · `CHEAP_GEOMETRY.json` · `DISJOINTNESS.json` · `HEADROOM.json` | the cheap half, where it lives, that it is a different pool, and what it needed from credit |
+| `sheets/sheet_0?.npz` · `SHEETS.json` · `priced_rows.jsonl` · `PRICE_MERGE.json` · `CHEAP_HALF.json` | the eight sheets, the 4,291 real-encode charges, the noise floor and the sensitivity |
+| `search/wave/realized_*.jsonl` · `screen_*.jsonl` · `WAVE_ANALYSIS.json` · `CREDIT.json` | **every realized row and every screened proposal** — 1,203 realized, 4,307 screened, winners and losers |
+| `setprice/STATE.json` · `set_0?.npz` · `close/*/CLOSE.json` · `close/*/candidate_archive.zip` | the set-price iteration, the size ladder, and every closed archive including the retracted one |
+| `pose/pose_stale.npy` · `pose_resolved.npy` · `pose_on_decode.npy` · `pose_on_decode2.npy` · `refine/` | the four pose vectors, including both decodes |
+| `seg_final/` · `seg_final2/argmax_n600.npy` | the two decodes' own SegNet argmaxes |
+| `parseback*/PARSEBACK_RESULT.json` · `PUBLIC_SMOKE.json` · `LITERAL_CENSUS.json` · `seal_inputs/` | the decode receipts, the smokes, the rule-118 census and the seal inputs |
+| `DELETION_CERTIFICATE.json` · `BULK_CERTIFICATE.json` · `RETENTION_MANIFEST.json` | the custody record, honest about its own gap |
+
+Producer: `experiments/ddm_pd6_price_first.py` (`bind | capture | candidates | sheets | pick |
+price-merge | cheap-half | realize | credit | enrich`), ruff-clean, two review passes; plus pd4's
+`price-merge`/`carry`/`assemble`/`run`, pd5's `setprice`/`carry-from-set`/`setabsorb`, sj1's
+`ddm_sj1_rlc1_price` and `ddm_sj1_joint_admission`, and pd1's `candidate_tree` — all unchanged.
+One function is rebound PROCESS-LOCALLY and restored in `finally`: `pd4._encode_bits`, so pd4's
+merge reads `pd6sheet…` inside pd6's own store. The capture's two `LaneMixer` wrappers are pure
+observers that call the shipped method and return its value unchanged; the control identity is the
+proof. Nothing under `ddm_pd1`–`ddm_pd5`, `ddm_sj1`, `ddm_jr*` or `/Volumes/VertigoDataTier/` was
+written (Incident 2 above, restored).
+
+## 17. What this hands the next arm
+
+1. **The price-first generator WORKS, and it is the cheapest thing this campaign has measured.**
+   2.163 bits/token on the cheapest sheet against pd5's 12.900–14.271; two-token proposals at
+   3.496 pooled; 9.1 % of charged proposals carry a NEGATIVE real charge. pd4's derived 10.891
+   bits/token target is not merely met, it is beaten by 5×. **Read pd5's "do not buy price on this
+   field again" as answered: the price was never the problem, the GENERATOR was.**
+2. **The decisive new law is a MEASUREMENT DISCIPLINE, not a lever.** `render-edits` does not
+   reproduce the receiver's own odd frame for every edited pair. The overlay PROPOSES a pose
+   credit; only the decode CHARGES it. On this pass 9 of 110 admitted pairs failed that check and
+   would have shipped a candidate 4.9× worse than its projection. **Every successor that admits on
+   an overlay pose leg must parse back and re-measure before it believes its own number** — and
+   the nine cannot be predicted from the edit, so the decode is not optional.
+3. **The seg screen should be a per-pair budget, not a flat one.** `floor(base[pair]·pose_unit /
+   seg_cell)` capped: 398 of 588 pairs can pay for no cells at all and 125 for two or more. A flat
+   screen wastes refines on light pairs and discards what heavy pairs can afford.
+4. **Set pricing plus a SIZE ladder on real CLOSED archives is now cheap and it moved the pick.**
+   The ladder chose neither the largest set, nor the smallest archive, nor the λ-sweep's own
+   choice.
+5. **What is still unmeasured on this object:** whether the nine-pair render disagreement has a
+   mechanism (a selector mode? an adaptive state?) and therefore whether a screen could predict it
+   cheaply; and whether a second price-first wave over the 3,104 proposals this arm's seg budget
+   refused would find more, if the seg debt were paid elsewhere.
+
+<!-- # FORMALIZATION_PENDING: a measurement pass and a byte-closed candidate; the score arithmetic
+used throughout is the registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
+
+Own-vehicle frontier (unchanged by this arm — MAIN fires):
+**S 0.13620226906030858 @ 179,332 B [contest-CUDA T4 n600]** (move 52).
