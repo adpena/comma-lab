@@ -23,9 +23,16 @@ on the composed overlay this arm rendered.
 **The price lever hit its target and the bar still did not fall.**
 
 pd4 DERIVED, by bisection on its own pool, that 10.891 bits per changed token would clear the
-−2e−05 bar. This arm's admitted subset priced at **9.647 bits per changed token** by its own
-real encode — better than pd4's derived target, better than pd4's measured 12.000, better
-than pass 8's clustered 8.93 by only 8 % — and its net is **−1.589e−05, 0.795 bars**.
+−2e−05 bar. This arm put THREE candidate sets through their own exact encodes; the cheapest
+priced at **8.976 bits per changed token** — better than pd4's derived target, better than
+pd4's measured 12.000, and within 0.5 % of pass 8's clustered 8.93 — and the best net any of
+them reaches is **−1.766e−05, 0.883 bars**.
+
+| set | pairs / tokens | exact archive | Δ B | bits/token | rate | seg | pose | **net** | **bars** |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| **00** (ledger optimum) | **22 / 41** | **179,378 B** `db78a913…` | **+46** | **8.976** | +3.06295e−05 | +2.54483e−06 | **−5.08317e−05** | **−1.765740e−05** | **0.883** |
+| 01 (the λ-sweep's admitted set) | 17 / 34 | 179,373 B `af268709…` | +41 | 9.647 | +2.73002e−05 | +2.54483e−06 | −4.57364e−05 | −1.589134e−05 | 0.795 |
+| 02 (the set-price fixed point) | 16 / 33 | 179,371 B `9e186f4f…` | +39 | 9.455 | +2.59685e−05 | +2.54483e−06 | −4.43557e−05 | −1.584236e−05 | 0.792 |
 
 | falsifier | outcome |
 |---|---|
@@ -33,16 +40,27 @@ than pass 8's clustered 8.93 by only 8 % — and its net is **−1.589e−05, 0.
 | F2 the base is move 52's own decode | **does not fire** — sha `ccb89e3e…eced`, re-hashed by this arm |
 | F3 the per-proposal price resolves above its noise | **does not fire** — noise median 2.905 bits (106 repeated proposals) against a within-pair range of median 9.555 bits |
 | F4 3- and 4-token runs are not cheaper per token | **does not fire** — median bits/token 14.834 → 10.363 → 9.209 → **8.659** by run length |
-| F5 the admitted set's real bits/token ≥ 11.0 | **does not fire** — **9.647** |
+| F5 the admitted set's real bits/token ≥ 11.0 | **does not fire** — **8.976 / 9.647 / 9.455** across the three sets |
 | F6 composition is summed, not realized | **does not fire** — realized fraction **1.0219**; 577 of 578 unedited pairs bit-identical |
-| F7 the set re-price differs from the ledger by > 10 % after iteration | **does not fire** — **+8.11 % → −1.08 % in ONE iteration** |
-| **F8 the admitted set clears −2e−05** | **FIRES — −1.589e−05, 0.795 bars** |
+| F7 the set re-price differs from the ledger by > 10 % after iteration | **does not fire** — **+8.11 % → −1.08 % → +0.38 %**, fixed point at iteration 3 |
+| **F8 the admitted set clears −2e−05** | **FIRES on all three sets — best −1.766e−05, 0.883 bars** |
 
 **F8 firing CLOSES the multi-token joint-proposal formulation on this object**, per the
 charter's pre-registered rule. Say it plainly: three waves of search, 1,441 realized rows,
-718 real-encode prices and two exact archives later, **the pointer did not move and this arm
-did not build a candidate.** What the pass buys the campaign is not a row; it is the
+718 real-encode prices and **three** exact archives later, **the pointer did not move and this
+arm did not build a candidate.** What the pass buys the campaign is not a row; it is the
 knowledge that the price corner is now spent, and WHY.
+
+**And one thing that only the third archive could show.** The set-price iteration SHRANK the
+set — 22 → 17 → 16 pairs — and every shrink made the EXACT net WORSE: 0.883 → 0.795 → 0.792
+bars. The iteration converges the ledger onto the truth (§6) but its objective is frame-local
+bits, and frame-local bits are a LESS complete picture of a SMALLER set: the spill onto
+unedited frames runs **10.4 % → 19.2 % → 19.6 %** across the three encodes. So the cure for
+pd4's selection bias introduces a new bias of its own at the set-size margin — it over-charges
+the marginal pair and drops pairs the container was in fact carrying almost free. **The five
+pairs iteration 1 dropped cost 5 bytes and carried −5.10e−06 S of pose.** The lesson is not
+"don't iterate"; it is **iterate to converge the ledger, then price the SIZE ladder on real
+archives and take the best** — which is what this arm did, and which cost two extra encodes.
 
 ---
 
@@ -191,12 +209,19 @@ re-encode the SELECTED SET as one field and re-run the admission on the set's ow
 |---:|---:|---:|---:|---:|---:|---:|
 | 0 | 22 | 41 | 308.618 | 333.660 | **+8.11 %** | 179,378 B sha `db78a913…` (+46 B) |
 | 1 | 17 | 34 | 268.857 | 265.967 | **−1.08 %** | **179,373 B sha `af268709…` (+41 B)** |
-| 2 | 16 | 33 | 248.271 | *(bound, §8)* | — | — |
+| 2 | 16 | 33 | 248.271 | 249.205 | **+0.38 %** | 179,371 B sha `9e186f4f…` (+39 B) |
+| 3 | 16 | 33 | — | — | — | **`set_repeats_previous: true` — FIXED POINT** |
 
 **ONE iteration takes the residual from +8.11 % to −1.08 %** — inside the 2.9-bit noise floor
-on a 266-bit set. F7 does not fire, and pd4's 36.3 % is not a property of the estimator: it was
-a property of choosing with it. Two things did the work: eight sheets instead of six (more
-independent draws per pair), and the iteration itself.
+on a 266-bit set — and the loop reaches a fixed point at iteration 3. F7 does not fire, and
+pd4's 36.3 % is not a property of the estimator: it was a property of choosing with it. Two
+things did the work: eight sheets instead of six (more independent draws per pair), and the
+iteration itself.
+
+**But the converged set is not the best set** (§0). Frame-local spill runs 10.4 % / 19.2 % /
+19.6 % across the three encodes — the rail is measurably less complete on a smaller edit set —
+so the iteration's own objective over-charges the marginal pair. The honest procedure this
+pass arrives at: **converge the ledger, then price the SIZE ladder on real archives.**
 
 Iteration ≥ 1 may only DROP pairs, never swap a pair's proposal. That is enforced in code
 (`carry-from-set` pins the candidate space to one iteration's choices) because the realization
@@ -249,45 +274,49 @@ under a carrier-only re-solve — pd4 saw the same single pair; it is not banked
 | **S projected** | **0.13618637772083570** | 100·0.00010306544825882935 + √(10·4.1508575238478585e−06) + 25·179,373/37,545,489 |
 | **net vs move 52** | **−1.5891339472884347e−05** | **0.795 bars** · **0.686× the 34.8 B container-break sd** |
 
-**F8 FIRES.** The margin is smaller than the campaign's standing container-break lottery, so
-even the sign of a single re-pack could swallow it. No candidate was built, no archive staged,
-no parse-back run, nothing sealed — pass 8's and pd4's precedent, applied.
+**F8 FIRES on the admitted set, and on both of its neighbours** — the exact ladder is in §0:
+0.883 / 0.795 / 0.792 bars for 22 / 17 / 16 pairs. The best margin, −1.766e−05, is **0.762× the
+34.8 B container-break sd**, so the sign of a single re-pack could swallow it. No candidate was
+built, no archive staged, no parse-back run, nothing sealed — pass 8's and pd4's precedent,
+applied.
 
 The admitted set's composition by run length: **1-token 5 · 2-token 9 · 3-token 1 · 4-token 2**
 — 12 of 17 admitted pairs carry a multi-token run, and 3 carry a run of 3 or 4. The longer runs
 are not decoration; they are a third of the admitted mass and they are the cheapest rows in it
 (pair 14, 4 tokens at 5.55 bits/token; pair 221, 3 tokens at 5.44).
 
-**The tail is bounded, not open.** Iteration 2 drops one further pair to 16/33 at an estimated
-net of −1.806e−05 on frame-local bits. Iteration 1's estimate was −1.773e−05 and its EXACT
-came in at −1.589e−05, a container-and-sqrt correction of +1.84e−06; applying the same
-correction bounds iteration 2 near **−1.62e−05 (0.81 bars)**. That is a DERIVED bound on a
-measured relation, not a measurement — but it is the same side of the bar, and one dropped
-pair cannot close a 20 % gap. *(Receipt `setprice/STATE.json`; the iteration-2 encode was
-launched and its exact bytes, if harvested, belong in a successor's ledger.)*
+**The tail is MEASURED, not bounded.** Iteration 2's own exact archive is **179,371 B sha
+`9e186f4f7121701249cafd86187d9fec53e1b470d4c30d220761c94db99ca3b6`, +39 B**, and its net is
+**−1.584236e−05 (0.792 bars)** — the worst of the three, not the best. Iteration 3 repeats
+iteration 2's set, so the loop is at a fixed point and the ladder is complete. Receipts:
+`SET_LADDER.json`, `setprice/STATE.json`.
 
 ---
 
 ## 9. What the pass settles
 
 1. **The price lever is now SPENT on this object.** pd4 asked for 10.891 bits/token; pd5
-   delivered **9.647** on the admitted subset and **8.659** median on 4-token runs, and the
-   bar did not fall. pd4's 10.891 was a bisection on a ladder that assumed each pair's best
-   proposal keeps its credit at a lower price; the composed, admitted credit is smaller than
-   that ladder implies. **Read pd4's threshold as retired: a price target is not a score.**
+   delivered **8.976** on its cheapest real archive and **8.659** median on 4-token runs, and
+   the bar did not fall. pd4's 10.891 was a bisection on a ladder that assumed each pair's
+   best proposal keeps its credit at a lower price; the composed, admitted credit is smaller
+   than that ladder implies. **Read pd4's threshold as retired: a price target is not a score.**
 2. **Longer runs are genuinely cheaper and genuinely no better at buying pose.** Marginal bits
    5.6 / 6.6 / 4.7; marginal credit improves on 43 % / 46 % / 37 %. Every extension is a fair
    coin on the pose axis and a loaded one on the seg axis (+2 cells on 43 of 117 best rows).
    The discount compounds; the credit does not. **That asymmetry, not the price, is the wall.**
-3. **Set pricing WORKS and should be standard.** 36.3 % → **1.08 %** in one iteration. Any
-   successor that ranks by a measured per-proposal price must re-encode the chosen SET before
-   believing its number; this arm shows the correction is one encode deep.
+3. **Set pricing WORKS as a LEDGER correction and MISLEADS as a selection rule.** The residual
+   goes 36.3 % → 8.11 % → −1.08 % → +0.38 % and reaches a fixed point in three iterations — so
+   any successor that ranks by a measured per-proposal price must re-encode the chosen SET
+   before believing its number. But the converged set is the WORST of the three on exact bytes
+   (0.792 bars against 0.883 for the unconverged ledger optimum), because frame-local spill
+   grows as the edit set shrinks (10.4 % → 19.2 % → 19.6 %). **Converge the ledger; then price
+   the SIZE ladder on real archives and take the best.**
 4. **pd4's 45 %-prefix cluster scope is closed.** The remaining 101 pairs were walked; the
    2-token family's verdict is now population-wide.
 5. **The pool is not short of credit and it is no longer short of price.** 22 of 156 pairs pay
-   at the sheet price and 17 survive the composed admission. What is short is the JOINT
-   quantity: the 17 admitted pairs together remove **1.347 %** of the n600 pose mean, and that,
-   minus 41 bytes and 3 seg cells, is 0.795 bars.
+   at the sheet price and all 22 survive their own exact encode. What is short is the JOINT
+   quantity: those 22 pairs together remove **1.50 %** of the n600 pose mean, and that, minus
+   46 bytes and 3 seg cells, is 0.883 bars.
 
 **verdict_scope: FORMULATION, on the move-52 field.** What is MEASURED and closed is
 pose-directed token pre-distortion in runs of 1–4 tokens grown along the pose-saliency ridge
@@ -316,7 +345,11 @@ coder contexts.
    DALI-lineage GT. This arm's base is 4.207535785085938e−06 against the T4 print 4.21e−06.
 5. **9.647 bits/token is THIS subset at THIS edit shape on THIS field**, measured once, as
    15.485 is this pool's isolated-token pooled price. None is a law.
-6. **The iteration-2 bound in §8 is DERIVED**, from a single measured estimate→exact relation.
+6. **Every net in §0 and §8 is MEASURED on that set's own real archive.** Nothing in the
+   ladder is extrapolated. The pose leg of each set is the composed resolved vector restricted
+   to that set, from ONE 600-pair re-solve on the 22-edit overlay; a pair's re-solve depends
+   only on its own render, so it transfers across the three sets, but no set other than 22
+   was independently re-rendered.
 7. **The decode is inherited** (§1), with its warrant stated; this arm did not produce a third
    independent parse-back.
 8. **pp1's twelve floor pairs stay excluded** on pp1's measurement. Nothing here reopens them.
@@ -343,7 +376,7 @@ APDataStore free space MEASURED at each heavy step: 22 GiB at start, 22 GiB befo
 | `assemble/` · `admission/` | the carried rows pinned to set 00, the candidate field, the pass rows, the spliced ledger, the λ-sweep and its admitted field |
 | `pose/overlay/` · `pose_stale.npy` · `pose_resolved.npy` · `refine/` | the 600-pair overlay, the two n600 vectors, the per-pair re-solve and the merged codes |
 | `controls/CONTROL_IDENTITY.json` · `controls/SWEEP_RULE_CONTROL.json` · `controls/ADMITTED_SUBSET_TWINS.json` · `controls/FRESH_STORE_CONTROL.json` | the pricer's identity gate, the selection-rule cross-check against pd4, the admitted subset's cross-process twins, and the proof that the fresh-store parameter is load-bearing |
-| `PRICE_BY_RUN_LENGTH.json` · `YIELD.json` · `THREE_LEG.json` | the headline, the admitted histogram and the exact three-leg arithmetic |
+| `PRICE_BY_RUN_LENGTH.json` · `YIELD.json` · `THREE_LEG.json` · `SET_LADDER.json` | the headline, the admitted histogram, the exact three-leg arithmetic, and the exact ladder over all three sets |
 | `PIPELINE_PLAN.md` · `progress.sh` · `three_leg.py` · `launch_joint.sh` | the chain as exact commands and this arm's own producers |
 
 Producer: `experiments/ddm_pd5_multitoken.py` (`bind | prereg | seeds | run-search |
@@ -367,8 +400,10 @@ swaps are declared in the module's docstrings. Nothing under `ddm_pd1`–`ddm_pd
    from pose saliency and pricing afterwards. This arm did the latter, like every pass before
    it. It is the last untried thing inside this formulation, and §9's closure is scoped to
    exclude it.
-3. **Set pricing is cheap and it is now standard.** One extra encode per candidate set takes
-   the ledger error from 36 % to 1 %. Never believe a chosen subset's ledger again.
+3. **Set pricing is cheap and it is now standard — but price the SIZE ladder too.** One extra
+   encode per candidate set takes the ledger error from 36 % to 1 %; two more showed the
+   converged set is not the best one. Never believe a chosen subset's ledger, and never
+   believe the fixed point without pricing its neighbours.
 4. **The seg screen is the binding constraint on extensions, not the coder.** 43 of 117 best
    extensions cost +2 cells. A formulation that pays the seg debt somewhere else — or that
    grows along the argmax interior rather than the pose ridge — sees a different pool.
