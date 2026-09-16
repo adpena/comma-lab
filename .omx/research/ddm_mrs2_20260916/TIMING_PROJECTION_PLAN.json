@@ -1,0 +1,23 @@
+{
+  "schema": "mrs2_timing_projection_plan.v1",
+  "predeclared_before_C_implementation": true,
+  "rounded_mrs1_ratio": 1.2661058383664079,
+  "rounded_mrs1_formula": "host_seconds * 1760.9 / 1390.8",
+  "original_measured_ratio": 1.2660954973462792,
+  "original_formula": "host_seconds * 1185.899645171 / 936.6589231670368",
+  "projection_threshold_seconds": 1200,
+  "risk_ceiling_seconds": 1260,
+  "original_host": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd6/parseback2/PARSEBACK_RESULT.json",
+    "sha256": "fa119d37c663cb87947f265bab0a424e50a6e4acb5d35c378271049049998417",
+    "bytes": 4631
+  },
+  "original_T4": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd6_fire/run2/MODAL_REMOTE_RESULT.json",
+    "sha256": "fbea310f35317683800cf57b6dd17ef28b5dc16f819f7d7df51b4625642f24ba",
+    "bytes": 162834
+  },
+  "projection_only": true,
+  "admission": false,
+  "caveat": "The exact mrs1 plan uses the original receiver ratio too. These are rounded and full-precision variants of the same assumption, not independent calibrations; changed work share and T4 hardware remain unmeasured."
+}

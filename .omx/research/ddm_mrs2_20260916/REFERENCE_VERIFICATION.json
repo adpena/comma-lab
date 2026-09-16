@@ -1,0 +1,16 @@
+{
+  "done": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mrs2_reference_verify.done",
+    "bytes": 406,
+    "sha256": "0a9c3705ec9cb7da79fb964087565cec992b801a8a237bbf4ccefcca8cecd964"
+  },
+  "proof": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs2/profile_native/RESULT.json",
+    "bytes": 54141,
+    "sha256": "9adb4592a88e1cbe4e3a7f2397db5cdc84f858cf3029cb5730e220982bfa243e"
+  },
+  "matched_pairs": 48,
+  "reference_test": "experiments/ddm_mrs2_audit/python_reference_equivalence_test.py",
+  "reused_completed_state_bound_vectors": true,
+  "score_claim": false
+}

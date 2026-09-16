@@ -1,0 +1,12 @@
+{
+  "unchanged_top_level_definitions": 135,
+  "changed_top_level": [
+    "ArithmeticDecoder"
+  ],
+  "added_top_level": [
+    "load_range_library"
+  ],
+  "only_changed_class_method": "ArithmeticDecoder.decode",
+  "python_311_grammar": true,
+  "c11_pedantic_errors_build": true
+}

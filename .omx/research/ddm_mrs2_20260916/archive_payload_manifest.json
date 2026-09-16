@@ -1,0 +1,22 @@
+{
+  "archive": {
+    "path": "/Users/adpena/Projects/pact/submissions/mrs2/archive.zip",
+    "bytes": 179286,
+    "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+  },
+  "members": [
+    {
+      "name": "p",
+      "bytes": 179186,
+      "compressed_bytes": 179186,
+      "sha256": "a26208c5cf890d81f23cc083bbf3cd85baf34123c28f4d850e9066d7fce0ba9c"
+    }
+  ],
+  "unchanged_from": {
+    "path": "/Users/adpena/Projects/pact/submissions/mrs1/archive.zip",
+    "bytes": 179286,
+    "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+  },
+  "video_derived_content_in_C": false,
+  "score_claim": false
+}

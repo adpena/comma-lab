@@ -1,0 +1,15 @@
+{
+  "status": "local_proofs_complete_timing_screen_failed",
+  "as_of_utc": "2026-09-16T16:45:52.643437+00:00",
+  "cold_pairs": 600,
+  "C_Python_pairs": 48,
+  "absent_compiler_pairs": 48,
+  "projection_screen_pass": false,
+  "fresh_reader_owner": "MAIN",
+  "serializer_result_store": "/Volumes/APDataStore/pact/ddm_mrs2/serializer/RESULT.json",
+  "source_delivery_store": "/Volumes/APDataStore/pact/ddm_mrs2/SOURCE_DELIVERY.json",
+  "retention_store": "/Volumes/APDataStore/pact/ddm_mrs2/RETENTION_SUMMARY.json",
+  "landing_claim": false,
+  "score_claim": false,
+  "promotable": false
+}

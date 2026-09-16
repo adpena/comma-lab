@@ -1,0 +1,27 @@
+{
+  "schema": "mrs2_compiler_absent_bare_smoke.v1",
+  "axis": "[macOS-CPU advisory]",
+  "result": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs2/public_fallback/RESULT.json",
+    "bytes": 8898,
+    "sha256": "a5a41f8b98320b8077cc88175fbc905be3e712685743c7db79a6d12cf7ffc068"
+  },
+  "pairs": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs2/public_fallback/FALLBACK_PAIRS.json",
+    "bytes": 66199,
+    "sha256": "39f7efed6b92364e2d50946e00023bfcdc4ed037f884d6d04954e6fab606bbdf"
+  },
+  "done": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mrs2_public_fallback.done",
+    "bytes": 406,
+    "sha256": "339b0ab96fb59b9c49087803ad1b205e98ed9b4a9c7b949c9e464527b6f52edc"
+  },
+  "matched_pairs": 48,
+  "matched_tokens": 9437184,
+  "compiler_hidden_from_PATH": true,
+  "stale_native_library_removed": true,
+  "full_cold_n600": false,
+  "bare_venv": true,
+  "score_claim": false,
+  "promotable": false
+}

@@ -1,0 +1,34 @@
+{
+  "original": {
+    "path": "/Users/adpena/Projects/pact/submissions/mrs2/range_decoder.so",
+    "bytes": 33472,
+    "sha256": "3fef2d7ae7555d301edee68095b94cb133c563e3cb65abdd735bbc176cdfa926"
+  },
+  "retained": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs2/retained_build/range_decoder.strict.so",
+    "bytes": 33472,
+    "sha256": "3fef2d7ae7555d301edee68095b94cb133c563e3cb65abdd735bbc176cdfa926"
+  },
+  "source": {
+    "path": "/Users/adpena/Projects/pact/submissions/mrs2/range_decoder.c",
+    "bytes": 4018,
+    "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec"
+  },
+  "command": [
+    "cc",
+    "-O2",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-pedantic-errors",
+    "-shared",
+    "-fPIC",
+    "submissions/mrs2/range_decoder.c",
+    "-o",
+    "submissions/mrs2/range_decoder.so"
+  ],
+  "reason": "Generated test library externalized after parity proof; the public deliverable remains exactly five files.",
+  "score_claim": false,
+  "promotable": false
+}

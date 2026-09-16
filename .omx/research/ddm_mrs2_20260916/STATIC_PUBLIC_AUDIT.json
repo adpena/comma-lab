@@ -1,0 +1,46 @@
+{
+  "allowed_external_imports": [
+    "argparse",
+    "bisect",
+    "brotli",
+    "collections",
+    "ctypes",
+    "dataclasses",
+    "hashlib",
+    "lzma",
+    "math",
+    "numpy",
+    "pathlib",
+    "struct",
+    "sys",
+    "torch",
+    "types",
+    "zipfile"
+  ],
+  "no_forbidden_public_identifiers": true,
+  "no_environment_switches": true,
+  "no_added_dependency_pins": true,
+  "no_wide_integer_extensions": true,
+  "archive_unchanged": true,
+  "strict_C11_command": [
+    "cc",
+    "-O2",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-pedantic-errors",
+    "-fsyntax-only",
+    "submissions/mrs2/range_decoder.c"
+  ],
+  "strict_C11_returncode": 0,
+  "C11_output": "",
+  "public_source": {
+    "inflate.py": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425",
+    "README.md": "d5058a3a3274647166a1aa35dff222b3dc8f943fd653ecd033cfbc07377e7878",
+    "range_decoder.c": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec",
+    "inflate.sh": "02f3a545b4f99d04e3b823675a6442c29d947bf21a0f0ebae8bfbaaeecae4089",
+    "archive.zip": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+  },
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.4.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n"
+}

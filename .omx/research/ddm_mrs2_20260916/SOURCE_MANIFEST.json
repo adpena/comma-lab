@@ -1,0 +1,63 @@
+{
+  "schema": "mrs2_source_manifest.v1",
+  "source_head": "584f5d9a0f1c7ac573caa5e1e9dd32ce2caa8e8b",
+  "files": [
+    {
+      "path": "submissions/mrs2/inflate.sh",
+      "bytes": 197,
+      "sha256": "02f3a545b4f99d04e3b823675a6442c29d947bf21a0f0ebae8bfbaaeecae4089",
+      "physical_loc": 6
+    },
+    {
+      "path": "submissions/mrs2/inflate.py",
+      "bytes": 138152,
+      "sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425",
+      "physical_loc": 2715
+    },
+    {
+      "path": "submissions/mrs2/range_decoder.c",
+      "bytes": 4018,
+      "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec",
+      "physical_loc": 100
+    },
+    {
+      "path": "submissions/mrs2/README.md",
+      "bytes": 1559,
+      "sha256": "d5058a3a3274647166a1aa35dff222b3dc8f943fd653ecd033cfbc07377e7878",
+      "physical_loc": 24
+    },
+    {
+      "path": "submissions/mrs2/archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+      "physical_loc": null
+    },
+    {
+      "path": "experiments/ddm_mrs2_profile.py",
+      "bytes": 12062,
+      "sha256": "82a311b8cfb7fb05e2a87c5b73e794f0e16423168d3a1e3ed11e248e1b853a5e",
+      "physical_loc": 245
+    },
+    {
+      "path": "experiments/ddm_mrs2_bootstrap.py",
+      "bytes": 4225,
+      "sha256": "5d661ec193717373eb542bf4e77c3e76a8e357030c5efbf123e128a4f63fc375",
+      "physical_loc": 83
+    },
+    {
+      "path": "experiments/ddm_mrs2_smoke.py",
+      "bytes": 13419,
+      "sha256": "03250e7a9cdb4ad4dd57e1f8fd58afe0578ed022625dae8380381a909a7cddb8",
+      "physical_loc": 252
+    },
+    {
+      "path": "experiments/ddm_mrs2_audit/python_reference_equivalence_test.py",
+      "bytes": 1503,
+      "sha256": "aa45e7ba505b6bcfae02a814534a95c78b563969050d0da146f4a60382c7b881",
+      "physical_loc": 34
+    }
+  ],
+  "public_files": 5,
+  "generated_libraries_excluded": true,
+  "archive_changed": false
+}

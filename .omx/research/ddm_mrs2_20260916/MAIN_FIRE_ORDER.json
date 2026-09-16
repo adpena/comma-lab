@@ -1,0 +1,81 @@
+{
+  "schema": "mrs2_main_fire_order.v1",
+  "local_proof_status": "complete_identity_and_both_smokes_projection_screen_failed",
+  "reader_owner": "MAIN",
+  "actions": [
+    {
+      "task_id": "ddm_mrs2_source_custody_and_landing_20260916",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "QUEUED-WITH-A-FIRE-ORDER. Consumer .omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json. Trigger: Harvest completed local handoff; verify post-edit manifest and serializer or source tar, preserve unrelated shared work. No T4 dispatch or publication is authorized by this row."
+    },
+    {
+      "task_id": "ddm_mrs2_fresh_reader_20260916",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "QUEUED-WITH-A-FIRE-ORDER. Consumer .omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json. Trigger: Harvest local identity proofs and custody; MAIN spawns reader from FRESH_READER_PROMPT.md and records response verbatim. No T4 dispatch or publication is authorized by this row."
+    },
+    {
+      "task_id": "ddm_mrs2_context_runtime_successor_20260916",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json",
+      "action": "Commission a bounded context-statistics runtime successor with the same archive and reviewer budget.",
+      "fire_trigger": "Harvest this failed 1200-second projection screen and its completed identity/fallback proofs."
+    },
+    {
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json",
+      "action": "New receiver T4 timing and exact n600 row",
+      "folded_into": "ddm_mrs2_context_runtime_successor_20260916",
+      "fire_trigger": "A successor passes both <=1200-second projections, full raw identity and reader review, then MAIN obtains an exclusive lane and the required contract authorization.",
+      "blocked_for_this_receiver": true
+    }
+  ],
+  "timing_screen": {
+    "schema": "mrs2_cold_public_native_verification.v1",
+    "axis": "[macOS-CPU advisory]",
+    "identity": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/public_native/IDENTITY.json",
+      "bytes": 52772,
+      "sha256": "9a01ef777ebbdc2a22c5be9a657be7e4b113ca5fff33567c4c0c12ed331f7010"
+    },
+    "done": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mrs2_public_native.done",
+      "bytes": 403,
+      "sha256": "166ec69e1585c6d37cb56f1f7e637548530754b940530af49524e57dcf1e2170"
+    },
+    "matched_pairs": 600,
+    "raw_sha256": "8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b",
+    "raw_bytes": 3662409600,
+    "raw_removed_after_certificate": true,
+    "host_public_process_seconds": 1342.013138875016,
+    "T4_projections": [
+      {
+        "basis": "mrs1 rounded 1760.9/1390.8",
+        "ratio": 1.2661058383664079,
+        "seconds": 1699.1306702940867
+      },
+      {
+        "basis": "original measured 1185.899645171/936.6589231670368",
+        "ratio": 1.2660954973462792,
+        "seconds": 1699.1167925092047
+      }
+    ],
+    "projection_threshold_seconds": 1200,
+    "risk_ceiling_seconds": 1260,
+    "projection_screen_pass": false,
+    "T4_measured": false,
+    "score_claim": false,
+    "promotable": false,
+    "verdict_scope": "INSTANCE: this one-C range decoder on this archive and host, under the charter projection screen",
+    "bare_venv": true,
+    "compiler_present": true,
+    "public_receiver_sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425",
+    "T4_dispatch_authorized": false
+  },
+  "publication_authorized": false
+}

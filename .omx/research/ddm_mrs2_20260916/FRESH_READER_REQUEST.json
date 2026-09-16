@@ -1,0 +1,40 @@
+{
+  "schema": "mrs2_fresh_reader_request.v1",
+  "status": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "prompt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs2_20260916/FRESH_READER_PROMPT.md",
+    "bytes": 898,
+    "sha256": "9384ce1198846b7c34b479c3dabfc7c73ef97111c76c075f1331f0002a9cc2c9"
+  },
+  "public_files": [
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/inflate.sh",
+      "bytes": 197,
+      "sha256": "02f3a545b4f99d04e3b823675a6442c29d947bf21a0f0ebae8bfbaaeecae4089"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/inflate.py",
+      "bytes": 138152,
+      "sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/range_decoder.c",
+      "bytes": 4018,
+      "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/README.md",
+      "bytes": 1559,
+      "sha256": "d5058a3a3274647166a1aa35dff222b3dc8f943fd653ecd033cfbc07377e7878"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+    }
+  ],
+  "reply_produced": false,
+  "fire_trigger": "Harvest completed local proof and source custody; spawn a context-free reader using only the prompt-listed public text files.",
+  "consumer_store": ".omx/research/ddm_mrs2_20260916/MAIN_FIRE_ORDER.json"
+}

@@ -1,0 +1,7 @@
+VIDEO_DERIVED_CONSTANTS_IN_C=NONE
+C source constants: five-symbol alphabet, 31-bit frequency precision, 63-bit interval, half/quarter interval thresholds, normalization tolerances, state indices, return statuses and bit shifts.
+No learned arrays, weight literals, frame indices, masks, trajectories, seeds or video-derived tables in C.
+All learned/video-derived content remains in unchanged archive.zip (179286 bytes).
+Python's existing architecture/format constants and archive custody check are inherited unchanged.
+Build flags: cc -O2 -std=c11 -shared -fPIC. Strict source check additionally uses -Wall -Wextra -Werror -pedantic-errors.
+No OpenMP, -march=native, fast-math, 128-bit compiler extension, dependency version pin, or environment-selected backend.

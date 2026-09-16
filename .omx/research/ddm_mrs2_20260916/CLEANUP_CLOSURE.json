@@ -1,0 +1,54 @@
+{
+  "schema": "mrs2_cleanup_closure.v1",
+  "completed_receipts": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_bootstrap.done",
+      "bytes": 393,
+      "sha256": "b0774aeb68a01fbc4c8c64f315602f7dc7563f7ad610920d841ebdcbccf38329"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_bootstrap_cleanup.done",
+      "bytes": 408,
+      "sha256": "c75294e294b910efaa77b9f399ca7ef17cd8dd9c07642085eb4db3eccfd325f2"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_profile_native.done",
+      "bytes": 404,
+      "sha256": "7272b6f9d85cbad6ec89539abff4197be1f298608b3d45eea36e46ae37c28100"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_profile_python.done",
+      "bytes": 404,
+      "sha256": "a74ad14e8925d80a93118d6b9ca3b0f8059f6fc53ecb5cd3efcb5a8dc27cc206"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_public_fallback.done",
+      "bytes": 406,
+      "sha256": "339b0ab96fb59b9c49087803ad1b205e98ed9b4a9c7b949c9e464527b6f52edc"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_public_native.done",
+      "bytes": 403,
+      "sha256": "166ec69e1585c6d37cb56f1f7e637548530754b940530af49524e57dcf1e2170"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs2/completion_receipts/ddm_mrs2_reference_verify.done",
+      "bytes": 406,
+      "sha256": "0a9c3705ec9cb7da79fb964087565cec992b801a8a237bbf4ccefcca8cecd964"
+    }
+  ],
+  "venv_cleanup": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs2/bootstrap/VENV_CLEANUP_DONE.json",
+    "bytes": 285,
+    "sha256": "8bd9bd7c9678150d8ec51942fb470d5372b9c73677dd38989fd14ac10b709318"
+  },
+  "installed_file_certificate": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs2/bootstrap/VENV_CLEANUP.json",
+    "bytes": 4784831,
+    "sha256": "b0bdc8f64eea99eca1eb40acca43b875da280f1caef15fe236583a6396c53b83"
+  },
+  "bare_environment_absent": true,
+  "python_311_grammar_only": true,
+  "score_claim": false,
+  "promotable": false
+}

@@ -1,0 +1,78 @@
+{
+  "rows": [
+    {
+      "path": "experiments/ddm_mrs2_profile.py",
+      "sha256": "82a311b8cfb7fb05e2a87c5b73e794f0e16423168d3a1e3ed11e248e1b853a5e",
+      "passes": [
+        {
+          "pass_id": "ddm_mrs2_profile_r1",
+          "reviewer": "codex",
+          "lens": "source, ownership, resumed state and payload retention",
+          "outcome": "clean after pre-launch smoke bin path corrected to APFS"
+        },
+        {
+          "pass_id": "ddm_mrs2_profile_r2",
+          "reviewer": "codex",
+          "lens": "independent source re-read, actual CLI, input refusal and evidence denominators",
+          "outcome": "clean"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs2_bootstrap.py",
+      "sha256": "5d661ec193717373eb542bf4e77c3e76a8e357030c5efbf123e128a4f63fc375",
+      "passes": [
+        {
+          "pass_id": "ddm_mrs2_bootstrap_r1",
+          "reviewer": "codex",
+          "lens": "source, ownership, resumed state and payload retention",
+          "outcome": "clean after pre-launch smoke bin path corrected to APFS"
+        },
+        {
+          "pass_id": "ddm_mrs2_bootstrap_r2",
+          "reviewer": "codex",
+          "lens": "independent source re-read, actual CLI, input refusal and evidence denominators",
+          "outcome": "clean"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs2_smoke.py",
+      "sha256": "03250e7a9cdb4ad4dd57e1f8fd58afe0578ed022625dae8380381a909a7cddb8",
+      "passes": [
+        {
+          "pass_id": "ddm_mrs2_smoke_r1",
+          "reviewer": "codex",
+          "lens": "source, ownership, resumed state and payload retention",
+          "outcome": "clean after pre-launch smoke bin path corrected to APFS"
+        },
+        {
+          "pass_id": "ddm_mrs2_smoke_r2",
+          "reviewer": "codex",
+          "lens": "independent source re-read, actual CLI, input refusal and evidence denominators",
+          "outcome": "clean"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs2_audit/python_reference_equivalence_test.py",
+      "sha256": "aa45e7ba505b6bcfae02a814534a95c78b563969050d0da146f4a60382c7b881",
+      "passes": [
+        {
+          "pass_id": "ddm_mrs2_reference_r1",
+          "reviewer": "codex",
+          "lens": "actual reusable native proof call and retained byte comparisons",
+          "outcome": "clean"
+        },
+        {
+          "pass_id": "ddm_mrs2_reference_r2",
+          "reviewer": "codex",
+          "lens": "frame identity set, complete denominator, hash and byte lengths",
+          "outcome": "clean"
+        }
+      ]
+    }
+  ],
+  "independent_reviewer": false,
+  "scope": "two self-review passes; no fresh-reader claim"
+}
