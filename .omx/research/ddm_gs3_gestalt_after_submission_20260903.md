@@ -1953,3 +1953,25 @@ cells; seg one cell better; +47 B). Its own decode (1,067.8 s) minted its leg at
 not the binding term — the token PRICE is: admitted edits cost 12.9–17 bits/token against 8.9 for clustered edits (pass 8), and rate is now
 the largest cost in every admitted subset (+3.1e-5 of a −6.4e-5 pose credit here). Day's take: moves 45–52, −1.10e-3 S (0.13724 →
 0.13620). Demand −24,526 B. Next: pd4 — rank by resolved-pose credit per REAL bit and prefer clustered proposals.
+
+## Addendum 65 (2026-09-16, host ~03:00Z) — pd4: the price lever is real and 9 % short; the pose-directed family closes on this object
+
+pd4 (Opus; commits 5c85fba14, 1b90633f5, 8be7acf4e; retained 5.9 GB on APDataStore) priced every proposal by the real known-symbol rail
+(sheet encodes: 13.7 s per proposal) and ranked by resolved-pose credit per real bit, adding clustered two-token proposals. MEASURED:
+singles 15.8 bits/token pooled; clustered 13.8 pooled / 11.4 median (−26 % median — F5 did not fire); the per-bit ranking kept 18 pairs
+where benefit-only kept 13 (+32.6 % modelled net); the admitted 18-pair / 24-token subset priced at 12.000 bits/token by its own real
+encode (pd3's 12.923; pass 8's clustered 8.93). Three legs exact: +36 B (+2.40e-5), +5 cells (+4.2e-6), pose 4.2075e-6 → 4.1602e-6
+(−3.66e-5) ⇒ **net −1.03e-5 = 0.515 bars, 0.44 lotteries**; archive 179,368 B sha d4b52ebc… (twins across two processes). Nothing
+built or sealed; move 52's leg is unconsumed. DERIVED: the same pool clears the bar at 10.9 bits/token — the gap is 1.1 bits (9.2 %).
+
+New failure mode, measured: the spliced per-sheet ledger predicted 211 bits for the 18 pairs and the real encode charged 288 (−36 %)
+— not rail noise (median 2.5 bits over 116 repeats) but SELECTION: the argmin of a few noisy real prices is biased low. Re-sweeping on a
+calibrated ledger gives 11 pairs / −1.18e-5 — the verdict is rate-leg-independent. LAW: selecting on a real price still ranks; the
+selected set must be re-priced as one object (memory `select_on_a_real_price_still_ranks_20260915`).
+
+Family verdict. Pose-directed single/clustered token pre-distortion on this object: moves 50/51/52 (−4.0/−5.0/−3.1e-5) then pd4 at
+−1.0e-5. Four consecutive declines in yield and in admitted-per-walked (0.49 → 0.24 → 0.09 → 0.12 of 156) and a price 9 % above the
+bar's requirement at the field's realized bits/token: CLOSED at formulation scope (single/2-token proposals, per-pair Lagrange
+admission, this exchange rate). The two live pointer facts: d_pose 4.21e-6 is 1.9× lower than at move 48 (7.5e-6 → no; 4.59e-6 → 4.21e-6
+= −8.3 %), all from carrier re-solve credits the seg passes had never claimed. Day-and-a-half take: moves 45–52, −1.10e-3 S. Demand
+−24,526 B. Remaining doors on this object are formulation changes (multi-token joint proposals under the same admission) or a successor.
