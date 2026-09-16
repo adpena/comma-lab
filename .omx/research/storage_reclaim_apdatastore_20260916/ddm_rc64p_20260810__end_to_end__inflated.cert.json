@@ -15,5 +15,12 @@
  "rebuild": "deterministic decode: run the sibling runtime tree's inflate.sh on the listed archive.zip (same runtime tree, same host class); verify each raw sha256 above",
  "reason": "inflated raw frames are the deterministic output of archive+runtime; deleted to lift /Volumes/APDataStore above the pricer's 8 GiB reserve during pd6 byte-close (free was 5 GiB)",
  "false_authority": "no score is derived from these raws; any score cites its own exact-eval receipt",
- "head": "5e3c0e80bff4c83ce14bd29022367eee8a25f317"
+ "head": "5e3c0e80bff4c83ce14bd29022367eee8a25f317",
+ "source_archives_note": {
+  "memo": ".omx/research/ddm_rc64p_native_cpu_decode_20260810.md",
+  "archive_sha256": "b3365410a423fa6ae4d53e9a86fc2bd38bc59793ea2b437fc161bdcca11712b0",
+  "archive_bytes": 187222,
+  "basis": "memo line 43 (deterministic archive 187,222 B, SHA b3365410\u2026) and line 173 (exact replay queued on that sha); the raws under end_to_end/ and route_b_end_to_end/ were the Route-B parse-back of that archive (memo line 114); the archive bytes are not stored under this arm dir \u2014 rebuild requires the archive from the arm's receipts custody (memo \u00a7receipts) or a re-encode from DT1 per memo line 108",
+  "amended_utc": "2026-09-16T11:44:45Z"
+ }
 }
