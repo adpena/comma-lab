@@ -1,0 +1,11 @@
+{
+ "schema": "certified_retention_release.v1",
+ "utc": "2026-09-16T21:41:12Z",
+ "arm": "ddm_mrs2",
+ "landing_commit": "2171aaf9b",
+ "reason": "superseded by mrs6/mrs7 (landed; identity certified); APDataStore at 8 GiB = the pricer floor while pd7 seals; payload bulk released under the arm's own committed RETENTION_MANIFEST.json sha256 rows; rebuildable by re-running the landed proof instruments (experiments/ddm_mrs2_*.py) against the landed packet submissions/mrs2 and the unchanged archive",
+ "retention_manifests": [],
+ "released_files": 712,
+ "released_bytes": 1234891370,
+ "kept_small_receipts": 157
+}
