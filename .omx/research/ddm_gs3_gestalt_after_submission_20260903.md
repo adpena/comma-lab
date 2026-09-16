@@ -2073,3 +2073,33 @@ build failed its pose leg 4.9×; the decode is never optional).
 the re-rendered field (pd7) is the next unit; the pair-selective RGB bias (psa2) is the successor-part bet. Sub-0.12
 still needs −0.0161 S; moves 45–53 took −1.20e-3 in four days at ~1e-4 per exact row.
 verdict_scope: n/a (a positive exact row).
+
+## Addendum 70 (2026-09-16, host ~23:50Z) — MOVE 54: price-first pass 2 lands; the cheap half re-prices after every move; pd6's nine pairs explained
+
+**MEASURED [contest-CUDA T4 n600], call fc-01M2P468WE5DNZYCMDGPDG6Y1J.** S 0.13605599532783202 = 100·0.00010287 + sqrt(10·4.1e-6) +
+25·179,266/37,545,489 (recomputed = score field). Δ −4.548e-5 vs move 53 (0.1361014714463198); projected 0.13605554401927
+(drift +4.5e-7). Archive sha 5c6bf403b4cb4554…; decode 1,112.2 s (t4_direct leg minted at harvest); receiver behaviour
+9f6e7168… unchanged. Day's take moves 53–54: −1.46e-4 in one day at ~1e-4 and ~0.5e-4 per exact row.
+
+**What pd7 measured (memo `.omx/research/ddm_pd7_price_first_pass2_on_move53_20260916.md`, commits c5317e043…090847925).**
+The prior's cheap half is a property of the field: after move 53 the rank-0 sheet costs 3.075 bits/token vs pd6's 2.163
+(+42 %) — move 53 spent the 118 cheapest tokens; ranks 1–5 agree within 1.5 %. 4,291 proposals / 588 pairs; 341 with a
+negative real charge; 264 pairs positive after re-solve; 72 pay at their own price (pd6: 128). Set pricing converged in 4
+iterations (−59.6 % → −1.35 %); the closed-archive ladder chose set 03 (53 pairs / 66 tokens; −20 B; 1 cell repaired; pose
+4.099e-6 on the shipped decode = the admission in every digit). **pd6's nine "unexplained" pairs are explained**: pd6's
+overlay was rendered from set 00 and it closed set 01; the nine pairs are exactly the token-plane difference between those
+fields; the renderer was faithful, the composition was stale. pd7 hit the same genus (2/53), caught it before closing,
+and measured 53/53 render agreement at max |Δ| = 0. pd6's formulation-scope "overlay ≠ render" law is superseded by a
+free per-pair plane comparison (render from the SHIPPED field, always).
+
+**The reviewable submission (same day).** mrs1→mrs7 rebuilt the closed PR #140 tree as an 8-file packet (inflate.py
+2,180 lines, three C files, README, FORMAT.md): identical decode on all 600 pairs; measured on T4 three times at the
+identical score, inflate 896 s for the final bytes, T4 raw sha identical to the original receiver's; two fresh readers
+(NO → YES). It is measured on move 53's bytes; move 54 is a new archive — restaging = archive pin + identity + one T4 run.
+The operator decides.
+
+**Gestalt after 70.** Price-first generation is the live lever on this object and it decays: rank-0 tokens 2.16 → 3.08
+bits after one pass; positive-paying pairs 128 → 72. Pass 3 (pd8) should be cheaper than pass 2 to run and yield less;
+the 16 unread carrier bytes ride along in its byte close. Sub-0.12 still needs −0.0161 S: cap 155,153 B at held
+distortion (demand −24,113 B). Nothing on this object moves more than ~1e-4 per exact row.
+verdict_scope: n/a (a positive exact row).

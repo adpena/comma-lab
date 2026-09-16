@@ -1,0 +1,28 @@
+{
+ "schema": "cpu_axis_adjudication.v1",
+ "verdict": "REFUSED_BY_DESIGN",
+ "axis": "contest_cpu",
+ "pointer_move": 54,
+ "lane_id": "ddm_pd7_price_first_pass2_on_move53_20260916",
+ "instance_job_id": "ddm_pd7_cpu_20260916",
+ "pair_group_id": "ddm_pd7_pair_20260916",
+ "archive_sha256": "5c6bf403b4cb4554fe24a46bdf5b46d62876854764a10a22d8c90d76a7292ee6",
+ "archive_bytes": 179266,
+ "call": null,
+ "returncode": 5,
+ "cpu_metrics_absent_by_design": true,
+ "score_claim": false,
+ "allowed_use": [
+  "debug",
+  "no_score_claim",
+  "no_promotion"
+ ],
+ "receipt": {
+  "path": "/Volumes/APDataStore/pact/ddm_pd7_fire/cpu1b/FIRE_REFUSED.json",
+  "bytes": 5521
+ },
+ "refusal_class": "['schema', 'archived_prior_refusal', 'dry_run', 'runtime_dir', 'axis', 'evidence_axis_tag']",
+ "receiver_declaration": "linux-nvidia-t4; the CPU sibling is refused behind the live single-flight CUDA claim (fired after DISPATCHED, per the 09-16 fire-order law) and, when it does dispatch, refuses by design in ~10 s on the CPU path (moves 49\u201353); receiver unchanged (behaviour digest 9f6e7168\u2026)",
+ "packet_requirement": "runtime declaration + this refusal receipt; --submission-score-axis contest_cuda",
+ "recorded_at_utc": "2026-09-16T22:28:52+00:00"
+}
