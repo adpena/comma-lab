@@ -212,7 +212,71 @@ negative; the value is entirely in the tail and in being allowed eight shots per
 honest shape of a price-first pool: it does not know where the pose is, it is simply cheap enough
 that a coin flip can pay.
 
-<!-- SET PRICE, LADDER, COMPOSITION AND THE THREE LEGS FOLLOW FROM THE SET ENCODES -->
+## 8. THE SET PRICE — and the thing only a real encode could show
+
+pd4 measured that a per-bit rule under-charges the subset it chooses by 36.3 %, because the argmin
+of a few noisy real prices is biased low. pd5's cure is to re-encode the SELECTED SET as one field.
+This arm's noise floor is 6.758 bits — more than twice pd5's — so the cure is not optional here.
+
+| iteration | pairs / tokens | ledger bits | real frame-local bits | **residual bias** | exact archive |
+|---:|---:|---:|---:|---:|---|
+| 0 | 128 / 147 | −547.56 | −420.31 | **−23.24 %** | **179,290 B** sha `127cac07…` (**−42 B**) |
+| 1 | 110 / 129 | −563.44 | −531.03 | **−5.75 %** | **179,273 B** sha `b884a8bf…` (**−59 B**) |
+
+**One iteration takes the residual from −23.2 % to −5.8 %**, inside F6's 10 % bar. The spill onto
+unedited frames runs 26.1 % → 13.7 %, so the frame-local rail becomes MORE complete as the set
+shrinks — the opposite of pd5's 10.4 % → 19.6 %, and worth saying plainly because it means pd5's
+"the converged set is the worst" does not generalise: on this pool the smaller set is the better one.
+
+**And the ledger's sign is the pass's second surprise.** The selected set does not cost bytes. Its
+own exact encode comes back **SMALLER than move 52** — the negative-price tail of the cheap half is
+real, it survives its own re-encode, and the rate leg pays the candidate instead of the other way
+round. Every price-first pass this campaign has run assumed the rate leg was a cost to be minimised.
+On this object, generated this way, it is a credit.
+
+## 9. THE COMPOSITION, re-verified on one object
+
+A 600-pair overlay rendered from the 128-pair set-00 field (**1,831,204,800 B, 182.0 s**), an n600
+pose leg on it, and a carrier re-solve over all 600 pairs starting from the SHIPPED codes.
+
+| leg | value |
+|---|---:|
+| per-pair sum of credits | −4.89711e−05 |
+| **composed, re-verified (n600 mean shift)** | **−8.1529e−08 × 600 = −4.89174e−05** |
+| **realized fraction** | **0.9989** |
+| stale pose (candidate renders, shipped carrier) | 3.53511e−04 = **84.0× base** |
+| carrier coordinates changed | **926** over 126 pairs (set01: 791 over 108) |
+
+The composed n600 resolved pose is **4.126007089534244e−06** against the base
+4.207535785085938e−06. F-composition does not fire: the composition realized **99.89 %** of the
+per-pair sum, so the per-pair estimator is neither optimistic nor pessimistic on this vehicle
+(pd5 measured 1.0219, pd4 0.9992).
+
+## 10. THE BYTE-CLOSE — the three legs on the candidate's OWN shipped bytes
+
+The archives in §8 are the PRICER's: they carry move 52's own carrier. A real candidate must carry
+the RE-SOLVED one, and that is what `ddm_sj1_joint_admission close` builds. **MEASURED: the
+re-solved carrier costs +14 bytes** (18,470 → 18,484) for 791 moved coordinates over 110 pairs.
+The identity control inside `close` passed and every other frame-1 section is byte-identical.
+
+| candidate | pairs / tokens | **exact closed archive** | rate | seg | pose | **net** | **bars** |
+|---|---:|---|---:|---:|---:|---:|---:|
+| set 00 | 128 / 147 | 179,241 B `5ff520e5…` (**−91 B**) | −6.0593e−05 | −1.6117e−05 | −6.5051e−05 | −1.417614e−04 | 7.088 |
+| **set 01 (the candidate)** | **110 / 129** | **179,223 B `d34c02b1808732f4e8f0bfbcb0ef766e224f481b60f7ce561acf409e3dc48c1d` (−109 B)** | **−7.2579e−05** | **−1.6117e−05** | **−6.1375e−05** | **−1.500708e−04** | **7.504** |
+
+| leg | value | how |
+|---|---:|---|
+| rate | **−7.25786e−05** | **−109 B EXACT**, the candidate's own closed archive, carrier included |
+| seg | **−1.61172e−05** | **19 cells REPAIRED** on the frozen argmax, carried to T4 by the same-instrument ratio 1.0006662543837985 |
+| pose | **−6.13750e−05** | RESOLVED 4.130731e−06 against the base 4.21e−06, from the n600 composed re-solve at 0.9989 of the per-pair sum |
+| **S projected** | **0.13605219824302556** | 100·0.00010287882769408085 + √(10·4.130731e−06) + 25·179,223/37,545,489 |
+| **net vs move 52** | **−1.500708e−04** | **7.504 bars** · **6.48× the 34.8 B container-break sd** |
+
+**All three legs are negative.** The candidate is smaller, repairs SegNet cells, and lowers pose. No
+pass on this object has had that before: every prior move bought pose with bytes and paid seg on
+the side.
+
+<!-- PARSE-BACK, TWINS, SMOKES, CENSUS, RETENTION AND THE SEAL FOLLOW -->
 
 <!-- # FORMALIZATION_PENDING: a measurement pass; the score arithmetic used throughout is the
 registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
