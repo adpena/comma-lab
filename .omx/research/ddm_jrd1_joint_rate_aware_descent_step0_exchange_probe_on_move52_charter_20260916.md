@@ -60,7 +60,7 @@ the end, keep every file in the working tree, leave the verified bundle + format
 Reference forms: pd4's per-pair pricer + resolved-pose admission (row 1); rw1's int4-grid action + ren2's refit machinery
 (row 2); the real coder for every byte. Declared deltas: K = 24 pairs (SCOPE); first-order Lagrange direction realized by
 one discrete step (SCOPE — the burn is jrd2's). No MECHANISM reduction: no ledger sums, no first-order token prices as
-charges (m: first-order token price is a ranking, never a charge), no proxy scorer, no unresolved pose. Provenance pins:
+charges (m: first-order token price is a ranking, never a charge), no proxy scorer, no unresolved pose. Provenance pins: HEAD 59bcc5a9f (charter commit 59bcc5a9f); pd4 memo `.omx/research/ddm_pd4_pose_directed_pass4_price_lever_on_move52_20260913.md` sha 48767941b8a9cf1e; rw1 memo `.omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md` sha 233ed1b53a35585b; ren2 memo `.omx/research/ddm_ren2_renderer_refit_in_place_on_the_coded_field_20260912.md` sha 3b9cdbbdb6a7bfdf; cb1 memo `.omx/research/ddm_cb1_carrier_basis_refit_to_pose_residual_subspace_20260912.md` sha 07b6e9ecdc911116; move 52 seal `/Volumes/APDataStore/pact/ddm_pd3/SEAL_ddm_pd3_pose_directed_pass3_contest_cuda.json` sha 9905cb9238cccf29, archive sha256 ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e, pointer commit d1fc2a1c2.
 HEAD (record), pd4 memo sha (record), rw1/ren2/cb1 memo shas (record), move 52 seal + leg.
 
 ## Prior negatives accounted (operator 2026-08-15)
