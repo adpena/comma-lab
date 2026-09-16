@@ -1,0 +1,29 @@
+{
+  "artifacts": [
+    {
+      "bytes": 788479,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.bundle",
+      "sha256": "f89a4d046a6bf39151caed97e092a46f42f077e6acc41ac9cd7b8ee8df4294f3"
+    },
+    {
+      "bytes": 4299490,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.format-patch",
+      "sha256": "7d506d92e5e802b2cdc6f6980152fdae9d98dc01c8ad5f9b93eef197ff454c3f"
+    },
+    {
+      "bytes": 8360,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/receipts.jsonl",
+      "sha256": "507e004b171e32bfa00189e01cb3d7ffbb16468eb3d8ac8b12e729085dc1a514"
+    }
+  ],
+  "base_head": "1c1aba7cecfb77af068d9203666e2dd8c84d4a52",
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "fallback_commit": "b72db5de43bdc1d73dec6fb33aefcb69618235ec",
+  "fire_trigger": "Git-write-capable MAIN checkout; reverify bundle and all declared file hashes, then land the intended commit without absorbing pd5 changes.",
+  "owner": "MAIN",
+  "post_attempt_receipts": "Serializer output, bundle verification and this landing order are generated after the attempt and retained beside the bundle; include them when MAIN lands.",
+  "schema": "ddm_jrd1_landing_fire_order.v1",
+  "shared_state": "Own operational rows captured in OPERATIONAL_STATE.json; shared files deliberately not whole-file staged.",
+  "task_id": "ddm_jrd1_verified_bundle_landing_20260916"
+}

@@ -1,0 +1,27 @@
+{
+  "artifacts": [
+    {
+      "bytes": 788479,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.bundle",
+      "sha256": "f89a4d046a6bf39151caed97e092a46f42f077e6acc41ac9cd7b8ee8df4294f3"
+    },
+    {
+      "bytes": 4299490,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.format-patch",
+      "sha256": "7d506d92e5e802b2cdc6f6980152fdae9d98dc01c8ad5f9b93eef197ff454c3f"
+    },
+    {
+      "bytes": 8360,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/receipts.jsonl",
+      "sha256": "507e004b171e32bfa00189e01cb3d7ffbb16468eb3d8ac8b12e729085dc1a514"
+    }
+  ],
+  "bundle_verify_output": "The bundle contains this ref:\nb72db5de43bdc1d73dec6fb33aefcb69618235ec refs/heads/serializer-fallback\nThe bundle requires this ref:\n1c1aba7cecfb77af068d9203666e2dd8c84d4a52 \nThe bundle uses this hash algorithm: sha1\n.omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.bundle is okay\n",
+  "bundle_verify_rc": 0,
+  "no_coauthor_trailer": true,
+  "schema": "ddm_jrd1_bundle_verification.v1",
+  "serializer_rc": 17,
+  "shared_index_unchanged": true,
+  "status": "VERIFIED_BUNDLE_MAIN_MUST_LAND",
+  "working_tree_files_equal_fallback_commit": 34
+}
