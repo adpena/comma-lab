@@ -1,0 +1,30 @@
+{
+ "schema": "rebuildable_scratch_certificate.v1",
+ "utc": "2026-09-16T11:38:06Z",
+ "path": "/Volumes/APDataStore/pact/ddm_fx2/byteclose_a/parseback/inflated",
+ "bytes": 3662409600,
+ "file_count": 1,
+ "files": [
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_fx2/byteclose_a/parseback/inflated/0.raw",
+   "bytes": 3662409600,
+   "sha256": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9"
+  }
+ ],
+ "source_archives": [
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_fx2/byteclose_a/candidate_runtime/archive.zip",
+   "bytes": 180450,
+   "sha256": "9de0f6db3ca7ae4efcd9237752b7c95ed1119d9285f8aadd92fee7c8c18547ef"
+  },
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_fx2/byteclose_a/retained/archive.zip",
+   "bytes": 180450,
+   "sha256": "9de0f6db3ca7ae4efcd9237752b7c95ed1119d9285f8aadd92fee7c8c18547ef"
+  }
+ ],
+ "rebuild": "deterministic decode: run the sibling runtime tree's inflate.sh on the listed archive.zip (same runtime tree, same host class); verify each raw sha256 above",
+ "reason": "inflated raw frames are the deterministic output of archive+runtime; deleted to lift /Volumes/APDataStore above the pricer's 8 GiB reserve during pd6 byte-close (free was 5 GiB)",
+ "false_authority": "no score is derived from these raws; any score cites its own exact-eval receipt",
+ "head": "5e3c0e80bff4c83ce14bd29022367eee8a25f317"
+}
