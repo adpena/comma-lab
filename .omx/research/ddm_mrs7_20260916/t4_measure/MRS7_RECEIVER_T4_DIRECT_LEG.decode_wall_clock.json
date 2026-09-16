@@ -1,0 +1,40 @@
+{
+ "schema": "candidate_decode_wall_clock.v2",
+ "mode": "t4_direct",
+ "score_claim": false,
+ "candidate_t4_receipt": {
+  "path": "/Volumes/APDataStore/pact/ddm_mrs7_fire/run1/MODAL_REMOTE_RESULT.json",
+  "sha256": "ae3ee63816681ebf01e8a4c150ae1e4291ea32f0cff99d048ea84d3cf0df783b"
+ },
+ "runtime_dir": "/Users/adpena/Projects/pact/submissions/mrs7",
+ "archive_path": "/Users/adpena/Projects/pact/submissions/mrs7/archive.zip",
+ "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+ "receiver_sha256": "b76657fac01cd3b5377eb2ade2c532ee32e3956a3f97e66ff2f0e07feb410a66",
+ "t4_runtime_sha256": "fe197796a0e8194f8c1d09c173eb0e87d66ea6469756f3ffeb00052115a6d0ce",
+ "t4_runtime_digest_definition": "tac.deploy.modal.auth_eval.modal_uploaded_submission_dir_runtime_manifest",
+ "t4_seconds_field": [
+  "artifacts",
+  "contest_auth_eval.json",
+  "inflate_elapsed_seconds"
+ ],
+ "t4_archive_sha256_field": [
+  "expected_archive_sha256"
+ ],
+ "t4_runtime_sha256_field": [
+  "expected_runtime_tree_sha256"
+ ],
+ "t4_hardware_field": [
+  "artifacts",
+  "modal_cuda_preflight.json",
+  "torch_cuda_device_name"
+ ],
+ "t4_cuda_available_field": [
+  "artifacts",
+  "modal_cuda_preflight.json",
+  "torch_cuda_available"
+ ],
+ "t4_timing_scope": "cold_public_entrypoint_decode",
+ "measured_t4_decode_seconds": 896.003225923,
+ "projected_t4_decode_seconds": 896.003225923,
+ "limit_seconds": 1260.0
+}
