@@ -1,0 +1,8 @@
+{
+  "utc": "2026-09-16T04:47:54.046640+00:00",
+  "disposition": "FOLDED_ORIGINAL_SHARD_CONTINUES",
+  "action_taken": "none; no signal sent",
+  "reason": "Sandbox denied ps identity verification; retained original sequential worker rather than signal an unverified PID.",
+  "remaining_consumer": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2",
+  "no_duplicate_pairs_launched": true
+}

@@ -1,0 +1,95 @@
+[
+  {
+    "name": "memos",
+    "argv": [
+      "rg",
+      "-n",
+      "--glob",
+      "*.md",
+      "--glob",
+      "*.json",
+      "-m",
+      "4",
+      "joint.{0,50}(renderer|field)|renderer.{0,50}collateral|selection.on.{0,15}price|UNION.{0,8}SUM|price.first|zero.net.coded",
+      ".omx/research"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrx1_20260916/recall/memos.txt",
+    "bytes": 435983,
+    "sha256": "f21126d34e476c997a6479d642f124360a2e04252b61aa35ddfac35d4b66ebaf",
+    "lines": 488,
+    "stderr": ""
+  },
+  {
+    "name": "equations",
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrx1_20260916/recall/equations.txt",
+    "bytes": 3787485,
+    "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68",
+    "lines": 72362,
+    "stderr": ""
+  },
+  {
+    "name": "index_dag",
+    "argv": [
+      "rg",
+      "-n",
+      "-m",
+      "5",
+      "--glob",
+      "CANONICAL_RESEARCH_INDEX*",
+      "--glob",
+      "sub015_DAG_*",
+      "joint|renderer|collateral|real.*price",
+      ".omx/research"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrx1_20260916/recall/index_dag.txt",
+    "bytes": 4084,
+    "sha256": "0fe4456766de217a108fcddfa84e1a06c780628cf216b870996781db5da7bff3",
+    "lines": 18,
+    "stderr": ""
+  },
+  {
+    "name": "design",
+    "argv": [
+      "rg",
+      "-n",
+      "-m",
+      "3",
+      "--glob",
+      "*design*",
+      "--glob",
+      "*SPEC*",
+      "joint|renderer|collateral|real.*price",
+      "docs",
+      ".omx/research"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrx1_20260916/recall/design.txt",
+    "bytes": 171822,
+    "sha256": "37abe8ebb18dc25606350bf7dfba058cbcb2de46c562ddd396e86a5f6979c609",
+    "lines": 622,
+    "stderr": ""
+  },
+  {
+    "name": "tasks",
+    "argv": [
+      "rg",
+      "-n",
+      "jrx1|jrd1|pd5|pd4|joint.renderer|joint.field",
+      ".omx/state/canonical_task_status.jsonl"
+    ],
+    "rc": 0,
+    "path": ".omx/research/ddm_jrx1_20260916/recall/tasks.txt",
+    "bytes": 4383,
+    "sha256": "fcfa0ef1b09ebac0b2da413b02e9232beffb9e6039aca4014c54f2184d2ee420",
+    "lines": 5,
+    "stderr": ""
+  }
+]

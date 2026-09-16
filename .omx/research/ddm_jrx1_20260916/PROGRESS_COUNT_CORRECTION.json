@@ -1,0 +1,11 @@
+{
+  "classification": "CORRECTION_OF_PROGRESS_TELEMETRY_ONLY",
+  "cause": "Early glob(*.sha.json) file counts did not exclude ExFAT AppleDouble ._ sidecars. They overcounted completed solver-result receipts.",
+  "superseding_authority": "FIELD_CONTROL.json counts parsed reference search rows; RETENTION_VERIFICATION.json explicitly excludes AppleDouble and verifies solver receipt/result coverage.",
+  "final_realized_single_pose_rows": 215,
+  "final_realized_cluster_pose_rows": 121,
+  "used_in_price_or_exchange_gate": false,
+  "score_claim": false,
+  "new_archive_price_encodes": 0,
+  "utc": "2026-09-16T05:00:18.392110+00:00"
+}

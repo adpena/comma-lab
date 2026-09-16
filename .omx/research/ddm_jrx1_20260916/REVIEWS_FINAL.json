@@ -1,0 +1,38 @@
+{
+  "generated_utc": "2026-09-16T04:36:28.303699+00:00",
+  "source_facts": [
+    {
+      "path": "experiments/ddm_jrx1_field_control.py",
+      "sha256": "f4074aa5152d851e3334a71b0d979686ec96e1cb4d2cf5ec9da5535f160cfa2c",
+      "bytes": 12357
+    },
+    {
+      "path": "experiments/test_ddm_jrx1_field_control.py",
+      "sha256": "fbd5c623b9eee946bee46f987fe1c863e3f026caff5187df1b5c4f576ca905cb",
+      "bytes": 2308
+    },
+    {
+      "path": "experiments/ddm_jrx1_price_control.py",
+      "sha256": "1497df53eec66d3a3ff76478a5e4ae8217664ba70f196d3132429e82a9014322",
+      "bytes": 15212
+    }
+  ],
+  "review_passes": [
+    "primary source/retention review",
+    "independent row1_instrument_review source review"
+  ],
+  "validation": {
+    "retention_regression": "16 tasks, 8 processes, forced reimports; 136 exact payloads verified; passed in3.28s",
+    "ruff": "All3 files passed current checks",
+    "price_runner": "Encode/winner stages SOURCE_REVIEWED_NOT_EXECUTED; sheets completeness gate ran and correctly refused K24 with missing pairs before preparing payloads"
+  },
+  "findings_fixed": [
+    "stable retrying artifact census and serialized writes",
+    "reimport-safe original retention callback",
+    "first-observation sheet ranking",
+    "reservation budget and owned runtime custody",
+    "cached DONE validation and exact raw-expansion deletion certificate",
+    "same-process repeated pricing rejected before nested lock"
+  ],
+  "retention_verifier_review": "Primary and independent source reviews; terminal execution PASS, see RETENTION_VERIFICATION.json"
+}

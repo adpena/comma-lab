@@ -1,0 +1,222 @@
+{
+  "classification": "DERIVED_FROM_RETAINED_PD4_ROWS_NOT_A_NEW_JRX1_PRICE",
+  "axis": "[macOS-CPU advisory]",
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd4/sheets/priced_rows.jsonl",
+    "bytes": 314751,
+    "sha256": "67c779eb5d1db645e27693b935cf975606c22695f5c9fca4a2469f221502f944"
+  },
+  "base_pose_sha256": "dfeeb5f78cd3b2ad1a4f8a39c4f134d8c1597a4c6cd37242bd596f680d785108",
+  "overlap_pairs": 12,
+  "rows": [
+    {
+      "pair": 53,
+      "tokens": 1,
+      "bits": 19.38802522799506,
+      "bits_per_token": 19.38802522799506,
+      "benefit_S": 1.9923507893671305e-07,
+      "credit_S_per_bit": 1.0276192474158248e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          195,
+          248,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 80,
+      "tokens": 1,
+      "bits": 11.524284180383574,
+      "bits_per_token": 11.524284180383574,
+      "benefit_S": 2.8060657408521974e-08,
+      "credit_S_per_bit": 2.434915433297481e-09,
+      "seg_cells": 0,
+      "edits": [
+        [
+          192,
+          249,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 208,
+      "tokens": 1,
+      "bits": 11.802267027299877,
+      "bits_per_token": 11.802267027299877,
+      "benefit_S": 6.278080040548518e-07,
+      "credit_S_per_bit": 5.3193848487131015e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          185,
+          254,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 214,
+      "tokens": 1,
+      "bits": 18.698331008833293,
+      "bits_per_token": 18.698331008833293,
+      "benefit_S": 7.36622159031963e-07,
+      "credit_S_per_bit": 3.939507535105538e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          214,
+          314,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 236,
+      "tokens": 1,
+      "bits": 15.325125570184127,
+      "bits_per_token": 15.325125570184127,
+      "benefit_S": 5.936499581019724e-07,
+      "credit_S_per_bit": 3.873703712137608e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          217,
+          226,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 250,
+      "tokens": 1,
+      "bits": 16.329841959444366,
+      "bits_per_token": 16.329841959444366,
+      "benefit_S": 1.739078339065993e-07,
+      "credit_S_per_bit": 1.0649694855498566e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          219,
+          428,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 296,
+      "tokens": 1,
+      "bits": 12.63239904307602,
+      "bits_per_token": 12.63239904307602,
+      "benefit_S": 6.034227005539437e-07,
+      "credit_S_per_bit": 4.776786250151648e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          215,
+          456,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 382,
+      "tokens": 1,
+      "bits": 14.80110345974299,
+      "bits_per_token": 14.80110345974299,
+      "benefit_S": 3.1112560784493623e-07,
+      "credit_S_per_bit": 2.1020433286690823e-08,
+      "seg_cells": 1,
+      "edits": [
+        [
+          198,
+          242,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 385,
+      "tokens": 1,
+      "bits": 12.660944682235595,
+      "bits_per_token": 12.660944682235595,
+      "benefit_S": 1.320373628542364e-07,
+      "credit_S_per_bit": 1.042871335181618e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          192,
+          263,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 398,
+      "tokens": 1,
+      "bits": 11.691861772574839,
+      "bits_per_token": 11.691861772574839,
+      "benefit_S": 4.879948815326544e-07,
+      "credit_S_per_bit": 4.173799613995828e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          202,
+          286,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 406,
+      "tokens": 1,
+      "bits": 5.649953712846127,
+      "bits_per_token": 5.649953712846127,
+      "benefit_S": 2.475604528335346e-08,
+      "credit_S_per_bit": 4.3816368313011836e-09,
+      "seg_cells": 0,
+      "edits": [
+        [
+          209,
+          234,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "pair": 583,
+      "tokens": 1,
+      "bits": 16.27066360808658,
+      "bits_per_token": 16.27066360808658,
+      "benefit_S": 9.254048363749315e-07,
+      "credit_S_per_bit": 5.687566645499339e-08,
+      "seg_cells": 0,
+      "edits": [
+        [
+          216,
+          313,
+          0,
+          1
+        ]
+      ]
+    }
+  ],
+  "pd4_selected_archive_reference_bits_per_token": 12.0,
+  "overlap_frame_local_median_bits_per_token": 13.731024070989292,
+  "overlap_frame_local_median_credit_S_per_bit": 2.987873520403345e-08,
+  "overlap_zero_seg_benefit_pairs": 11,
+  "interpretation": "Different sample selection, aggregation and denominator: not a valid new K24 instrument-gate measurement. No rows2-3 authorization."
+}

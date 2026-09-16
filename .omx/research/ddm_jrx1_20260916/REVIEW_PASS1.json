@@ -1,0 +1,23 @@
+{
+  "pass": 1,
+  "status": "REVIEWED_AFTER_FIXES",
+  "file": "experiments/ddm_jrx1_field_control.py",
+  "sha256": "c5da88055168a96e680058a2237caf6d63103ffa5d81fc4b6aa857168565557f",
+  "checks": [
+    "helper calls match pd1/pd4 signatures",
+    "all writes route to owned store",
+    "all K24 pairs preserved, null when no anchor",
+    "renderer frame retained before scorer consumption",
+    "completed pose solves keyed by actual frame/start codes/source+input bindings",
+    "fresh attempt preserves interrupted JSONL",
+    "DONE validates stored artifacts and current binding",
+    "source raw hashed against move52 pin"
+  ],
+  "fixes": [
+    "verify raw SHA",
+    "bind actual receiver/scorer/GT/helper files",
+    "validate completed pairs",
+    "preserve interrupted JSONL",
+    "ensure metadata after payload interruption"
+  ]
+}

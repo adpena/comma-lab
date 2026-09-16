@@ -1,0 +1,20 @@
+{
+  "pass": 2,
+  "reviewer": "independent row1_instrument_review agent",
+  "scope": "source review of proposal-generation adapter; no scorer execution",
+  "status": "CLEAN_NO_NEW_LAUNCH_BLOCKING_FINDING",
+  "file": "experiments/ddm_jrx1_field_control.py",
+  "sha256": "c5da88055168a96e680058a2237caf6d63103ffa5d81fc4b6aa857168565557f",
+  "fixed_findings": [
+    "DONE artifacts and binding verified",
+    "interrupted JSONL retained under distinct attempts",
+    "raw receiver scorer GT and helper identities bound",
+    "fresh owned store initialization",
+    "frame metadata repaired/verified on resume"
+  ],
+  "remaining_boundaries": [
+    "Individual interrupted solve restarts from pinned proposal input; completed solves reused",
+    "Search does not price or adjudicate exchange",
+    "Fixed-K extension includes nonpositive-benefit anchors"
+  ]
+}

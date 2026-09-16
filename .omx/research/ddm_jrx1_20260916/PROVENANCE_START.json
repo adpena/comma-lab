@@ -1,0 +1,80 @@
+{
+  "time_utc": "2026-09-16T04:04:02.706455+00:00",
+  "head": "840e323fd63b4c09e0f7b756aa80310403ebd867",
+  "sources": [
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_joint_exchange_probe_with_scorer_slot_on_move52_charter_20260916.md",
+      "bytes": 3639,
+      "sha256": "7b5454d77aa0004372497eb2d7e835d9c076a3cf01a25684679ab4f9aed165dc"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_on_move52_charter_20260916.md",
+      "bytes": 8257,
+      "sha256": "847f004c5beab281a9a7fc7d732a4904e48fa3635d6705b41c9d093666934f1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_pd4_pose_directed_pass4_price_lever_on_move52_20260913.md",
+      "bytes": 33965,
+      "sha256": "48767941b8a9cf1e22e5815732a51bf3fc3a81b992e711103816239f7d6657f3"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "bytes": 65008,
+      "sha256": "233ed1b53a35585b3c83116fad93de8c19c835238aec13e38976834ec7dd6e13"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_ren2_renderer_refit_in_place_on_the_coded_field_20260912.md",
+      "bytes": 38751,
+      "sha256": "3b9cdbbdb6a7bfdf6d046f6bc8f185b268946e547d6c71f19a332307f05bfeb1"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_cb1_carrier_basis_refit_to_pose_residual_subspace_20260912.md",
+      "bytes": 32712,
+      "sha256": "07b6e9ecdc91111693b2a45e46299db1fb1892ffe6334d005487357be192e265"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/SAMPLE.json",
+      "bytes": 6928,
+      "sha256": "b905cbabf06ca4a9dc78c1f9ed49a929e0c15d5f2b580a55fa769c23a5256613"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/archive.zip",
+      "bytes": 179332,
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/SEAL_ddm_pd3_pose_directed_pass3_contest_cuda.json",
+      "bytes": 10851,
+      "sha256": "9905cb9238cccf29f738ab71c28a073eb06bc90512e777db509ce49d3c45bf9e"
+    }
+  ],
+  "ap_free_bytes": 19363921920,
+  "git_index_sha256": "d1a90de8c66035fe7d6a9b5238c4b0ba9c9d2eaeadb042dd5f816b2597a19dde",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false
+}

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "-c",
+    "9720ef6d444a9dce0902e9a83f7958c4a704e0ed9c43491d06f9545a99240216"
+  ],
+  "counts": {
+    "frames": 737,
+    "orphan_frame_payloads_verified": 0,
+    "pair_artifacts": 174,
+    "pair_done": 26,
+    "raw_frame_bytes": 2249329896,
+    "solver_checksums": 391,
+    "v1_results_without_checksums": 0,
+    "v2_bound_sources": 66
+  },
+  "scope": "all retained v1 and v2 frame payloads, solver result checksums, completed pair artifacts; current v2 input sources",
+  "score_claim": false,
+  "status": "PASS",
+  "verification_code_sha256": "9720ef6d444a9dce0902e9a83f7958c4a704e0ed9c43491d06f9545a99240216"
+}

@@ -1,0 +1,32 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/launch_detached_process.py",
+    "--output-dir",
+    "/Volumes/APDataStore/pact/ddm_jrx1/launch/control_gate",
+    "--cwd",
+    "/Users/adpena/Projects/pact",
+    "--purpose",
+    "ddm_jrx1 fixedK control completeness gate; missing proposals must refuse pricing",
+    "--authority",
+    "jrx1 charter instrument gate; no encoding or rows2-3",
+    "--nice",
+    "0",
+    "--nice-best-effort",
+    "--artifact-budget-gib",
+    "0.01",
+    "--done-receipt",
+    "ddm_jrx1_control_gate_20260916",
+    "--env",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "--",
+    ".venv/bin/python",
+    "experiments/ddm_jrx1_price_control.py",
+    "sheets",
+    "--resume-from",
+    "/Volumes/APDataStore/pact/ddm_jrx1"
+  ],
+  "rc": 1,
+  "stdout": "",
+  "stderr": "{\"error\": \"detached child exited during verify-alive window\", \"last_log_lines\": [\"Traceback (most recent call last):\", \"  File \\\"/Users/adpena/Projects/pact/experiments/ddm_jrx1_price_control.py\\\", line 325, in <module>\", \"    main()\", \"    ~~~~^^\", \"  File \\\"/Users/adpena/Projects/pact/experiments/ddm_jrx1_price_control.py\\\", line 321, in main\", \"    {\\\"sheets\\\": sheets, \\\"encode\\\": lambda: encode(args.name), \\\"winners\\\": winners}[args.stage]()\", \"    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\", \"  File \\\"/Users/adpena/Projects/pact/experiments/ddm_jrx1_price_control.py\\\", line 182, in sheets\", \"    raise ValueError(\\\"fixed K24 contains pairs without an admissible proposal; no invented median\\\")\", \"ValueError: fixed K24 contains pairs without an admissible proposal; no invented median\"], \"log_path\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/control_gate/run.log\", \"manifest_path\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/control_gate/launch_manifest.json\", \"output_dir\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/control_gate\", \"pid\": 34145, \"rc\": 1, \"verify_alive_secs\": 3.0}\n"
+}

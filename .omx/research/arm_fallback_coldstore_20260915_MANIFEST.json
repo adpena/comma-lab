@@ -2022,6 +2022,59 @@
     }
    ],
    "added_utc": "2026-09-16T01:16:29Z"
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_jrx1_20260916__recall_big.tar",
+   "tar_bytes": 4229120,
+   "tar_sha256": "8e5a41ce0786b5b05e819483b1b2a34ba4456311cc32a1899a44047372ad0f7b",
+   "files": [
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/recall/equations.txt",
+     "bytes": 3787485,
+     "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    },
+    {
+     "path": ".omx/research/ddm_jrx1_20260916/recall/memos.txt",
+     "bytes": 435983,
+     "sha256": "f21126d34e476c997a6479d642f124360a2e04252b61aa35ddfac35d4b66ebaf"
+    }
+   ],
+   "reason": "recall snapshots (rebuildable from the registry at HEAD) / serializer fallback bundles (content landed on main)",
+   "added_utc": "2026-09-16T05:10:44Z"
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_jrd1_20260916__serializer_bundles.tar",
+   "tar_bytes": 9410560,
+   "tar_sha256": "90fac922e9eddaaf58e9b6264b08464f84afd194ca428a8a9780c0ef81db108d",
+   "files": [
+    {
+     "path": ".omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/receipts.jsonl",
+     "bytes": 8360,
+     "sha256": "507e004b171e32bfa00189e01cb3d7ffbb16468eb3d8ac8b12e729085dc1a514"
+    },
+    {
+     "path": ".omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.bundle",
+     "bytes": 788479,
+     "sha256": "f89a4d046a6bf39151caed97e092a46f42f077e6acc41ac9cd7b8ee8df4294f3"
+    },
+    {
+     "path": ".omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-tree.patch",
+     "bytes": 4294427,
+     "sha256": "dafd769e7defde02dffba84307b6fa4ee23da71211bd359c2f702e3645ddb28b"
+    },
+    {
+     "path": ".omx/research/ddm_jrd1_20260916/serializer/20260916T011030.702168Z-87158/intended-commit.format-patch",
+     "bytes": 4299490,
+     "sha256": "7d506d92e5e802b2cdc6f6980152fdae9d98dc01c8ad5f9b93eef197ff454c3f"
+    },
+    {
+     "path": ".omx/research/ddm_jrd1_20260916/serializer_scratch/xcrun_db",
+     "bytes": 1083,
+     "sha256": "a80eadded66c6d720f8639ccbddcc7c5117de3c7499f960a8fdb0ba0be789459"
+    }
+   ],
+   "reason": "recall snapshots (rebuildable from the registry at HEAD) / serializer fallback bundles (content landed on main)",
+   "added_utc": "2026-09-16T05:10:44Z"
   }
  ]
 }

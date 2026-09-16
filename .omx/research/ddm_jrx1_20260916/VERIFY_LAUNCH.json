@@ -1,0 +1,31 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/launch_detached_process.py",
+    "--output-dir",
+    "/Volumes/APDataStore/pact/ddm_jrx1/launch/verify_retention",
+    "--cwd",
+    "/Users/adpena/Projects/pact",
+    "--purpose",
+    "ddm_jrx1 terminal lossless frame and solver custody verification",
+    "--authority",
+    "jrx1 charter retention; all8 scorer shards terminal rc0",
+    "--nice",
+    "0",
+    "--nice-best-effort",
+    "--artifact-budget-gib",
+    "0.01",
+    "--done-receipt",
+    "ddm_jrx1_retention_verify_20260916",
+    "--env",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "--",
+    ".venv/bin/python",
+    "-c",
+    "import os,json,hashlib,zlib,math,sys\nfrom pathlib import Path\nassert os.getpriority(os.PRIO_PROCESS,0)==0\nstore=Path('/Volumes/APDataStore/pact/ddm_jrx1')\nout=Path('/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/RETENTION_VERIFICATION.json')\ndef sha(p):\n h=hashlib.sha256()\n with p.open('rb') as f:\n  for b in iter(lambda:f.read(1<<20),b''):h.update(b)\n return h.hexdigest()\ndef check(f):\n p=Path(f['path'])\n assert p.stat().st_size==f['bytes'] and sha(p)==f['sha256'],str(p)\n return 1\ncounts={'frames':0,'raw_frame_bytes':0,'solver_checksums':0,'pair_done':0,'pair_artifacts':0,'v2_bound_sources':0,'orphan_frame_payloads_verified':0,'v1_results_without_checksums':0}\nfor generation in ['search','search_v2']:\n root=store/generation\n results={p.stem for p in (root/'solves').glob('*.json') if not p.name.startswith('._') and not p.name.endswith(('.inputs.json','.sha.json'))}\n checked={p.name[:-9] for p in (root/'solves').glob('*.sha.json') if not p.name.startswith('._')}\n assert checked<=results,(generation,'checksum_without_result')\n if generation=='search_v2':assert results==checked,('unchecked_v2_result',sorted(results-checked))\n else:counts['v1_results_without_checksums']=len(results-checked)\n for p in sorted((root/'frames').glob('*.json')):\n  if p.name.startswith('._'):continue\n  d=json.loads(p.read_text());assert Path(d['payload']['path'])==p.with_suffix('.zlib'),str(p);check(d['payload']);raw=zlib.decompress(Path(d['payload']['path']).read_bytes())\n  assert hashlib.sha256(raw).hexdigest()==d['raw_sha256'] and len(raw)==d['raw_bytes'],str(p)\n  assert d['dtype']=='uint8' and math.prod(d['shape'])==len(raw),str(p)\n  counts['frames']+=1;counts['raw_frame_bytes']+=len(raw)\n for p in sorted((root/'frames').glob('*.zlib')):\n  if p.name.startswith('._') or p.with_suffix('.json').exists():continue\n  raw=zlib.decompress(p.read_bytes())\n  assert hashlib.sha256(raw).hexdigest()==p.stem,str(p)\n  counts['orphan_frame_payloads_verified']+=1;counts['raw_frame_bytes']+=len(raw)\n for p in sorted((root/'solves').glob('*.sha.json')):\n  if p.name.startswith('._'):continue\n  counts['solver_checksums']+=check(json.loads(p.read_text()))\n for p in sorted(root.glob('pair_*/DONE.json')):\n  d=json.loads(p.read_text())\n  for f in d['artifacts']:counts['pair_artifacts']+=check(f)\n  counts['pair_done']+=1\n if generation=='search_v2':\n  binding=json.loads((root/'BINDING.json').read_text())\n  sample=json.loads(Path('/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/SAMPLE.json').read_text())['pairs']\n  assert {json.loads(p.read_text())['pair'] for p in root.glob('pair_*/DONE.json')}==set(sample) and len(sample)==24\n  expected_binding_sha=hashlib.sha256(json.dumps(binding,sort_keys=True).encode()).hexdigest()\n  assert all(json.loads(p.read_text())['binding_sha']==expected_binding_sha for p in root.glob('pair_*/DONE.json'))\n  nested=binding['scorer_binding']\n  for path_key,sha_key in [('raw_path','raw_sha256'),('live_field','field_sha256'),('live_argmax','argmax_sha256')]:assert sha(Path(nested[path_key]))==nested[sha_key],path_key\n  assert Path(nested['raw_path']).stat().st_size==nested['raw_bytes']\n  for f in binding.values():\n   if isinstance(f,dict) and set(['path','bytes','sha256'])<=set(f):counts['v2_bound_sources']+=check(f)\nresult={'status':'PASS','counts':counts,'score_claim':False,'scope':'all retained v1 and v2 frame payloads, solver result checksums, completed pair artifacts; current v2 input sources','command':sys.argv,'verification_code_sha256':sys.argv[1]}\n# The launcher plan pins this -c source; the source is not a training payload.\nout.write_text(json.dumps(result,indent=2,sort_keys=True)+'\\n')\nprint(json.dumps(result),flush=True)\n",
+    "9720ef6d444a9dce0902e9a83f7958c4a704e0ed9c43491d06f9545a99240216"
+  ],
+  "rc": 0,
+  "stdout": "{\"fresh_roots\": [], \"launch_id\": {\"manifest_path\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/verify_retention/launch_manifest.json\", \"monotonic_launch_counter\": 2066, \"pid\": 34466}, \"log_path\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/verify_retention/run.log\", \"manifest_path\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/verify_retention/launch_manifest.json\", \"output_dir\": \"/Volumes/APDataStore/pact/ddm_jrx1/launch/verify_retention\", \"pid\": 34466, \"schema\": \"detached_local_process_launch.v2\", \"watchers\": []}\n",
+  "stderr": ""
+}

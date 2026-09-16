@@ -1,0 +1,26 @@
+[
+  {
+    "receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx1/regression/8b80255c87964a51b00ce62f869e5e63/RESULT.json",
+      "bytes": 58903,
+      "sha256": "0d28954e1828d1e5ceeb1624bee512ede99a4b5030f7175a1c7af10e3df04993"
+    },
+    "status": "PASS",
+    "tasks": 16,
+    "workers": 8,
+    "unique_payloads": 136,
+    "appledouble_metadata_files": 136
+  },
+  {
+    "receipt": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx1/regression/955fc1b20f524822b88e0c37e62033b4/RESULT.json",
+      "bytes": 29526,
+      "sha256": "32ca7a40a4e225109448c947b8227814469077dd6f45cea32f194da736e9d959"
+    },
+    "status": "PASS",
+    "tasks": 8,
+    "workers": 8,
+    "unique_payloads": 72,
+    "appledouble_metadata_files": 72
+  }
+]

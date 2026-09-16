@@ -1,0 +1,235 @@
+{
+  "lane_registry_entry": {
+    "id": "ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916",
+    "name": "jrx1 joint exchange instrument on move52",
+    "phase": 1.0,
+    "level": 0,
+    "gates": {
+      "impl_complete": {
+        "status": false,
+        "evidence": ""
+      },
+      "real_archive_empirical": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cuda": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cpu": {
+        "status": false,
+        "evidence": ""
+      },
+      "strict_preflight": {
+        "status": false,
+        "evidence": ""
+      },
+      "three_clean_review": {
+        "status": false,
+        "evidence": ""
+      },
+      "memory_entry": {
+        "status": false,
+        "evidence": ""
+      },
+      "deploy_runbook": {
+        "status": false,
+        "evidence": ""
+      }
+    },
+    "notes": "research_only=true; score_claim=false; final reference search K24 completed:22 proposal-bearing,2 null. INSTRUMENT_INCOMPLETE, no archive prices or rows2-3, no all600 collateral or formulation closure. Retention verified; slot released; receipt .omx/research/ddm_jrx1_20260916/RECEIPT.md. L0 remains."
+  },
+  "claim_lines": [
+    "| 2026-09-16T05:00:40Z | ddm_jrx1 | ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916 | local_macos_cpu | ddm_jrx1_joint_probe_20260916 |  | completed_reference_search_instrument_incomplete | All8 final search shards terminal rc0; K24=22 with proposals+2 null anchors (502,547). Instrument completeness gate refuses before price encode; rows2-3 and all600 collateral unmeasured. Retention verifier rc0. Sole scorer slot RELEASED. Consumer .omx/research/ddm_jrx1_20260916; no score or formulation closure. |",
+    "| 2026-09-16T04:03:31Z | ddm_jrx1 | ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916 | local_macos_cpu | ddm_jrx1_joint_probe_20260916 |  | active_control_preflight | Charter-assigned sole host scorer slot after pd5 terminal receipt 2026-09-16T03:59:23Z. K24 seeded row1 control before rows2-3; n600 collateral chunk<=120 if control passes. No burn, Modal, fire, packet, or Vertigo writes. |"
+  ],
+  "task_events": [
+    {
+      "actual_delta_s": null,
+      "blockers": [],
+      "commit_shas": [],
+      "completed_at_utc": null,
+      "event_actor": "ddm_jrx1",
+      "event_notes": "FIRED into charter-assigned sole scorer slot after pd5 release. Consumer /Volumes/APDataStore/pact/ddm_jrx1/search_v2. Fixed seeded K24 control generation is running; no exchange or score claim. Row1 currently has an undefined pair under the reference screen; final typed handoff follows.",
+      "event_timestamp_utc": "2026-09-16T04:41:06.684010Z",
+      "event_type": "status_change",
+      "owner": "MAIN",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "schema_version": "canonical_task_status_v1_20260518",
+      "session_id": "ddm_jrx1_20260916",
+      "source_design_memo": ".omx/research/ddm_jrd1_20260916/FIRE_ORDER.md",
+      "started_at_utc": "2026-09-16T04:41:06.684010Z",
+      "status": "in_progress",
+      "task_id": "ddm_jrd1_joint_exchange_scorer_phase_20260916",
+      "test_status": "pending",
+      "title": "Measure jrd1 joint exchange after explicit scorer-slot assignment",
+      "written_at_utc": "2026-09-16T04:41:06.684010Z",
+      "written_host": "mac.lan",
+      "written_pid": 23134
+    },
+    {
+      "actual_delta_s": null,
+      "blockers": [
+        "INSTRUMENT_INCOMPLETE: K24 includes no admissible single anchor at pairs502 and547; changed-token exchange undefined; calibration compares different estimands."
+      ],
+      "commit_shas": [],
+      "completed_at_utc": null,
+      "event_actor": "ddm_jrx1",
+      "event_notes": "FIRED and consumed by ddm_jrx1. All24 reference searches finished,22 produced proposals; no new price encode, renderer/joint row or all600 collateral. Existing scientific task remains unmeasured. FOLDED behind ddm_jrx1_matched_control_repair_20260916. Consumer /Volumes/APDataStore/pact/ddm_jrx1; fire only after replacement control policy is declared, repaired Row1 passes, current pointer validates and sole scorer slot is reclaimed.",
+      "event_timestamp_utc": "2026-09-16T05:01:19.513535Z",
+      "event_type": "blocked",
+      "owner": "MAIN",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "schema_version": "canonical_task_status_v1_20260518",
+      "session_id": "ddm_jrx1_20260916",
+      "source_design_memo": ".omx/research/ddm_jrd1_20260916/FIRE_ORDER.md",
+      "started_at_utc": "2026-09-16T04:41:06.684010Z",
+      "status": "blocked",
+      "task_id": "ddm_jrd1_joint_exchange_scorer_phase_20260916",
+      "test_status": "n_a",
+      "title": "Measure jrd1 joint exchange after explicit scorer-slot assignment",
+      "written_at_utc": "2026-09-16T05:01:19.513535Z",
+      "written_host": "mac.lan",
+      "written_pid": 35680
+    },
+    {
+      "actual_delta_s": null,
+      "blockers": [],
+      "commit_shas": [],
+      "completed_at_utc": null,
+      "event_actor": "ddm_jrx1",
+      "event_notes": "QUEUED-WITH-A-FIRE-ORDER. Consumer stores .omx/research/ddm_jrx1_20260916 and /Volumes/APDataStore/pact/ddm_jrx1. Trigger harvest of this instrument-incomplete receipt; issue replacement calibration before observing replacement prices. Concrete bounded compensating-token neighborhoods are in CONTROL_REPAIR_PROPOSAL.md, untested. No new sample substitution, null-to-zero mapping or joint-family closure.",
+      "event_timestamp_utc": "2026-09-16T05:01:19.530724Z",
+      "event_type": "registered",
+      "owner": "MAIN",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "schema_version": "canonical_task_status_v1_20260518",
+      "session_id": "ddm_jrx1_20260916",
+      "source_design_memo": ".omx/research/ddm_jrx1_20260916/CONTROL_REPAIR_PROPOSAL.md",
+      "started_at_utc": null,
+      "status": "pending",
+      "task_id": "ddm_jrx1_matched_control_repair_20260916",
+      "test_status": "pending",
+      "title": "Define matched Row1 calibration and missing-proposal policy before resuming joint exchange",
+      "written_at_utc": "2026-09-16T05:01:19.530724Z",
+      "written_host": "mac.lan",
+      "written_pid": 35680
+    }
+  ],
+  "checkpoints": [
+    {
+      "expected_outputs": null,
+      "files_touched": [
+        ".omx/state/active_lane_dispatch_claims.md",
+        ".omx/state/lane_registry.json"
+      ],
+      "findings": [
+        "pd5 terminal, no active claims at start, move52 unchanged; owned SSD write succeeds with ~18 GiB free."
+      ],
+      "host": "mac.lan",
+      "lane_id": "ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916",
+      "next_action": "Record pins and own corpus recall; reuse pd4 row1 with jrd1 fixed K24 sample and actual twin byte prices.",
+      "notes": "",
+      "parent_id_or_session": "01a0a860-67ad-7c02-831b-9f2006359b57",
+      "pid": 832,
+      "respawn_context": null,
+      "status": "in_progress",
+      "step": 1,
+      "subagent_id": "ddm_jrx1",
+      "written_at_utc": "2026-09-16T04:03:31.992726+00:00"
+    },
+    {
+      "expected_outputs": null,
+      "files_touched": [
+        "experiments/ddm_jrx1_field_control.py",
+        ".omx/research/ddm_jrx1_20260916/PREREGISTRATION.json"
+      ],
+      "findings": [
+        "pd4 reference 12.0 is pooled selected-subset price, not random-pair median; independent audit found resume defects and fixes are in current driver."
+      ],
+      "host": "mac.lan",
+      "lane_id": "ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916",
+      "next_action": "Run reviewed retained pd4 control search on first seeded pair then complete K24 and exact pricing; do not run renderer/joint before control gate.",
+      "notes": "",
+      "parent_id_or_session": "01a0a860-67ad-7c02-831b-9f2006359b57",
+      "pid": 5438,
+      "respawn_context": null,
+      "status": "in_progress",
+      "step": 2,
+      "subagent_id": "ddm_jrx1",
+      "written_at_utc": "2026-09-16T04:12:27.696650+00:00"
+    },
+    {
+      "expected_outputs": null,
+      "files_touched": [
+        "experiments/ddm_jrx1_field_control.py",
+        "experiments/test_ddm_jrx1_field_control.py",
+        ".omx/research/ddm_jrx1_20260916/RETENTION_RACE_INCIDENT.json"
+      ],
+      "findings": [
+        "Real initial solver receipts retained; parallel storage census race stopped six jobs. Owned fix plus real-archive 16-task8-worker regression passed. v2 namespace retains failed v1 evidence."
+      ],
+      "host": "mac.lan",
+      "lane_id": "ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916",
+      "next_action": "Harvest v2 search shards, resume final six pairs after their v1 workers terminate, then actual twin field prices and row1 gate.",
+      "notes": "",
+      "parent_id_or_session": "01a0a860-67ad-7c02-831b-9f2006359b57",
+      "pid": 11875,
+      "respawn_context": null,
+      "status": "in_progress",
+      "step": 3,
+      "subagent_id": "ddm_jrx1",
+      "written_at_utc": "2026-09-16T04:22:29.205995+00:00"
+    },
+    {
+      "expected_outputs": null,
+      "files_touched": [
+        "experiments/ddm_jrx1_price_control.py",
+        ".omx/research/ddm_jrx1_20260916/SEARCH_LAUNCH_V2_LAST.json"
+      ],
+      "findings": [
+        "Pair547 screens30 legal proposals, all add5-14cells versus max2; zero refined and no cluster anchor. Fixed K24 exchange undefined without a new missing-proposal policy."
+      ],
+      "host": "mac.lan",
+      "lane_id": "ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916",
+      "next_action": "Complete already assigned fixed-K coverage; harvest instrument-only stop if any pair lacks an admissible reference proposal. No renderer or joint launch.",
+      "notes": "",
+      "parent_id_or_session": "01a0a860-67ad-7c02-831b-9f2006359b57",
+      "pid": 19255,
+      "respawn_context": null,
+      "status": "in_progress",
+      "step": 4,
+      "subagent_id": "ddm_jrx1",
+      "written_at_utc": "2026-09-16T04:35:46.182045+00:00"
+    },
+    {
+      "expected_outputs": null,
+      "files_touched": [
+        "experiments/ddm_jrx1_field_control.py",
+        "experiments/ddm_jrx1_price_control.py",
+        "experiments/test_ddm_jrx1_field_control.py",
+        ".omx/research/ddm_jrx1_20260916/RECEIPT.md"
+      ],
+      "findings": [
+        "K24 reference search terminal:435 single screens/215 resolved rows;161 cluster screens/121 resolved rows;22 pairs with proposals and2 null anchors. Price preparation refused; all exchange and collateral rows remain unmeasured.",
+        "Terminal retention PASS:737 frames,391 solver-result checksums across v1/v2;616401965 SSD bytes retained; scorer slot released; pointer unchanged."
+      ],
+      "host": "mac.lan",
+      "lane_id": "ddm_jrx1_joint_exchange_probe_with_scorer_slot_20260916",
+      "next_action": "MAIN harvests CONTROL_REPAIR_PROPOSAL.md and pending matched-control task; resume original joint task only after replacement control passes and scorer slot is reclaimed. Serializer landing attempted last; rc17 fallback must be verified and handed to MAIN.",
+      "notes": "",
+      "parent_id_or_session": "01a0a860-67ad-7c02-831b-9f2006359b57",
+      "pid": 37439,
+      "respawn_context": null,
+      "status": "blocked",
+      "step": 5,
+      "subagent_id": "ddm_jrx1",
+      "written_at_utc": "2026-09-16T05:04:58.809914+00:00"
+    }
+  ],
+  "staging_policy": "live shared files were initially dirty; retain own rows here and never whole-file stage unrelated hunks"
+}

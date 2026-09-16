@@ -1,0 +1,369 @@
+{
+  "scope": "owned retention apparatus, not scientific verdict",
+  "cause": "jrd1.storage materializes paths then stats after another worker atomically renames pending file",
+  "preserved_producer": "/Volumes/APDataStore/pact/ddm_jrx1/producer_versions/v1_c5da88055168a96e680058a2237caf6d63103ffa5d81fc4b6aa857168565557f.py",
+  "terminated_attempt_receipts": [
+    {
+      "receipt": ".omx/tmp/codex_runs/ddm_jrx1_search_shard0_20260916.done",
+      "result": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 26.064924,
+        "generated_utc": "2026-09-16T04:16:59Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard0/launch_manifest.json",
+          "monotonic_launch_counter": 2050,
+          "pid": 7375
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard0_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "log_sha256": "b658e67f2ee580f5e4ebbff18aef41a078da390b0ce47e5934cd03f7e8bfc320"
+    },
+    {
+      "receipt": ".omx/tmp/codex_runs/ddm_jrx1_search_shard4_20260916.done",
+      "result": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 15.569237,
+        "generated_utc": "2026-09-16T04:17:00Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard4/launch_manifest.json",
+          "monotonic_launch_counter": 2054,
+          "pid": 7475
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard4_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "log_sha256": "0e949ff0e76601f656c1728a9a83fa486d24350fd00b22de43fc08f4003a8c08"
+    },
+    {
+      "receipt": ".omx/tmp/codex_runs/ddm_jrx1_search_shard1_20260916.done",
+      "result": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 19.535565,
+        "generated_utc": "2026-09-16T04:16:55Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard1/launch_manifest.json",
+          "monotonic_launch_counter": 2051,
+          "pid": 7396
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard1_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "log_sha256": "46a9db4f94eae50b80fc038f84672e3b15f1b2d835381060514f4d208fa02221"
+    },
+    {
+      "receipt": ".omx/tmp/codex_runs/ddm_jrx1_search_shard6_20260916.done",
+      "result": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 3.167732,
+        "generated_utc": "2026-09-16T04:16:54Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard6/launch_manifest.json",
+          "monotonic_launch_counter": 2056,
+          "pid": 7534
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard6_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "log_sha256": "3b3434bf19e49685ba3bf16bebfa23ee83c2968c20086346d4894ac539b39b50"
+    },
+    {
+      "receipt": ".omx/tmp/codex_runs/ddm_jrx1_search_shard2_20260916.done",
+      "result": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 23.728694,
+        "generated_utc": "2026-09-16T04:17:02Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard2/launch_manifest.json",
+          "monotonic_launch_counter": 2052,
+          "pid": 7426
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard2_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "log_sha256": "bedbf6b89eb91e25d7f4c3b913baaf5218ade872cfd3b19f54d0ee84e192f316"
+    },
+    {
+      "receipt": ".omx/tmp/codex_runs/ddm_jrx1_search_pair250_20260916.done",
+      "result": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 270.399467,
+        "generated_utc": "2026-09-16T04:17:10Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_pair250/launch_manifest.json",
+          "monotonic_launch_counter": 2049,
+          "pid": 5516
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_pair250_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "log_sha256": "fa1e2c62d5be61c5a5bc7e9efda941df0630c4f141a67e587751a5ab64bbdf7b"
+    }
+  ],
+  "cure": "serialize retained writes and perform stable full census; new version namespace preserves all v1 evidence",
+  "terminal_v1_launches": [
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 270.399467,
+        "generated_utc": "2026-09-16T04:17:10Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_pair250/launch_manifest.json",
+          "monotonic_launch_counter": 2049,
+          "pid": 5516
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_pair250_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_pair250_20260916.done",
+        "sha256": "657bc57a2482cd42ed0445b92d84f2854552a5c66c9300338fdf3677656c0632",
+        "bytes": 412
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_pair250/run.log",
+        "sha256": "fa1e2c62d5be61c5a5bc7e9efda941df0630c4f141a67e587751a5ab64bbdf7b",
+        "bytes": 4711
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search/frames/c5cd58af125cc1b4e6d72e0b912c0a0fd3222f4d2fcabd456662374243da825d.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 26.064924,
+        "generated_utc": "2026-09-16T04:16:59Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard0/launch_manifest.json",
+          "monotonic_launch_counter": 2050,
+          "pid": 7375
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard0_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard0_20260916.done",
+        "sha256": "b979dedf761c06eb532c4c8a40609410cdbfda7c75544aa4ff021c5682b4ddbe",
+        "bytes": 409
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard0/run.log",
+        "sha256": "b658e67f2ee580f5e4ebbff18aef41a078da390b0ce47e5934cd03f7e8bfc320",
+        "bytes": 3599
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search/frames/3511a987b387a2948a1839dd8fd695754ea2ceaa382c16116c5abb507d85f099.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 19.535565,
+        "generated_utc": "2026-09-16T04:16:55Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard1/launch_manifest.json",
+          "monotonic_launch_counter": 2051,
+          "pid": 7396
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard1_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard1_20260916.done",
+        "sha256": "c6ca3ef5ec28f6f069b851e1994067f40577930ff1357edc7fb071c0991cbadf",
+        "bytes": 409
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard1/run.log",
+        "sha256": "46a9db4f94eae50b80fc038f84672e3b15f1b2d835381060514f4d208fa02221",
+        "bytes": 3389
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search/frames/b74cd0b45e57a3ce066e903c9358880ba5be7c8b6f9a0cc80c3702455e61a8cc.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 23.728694,
+        "generated_utc": "2026-09-16T04:17:02Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard2/launch_manifest.json",
+          "monotonic_launch_counter": 2052,
+          "pid": 7426
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard2_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard2_20260916.done",
+        "sha256": "c5a9ef26f3df790530d5ba2aae4d6c46f85c2ef920cf211d5f05aa5bfdb49575",
+        "bytes": 409
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard2/run.log",
+        "sha256": "bedbf6b89eb91e25d7f4c3b913baaf5218ade872cfd3b19f54d0ee84e192f316",
+        "bytes": 3599
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search/frames/7606016ecfcc1c28a30b218ee13adbaf7e72808f594121c0fbbea09d372b70d2.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 1084.577867,
+        "generated_utc": "2026-09-16T04:34:46Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard3/launch_manifest.json",
+          "monotonic_launch_counter": 2053,
+          "pid": 7447
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard3_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard3_20260916.done",
+        "sha256": "80610b3832d827adf081749a7977a037ec70bf7a902b0b3e655eb58c3d360dc9",
+        "bytes": 411
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard3/run.log",
+        "sha256": "b41e1621ac6bb1cbd7382f35ea7d438219c7f20b50dafad513b89148c3148755",
+        "bytes": 7527
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search_v2/frames/7cfa6fa95be755a666bca0798af5e76b1e971dbebef8c35a07e74d35a1f346c4.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 15.569237,
+        "generated_utc": "2026-09-16T04:17:00Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard4/launch_manifest.json",
+          "monotonic_launch_counter": 2054,
+          "pid": 7475
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard4_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard4_20260916.done",
+        "sha256": "a9abf91ec97b2731b7231fe3f62d34b2f22ea6730f7d5d2575e75559ef976b80",
+        "bytes": 409
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard4/run.log",
+        "sha256": "0e949ff0e76601f656c1728a9a83fa486d24350fd00b22de43fc08f4003a8c08",
+        "bytes": 3861
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search/frames/e5ea43da6a22bf12adcd1b8ee4e972057a3a3794cfe548e49fac0addad6dc05d.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 322.435142,
+        "generated_utc": "2026-09-16T04:22:10Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard5/launch_manifest.json",
+          "monotonic_launch_counter": 2055,
+          "pid": 7495
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard5_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard5_20260916.done",
+        "sha256": "e5d7175d23fc1d85bb3f0df508832a1849f06fbdabf0c9f7410d88faadd0277b",
+        "bytes": 410
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard5/run.log",
+        "sha256": "e809b1463011affe5fb9b2ec289d1b7131516fc951edc174be34a44edc0aa5f6",
+        "bytes": 5308
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search_v2/frames/995db698cc84eca289ebbb9d686adec147430c8758afd244f5de52ca5457e75e.zlib.pending'"
+      ]
+    },
+    {
+      "receipt": {
+        "adjudicated_at_launch": false,
+        "detail": "",
+        "elapsed_s": 3.167732,
+        "generated_utc": "2026-09-16T04:16:54Z",
+        "launch_id": {
+          "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard6/launch_manifest.json",
+          "monotonic_launch_counter": 2056,
+          "pid": 7534
+        },
+        "rc": 1,
+        "receipt_name": "ddm_jrx1_search_shard6_20260916",
+        "schema": "detached_local_process_done.v2"
+      },
+      "receipt_fact": {
+        "path": ".omx/tmp/codex_runs/ddm_jrx1_search_shard6_20260916.done",
+        "sha256": "39da040bf64d1296df6d39f3c0efe8a93c06c5d4ed13239ff026bc38607ebaf9",
+        "bytes": 408
+      },
+      "terminal_log": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/launch/search_shard6/run.log",
+        "sha256": "3b3434bf19e49685ba3bf16bebfa23ee83c2968c20086346d4894ac539b39b50",
+        "bytes": 2809
+      },
+      "last_error_lines": [
+        "    return os.stat(self, follow_symlinks=follow_symlinks)",
+        "           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/APDataStore/pact/ddm_jrx1/search/frames/._151f604316c5f766de6adb88419d66f1c6a0f0cba2928275565ddeb9956b48d0.zlib.pending'"
+      ]
+    }
+  ],
+  "terminal_v1_count": 8,
+  "all_v1_terminal": true,
+  "payload_policy": "Every v1 payload remains in search/; v2 source and binding are separate. No failed search scalar is promoted into an exchange or frontier."
+}

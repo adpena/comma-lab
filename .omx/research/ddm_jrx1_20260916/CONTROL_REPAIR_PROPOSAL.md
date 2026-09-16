@@ -1,0 +1,14 @@
+# Reviewable control repair for MAIN
+
+Disposition: QUEUED-WITH-A-FIRE-ORDER. Owner: MAIN. Consumer stores: this directory and `/Volumes/APDataStore/pact/ddm_jrx1`. Fire trigger: harvest the instrument-incomplete receipt, then issue a replacement Row 1 calibration before any new price/exchange result is selected. No scorer launch is authorized by this proposal alone; reclaim the sole slot and revalidate the current pointer first.
+
+The original K24 draw must remain visible. Pairs 547 and 502 have no eligible single anchor under the unchanged reference, so their changed-token prices are undefined. The selected pooled 12.0 bits/token reference is also a different estimand from the requested random-pair median. Choosing an arbitrary null value or silently changing the sample would manufacture a passing gate.
+
+Proposed decisions for MAIN:
+
+1. Define instrument reproduction on identical retained pd4 proposals for overlapping pairs, using the same resolved-pose plus seg numerator and the same coded-price denominator. Keep randomized K24 discovery economics as a separately reported distribution. Use actual full-archive twins as charges; ledger bits only rank. Set comparison tolerances before observing replacement prices.
+2. Define a no-proposal policy. Preserve null observations and the full 24 denominator. If all 24 finite exchanges are required, explicitly extend the anchor selection and rerun only affected pairs; never substitute another pair or call a no-op a changed token.
+3. A concrete bounded extension already fits the existing cluster helper: use pair 547's least damaging rejected single anchor, cell [343,231], 4→3, +5 cells, and test its radius 1 second-token neighborhood. Apply the unchanged ≤2-cell gate to the combined render, then the unchanged full pose solver and real coder to any survivor. Pair 502 provides a second concrete test: cell [129,273], 2→1, +6 cells. These are new declared anchor-selection scopes, not a measured remedy. The original single-screen result remains an instance-scoped observation. If this neighborhood fails, that does not close all two-token moves.
+4. Resume renderer/joint rows only after the repaired control passes. Row 2 must include all 600 collateral; Row 3 must price real tail and int4 bytes, resolve pose, charge residual bytes within ±35 B, and report undefined ratios honestly when the better single has no positive exchange. The original ≥2x and <1.5x gates otherwise remain unchanged.
+
+The existing pricing adapter's encoder and winner-selection stages are source-reviewed but unexecuted. Its preparation gate ran and refused the incomplete sample before encoding. It requires one encode job per process, search completion before price reservations, and preparation separated from active encoders. It cannot convert resolved-pose diagnostics into a byte-closed candidate because the priced archives hold the shipped carrier; no candidate or score may be claimed from that diagnostic alone.

@@ -1,0 +1,84 @@
+{
+  "schema": "ddm_jrx1_handoff.v1",
+  "verdict": "INSTRUMENT_INCOMPLETE",
+  "three_row_probe_complete": false,
+  "reference_search_complete": true,
+  "sample_n": 24,
+  "resolved_proposal_pairs": 22,
+  "undefined_pairs": [
+    502,
+    547
+  ],
+  "field_single_resolved_rows": 215,
+  "field_cluster_resolved_rows": 121,
+  "new_archive_encodes": 0,
+  "median_exchange_S_per_B": {
+    "row1": null,
+    "row2": null,
+    "row3": null
+  },
+  "exchange_iqr": null,
+  "joint_vs_single_ratio": null,
+  "all600_collateral": null,
+  "score_claim": false,
+  "exact_frontier_moved": false,
+  "current_own_frontier": {
+    "S": 0.13620226906030858,
+    "archive_bytes": 179332,
+    "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+    "axis": "[contest-CUDA T4 n600]"
+  },
+  "measurement_axis": "[macOS-CPU advisory]",
+  "retained_SSD_bytes": 616401965,
+  "consumer_store": "/Volumes/APDataStore/pact/ddm_jrx1",
+  "scorer_slot": "RELEASED",
+  "negative_scope": "Specific declared single-proposal screens only; no formulation/family negative banked",
+  "next_actions": [
+    {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "task_id": "ddm_jrx1_matched_control_repair_20260916",
+      "action": "Define matched calibration and null-pair treatment before replacement prices",
+      "consumer_store": ".omx/research/ddm_jrx1_20260916/CONTROL_REPAIR_PROPOSAL.md",
+      "fire_trigger": "harvest this instrument-incomplete receipt; set comparison before observing replacement prices"
+    },
+    {
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "task_id": "ddm_jrd1_joint_exchange_scorer_phase_20260916",
+      "action": "Resume original renderer/joint probe including all600 collateral",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_jrx1",
+      "fire_trigger": "repaired Row1 passes, pointer validated, sole scorer slot reclaimed"
+    }
+  ],
+  "landing": {
+    "serializer_result": ".omx/research/ddm_jrx1_20260916/SERIALIZER_RESULT.json",
+    "if_git_object_denial_rc17": {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_jrx1_20260916/serializer",
+      "fire_trigger": "Git-write-capable MAIN and verified bundle/patch/file hashes",
+      "action": "land exact owned-file fallback; reconcile own operational rows without absorbing unrelated dirty work"
+    }
+  },
+  "live_hypotheses": [
+    {
+      "lead": "Two-token compensation behind rejected single anchors",
+      "why_plausible": "Combined renderer effects can cancel; these neighborhoods were not searched because reference singles failed the gate"
+    },
+    {
+      "lead": "Joint field/int4 exchange with global collateral",
+      "why_plausible": "Single-axis negatives do not measure coupled motion; no joint row was reached"
+    }
+  ],
+  "dead_ends": [
+    {
+      "path": "Repeat the exact62 sampled single proposals on pairs502/547 with unchanged\u22642-cell screen",
+      "reason": "All62 already measured at+5\u202614 or+6\u202614 cells"
+    },
+    {
+      "path": "Use pooled selected12.0 bits/token as a matched random-K24 median baseline, or replace undefined rows with zero",
+      "reason": "Changes the estimand or fabricates the missing denominator"
+    }
+  ]
+}

@@ -1,0 +1,625 @@
+{
+  "status": "INSTRUMENT_INCOMPLETE",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "sample_pairs": 24,
+  "pairs_with_refined_proposals": 22,
+  "missing_pairs": [
+    {
+      "pair": 502,
+      "screened": 32,
+      "minimum_added_seg_cells": 6,
+      "median_added_seg_cells": 10.0,
+      "maximum_added_seg_cells": 14,
+      "eligible_threshold": 2,
+      "pose_refines": 0,
+      "cluster_measured": false,
+      "scope": "INSTANCE_ONLY_DECLARED_SINGLE_PROPOSAL_SCREEN",
+      "least_harmful_anchor": {
+        "pair": 502,
+        "cell": [
+          129,
+          273
+        ],
+        "old": 2,
+        "new": 1,
+        "base_flips": 37,
+        "flips": 43,
+        "d_cells": 6,
+        "saliency": 3.786585622833627e-08,
+        "interior": true
+      }
+    },
+    {
+      "pair": 547,
+      "screened": 30,
+      "minimum_added_seg_cells": 5,
+      "median_added_seg_cells": 9.0,
+      "maximum_added_seg_cells": 14,
+      "eligible_threshold": 2,
+      "pose_refines": 0,
+      "cluster_measured": false,
+      "scope": "INSTANCE_ONLY_DECLARED_SINGLE_PROPOSAL_SCREEN",
+      "least_harmful_anchor": {
+        "pair": 547,
+        "cell": [
+          343,
+          231
+        ],
+        "old": 4,
+        "new": 3,
+        "base_flips": 37,
+        "flips": 42,
+        "d_cells": 5,
+        "saliency": 3.9380910976660743e-08,
+        "interior": true
+      }
+    }
+  ],
+  "single_screened": 435,
+  "single_pose_rows": 215,
+  "cluster_screened": 161,
+  "cluster_pose_rows": 121,
+  "new_price_encodes": 0,
+  "row1": {
+    "median_S_per_B": null,
+    "iqr_S_per_B": null,
+    "median_bits_per_changed_token": null,
+    "iqr_bits_per_changed_token": null,
+    "reason": "fixed sample includes two undefined changed-token exchanges; price preparation refused before encoding"
+  },
+  "row2": {
+    "status": "UNMEASURED_CONTROL_NOT_PASSED"
+  },
+  "row3": {
+    "status": "UNMEASURED_CONTROL_NOT_PASSED"
+  },
+  "joint_vs_best_single_ratio": null,
+  "all600_collateral": null,
+  "tolerance_comparison": "NOT_EVALUABLE; neither tolerance is reported passed or numerically failed",
+  "negative_scope": "No formulation or family negative; n24 diagnostic cannot bank one",
+  "pairs": [
+    {
+      "pair": 32,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 1
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_032/DONE.json",
+        "bytes": 2016,
+        "sha256": "2a7857a8a7329e83cc3978b26142e5c281f80ba9dcdf34544c40878ec967c477"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 33,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 7
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_033/DONE.json",
+        "bytes": 2016,
+        "sha256": "d561ed28c53fb92df02064ce3bd521b6a480d96a24023f722f93f28b3e28040f"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 53,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 12
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_053/DONE.json",
+        "bytes": 2016,
+        "sha256": "d7db53f82aefcd51e6a0caf0ff5d35ee544223ef854f057b3016d3fe4a9fd0cf"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 80,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 5
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_080/DONE.json",
+        "bytes": 2016,
+        "sha256": "d4f0df257e79ab761e4161e1e945c9433df2da91f6ff7ef646ae80085694e8b8"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 127,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 9
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_127/DONE.json",
+        "bytes": 2017,
+        "sha256": "25e9dfff2d176bc96b5baa06324e925d102b1e2f034750ed2648724192a3018d"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 134,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 4,
+        "screened": 23,
+        "seg_neutral": 0
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 0,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_134/DONE.json",
+        "bytes": 2013,
+        "sha256": "1342debe455102209fc8307d818eeb677089bfd708e447fff7f3b5395963f4c5"
+      },
+      "single_pose_rows": 4,
+      "cluster_pose_rows": 0
+    },
+    {
+      "pair": 137,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 6,
+        "screened": 16,
+        "seg_neutral": 2
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 6,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_137/DONE.json",
+        "bytes": 2016,
+        "sha256": "0b6a181deea38fdb608e4b4edc9e483b20c6341c4abacf3071d4fac2e5f5a38f"
+      },
+      "single_pose_rows": 6,
+      "cluster_pose_rows": 6
+    },
+    {
+      "pair": 183,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 11,
+        "screened": 16,
+        "seg_neutral": 0
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 4,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_183/DONE.json",
+        "bytes": 2017,
+        "sha256": "4ae244f9fe6fb4902150ad10fc4d633ea31b4661468ed9a17f0ab41c406f7a00"
+      },
+      "single_pose_rows": 11,
+      "cluster_pose_rows": 4
+    },
+    {
+      "pair": 208,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 1
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_208/DONE.json",
+        "bytes": 2017,
+        "sha256": "200049c413e9447f6fc402c15141cd5c0a6f9983b53ae84fba043f2b1a2e254e"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 214,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 10,
+        "screened": 16,
+        "seg_neutral": 2
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 4,
+        "screened": 5,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_214/DONE.json",
+        "bytes": 2017,
+        "sha256": "8c661674668f2303b6781aca5c1774d34d500c99568fc54a75523b3f924c79ea"
+      },
+      "single_pose_rows": 10,
+      "cluster_pose_rows": 4
+    },
+    {
+      "pair": 236,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 12
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_236/DONE.json",
+        "bytes": 2017,
+        "sha256": "1bede7268705aeeb1f1cddb138dfce6e0b2c679c2081ea8794510efbba9250ea"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 250,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 10,
+        "screened": 16,
+        "seg_neutral": 3
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 7,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_250/DONE.json",
+        "bytes": 2017,
+        "sha256": "15cd51d026c7fbb0f274d45ebbc348abc0b8ced4457561ce76419f9e2f71558e"
+      },
+      "single_pose_rows": 10,
+      "cluster_pose_rows": 7
+    },
+    {
+      "pair": 296,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 4
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 6,
+        "screened": 6,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_296/DONE.json",
+        "bytes": 2017,
+        "sha256": "8c6f04167ac79a822e409ecd17378f5aa04687727c57d4b5acbf2a46785ec53b"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 6
+    },
+    {
+      "pair": 319,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 5,
+        "screened": 17,
+        "seg_neutral": 0
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 1,
+        "screened": 5,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_319/DONE.json",
+        "bytes": 2015,
+        "sha256": "306dd4bc1926bc7e4896558525c963b7b38de8e83b8bb1bff86c7b4f1147d17b"
+      },
+      "single_pose_rows": 5,
+      "cluster_pose_rows": 1
+    },
+    {
+      "pair": 342,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 7
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 5,
+        "screened": 5,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_342/DONE.json",
+        "bytes": 2017,
+        "sha256": "74779ed30995fe4b317e429f3c9c7fc69a5884bf041640e1faa42bb200b3c424"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 5
+    },
+    {
+      "pair": 376,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 10,
+        "screened": 16,
+        "seg_neutral": 3
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 5,
+        "screened": 5,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_376/DONE.json",
+        "bytes": 2017,
+        "sha256": "f85d79d4de4f2d6448bb569a7e2991aca8677eee067b7c95efd2aa35703f7021"
+      },
+      "single_pose_rows": 10,
+      "cluster_pose_rows": 5
+    },
+    {
+      "pair": 382,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 9,
+        "screened": 16,
+        "seg_neutral": 2
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 1,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_382/DONE.json",
+        "bytes": 2015,
+        "sha256": "5f9aa274494d7f58a98cd2cc5dc6de95fcff57f35dc6f920111420fb4564923f"
+      },
+      "single_pose_rows": 9,
+      "cluster_pose_rows": 1
+    },
+    {
+      "pair": 385,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 8
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 5,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_385/DONE.json",
+        "bytes": 2017,
+        "sha256": "3f6d857db0a7ae7a105684b7f14130f8b8d204e15e445f1a29f0e813c5b8d414"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 5
+    },
+    {
+      "pair": 398,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 16,
+        "seg_neutral": 1
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 0,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_398/DONE.json",
+        "bytes": 2013,
+        "sha256": "069bc9de5dc42dc09a8df4c5774329689681cfdbc96fe4adba1f22d328c761c1"
+      },
+      "single_pose_rows": 8,
+      "cluster_pose_rows": 0
+    },
+    {
+      "pair": 406,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 12,
+        "screened": 16,
+        "seg_neutral": 3
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 9,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_406/DONE.json",
+        "bytes": 2017,
+        "sha256": "b931fb967a420dc8e1b85713fdb9c940c73ebf4a4fd32a247f78eded2f6fc950"
+      },
+      "single_pose_rows": 12,
+      "cluster_pose_rows": 8
+    },
+    {
+      "pair": 502,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 0,
+        "screened": 32,
+        "seg_neutral": 0
+      },
+      "cluster_counters": null,
+      "status": "NO_ADMISSIBLE_SINGLE_ANCHOR",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_502/DONE.json",
+        "bytes": 1129,
+        "sha256": "534ef0480b798a26a4ea4cd0a779390340ae46c950f8c79e3961d6ad173de961"
+      },
+      "single_pose_rows": 0,
+      "cluster_pose_rows": 0
+    },
+    {
+      "pair": 536,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 2,
+        "screened": 29,
+        "seg_neutral": 0
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 5,
+        "screened": 6,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_536/DONE.json",
+        "bytes": 2016,
+        "sha256": "effd3d6ef0d157533716602acf08af65f5accf33d8921797722c4b7c82e06942"
+      },
+      "single_pose_rows": 2,
+      "cluster_pose_rows": 5
+    },
+    {
+      "pair": 547,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 0,
+        "screened": 30,
+        "seg_neutral": 0
+      },
+      "cluster_counters": null,
+      "status": "NO_ADMISSIBLE_SINGLE_ANCHOR",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_547/DONE.json",
+        "bytes": 1129,
+        "sha256": "efbac749067880abe61953aa7151c2630b128650ccb46e4330f30ef8fa7e73a1"
+      },
+      "single_pose_rows": 0,
+      "cluster_pose_rows": 0
+    },
+    {
+      "pair": 583,
+      "single_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 16,
+        "seg_neutral": 2
+      },
+      "cluster_counters": {
+        "pairs": 1,
+        "refined": 8,
+        "screened": 8,
+        "skipped_done": 0
+      },
+      "status": "PROPOSALS_READY_UNPRICED",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/pair_583/DONE.json",
+        "bytes": 2016,
+        "sha256": "09e93705465f78aeb7a8a9f4eb86094b74e855bbc0e887db79e6ba2dbd1177e5"
+      },
+      "single_pose_rows": 8,
+      "cluster_pose_rows": 8
+    }
+  ]
+}

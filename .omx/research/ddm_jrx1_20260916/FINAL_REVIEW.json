@@ -1,0 +1,41 @@
+{
+  "utc": "2026-09-16T05:06:15.992012+00:00",
+  "reviewer": "independent row1_instrument_review",
+  "status": "NO_FINAL_BLOCKER",
+  "scope": "K24 membership+DONE hashes+actual retained row counts; pd4 reference medians; byte ceiling; receipt epistemic labels",
+  "verified": {
+    "single_screened": 435,
+    "single_resolved": 215,
+    "cluster_screened": 161,
+    "cluster_resolved": 121,
+    "null_pairs": [
+      502,
+      547
+    ],
+    "tolerance": "NOT_EVALUABLE",
+    "joint_and_collateral": "UNMEASURED",
+    "frontier_progress": false
+  },
+  "files": [
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RECEIPT.md",
+      "bytes": 10984,
+      "sha256": "9b45418c12d81dc7feefe0169cfb12e4ffe9407cce77875706b3fefecdf8ee98"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/FIELD_CONTROL.json",
+      "bytes": 16573,
+      "sha256": "63b10857488fb2b3a375a33779acc1a9d420d9f228f7d514334eebb7beb3ff90"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/RETENTION_VERIFICATION.json",
+      "bytes": 632,
+      "sha256": "853892e14e9f7d13724f225db63704c1109cd3d2ee9edf41aa17c3d4a1ab4561"
+    },
+    {
+      "path": ".omx/research/ddm_jrx1_20260916/PD4_REFERENCE_AUDIT.json",
+      "bytes": 4926,
+      "sha256": "2abe51056525b2b60f5c77e11aa0f18660bcd703f0fdab97c0767e8cdf4704f9"
+    }
+  ]
+}
