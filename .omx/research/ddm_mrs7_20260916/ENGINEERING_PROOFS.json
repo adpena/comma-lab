@@ -1,0 +1,146 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "c_warnings": {
+    "corrector": {
+      "argv": [
+        "cc",
+        "-O2",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-shared",
+        "-fPIC",
+        "/Users/adpena/Projects/pact/submissions/mrs7/corrector.c",
+        "-o",
+        "/dev/null",
+        "-lm"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "warning_lines": 0
+    },
+    "geometry": {
+      "argv": [
+        "cc",
+        "-O2",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-shared",
+        "-fPIC",
+        "/Users/adpena/Projects/pact/submissions/mrs7/geometry.c",
+        "-o",
+        "/dev/null",
+        "-lm"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "warning_lines": 0
+    },
+    "range_decoder": {
+      "argv": [
+        "cc",
+        "-O2",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-ffp-contract=off",
+        "-fno-fast-math",
+        "-shared",
+        "-fPIC",
+        "/Users/adpena/Projects/pact/submissions/mrs7/range_decoder.c",
+        "-o",
+        "/dev/null",
+        "-lm"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "warning_lines": 0
+    }
+  },
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+  "files": {
+    "FORMAT.md": {
+      "bytes": 6828,
+      "lines": 101,
+      "sha256": "66a005316e34b66394af6cec108458d8319217ab37cebb5d65df824c1407c4e1"
+    },
+    "README.md": {
+      "bytes": 4707,
+      "lines": 57,
+      "sha256": "3d596c938bd1d24ff609065d575da03f5fa53e63463262c24b476781b28d8cbe"
+    },
+    "archive.zip": {
+      "bytes": 179286,
+      "lines": null,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+    },
+    "corrector.c": {
+      "bytes": 32702,
+      "lines": 715,
+      "sha256": "ce98ed5d731d0cc83e1c1ffb9cb42d66ac5a0e4f882ae5a3cd1da7a457f7bc34"
+    },
+    "geometry.c": {
+      "bytes": 6868,
+      "lines": 165,
+      "sha256": "63dc7d7df810712389bfd5f287eabf3b0b1915db3d7f1033125f6f9e13c0ec22"
+    },
+    "inflate.py": {
+      "bytes": 104935,
+      "lines": 2180,
+      "sha256": "db48036fc33465627f9b1288eff05ee4b50f9b831a158cd4c7e9379d84b6b7ab"
+    },
+    "inflate.sh": {
+      "bytes": 648,
+      "lines": 10,
+      "sha256": "a4089a1a18a6e40e1ea241f8a3522a3576e44f0a469f9658fc9eb0d675a8bf6b"
+    },
+    "range_decoder.c": {
+      "bytes": 4018,
+      "lines": 100,
+      "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec"
+    }
+  },
+  "promotable": false,
+  "reason": "Compiler and linter receipts for the eight shipped mrs7 files",
+  "ruff": {
+    "experiments/ddm_mrs7_proof.py": {
+      "argv": [
+        ".venv/bin/ruff",
+        "check",
+        "--select",
+        "F,ARG",
+        "experiments/ddm_mrs7_proof.py"
+      ],
+      "returncode": 0,
+      "stdout": "All checks passed!"
+    },
+    "experiments/ddm_mrs7_report_parse_check.py": {
+      "argv": [
+        ".venv/bin/ruff",
+        "check",
+        "--select",
+        "F,ARG",
+        "experiments/ddm_mrs7_report_parse_check.py"
+      ],
+      "returncode": 0,
+      "stdout": "All checks passed!"
+    },
+    "submissions/mrs7/inflate.py": {
+      "argv": [
+        ".venv/bin/ruff",
+        "check",
+        "--select",
+        "F,ARG",
+        "submissions/mrs7/inflate.py"
+      ],
+      "returncode": 0,
+      "stdout": "All checks passed!"
+    }
+  },
+  "score_claim": false
+}
