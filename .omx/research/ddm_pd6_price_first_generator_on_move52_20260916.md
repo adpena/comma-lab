@@ -255,26 +255,53 @@ per-pair sum, so the per-pair estimator is neither optimistic nor pessimistic on
 ## 10. THE BYTE-CLOSE — the three legs on the candidate's OWN shipped bytes
 
 The archives in §8 are the PRICER's: they carry move 52's own carrier. A real candidate must carry
-the RE-SOLVED one, and that is what `ddm_sj1_joint_admission close` builds. **MEASURED: the
-re-solved carrier costs +14 bytes** (18,470 → 18,484) for 791 moved coordinates over 110 pairs.
-The identity control inside `close` passed and every other frame-1 section is byte-identical.
+the RE-SOLVED one, and that is what `ddm_sj1_joint_admission close` builds from a staged body.
+
+**A DEFECT this arm hit, and the gate that caught it.** `stage-tail` splices the new stream as
+`tail[:RESIDUAL_COMPACT_BYTES] + stream`. On an RLC1-era pointer the tail is
+`prefix(96) + RIDER(64) + stream`, so handing it the bare `stream_0.rc64` silently DROPPED the
+64-byte RLC1 rider: the staged archive was 64 B smaller than a legal one and the receiver fell
+straight through to the TC1M rider path (`invalid or truncated TC1M rider`). The first closed
+candidate therefore read 179,223 B — **64 bytes better than the truth, and undecodable.** The
+parse-back refused it, which is the gate doing its job; the correct input is the tail SUFFIX
+(`rider + stream`), and every number below is measured on archives rebuilt that way.
+**LAW: on an RLC1 pointer, `stage-tail --stream` wants the tail suffix, not the raw rc64 stream;
+a byte claim taken from the bare stream is 64 B optimistic and does not parse.**
+
+**MEASURED: the re-solved carrier costs +14 bytes** (18,470 → 18,484) for 791 moved coordinates
+over 110 pairs. The `close` identity control passed and every other frame-1 section is
+byte-identical.
+
+### The SIZE ladder, on real CLOSED archives
 
 | candidate | pairs / tokens | **exact closed archive** | rate | seg | pose | **net** | **bars** |
 |---|---:|---|---:|---:|---:|---:|---:|
-| set 00 | 128 / 147 | 179,241 B `5ff520e5…` (**−91 B**) | −6.0593e−05 | −1.6117e−05 | −6.5051e−05 | −1.417614e−04 | 7.088 |
-| **set 01 (the candidate)** | **110 / 129** | **179,223 B `d34c02b1808732f4e8f0bfbcb0ef766e224f481b60f7ce561acf409e3dc48c1d` (−109 B)** | **−7.2579e−05** | **−1.6117e−05** | **−6.1375e−05** | **−1.500708e−04** | **7.504** |
+| set 00 | 128 / 147 | 179,305 B `4a301a0c…` (−27 B) | −1.7978e−05 | −1.6117e−05 | −6.5051e−05 | −9.914644e−05 | 4.957 |
+| **set 01 — THE CANDIDATE** | **110 / 129** | **179,287 B `18b7e729505deb88524c922c4579cc631fcf699a6962032ccc374e374d4be00f` (−45 B)** | **−2.9964e−05** | **−1.6117e−05** | **−6.1375e−05** | **−1.074558e−04** | **5.373** |
+| pd6sub (the λ-sweep's own pick) | 106 / — | 179,286 B `a09134a7…` (−46 B) | −3.0630e−05 | −1.5269e−05 | −6.1205e−05 | −1.071037e−04 | 5.355 |
+
+pd5's handoff said: converge the ledger, then price the SIZE ladder on real archives and take the
+best. Doing exactly that here picks **set 01** — neither the largest set, nor the smallest archive,
+nor the λ-sweep's own choice. The smallest archive (pd6sub, 179,286 B) is NOT the best score,
+because it repairs one fewer SegNet cell. That is pd5's warning reproduced from the other side.
+
+### The candidate's three legs
 
 | leg | value | how |
 |---|---:|---|
-| rate | **−7.25786e−05** | **−109 B EXACT**, the candidate's own closed archive, carrier included |
+| rate | **−2.99637e−05** | **−45 B EXACT**, the candidate's own closed archive, re-solved carrier included |
 | seg | **−1.61172e−05** | **19 cells REPAIRED** on the frozen argmax, carried to T4 by the same-instrument ratio 1.0006662543837985 |
 | pose | **−6.13750e−05** | RESOLVED 4.130731e−06 against the base 4.21e−06, from the n600 composed re-solve at 0.9989 of the per-pair sum |
-| **S projected** | **0.13605219824302556** | 100·0.00010287882769408085 + √(10·4.130731e−06) + 25·179,223/37,545,489 |
-| **net vs move 52** | **−1.500708e−04** | **7.504 bars** · **6.48× the 34.8 B container-break sd** |
+| **S projected** | **0.13609481321602535** | 100·0.00010287882769408085 + √(10·4.130731e−06) + 25·179,287/37,545,489 |
+| **net vs move 52** | **−1.074558e−04** | **5.373 bars** · **4.64× the 34.8 B container-break sd** |
 
 **All three legs are negative.** The candidate is smaller, repairs SegNet cells, and lowers pose. No
-pass on this object has had that before: every prior move bought pose with bytes and paid seg on
-the side.
+pass on this object has had that before: every prior move bought pose with bytes and paid seg on the
+side.
+
+**Twins.** The candidate was closed twice — from the FIRST and the SECOND in-process encoder's
+stream, staged and closed in separate directories — and both produce
+**179,287 B sha `18b7e729505deb88524c922c4579cc631fcf699a6962032ccc374e374d4be00f`**.
 
 <!-- PARSE-BACK, TWINS, SMOKES, CENSUS, RETENTION AND THE SEAL FOLLOW -->
 
