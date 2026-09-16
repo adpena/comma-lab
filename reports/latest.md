@@ -9,7 +9,7 @@ from_state_hash: canonical_frontier_pointer_20260904_fs2_carrier_resolve_pointer
 > snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
 > pointer, not any row below.
 >
-> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.14784474152757654 —
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.1361014714463198 — lane `ddm_pd6_price_first_generator_on_move52_20260916`, archive `aab908d3b32c` 179,286 B, pointer move 53 (2026-09-16); derived from .omx/state/canonical_frontier_pointer.json**
 > TWENTY-FIFTH pointer move, 2026-09-04 (fs2 carrier re-solve on fs1's 21 moved-frame-0 pairs: 15/21 pairs,
 > +1 B, d_seg identical, d_pose 6.17e-6 → 6.14e-6).** archive sha
 > `a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6` @ 180,023 B, call
@@ -42,12 +42,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-09-13T09:51:01Z
+### Current best - last rechecked 2026-09-16T13:31:54Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.1362022691** | `ae59c5109597` | linux_x86_64_t4 | `ddm_pd3_pose_directed_pass3_on_move51_20260913` |
+| **`[contest-CUDA T4]`** | **0.1361014714** | `aab908d3b32c` | linux_x86_64_t4 | `ddm_pd6_price_first_generator_on_move52_20260916` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 
