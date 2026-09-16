@@ -1,0 +1,14 @@
+{
+  "adjudicated_at_launch": true,
+  "detail": "detached child exited during verify-alive window",
+  "elapsed_s": 1.449351,
+  "generated_utc": "2026-09-16T13:56:27Z",
+  "launch_id": {
+    "manifest_path": "/Volumes/APDataStore/pact/ddm_psa2/launch_snapshot_v2/launch_manifest.json",
+    "monotonic_launch_counter": 2223,
+    "pid": 64045
+  },
+  "rc": 0,
+  "receipt_name": "ddm_psa2_snapshot_v2",
+  "schema": "detached_local_process_done.v2"
+}

@@ -1,0 +1,1286 @@
+{
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/CONTROL.json",
+    "bytes": 43227,
+    "sha256": "19dc89c40b8a795faf2b1570ba87dc476cba4c46656ae8dc2745535740b3e9b5"
+  },
+  "data": {
+    "axis": "[macOS-CPU advisory, frozen CPU SegNet/PoseNet, DALI GT lineage]",
+    "base_mean": 4.207535785085938e-06,
+    "k": 60,
+    "n": 60,
+    "rows": [
+      {
+        "abs_error": 3.348167576522343e-11,
+        "artifacts": [
+          {
+            "bytes": 1208,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_250/base_argmax.npz",
+            "sha256": "1d8df61e9e56b972c9bbce840945f788c9c34df7782b7924f3e44ab7283ca027"
+          },
+          {
+            "bytes": 1699555,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_250/base_frame0.npz",
+            "sha256": "a472c4c79f1d828b47b7aa2c4480325864538e4d9d63bb93a2a6dbdd3a41bdca"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.734995620677679e-06,
+        "d_pose": 1.7350291023534442e-06,
+        "pair": 250,
+        "passed": true,
+        "seg_cells": 11
+      },
+      {
+        "abs_error": 1.9533713072987227e-09,
+        "artifacts": [
+          {
+            "bytes": 1241,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_398/base_argmax.npz",
+            "sha256": "29694409540f3880c021c579ca28b0af146961b2184d82f99b2364ece06a3840"
+          },
+          {
+            "bytes": 1400285,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_398/base_frame0.npz",
+            "sha256": "89ee6d914424f2f1610b557d95ba57c8276d8a1d70abfab058eec6442166d27a"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 4.076595065521012e-07,
+        "d_pose": 4.096128778593999e-07,
+        "pair": 398,
+        "passed": true,
+        "seg_cells": 13
+      },
+      {
+        "abs_error": 5.823487062949985e-11,
+        "artifacts": [
+          {
+            "bytes": 1397,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_296/base_argmax.npz",
+            "sha256": "3496ae8faf861aba1fa8ee530b74a84b789bc84b48f80438e6d10d4687c7c1fb"
+          },
+          {
+            "bytes": 1973269,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_296/base_frame0.npz",
+            "sha256": "304a5eb82eb6924337c6f7c6d5a4437802ce12bc7b0a35e98f28452969201874"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.274409916692738e-07,
+        "d_pose": 5.274992265399033e-07,
+        "pair": 296,
+        "passed": true,
+        "seg_cells": 14
+      },
+      {
+        "abs_error": 4.330868441648761e-10,
+        "artifacts": [
+          {
+            "bytes": 1216,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_236/base_argmax.npz",
+            "sha256": "2bb792c44769116bdb0fc0742b3c08fa8a0153020c087999b7677e3c8075f337"
+          },
+          {
+            "bytes": 2125648,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_236/base_frame0.npz",
+            "sha256": "a108c36c4a9523efa7432f99e06c5efecfe5a7db7b9256b234681ad7c51352c9"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 7.783386383834282e-07,
+        "d_pose": 7.787717252275931e-07,
+        "pair": 236,
+        "passed": true,
+        "seg_cells": 13
+      },
+      {
+        "abs_error": 9.194445020153371e-10,
+        "artifacts": [
+          {
+            "bytes": 1276,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_080/base_argmax.npz",
+            "sha256": "8f74cbf44f20337fa31936087cbe2cef0b61b6414d41d6be8d73681d89f88dc2"
+          },
+          {
+            "bytes": 1892085,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_080/base_frame0.npz",
+            "sha256": "5dfc41035f24839b3de0381fd3e8fed3d4d1548979cee1b1d3f3b038c266f6fc"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.4273609089917802e-05,
+        "d_pose": 1.4272689645415787e-05,
+        "pair": 80,
+        "passed": true,
+        "seg_cells": 23
+      },
+      {
+        "abs_error": 7.112393451969012e-10,
+        "artifacts": [
+          {
+            "bytes": 1364,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_385/base_argmax.npz",
+            "sha256": "5c767193fb969be2d15ca44928718bf2f41ebf9fb6de9586d8b70c74a84119cb"
+          },
+          {
+            "bytes": 1203243,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_385/base_frame0.npz",
+            "sha256": "0ed600a3bfa53d91f7b7c4bc9c53acc3e9cc963ef7a9deb5140e1313e0b41ca4"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 4.20016793798809e-07,
+        "d_pose": 4.193055544536121e-07,
+        "pair": 385,
+        "passed": true,
+        "seg_cells": 15
+      },
+      {
+        "abs_error": 1.1621166991607855e-11,
+        "artifacts": [
+          {
+            "bytes": 1326,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_214/base_argmax.npz",
+            "sha256": "5e532537937618f60d3f0ede438dc277954a3df51ad33e0f1a29da31613537f0"
+          },
+          {
+            "bytes": 2314671,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_214/base_frame0.npz",
+            "sha256": "a364af8a8feb00eabcf77e774142da1f2a00ecebea7b0dbd712496c97982c555"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 6.115204709578973e-07,
+        "d_pose": 6.115088497909057e-07,
+        "pair": 214,
+        "passed": true,
+        "seg_cells": 7
+      },
+      {
+        "abs_error": 1.935886219846642e-09,
+        "artifacts": [
+          {
+            "bytes": 1300,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_382/base_argmax.npz",
+            "sha256": "206b308e82d66e637c3619fe2a79696771e4e2d350266f60494bdb48ab756318"
+          },
+          {
+            "bytes": 1319507,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_382/base_frame0.npz",
+            "sha256": "29757fbb2eb2103fc5755b3a326dfc5f6fd8090a8614f2ac452acf0b1040069c"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.266647131755357e-06,
+        "d_pose": 1.2647112455355103e-06,
+        "pair": 382,
+        "passed": true,
+        "seg_cells": 10
+      },
+      {
+        "abs_error": 2.0159358233666734e-09,
+        "artifacts": [
+          {
+            "bytes": 1242,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_208/base_argmax.npz",
+            "sha256": "30206b8d2e624d7ccd9bcf78138437e49d36dd5daacda5369ccbd1c21b686833"
+          },
+          {
+            "bytes": 2206048,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_208/base_frame0.npz",
+            "sha256": "b8436e6b4c55e260cc49756b10350e67c00a20828ccea570bf5aacf007c1e921"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.136412179219488e-07,
+        "d_pose": 5.156571537453155e-07,
+        "pair": 208,
+        "passed": true,
+        "seg_cells": 12
+      },
+      {
+        "abs_error": 1.3240894029360324e-09,
+        "artifacts": [
+          {
+            "bytes": 1675,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_583/base_argmax.npz",
+            "sha256": "8abeaa4c771a0c1ffecf6047704c1b8cf9ab84ac20610ae92d9f9e656027d831"
+          },
+          {
+            "bytes": 1622784,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_583/base_frame0.npz",
+            "sha256": "2205089d22580d635dd218648b8d9f96fde840505ebfe88a6b11d1fe4a19360a"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 4.8438066141340275e-06,
+        "d_pose": 4.8451307035369635e-06,
+        "pair": 583,
+        "passed": true,
+        "seg_cells": 22
+      },
+      {
+        "abs_error": 1.3320112327922505e-09,
+        "artifacts": [
+          {
+            "bytes": 1521,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_053/base_argmax.npz",
+            "sha256": "9c95284e95378f4de767a8bf18723c3da40536e5b45651a332f6071766563a99"
+          },
+          {
+            "bytes": 1601345,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_053/base_frame0.npz",
+            "sha256": "081f6d838dafeaac71a903d7fceb7d6cc0efd113f0d08cbaa9b819bb7778641b"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.61672305687884e-05,
+        "d_pose": 1.6165898557555607e-05,
+        "pair": 53,
+        "passed": true,
+        "seg_cells": 17
+      },
+      {
+        "abs_error": 1.7023227272261465e-10,
+        "artifacts": [
+          {
+            "bytes": 1260,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_406/base_argmax.npz",
+            "sha256": "2ef5ce2d6acddcff7db87e542d536d7aa4d856dd1cb65cfd837765f4967fe338"
+          },
+          {
+            "bytes": 1534728,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_406/base_frame0.npz",
+            "sha256": "4117e9c3fcc125d44e4a3c1c32a64b10d433a73d99ab9ad48019c1abb95ed397"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.2458860026914524e-06,
+        "d_pose": 3.246056234964175e-06,
+        "pair": 406,
+        "passed": true,
+        "seg_cells": 24
+      },
+      {
+        "abs_error": 9.64704954808937e-10,
+        "artifacts": [
+          {
+            "bytes": 1510,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_547/base_argmax.npz",
+            "sha256": "0e32489dd53b3574a37282b6b28b821fce4d99b20541464d06069d67524c3b4d"
+          },
+          {
+            "bytes": 2239000,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_547/base_frame0.npz",
+            "sha256": "2be5ad5fb0fd6993e93f194822ba2fba93edab0339e6727ed48d78b387d394d9"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.0626807665318576e-07,
+        "d_pose": 1.072327816079947e-07,
+        "pair": 547,
+        "passed": true,
+        "seg_cells": 37
+      },
+      {
+        "abs_error": 6.4540595090534225e-12,
+        "artifacts": [
+          {
+            "bytes": 1320,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_342/base_argmax.npz",
+            "sha256": "b77789112729730bb59ffb43c641a801d3f92b202890af322caa1ed2c4de12bc"
+          },
+          {
+            "bytes": 1606363,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_342/base_frame0.npz",
+            "sha256": "6b33c6fb8cc8f3d322c85f76ee4e8181cf808c1a71d4f4767d679bc0f0581cfa"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 9.070554568557654e-08,
+        "d_pose": 9.069909162606749e-08,
+        "pair": 342,
+        "passed": true,
+        "seg_cells": 12
+      },
+      {
+        "abs_error": 1.0428177580716074e-09,
+        "artifacts": [
+          {
+            "bytes": 1402,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_127/base_argmax.npz",
+            "sha256": "8af990f6b2af483e9ff65a594098e38e71ed8abbcc062cdb78c6cc96857184a9"
+          },
+          {
+            "bytes": 2086610,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_127/base_frame0.npz",
+            "sha256": "c4acfeefad5ed14b6f62d3bdcc51ced2545b63ccd624f33df11d37996892ae55"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.340681355770553e-07,
+        "d_pose": 1.351109533351269e-07,
+        "pair": 127,
+        "passed": true,
+        "seg_cells": 22
+      },
+      {
+        "abs_error": 2.9685714072092205e-10,
+        "artifacts": [
+          {
+            "bytes": 1498,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_319/base_argmax.npz",
+            "sha256": "f177469ba2ca44a3d84a1d4cea9f128e555e6569f66a591a631fae0abc17ff70"
+          },
+          {
+            "bytes": 2098372,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_319/base_frame0.npz",
+            "sha256": "4353018fc59e3da6de1614f44d0118ac88a371abe26179c562102093334e8b30"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 9.189970819519407e-07,
+        "d_pose": 9.192939390926617e-07,
+        "pair": 319,
+        "passed": true,
+        "seg_cells": 17
+      },
+      {
+        "abs_error": 1.8038616341383292e-09,
+        "artifacts": [
+          {
+            "bytes": 1506,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_502/base_argmax.npz",
+            "sha256": "16fc930cb93b116d0064de539402de63c381ca2a4910c9bbe35f00d3c7d774bf"
+          },
+          {
+            "bytes": 1974354,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_502/base_frame0.npz",
+            "sha256": "345db3c78ec0687e42fb15af992048d90e6b810230927ee7cdab4c543eaa61af"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 6.461946546604258e-08,
+        "d_pose": 6.642332710018091e-08,
+        "pair": 502,
+        "passed": true,
+        "seg_cells": 37
+      },
+      {
+        "abs_error": 3.0164405232882595e-10,
+        "artifacts": [
+          {
+            "bytes": 1525,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_137/base_argmax.npz",
+            "sha256": "b38749eac5b3dfc6ff124fc1a55636ea96ddb4b9e50b2514c7e7ed74c5fd909e"
+          },
+          {
+            "bytes": 1988480,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_137/base_frame0.npz",
+            "sha256": "0f7719c0f73f7eb5228f0cf9d574dc59294c6fb4d53d3c44387cb0709ddb78a6"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.857051420995718e-07,
+        "d_pose": 1.85403498047243e-07,
+        "pair": 137,
+        "passed": true,
+        "seg_cells": 21
+      },
+      {
+        "abs_error": 3.886968339787138e-10,
+        "artifacts": [
+          {
+            "bytes": 1410,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_376/base_argmax.npz",
+            "sha256": "6effb3ee1b45571b832b92474de247427a93037b7e31460ea0a9df3aba916ae3"
+          },
+          {
+            "bytes": 1211087,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_376/base_frame0.npz",
+            "sha256": "1068cec50e484d4bcf7602cad478348fd38c0c76c8777c8c85f075d3f15b69fa"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.4211102535484818e-07,
+        "d_pose": 1.424997221888269e-07,
+        "pair": 376,
+        "passed": true,
+        "seg_cells": 14
+      },
+      {
+        "abs_error": 4.320944713143149e-10,
+        "artifacts": [
+          {
+            "bytes": 1581,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_032/base_argmax.npz",
+            "sha256": "b3c50750a6cc2176ead0c3e67208db7d974029abe26bb77fd8014cbafd0eb69d"
+          },
+          {
+            "bytes": 1963465,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_032/base_frame0.npz",
+            "sha256": "768077b972060f0fd4a5ffbef3e6557b90c119b2e537b0699106a7ea90f6c756"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 6.80930022904184e-07,
+        "d_pose": 6.813621173754983e-07,
+        "pair": 32,
+        "passed": true,
+        "seg_cells": 20
+      },
+      {
+        "abs_error": 7.321091325766253e-10,
+        "artifacts": [
+          {
+            "bytes": 1379,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_183/base_argmax.npz",
+            "sha256": "107c8faaf948f58de4d3781981cd2829b0c78f40289c0f70bce7333443417647"
+          },
+          {
+            "bytes": 1785862,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_183/base_frame0.npz",
+            "sha256": "950a2ad13e259181a0c9411fd8cb41ae9f61db808cb536290c9069bdb4a725b0"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 9.160423143407999e-08,
+        "d_pose": 9.087212230150336e-08,
+        "pair": 183,
+        "passed": true,
+        "seg_cells": 17
+      },
+      {
+        "abs_error": 1.9132031607084814e-11,
+        "artifacts": [
+          {
+            "bytes": 1486,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_033/base_argmax.npz",
+            "sha256": "1f0f64371b235d9be22fbc8dd950d1aa30f08f43ded680260027f44e4da6fdd3"
+          },
+          {
+            "bytes": 2096773,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_033/base_frame0.npz",
+            "sha256": "c4b6508807cd55e29da6f1b4ffc65b717adc4ff4dc3a6433ed16cbac9cc6c3c2"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 6.497739268492472e-07,
+        "d_pose": 6.497930588808543e-07,
+        "pair": 33,
+        "passed": true,
+        "seg_cells": 17
+      },
+      {
+        "abs_error": 4.897207546890611e-10,
+        "artifacts": [
+          {
+            "bytes": 1484,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_134/base_argmax.npz",
+            "sha256": "1c4883445729230e63527e05ad9bf65f59883a4af7e850561701eb9f07495de7"
+          },
+          {
+            "bytes": 2153368,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_134/base_frame0.npz",
+            "sha256": "98535ace46b51b6a58e65df239f35026e8946eee90e6529711514e9a4038b964"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 2.7108577882693313e-07,
+        "d_pose": 2.715754995816222e-07,
+        "pair": 134,
+        "passed": true,
+        "seg_cells": 23
+      },
+      {
+        "abs_error": 2.3619143677905836e-11,
+        "artifacts": [
+          {
+            "bytes": 1511,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_536/base_argmax.npz",
+            "sha256": "f0285db8bcdbfac4354ab5cf6bea7027a17171ee03911f38a679d88abecb5491"
+          },
+          {
+            "bytes": 2024975,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_536/base_frame0.npz",
+            "sha256": "7ccb3b5df3b0bf3730e30f76ef6ba8d89368338672957b733805d5ea81710d77"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 8.15260995564356e-08,
+        "d_pose": 8.150248041275769e-08,
+        "pair": 536,
+        "passed": true,
+        "seg_cells": 17
+      },
+      {
+        "abs_error": 3.389658378057707e-09,
+        "artifacts": [
+          {
+            "bytes": 1752,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_518/base_argmax.npz",
+            "sha256": "efbf299d6599fef844c6be1a6ea801d786a1d527ee904d148a68888e8014b58b"
+          },
+          {
+            "bytes": 1595028,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_518/base_frame0.npz",
+            "sha256": "7462b6fe639da0a72e52f4b1aaff8fba59e945b63bff54fcac1f612fee3fc44c"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.2505082374973202e-06,
+        "d_pose": 1.2471185791192625e-06,
+        "pair": 518,
+        "passed": true,
+        "seg_cells": 49
+      },
+      {
+        "abs_error": 7.520257842378855e-10,
+        "artifacts": [
+          {
+            "bytes": 1581,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_543/base_argmax.npz",
+            "sha256": "4a354fd53ba776dfd3e2c095b60253dc1883f47bf6dcf9f4c4c4266e3d5b43fb"
+          },
+          {
+            "bytes": 2389738,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_543/base_frame0.npz",
+            "sha256": "3c9101e8d8f472ed5f2a15d919192980383205c03df673c941935a3453c5ac5f"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 4.533805722448103e-07,
+        "d_pose": 4.541325980290482e-07,
+        "pair": 543,
+        "passed": true,
+        "seg_cells": 46
+      },
+      {
+        "abs_error": 2.958583535569208e-09,
+        "artifacts": [
+          {
+            "bytes": 1578,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_168/base_argmax.npz",
+            "sha256": "ce1fc6ebb27cf2da735703ac029767088936f3243dae98eb5af4bd03138301b1"
+          },
+          {
+            "bytes": 1963067,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_168/base_frame0.npz",
+            "sha256": "74794a38727493c4b90137a97fda0b699e4c49d04ccbe63c46f24b6697c9035e"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.719967783535431e-06,
+        "d_pose": 3.722926367071e-06,
+        "pair": 168,
+        "passed": true,
+        "seg_cells": 45
+      },
+      {
+        "abs_error": 3.598963719639089e-12,
+        "artifacts": [
+          {
+            "bytes": 1657,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_569/base_argmax.npz",
+            "sha256": "52e161c9c6d0949941290d50bb530256abd31c12abe00433b0073846afa6ff32"
+          },
+          {
+            "bytes": 1700633,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_569/base_frame0.npz",
+            "sha256": "8daf757ac38ddd4a7da919a4ab23a21c6af0de2aba00f26a6a412c0c7dc3edcd"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.1077612201611704e-07,
+        "d_pose": 1.1077972097983668e-07,
+        "pair": 569,
+        "passed": true,
+        "seg_cells": 41
+      },
+      {
+        "abs_error": 1.0722019568498548e-10,
+        "artifacts": [
+          {
+            "bytes": 1420,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_105/base_argmax.npz",
+            "sha256": "87f5aade24395871e6f9a6cb031d7058649c7d044d587f1950fd138891606739"
+          },
+          {
+            "bytes": 1826133,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_105/base_frame0.npz",
+            "sha256": "38ca06aece79d533ec83791bda5b6b21ba09f771706211d78fa4efeaa692c6c0"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.5749341856470645e-07,
+        "d_pose": 3.5738619836902147e-07,
+        "pair": 105,
+        "passed": true,
+        "seg_cells": 40
+      },
+      {
+        "abs_error": 2.991436080322093e-10,
+        "artifacts": [
+          {
+            "bytes": 1485,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_550/base_argmax.npz",
+            "sha256": "49279d6395205fbf6cc71a873968568be3ddaf5e1229ce766e33b823a279fd24"
+          },
+          {
+            "bytes": 2313754,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_550/base_frame0.npz",
+            "sha256": "a0ae1dff47821fa3f47d9afa8e32b61e1e7c0a2e7b8823df053e2eb8672d1cad"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.131702700935914e-05,
+        "d_pose": 1.1316727865751108e-05,
+        "pair": 550,
+        "passed": true,
+        "seg_cells": 40
+      },
+      {
+        "abs_error": 3.6720467638806653e-10,
+        "artifacts": [
+          {
+            "bytes": 1691,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_465/base_argmax.npz",
+            "sha256": "f8d963dbbe3029bf26d6b47b3f54fbb2a76fb7f1b238181ca8e179a35abc309a"
+          },
+          {
+            "bytes": 1778659,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_465/base_frame0.npz",
+            "sha256": "4509031319b030a7898e993847e18042f6bb5316bc3d643cb33cfffc4752351f"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.654944476840725e-06,
+        "d_pose": 1.654577272164337e-06,
+        "pair": 465,
+        "passed": true,
+        "seg_cells": 39
+      },
+      {
+        "abs_error": 1.0125194201646181e-10,
+        "artifacts": [
+          {
+            "bytes": 1401,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_514/base_argmax.npz",
+            "sha256": "0b1ba2fdb1742e090d3aa1e68ea3ca1e306cb99fb1e9a405648671889a8f270c"
+          },
+          {
+            "bytes": 1811948,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_514/base_frame0.npz",
+            "sha256": "360bd59c13f437bd13b6096990efcdc985dff894b2a6ab52d61870f869a4dd33"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.9827307456692775e-06,
+        "d_pose": 5.982629493727261e-06,
+        "pair": 514,
+        "passed": true,
+        "seg_cells": 39
+      },
+      {
+        "abs_error": 4.775315763185016e-09,
+        "artifacts": [
+          {
+            "bytes": 1579,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_566/base_argmax.npz",
+            "sha256": "56fe9f12816e7f83768ce491d8fc4e8d55d62a32239cca24749c57fc64c52271"
+          },
+          {
+            "bytes": 1663124,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_566/base_frame0.npz",
+            "sha256": "3e889d74c9d243e4f96c42eca464b413da93f2cedeac957a66bf986912ffa328"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.171976259541687e-05,
+        "d_pose": 3.172453791118005e-05,
+        "pair": 566,
+        "passed": true,
+        "seg_cells": 36
+      },
+      {
+        "abs_error": 1.8810954414452653e-10,
+        "artifacts": [
+          {
+            "bytes": 1463,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_112/base_argmax.npz",
+            "sha256": "fb009313f015c2ed4917f458459e8652c170ca591bb184d4510137aa01b35a64"
+          },
+          {
+            "bytes": 1843270,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_112/base_frame0.npz",
+            "sha256": "d75679dd41065739519a79d67366afdf80b27d7a5d8efdd569843e8f99cc5a68"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.844261656509179e-06,
+        "d_pose": 5.844449766053324e-06,
+        "pair": 112,
+        "passed": true,
+        "seg_cells": 33
+      },
+      {
+        "abs_error": 8.323560359448074e-11,
+        "artifacts": [
+          {
+            "bytes": 1579,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_452/base_argmax.npz",
+            "sha256": "fc6d4069db0ec128a757264b84697e5064e924f1646bd1685090b9f287daf44a"
+          },
+          {
+            "bytes": 1599267,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_452/base_frame0.npz",
+            "sha256": "115bd0e4903e9107a745844e01e0bb520b3d11b38094c3c09d2d0ecc991584d5"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 2.692584973808717e-06,
+        "d_pose": 2.6926682094123113e-06,
+        "pair": 452,
+        "passed": true,
+        "seg_cells": 32
+      },
+      {
+        "abs_error": 2.5271729153786282e-12,
+        "artifacts": [
+          {
+            "bytes": 1461,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_492/base_argmax.npz",
+            "sha256": "a9f724739289ef4106e9702fc14c5a3791bfeedc0621330b3a9913dfb9efe712"
+          },
+          {
+            "bytes": 1924273,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_492/base_frame0.npz",
+            "sha256": "7c157c39f816536e52b6dce50eb5f5570926dc681ee0ab22665f4fe8cae6c4b9"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 9.230676297604842e-07,
+        "d_pose": 9.230651025875688e-07,
+        "pair": 492,
+        "passed": true,
+        "seg_cells": 31
+      },
+      {
+        "abs_error": 3.8986110636234165e-11,
+        "artifacts": [
+          {
+            "bytes": 1531,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_565/base_argmax.npz",
+            "sha256": "e5c232e5887f3faf0148b71d5fa420822a85e684152d3447df85ef16e32de91a"
+          },
+          {
+            "bytes": 1745797,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_565/base_frame0.npz",
+            "sha256": "2289fe82a40da52867f22c34aa5b0ce31b05df5aa5695bb01a54d0f53ec4e230"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.2698586343192393e-06,
+        "d_pose": 1.2698976204298755e-06,
+        "pair": 565,
+        "passed": true,
+        "seg_cells": 31
+      },
+      {
+        "abs_error": 1.4663034675344022e-11,
+        "artifacts": [
+          {
+            "bytes": 1677,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_579/base_argmax.npz",
+            "sha256": "4c887fccc983e0871bdc7914e1bf902bfaece76a58117e8750dd888e77f439a5"
+          },
+          {
+            "bytes": 1393620,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_579/base_frame0.npz",
+            "sha256": "0cc0a188890226ff14bc0e2f5b2c00c73412fb908067316b38092a49ab61aacd"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.829691032046419e-07,
+        "d_pose": 5.829544401699666e-07,
+        "pair": 579,
+        "passed": true,
+        "seg_cells": 28
+      },
+      {
+        "abs_error": 2.1639838069471758e-11,
+        "artifacts": [
+          {
+            "bytes": 1593,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_589/base_argmax.npz",
+            "sha256": "dda51e0860cb124a7ee729726a1ebd458e1c2981b82dcc7dc591f53027f294ae"
+          },
+          {
+            "bytes": 1451293,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_589/base_frame0.npz",
+            "sha256": "d017e064d939d69b2ff4347e9e11bc8096e4c690ada8d93a028df9ea4f220c52"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 2.4670626677294333e-06,
+        "d_pose": 2.4670843075675028e-06,
+        "pair": 589,
+        "passed": true,
+        "seg_cells": 28
+      },
+      {
+        "abs_error": 3.764896450153543e-10,
+        "artifacts": [
+          {
+            "bytes": 1366,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_422/base_argmax.npz",
+            "sha256": "ed396715965064df04d593697cc5d80d6a2b50b281767e625e6add17a67b0070"
+          },
+          {
+            "bytes": 1568437,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_422/base_frame0.npz",
+            "sha256": "29c369952fd2788fa2cb759a5032b9d2a52f05400bfe3bf911e65967aadcb6f7"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.2820452029273345e-07,
+        "d_pose": 3.285810099377488e-07,
+        "pair": 422,
+        "passed": true,
+        "seg_cells": 27
+      },
+      {
+        "abs_error": 9.541451193954015e-10,
+        "artifacts": [
+          {
+            "bytes": 1582,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_585/base_argmax.npz",
+            "sha256": "495e665a052f2eea4aeac5ab3a6cf4d2d0ae30c2f31e31f0c143fa6874f9f151"
+          },
+          {
+            "bytes": 1993075,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_585/base_frame0.npz",
+            "sha256": "b7dc8934e3bc241049ec0509185fd631106f2e25f07df031840d67a9a47ab821"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.161371091638953e-07,
+        "d_pose": 5.151829640444999e-07,
+        "pair": 585,
+        "passed": true,
+        "seg_cells": 27
+      },
+      {
+        "abs_error": 7.015088510087253e-11,
+        "artifacts": [
+          {
+            "bytes": 1643,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_022/base_argmax.npz",
+            "sha256": "fe8f65cafacf5bff44707e8988831fc3158623dadbd752646e300654cac9b4f1"
+          },
+          {
+            "bytes": 1913197,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_022/base_frame0.npz",
+            "sha256": "387dc15ab7e6306c8d8813e7c1002ce138dab9fb9ba0127f9b21fedbc4969ec1"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.2025847629963086e-06,
+        "d_pose": 3.2025146121112077e-06,
+        "pair": 22,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 2.2187192592458565e-10,
+        "artifacts": [
+          {
+            "bytes": 1421,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_037/base_argmax.npz",
+            "sha256": "08622b745354acba17e8690bb12d2f8b3be9cc9acbcb924ca9a5ad426cd25be5"
+          },
+          {
+            "bytes": 1619541,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_037/base_frame0.npz",
+            "sha256": "ead8cbde88a304a94be1ea016187bbac6cde46fbc1ae76b51456d884c51a2c40"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.666510280749604e-06,
+        "d_pose": 5.666288408823679e-06,
+        "pair": 37,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 4.397132361924988e-09,
+        "artifacts": [
+          {
+            "bytes": 1371,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_059/base_argmax.npz",
+            "sha256": "07216eb4542103087735b5ba4059fa8940978d94aff7796a7abab5b0c4a24af9"
+          },
+          {
+            "bytes": 2336800,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_059/base_frame0.npz",
+            "sha256": "cb117461e6f9c06be5664deab1ca8c61cc7d194a29eaf03746a957aa390519bd"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.228960971035494e-05,
+        "d_pose": 1.2294006842716865e-05,
+        "pair": 59,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 5.079883828399429e-10,
+        "artifacts": [
+          {
+            "bytes": 1495,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_102/base_argmax.npz",
+            "sha256": "bb08e8c853a0c5ea906893187ab185cb9209e58fd9cfc76645be547b06e1b4d7"
+          },
+          {
+            "bytes": 1333021,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_102/base_frame0.npz",
+            "sha256": "dbb28cbb8ad9a75f949ea5b8fc6a840e482a61648c5528a735b33e85da1bc4a0"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.415491867097333e-07,
+        "d_pose": 5.420571750925732e-07,
+        "pair": 102,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 2.1385847259747237e-10,
+        "artifacts": [
+          {
+            "bytes": 1389,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_109/base_argmax.npz",
+            "sha256": "536c7d983936dcf61dbab13d5a4138e408c252ea3d500a43bd56d6d65f532a7c"
+          },
+          {
+            "bytes": 1878904,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_109/base_frame0.npz",
+            "sha256": "30e2ce365972ce507397545019c2d7a4036d4870f900c4faea085887bd3d7f2b"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 4.229848518972947e-07,
+        "d_pose": 4.2319871036989215e-07,
+        "pair": 109,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 2.538959135526705e-09,
+        "artifacts": [
+          {
+            "bytes": 1451,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_136/base_argmax.npz",
+            "sha256": "1f9abf824c068738318f8c99bf4da0650e49a67a05106816a538ff3919e2d6b2"
+          },
+          {
+            "bytes": 2219295,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_136/base_frame0.npz",
+            "sha256": "2e184d616922b58deae9fb030b7df58e987f3f36c440c8e6c43f6d9c998695cd"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 7.783036233185067e-07,
+        "d_pose": 7.7576466418298e-07,
+        "pair": 136,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 4.495025925552663e-10,
+        "artifacts": [
+          {
+            "bytes": 1507,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_418/base_argmax.npz",
+            "sha256": "873bb5012c9ee5d0f8827403cf164d8c1051783d5c0c165e8585023d8950cf91"
+          },
+          {
+            "bytes": 1333865,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_418/base_frame0.npz",
+            "sha256": "a24a60e182596b8524f68a6f8d2b3104b613eea625fac063450f1a16c770ae8a"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.323528785931229e-06,
+        "d_pose": 3.3239782885237843e-06,
+        "pair": 418,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 4.641688653795459e-11,
+        "artifacts": [
+          {
+            "bytes": 1604,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_463/base_argmax.npz",
+            "sha256": "a02add4a4d0857a4ebfc9d413047fba11304434bc6ea704abd3a1add48b55f14"
+          },
+          {
+            "bytes": 1424719,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_463/base_frame0.npz",
+            "sha256": "21ccbf80bcaf4218dbc71b4cc3a6c48740636d2dff32ce6c4ad8b7098409a886"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.1716452139066507e-06,
+        "d_pose": 1.1716916307931886e-06,
+        "pair": 463,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 2.2328947024696788e-10,
+        "artifacts": [
+          {
+            "bytes": 1494,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_497/base_argmax.npz",
+            "sha256": "05933f14b308f6471baa63580b5dfe09a0deff34c310aca71a8f19d32c0ea464"
+          },
+          {
+            "bytes": 1895031,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_497/base_frame0.npz",
+            "sha256": "058ec6fda0f7c9503a630ce38ccd6d6d571e49a9241bd681ca513f36c4479aaf"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 6.026787577328996e-07,
+        "d_pose": 6.024554682626526e-07,
+        "pair": 497,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 2.465990374835009e-11,
+        "artifacts": [
+          {
+            "bytes": 1496,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_591/base_argmax.npz",
+            "sha256": "0cfea02821c4d438be659791135bcf678e4d95ebaedd61e3fe96d5e7d6f2c071"
+          },
+          {
+            "bytes": 1891554,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_591/base_frame0.npz",
+            "sha256": "ecb7742b1ca42ce72055273c7f51d6a97634dc96640e5ad84a1c293883609e13"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 6.102445166929667e-06,
+        "d_pose": 6.1024205070259185e-06,
+        "pair": 591,
+        "passed": true,
+        "seg_cells": 26
+      },
+      {
+        "abs_error": 2.997879722244079e-11,
+        "artifacts": [
+          {
+            "bytes": 1366,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_170/base_argmax.npz",
+            "sha256": "ded974112fd4b7a143251dcf13b65e02e9db2b7688b18500f3d7158b79a49ae2"
+          },
+          {
+            "bytes": 2341002,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_170/base_frame0.npz",
+            "sha256": "81ee60a3f052abd74701920718ad2352d34b498f9edd0881f6b5bac0dd1653b2"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 8.21267769413279e-06,
+        "d_pose": 8.212647715335567e-06,
+        "pair": 170,
+        "passed": true,
+        "seg_cells": 25
+      },
+      {
+        "abs_error": 6.580107292375459e-10,
+        "artifacts": [
+          {
+            "bytes": 1519,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_284/base_argmax.npz",
+            "sha256": "06d31812d132d01734f073592ccc4aab735ea9a16127b61e4afe29ac62b72c5a"
+          },
+          {
+            "bytes": 2152496,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_284/base_frame0.npz",
+            "sha256": "d016909cdc27fcbc4af5e5780d6be3e07e4d9d2e61e00f0fae7a8020eff1facf"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 5.4891028463584695e-06,
+        "d_pose": 5.488444835629232e-06,
+        "pair": 284,
+        "passed": true,
+        "seg_cells": 25
+      },
+      {
+        "abs_error": 5.363026689408912e-10,
+        "artifacts": [
+          {
+            "bytes": 1219,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_425/base_argmax.npz",
+            "sha256": "5fdff3407598c87756129d1610e443f75d0dcbd97caeb26b312d83b47b2250ec"
+          },
+          {
+            "bytes": 1749787,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_425/base_frame0.npz",
+            "sha256": "cb4dd50e7077ef0e5d987909b0fc3cf168ae9f3c8c7de9ee1bea840f6b61ed02"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 8.968269284611215e-08,
+        "d_pose": 8.914639017717126e-08,
+        "pair": 425,
+        "passed": true,
+        "seg_cells": 25
+      },
+      {
+        "abs_error": 6.185458626770942e-10,
+        "artifacts": [
+          {
+            "bytes": 1476,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_499/base_argmax.npz",
+            "sha256": "ab27fc4b1e6d75decc6e7236b421549ff264a94d3ff48316d90fb883b29ab3f4"
+          },
+          {
+            "bytes": 1901456,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_499/base_frame0.npz",
+            "sha256": "d689e50ef1e9a309475fc4b96e2ad189c23e7055bf154837f663449894e2d362"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 9.092736996674233e-06,
+        "d_pose": 9.09335554253691e-06,
+        "pair": 499,
+        "passed": true,
+        "seg_cells": 25
+      },
+      {
+        "abs_error": 1.592375305686874e-11,
+        "artifacts": [
+          {
+            "bytes": 1443,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_531/base_argmax.npz",
+            "sha256": "b43a6ea9852786ee2fbc24b0df2d059ce85f22e3335f04e76cf3e207c08ac26e"
+          },
+          {
+            "bytes": 2042442,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_531/base_frame0.npz",
+            "sha256": "c40b96b46d5805f279c983d0438895b457c0b3faf921f37d42f3451422529239"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 4.2756081309695365e-07,
+        "d_pose": 4.275767368500105e-07,
+        "pair": 531,
+        "passed": true,
+        "seg_cells": 25
+      },
+      {
+        "abs_error": 2.293247998918371e-11,
+        "artifacts": [
+          {
+            "bytes": 1477,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_025/base_argmax.npz",
+            "sha256": "c5938e231ef6477f372fdd3ed4c2f80dfdb47753911c3a25428a328472527385"
+          },
+          {
+            "bytes": 1726401,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_025/base_frame0.npz",
+            "sha256": "9e45498f40e3fc7556fc0a3230cea9c58310122dc481ba102cef25d0487b8fec"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 1.108862312221871e-06,
+        "d_pose": 1.1088393797418817e-06,
+        "pair": 25,
+        "passed": true,
+        "seg_cells": 24
+      },
+      {
+        "abs_error": 5.474150207204192e-10,
+        "artifacts": [
+          {
+            "bytes": 1307,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_179/base_argmax.npz",
+            "sha256": "39d975a4185aa383adad15d1f637277a8e037a46f75e9a6e6a46121574c31fff"
+          },
+          {
+            "bytes": 2059633,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_179/base_frame0.npz",
+            "sha256": "3b723e70e6c5dcec652e90244d9fbd8938c421ca4ec17b87496463f92be589df"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 7.050917505899146e-07,
+        "d_pose": 7.05639165610635e-07,
+        "pair": 179,
+        "passed": true,
+        "seg_cells": 24
+      },
+      {
+        "abs_error": 2.210604350035451e-09,
+        "artifacts": [
+          {
+            "bytes": 1330,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_197/base_argmax.npz",
+            "sha256": "bedf3c601ad50bdfa322692d69de9882c8d26a751cd3090885071896f21676e6"
+          },
+          {
+            "bytes": 1887543,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_197/base_frame0.npz",
+            "sha256": "b2d80c4bdcc64f88bfbcfffaad9ca4992bef2e36cb54bc1a88d976db0afaf044"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 3.5764143013761185e-07,
+        "d_pose": 3.598520344876473e-07,
+        "pair": 197,
+        "passed": true,
+        "seg_cells": 24
+      },
+      {
+        "abs_error": 3.413666826053701e-10,
+        "artifacts": [
+          {
+            "bytes": 1414,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_476/base_argmax.npz",
+            "sha256": "bd9e559d9f37e1c58c4b6f96c6048b4ffaf2c5482ceb9e64bf0420b8c2a713b5"
+          },
+          {
+            "bytes": 1806068,
+            "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_476/base_frame0.npz",
+            "sha256": "0d9d0dbe4cdc302d059d968421deb181871dd8d7fe02a5e30cdab28b4b82aa3b"
+          }
+        ],
+        "band_abs": 2.2642595483754955e-08,
+        "baseline": 2.059830990117084e-05,
+        "d_pose": 2.0597968534488236e-05,
+        "pair": 476,
+        "passed": true,
+        "seg_cells": 24
+      }
+    ],
+    "scales": [
+      0.027069091796875,
+      0.0163421630859375,
+      0.016448974609375
+    ],
+    "score_claim": false,
+    "source_pose": {
+      "bytes": 4928,
+      "path": "/Volumes/APDataStore/pact/ddm_pd4/base/pose_base_move52.npy",
+      "sha256": "dfeeb5f78cd3b2ad1a4f8a39c4f134d8c1597a4c6cd37242bd596f680d785108"
+    }
+  }
+}

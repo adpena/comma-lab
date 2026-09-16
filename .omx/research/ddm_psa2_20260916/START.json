@@ -1,0 +1,54 @@
+{
+  "inputs": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "path": ".omx/state/main_hot_state.md",
+      "bytes": 79773,
+      "sha256": "90ba81a05b601a43b5de9fcf8ca6f9ea7dbeb996a3ab2bc4a227a8c987f7434a"
+    },
+    {
+      "path": "reports/latest.md",
+      "bytes": 92959,
+      "sha256": "c3f7ec50b795b00505fb6c99d2a88b51a74188c2a0db49747be06965eca01b82"
+    },
+    {
+      "path": ".omx/state/canonical_frontier_pointer.json",
+      "bytes": 19597,
+      "sha256": "9c8c8d7cd095268f7eb18b6463f643d8252fccfc6932a8f20232bf996efc6283"
+    },
+    {
+      "path": ".omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": ".omx/research/ddm_psa2_pair_selective_rgb_bias_efficacy_on_move52_charter_20260916.md",
+      "bytes": 5464,
+      "sha256": "80046e83afc024da3236f9b428fe9ab378734edff00d58dcecb7219407ee84ef"
+    }
+  ],
+  "head": "f04f1d99d97011153e0ab8023a08ba3425b2eb70",
+  "index_sha256": "10d90df5b7f5ae5b98a44ed47dac3133d599549a3c8723d762e168bb5cb2d540",
+  "created_utc": "2026-09-16T13:06:55.286201+00:00",
+  "storage_free_bytes": 30575558656,
+  "score_claim": false
+}

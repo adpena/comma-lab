@@ -1,0 +1,35 @@
+{
+  "utc": "2026-09-16T13:55:47.820103+00:00",
+  "source": {
+    "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+    "bytes": 19601,
+    "sha256": "18b114064aab7b9c1c5aadc9f0c5ad67c8299108d8732b002b89d003b8406f35"
+  },
+  "own_cuda": {
+    "archive_sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+    "axis": "contest_cuda",
+    "evidence_grade": "contest-CUDA",
+    "extra": {
+      "anchor_mirror_schema": "modal_auth_eval_anchor_mirror.v2",
+      "archive_bytes": 179286,
+      "disqualified": null,
+      "evidence_grade": "contest-CUDA",
+      "inflate_device_policy": "auto",
+      "inflate_sh_rel": "inflate.sh",
+      "lane_id": "ddm_pd6_price_first_generator_on_move52_20260916",
+      "measured_at_utc": null,
+      "promotion_eligible": false,
+      "runtime_custody": "pinned",
+      "runtime_tree_sha256": "a0b0a859337df7d237bb3989511ab2feeab05e3a0772abf835b9e5b59612e7c0",
+      "source_receipt_sha256": "fbea310f35317683800cf57b6dd17ef28b5dc16f819f7d7df51b4625642f24ba"
+    },
+    "hardware_substrate": "linux_x86_64_t4",
+    "lane_id": "ddm_pd6_price_first_generator_on_move52_20260916",
+    "measured_at_utc": null,
+    "score": 0.1361014714463198,
+    "source_path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_pd6_cuda_20260916.json"
+  },
+  "probe_frozen_move52": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+  "baseline_moved_by": "MAIN pd6; not psa2",
+  "candidate_rebase_owed_if_nets": true
+}

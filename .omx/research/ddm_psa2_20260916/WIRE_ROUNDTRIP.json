@@ -1,0 +1,26 @@
+{
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/wire_roundtrip/RESULT.json",
+    "bytes": 441,
+    "sha256": "6c7719f2f3749df6e79b8f679a22b98df902e99562a4b72dc2b7c7bf982b6e9a"
+  },
+  "data": {
+    "axis": "[macOS-CPU advisory / scorer-free exact bytes]",
+    "k": 4096,
+    "n": 4096,
+    "payload": {
+      "bytes": 122880,
+      "path": "/Volumes/APDataStore/pact/ddm_psa2/wire_roundtrip/all4096_sections.bin",
+      "sha256": "1701e148b9113f620f40108046d5d7761ea6861fdd42c1b4193d433ddf6db80d"
+    },
+    "record_bytes": [
+      30
+    ],
+    "scales": [
+      0.027069091796875,
+      0.0163421630859375,
+      0.016448974609375
+    ],
+    "score_claim": false
+  }
+}

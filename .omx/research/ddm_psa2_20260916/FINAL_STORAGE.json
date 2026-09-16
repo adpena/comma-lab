@@ -1,0 +1,11 @@
+{
+  "utc": "2026-09-16T14:04:11.396402+00:00",
+  "storage": {
+    "retained_bytes": 1012756554,
+    "free_bytes": 24912986112,
+    "limit_bytes": 3221225472,
+    "reserve_bytes": 8589934592
+  },
+  "score_claim": false,
+  "charter_complete": false
+}

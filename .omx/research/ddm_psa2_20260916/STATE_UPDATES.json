@@ -1,0 +1,177 @@
+{
+  "lane": {
+    "id": "ddm_psa2_pair_selective_rgb_bias_efficacy_20260916",
+    "name": "Pair selective RGB bias efficacy on move52",
+    "phase": 2.0,
+    "level": 0,
+    "gates": {
+      "impl_complete": {
+        "status": false,
+        "evidence": ""
+      },
+      "real_archive_empirical": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cuda": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cpu": {
+        "status": false,
+        "evidence": ""
+      },
+      "strict_preflight": {
+        "status": false,
+        "evidence": ""
+      },
+      "three_clean_review": {
+        "status": false,
+        "evidence": ""
+      },
+      "memory_entry": {
+        "status": false,
+        "evidence": ""
+      },
+      "deploy_runbook": {
+        "status": false,
+        "evidence": ""
+      }
+    },
+    "notes": "research_only=true; charter owns scorer after pd6 release; no Modal fire or authorization; full int4 lattice and resolved pose; APDataStore ddm_psa2 <=3GiB"
+  },
+  "claims": [
+    "| 2026-09-16T13:06:55Z | ddm_psa2 | ddm_psa2_pair_selective_rgb_bias_efficacy_20260916 | local_macos_cpu | ddm_psa2_search_20260916 |  | active_local_prepare | Charter owns local scorer after pd6 completed_sealed_candidate receipt at 13:00:54Z. APDataStore only writes <=3GiB; no Modal fire authorization. Start base/control then full int4 search with resolved pose. |"
+  ],
+  "tasks": [
+    {
+      "task_id": "ddm_psa2_pair_selective_rgb_bias_realization_20260916",
+      "source_design_memo": ".omx/research/ddm_psa1_20260916/FIRE_ORDER.md",
+      "title": "Realize counted pair-selective RGB head bias after psa1 price gate",
+      "status": "in_progress",
+      "owner": "MAIN",
+      "event_type": "note",
+      "event_timestamp_utc": "2026-09-16T14:03:25.300660Z",
+      "event_actor": "ddm_psa2",
+      "written_at_utc": "2026-09-16T14:03:25.300660Z",
+      "written_pid": 69308,
+      "written_host": "mac.lan",
+      "schema_version": "canonical_task_status_v1_20260518",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "actual_delta_s": null,
+      "commit_shas": [],
+      "test_status": "pending",
+      "blockers": [],
+      "started_at_utc": "2026-09-16T13:25:24.144464Z",
+      "completed_at_utc": null,
+      "event_notes": "First complete pair250: one-cell Seg repair; resolved pose improves; exact cheaper archive adds46B and net worsens. Literal all600 census confirms599/599 unedited identity. Evidence FIRST_SINGLETON.json, FIRST_CENSUS.json; full60 remains executing. V2 handles old waiter source-pin refusal before pose children. Current pointer moved separately to pd6/move53; no transfer. See checkpoint3 and FIRE_ORDER.json.",
+      "session_id": "ddm_psa2_20260916"
+    },
+    {
+      "task_id": "ddm_psa2_collateral_set_admission_20260916",
+      "source_design_memo": ".omx/research/ddm_psa2_pair_selective_rgb_bias_efficacy_on_move52_20260916.md",
+      "title": "Complete psa2 all600 collateral and resolved-pose real set-price ladder",
+      "status": "pending",
+      "owner": "MAIN",
+      "event_type": "note",
+      "event_timestamp_utc": "2026-09-16T14:03:25.318770Z",
+      "event_actor": "ddm_psa2",
+      "written_at_utc": "2026-09-16T14:03:25.318770Z",
+      "written_pid": 69308,
+      "written_host": "mac.lan",
+      "schema_version": "canonical_task_status_v1_20260518",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "actual_delta_s": null,
+      "commit_shas": [],
+      "test_status": "pending",
+      "blockers": [],
+      "started_at_utc": null,
+      "completed_at_utc": null,
+      "event_notes": "{\"task_id\": \"ddm_psa2_collateral_set_admission_20260916\", \"owner\": \"MAIN\", \"executing_owner\": \"ddm_psa2\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"consumer_store\": \"/Volumes/APDataStore/pact/ddm_psa2/\", \"fire_trigger\": \"SINGLETONS.json and SINGLETON_SUMMARY.json exist with 60 completed full-grid/resolved-pose/real-price rows; consume k<6 falsifier if fired, otherwise continue remaining census and real set iteration/ladder after scorer slot release\", \"title\": \"Complete psa2 all600 collateral and resolved-pose real set-price ladder\"}",
+      "session_id": "ddm_psa2_20260916"
+    },
+    {
+      "task_id": "ddm_psa2_conditional_receiver_intent_20260916",
+      "source_design_memo": ".omx/research/ddm_psa2_pair_selective_rgb_bias_efficacy_on_move52_20260916.md",
+      "title": "Conditionally realize psa2 receiver copy and first-fire intent",
+      "status": "pending",
+      "owner": "MAIN",
+      "event_type": "note",
+      "event_timestamp_utc": "2026-09-16T14:03:25.336725Z",
+      "event_actor": "ddm_psa2",
+      "written_at_utc": "2026-09-16T14:03:25.336725Z",
+      "written_pid": 69308,
+      "written_host": "mac.lan",
+      "schema_version": "canonical_task_status_v1_20260518",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "actual_delta_s": null,
+      "commit_shas": [],
+      "test_status": "pending",
+      "blockers": [],
+      "started_at_utc": null,
+      "completed_at_utc": null,
+      "event_notes": "{\"task_id\": \"ddm_psa2_conditional_receiver_intent_20260916\", \"owner\": \"MAIN\", \"executing_owner\": \"ddm_psa2\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"consumer_store\": \"/Volumes/APDataStore/pact/ddm_psa2/candidate/\", \"fire_trigger\": \"At least 6 of 60 net-positive actions; admitted set net<=-2e-5; residual<=10percent; all600 collateral verified; then rebase and remeasure against move53 or later current pointer before receiver intent. Otherwise FOLD on the named formulation falsifier.\", \"title\": \"Conditionally realize psa2 receiver copy and first-fire intent\"}",
+      "session_id": "ddm_psa2_20260916"
+    },
+    {
+      "task_id": "ddm_psa2_source_bundle_landing_20260916",
+      "source_design_memo": ".omx/research/ddm_psa2_pair_selective_rgb_bias_efficacy_on_move52_20260916.md",
+      "title": "Land psa2 owned sources and execution checkpoint from verified bundle",
+      "status": "pending",
+      "owner": "MAIN",
+      "event_type": "note",
+      "event_timestamp_utc": "2026-09-16T14:03:25.354631Z",
+      "event_actor": "ddm_psa2",
+      "written_at_utc": "2026-09-16T14:03:25.354631Z",
+      "written_pid": 69308,
+      "written_host": "mac.lan",
+      "schema_version": "canonical_task_status_v1_20260518",
+      "predicted_cost_usd": 0.0,
+      "predicted_delta_s_band": null,
+      "actual_delta_s": null,
+      "commit_shas": [],
+      "test_status": "pending",
+      "blockers": [],
+      "started_at_utc": null,
+      "completed_at_utc": null,
+      "event_notes": "{\"task_id\": \"ddm_psa2_source_bundle_landing_20260916\", \"owner\": \"MAIN\", \"disposition\": \"QUEUED-WITH-A-FIRE-ORDER\", \"consumer_store\": \"committed repository and exported owned operational rows\", \"fire_trigger\": \"Serializer rc17 plus verified intended bundle; running scientific jobs continue independently\", \"title\": \"Land psa2 owned sources and execution checkpoint from verified bundle\"}",
+      "session_id": "ddm_psa2_20260916"
+    }
+  ],
+  "shared_files_not_whole_file_staged": true,
+  "index_not_modified_by_arm": true,
+  "checkpoint": {
+    "expected_outputs": [
+      "/Volumes/APDataStore/pact/ddm_psa2/SINGLETONS.json",
+      "/Volumes/APDataStore/pact/ddm_psa2/SINGLETON_SUMMARY.json"
+    ],
+    "files_touched": [
+      "experiments/ddm_psa2_rgb_bias.py",
+      "experiments/ddm_psa2_resolve_price.py",
+      "experiments/ddm_psa2_followthrough.py",
+      "experiments/ddm_psa2_followthrough_v2.py",
+      "experiments/ddm_psa2_census.py",
+      "experiments/ddm_psa2_resume.py",
+      ".omx/research/ddm_psa2_pair_selective_rgb_bias_efficacy_on_move52_20260916.md"
+    ],
+    "findings": [
+      "Pair250 full4096 optimum repairs1 cell; re-solved pose improves but exact q11 archive +46B yields net +2.9229434210131152e-5. All600 literal census verifies599/599 unedited identity. No formulation closure from1/60.",
+      "MAIN independently moved pointer to pd6/move53 S0.1361014714463198 at179286B. Probe remains frozen move52; any survivor needs current-object remeasurement."
+    ],
+    "host": "mac.lan",
+    "lane_id": "ddm_psa2_pair_selective_rgb_bias_efficacy_20260916",
+    "next_action": "FIRED full search PID40291 and V2 continuation PID62499; full receipt then expected old waiter source-pin refusal then resolve60 plus prices and SINGLETON_SUMMARY. Queued remaining census, real set ladder and conditional current-object receiver intent; no duplicate search.",
+    "notes": "",
+    "parent_id_or_session": "01a0aa51-564a-7aa3-acdc-8d4b2b95b5ac",
+    "pid": 68892,
+    "respawn_context": "Read .omx/research/ddm_psa2_pair_selective_rgb_bias_efficacy_on_move52_20260916.md and ddm_psa2_20260916/FIRE_ORDER.json. Store /Volumes/APDataStore/pact/ddm_psa2. Old waiter43543 must refuse old pose pin; V2 handles it. Running RGB/V2/old-waiter sources must remain unchanged. All-owned-jobs terminal prerequisite for ddm_psa2_resume.py. First selected payload and twins retained; full60 efficacy incomplete; no score/intent.",
+    "status": "in_progress",
+    "step": 3,
+    "subagent_id": "ddm_psa2",
+    "written_at_utc": "2026-09-16T14:02:37.895594+00:00"
+  },
+  "status_refresh_note": "Task notes appended using canonical append_note after same-status update was correctly refused. Claim status refresh refused; original active claim remains."
+}

@@ -1,0 +1,30 @@
+{
+  "prepare_original_fact": {
+    "bytes": 13047,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+    "sha256": "c025a81617a50025191f7e6aaa3c3971dbd85193256b3fb467b6de650a0cf1ab"
+  },
+  "prepare_retained_snapshot": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/sources/prepare_producer.py",
+    "bytes": 13047,
+    "sha256": "c025a81617a50025191f7e6aaa3c3971dbd85193256b3fb467b6de650a0cf1ab"
+  },
+  "active_sources": [
+    {
+      "bytes": 5794,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough.py",
+      "sha256": "57d769e57d1f7571f9e9b7874b236e26feef06c6c8b48d8a80129c843dff5b43"
+    },
+    {
+      "bytes": 16765,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+      "sha256": "95b317fcbad9bfea3cb0eca33f0dadd5aa04982969970bebac9755f188711bf8"
+    },
+    {
+      "bytes": 12486,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resolve_price.py",
+      "sha256": "fb7766fa8319db582fa9d6de2e500afbd6313b67010879d6e1aa81b6ff11f37c"
+    }
+  ],
+  "note": "Prepare fact retains its old execution source identity; the later control/search source is a separate revision."
+}

@@ -1,0 +1,438 @@
+{
+  "utc": "2026-09-16T13:58:42.081608+00:00",
+  "n": 60,
+  "vectors_denominator": 245760,
+  "vectors_complete": 5088,
+  "searches_complete": 1,
+  "rows": [
+    {
+      "pair": 250,
+      "vectors_complete": 4096,
+      "search_complete": true,
+      "pose_complete": true,
+      "price_complete": true
+    },
+    {
+      "pair": 398,
+      "vectors_complete": 992,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 296,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 236,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 80,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 385,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 214,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 382,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 208,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 583,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 53,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 406,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 547,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 342,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 127,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 319,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 502,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 137,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 376,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 32,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 183,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 33,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 134,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 536,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 518,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 543,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 168,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 569,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 105,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 550,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 465,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 514,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 566,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 112,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 452,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 492,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 565,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 579,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 589,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 422,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 585,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 22,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 37,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 59,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 102,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 109,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 136,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 418,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 463,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 497,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 591,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 170,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 284,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 425,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 499,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 531,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 25,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 179,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 197,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    },
+    {
+      "pair": 476,
+      "vectors_complete": 0,
+      "search_complete": false,
+      "pose_complete": false,
+      "price_complete": false
+    }
+  ],
+  "storage": {
+    "retained_bytes": 1012614034,
+    "free_bytes": 27892908032,
+    "limit_bytes": 3221225472,
+    "reserve_bytes": 8589934592
+  },
+  "charter_complete": false,
+  "score_claim": false,
+  "axis": "[macOS-CPU advisory, frozen CPU SegNet/PoseNet, DALI GT lineage]"
+}

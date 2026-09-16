@@ -1,0 +1,84 @@
+{
+  "pair": 250,
+  "complete_search_vectors": 4096,
+  "credit_cells": 1,
+  "bias_codes": [
+    3,
+    2,
+    1
+  ],
+  "delta_d_pose": -4.2993667198620855e-07,
+  "seg_delta_S": -8.477105034722222e-07,
+  "resolved_pose_delta_S": -5.523671300165095e-07,
+  "delta_bytes_q11": 46,
+  "delta_bytes_sm1": 58,
+  "net_delta_S": {
+    "q11": 2.9229434210131152e-05,
+    "sm1": 3.721974164759721e-05
+  },
+  "price": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/PRICE.json",
+    "bytes": 6451,
+    "sha256": "053e0a8ba7c26acae2b15e08317435cf4bb6b2470055d683ac66dc106b8cbbff"
+  },
+  "search": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_250/SEARCH.json",
+    "bytes": 849,
+    "sha256": "af0cbc1580a7ec3a8ab45e4a602ea1ed4d0da44b50b42ad9c6a8d1ff1807a96f"
+  },
+  "resolved": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/pairs/pair_250/RESOLVED.json",
+    "bytes": 1728,
+    "sha256": "1948139aa7060827ea8c395b0b650a2aeb948756d22a9ef222bc1ed1612cebf0"
+  },
+  "pose_replay": {
+    "abs_difference": 9.001749184018893e-10,
+    "band_abs": 2.2642595483754955e-08,
+    "batch1_d_pose": 1.3050924303672357e-06,
+    "candidate_batch_d_pose": 1.3041922554488338e-06
+  },
+  "twins": {
+    "carrier": [
+      {
+        "bytes": 179336,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/repeat0/carrier.zip",
+        "sha256": "93f1fcebbe5fe2a023d503d55c901081b1ecaa9944670ef2bc0a65bbba57e63c"
+      },
+      {
+        "bytes": 179336,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/repeat1/carrier.zip",
+        "sha256": "93f1fcebbe5fe2a023d503d55c901081b1ecaa9944670ef2bc0a65bbba57e63c"
+      }
+    ],
+    "q11": [
+      {
+        "bytes": 179378,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/repeat0/q11.research.zip",
+        "sha256": "9ef6d480997b790ec5e09149b845518cd57557ade525865eaacaf1349bc6654c"
+      },
+      {
+        "bytes": 179378,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/repeat1/q11.research.zip",
+        "sha256": "9ef6d480997b790ec5e09149b845518cd57557ade525865eaacaf1349bc6654c"
+      }
+    ],
+    "sm1": [
+      {
+        "bytes": 179390,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/repeat0/sm1.research.zip",
+        "sha256": "4eaf33f7c10ee783b1e83ba2efc590b7512f0d8f917da1777805dbb093633310"
+      },
+      {
+        "bytes": 179390,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/repeat1/sm1.research.zip",
+        "sha256": "4eaf33f7c10ee783b1e83ba2efc590b7512f0d8f917da1777805dbb093633310"
+      }
+    ]
+  },
+  "n_completed": 1,
+  "charter_n": 60,
+  "axis": "[macOS-CPU advisory, frozen CPU SegNet/PoseNet, DALI GT lineage]",
+  "disposition": "FOLDED singleton instance; no formulation falsifier yet",
+  "charter_complete": false,
+  "score_claim": false
+}

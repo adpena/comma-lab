@@ -1,0 +1,48 @@
+{
+  "scope": "recovery control using137 actual wire-bank bytes; deliberately interrupted input, no scientific output",
+  "retained": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/resume_safety_control_v2/certified/interrupted/0000_8198711366bf35f4e73ce5754ddb468bcbf2ac8f3948cd49e130fb2aa7482e7c",
+    "bytes": 137,
+    "sha256": "8198711366bf35f4e73ce5754ddb468bcbf2ac8f3948cd49e130fb2aa7482e7c"
+  },
+  "certificates": [
+    {
+      "original": {
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/resume_safety_control_v2/interrupted_actual_record_bank.pending",
+        "bytes": 137,
+        "sha256": "8198711366bf35f4e73ce5754ddb468bcbf2ac8f3948cd49e130fb2aa7482e7c"
+      },
+      "destination": "/Volumes/APDataStore/pact/ddm_psa2/resume_safety_control_v2/certified/interrupted/0000_8198711366bf35f4e73ce5754ddb468bcbf2ac8f3948cd49e130fb2aa7482e7c",
+      "reason": "interrupted atomic stage output; complete checkpoints retained",
+      "reproducibility": {
+        "seed": 20260916,
+        "source_pins": [
+          {
+            "bytes": 5794,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough.py",
+            "sha256": "57d769e57d1f7571f9e9b7874b236e26feef06c6c8b48d8a80129c843dff5b43"
+          },
+          {
+            "bytes": 16765,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+            "sha256": "95b317fcbad9bfea3cb0eca33f0dadd5aa04982969970bebac9755f188711bf8"
+          },
+          {
+            "bytes": 12486,
+            "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resolve_price.py",
+            "sha256": "fb7766fa8319db582fa9d6de2e500afbd6313b67010879d6e1aa81b6ff11f37c"
+          }
+        ],
+        "failed_stage_manifests": [],
+        "base_binding": {
+          "path": "/Volumes/APDataStore/pact/ddm_psa2/resume_safety_control_v2/BINDING.json",
+          "bytes": 26010,
+          "sha256": "3648c6bc18ec388fb52eb952bf786a1958ed08de1aee03c42c9f6c31e06f3e8b"
+        }
+      },
+      "score_claim": false,
+      "rebuildable_by": "same recorded argv using --resume-from and retained complete blocks"
+    }
+  ],
+  "passed": true
+}

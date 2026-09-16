@@ -1,0 +1,42 @@
+{
+  "receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/census/pair_250/CENSUS.json",
+    "bytes": 350876,
+    "sha256": "87bce6cb762003fe12a278793d3403591e14b6aae102dfbdb48dd0672f282233"
+  },
+  "summary": {
+    "axis": "[macOS-CPU advisory, frozen CPU SegNet/PoseNet, DALI GT lineage]",
+    "edited_match_retained": 1,
+    "edited_pairs": [
+      250
+    ],
+    "inputs": {
+      "base_binding": {
+        "bytes": 26010,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/BINDING.json",
+        "sha256": "3648c6bc18ec388fb52eb952bf786a1958ed08de1aee03c42c9f6c31e06f3e8b"
+      },
+      "price": {
+        "bytes": 6451,
+        "path": "/Volumes/APDataStore/pact/ddm_psa2/prices/pair_250/PRICE.json",
+        "sha256": "053e0a8ba7c26acae2b15e08317435cf4bb6b2470055d683ac66dc106b8cbbff"
+      },
+      "producer": {
+        "bytes": 6963,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_census.py",
+        "sha256": "d17457ed81fc57fec5e6cc36ba3f0b63355f726e42eb348e2612a1bc2026b09e"
+      },
+      "rgb_producer": {
+        "bytes": 16765,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+        "sha256": "95b317fcbad9bfea3cb0eca33f0dadd5aa04982969970bebac9755f188711bf8"
+      }
+    },
+    "n_pairs": 600,
+    "score_claim": false,
+    "surface": "literal research renderer; public receiver not implemented",
+    "unedited_bit_identical": 599,
+    "unedited_denominator": 599
+  },
+  "verified_600_unique_pair_rows": true
+}

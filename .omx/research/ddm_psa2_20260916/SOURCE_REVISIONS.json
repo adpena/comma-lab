@@ -1,0 +1,67 @@
+{
+  "prepare_original_fact": {
+    "bytes": 13047,
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+    "sha256": "c025a81617a50025191f7e6aaa3c3971dbd85193256b3fb467b6de650a0cf1ab"
+  },
+  "prepare_retained_snapshot": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/sources/prepare_producer.py",
+    "bytes": 13047,
+    "sha256": "c025a81617a50025191f7e6aaa3c3971dbd85193256b3fb467b6de650a0cf1ab"
+  },
+  "superseded_chain_pins": [
+    {
+      "bytes": 5794,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough.py",
+      "sha256": "57d769e57d1f7571f9e9b7874b236e26feef06c6c8b48d8a80129c843dff5b43"
+    },
+    {
+      "bytes": 16765,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+      "sha256": "95b317fcbad9bfea3cb0eca33f0dadd5aa04982969970bebac9755f188711bf8"
+    },
+    {
+      "bytes": 12486,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resolve_price.py",
+      "sha256": "fb7766fa8319db582fa9d6de2e500afbd6313b67010879d6e1aa81b6ff11f37c"
+    }
+  ],
+  "superseded_pose_source_retained": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa2/sources/resolve_price_producer.py",
+    "bytes": 12486,
+    "sha256": "fb7766fa8319db582fa9d6de2e500afbd6313b67010879d6e1aa81b6ff11f37c"
+  },
+  "active_sources": [
+    {
+      "bytes": 4122,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough_v2.py",
+      "sha256": "3aaa44945cb5554cfcb6cc31ecb8cee77cd847ee80ed7e0b7626f5c1c5d8efc0"
+    },
+    {
+      "bytes": 5794,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough.py",
+      "sha256": "57d769e57d1f7571f9e9b7874b236e26feef06c6c8b48d8a80129c843dff5b43"
+    },
+    {
+      "bytes": 16765,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+      "sha256": "95b317fcbad9bfea3cb0eca33f0dadd5aa04982969970bebac9755f188711bf8"
+    },
+    {
+      "bytes": 12890,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resolve_price.py",
+      "sha256": "9d5b1d524543b9ac8ca34e1e94525c5e089685a732909cc45b02b44c2fbcacca"
+    }
+  ],
+  "census_source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_census.py",
+    "bytes": 6963,
+    "sha256": "d17457ed81fc57fec5e6cc36ba3f0b63355f726e42eb348e2612a1bc2026b09e"
+  },
+  "resume_source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resume.py",
+    "bytes": 6131,
+    "sha256": "74998207df1d4898881067e174d1843c450db5c80f0becfbb7c05f0f3fd5d16a"
+  },
+  "note": "RGB search and original waiter source unchanged. Original waiter must refuse the old pose pin; V2 then continues under corrected pose pins. Prepare execution source retained separately."
+}

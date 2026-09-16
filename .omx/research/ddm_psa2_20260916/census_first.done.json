@@ -1,0 +1,14 @@
+{
+  "adjudicated_at_launch": false,
+  "detail": "",
+  "elapsed_s": 271.902057,
+  "generated_utc": "2026-09-16T13:58:39Z",
+  "launch_id": {
+    "manifest_path": "/Volumes/APDataStore/pact/ddm_psa2/launch_census_first/launch_manifest.json",
+    "monotonic_launch_counter": 2219,
+    "pid": 62315
+  },
+  "rc": 0,
+  "receipt_name": "ddm_psa2_census_first",
+  "schema": "detached_local_process_done.v2"
+}

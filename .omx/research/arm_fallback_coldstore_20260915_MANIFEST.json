@@ -2312,6 +2312,25 @@
    ],
    "reason": "jrx2/psa1 serializer fallback bundles and verify objects; content landed on main (8a689a70d, b702a1b82)",
    "added_utc": "2026-09-16T08:19:28Z"
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_psa2_20260916__recall_big.tar",
+   "tar_bytes": 6389760,
+   "tar_sha256": "cc4399298767d15e84ccf30d8510655a1f6d26f1d04d58584bb9434ac6253caa",
+   "files": [
+    {
+     "path": ".omx/research/ddm_psa2_20260916/EQUATIONS_RECALL.json",
+     "bytes": 3813910,
+     "sha256": "9389b1cab2ece031471a509f8e88fc2c489908c5fcac07576c330dc2a2ae7394"
+    },
+    {
+     "path": ".omx/research/ddm_psa2_20260916/RECALL_MEMOS.txt",
+     "bytes": 2570728,
+     "sha256": "6bcde261b679f1146684dc7fb1e0e71fa72e68b7da36bde0a1b809b2beb15acd"
+    }
+   ],
+   "reason": "psa2 recall snapshots; rebuildable at HEAD",
+   "added_utc": "2026-09-16T14:08:47Z"
   }
  ]
 }

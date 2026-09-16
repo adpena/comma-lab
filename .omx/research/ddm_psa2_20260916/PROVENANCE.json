@@ -1,0 +1,47 @@
+{
+  "utc": "2026-09-16T13:41:54.463044+00:00",
+  "host": "mac.lan",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "torch": "2.12.1",
+  "seed": 20260916,
+  "threads": 4,
+  "interop_threads": 1,
+  "scorer_device": "cpu",
+  "axis": "[macOS-CPU advisory, frozen CPU SegNet/PoseNet, DALI GT lineage]",
+  "score_claim": false,
+  "input_facts": [
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "bytes": 8322,
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "bytes": 9345,
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "bytes": 38502892,
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+      "bytes": 55835560,
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "bytes": 117980732,
+      "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"
+    }
+  ],
+  "head_now": "ee9f67215ad38e8a76df9a086af1087ab96a1176",
+  "upstream_head": "11ad728f563d8970929e8947a1cf6124ee6303e4"
+}

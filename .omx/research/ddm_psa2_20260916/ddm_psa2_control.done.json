@@ -1,0 +1,14 @@
+{
+  "adjudicated_at_launch": false,
+  "detail": "",
+  "elapsed_s": 176.739242,
+  "generated_utc": "2026-09-16T13:16:59Z",
+  "launch_id": {
+    "manifest_path": "/Volumes/APDataStore/pact/ddm_psa2/launch_control/launch_manifest.json",
+    "monotonic_launch_counter": 2209,
+    "pid": 36771
+  },
+  "rc": 0,
+  "receipt_name": "ddm_psa2_control",
+  "schema": "detached_local_process_done.v2"
+}

@@ -1,0 +1,40 @@
+{
+  "orders": [
+    {
+      "task_id": "ddm_psa2_collateral_set_admission_20260916",
+      "owner": "MAIN",
+      "executing_owner": "ddm_psa2",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_psa2/",
+      "fire_trigger": "SINGLETONS.json and SINGLETON_SUMMARY.json exist with 60 completed full-grid/resolved-pose/real-price rows; consume k<6 falsifier if fired, otherwise continue remaining census and real set iteration/ladder after scorer slot release",
+      "title": "Complete psa2 all600 collateral and resolved-pose real set-price ladder"
+    },
+    {
+      "task_id": "ddm_psa2_conditional_receiver_intent_20260916",
+      "owner": "MAIN",
+      "executing_owner": "ddm_psa2",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_psa2/candidate/",
+      "fire_trigger": "At least 6 of 60 net-positive actions; admitted set net<=-2e-5; residual<=10percent; all600 collateral verified; then rebase and remeasure against move53 or later current pointer before receiver intent. Otherwise FOLD on the named formulation falsifier.",
+      "title": "Conditionally realize psa2 receiver copy and first-fire intent"
+    },
+    {
+      "task_id": "ddm_psa2_source_bundle_landing_20260916",
+      "owner": "MAIN",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "committed repository and exported owned operational rows",
+      "fire_trigger": "Serializer rc17 plus verified intended bundle; running scientific jobs continue independently",
+      "title": "Land psa2 owned sources and execution checkpoint from verified bundle"
+    }
+  ],
+  "already_fired": [
+    "ddm_psa2_search_full",
+    "ddm_psa2_followthrough",
+    "ddm_psa2_followthrough_v2",
+    "ddm_psa2_resolve_first",
+    "ddm_psa2_price_first",
+    "ddm_psa2_census_first"
+  ],
+  "charter_complete": false,
+  "supersession": "Original waiter source stays unchanged but must refuse old pose pin before V2 launches a pose child."
+}

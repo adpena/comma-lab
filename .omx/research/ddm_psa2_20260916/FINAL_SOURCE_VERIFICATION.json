@@ -1,0 +1,40 @@
+{
+  "ruff": "PASS",
+  "compilation": "PASS",
+  "python_files": [
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough.py",
+      "bytes": 5794,
+      "sha256": "57d769e57d1f7571f9e9b7874b236e26feef06c6c8b48d8a80129c843dff5b43"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resolve_price.py",
+      "bytes": 12890,
+      "sha256": "9d5b1d524543b9ac8ca34e1e94525c5e089685a732909cc45b02b44c2fbcacca"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_census.py",
+      "bytes": 6963,
+      "sha256": "d17457ed81fc57fec5e6cc36ba3f0b63355f726e42eb348e2612a1bc2026b09e"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_resume.py",
+      "bytes": 6131,
+      "sha256": "74998207df1d4898881067e174d1843c450db5c80f0becfbb7c05f0f3fd5d16a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_followthrough_v2.py",
+      "bytes": 4122,
+      "sha256": "3aaa44945cb5554cfcb6cc31ecb8cee77cd847ee80ed7e0b7626f5c1c5d8efc0"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_psa2_rgb_bias.py",
+      "bytes": 16765,
+      "sha256": "95b317fcbad9bfea3cb0eca33f0dadd5aa04982969970bebac9755f188711bf8"
+    }
+  ],
+  "v2_pins_pass": true,
+  "old_pin_expected_refusal": "source or checkpoint drift: /Users/adpena/Projects/pact/experiments/ddm_psa2_resolve_price.py",
+  "old_pose_child_exists": false,
+  "charter_complete": false
+}
