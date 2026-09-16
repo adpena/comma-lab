@@ -1056,8 +1056,8 @@ def render_video(renderer, basis, coefficients, tokens, destination, device):
     for start in range(0, PAIRS, renderer_batch):
         end = min(start + renderer_batch, PAIRS)
         indices = torch.arange(start, end, device=device)
-        master = F.interpolate(renderer(tokens[start:end].long().to(device), indices), size=(CAMERA_H, CAMERA_W), mode='bilinear', align_corners=False).clamp(0.0, 255.0).round()
-        master_np = master.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
+        rendered_frame = F.interpolate(renderer(tokens[start:end].long().to(device), indices), size=(CAMERA_H, CAMERA_W), mode='bilinear', align_corners=False).clamp(0.0, 255.0).round()
+        master_np = rendered_frame.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
         for offset in range(end - start):
             output[2 * (start + offset) + 1] = master_np[offset]
     pose_batch = 64 if device.type == 'cuda' else 1
@@ -1065,8 +1065,8 @@ def render_video(renderer, basis, coefficients, tokens, destination, device):
         end = min(start + pose_batch, PAIRS)
         carrier = torch.einsum('bk,kchw->bchw', coefficients[start:end], basis)
         carrier = carrier / math.sqrt(CARRIER_DIM)
-        slave = F.interpolate((127.5 + CARRIER_AMPLITUDE * carrier).clamp(0.0, 255.0).round(), size=(CAMERA_H, CAMERA_W), mode='bicubic', align_corners=False).clamp(0.0, 255.0).round()
-        slave_np = slave.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
+        carrier_frame = F.interpolate((127.5 + CARRIER_AMPLITUDE * carrier).clamp(0.0, 255.0).round(), size=(CAMERA_H, CAMERA_W), mode='bicubic', align_corners=False).clamp(0.0, 255.0).round()
+        slave_np = carrier_frame.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy()
         for offset in range(end - start):
             output[2 * (start + offset)] = slave_np[offset]
     output.flush()
