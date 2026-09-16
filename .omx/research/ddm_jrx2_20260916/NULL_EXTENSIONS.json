@@ -1,0 +1,39 @@
+{
+  "denominator": 24,
+  "rows": [
+    {
+      "pair": 502,
+      "screened": 16,
+      "admissible": 0,
+      "resolved_rows": 0,
+      "minimum_added_cells": 7,
+      "median_added_cells": 10.0,
+      "maximum_added_cells": 11,
+      "null": true,
+      "verdict_scope": "INSTANCE: named least-damaging anchor and radius1 legal interior neighbours only",
+      "source": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/measure/pair_502/attempt_000/cluster_screen_0.jsonl",
+        "bytes": 5522,
+        "sha256": "a7ef2209fd5d2c1fd47308425613482ade3ccce5ef3853af7a522f777ccade56"
+      }
+    },
+    {
+      "pair": 547,
+      "screened": 8,
+      "admissible": 0,
+      "resolved_rows": 0,
+      "minimum_added_cells": 6,
+      "median_added_cells": 7.0,
+      "maximum_added_cells": 9,
+      "null": true,
+      "verdict_scope": "INSTANCE: named least-damaging anchor and radius1 legal interior neighbours only",
+      "source": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/measure/pair_547/attempt_000/cluster_screen_0.jsonl",
+        "bytes": 2766,
+        "sha256": "38552fa6d3343f80bfc8fa268f419267c9b8cf3320c3f365a76e2d5949992ecd"
+      }
+    }
+  ],
+  "score_claim": false,
+  "axis": "[macOS-CPU advisory]"
+}

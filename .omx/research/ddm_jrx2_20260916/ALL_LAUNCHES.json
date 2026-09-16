@@ -1,0 +1,4663 @@
+[
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0/launch_manifest.json",
+      "bytes": 3493,
+      "sha256": "1854efcc18b6ce1af91e10c377a3b22591898fd48860cbdadacc47644a443510"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "calibration0",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_calibration0.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "calibration0",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "calibration0",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "calibration0",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:21:21Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0/launch_manifest.json",
+        "monotonic_launch_counter": 2071,
+        "pid": 48151
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0",
+      "pid": 48151,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0/run.pid",
+      "purpose": "First real execution jrx1 encoder on identical pd4 sheet0",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.83,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.54,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.54,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1/launch_manifest.json",
+      "bytes": 3493,
+      "sha256": "ad3fb46f17980376071923c4f76750a0f3dc56cf6aac3c124b03ef2d1d8fa156"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "calibration1",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_calibration1.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "calibration1",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "calibration1",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "calibration1",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:21:22Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1/launch_manifest.json",
+        "monotonic_launch_counter": 2072,
+        "pid": 48218
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1",
+      "pid": 48218,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1/run.pid",
+      "purpose": "First real execution jrx1 encoder on identical pd4 sheet1",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.83,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.47,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.47,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first/launch_manifest.json",
+      "bytes": 3543,
+      "sha256": "8e0967bb0d79ceb27be57b4d8d36ba412760e2b41a9ee1b58501d155cee58e65"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_renderer.py",
+        "score",
+        "--pairs",
+        "250,398,296",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_collateral_first.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_renderer.py",
+        "score",
+        "--pairs",
+        "250,398,296",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_renderer.py",
+          "score",
+          "--pairs",
+          "250,398,296",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_renderer.py",
+          "score",
+          "--pairs",
+          "250,398,296",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:45:20Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first/launch_manifest.json",
+        "monotonic_launch_counter": 2082,
+        "pid": 61496
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first",
+      "pid": 61496,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first/run.pid",
+      "purpose": "Sole full-n600 scorer: held-field int4 SegNet collateral for three prepared actions",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.45,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.78,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.59,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.59,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery/launch_manifest.json",
+      "bytes": 3349,
+      "sha256": "56f97c8b90c7923f4be71c6e4336757f51dd11dce41f9db31611c8173fc0688c"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "discovery",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_discovery.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "discovery",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "discovery",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "discovery",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:41:42Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery/launch_manifest.json",
+        "monotonic_launch_counter": 2074,
+        "pid": 59096
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery",
+      "pid": 59096,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery/run.pid",
+      "purpose": "Prepare random K24 discovery sheets retaining2null observations",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.15,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.39,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.39,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate/launch_manifest.json",
+      "bytes": 3356,
+      "sha256": "b7dfd73d758b99b9fd3678442b853d4b80d61867145472eff6003c7364827481"
+    },
+    "data": {
+      "actual_nice": null,
+      "adjudicated_at_launch": true,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "gate",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_gate.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "gate",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "gate",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "gate",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:41:41Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate/launch_manifest.json",
+        "monotonic_launch_counter": 2073,
+        "pid": 59090
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate",
+      "pid": 59090,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate/run.pid",
+      "purpose": "Adjudicate matched Row1 calibration against declared tolerances",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.05,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.39,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.39,
+        "verdict": "PASS"
+      },
+      "verify_alive_rc": 0,
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a/launch_manifest.json",
+      "bytes": 3494,
+      "sha256": "ead230e0d951cb6d38bdadab3b5e6559a5db4d8d1ea7d280f227caf5d72e73b5"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "measure",
+        "--pairs",
+        "53,80,208,214,236,250",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_measure_a.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "measure",
+        "--pairs",
+        "53,80,208,214,236,250",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "measure",
+          "--pairs",
+          "53,80,208,214,236,250",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "measure",
+          "--pairs",
+          "53,80,208,214,236,250",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:20:28Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a/launch_manifest.json",
+        "monotonic_launch_counter": 2068,
+        "pid": 47022
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a",
+      "pid": 47022,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a/run.pid",
+      "purpose": "Matched pd4 calibration six pairs",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.2,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.92,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.59,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.59,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b/launch_manifest.json",
+      "bytes": 3502,
+      "sha256": "5967a35788c6aebf90f78a03b9b2f36e461b7fdca819b30c2a8d3d00605e7ef3"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "measure",
+        "--pairs",
+        "296,382,385,398,406,583",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_measure_b.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "measure",
+        "--pairs",
+        "296,382,385,398,406,583",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "measure",
+          "--pairs",
+          "296,382,385,398,406,583",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "measure",
+          "--pairs",
+          "296,382,385,398,406,583",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:20:29Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b/launch_manifest.json",
+        "monotonic_launch_counter": 2069,
+        "pid": 47112
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b",
+      "pid": 47112,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b/run.pid",
+      "purpose": "Matched pd4 calibration six pairs",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.2,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.92,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.58,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.58,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls/launch_manifest.json",
+      "bytes": 3452,
+      "sha256": "70dd2a865dbe52d25455ddeb04bc1334b2c083f61626a79e352f85e7105dfda0"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "measure",
+        "--pairs",
+        "502,547",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_nulls.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "measure",
+        "--pairs",
+        "502,547",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "measure",
+          "--pairs",
+          "502,547",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "measure",
+          "--pairs",
+          "502,547",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:20:30Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls/launch_manifest.json",
+        "monotonic_launch_counter": 2070,
+        "pid": 47192
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls",
+      "pid": 47192,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls/run.pid",
+      "purpose": "Chartered least damaging anchors radius1 under unchanged two cell gate",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.92,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.58,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.58,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032/launch_manifest.json",
+      "bytes": 3471,
+      "sha256": "526b3448b0f2af9346aa1a7ec07c9052d1ff7efc25723ed64688f4501f04a46b"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair032",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair032.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair032",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair032",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair032",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T07:08:12Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032/launch_manifest.json",
+        "monotonic_launch_counter": 2102,
+        "pid": 6661
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032",
+      "pid": 6661,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair032; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.57,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.52,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.52,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033/launch_manifest.json",
+      "bytes": 3471,
+      "sha256": "86433efed886af771a9440190deee3c6ba4793304c8d3fc1c9995fdc1ef580e9"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair033",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair033.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair033",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair033",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair033",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T07:08:19Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033/launch_manifest.json",
+        "monotonic_launch_counter": 2104,
+        "pid": 6724
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033",
+      "pid": 6724,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair033; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.56,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.29,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.29,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "53a908337f40ab8ee8d73f2988b65fc350677021d9de09b66d00e0cf68dfc9a1"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair053",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair053.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair053",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair053",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair053",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:17Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053/launch_manifest.json",
+        "monotonic_launch_counter": 2094,
+        "pid": 91753
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053",
+      "pid": 91753,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair053; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.87,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.87,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "32e55abbc387c5ed66b907a9aabe5f577baf724a2fbd342c6e2abb0efd80a4fb"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair080",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair080.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair080",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair080",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair080",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:11Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080/launch_manifest.json",
+        "monotonic_launch_counter": 2088,
+        "pid": 75497
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080",
+      "pid": 75497,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair080; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.18,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.18,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "0b1a9be9fcb0fe869179fdff70816dbed655b5b196ed11db253dd3926339bc1b"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair127",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair127.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair127",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair127",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair127",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:27Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127/launch_manifest.json",
+        "monotonic_launch_counter": 2097,
+        "pid": 91873
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127",
+      "pid": 91873,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair127; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.57,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.57,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134/launch_manifest.json",
+      "bytes": 3471,
+      "sha256": "0eb093c825be1446ca9d137d6f84474a154f3bbeb03c5310708adac31e204d30"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair134",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair134.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair134",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair134",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair134",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T07:08:22Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134/launch_manifest.json",
+        "monotonic_launch_counter": 2105,
+        "pid": 6764
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134",
+      "pid": 6764,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair134; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.56,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.18,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.18,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "d609a26d4d74d1d7f52ff5fba2cc597c375504abbce5e7ebf4ef112c73ea1cf7"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair137",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair137.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair137",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair137",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair137",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:34Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137/launch_manifest.json",
+        "monotonic_launch_counter": 2099,
+        "pid": 91959
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137",
+      "pid": 91959,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair137; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.34,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.34,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183/launch_manifest.json",
+      "bytes": 3471,
+      "sha256": "6db29ab31b3a59c8c64d5ff8f3bb3ff31e77c53ae2501ac7e843cec8fbc89a54"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair183",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair183.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair183",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair183",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair183",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T07:08:15Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183/launch_manifest.json",
+        "monotonic_launch_counter": 2103,
+        "pid": 6686
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183",
+      "pid": 6686,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair183; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.56,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.41,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.41,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "e431c81c2453fac82d77b5c33d3d771f0f9edb080e44519af8a4541daa0b30cc"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair208",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair208.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair208",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair208",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair208",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:25Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208/launch_manifest.json",
+        "monotonic_launch_counter": 2092,
+        "pid": 75668
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208",
+      "pid": 75668,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair208; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.71,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.71,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "1a5d2b4a014bd9420f2e60b3655b4ad78970c513def3251e4c0c0267227dd1d4"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair214",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair214.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair214",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair214",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair214",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:18Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214/launch_manifest.json",
+        "monotonic_launch_counter": 2090,
+        "pid": 75576
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214",
+      "pid": 75576,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair214; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.94,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.94,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "1f3c15991d904c96ba39a965489ce60c5bfef9c210194a0cd240cae4b6b44ad6"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair236",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair236.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair236",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair236",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair236",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:08Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236/launch_manifest.json",
+        "monotonic_launch_counter": 2087,
+        "pid": 75446
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236",
+      "pid": 75446,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair236; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.29,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.29,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "7cee60d2b044fad88d848fae880628417447ca18b370ef053660538ec497d62e"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair250",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair250.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair250",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair250",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair250",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:09:57Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250/launch_manifest.json",
+        "monotonic_launch_counter": 2084,
+        "pid": 75271
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250",
+      "pid": 75271,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair250; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.71,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.64,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.64,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "d0dfba7f388f1b0b769f1633b96c5ea23c2f403b19c14a9a0b95a47764f40166"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair296",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair296.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair296",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair296",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair296",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:04Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296/launch_manifest.json",
+        "monotonic_launch_counter": 2086,
+        "pid": 75404
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296",
+      "pid": 75404,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair296; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.41,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.41,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "51a12b63e989c58e5474a8802d28b954c622324d67581136b4104c02dc48fccd"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair319",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair319.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair319",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair319",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair319",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:31Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319/launch_manifest.json",
+        "monotonic_launch_counter": 2098,
+        "pid": 91914
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319",
+      "pid": 91914,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair319; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.46,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.46,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "2b2ac86e811a3a8f6dd60c5f0e9ecfb9e8d0fe71ce0a2a302d7193a64c3adedc"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair342",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair342.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair342",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair342",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair342",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:24Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342/launch_manifest.json",
+        "monotonic_launch_counter": 2096,
+        "pid": 91824
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342",
+      "pid": 91824,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair342; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.64,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.64,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "54d0996aebc0c7869266e87cde2081b8d3b8cd7a22935d42bf0987a901a327c6"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair376",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair376.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair376",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair376",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair376",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:38Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376/launch_manifest.json",
+        "monotonic_launch_counter": 2100,
+        "pid": 91998
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376",
+      "pid": 91998,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair376; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.22,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.22,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "9efb69ce69e7dcde24257c9df900392e7e0f74b0f3f79445efdb06af853556b7"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair382",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair382.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair382",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair382",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair382",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:22Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382/launch_manifest.json",
+        "monotonic_launch_counter": 2091,
+        "pid": 75626
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382",
+      "pid": 75626,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair382; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.83,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.83,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "61fc7ced741f3483732db2acf7abf15e5514a4c1c1363e00d333f0ef9ac0d405"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair385",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair385.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair385",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair385",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair385",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:15Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385/launch_manifest.json",
+        "monotonic_launch_counter": 2089,
+        "pid": 75538
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385",
+      "pid": 75538,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair385; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.68,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.06,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.06,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "25581e82ba7d990491c931e43cf455cbfc50bc832a16989b59d15419a6434daa"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair398",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair398.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair398",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair398",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair398",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:10:01Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398/launch_manifest.json",
+        "monotonic_launch_counter": 2085,
+        "pid": 75378
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398",
+      "pid": 75378,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair398; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.71,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.52,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.52,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "d004ba35b5fb1eb52dd81cb33b112fd42b1dd07e6cf64dccc3c24421bf5ecba2"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair406",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair406.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair406",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair406",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair406",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:20Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406/launch_manifest.json",
+        "monotonic_launch_counter": 2095,
+        "pid": 91780
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406",
+      "pid": 91780,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair406; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.76,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.76,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536/launch_manifest.json",
+      "bytes": 3471,
+      "sha256": "09aa37ee68cc67cc8b381165f6cddb1f21fe222052a66e9ff2786541adab3ddc"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair536",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair536.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair536",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair536",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair536",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T07:08:26Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536/launch_manifest.json",
+        "monotonic_launch_counter": 2106,
+        "pid": 6811
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536",
+      "pid": 6811,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair536; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.56,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.06,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.06,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583/launch_manifest.json",
+      "bytes": 3473,
+      "sha256": "27b63d318da83cbe5a444ef86affc51e23eea4d404607886a9cb3b2b37e1634e"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair583",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair583.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "pair583",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair583",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "pair583",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:40:13Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583/launch_manifest.json",
+        "monotonic_launch_counter": 2093,
+        "pid": 91645
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583",
+      "pid": 91645,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583/run.pid",
+      "purpose": "K24 individual full-archive twin price for pair583; original jrx1 encoder; held carrier",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.98,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.98,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify/launch_manifest.json",
+      "bytes": 3429,
+      "sha256": "82150269c5d155993f14f312a5e5f85b9358dd152eb8fa3128fb6be734db3827"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_harvest.py",
+        "verify",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_payload_verify.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_harvest.py",
+        "verify",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_harvest.py",
+          "verify",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_harvest.py",
+          "verify",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:47:41Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify/launch_manifest.json",
+        "monotonic_launch_counter": 2101,
+        "pid": 95327
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify",
+      "pid": 95327,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify/run.pid",
+      "purpose": "Scorer-free verification of completed renderer and calibration payloads; later prices stage verifies all22 individual charges",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.05,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.44,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 13.97,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 13.97,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare/launch_manifest.json",
+      "bytes": 3371,
+      "sha256": "34ef7bf78de8d6cb9a580dd42e793440c1da9561b1476d2ddd2752632f771691"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "prepare-calibration",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_prepare.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "prepare-calibration",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "prepare-calibration",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "prepare-calibration",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:20:13Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare/launch_manifest.json",
+        "monotonic_launch_counter": 2067,
+        "pid": 46582
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare",
+      "pid": 46582,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare/run.pid",
+      "purpose": "Prepare identical pd4 calibration sheets; retained <=3GiB",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.15,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.92,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.61,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.61,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/launch_manifest.json",
+      "bytes": 3387,
+      "sha256": "4efd7fa0471ce0674fe84d4d9bebc74cafa97b7828151dd1e69b8f92c9d06df3"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_harvest.py",
+        "prices",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_price_harvest.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_harvest.py",
+        "prices",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_harvest.py",
+          "prices",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_harvest.py",
+          "prices",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T07:33:08Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/launch_manifest.json",
+        "monotonic_launch_counter": 2107,
+        "pid": 19744
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest",
+      "pid": 19744,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/run.pid",
+      "purpose": "Verify and harvest all22 completed whole-archive field prices; no scorer or new candidate",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.05,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.47,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 14.23,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 14.23,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals/launch_manifest.json",
+      "bytes": 3424,
+      "sha256": "0cfe7ceab5321ee028f912d8a1b91625a36087d1b692931231e216a1e428432a"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_renderer.py",
+        "proposals",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_renderer_proposals.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_renderer.py",
+        "proposals",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_renderer.py",
+          "proposals",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_renderer.py",
+          "proposals",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:42:06Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals/launch_manifest.json",
+        "monotonic_launch_counter": 2075,
+        "pid": 59836
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals",
+      "pid": 59836,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals/run.pid",
+      "purpose": "After12of12calibration pass, gradient nearest-int4 proposals and real twin price",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.15,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.37,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.37,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0/launch_manifest.json",
+      "bytes": 3433,
+      "sha256": "2823243e01da0977cc64a25606140a8b161df60af075f8c1d62976a5375c9570"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet0",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet0.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet0",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet0",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet0",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:42:55Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0/launch_manifest.json",
+        "monotonic_launch_counter": 2076,
+        "pid": 60246
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0",
+      "pid": 60246,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0/run.pid",
+      "purpose": "Random K24 discovery sheet real twin encode; ranking only",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.36,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.36,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1/launch_manifest.json",
+      "bytes": 3433,
+      "sha256": "c00be1607d334377488233a8f2b91a07430a39b4e28c0f36f45aa0b32f981aa0"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet1",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet1.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet1",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet1",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet1",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:42:58Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1/launch_manifest.json",
+        "monotonic_launch_counter": 2077,
+        "pid": 60275
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1",
+      "pid": 60275,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1/run.pid",
+      "purpose": "Random K24 discovery sheet real twin encode; ranking only",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.24,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.24,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2/launch_manifest.json",
+      "bytes": 3433,
+      "sha256": "6b5d2165ee6f92342cad99f95d5504a8f05a26368fe17dc9073b5339058f515d"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet2",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet2.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet2",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet2",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet2",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:43:01Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2/launch_manifest.json",
+        "monotonic_launch_counter": 2078,
+        "pid": 60297
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2",
+      "pid": 60297,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2/run.pid",
+      "purpose": "Random K24 discovery sheet real twin encode; ranking only",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.13,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.13,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3/launch_manifest.json",
+      "bytes": 3433,
+      "sha256": "e589d44a87b3b896781930d885c6bf85f616d800b17067f83c629402d1bc986f"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet3",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet3.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet3",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet3",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet3",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:43:05Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3/launch_manifest.json",
+        "monotonic_launch_counter": 2079,
+        "pid": 60341
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3",
+      "pid": 60341,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3/run.pid",
+      "purpose": "Random K24 discovery sheet real twin encode; ranking only",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 16.01,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 16.01,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4/launch_manifest.json",
+      "bytes": 3431,
+      "sha256": "fcecc68976c1e0ca5ce078479fa93048ac74e8127c378a9f82b6d7c86611efd9"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet4",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet4.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet4",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet4",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet4",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:43:08Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4/launch_manifest.json",
+        "monotonic_launch_counter": 2080,
+        "pid": 60393
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4",
+      "pid": 60393,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4/run.pid",
+      "purpose": "Random K24 discovery sheet real twin encode; ranking only",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.9,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.9,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5/launch_manifest.json",
+      "bytes": 3433,
+      "sha256": "10efdf2a57d514d36bc2dc53cdbb2521a0f1757d14c974659b58ae019f8d5ff6"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet5",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet5.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "encode",
+        "--name",
+        "sheet5",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet5",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "encode",
+          "--name",
+          "sheet5",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T05:43:11Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5/launch_manifest.json",
+        "monotonic_launch_counter": 2081,
+        "pid": 60429
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5",
+      "pid": 60429,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5/run.pid",
+      "purpose": "Random K24 discovery sheet real twin encode; ranking only",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.25,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.79,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.78,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.78,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  },
+  {
+    "manifest": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners/launch_manifest.json",
+      "bytes": 3370,
+      "sha256": "295a289af864b2d4bed5153a49992844726d4e824076f0407cc6fc64e6e5fbf2"
+    },
+    "data": {
+      "actual_nice": null,
+      "argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "winners",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "authority": "local detached execution; downstream artifacts decide authority",
+      "cwd": "/Users/adpena/Projects/pact",
+      "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+      "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_winners.done",
+      "dry_run": false,
+      "effective_argv": [
+        ".venv/bin/python",
+        "experiments/ddm_jrx2_control.py",
+        "winners",
+        "--resume-from",
+        "/Volumes/APDataStore/pact/ddm_jrx2"
+      ],
+      "fleet_reaper_guard": {
+        "exemption_hits": [],
+        "matched_tokens": [],
+        "matching_argv_parts": [],
+        "refused": false,
+        "requested_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "winners",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ],
+        "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+        "stable_argv": [
+          ".venv/bin/python",
+          "experiments/ddm_jrx2_control.py",
+          "winners",
+          "--resume-from",
+          "/Volumes/APDataStore/pact/ddm_jrx2"
+        ]
+      },
+      "fresh_roots": [],
+      "generated_utc": "2026-09-16T06:09:09Z",
+      "git_sha": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners/launch_manifest.json",
+        "monotonic_launch_counter": 2083,
+        "pid": 74219
+      },
+      "log_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners/run.log",
+      "metal_occupancy": {
+        "evidence": [],
+        "metal_footprint_gib": null,
+        "metal_occupant": false
+      },
+      "nice_status": "unapplied:best_effort (requested 0, actual None)",
+      "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners",
+      "pid": 74219,
+      "pid_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners/run.pid",
+      "purpose": "Execute original jrx1 real-price winner selection for 22 finite K24 pairs after all six sheets completed",
+      "reaper_name_match_allow_requested": false,
+      "reaper_name_match_allowed": false,
+      "reaper_predicate_hits": [],
+      "receipt_arm_tombstone": null,
+      "receipt_tombstone": null,
+      "requested_nice": 0,
+      "resource_budget": {
+        "metal_footprint_gib": null,
+        "metal_occupancy_evidence": [],
+        "metal_occupant": false,
+        "mode": "child_owned",
+        "note": "launcher did not invent an RSS or thread limit without measured demand"
+      },
+      "schema": "detached_local_process_launch.v2",
+      "storage_waterfall": {
+        "artifact_budget_gib": 0.05,
+        "artifact_budget_provenance": "operator-declared --artifact-budget-gib",
+        "boot_data_volume_free_gib": 237.72,
+        "boot_min_free_gib": 40.0,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+        "on_boot_volume": false,
+        "output_dir": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners",
+        "ssd_tiers": [
+          {
+            "free_gib": 38.04,
+            "path": "/Volumes/VertigoDataTier/pact"
+          },
+          {
+            "free_gib": 15.68,
+            "path": "/Volumes/APDataStore/pact"
+          }
+        ],
+        "target_free_gib": 15.68,
+        "verdict": "PASS"
+      },
+      "watcher_config_derivation": null,
+      "watchers": [],
+      "watchers_requested": false
+    }
+  }
+]

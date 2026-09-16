@@ -1,0 +1,74 @@
+[
+  {
+    "pair": 53,
+    "reference": 1.9923507893671305e-07,
+    "observed": 1.9923507893671305e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 80,
+    "reference": 2.8060657408521974e-08,
+    "observed": 2.8060657408521974e-08,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 208,
+    "reference": 6.278080040548518e-07,
+    "observed": 6.278080040548518e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 214,
+    "reference": 7.36622159031963e-07,
+    "observed": 7.36622159031963e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 236,
+    "reference": 5.936499581019724e-07,
+    "observed": 5.936499581019724e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 250,
+    "reference": 1.739078339065993e-07,
+    "observed": 1.739078339065993e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 296,
+    "reference": 6.034227005539437e-07,
+    "observed": 6.034227005539437e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 382,
+    "reference": 3.1112560784493623e-07,
+    "observed": 3.1112560784493623e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 385,
+    "reference": 1.320373628542364e-07,
+    "observed": 1.320373628542364e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 398,
+    "reference": 4.879948815326544e-07,
+    "observed": 4.879948815326544e-07,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 406,
+    "reference": 2.475604528335346e-08,
+    "observed": 2.475604528335346e-08,
+    "relative_error": 0.0
+  },
+  {
+    "pair": 583,
+    "reference": 9.254048363749315e-07,
+    "observed": 9.254048363749315e-07,
+    "relative_error": 0.0
+  }
+]

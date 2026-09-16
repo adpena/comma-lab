@@ -1,0 +1,47 @@
+{
+  "verdict": "STOP_COLLATERAL_SEG",
+  "instrument": "12/12 matched pd4 controls pass exactly",
+  "goal_progress": false,
+  "own_frontier": "composition S 0.13620226906030858 @ 179,332 B [contest-CUDA T4 n600] (move 52)",
+  "live_hypotheses": [
+    {
+      "lead": "Spatially selective actuator reaching residual cells without moving neighbouring correct boundary cells",
+      "why_plausible": "The measured failure is global collateral. Changing spatial support could change that tradeoff; no such actuator was measured here.",
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md section9 OWED1f",
+      "fire_trigger": "Distinct authorized charter with spatial support argument, complete payload price, current pointer and affected-pair scorer ownership; no new job queued"
+    }
+  ],
+  "dead_ends": [
+    {
+      "path": "Named move52 one-code int4 actions for250,398,296",
+      "reason": "Target Seg credits0,0,-3 versus other599 added errors2438,1740,2256; chartered Seg collateral falsifier fired",
+      "scope": "INSTANCE,3/24 actions; each n600"
+    },
+    {
+      "path": "Named least-damaging-anchor radius1 extensions for502/547",
+      "reason": "0/16 and0/8 proposals pass unchanged <=2-cell gate",
+      "scope": "INSTANCE; not every possible two-token move"
+    },
+    {
+      "path": "Random-K24 median compared against selected pooled pd4 knee",
+      "reason": "Different estimands; replaced by identical retained proposals in matched full-sheet context",
+      "scope": "INSTRUMENT"
+    },
+    {
+      "path": "Precision-only successor framed as untried",
+      "reason": "Current rw1 sections8h/9 retract screen repair at n600 and close tested finer-scale routes; this is prior evidence, not a new jrx2 result",
+      "scope": "Prior formulation/derivation boundaries in rw1, not all representations"
+    }
+  ],
+  "unmeasured": [
+    "remaining21 renderer collateral actions",
+    "all resolved renderer-only total exchanges",
+    "all joint rows and joint/better-single ratios",
+    ">=2 joint gate and <1.5 ratio falsifier",
+    "separate full entropy decode",
+    "public authority evaluation"
+  ],
+  "landing_outcome_authority": "SERIALIZER_RESULT.json; any actual follow-on is in LANDING_FIRE_ORDER.json after the final attempt"
+}

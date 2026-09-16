@@ -2075,6 +2075,20 @@
    ],
    "reason": "recall snapshots (rebuildable from the registry at HEAD) / serializer fallback bundles (content landed on main)",
    "added_utc": "2026-09-16T05:10:44Z"
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/ddm_jrx2_20260916__recall_index_dag.tar",
+   "tar_bytes": 327680,
+   "tar_sha256": "51773ab6f06d846124419d243c5cc658c5b0136f2b4d2cf84ff923e543118e33",
+   "files": [
+    {
+     "path": ".omx/research/ddm_jrx2_20260916/RECALL_index_dag.txt",
+     "bytes": 316858,
+     "sha256": "971fead9596f690085205b47bb75c6f064a70180028672b6d6eb0f50e710758c"
+    }
+   ],
+   "reason": "recall snapshot of the DAG index; rebuildable at HEAD",
+   "added_utc": "2026-09-16T07:45:49Z"
   }
  ]
 }

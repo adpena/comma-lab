@@ -1,0 +1,11 @@
+{
+  "census_excludes_pending_and_exfat": true,
+  "census_retries_rename": true,
+  "calibration_rows": 12,
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx2_control.py",
+    "bytes": 17045,
+    "sha256": "e6ffd074377e96b5788ebdf717c6ba0eb6930ada11d2e63d5e62b6dd70becf39"
+  },
+  "score_claim": false
+}

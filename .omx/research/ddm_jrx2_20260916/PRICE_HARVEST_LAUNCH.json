@@ -1,0 +1,32 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/launch_detached_process.py",
+    "--output-dir",
+    "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest",
+    "--nice",
+    "0",
+    "--nice-best-effort",
+    "--verify-alive-secs",
+    "0",
+    "--artifact-budget-gib",
+    ".05",
+    "--done-receipt",
+    "ddm_jrx2_price_harvest",
+    "--purpose",
+    "Verify and harvest all22 completed whole-archive field prices; no scorer or new candidate",
+    "--",
+    ".venv/bin/python",
+    "experiments/ddm_jrx2_harvest.py",
+    "prices",
+    "--resume-from",
+    "/Volumes/APDataStore/pact/ddm_jrx2"
+  ],
+  "storage_before_heavy": {
+    "retained_bytes": 1384156164,
+    "free_bytes": 15279325184
+  },
+  "launcher_rc": 0,
+  "stdout": "{\"fresh_roots\": [], \"launch_id\": {\"manifest_path\": \"/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/launch_manifest.json\", \"monotonic_launch_counter\": 2107, \"pid\": 19744}, \"log_path\": \"/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/run.log\", \"manifest_path\": \"/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/launch_manifest.json\", \"output_dir\": \"/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest\", \"pid\": 19744, \"schema\": \"detached_local_process_launch.v2\", \"watchers\": []}\n",
+  "stderr": ""
+}

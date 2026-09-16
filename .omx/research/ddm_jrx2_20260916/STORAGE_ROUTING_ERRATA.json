@@ -1,0 +1,397 @@
+{
+  "rows": [
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/INPUTS.json",
+        "bytes": 36721,
+        "sha256": "cf243626f4c28dea42759fbd35adc7d6e17116f382e8b44b6402426d7ef36e88"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/INPUTS.json",
+        "bytes": 36721,
+        "sha256": "32670d26dc0af0a8ae30e72a525d48fee79102b6f9f5fccdbc07405e30d43985"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair032/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "d3b2560686b1ba39665b00a89f18eafd7c55de8cc540cd3021c2e4def02dfa5c"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair032/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair032/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair033/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "0f31b4c77df5eb86c6bf23992c9f85c44004e46cb73f8d3318332ab3aa89ae3c"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair033/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair033/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair053/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "986345dd4a2aaf97421a198c3f485fe77b0e45d42ff0aa21c0d53e93c097d072"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair053/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair053/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "db1ca93a803b083635a74782d5170ebcf5d6c2ad7d9fef04311938c7583f2a93"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair127/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "902d1c611c15c756db8a14bd4595887b677b2a40a7043b068226931c9beedb00"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair127/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair127/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair134/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "7c1372f6cfc5a1b5604fed6f1e06c22fd654554cec899026ce72835fddde8054"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair134/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair134/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair137/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "fcee1ce3739f10a6808f1d26430462ed98875eec218b3a660d4b45b3725d4895"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair137/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair137/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair183/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "9346e3c9ffe8db15e77772d1c4e5f1860d4620131246ad49575f96b698770d73"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair183/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair183/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "629b6eab72697d31449368534fea382dd15a46c508e727394d20ab908c042ce7"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "150d822b992e87648085fab14f1af1e617af85fbd6be3d5e5242b42038e9e9ce"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "464d82836aba4663698a6e71220d27b9e753fc9a2e49dee3c37afb276e1be8e0"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "52cf725bb5c83b85f6b6a2efb9513fe7610450a4f37cff03e1be7525faaacba5"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "160461ea7a1c4a9e6c6a03230b03d89b305596f25d69dde0c8a4be00e695caa8"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair319/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "003899000eb2c029c6d9fb2ecfb4d94164c409eba96c4fea2053bb2e9f41e525"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair319/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair319/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair342/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "9899ba0a406804133dd1984772109fdf7d8e624de8f10333a5f4b0f79cd73201"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair342/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair342/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair376/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "4f438431d8ac2e8dbf9f7e5b6f23baa92c212cdf79bb4ea458c10ef6dece266c"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair376/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair376/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "3723e286575ae3dab9b83cfadc4bd2db54026d9ebb8f038508db455cbced6acb"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "84e0b7a188c42381549330adf34a4932e752fff6ca2eb8516b7dd97199de7af2"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "aeb1debbd0935a59397a5b6f9f7dead6d1f423c2f438a402addfeda0bfaeacef"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair406/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "10f45f34b6cb2fe64308ca78f21153e95c0579ddac49674154a2706b17e9d9e0"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair406/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair406/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair536/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "52fa9d74ed4bc16ffb7c3196a28b62e3f843f39cdb45607fb0149f36aada1a5b"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair536/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair536/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair583/INPUTS.json",
+        "bytes": 36711,
+        "sha256": "264e5505dcb2133abdf600e7130bf99088f35ba72702a3b9b4a755fb578711bc"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair583/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair583/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/INPUTS.json",
+        "bytes": 36709,
+        "sha256": "e39d731667cb3a2331d5c41bac4b307a630a002199cf9de0d12d6ba9d1890ec7"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/INPUTS.json",
+        "bytes": 36709,
+        "sha256": "cd11521777711d8fdc115a96a2a68fa71f268b9d6f73016493a4012e64acd22f"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/INPUTS.json",
+        "bytes": 36709,
+        "sha256": "ae35bda920e35d0751842bb5103ec1956c67dacb533e505e2f161bfb5728110c"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/INPUTS.json",
+        "bytes": 36709,
+        "sha256": "1d9e341ea628667e7df2ceccfb5bf36f83bb5a96918fb3b74334456a8804d3f7"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/INPUTS.json",
+        "bytes": 36709,
+        "sha256": "c432b11609cf35c1dd1c44c468d54a6df5098a1171963bed2ae50c1cb3cf89df"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    },
+    {
+      "input": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/INPUTS.json",
+        "bytes": 36709,
+        "sha256": "5287eb868fb4188ac83a99409cebb38579e6f7f26a898ea48f1fe1d7041b2ebe"
+      },
+      "owned_paths": [
+        "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/field.npz",
+        "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/bulk/field.u8"
+      ],
+      "historical_storage_policy": "all new payloads in jrx1; verified jrd1 control read-only"
+    }
+  ],
+  "all_new_routes_owned": true,
+  "correction": "The unmodified jrx1 price adapter emits a historical storage_policy string naming jrx1. For this run, every new runtime, candidate field, checkpoint, stream and archive is routed to ddm_jrx2 by the adapter binding. Explicit absolute paths are authoritative; jrd1 control and jrx1 searches are verified read-only inputs. Immutable INPUTS bytes are preserved for checkpoint identity.",
+  "score_claim": false
+}

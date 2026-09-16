@@ -1,0 +1,447 @@
+[
+  {
+    "canonical_consumers": [
+      "any successor rung of the compensated-edit family: call project_at_mass() for its expected net before sealing, instead of assuming linear scaling",
+      "fire-order falsifier bands for semantic-quantization candidates (the pose bar is a fraction of the credit, not an absolute)",
+      "routing decisions between axes \u2014 family_cannot_close_alone() is why this family is composed rather than pursued to the gap",
+      "ddm_asym1's three-axis asymmetry: this is the worked case where concavity helps rather than hurts, because the damage is paid upward"
+    ],
+    "canonical_producers": [
+      ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+      "/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/MODAL_REMOTE_RESULT.json",
+      ".omx/research/ddm_asym1_three_axis_asymmetry_and_dynamics_20260818.md",
+      ".omx/research/ddm_sa1_uncompensated_semantic_edit_family_refused_20260818.md (the uncompensated control: 68-512x, 3/3 refused)"
+    ],
+    "domain_of_validity": {
+      "applies_to": "members of the compensated lossy-semantic-edit family: coarser semantic quantization for rate, repaired by an in-compile Schur pose compensation solved against the EDITED object",
+      "axis": "[contest-CUDA T4 n600] measured legs; exchange arithmetic DERIVED-EXACT",
+      "does_not_apply_to": "UNCOMPENSATED lossy semantic edits \u2014 sa1 refused that family 3/3 with pose damage 68-512x the rate credit. The compensation is what makes the ratio 0.508 instead of two orders of magnitude worse. Also does not apply to a compensation carried from a DIFFERENT object: qs4 did exactly that and paid +2.396e-4 (cross-regime constant transfer).",
+      "extrapolation_rule": "scale d_pose, THEN take sqrt(10*d_pose). Scaling the pose S-leg directly assumes a linearity the score function does not have and under-states the family at every mass above 1.",
+      "ratios_are_instance_scoped": "one measured member at one operating point; the SHAPE (rate/seg linear, pose concave, retention rising with mass) is DERIVED-EXACT and carries further than the ratios do",
+      "research_only": false
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "sa3_compensated_edit_leg_split_20260818",
+        "empirical_output": {
+          "falsifiers": {
+            "F1": "PASS \u2014 net -5.506e-05 is 15.7x the -3.5e-6 band",
+            "F2": "PASS \u2014 measured d_seg delta +2.04e-6 = 1.19x predicted, under 2x",
+            "F3": "PASS \u2014 pose damage +2.670e-4 consumed 51% of the rate credit",
+            "F4": "PASS \u2014 passed=True, rc=0, validation_errors=[]"
+          },
+          "family_ceiling": {
+            "mass_to_close_gap_alone": 52.1017,
+            "rate_credit_bytes_required": 41160.3,
+            "semantic_section_bytes": 34243,
+            "verdict": "INFEASIBLE \u2014 the demand is 1.20x the entire semantic section, so the family contributes but cannot route"
+          },
+          "legs_S": {
+            "net": -5.50632e-05,
+            "pose": 0.0002669654,
+            "rate": -0.0005260286,
+            "seg": 0.000204
+          },
+          "ratios_of_credit": {
+            "pose_damage": 0.50751,
+            "retained": 0.10468,
+            "seg_damage": 0.38781
+          },
+          "verdict": "ADMITTED \u2014 eighth pointer move, 0.71% of the sub-0.15 gap"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "axis": "[contest-CUDA T4 n600]",
+          "base": {
+            "S": 0.15771357797660338,
+            "archive_bytes": 179930,
+            "d_pose": 6.88e-06,
+            "d_seg": 0.00029611,
+            "sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a"
+          },
+          "candidate": {
+            "S": 0.15765851477950737,
+            "archive_bytes": 179140,
+            "d_pose": 7.33e-06,
+            "d_seg": 0.00029815,
+            "sha256": "d2ad58ee28b84388a262bd5c8b11611a163dcc2694ad3c29a1283605a206b992"
+          },
+          "gpu_t4_match": true,
+          "mechanism": "lossy semantic-FiLM quantization (rate) + in-compile Schur pose compensation solved against the EDITED object (qs5's proven form, re-based onto the live sz1 pointer)",
+          "n_samples": 600
+        },
+        "measurement_method": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda on a Tesla T4, n=600, gpu_t4_match=True. Legs recomputed at 40-digit decimal precision from the harness's reported components; their sum reproduces the harness's own score_recomputed_from_components to 17 digits.",
+        "measurement_utc": "2026-08-18T06:00:00Z",
+        "predicted_output": {
+          "sealed_falsifiers": {
+            "F1_net_below_band": "net < -3.5e-6",
+            "F2_seg_within_2x_of_predicted": "predicted d_seg delta +1.72e-6",
+            "F3_pose_damage_under_bar": "pose damage < +5.226e-4 S",
+            "F4_clean_row": "passed=True, validation_errors=[]"
+          }
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-08-18T06:00:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "linux_x86_64_t4",
+          "measurement_axis": "[contest-CUDA T4 n600] measured legs; exchange arithmetic DERIVED-EXACT",
+          "promotion_eligible": false,
+          "rejection_reason": "re-calibrate when any member of this family lands a T4 row at a materially different edit mass, or when the pointer's d_pose moves enough that the pose marginal 5/sqrt(10*d_pose) shifts by more than ~10%; the SHAPE never needs recalibration, only the unit-mass legs do",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+          "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "residual": 0.0,
+        "source_artifact": "/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/MODAL_REMOTE_RESULT.json"
+      }
+    ],
+    "equation_id": "compensated_semantic_edit_exchange_v1",
+    "last_calibration_utc": "2026-08-18T06:00:00Z",
+    "latex_form": "\\Delta S(m)=\\Big[\\sqrt{10\\,(d_p^{0}+m\\,\\delta_p)}-\\sqrt{10\\,d_p^{0}}\\Big]+m\\,\\Delta S_{seg}-m\\,\\Delta S_{rate}",
+    "name": "Compensated lossy-semantic-edit exchange rate: what a byte of rate credit costs in pose and seg, and why the family gets more efficient with mass",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "per S of rate credit: 0.508 back as pose, 0.388 as seg, 0.105 net; retention RISES with mass (concave pose leg); the gap alone needs 1.20x the whole semantic section \u2014 contributes, never routes",
+    "predicted_vs_empirical_residual": {
+      "registration": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-08-18T06:00:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "linux_x86_64_t4",
+      "measurement_axis": "[contest-CUDA T4 n600] measured legs; exchange arithmetic DERIVED-EXACT",
+      "promotion_eligible": false,
+      "rejection_reason": "re-calibrate when any member of this family lands a T4 row at a materially different edit mass, or when the pointer's d_pose moves enough that the pose marginal 5/sqrt(10*d_pose) shifts by more than ~10%; the SHAPE never needs recalibration, only the unit-mass legs do",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "python_callable_module_path": "tac.canonical_equations.compensated_semantic_edit_exchange_20260818:project_at_mass",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "base_d_pose": "PoseNet MSE over the first 6 pose dims",
+      "mass": "multiple of the sa3 edit (dimensionless)",
+      "unit_rate_credit_S": "S",
+      "unit_seg_damage_S": "S"
+    },
+    "units_out": {
+      "net_S": "S",
+      "rate_credit_bytes_required": "bytes",
+      "retention_fraction": "dimensionless"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "experiments/ddm_rw1_renderer_edge_foldback.py",
+      ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_rw1_renderer_edge_foldback.py"
+    ],
+    "domain_of_validity": {
+      "excluded": [
+        "FINER grids: depth 5-8 on these tensors is a packer change the receiver already supports and is NOT measured here",
+        "the per-row fp16 SCALES, which move a whole row by a FRACTION of a code step and are untried",
+        "the row-pruned blocks.{1,2,3}.film runs (2 of 192 rows kept), which this arm refuses to edit",
+        "any claim about the PARADIGM: a per-pair-admitted renderer change is untouched -- the rate leg is nearly free and the pose re-solve has full rank on all 600 pairs"
+      ],
+      "included": [
+        "the shipped SemanticTokenRenderer(96) SM3R section, depth-4 un-pruned runs of head.weight / blocks.3.dw.weight / blocks.3.pw.weight, fp16 scales frozen",
+        "the pc2 34th-move body (e138ee09..., 181,373 B) whose semantic section is byte-identical back through rc2 and sj1 pass-3",
+        "the expected-flip surrogate sigmoid(-margin/tau), tau in [0.05, 0.15], through the exact R, DALI GT"
+      ],
+      "known_boundary": "one body, one surrogate; a different objective could reorder the codes but cannot make the grid finer",
+      "measurement_axis": [
+        "[macOS-MPS research-signal]",
+        "[macOS-CPU advisory, cpu_torch n600, DALI]"
+      ],
+      "recalibration_meaning": "the domain admits a DIFFERENT grid depth on these tensors or a sub-code actuator (the fp16 scales); three such anchors re-open the law",
+      "result_type": "DISTORTION-reach law; it bounds an actuator, it does not authorise one",
+      "sister_laws": [
+        "model_section_edit_container_break_fee_v1 -- the RATE half: 0.0139 B per changed code",
+        "renderer_seg_pose_coupling_shipped_object_v1 -- the pre-re-solve coupling this arm pose geometry re-scoped",
+        "token_predistortion_multipass_yield_v1 -- sj1 1.081 cells per changed TOKEN"
+      ],
+      "verdict_scope": "formulation (this actuator at this grid resolution), NOT the family"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "rw1_int4_code_minimum_action_costs_240_to_455_cells_20260909",
+        "empirical_output": {
+          "cells_broken_per_code_by_rule": {
+            "abs_asc": [
+              8.06,
+              75.2
+            ],
+            "abs_desc": [
+              1914,
+              55746
+            ],
+            "adamw_accumulated": [
+              27,
+              123
+            ],
+            "random": [
+              84,
+              366
+            ]
+          },
+          "discrete_search": {
+            "accepts": 0,
+            "cells_repaired_n600": 0,
+            "codes_changed": 0,
+            "dS": 0.0,
+            "evaluations": 150
+          },
+          "law": "one int4 code step already costs 240-455 flipped cells, so no search finds a move below the grid resolution; the gradient 238x ordering ranks DAMAGE, not benefit",
+          "minimum_quantum_of_action_cells": [
+            240,
+            455
+          ],
+          "reach_at_66_codes": -0.1137,
+          "stake_at_operating_point": {
+            "full_rewrite_rate_S": 0.00011766,
+            "full_rewrite_share_of_gap": 0.00625,
+            "residual_S": 0.01090664333767361,
+            "share_of_gap_to_0_12": 0.5794235869308744
+          }
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "actuator": "shipped signed-int4 codes of head.weight + blocks.3.dw.weight + blocks.3.pw.weight (12,672 codes, fp16 scales FROZEN)",
+          "body": "pc2 34th move, e138ee09..., 181,373 B, S 0.13882326433317044",
+          "producers": "experiments/ddm_rw1_renderer_edge_foldback.py {train, perturb-control, gradient-topk, code-search}",
+          "residual": "12,866 cells (d_seg 0.00010906643337673611, DALI, cpu_torch n600)",
+          "selection_rules_tried": [
+            "abs_desc",
+            "random",
+            "AdamW-accumulated 3000 steps",
+            "abs_asc",
+            "discrete realized search 150 evals bisecting to size 1"
+          ]
+        },
+        "measurement_method": "realized argmax over all 600 pairs through the receiver own forward (identity-controlled byte-exact at batch 1) against the DALI GT; the n600 seg instrument reproduces sj1 leg EXACTLY on the base decode (12,866 cells, 600/600 pairs unchanged); the MPS monitor device gap to the cpu_torch instrument is a measured +5 cells over four identical evaluations",
+        "measurement_utc": "2026-09-09T16:05:00Z",
+        "predicted_output": {
+          "charter": "8-20% residual cut (1,000-2,600 cells)",
+          "prereg_discrete_search": "120 / 340 / 1,500 cells at 66 / 200 / 1,000 accepted codes"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T16:05:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_mps",
+          "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+          "promotion_eligible": false,
+          "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+          "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+        },
+        "residual": 1.0,
+        "source_artifact": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md"
+      }
+    ],
+    "equation_id": "renderer_edge_layer_foldback_reach_v1",
+    "last_calibration_utc": "2026-09-09T16:05:00Z",
+    "latex_form": "\\min_{one code} \\Delta flips \\approx 240-455 \\gg 0",
+    "name": "Renderer edge-layer int4 code fold-back: minimum quantum of action",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "One int4 code step in head/blocks.3 already moves 240-455 argmax cells, so a renderer-weight fold-back is limited by the grid resolution, not by the search",
+    "predicted_vs_empirical_residual": {
+      "cells_repaired": 1.0,
+      "reach_fraction": 1.8121
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-09T16:05:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "m5_max_128gib_mps",
+      "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+      "promotion_eligible": false,
+      "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+    },
+    "python_callable_module_path": "experiments.ddm_rw1_renderer_edge_foldback",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "changed_int4_codes": "count",
+      "selection_rule": "categorical"
+    },
+    "units_out": {
+      "flipped_segnet_argmax_cells_n600": "count"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_sj1_t4_compose39_rp1_union_20260910_pointer_move_40_20260910.md",
+      "experiments/ddm_rp1_rebase.py",
+      ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_sj1_compose_segcheck.py",
+      "experiments/ddm_rp1_segcheck.py"
+    ],
+    "domain_of_validity": {
+      "excluded": "the NUMBERS. 6-of-80 and 7.5 % are one composition's; do not carry them to a different overlap, a different field, or cell-COLLIDING edits (a different and worse case this equation does not cover). Also excluded: the pose leg, which was near-neutral here (+6.887478e-07) and is not claimed to be sub-additive",
+      "generalizes_to": "any two actuators whose credit is a property of the RENDER rather than of the symbol they write -- the sign and the locus (the shared pairs) transfer",
+      "object": "two token-field edit sets composed onto one field, cell-disjoint, each with its own measured seg and rate legs, under the shipped coder and receiver",
+      "support": "n = 1 cross-arm composition, n600, with a byte-exact cross-arm control and an EXACT contest-CUDA T4 row (move 40) confirming sign and scale",
+      "verdict_this_priced": "the composition was still WORTH firing -- it became pointer move 40 at 1.54x the bar. The law is about PREDICTION, not admission: a composition whose margin is thinner than its overlap's seg loss must be re-measured before it is fired"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "sj1_compose39_rp1_union_subadditive_seg_n600_20260910",
+        "empirical_output": {
+          "decomposition_s": {
+            "bytes_47_measured_vs_48_assumed": -6.66e-07,
+            "memo_restatements_its_own_numbers_do_not_support": "'the seg loss is four times the byte effect' is 7.64x; the memory index's 'four fifths' does not hold for +5.086e-06 against a +1.62e-06 miss",
+            "note": "the two NAMED terms sum to +4.42e-06 against a measured miss of +1.62e-06, so the remainder the memo prints as the word 'remainder' is -2.80e-06 -- 1.7x the miss. The decomposition does NOT close; the seg term is still the largest contributor and still lives entirely on the overlap",
+            "six_seg_repairs_lost_on_the_overlap": 5.086e-06,
+            "unnamed_remainder_t4_seg_carry_and_rounding": -2.8e-06
+          },
+          "exact_row_the_composition_became": {
+            "archive_bytes": 180233,
+            "archive_sha256_prefix": "986d536b",
+            "delta_s_vs_move_39": -3.070463e-05,
+            "pointer_move": 40,
+            "projection_miss_vs_t4_print_s": 2.84e-06,
+            "s": 0.13763861019288715
+          },
+          "losing_pairs": 4,
+          "losing_pairs_inside_the_overlap": 4,
+          "miss_s": 1.62e-06,
+          "pair_overlap_fraction": 0.046,
+          "projected_composition_s": 0.1376357708,
+          "rate_leg": {
+            "anti_synergy_fraction": 0.064,
+            "bits_per_token": {
+              "move_37_field": 4.8205,
+              "move_39_field": 5.1282
+            },
+            "container_refund": {
+              "closed_bytes": 180233,
+              "note": "the +3 B was handed back; fe1's lottery is two-sided",
+              "tail_splice_bytes": 180236
+            },
+            "mechanism": "the yield law's mirror -- writing surprise into a field surprise was REMOVED from costs more per token",
+            "token_cost_bytes": {
+              "move_37_field": 47,
+              "move_39_field": 50
+            }
+          },
+          "repairs": {
+            "after": 74,
+            "before": 80
+          },
+          "seg_credit_lost_fraction": 0.075
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "arm_a": "rp1's move 39 -- 473 argmax-neutral token changes over 253 pairs, 180,186 B",
+          "arm_b": "sj1's move-38 subset -- 78 token writes over 42 pairs",
+          "cross_arm_control": "rp1's shipped field re-encoded through sj1's OWN loop emits 119,568 B sha 26e9eba5209495a0... byte-identical to rp1's retained rider body",
+          "overlap_pair_ids": [
+            7,
+            118,
+            165,
+            167,
+            202,
+            237,
+            293,
+            398,
+            502,
+            546,
+            565,
+            584,
+            593
+          ],
+          "overlap_pairs": 13,
+          "position_collisions": 0,
+          "union_pairs": 282,
+          "well_definedness": "MEASURED, not assumed: zero position collisions, and the builder asserts no cell outside either edit set moved"
+        },
+        "measurement_method": "rebuild the composed field, re-encode it through the shipped coder, and RECOMPUTE every repair through the receiver's own render_frame1 at batch 1 against the frozen CPU SegNet -- never carrying a repair from either parent",
+        "measurement_utc": "2026-09-10T00:00:00Z",
+        "predicted_output": {
+          "assumption": "token-disjoint edits compose additively",
+          "naive_sum_s": 0.1376341479
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-11T00:00:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS CPU (frozen SegNet recount, exact encodes) + contest-CUDA T4 for move 40",
+          "measurement_axis": "[contest-CUDA T4 n600 exact rows; exact archive bytes; frozen CPU SegNet repair recount]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure the seg leg of EVERY composition by recompute on the shared pairs -- this equation gives the sign and the locus, never a number to carry. It widens (support n = 1 composition) when a second cross-arm composition with a different overlap fraction is measured; a measured composition with shared pairs and NO repair loss would falsify the mechanism, not merely the coefficient",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md",
+          "source_sha256": "3d848e593881b864c57eaa6dc0eca991c9a7b030300d87f912e2c29278652dba"
+        },
+        "residual": 1.179e-05,
+        "source_artifact": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md"
+      }
+    ],
+    "equation_id": "token_edit_composition_subadditive_on_pair_overlap_v1",
+    "last_calibration_utc": "2026-09-11T00:00:00Z",
+    "latex_form": "\\Delta S_{a\\oplus b} = \\Delta S_a + \\Delta S_b + \\varepsilon_{\\mathrm{seg}}(\\mathcal{P}_a \\cap \\mathcal{P}_b) + \\varepsilon_{\\mathrm{rate}},\\quad \\varepsilon_{\\mathrm{seg}} > 0 \\ \\text{and supported on the shared pairs}",
+    "name": "Token-edit compositions are sub-additive on seg in proportion to pair overlap",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "Two token arms with ZERO cell collisions lost 6 of 80 seg repairs, all four losing pairs inside their 13-pair overlap: +5.086e-06 S of a +1.62e-06 miss",
+    "predicted_vs_empirical_residual": {
+      "naive_additivity_relative_error": 1.179e-05,
+      "named_decomposition_remainder_abs_s": 2.8e-06,
+      "seg_term_over_byte_term": 7.64
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-11T00:00:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "macOS CPU (frozen SegNet recount, exact encodes) + contest-CUDA T4 for move 40",
+      "measurement_axis": "[contest-CUDA T4 n600 exact rows; exact archive bytes; frozen CPU SegNet repair recount]",
+      "promotion_eligible": false,
+      "rejection_reason": "re-measure the seg leg of EVERY composition by recompute on the shared pairs -- this equation gives the sign and the locus, never a number to carry. It widens (support n = 1 composition) when a second cross-arm composition with a different overlap fraction is measured; a measured composition with shared pairs and NO repair loss would falsify the mechanism, not merely the coefficient",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_sj1_multipass_token_predistortion_20260905.md",
+      "source_sha256": "3d848e593881b864c57eaa6dc0eca991c9a7b030300d87f912e2c29278652dba"
+    },
+    "python_callable_module_path": "tac.canonical_equations.sj1_composition_subadditive_on_pair_overlap_20260911:predict_subadditive",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "overlap_pairs": "count",
+      "union_pairs": "count"
+    },
+    "units_out": {
+      "composition_miss_s": "score units, positive = composition worse than the naive sum",
+      "predict_subadditive": "boolean -- must the seg leg be recomputed?"
+    }
+  }
+]

@@ -1,0 +1,445 @@
+{
+  "utc": "2026-09-16T07:39:12.760845+00:00",
+  "head": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+  "facts": [
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_joint_exchange_probe_repaired_row1_on_move52_charter_20260916.md",
+      "bytes": 4860,
+      "sha256": "5c187894edfbc04c70da5c4145235d174788638450f99393cc3da5ec9544ad15"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "bytes": 19597,
+      "sha256": "9c8c8d7cd095268f7eb18b6463f643d8252fccfc6932a8f20232bf996efc6283"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/CONTROL_REPAIR_PROPOSAL.md",
+      "bytes": 2977,
+      "sha256": "0771c3870b3480299610ffb0b436ef36f23fe12b03023e41bb834defecf88141"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/SAMPLE.json",
+      "bytes": 6928,
+      "sha256": "b905cbabf06ca4a9dc78c1f9ed49a929e0c15d5f2b580a55fa769c23a5256613"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.git/index",
+      "bytes": 7718421,
+      "sha256": "0aafdb48c5ece33e64a0c950cfe2b4a449efc990c7bf7eefe4de23482dd698e5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/archive.zip",
+      "bytes": 179332,
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    },
+    {
+      "path": ".omx/research/ddm_pd4_pose_directed_pass4_price_lever_on_move52_20260913.md",
+      "bytes": 33965,
+      "sha256": "48767941b8a9cf1e22e5815732a51bf3fc3a81b992e711103816239f7d6657f3"
+    },
+    {
+      "path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "bytes": 65008,
+      "sha256": "233ed1b53a35585b3c83116fad93de8c19c835238aec13e38976834ec7dd6e13"
+    },
+    {
+      "path": ".omx/research/ddm_ren2_renderer_refit_in_place_on_the_coded_field_20260912.md",
+      "bytes": 38751,
+      "sha256": "3b9cdbbdb6a7bfdf6d046f6bc8f185b268946e547d6c71f19a332307f05bfeb1"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_carrier_basis_refit_to_pose_residual_subspace_20260912.md",
+      "bytes": 32712,
+      "sha256": "07b6e9ecdc91111693b2a45e46299db1fb1892ffe6334d005487357be192e265"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_br1_pose_basis_reorientation.py",
+      "bytes": 39241,
+      "sha256": "d6dc6fd04051f697653056911ec13a4cabc5d311712bf556827cee58f6f2c68d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_fe1_frame_embedding_search.py",
+      "bytes": 35061,
+      "sha256": "083bbdc028337bcd105931946478a496636734c79b3f355f57f5703c86d7026c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jg1_seg_solve.py",
+      "bytes": 28600,
+      "sha256": "45acb37e6bb100a409d3752f94b30f7244e5fe0ca476263ad7a0ccfbea62b96b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jg5_pose_resolve_on_edited_renders.py",
+      "bytes": 66271,
+      "sha256": "bcf41c5295b314eb9da1c4bb056825ec04bef354a6f9cb67f38ee92cde0a4204"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx1_field_control.py",
+      "bytes": 12357,
+      "sha256": "f4074aa5152d851e3334a71b0d979686ec96e1cb4d2cf5ec9da5535f160cfa2c"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_pd1_pose_directed.py",
+      "bytes": 35278,
+      "sha256": "4c685d33241c1132f44f1c4caa9ac8c4fe10c24e5631cd3b5543e066397efb89"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_pd4_pose_directed_pass4.py",
+      "bytes": 81756,
+      "sha256": "4d56b6c0d886ade886c78f83c4d31ecc660e648e1279ed41cf5402838421c3f9"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_pp1_pose_actuation.py",
+      "bytes": 71765,
+      "sha256": "a44afd8b01f0ed665fdc7043a4d221a33ba5631f96a1f4071e0228c6bd32c857"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_up2_shipping_pose_solve.py",
+      "bytes": 46107,
+      "sha256": "3fe52950cf0c2aa7d1fa554c4e95db8d015a5619a06d83e52e0b2ba0f48bd4b7"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+      "bytes": 55835560,
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "bytes": 38502892,
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "bytes": 8322,
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/MANIFEST.sha256",
+      "bytes": 4570,
+      "sha256": "f3f60585b2d22c84c8886e6a0a54d40ed859bd965f1db4671d3effa5fe0be5d8"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/README.md",
+      "bytes": 3667,
+      "sha256": "cbad2dd78959daf3b783ed6cd0b30e2f9535ce5e6394bbebcaabde8392180609"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/compress.py",
+      "bytes": 183043,
+      "sha256": "2056ec97a6ea803d6a44dec935015e92f8f07bc09775e9a6c951cef011888175"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/carrier_codec.py",
+      "bytes": 7353,
+      "sha256": "9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/ddm_mp2_semantic_receiver.py",
+      "bytes": 13389,
+      "sha256": "b337fa08249c32a7210722561ecf9a880c37456267038ded1871b21d356bd160"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/hpac_integer.py",
+      "bytes": 17471,
+      "sha256": "cea40a9bf2fe6db36e7269de0d25711eb77dffdc58955d3eb9228767d448db66"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/hpac_integer_sparse.py",
+      "bytes": 8282,
+      "sha256": "191962f37f5710bd242728366e702d25187f47c1adfaa19ab4bc200ad2f0b864"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/inflate.py",
+      "bytes": 13810,
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/integer_model_io.py",
+      "bytes": 5881,
+      "sha256": "dee0bfa4c8e46a47d10216a94f5f43f9b27eb41e781ab99f740099e089c63be1"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/cpr1/rc1_adaptive_model_sections.py",
+      "bytes": 20916,
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/inflate.py",
+      "bytes": 2735,
+      "sha256": "eafbdec241d250304146ebe97f51028f02b7612affc6e82c91bf4470244fea4e"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/inflate.sh",
+      "bytes": 3380,
+      "sha256": "0a1820f29e454e16951068924d082cae8cbc4699f218b1beeb8663cdfdb9e618"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/__init__.py",
+      "bytes": 57,
+      "sha256": "3899ca964c34159ba49e75d02e9552bc9842e93f2e767da749b594b2089581a8"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/baseline.py",
+      "bytes": 2058,
+      "sha256": "495769155304e694e364790c7455f5cbe15815dd457daee129e0b08928f91c38"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/bits.py",
+      "bytes": 1578,
+      "sha256": "834ac42b28608d7a91965799d41f3168a545b07054579a3eed8aebe58b92c55a"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/carrier_repack.py",
+      "bytes": 8206,
+      "sha256": "48303a4859b26644f03960af0026f26163e17d22de290d70a5d5736d71b78337"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/compensation_overlay.py",
+      "bytes": 7074,
+      "sha256": "7e5d905d42cd0ec65851d5df5f762ce8adac65783781015ad48585a9fc91231f"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/ddm_wc1_advisory_runtime.py",
+      "bytes": 25232,
+      "sha256": "df939fd0d47d9d06b880c1dade269f706437ad184497755d3c2c67e675876bc2"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/dx2_cabac_coefficients.py",
+      "bytes": 12929,
+      "sha256": "fae972756ca19f8d2a364969ce53e6c79cb20741cf8bac6eec30d9c72390233e"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/__init__.py",
+      "bytes": 54,
+      "sha256": "1d18072f7e08c2c8be5763f50d7bda5370272ba3b4c789a51fe1a2fa6a8111de"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/adaptive_ans.py",
+      "bytes": 4230,
+      "sha256": "95b7a45e77e5ece9512111579d0bd1544defbfc11d5110be7612b2e4a2d46797"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/coefficient_ar1_codec.py",
+      "bytes": 4875,
+      "sha256": "5e0c03b6b8f03cdf5e0789a0bba02ce3eca0d332f23f8edb742781369fdd38c3"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/coefficient_predictor.py",
+      "bytes": 4027,
+      "sha256": "7a5717db1464277e10baa8244c702d93573955e71d0065ccfbfe104b361b8957"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/rc64.py",
+      "bytes": 2904,
+      "sha256": "dad52aa013aafcc64666630724523431597f4da5997aebcaec91c63b515ade36"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/rc64_backend.c",
+      "bytes": 5638,
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/entropy/renderer_weight_codec.py",
+      "bytes": 9656,
+      "sha256": "8fbc79c470e40b2b00c6c4a321ad46f972ceb55dbae6cf43d9a5ea156a4cd8a1"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_corrector_native.c",
+      "bytes": 50299,
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_hpac_native.c",
+      "bytes": 40911,
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_hpac_native.py",
+      "bytes": 26781,
+      "sha256": "f13fe8beee4268cbc1df4f20016a6db6635bebebb53afc85e5025ada3748ecba"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/f26_inflate.py",
+      "bytes": 29176,
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/frame0_selector.py",
+      "bytes": 4964,
+      "sha256": "5b0f7e0f30415f7716f1913f4994f761a10c6e0c337218cc58a337f264a943c9"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/free_corrector.py",
+      "bytes": 14709,
+      "sha256": "dd337159bd84e96e767cbde9a6dffecc909e824c2f092399e09095bebaf094a5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/fx1_logistic_mixer_corrector.py",
+      "bytes": 34979,
+      "sha256": "8038119d065d578b6c163d2ee515e437cab273737ecf82f8c30619844c0f7452"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/fx2_model_axis_corrector.py",
+      "bytes": 31470,
+      "sha256": "6462ba51ddf29dbb60b091e22043d591a1d081d9583a4864348f2cb1525aa064"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/hpac_inference.py",
+      "bytes": 10952,
+      "sha256": "bbd8cdb0a9f94283b1eff9168726ee7e89e58a68bc7aec170f8340abea1b2ed6"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/ihs2.py",
+      "bytes": 13327,
+      "sha256": "6d3f45b1a75d1baad7a1b0510c44e6718e62c9a1f870aafdef02cdcff65aa903"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/ihs2_gate_a.py",
+      "bytes": 10527,
+      "sha256": "4dc291aa8c9dc543be85285f42cdf1e9365e9d1c67f4ada3b8714e130779d49b"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/native_free_corrector.py",
+      "bytes": 15952,
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rc1_adaptive_model_sections.py",
+      "bytes": 20916,
+      "sha256": "7e4170dfbf94863e87c4459405a35ddb65fbcdc1670e7226dffe4f2d3c3f52f2"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rc2_hpac_semistatic_mixing.py",
+      "bytes": 31341,
+      "sha256": "375c0325496ef9ce87afaa657b35dbf871609c388b0c96bd82d67285148f9589"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rc3_shared_mixer.py",
+      "bytes": 8010,
+      "sha256": "c0ac51f359f5bca5ef2e8ab803f8a1961be79dd27aa223e5496a0cfa6564a9fa"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/residual_archive.py",
+      "bytes": 34460,
+      "sha256": "15333b33264093641d096af25efe38ab6e62549bc6eb57e515e5d2a78b3fbae4"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rlc1_geometry.c",
+      "bytes": 4238,
+      "sha256": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rlc1_geometry.py",
+      "bytes": 4552,
+      "sha256": "c6fc46dd647725bd3fa256c7e712e255e135bd1928e93f70bad53c0ef56c451f"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rlc1_mixer.py",
+      "bytes": 5530,
+      "sha256": "80dd1a6be9541f833924675e9596633486e82db0ec2e09c4463161d4f100bb4d"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rr4_free_corrector.py",
+      "bytes": 15421,
+      "sha256": "96fd35aaf82c737a997ea41d28c2b6e83ee8b0237afcf52808ee6cdf55a874c0"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/rr5_arith_basis.py",
+      "bytes": 20793,
+      "sha256": "c44758dfa6b530b0e3185241c05971f75b14db7f4d2a329763f1a7bc0332c0bb"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/sm1_semantic_mixer.py",
+      "bytes": 9693,
+      "sha256": "505a0749124f94ece64f33c91f540b4bd1b2bb382a977479e293336dd80ceb26"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/tc1_receiver_checkpoint.py",
+      "bytes": 8753,
+      "sha256": "5fc1222c83f00d779ff2a58fd7f13875a6aaa83ed8feb00614a8f2b362ef2826"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/runtime/tc1_shared_mixer.py",
+      "bytes": 8590,
+      "sha256": "35e44da161603cf86defc174731c41d2e50ac30c8218db2a1afb153927beb8eb"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt",
+      "bytes": 117980732,
+      "sha256": "a91d98252fe377c51ff7f3380c2fc9d30d84093fc54ee89e5e5f5102e6354994"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd4/base/pose_base_move52.npy",
+      "bytes": 4928,
+      "sha256": "dfeeb5f78cd3b2ad1a4f8a39c4f134d8c1597a4c6cd37242bd596f680d785108"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/BINDING.json",
+      "bytes": 1175,
+      "sha256": "f1aa97f7e80e0a8bb543ded79dee86158c655bd8423968c3b8171eba551a2e5b"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/BINDING.json",
+      "bytes": 20893,
+      "sha256": "957106a599fad2696458ecbc5d0d9f1b722df1fb2f6cdd69e953113fca87015b"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/PD4_REFERENCE_AUDIT.json",
+      "bytes": 4926,
+      "sha256": "2abe51056525b2b60f5c77e11aa0f18660bcd703f0fdab97c0767e8cdf4704f9"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx2_control.py",
+      "bytes": 17045,
+      "sha256": "e6ffd074377e96b5788ebdf717c6ba0eb6930ada11d2e63d5e62b6dd70becf39"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx1_price_control.py",
+      "bytes": 15212,
+      "sha256": "1497df53eec66d3a3ff76478a5e4ae8217664ba70f196d3132429e82a9014322"
+    },
+    {
+      "path": "experiments/ddm_jrx2_control.py",
+      "bytes": 17045,
+      "sha256": "e6ffd074377e96b5788ebdf717c6ba0eb6930ada11d2e63d5e62b6dd70becf39"
+    },
+    {
+      "path": "experiments/ddm_jrx2_renderer.py",
+      "bytes": 17901,
+      "sha256": "abc9dec844b1c63c33526b1f79c86a149f98f5277030203c976a4a8a7ed60e7e"
+    },
+    {
+      "path": "experiments/ddm_jrx2_harvest.py",
+      "bytes": 11397,
+      "sha256": "f60c848817fbe8b064b1e63718906fb637adaa574a4fa3dba232754846086cdc"
+    }
+  ],
+  "fact_count": 87,
+  "all_unchanged": true,
+  "shared_index_unchanged": true,
+  "score_claim": false
+}

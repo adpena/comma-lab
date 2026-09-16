@@ -1,0 +1,171 @@
+{
+  "payload_verifier": {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/PAYLOAD_VERIFICATION.json",
+    "bytes": 3402,
+    "sha256": "5dc0aa028c3c57e85b3f34ad6edbd23a5a20a988ab6e2c17069a3267de3b8c70"
+  },
+  "price_harvester": {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/DISCOVERY_RESULTS.json",
+    "bytes": 33073,
+    "sha256": "53b50573c1f9c792ed45ad3c1b4c6b4e9d03fdd9eb7d9a4bb132914953c0731c"
+  },
+  "early_count": 17,
+  "final_individual_count": 22,
+  "overlap_count": 9,
+  "union_count": 30,
+  "all_price_jobs": {
+    "calibration0": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/DONE.json",
+      "bytes": 136629,
+      "sha256": "561688f7894cbc27c4a541f8d3f53b5dc4ab9b728f3ad42e3b59a46f96431d49"
+    },
+    "calibration1": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/DONE.json",
+      "bytes": 137028,
+      "sha256": "cf513a825586816dc09b811e76494cd635a3b2b37b6df5dc4269ed5a1add7157"
+    },
+    "pair080": {
+      "bytes": 2409,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/DONE.json",
+      "sha256": "c745af7e26d4a8cdf36b4ba79a69e5ac7cacfb12f43b676b525bd33cd68184d5"
+    },
+    "pair208": {
+      "bytes": 2073,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/DONE.json",
+      "sha256": "41bde196e05800c2c151ccb26c4130c7c774a8b618ba5b4ccc5f370f511707ce"
+    },
+    "pair214": {
+      "bytes": 2069,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/DONE.json",
+      "sha256": "8117d32e184682fca0bf2acb61503ac392251eb9574dd04e8e35d0cb6f69dd84"
+    },
+    "pair236": {
+      "bytes": 2073,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/DONE.json",
+      "sha256": "7154b2f3eb3bb32c67fd4cfcfa39a42421962c1129356d0819870bb9272676a5"
+    },
+    "pair250": {
+      "bytes": 2073,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/DONE.json",
+      "sha256": "3a9899c157e9e761597e5d292e9e4b2c24fe3436bf29538633ea721201460b33"
+    },
+    "pair296": {
+      "bytes": 2073,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/DONE.json",
+      "sha256": "4c56ecb6032682eac65df1ae2476fd2fa0fb353d79d5691a9279d11856edd60e"
+    },
+    "pair382": {
+      "bytes": 2096,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/DONE.json",
+      "sha256": "77b194b5a9b71b15be6ec004bae55221a388bbd712a799d3aa22368a4d0f65a8"
+    },
+    "pair385": {
+      "bytes": 2410,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/DONE.json",
+      "sha256": "8a5ff7ce90df934ae96689c965d6d5a6e8dc1dc075382ee64a74f4f04f3177fc"
+    },
+    "pair398": {
+      "bytes": 2070,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/DONE.json",
+      "sha256": "ee29146854c8c81714956e6e90f7a2595cc61c8f7fcedbe686d826aba1a6a075"
+    },
+    "sheet0": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/DONE.json",
+      "bytes": 23446,
+      "sha256": "c019f8ef7b85e1bca6554a1c4865b1cffcfc7ad51dde272a05ab6d31c54bcad3"
+    },
+    "sheet1": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/DONE.json",
+      "bytes": 24175,
+      "sha256": "3683f4c54037367260819f099ab10a7375130d23372c6a362a654a1dc74dafd8"
+    },
+    "sheet2": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/DONE.json",
+      "bytes": 24518,
+      "sha256": "8c9fff5c508ecf7d59ca029aad34926adb3217cc917ce57c28e598a8485ec9de"
+    },
+    "sheet3": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/DONE.json",
+      "bytes": 23921,
+      "sha256": "3f17e2c51f016bf3e54591025701e28f897d73c0ed4a00efff9779d512c1d9ca"
+    },
+    "sheet4": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/DONE.json",
+      "bytes": 23959,
+      "sha256": "ecf5e10b4aaf09121329a4489c4870fb11897ac3623583fb5a0774d782c907e2"
+    },
+    "sheet5": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/DONE.json",
+      "bytes": 24972,
+      "sha256": "885a076a0d9f75fd0c1412080a50be0c9a517650057057f77a24193647b8cf05"
+    },
+    "pair583": {
+      "bytes": 2073,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair583/DONE.json",
+      "sha256": "95af2aa93bbed87d423ed525a1198fb34ee837aacd295b45867e63170480d835"
+    },
+    "pair053": {
+      "bytes": 2414,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair053/DONE.json",
+      "sha256": "08c4e672f94edb31288162284c62da8b1c9701419c0acfdf00824c46f4e209e8"
+    },
+    "pair406": {
+      "bytes": 2072,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair406/DONE.json",
+      "sha256": "d401d1cce1edb77e6473ef14d6f2a4eaa06d27e5e23384323d43465f8bdb345b"
+    },
+    "pair342": {
+      "bytes": 2415,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair342/DONE.json",
+      "sha256": "4513078d66b52ebfe54bbc75fa5d7005e0996c576145cab0f1e0dfb5488c8e90"
+    },
+    "pair127": {
+      "bytes": 2412,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair127/DONE.json",
+      "sha256": "86b3240ce4fec1f9845e6fcb9f2859a5f4f9e4a9f6a0e100ae7b9a1a7584e070"
+    },
+    "pair319": {
+      "bytes": 2099,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair319/DONE.json",
+      "sha256": "d9084d76694a1c455486dcc22ebf11ac077d63009ef342ce7f9ecef57be4df4d"
+    },
+    "pair137": {
+      "bytes": 2072,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair137/DONE.json",
+      "sha256": "28a5a9bfa1a8b6dd00751e7ac399f64bc4775cf91330d8b594214fdf76fb3f97"
+    },
+    "pair376": {
+      "bytes": 2071,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair376/DONE.json",
+      "sha256": "3de6880cb47f2c7554cff2c78b4fda3a9c2362e07b53fb69eaa67d943871ee51"
+    },
+    "pair032": {
+      "bytes": 2070,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair032/DONE.json",
+      "sha256": "9ac0b7c7861bb574701b15749f8fa38c6e5e69a2685f6c2fff3a1d4f0b8c9a57"
+    },
+    "pair183": {
+      "bytes": 2435,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair183/DONE.json",
+      "sha256": "a79f4c44efde0a495a446675172fa1b44f2d62884eff6113d2d1b5cae0df1eb7"
+    },
+    "pair033": {
+      "bytes": 2073,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair033/DONE.json",
+      "sha256": "4447ae7702a2bdcee8de35b03e7b6610bfd09e6ed5b1a7169af83495df3084a6"
+    },
+    "pair134": {
+      "bytes": 2095,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair134/DONE.json",
+      "sha256": "5f9ed7c47b86b2ebf63f5110352368b5bd44cc26cf8f8a6f34c97d4c3920716a"
+    },
+    "pair536": {
+      "bytes": 2415,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair536/DONE.json",
+      "sha256": "1c63485e80d93909e208d568bad29ecfae8368b8fd261568697cbd6738b906a1"
+    }
+  },
+  "final_manifest_matches_all_done_facts": true,
+  "passed": true,
+  "score_claim": false
+}

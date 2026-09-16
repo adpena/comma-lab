@@ -1,0 +1,78 @@
+[
+  {
+    "query": "joint.*(renderer|field)|compensat.*(token|seg)|container.*lottery|first.order.token.price",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "joint.*(renderer|field)|compensat.*(token|seg)|container.*lottery|first.order.token.price",
+      ".omx/research"
+    ],
+    "rc": 0,
+    "result": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/RECALL_memos.txt",
+      "bytes": 46994895,
+      "sha256": "34c59078053478dd337a2bad1ffcdd3cdda417c8500761879437c1dc5a682a23"
+    },
+    "lines": 4097
+  },
+  {
+    "query": "joint|collateral|exchange|jitter",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "joint|collateral|exchange|jitter",
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "rc": 0,
+    "result": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/RECALL_index_dag.txt",
+      "bytes": 316858,
+      "sha256": "971fead9596f690085205b47bb75c6f064a70180028672b6d6eb0f50e710758c"
+    },
+    "lines": 772
+  },
+  {
+    "query": "joint.*(renderer|field)|renderer.*jitter|per.pair.*price",
+    "argv": [
+      "rg",
+      "-n",
+      "-i",
+      "joint.*(renderer|field)|renderer.*jitter|per.pair.*price",
+      "docs",
+      ".omx/state/canonical_task_status.jsonl"
+    ],
+    "rc": 0,
+    "result": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/RECALL_design_task.txt",
+      "bytes": 39977,
+      "sha256": "a6a1b645b771c2c1a8621596be9e1dcb57a6f2f27a0f9fac9967bf344331d62e"
+    },
+    "lines": 29
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "rc": 0,
+    "result": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/RECALL_EQUATIONS.json",
+      "bytes": 3787485,
+      "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    }
+  }
+]

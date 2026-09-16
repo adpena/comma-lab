@@ -1,0 +1,152 @@
+{
+  "verification": {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/PAYLOAD_VERIFICATION.json",
+    "bytes": 3402,
+    "sha256": "5dc0aa028c3c57e85b3f34ad6edbd23a5a20a988ab6e2c17069a3267de3b8c70"
+  },
+  "completed_price_jobs": [
+    {
+      "name": "calibration0",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/DONE.json",
+        "bytes": 136629,
+        "sha256": "561688f7894cbc27c4a541f8d3f53b5dc4ab9b728f3ad42e3b59a46f96431d49"
+      }
+    },
+    {
+      "name": "calibration1",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/DONE.json",
+        "bytes": 137028,
+        "sha256": "cf513a825586816dc09b811e76494cd635a3b2b37b6df5dc4269ed5a1add7157"
+      }
+    },
+    {
+      "name": "pair080",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/DONE.json",
+        "bytes": 2409,
+        "sha256": "c745af7e26d4a8cdf36b4ba79a69e5ac7cacfb12f43b676b525bd33cd68184d5"
+      }
+    },
+    {
+      "name": "pair208",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/DONE.json",
+        "bytes": 2073,
+        "sha256": "41bde196e05800c2c151ccb26c4130c7c774a8b618ba5b4ccc5f370f511707ce"
+      }
+    },
+    {
+      "name": "pair214",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/DONE.json",
+        "bytes": 2069,
+        "sha256": "8117d32e184682fca0bf2acb61503ac392251eb9574dd04e8e35d0cb6f69dd84"
+      }
+    },
+    {
+      "name": "pair236",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/DONE.json",
+        "bytes": 2073,
+        "sha256": "7154b2f3eb3bb32c67fd4cfcfa39a42421962c1129356d0819870bb9272676a5"
+      }
+    },
+    {
+      "name": "pair250",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/DONE.json",
+        "bytes": 2073,
+        "sha256": "3a9899c157e9e761597e5d292e9e4b2c24fe3436bf29538633ea721201460b33"
+      }
+    },
+    {
+      "name": "pair296",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/DONE.json",
+        "bytes": 2073,
+        "sha256": "4c56ecb6032682eac65df1ae2476fd2fa0fb353d79d5691a9279d11856edd60e"
+      }
+    },
+    {
+      "name": "pair382",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/DONE.json",
+        "bytes": 2096,
+        "sha256": "77b194b5a9b71b15be6ec004bae55221a388bbd712a799d3aa22368a4d0f65a8"
+      }
+    },
+    {
+      "name": "pair385",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/DONE.json",
+        "bytes": 2410,
+        "sha256": "8a5ff7ce90df934ae96689c965d6d5a6e8dc1dc075382ee64a74f4f04f3177fc"
+      }
+    },
+    {
+      "name": "pair398",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/DONE.json",
+        "bytes": 2070,
+        "sha256": "ee29146854c8c81714956e6e90f7a2595cc61c8f7fcedbe686d826aba1a6a075"
+      }
+    },
+    {
+      "name": "sheet0",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/DONE.json",
+        "bytes": 23446,
+        "sha256": "c019f8ef7b85e1bca6554a1c4865b1cffcfc7ad51dde272a05ab6d31c54bcad3"
+      }
+    },
+    {
+      "name": "sheet1",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/DONE.json",
+        "bytes": 24175,
+        "sha256": "3683f4c54037367260819f099ab10a7375130d23372c6a362a654a1dc74dafd8"
+      }
+    },
+    {
+      "name": "sheet2",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/DONE.json",
+        "bytes": 24518,
+        "sha256": "8c9fff5c508ecf7d59ca029aad34926adb3217cc917ce57c28e598a8485ec9de"
+      }
+    },
+    {
+      "name": "sheet3",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/DONE.json",
+        "bytes": 23921,
+        "sha256": "3f17e2c51f016bf3e54591025701e28f897d73c0ed4a00efff9779d512c1d9ca"
+      }
+    },
+    {
+      "name": "sheet4",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/DONE.json",
+        "bytes": 23959,
+        "sha256": "ecf5e10b4aaf09121329a4489c4870fb11897ac3623583fb5a0774d782c907e2"
+      }
+    },
+    {
+      "name": "sheet5",
+      "done": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/DONE.json",
+        "bytes": 24972,
+        "sha256": "885a076a0d9f75fd0c1412080a50be0c9a517650057057f77a24193647b8cf05"
+      }
+    }
+  ],
+  "scope": "Eight calibration/sheet jobs plus first nine individual jobs; later prices stage verifies all22 individual jobs. Final retention manifest must match these facts.",
+  "rc0_receipt": {
+    "path": ".omx/tmp/codex_runs/ddm_jrx2_payload_verify.done",
+    "bytes": 402,
+    "sha256": "733caa298b13ac17996177d6c955468cff67593bdeda17f59d53ead79800ad06"
+  },
+  "score_claim": false
+}

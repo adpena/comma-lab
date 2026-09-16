@@ -1,0 +1,14 @@
+{
+  "source": {
+    "path": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_pd3_cuda_20260913.json",
+    "bytes": 1583,
+    "sha256": "64b8f8eb9103963b2ebf5a7c0dc4f97d542ac9c63d2be7f591b1e275525a0eee"
+  },
+  "d_seg": 0.00010304,
+  "d_pose": 4.21e-06,
+  "bytes": 179332,
+  "S_rederived": 0.13620226906030858,
+  "axis": "[contest-CUDA T4 n600]",
+  "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+  "score_claim": false
+}

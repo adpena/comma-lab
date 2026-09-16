@@ -1,0 +1,111 @@
+{
+  "anchor_id": "jrx2_move52_per_pair_selected_int4_n600_collateral_instances_20260916",
+  "measurement_utc": "2026-09-16T06:21:40Z",
+  "inputs": {
+    "base_archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+    "sample_seed": 20260916,
+    "selected_pairs": [
+      250,
+      398,
+      296
+    ],
+    "k_actions": 3,
+    "n_sample": 24,
+    "pairs_per_action": 600,
+    "selection": "first three fixed-sample entries, all residual-heavy stratum; nearest int4 step minimizing per-pair correct-token residual surrogate",
+    "source": {
+      "path": "experiments/ddm_jrx2_renderer.py",
+      "bytes": 17901,
+      "sha256": "abc9dec844b1c63c33526b1f79c86a149f98f5277030203c976a4a8a7ed60e7e"
+    },
+    "prediction_origin": "postmeasurement consistency audit against rw1 qualitative collateral direction; not a preregistered numerical forecast and not transport of 240-455 cells"
+  },
+  "predicted_output": {
+    "collateral_exceeds_target_credit": [
+      true,
+      true,
+      true
+    ],
+    "quantity": "qualitative direction only"
+  },
+  "empirical_output": {
+    "rows": [
+      {
+        "all600_delta_cells": 2438,
+        "archive_sha256": "cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+        "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+        "checkpoint_chunk": 25,
+        "collateral_exceeds_target_seg_credit": true,
+        "delta_archive_bytes": 10,
+        "other599_net_collateral_cells": 2438,
+        "pair": 250,
+        "pairs_scored": 600,
+        "resolved_pose": null,
+        "score_claim": false,
+        "scorer_batch": 1,
+        "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+        "target_credit_cells": 0
+      },
+      {
+        "all600_delta_cells": 2259,
+        "archive_sha256": "c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+        "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+        "checkpoint_chunk": 25,
+        "collateral_exceeds_target_seg_credit": true,
+        "delta_archive_bytes": -14,
+        "other599_net_collateral_cells": 2256,
+        "pair": 296,
+        "pairs_scored": 600,
+        "resolved_pose": null,
+        "score_claim": false,
+        "scorer_batch": 1,
+        "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10",
+        "target_credit_cells": -3
+      },
+      {
+        "all600_delta_cells": 1740,
+        "archive_sha256": "c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+        "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+        "checkpoint_chunk": 25,
+        "collateral_exceeds_target_seg_credit": true,
+        "delta_archive_bytes": 5,
+        "other599_net_collateral_cells": 1740,
+        "pair": 398,
+        "pairs_scored": 600,
+        "resolved_pose": null,
+        "score_claim": false,
+        "scorer_batch": 1,
+        "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc",
+        "target_credit_cells": 0
+      }
+    ],
+    "verdict_scope": "INSTANCE",
+    "banked_population_negative": false,
+    "joint_ratio": null,
+    "resolved_total_score_exchange": null,
+    "score_claim": false
+  },
+  "residual": 0.0,
+  "source_artifact": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+  "measurement_method": "jrx2_collateral_direction_mismatch_fraction_three_named_actions_n600_cpu",
+  "provenance": {
+    "artifact_kind": "research_sidecar",
+    "source_path": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+    "source_sha256": "7dfa174abb6ef708f83834c6cc6c5188fc828b35b266686992ecef8393d0abec",
+    "measurement_axis": "[macOS-CPU advisory, frozen CPU-torch SegNet, DALI GT lineage]",
+    "hardware_substrate": "macOS26.4 arm64, 18 logical CPUs, torch CPU scorer batch1, four threads",
+    "evidence_grade": "research_only",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "captured_at_utc": "2026-09-16T06:21:40Z",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+    "contest_archive_zip_path": "",
+    "contest_archive_member_name": "",
+    "composed_from": [],
+    "rejection_reason": "No promotion: three named global-weight actions only. A different spatially selective actuator needs a separate charter, real bytes, all affected pairs, and resolved pose."
+  },
+  "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR"
+}

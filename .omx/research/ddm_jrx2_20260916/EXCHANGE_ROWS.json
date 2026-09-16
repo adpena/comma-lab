@@ -1,0 +1,99 @@
+{
+  "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+  "score_claim": false,
+  "verdict": "STOP_COLLATERAL_SEG",
+  "sample_n": 24,
+  "field": {
+    "kind": "resolved-credit diagnostic with held shipped carrier",
+    "credit_S_per_byte": {
+      "iqr": [
+        1.3693505251401696e-08,
+        2.840039142075699e-07
+      ],
+      "k": 18,
+      "max": 4.879948815326544e-07,
+      "median": 1.3782798299610095e-07,
+      "min": -3.7878554396237644e-07,
+      "n": 24
+    },
+    "bits_per_changed_token": {
+      "iqr": [
+        8.0,
+        16.0
+      ],
+      "k": 22,
+      "max": 24.0,
+      "median": 16.0,
+      "min": 0.0,
+      "n": 24
+    },
+    "archive_delta_bytes": {
+      "iqr": [
+        1.25,
+        2.0
+      ],
+      "k": 22,
+      "max": 4.0,
+      "median": 2.0,
+      "min": 0.0,
+      "n": 24
+    },
+    "zero_cost_pairs": [
+      127,
+      319,
+      376,
+      134
+    ],
+    "null_pairs": [
+      547,
+      502
+    ],
+    "positive_diagnostic_only_pairs": [
+      127,
+      376
+    ],
+    "source": {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/DISCOVERY_RESULTS.json",
+      "bytes": 33073,
+      "sha256": "53b50573c1f9c792ed45ad3c1b4c6b4e9d03fdd9eb7d9a4bb132914953c0731c"
+    }
+  },
+  "renderer": {
+    "resolved_total_exchange": null,
+    "resolved_total_exchange_k": 0,
+    "archive_delta_bytes": {
+      "k": 24,
+      "n": 24,
+      "median": 28.0,
+      "iqr": [
+        2.0,
+        40.0
+      ]
+    },
+    "bits_per_step": {
+      "k": 24,
+      "n": 24,
+      "median": 224.0,
+      "iqr": [
+        16.0,
+        320.0
+      ]
+    },
+    "seg_censuses_k": 3,
+    "pairs_per_census": 600,
+    "source": {
+      "path": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+      "bytes": 3485,
+      "sha256": "7dfa174abb6ef708f83834c6cc6c5188fc828b35b266686992ecef8393d0abec"
+    }
+  },
+  "joint": {
+    "exchange": null,
+    "bits": null,
+    "joint_vs_better_single_ratio": null,
+    "all_three_finite_k": 0,
+    "n": 24,
+    "reason": "Chartered Seg collateral stop before joint implementation or scoring"
+  },
+  "population_negative_banked": false
+}

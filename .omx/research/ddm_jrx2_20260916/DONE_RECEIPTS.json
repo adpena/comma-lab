@@ -1,0 +1,863 @@
+[
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_calibration0.done",
+      "bytes": 401,
+      "sha256": "7def4be7e4f9511f17da1f4b4a6b636ed24e95e2a6d258b4586974290c4c6056"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1182.699451,
+      "generated_utc": "2026-09-16T05:41:04Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0/launch_manifest.json",
+        "monotonic_launch_counter": 2071,
+        "pid": 48151
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_calibration0",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_calibration1.done",
+      "bytes": 399,
+      "sha256": "59803c64dfca118dfa7d17ce29328548284036f4fbfc5cc881a77e057853a733"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1179.8954,
+      "generated_utc": "2026-09-16T05:41:02Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1/launch_manifest.json",
+        "monotonic_launch_counter": 2072,
+        "pid": 48218
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_calibration1",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_collateral_first.done",
+      "bytes": 409,
+      "sha256": "d2edaed5ee9995149c05b7b1852a1b4dc3143ab0824cfdba5ba5141bca2ac27f"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 2179.726555,
+      "generated_utc": "2026-09-16T06:21:40Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_collateral_first/launch_manifest.json",
+        "monotonic_launch_counter": 2082,
+        "pid": 61496
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_collateral_first",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_discovery.done",
+      "bytes": 392,
+      "sha256": "0a87f65e1b6a7b2346b9d78b2831fe51efd3a091ddbb8b777dc41ba0bbb72840"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 3.736699,
+      "generated_utc": "2026-09-16T05:41:45Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_discovery/launch_manifest.json",
+        "monotonic_launch_counter": 2074,
+        "pid": 59096
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_discovery",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_gate.done",
+      "bytes": 429,
+      "sha256": "93f445627a26c104e1892c26fc37c92909e4708996354e635e2e3f51111b8055"
+    },
+    "data": {
+      "adjudicated_at_launch": true,
+      "detail": "detached child exited during verify-alive window",
+      "elapsed_s": 0.304094,
+      "generated_utc": "2026-09-16T05:41:42Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_gate/launch_manifest.json",
+        "monotonic_launch_counter": 2073,
+        "pid": 59090
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_gate",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_measure_a.done",
+      "bytes": 394,
+      "sha256": "014869ecb0f52bf5cbd5daf7457aa314c0c51ccc7482ad1d84761ac3966e4cc1"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 182.247235,
+      "generated_utc": "2026-09-16T05:23:30Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a/launch_manifest.json",
+        "monotonic_launch_counter": 2068,
+        "pid": 47022
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_measure_a",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_measure_b.done",
+      "bytes": 394,
+      "sha256": "ff66d2f4d31f57490a47f82dde6b741ab153b5e8bd90baa656cc45f1dc2b1305"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 178.232515,
+      "generated_utc": "2026-09-16T05:23:27Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b/launch_manifest.json",
+        "monotonic_launch_counter": 2069,
+        "pid": 47112
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_measure_b",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_nulls.done",
+      "bytes": 385,
+      "sha256": "65433556e8edba3aa8f80aca60d05460cdcbaf054a0bd7a799fd8799973715f8"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 37.160033,
+      "generated_utc": "2026-09-16T05:21:07Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls/launch_manifest.json",
+        "monotonic_launch_counter": 2070,
+        "pid": 47192
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_nulls",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair032.done",
+      "bytes": 390,
+      "sha256": "c491878fc81db79738830fac83f3f8caf70695b41e4989c94bfe1f9d0f60c84d"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1413.804284,
+      "generated_utc": "2026-09-16T07:31:46Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair032/launch_manifest.json",
+        "monotonic_launch_counter": 2102,
+        "pid": 6661
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair032",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair033.done",
+      "bytes": 390,
+      "sha256": "a391065c427c302d97cbd7592e8109ed2e3f803a38acd257a64c0c9f7b34f24a"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1415.308442,
+      "generated_utc": "2026-09-16T07:31:54Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair033/launch_manifest.json",
+        "monotonic_launch_counter": 2104,
+        "pid": 6724
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair033",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair053.done",
+      "bytes": 390,
+      "sha256": "b1e761688ceebea27f3974f97ccaeea1e7586606f3e9724a1d0d86289cdca263"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1574.04363,
+      "generated_utc": "2026-09-16T07:06:31Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair053/launch_manifest.json",
+        "monotonic_launch_counter": 2094,
+        "pid": 91753
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair053",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair080.done",
+      "bytes": 391,
+      "sha256": "bc6a80b0b295b9edddcf59f86b1ef4ac22f780e010ea9a97ba72ae9ef8f19166"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1708.368089,
+      "generated_utc": "2026-09-16T06:38:40Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair080/launch_manifest.json",
+        "monotonic_launch_counter": 2088,
+        "pid": 75497
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair080",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair127.done",
+      "bytes": 391,
+      "sha256": "d7147c0326da73aa6b4e222fc3ca853b14837afe7fda058a2f194f6c4fca01d4"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1581.370432,
+      "generated_utc": "2026-09-16T07:06:49Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair127/launch_manifest.json",
+        "monotonic_launch_counter": 2097,
+        "pid": 91873
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair127",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair134.done",
+      "bytes": 390,
+      "sha256": "a5d7bb0728573973cd57a78214a14a278a3c32b738ffea88ac52c8f7e80314e4"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1414.347132,
+      "generated_utc": "2026-09-16T07:31:57Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair134/launch_manifest.json",
+        "monotonic_launch_counter": 2105,
+        "pid": 6764
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair134",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair137.done",
+      "bytes": 391,
+      "sha256": "da0cfcac0053a94a9550639ddd0639aaddaf66d2ee70586285f4195350304d90"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1582.728625,
+      "generated_utc": "2026-09-16T07:06:57Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair137/launch_manifest.json",
+        "monotonic_launch_counter": 2099,
+        "pid": 91959
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair137",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair183.done",
+      "bytes": 390,
+      "sha256": "47710c9d52aa9aef4443a3e076d17ce0474e7b6b8fff92d11a8678d9c1495d96"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1416.141827,
+      "generated_utc": "2026-09-16T07:31:51Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair183/launch_manifest.json",
+        "monotonic_launch_counter": 2103,
+        "pid": 6686
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair183",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair208.done",
+      "bytes": 391,
+      "sha256": "9aa10213376091b7009e1e1054ddd5200cf61f60e270fb82ca0b6ee3c57d9ab0"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1699.472342,
+      "generated_utc": "2026-09-16T06:38:45Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair208/launch_manifest.json",
+        "monotonic_launch_counter": 2092,
+        "pid": 75668
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair208",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair214.done",
+      "bytes": 391,
+      "sha256": "c7b7eaa57d196a006159676517f6dcd2be733c0b35bfa2b7367730e671491a55"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1701.255968,
+      "generated_utc": "2026-09-16T06:38:39Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair214/launch_manifest.json",
+        "monotonic_launch_counter": 2090,
+        "pid": 75576
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair214",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair236.done",
+      "bytes": 391,
+      "sha256": "b4e35097119dcc9aae3a28a2e046d3b04ff1d35f4bc849a647c94b695983af4a"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1695.242784,
+      "generated_utc": "2026-09-16T06:38:23Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair236/launch_manifest.json",
+        "monotonic_launch_counter": 2087,
+        "pid": 75446
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair236",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair250.done",
+      "bytes": 391,
+      "sha256": "ebee710b3ca7d6663a7c4817d0c471300eca478bbeb34cfdcfce94e59b9612b9"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1713.276059,
+      "generated_utc": "2026-09-16T06:38:31Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair250/launch_manifest.json",
+        "monotonic_launch_counter": 2084,
+        "pid": 75271
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair250",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair296.done",
+      "bytes": 391,
+      "sha256": "65314a7590ecb99ea256bbff888f3e5732c7cb1869b25a6116bbcd47fe7e72db"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1703.809632,
+      "generated_utc": "2026-09-16T06:38:28Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair296/launch_manifest.json",
+        "monotonic_launch_counter": 2086,
+        "pid": 75404
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair296",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair319.done",
+      "bytes": 391,
+      "sha256": "a7eccbce7447a36d633a4d85d4def916ba2a4480748b05ce276862da72fd9490"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1585.107205,
+      "generated_utc": "2026-09-16T07:06:56Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair319/launch_manifest.json",
+        "monotonic_launch_counter": 2098,
+        "pid": 91914
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair319",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair342.done",
+      "bytes": 391,
+      "sha256": "ec0687862fe6d29fbd511a5ecdcf974f808bdc4e33d6b738de2d34b00570ce1f"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1581.647699,
+      "generated_utc": "2026-09-16T07:06:46Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair342/launch_manifest.json",
+        "monotonic_launch_counter": 2096,
+        "pid": 91824
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair342",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair376.done",
+      "bytes": 391,
+      "sha256": "41b705b5b12cbe8416a652ff9c8599400428f2ca64fd30e4c6a9467979f40c7a"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1580.700374,
+      "generated_utc": "2026-09-16T07:06:59Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair376/launch_manifest.json",
+        "monotonic_launch_counter": 2100,
+        "pid": 91998
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair376",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair382.done",
+      "bytes": 391,
+      "sha256": "e61bf66e78e11fdd6854c99a4aa55ebaa13c31a203326e4036b85aea399b0c89"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1704.962211,
+      "generated_utc": "2026-09-16T06:38:47Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair382/launch_manifest.json",
+        "monotonic_launch_counter": 2091,
+        "pid": 75626
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair382",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair385.done",
+      "bytes": 391,
+      "sha256": "46415a31de611d253276f7d874e99165f2fbebd0c1581b7ffa9bc09b074bb25a"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1711.839836,
+      "generated_utc": "2026-09-16T06:38:46Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair385/launch_manifest.json",
+        "monotonic_launch_counter": 2089,
+        "pid": 75538
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair385",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair398.done",
+      "bytes": 391,
+      "sha256": "ed655f82cbd934b25bc74fa02dc82335ad49346d0717cff7f01796111b558f0b"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1705.480792,
+      "generated_utc": "2026-09-16T06:38:26Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair398/launch_manifest.json",
+        "monotonic_launch_counter": 2085,
+        "pid": 75378
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair398",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair406.done",
+      "bytes": 391,
+      "sha256": "fe954cb1d3aff2ed930e8ca27adfe0a8735355091a17581b380a86b3516dfb8c"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1586.227975,
+      "generated_utc": "2026-09-16T07:06:47Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair406/launch_manifest.json",
+        "monotonic_launch_counter": 2095,
+        "pid": 91780
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair406",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair536.done",
+      "bytes": 390,
+      "sha256": "de8f774b6871ee66653d494b360d9c76836f6ddafe72fadc164a91ee537727a2"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1414.192384,
+      "generated_utc": "2026-09-16T07:32:00Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair536/launch_manifest.json",
+        "monotonic_launch_counter": 2106,
+        "pid": 6811
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair536",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_pair583.done",
+      "bytes": 390,
+      "sha256": "c5cb3cefc472263e2ea950931f109aabb8cfee7d6b1f747a0967fdc7e639cf4c"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1579.43826,
+      "generated_utc": "2026-09-16T07:06:33Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_pair583/launch_manifest.json",
+        "monotonic_launch_counter": 2093,
+        "pid": 91645
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_pair583",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_payload_verify.done",
+      "bytes": 402,
+      "sha256": "733caa298b13ac17996177d6c955468cff67593bdeda17f59d53ead79800ad06"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 8.207233,
+      "generated_utc": "2026-09-16T06:47:49Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_payload_verify/launch_manifest.json",
+        "monotonic_launch_counter": 2101,
+        "pid": 95327
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_payload_verify",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_prepare.done",
+      "bytes": 388,
+      "sha256": "2479ea831cbf76bf4a5c8fa6ead70e8f1f385887f555f2b82ed96d832ed654a6"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 4.678607,
+      "generated_utc": "2026-09-16T05:20:18Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare/launch_manifest.json",
+        "monotonic_launch_counter": 2067,
+        "pid": 46582
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_prepare",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_price_harvest.done",
+      "bytes": 399,
+      "sha256": "1ac0e3204a08fe6af94ef238299dec5895548de223d27e2b674c256280621bca"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 0.58515,
+      "generated_utc": "2026-09-16T07:33:08Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_price_harvest/launch_manifest.json",
+        "monotonic_launch_counter": 2107,
+        "pid": 19744
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_price_harvest",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_renderer_proposals.done",
+      "bytes": 412,
+      "sha256": "249ab596df81ea7dde961d4eb9f874168a97cbac71a019112a6a3afdd05f0661"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 430.868891,
+      "generated_utc": "2026-09-16T05:49:17Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_renderer_proposals/launch_manifest.json",
+        "monotonic_launch_counter": 2075,
+        "pid": 59836
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_renderer_proposals",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet0.done",
+      "bytes": 388,
+      "sha256": "8de644d408d44ff43b49600d71ecb05090f3bcc6b152d14ef9309737d46b5d97"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1527.09067,
+      "generated_utc": "2026-09-16T06:08:22Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet0/launch_manifest.json",
+        "monotonic_launch_counter": 2076,
+        "pid": 60246
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_sheet0",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet1.done",
+      "bytes": 389,
+      "sha256": "6b2f4d76b7c76ae15115007752eb60f3d89839128f86da3ea2d1f22dd9d0d0d6"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1529.049508,
+      "generated_utc": "2026-09-16T06:08:27Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet1/launch_manifest.json",
+        "monotonic_launch_counter": 2077,
+        "pid": 60275
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_sheet1",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet2.done",
+      "bytes": 389,
+      "sha256": "d9f22f43994a0c3096f564c2b1eeed83dd98954ef8a82acdd4f9514eded02aec"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1523.659502,
+      "generated_utc": "2026-09-16T06:08:25Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet2/launch_manifest.json",
+        "monotonic_launch_counter": 2078,
+        "pid": 60297
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_sheet2",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet3.done",
+      "bytes": 389,
+      "sha256": "66ba471807459b5083ba42c8ee10348dda4da6bc99b8792592474132164c8c81"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1529.490896,
+      "generated_utc": "2026-09-16T06:08:34Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet3/launch_manifest.json",
+        "monotonic_launch_counter": 2079,
+        "pid": 60341
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_sheet3",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet4.done",
+      "bytes": 389,
+      "sha256": "3d79338fb760c6514775255184fdea65136d1f8d48d5c4b1db95f13d0a565c91"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1526.374973,
+      "generated_utc": "2026-09-16T06:08:35Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet4/launch_manifest.json",
+        "monotonic_launch_counter": 2080,
+        "pid": 60393
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_sheet4",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_sheet5.done",
+      "bytes": 389,
+      "sha256": "eebf17271cef3a217a96d83fe575bf796dfb8a323b40fb9de67a489cb8677227"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 1522.176115,
+      "generated_utc": "2026-09-16T06:08:34Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_sheet5/launch_manifest.json",
+        "monotonic_launch_counter": 2081,
+        "pid": 60429
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_sheet5",
+      "schema": "detached_local_process_done.v2"
+    }
+  },
+  {
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_winners.done",
+      "bytes": 389,
+      "sha256": "1d9a32654684d2b123936972d7d25e3177e584f6f4223138524141cda7d589b2"
+    },
+    "data": {
+      "adjudicated_at_launch": false,
+      "detail": "",
+      "elapsed_s": 17.314379,
+      "generated_utc": "2026-09-16T06:09:26Z",
+      "launch_id": {
+        "manifest_path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_winners/launch_manifest.json",
+        "monotonic_launch_counter": 2083,
+        "pid": 74219
+      },
+      "rc": 0,
+      "receipt_name": "ddm_jrx2_winners",
+      "schema": "detached_local_process_done.v2"
+    }
+  }
+]

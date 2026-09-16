@@ -1,0 +1,808 @@
+{
+  "proposals": 24,
+  "unique_archives": 23,
+  "median_delta_bytes": 28.0,
+  "min_delta_bytes": -14,
+  "max_delta_bytes": 90,
+  "iqr_delta_bytes": [
+    2.0,
+    40.0
+  ],
+  "rows": [
+    {
+      "pair": 250,
+      "action": {
+        "flat_index": 594,
+        "new": -1,
+        "old": -2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 11,
+      "pack": {
+        "action": {
+          "flat_index": 594,
+          "new": -1,
+          "old": -2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179342,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_250/repeat0/archive.zip",
+            "sha256": "cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33"
+          },
+          {
+            "bytes": 179342,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_250/repeat1/archive.zip",
+            "sha256": "cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33"
+          }
+        ],
+        "delta_bytes": 10,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 398,
+      "action": {
+        "flat_index": 1256,
+        "new": -1,
+        "old": 0,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 12,
+      "pack": {
+        "action": {
+          "flat_index": 1256,
+          "new": -1,
+          "old": 0,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179337,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_398/repeat0/archive.zip",
+            "sha256": "c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc"
+          },
+          {
+            "bytes": 179337,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_398/repeat1/archive.zip",
+            "sha256": "c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc"
+          }
+        ],
+        "delta_bytes": 5,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 296,
+      "action": {
+        "flat_index": 1028,
+        "new": -3,
+        "old": -2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 9,
+      "pack": {
+        "action": {
+          "flat_index": 1028,
+          "new": -3,
+          "old": -2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179318,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_296/repeat0/archive.zip",
+            "sha256": "c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10"
+          },
+          {
+            "bytes": 179318,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_296/repeat1/archive.zip",
+            "sha256": "c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10"
+          }
+        ],
+        "delta_bytes": -14,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 236,
+      "action": {
+        "flat_index": 846,
+        "new": 1,
+        "old": 0,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 12,
+      "pack": {
+        "action": {
+          "flat_index": 846,
+          "new": 1,
+          "old": 0,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179323,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_236/repeat0/archive.zip",
+            "sha256": "a8b5aca0e35bdc537484191b98ce6e4ca310500a2ae120d35495bea6b3618db3"
+          },
+          {
+            "bytes": 179323,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_236/repeat1/archive.zip",
+            "sha256": "a8b5aca0e35bdc537484191b98ce6e4ca310500a2ae120d35495bea6b3618db3"
+          }
+        ],
+        "delta_bytes": -9,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 80,
+      "action": {
+        "flat_index": 208,
+        "new": 2,
+        "old": 1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 20,
+      "pack": {
+        "action": {
+          "flat_index": 208,
+          "new": 2,
+          "old": 1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179372,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_080/repeat0/archive.zip",
+            "sha256": "e717c0be4457f334d0db934e60be5dac3da8974459b67d639d4a0e7c01fc8404"
+          },
+          {
+            "bytes": 179372,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_080/repeat1/archive.zip",
+            "sha256": "e717c0be4457f334d0db934e60be5dac3da8974459b67d639d4a0e7c01fc8404"
+          }
+        ],
+        "delta_bytes": 40,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 385,
+      "action": {
+        "flat_index": 597,
+        "new": 0,
+        "old": -1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 10,
+      "pack": {
+        "action": {
+          "flat_index": 597,
+          "new": 0,
+          "old": -1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179354,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_385/repeat0/archive.zip",
+            "sha256": "bc01aa3d632a8faeba31984c03b09d6aacd966d331541db4b8061f85e1de1295"
+          },
+          {
+            "bytes": 179354,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_385/repeat1/archive.zip",
+            "sha256": "bc01aa3d632a8faeba31984c03b09d6aacd966d331541db4b8061f85e1de1295"
+          }
+        ],
+        "delta_bytes": 22,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 214,
+      "action": {
+        "flat_index": 387,
+        "new": 3,
+        "old": 2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 5,
+      "pack": {
+        "action": {
+          "flat_index": 387,
+          "new": 3,
+          "old": 2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179364,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_214/repeat0/archive.zip",
+            "sha256": "e89a95ef64a7634f92840114a6e7831e497314185c6952f328a234e280574a0a"
+          },
+          {
+            "bytes": 179364,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_214/repeat1/archive.zip",
+            "sha256": "e89a95ef64a7634f92840114a6e7831e497314185c6952f328a234e280574a0a"
+          }
+        ],
+        "delta_bytes": 32,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 382,
+      "action": {
+        "flat_index": 848,
+        "new": 1,
+        "old": 2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 7,
+      "pack": {
+        "action": {
+          "flat_index": 848,
+          "new": 1,
+          "old": 2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179334,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_382/repeat0/archive.zip",
+            "sha256": "e5d2a8cb968ac72ae2913673bd9b11a639cc8196fe4def1fed8e836ef17d9019"
+          },
+          {
+            "bytes": 179334,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_382/repeat1/archive.zip",
+            "sha256": "e5d2a8cb968ac72ae2913673bd9b11a639cc8196fe4def1fed8e836ef17d9019"
+          }
+        ],
+        "delta_bytes": 2,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 208,
+      "action": {
+        "flat_index": 851,
+        "new": -1,
+        "old": -2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 10,
+      "pack": {
+        "action": {
+          "flat_index": 851,
+          "new": -1,
+          "old": -2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179332,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_208/repeat0/archive.zip",
+            "sha256": "01bd24476b3f615c611f01456994fbd4713c67e6992766d868849d9e8fd56d6b"
+          },
+          {
+            "bytes": 179332,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_208/repeat1/archive.zip",
+            "sha256": "01bd24476b3f615c611f01456994fbd4713c67e6992766d868849d9e8fd56d6b"
+          }
+        ],
+        "delta_bytes": 0,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 583,
+      "action": {
+        "flat_index": 198,
+        "new": 0,
+        "old": -1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 18,
+      "pack": {
+        "action": {
+          "flat_index": 198,
+          "new": 0,
+          "old": -1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179367,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_583/repeat0/archive.zip",
+            "sha256": "57e223777fa64599d129f8c7a23343158347eb3f740cd27a375d8fbb62e20ba9"
+          },
+          {
+            "bytes": 179367,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_583/repeat1/archive.zip",
+            "sha256": "57e223777fa64599d129f8c7a23343158347eb3f740cd27a375d8fbb62e20ba9"
+          }
+        ],
+        "delta_bytes": 35,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 53,
+      "action": {
+        "flat_index": 809,
+        "new": -4,
+        "old": -3,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 14,
+      "pack": {
+        "action": {
+          "flat_index": 809,
+          "new": -4,
+          "old": -3,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179422,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_053/repeat0/archive.zip",
+            "sha256": "a0631e818709de991a442ea9108daae4eddd4decea598215f21185288b16d952"
+          },
+          {
+            "bytes": 179422,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_053/repeat1/archive.zip",
+            "sha256": "a0631e818709de991a442ea9108daae4eddd4decea598215f21185288b16d952"
+          }
+        ],
+        "delta_bytes": 90,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 406,
+      "action": {
+        "flat_index": 198,
+        "new": -2,
+        "old": -1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 22,
+      "pack": {
+        "action": {
+          "flat_index": 198,
+          "new": -2,
+          "old": -1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179371,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_406/repeat0/archive.zip",
+            "sha256": "86b7e7e1d1bfe900153e9b26da0aaa5db5303728b2bf0a323dc99226ccc9f3f9"
+          },
+          {
+            "bytes": 179371,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_406/repeat1/archive.zip",
+            "sha256": "86b7e7e1d1bfe900153e9b26da0aaa5db5303728b2bf0a323dc99226ccc9f3f9"
+          }
+        ],
+        "delta_bytes": 39,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 547,
+      "action": {
+        "flat_index": 1998,
+        "new": -4,
+        "old": -3,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 32,
+      "pack": {
+        "action": {
+          "flat_index": 1998,
+          "new": -4,
+          "old": -3,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179318,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_547/repeat0/archive.zip",
+            "sha256": "ac878a943519f95d8465ca173a71fcb97714fbc5f05542875934d6f9d23affdc"
+          },
+          {
+            "bytes": 179318,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_547/repeat1/archive.zip",
+            "sha256": "ac878a943519f95d8465ca173a71fcb97714fbc5f05542875934d6f9d23affdc"
+          }
+        ],
+        "delta_bytes": -14,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 342,
+      "action": {
+        "flat_index": 752,
+        "new": 0,
+        "old": -1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 8,
+      "pack": {
+        "action": {
+          "flat_index": 752,
+          "new": 0,
+          "old": -1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179356,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_342/repeat0/archive.zip",
+            "sha256": "e61e18f832c8ccb0b2a8e3ab11e3d761bbab2941de5b4c81fcf6b0581cbd923d"
+          },
+          {
+            "bytes": 179356,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_342/repeat1/archive.zip",
+            "sha256": "e61e18f832c8ccb0b2a8e3ab11e3d761bbab2941de5b4c81fcf6b0581cbd923d"
+          }
+        ],
+        "delta_bytes": 24,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 127,
+      "action": {
+        "flat_index": 847,
+        "new": 1,
+        "old": 0,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 18,
+      "pack": {
+        "action": {
+          "flat_index": 847,
+          "new": 1,
+          "old": 0,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179325,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_127/repeat0/archive.zip",
+            "sha256": "dc4d3e4c7ed88500cd75186a94d2edc939a2523d65aca156073285381a994aae"
+          },
+          {
+            "bytes": 179325,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_127/repeat1/archive.zip",
+            "sha256": "dc4d3e4c7ed88500cd75186a94d2edc939a2523d65aca156073285381a994aae"
+          }
+        ],
+        "delta_bytes": -7,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 319,
+      "action": {
+        "flat_index": 812,
+        "new": 1,
+        "old": 2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 15,
+      "pack": {
+        "action": {
+          "flat_index": 812,
+          "new": 1,
+          "old": 2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179371,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_319/repeat0/archive.zip",
+            "sha256": "13fca1c7e2c43462d82e8a2bbd5a2cc4e989c1b6cdd65ea9647a2a9e535b7d66"
+          },
+          {
+            "bytes": 179371,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_319/repeat1/archive.zip",
+            "sha256": "13fca1c7e2c43462d82e8a2bbd5a2cc4e989c1b6cdd65ea9647a2a9e535b7d66"
+          }
+        ],
+        "delta_bytes": 39,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 502,
+      "action": {
+        "flat_index": 808,
+        "new": -3,
+        "old": -2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 36,
+      "pack": {
+        "action": {
+          "flat_index": 808,
+          "new": -3,
+          "old": -2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179338,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_502/repeat0/archive.zip",
+            "sha256": "cddda6486ba7caa3e2b4dee9f74e40ae0ad64ed8344994a5a8b3e77d75d3eb53"
+          },
+          {
+            "bytes": 179338,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_502/repeat1/archive.zip",
+            "sha256": "cddda6486ba7caa3e2b4dee9f74e40ae0ad64ed8344994a5a8b3e77d75d3eb53"
+          }
+        ],
+        "delta_bytes": 6,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 137,
+      "action": {
+        "flat_index": 847,
+        "new": -1,
+        "old": 0,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 16,
+      "pack": {
+        "action": {
+          "flat_index": 847,
+          "new": -1,
+          "old": 0,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179387,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_137/repeat0/archive.zip",
+            "sha256": "c223ff4aa1136669cfedce974b9fcc0d7b3dacdc18c7914c84340824897c0b8e"
+          },
+          {
+            "bytes": 179387,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_137/repeat1/archive.zip",
+            "sha256": "c223ff4aa1136669cfedce974b9fcc0d7b3dacdc18c7914c84340824897c0b8e"
+          }
+        ],
+        "delta_bytes": 55,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 376,
+      "action": {
+        "flat_index": 802,
+        "new": 2,
+        "old": 1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 11,
+      "pack": {
+        "action": {
+          "flat_index": 802,
+          "new": 2,
+          "old": 1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179389,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_376/repeat0/archive.zip",
+            "sha256": "e6a205fe562e958016440796bc5c4faf3e0d269e0160b442908c7bb1a47b809f"
+          },
+          {
+            "bytes": 179389,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_376/repeat1/archive.zip",
+            "sha256": "e6a205fe562e958016440796bc5c4faf3e0d269e0160b442908c7bb1a47b809f"
+          }
+        ],
+        "delta_bytes": 57,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 32,
+      "action": {
+        "flat_index": 848,
+        "new": 1,
+        "old": 2,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 14,
+      "pack": {
+        "action": {
+          "flat_index": 848,
+          "new": 1,
+          "old": 2,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179334,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_032/repeat0/archive.zip",
+            "sha256": "e5d2a8cb968ac72ae2913673bd9b11a639cc8196fe4def1fed8e836ef17d9019"
+          },
+          {
+            "bytes": 179334,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_032/repeat1/archive.zip",
+            "sha256": "e5d2a8cb968ac72ae2913673bd9b11a639cc8196fe4def1fed8e836ef17d9019"
+          }
+        ],
+        "delta_bytes": 2,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 183,
+      "action": {
+        "flat_index": 1065,
+        "new": 1,
+        "old": 0,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 12,
+      "pack": {
+        "action": {
+          "flat_index": 1065,
+          "new": 1,
+          "old": 0,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179366,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_183/repeat0/archive.zip",
+            "sha256": "a797054f647771b492c8203d0337c4aa1b885dc876bea7fe0737b0cc22a0f346"
+          },
+          {
+            "bytes": 179366,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_183/repeat1/archive.zip",
+            "sha256": "a797054f647771b492c8203d0337c4aa1b885dc876bea7fe0737b0cc22a0f346"
+          }
+        ],
+        "delta_bytes": 34,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 33,
+      "action": {
+        "flat_index": 494,
+        "new": 0,
+        "old": 1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 15,
+      "pack": {
+        "action": {
+          "flat_index": 494,
+          "new": 0,
+          "old": 1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179379,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_033/repeat0/archive.zip",
+            "sha256": "5aa1313dae72c4ccc1b056e9293f9b53486f73604ac2cdd9946ea119843398b2"
+          },
+          {
+            "bytes": 179379,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_033/repeat1/archive.zip",
+            "sha256": "5aa1313dae72c4ccc1b056e9293f9b53486f73604ac2cdd9946ea119843398b2"
+          }
+        ],
+        "delta_bytes": 47,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 134,
+      "action": {
+        "flat_index": 388,
+        "new": 2,
+        "old": 1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 17,
+      "pack": {
+        "action": {
+          "flat_index": 388,
+          "new": 2,
+          "old": 1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179372,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_134/repeat0/archive.zip",
+            "sha256": "d67432ee0ffe51946d53cf54773a5252351b43db583ee9d1e36fe6d206685bfc"
+          },
+          {
+            "bytes": 179372,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_134/repeat1/archive.zip",
+            "sha256": "d67432ee0ffe51946d53cf54773a5252351b43db583ee9d1e36fe6d206685bfc"
+          }
+        ],
+        "delta_bytes": 40,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    },
+    {
+      "pair": 536,
+      "action": {
+        "flat_index": 169,
+        "new": 0,
+        "old": 1,
+        "tensor": "head.weight"
+      },
+      "targeted_cells": 15,
+      "pack": {
+        "action": {
+          "flat_index": 169,
+          "new": 0,
+          "old": 1,
+          "tensor": "head.weight"
+        },
+        "archives": [
+          {
+            "bytes": 179390,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_536/repeat0/archive.zip",
+            "sha256": "c870713c1ac9bda8da44f32778898a4cfbff3db77a242499d22ac7d771443686"
+          },
+          {
+            "bytes": 179390,
+            "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_536/repeat1/archive.zip",
+            "sha256": "c870713c1ac9bda8da44f32778898a4cfbff3db77a242499d22ac7d771443686"
+          }
+        ],
+        "delta_bytes": 58,
+        "pose_resolved": false,
+        "score_claim": false
+      }
+    }
+  ],
+  "axis": "[macOS-CPU advisory / exact byte measurement]",
+  "score_claim": false,
+  "exchange_status": "unmeasured; gradient is ranking only"
+}

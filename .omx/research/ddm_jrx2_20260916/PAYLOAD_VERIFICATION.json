@@ -1,0 +1,92 @@
+{
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/PAYLOAD_VERIFICATION.json",
+    "bytes": 3402,
+    "sha256": "5dc0aa028c3c57e85b3f34ad6edbd23a5a20a988ab6e2c17069a3267de3b8c70"
+  },
+  "data": {
+    "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+    "calibration_and_extension_frames": 50,
+    "completed_solve_checksums": 12,
+    "gt_lineage_check": {
+      "axis": "contest_cuda",
+      "gt_lineage": "dali",
+      "status": "VERIFIED"
+    },
+    "passed": true,
+    "price_jobs_verified": 17,
+    "raw_base": {
+      "bytes": 3662409600,
+      "path": "/Volumes/APDataStore/pact/ddm_pd4/parseback/0.raw",
+      "sha256": "ccb89e3e73bf61ac334f50d6963e51e291d446d798c9a5bac5992da0beceeced"
+    },
+    "renderer_actions": 3,
+    "renderer_census_frames": 1800,
+    "renderer_packs_verified": 25,
+    "renderer_rows": [
+      {
+        "all600_delta_cells": 2438,
+        "archive_sha256": "cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+        "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+        "checkpoint_chunk": 25,
+        "collateral_exceeds_target_seg_credit": true,
+        "delta_archive_bytes": 10,
+        "other599_net_collateral_cells": 2438,
+        "pair": 250,
+        "pairs_scored": 600,
+        "resolved_pose": null,
+        "score_claim": false,
+        "scorer_batch": 1,
+        "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+        "target_credit_cells": 0
+      },
+      {
+        "all600_delta_cells": 2259,
+        "archive_sha256": "c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+        "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+        "checkpoint_chunk": 25,
+        "collateral_exceeds_target_seg_credit": true,
+        "delta_archive_bytes": -14,
+        "other599_net_collateral_cells": 2256,
+        "pair": 296,
+        "pairs_scored": 600,
+        "resolved_pose": null,
+        "score_claim": false,
+        "scorer_batch": 1,
+        "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10",
+        "target_credit_cells": -3
+      },
+      {
+        "all600_delta_cells": 1740,
+        "archive_sha256": "c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+        "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+        "checkpoint_chunk": 25,
+        "collateral_exceeds_target_seg_credit": true,
+        "delta_archive_bytes": 5,
+        "other599_net_collateral_cells": 1740,
+        "pair": 398,
+        "pairs_scored": 600,
+        "resolved_pose": null,
+        "score_claim": false,
+        "scorer_batch": 1,
+        "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc",
+        "target_credit_cells": 0
+      }
+    ],
+    "score_claim": false,
+    "source": {
+      "bytes": 11397,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx2_harvest.py",
+      "sha256": "f60c848817fbe8b064b1e63718906fb637adaa574a4fa3dba232754846086cdc"
+    },
+    "storage": {
+      "free_bytes": 14996733952,
+      "limit_bytes": 3221225472,
+      "reserve_bytes": 8589934592,
+      "retained_bytes": 1966333401
+    }
+  }
+}

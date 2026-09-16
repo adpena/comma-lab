@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "rg",
+    "-n",
+    "-i",
+    "-m",
+    "3",
+    "spatially selective.*actuator|fp16 scale search|wider.mantissa.*CLOSED|first repair.*screening artifact",
+    ".omx/research",
+    "--glob",
+    "*.md"
+  ],
+  "rc": 0,
+  "output": {
+    "path": ".omx/research/ddm_jrx2_20260916/RECALL_FOLLOWUP.txt",
+    "bytes": 3908,
+    "sha256": "e41732f772865097584a5bdba3bc1c0c288ceaa71797317804ba4a691db0b18d"
+  },
+  "finding": "rw1 final sections8h/9 supersede the registry exclusions advertising scales/finer precision as untried; no precision retry is a live lead. OWED1f asks for spatial selectivity; global-actuator screening must be n600.",
+  "changed_plan": "Do not nominate fp16/finer-grid successor; retain spatially selective representation only as outside-charter hypothesis."
+}

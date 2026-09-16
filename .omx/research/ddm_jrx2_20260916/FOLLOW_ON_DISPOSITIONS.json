@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "action": "Matched pd4 calibration repair",
+      "disposition": "FIRED",
+      "owner": "ddm_jrx2",
+      "consumer_store": ".omx/research/ddm_jrx2_20260916/ROW1_GATE.json",
+      "fire_trigger": "jrx2 charter; completed12/12 matched price and credit",
+      "canonical_task_id": "ddm_jrx1_matched_control_repair_20260916"
+    },
+    {
+      "action": "Remaining global int4 renderer and joint rows",
+      "disposition": "FOLDED",
+      "owner": "ddm_jrx2",
+      "consumer_store": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+      "fire_trigger": "First completed n600 action fires the recorded Seg collateral falsifier; continuation stopped",
+      "unmeasured_not_failed_population": "remaining21 actions and all joint ratios"
+    },
+    {
+      "action": "jrd2 burn",
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+      "fire_trigger": "No fire under this charter: the stop falsifier fired and the >=2 joint gate was not tested",
+      "authorized": false
+    },
+    {
+      "action": "Spatially selective representation hypothesis",
+      "disposition": "FOLDED",
+      "owner": "MAIN",
+      "consumer_store": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md#9-owed-the-queue-this-arm-hands-forward-each-with-its-blocker-named",
+      "existing_consumer": "rw1 OWED1f, also cross-referenced in jrx2 RECALL_EVIDENCE.md",
+      "fire_trigger": "Only a distinct future charter with a spatial support argument, complete payload price, current pointer pin and affected-pair scorer ownership; no new job is queued by jrx2",
+      "why_plausible": "Could avoid the observed global collateral by changing which cells and pairs are affected; finer precision alone has prior negative evidence",
+      "new_measurement": false
+    }
+  ],
+  "landing": "Serializer is the final action after this receipt; actual outcome and any MAIN fire order are recorded in SERIALIZER_RESULT.json and LANDING_FIRE_ORDER.json.",
+  "price_distribution": "FIRED and complete:22 individual fields,30 total price jobs, final harvester rc0; DISCOVERY_RESULTS.json and VERIFICATION_COVERAGE.json."
+}

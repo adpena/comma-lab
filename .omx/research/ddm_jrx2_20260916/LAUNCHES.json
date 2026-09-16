@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_prepare/launch_manifest.json",
+    "sha256": "34ef7bf78de8d6cb9a580dd42e793440c1da9561b1476d2ddd2752632f771691",
+    "receipt": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_prepare.done"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_a/launch_manifest.json",
+    "sha256": "ead230e0d951cb6d38bdadab3b5e6559a5db4d8d1ea7d280f227caf5d72e73b5",
+    "receipt": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_measure_a.done"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_measure_b/launch_manifest.json",
+    "sha256": "5967a35788c6aebf90f78a03b9b2f36e461b7fdca819b30c2a8d3d00605e7ef3",
+    "receipt": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_measure_b.done"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_nulls/launch_manifest.json",
+    "sha256": "70dd2a865dbe52d25455ddeb04bc1334b2c083f61626a79e352f85e7105dfda0",
+    "receipt": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_nulls.done"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration0/launch_manifest.json",
+    "sha256": "1854efcc18b6ce1af91e10c377a3b22591898fd48860cbdadacc47644a443510",
+    "receipt": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_calibration0.done"
+  },
+  {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/launch_calibration1/launch_manifest.json",
+    "sha256": "ad3fb46f17980376071923c4f76750a0f3dc56cf6aac3c124b03ef2d1d8fa156",
+    "receipt": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_jrx2_calibration1.done"
+  }
+]

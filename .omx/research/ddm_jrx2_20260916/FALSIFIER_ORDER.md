@@ -1,0 +1,7 @@
+# Execution order for the chartered falsifiers
+
+Recorded before reading any completed all600 collateral result. Row1 has passed12/12 exactly. Row2 defines a boundary-jitter SegNet residual and names a falsifier: collateral on the other599 pairs exceeds the target-pair credit. This check compares realized SegNet cell debt, with batch1 frozen CPU argmax on the actual receiver-parsed renderer. Resolved total Seg/Pose exchange remains a separate, unclaimed quantity. An optional clarification was requested from the operator; no reply has been received.
+
+The charter says a fired falsifier closes the joint direction on this object. Therefore the execution short-circuits on that named collateral falsifier: once a completed n600 row fires it, do not launch further renderer or joint scoring merely to fill a table. Allow the already-launched three-action job (250,398,296) to finish its durable stages; then close the row2/3 continuation if it fired. Report every executed denominator and leave unmeasured median/ratio fields undefined. This is an INSTANCE result for the named one-step actions on move52, not a K24 population or formulation/family negative. The K24 discovery price distribution and first real winner selection still must complete under the charter.
+
+If none of the three completed rows fires, continue the remaining sampled actions and the full joint exchange machinery. No burn, Modal, fire, authorization or packet is permitted in either branch.

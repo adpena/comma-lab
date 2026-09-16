@@ -1,0 +1,65 @@
+{
+  "rows": [
+    {
+      "pair": 250,
+      "target_base_errors": 11,
+      "target_current_errors": 11,
+      "other599_net_collateral_cells": 2438,
+      "lower_bound_all600_added_seg_cells_if_target_perfect": 2427,
+      "lower_bound_seg_plus_rate_at_minus35B": 0.002034088328567807,
+      "chunk": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33/chunk_250.json",
+        "bytes": 11715,
+        "sha256": "076f81bbc9a48480df080b28096b637ff5fe958743ce7649b0c113e08edce26f"
+      }
+    },
+    {
+      "pair": 296,
+      "target_base_errors": 14,
+      "target_current_errors": 17,
+      "other599_net_collateral_cells": 2256,
+      "lower_bound_all600_added_seg_cells_if_target_perfect": 2242,
+      "lower_bound_seg_plus_rate_at_minus35B": 0.001877261885425446,
+      "chunk": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10/chunk_275.json",
+        "bytes": 11716,
+        "sha256": "63010d44815c117fe8d818d5042d45a4098ab3cf733adab976daf625b0293fc6"
+      }
+    },
+    {
+      "pair": 398,
+      "target_base_errors": 13,
+      "target_current_errors": 13,
+      "other599_net_collateral_cells": 1740,
+      "lower_bound_all600_added_seg_cells_if_target_perfect": 1727,
+      "lower_bound_seg_plus_rate_at_minus35B": 0.0014406909761372517,
+      "chunk": {
+        "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc/chunk_375.json",
+        "bytes": 11717,
+        "sha256": "cb356c657b1eb10a89eaffbf625a4ca45851d01a48d827c0f26ea96b5e8ecefb"
+      }
+    }
+  ],
+  "derivation": "For this fixed renderer action, changing only the target-pair field cannot alter other599 renders. Even a perfect target mask can recover only its baseline errors. Therefore all600 added Seg cells >= other599 collateral - target baseline errors. The \u00b135 B band is charged at its most favorable -35 B endpoint.",
+  "scope": "DERIVED bound on Seg plus rate for each named renderer with any target-pair-only field; pose omitted, not a total score bound",
+  "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet, DALI GT lineage]",
+  "score_claim": false,
+  "source_files": [
+    {
+      "path": "experiments/ddm_jg1_seg_solve.py",
+      "bytes": 28600,
+      "sha256": "45acb37e6bb100a409d3752f94b30f7244e5fe0ca476263ad7a0ccfbea62b96b"
+    },
+    {
+      "path": "experiments/ddm_jrx2_renderer.py",
+      "bytes": 17901,
+      "sha256": "abc9dec844b1c63c33526b1f79c86a149f98f5277030203c976a4a8a7ed60e7e"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_jrx2/price_runtime/cpr1/inflate.py",
+      "bytes": 13810,
+      "sha256": "a3d25a10188684e2617d71b0f50bb883d28938d4ab9f75c385e0ee78953c7d4e"
+    }
+  ],
+  "locality_source": "SemanticTokenRenderer.forward lines116-130: only supplied tokens and pair_indices; fixed model parameters; no other-pair token input. CPU receiver forwards batch1."
+}

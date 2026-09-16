@@ -1,0 +1,38 @@
+{
+  "path": "/Volumes/APDataStore/pact/ddm_jrx2/BINDING.json",
+  "bytes": 1175,
+  "sha256": "f1aa97f7e80e0a8bb543ded79dee86158c655bd8423968c3b8171eba551a2e5b",
+  "data": {
+    "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+    "predecessor_binding": {
+      "bytes": 20893,
+      "path": "/Volumes/APDataStore/pact/ddm_jrx1/search_v2/BINDING.json",
+      "sha256": "957106a599fad2696458ecbc5d0d9f1b722df1fb2f6cdd69e953113fca87015b"
+    },
+    "reference": {
+      "bytes": 4926,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/PD4_REFERENCE_AUDIT.json",
+      "sha256": "2abe51056525b2b60f5c77e11aa0f18660bcd703f0fdab97c0767e8cdf4704f9"
+    },
+    "score_claim": false,
+    "seed": 20260916,
+    "sources": [
+      {
+        "bytes": 17045,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx2_control.py",
+        "sha256": "e6ffd074377e96b5788ebdf717c6ba0eb6930ada11d2e63d5e62b6dd70becf39"
+      },
+      {
+        "bytes": 12357,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx1_field_control.py",
+        "sha256": "f4074aa5152d851e3334a71b0d979686ec96e1cb4d2cf5ec9da5535f160cfa2c"
+      },
+      {
+        "bytes": 15212,
+        "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx1_price_control.py",
+        "sha256": "1497df53eec66d3a3ff76478a5e4ae8217664ba70f196d3132429e82a9014322"
+      }
+    ]
+  },
+  "verified_top_level_facts": 5
+}

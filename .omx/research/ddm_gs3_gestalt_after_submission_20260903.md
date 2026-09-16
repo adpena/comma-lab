@@ -2006,3 +2006,24 @@ released the slot.
 **Gestalt after 66.** Every measured single-axis and multi-token field formulation on this object is at its knee or
 closed. Two things remain unmeasured on the object: the JOINT (field + renderer) exchange (jrx1) and the price-first
 generator (pd5's handoff). Sub-0.12 still needs −0.0162 S; nothing measured this week moves more than 1e-4.
+
+## Addendum 67 (2026-09-16, host ~08:00Z) — jrx2: the joint field + global-int4 direction STOPS on Seg collateral at n600; the joint ratio is unmeasured; the family stays open only through a spatially selective renderer actuator
+
+**jrx2 (codex astra, scorer slot; receipt `.omx/research/ddm_jrx2_20260916/RECEIPT.md`) — MEASURED [macOS-CPU advisory].**
+Row 1 (instrument): 12/12 of the pd4-overlapping pairs reproduced pd4's retained proposals at 0 % price error and 0 %
+credit error — the repaired estimand match works. Field diagnostic row: median 1.378e-7 S/B [IQR 1.37e-8, 2.84e-7]
+on 18/24 finite pairs; 16 bits per changed token median [8, 16] on 22/24; four zero-byte observations have undefined
+ratios; pairs 502/547 stay null (16 / 8 extensions all fail the two-cell gate). Renderer row: the smallest global int4
+weight actions for pairs 250 / 398 / 296 credit 0 / 0 / −3 target Seg cells against 2,438 / 1,740 / 2,256 added
+errors on the other 599 pairs (all-600 census each). The pre-registered collateral falsifier fired; per charter the
+joint row did not run. 41 detached steps rc 0; 1.384 GB retained with hashes.
+verdict_scope: formulation — joint field + GLOBAL int4 weight step on this object (rw1's global finding reproduced at
+n600 with the per-pair-restricted target). NOT closed: the joint family with a spatially selective renderer actuator
+(rw1 OWED1f; jrx2 folds its live hypothesis there) — no such actuator exists in the shipped object (its only per-pair
+conditioning IS the token field), so it would be a new object part with counted bytes.
+
+**Gestalt after 67.** On the shipped object every measured direction is closed or at its knee: field (single, multi,
+pose-directed, set-priced), renderer (basis, in-place refit, global int4 grid, and now joint-with-field), carrier
+lattice, tail coder, temporal context. Two things remain unmeasured: the price-first generator (pd6, spawning now)
+and a pair-selective renderer actuator (a successor-object part). Sub-0.12 needs −0.0162 S; this object has not
+yielded more than 1.65e-4 in any single move since move 44.

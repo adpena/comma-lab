@@ -1,0 +1,15 @@
+{
+  "actual_retained_render_count": 2,
+  "payload": {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/regression_chunk/real_frames.npz",
+    "bytes": 1527419,
+    "sha256": "2138f8943001e7edcc3fce00d77f5a7d054f7d93cbf1994fa15398cce256df6c"
+  },
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_jrx2_renderer.py",
+    "bytes": 17716,
+    "sha256": "24b16f32a942def32aa6c86abfe1959881cc8540a2dd719e5ac66ad0c711a14e"
+  },
+  "scientific_measurement": false,
+  "scope": "storage-only real-payload roundtrip; no renderer or scorer invoked"
+}

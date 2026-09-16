@@ -1,0 +1,65 @@
+{
+  "time": "2026-09-16T05:14:04.082593+00:00",
+  "head": "922027fd93d72e0643d29b8e0d691c728c358ff4",
+  "facts": [
+    {
+      "path": "/Users/adpena/Projects/pact/AGENTS.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/CLAUDE.md",
+      "bytes": 439573,
+      "sha256": "1264c3f7be1554d38a27e0bf0b4f0225cee21a244f6a93676003e6d57fc4bc1a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/PROGRAM.md",
+      "bytes": 5784,
+      "sha256": "a6d5f79f3241ca1ae17b2587afd9940e1a4ea598804fd9efa152f2330e15db82"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/docs/operating_manual_craft_handoff.md",
+      "bytes": 15577,
+      "sha256": "40d157a039d4dd242bfb189d53e6b82abcc5d037adceb0a52c9bb2956903f212"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/_common_contract.md",
+      "bytes": 4124,
+      "sha256": "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_joint_exchange_probe_repaired_row1_on_move52_charter_20260916.md",
+      "bytes": 4860,
+      "sha256": "5c187894edfbc04c70da5c4145235d174788638450f99393cc3da5ec9544ad15"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json",
+      "bytes": 19597,
+      "sha256": "9c8c8d7cd095268f7eb18b6463f643d8252fccfc6932a8f20232bf996efc6283"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx1_20260916/CONTROL_REPAIR_PROPOSAL.md",
+      "bytes": 2977,
+      "sha256": "0771c3870b3480299610ffb0b436ef36f23fe12b03023e41bb834defecf88141"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrd1_20260916/SAMPLE.json",
+      "bytes": 6928,
+      "sha256": "b905cbabf06ca4a9dc78c1f9ed49a929e0c15d5f2b580a55fa769c23a5256613"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.git/index",
+      "bytes": 7718421,
+      "sha256": "0aafdb48c5ece33e64a0c950cfe2b4a449efc990c7bf7eefe4de23482dd698e5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd3/candidate/candidate_runtime/archive.zip",
+      "bytes": 179332,
+      "sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e"
+    }
+  ],
+  "status_start": " M .omx/state/active_lane_dispatch_claims.md\n M .omx/state/canonical_task_status.jsonl\n M .omx/state/lane_maturity_audit.log\n M .omx/state/lane_registry.json\n M .omx/state/operator_p0_ledger.jsonl\n?? .omx/research/ddm_jrx1_20260916/BUNDLE_VERIFICATION.json\n?? .omx/research/ddm_jrx1_20260916/CLOSEOUT.json\n?? .omx/research/ddm_jrx1_20260916/LANDING_FIRE_ORDER.json\n?? .omx/research/ddm_jrx1_20260916/LANDING_TASK.json\n?? .omx/research/ddm_jrx1_20260916/SERIALIZER_OUTPUT.txt\n?? .omx/research/ddm_jrx1_20260916/SERIALIZER_RESULT.json\n?? .omx/research/ddm_jrx1_20260916/serializer/\n?? .omx/research/ddm_jrx1_20260916/serializer_verify_objects.git/\n?? submissions/_staging_move40_pr140_swap/\n?? submissions/_staging_move43_pr140_swap/\n?? submissions/_staging_move44_pr140_swap/\n?? submissions/_staging_move47_pr140_swap/\n?? submissions/_staging_move48_pr140_swap/\n",
+  "free_bytes": 17882939392,
+  "score_rederived": 0.13620226906030858,
+  "strict_byte_ceiling": 154999
+}

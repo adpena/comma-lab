@@ -1,0 +1,40 @@
+{
+  "observed_at_utc": "2026-09-16T06:06:13.499434+00:00",
+  "result": {
+    "all600_delta_cells": 2438,
+    "archive_sha256": "cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+    "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+    "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+    "checkpoint_chunk": 25,
+    "collateral_exceeds_target_seg_credit": true,
+    "delta_archive_bytes": 10,
+    "other599_net_collateral_cells": 2438,
+    "pair": 250,
+    "pairs_scored": 600,
+    "resolved_pose": null,
+    "score_claim": false,
+    "scorer_batch": 1,
+    "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+    "target_credit_cells": 0
+  },
+  "source": {
+    "path": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/pair_250/COLLATERAL.json",
+    "bytes": 733,
+    "sha256": "1ca4f39fcf36a7cc07e36a5e3d549e55ff395022b47fc3c8888b3fe0ea314afa"
+  },
+  "pre_result_interpretation": {
+    "path": ".omx/research/ddm_jrx2_20260916/FALSIFIER_ORDER.md",
+    "bytes": 1467,
+    "sha256": "0101f7107145a7891fff783adb3edfb410194873e3200ad57ce7c11761a26348"
+  },
+  "disposition": "FIRED: stop further renderer and joint launches after already-started three-action job completes",
+  "verdict_scope": "INSTANCE, target pair250 action on move52; not a K24 population or family negative",
+  "joint_ratio": null,
+  "total_resolved_pose_exchange": null,
+  "row2_all600_coverage_at_first_firing": {
+    "k": 1,
+    "n": 24
+  },
+  "measured_stratum": "residual-heavy pool, first pair in the fixed sample order",
+  "score_claim": false
+}

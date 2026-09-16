@@ -1,0 +1,30 @@
+{
+  "pd4": {
+    "path": ".omx/research/ddm_pd4_pose_directed_pass4_price_lever_on_move52_20260913.md",
+    "bytes": 33965,
+    "sha256": "48767941b8a9cf1e22e5815732a51bf3fc3a81b992e711103816239f7d6657f3",
+    "charter_sha_prefix": "48767941b8a9cf1e",
+    "matches": true
+  },
+  "rw1": {
+    "path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+    "bytes": 65008,
+    "sha256": "233ed1b53a35585b3c83116fad93de8c19c835238aec13e38976834ec7dd6e13",
+    "charter_sha_prefix": "233ed1b53a35585b",
+    "matches": true
+  },
+  "ren2": {
+    "path": ".omx/research/ddm_ren2_renderer_refit_in_place_on_the_coded_field_20260912.md",
+    "bytes": 38751,
+    "sha256": "3b9cdbbdb6a7bfdf6d046f6bc8f185b268946e547d6c71f19a332307f05bfeb1",
+    "charter_sha_prefix": "3b9cdbbdb6a7bfdf",
+    "matches": true
+  },
+  "cb1": {
+    "path": ".omx/research/ddm_cb1_carrier_basis_refit_to_pose_residual_subspace_20260912.md",
+    "bytes": 32712,
+    "sha256": "07b6e9ecdc91111693b2a45e46299db1fb1892ffe6334d005487357be192e265",
+    "charter_sha_prefix": "07b6e9ecdc911116",
+    "matches": true
+  }
+}

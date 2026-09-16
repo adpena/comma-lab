@@ -1,0 +1,31 @@
+{
+  "utc": "2026-09-16T06:57:17.215584+00:00",
+  "argv": [
+    ".venv/bin/ruff",
+    "check",
+    "experiments/ddm_jrx2_control.py",
+    "experiments/ddm_jrx2_renderer.py",
+    "experiments/ddm_jrx2_harvest.py"
+  ],
+  "rc": 0,
+  "stdout": "All checks passed!\n",
+  "stderr": "",
+  "sources": [
+    {
+      "path": "experiments/ddm_jrx2_control.py",
+      "bytes": 17045,
+      "sha256": "e6ffd074377e96b5788ebdf717c6ba0eb6930ada11d2e63d5e62b6dd70becf39"
+    },
+    {
+      "path": "experiments/ddm_jrx2_renderer.py",
+      "bytes": 17901,
+      "sha256": "abc9dec844b1c63c33526b1f79c86a149f98f5277030203c976a4a8a7ed60e7e"
+    },
+    {
+      "path": "experiments/ddm_jrx2_harvest.py",
+      "bytes": 11397,
+      "sha256": "f60c848817fbe8b064b1e63718906fb637adaa574a4fa3dba232754846086cdc"
+    }
+  ],
+  "checks": "Two visible review-tracker passes per final Python content; actual12/12 calibration, census regression,30 real twin price jobs, first winner stage,1800 retained renderer frames,50 calibration/extension frames,12 solves and25 renderer packs verified. Final price harvester rc0;41/41 detached children terminal rc0."
+}

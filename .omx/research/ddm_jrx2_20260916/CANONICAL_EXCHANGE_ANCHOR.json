@@ -1,0 +1,452 @@
+{
+  "anchor_id": "jrx2_move52_same_input_archive_twins_and_diagnostic_exchange_20260916",
+  "measurement_utc": "2026-09-16T07:35:43.509407Z",
+  "inputs": {
+    "base_archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+    "price_jobs": 30,
+    "calibration_sheets": 2,
+    "discovery_sheets": 6,
+    "individual_fields": 22,
+    "repeat_unit": "two independent in-process range-encoder states per full600 field, same probabilities and symbols",
+    "verification": {
+      "path": ".omx/research/ddm_jrx2_20260916/VERIFICATION_COVERAGE.json",
+      "bytes": 6791,
+      "sha256": "03247f4aa5502ff6224cd7184049bd1d32dab6b21ae25ebd95f920d648457ab3"
+    },
+    "forecast_origin": "XR1 deterministic same-input byte premise recalled before execution; no borrowed bootstrap interval"
+  },
+  "predicted_output": {
+    "same_input_archive_twins_identical": true,
+    "byte_difference_per_twin_pair": 0
+  },
+  "empirical_output": {
+    "same_input_archive_twins_identical": true,
+    "maximum_byte_difference": 0,
+    "twin_pairs": [
+      {
+        "job": "calibration0",
+        "archive_sha256": "3136fff14806e745014de23aa660f8636766603d3e64e9aca2cd34a82e0f98e3",
+        "archive_bytes": 179683,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/DONE.json",
+          "bytes": 136629,
+          "sha256": "561688f7894cbc27c4a541f8d3f53b5dc4ab9b728f3ad42e3b59a46f96431d49"
+        }
+      },
+      {
+        "job": "calibration1",
+        "archive_sha256": "a453b1ab2767d13dbfccd87c283bc6ec206612818ca645adcafd0c1e5196c99e",
+        "archive_bytes": 179676,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/DONE.json",
+          "bytes": 137028,
+          "sha256": "cf513a825586816dc09b811e76494cd635a3b2b37b6df5dc4269ed5a1add7157"
+        }
+      },
+      {
+        "job": "pair080",
+        "archive_sha256": "735ad5f676d28dcab0049a62c40005ed8aaa8415c53f6ea9a91a7b241bd5f9b2",
+        "archive_bytes": 179336,
+        "done": {
+          "bytes": 2409,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/DONE.json",
+          "sha256": "c745af7e26d4a8cdf36b4ba79a69e5ac7cacfb12f43b676b525bd33cd68184d5"
+        }
+      },
+      {
+        "job": "pair208",
+        "archive_sha256": "dbf6cfb973133123c678e5ce0089ed1344ede44998cad17f099bd96e0e54b598",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2073,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/DONE.json",
+          "sha256": "41bde196e05800c2c151ccb26c4130c7c774a8b618ba5b4ccc5f370f511707ce"
+        }
+      },
+      {
+        "job": "pair214",
+        "archive_sha256": "f8e93a669b5d2fb6fc445662344af2e81a0393908fdc606659839cdb9b9733df",
+        "archive_bytes": 179335,
+        "done": {
+          "bytes": 2069,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/DONE.json",
+          "sha256": "8117d32e184682fca0bf2acb61503ac392251eb9574dd04e8e35d0cb6f69dd84"
+        }
+      },
+      {
+        "job": "pair236",
+        "archive_sha256": "02db2b4d5a2f7b3ebaccf754c67f10622af02053a7e6aa97259d1b48debfd99d",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2073,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/DONE.json",
+          "sha256": "7154b2f3eb3bb32c67fd4cfcfa39a42421962c1129356d0819870bb9272676a5"
+        }
+      },
+      {
+        "job": "pair250",
+        "archive_sha256": "7523b13cdf983ac6ba6245058b8e73dc68bace532451ed1c0c479f3f0f29efa1",
+        "archive_bytes": 179333,
+        "done": {
+          "bytes": 2073,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/DONE.json",
+          "sha256": "3a9899c157e9e761597e5d292e9e4b2c24fe3436bf29538633ea721201460b33"
+        }
+      },
+      {
+        "job": "pair296",
+        "archive_sha256": "26c3c15f80854ed2d2bc92c42b3050cda2da4d6d7957bf5181c626579dadc440",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2073,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/DONE.json",
+          "sha256": "4c56ecb6032682eac65df1ae2476fd2fa0fb353d79d5691a9279d11856edd60e"
+        }
+      },
+      {
+        "job": "pair382",
+        "archive_sha256": "a28b027a44cab4e7f6203e20da6669fa204d30ed866ad925a2f93b0176bab6d5",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2096,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/DONE.json",
+          "sha256": "77b194b5a9b71b15be6ec004bae55221a388bbd712a799d3aa22368a4d0f65a8"
+        }
+      },
+      {
+        "job": "pair385",
+        "archive_sha256": "3b2b47914c8df002fcbd92e1c372d57efb640554fc6b49b5435a35837f23b8a2",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2410,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/DONE.json",
+          "sha256": "8a5ff7ce90df934ae96689c965d6d5a6e8dc1dc075382ee64a74f4f04f3177fc"
+        }
+      },
+      {
+        "job": "pair398",
+        "archive_sha256": "54964338c95bbcc21479830171600d252ff8eafb1a5b974fb9d3998660bdd33f",
+        "archive_bytes": 179333,
+        "done": {
+          "bytes": 2070,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/DONE.json",
+          "sha256": "ee29146854c8c81714956e6e90f7a2595cc61c8f7fcedbe686d826aba1a6a075"
+        }
+      },
+      {
+        "job": "sheet0",
+        "archive_sha256": "d8a0ee053414081a9db30eab8b4f90dc4c2073786507a36f7f157ab063d58b9e",
+        "archive_bytes": 179384,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/DONE.json",
+          "bytes": 23446,
+          "sha256": "c019f8ef7b85e1bca6554a1c4865b1cffcfc7ad51dde272a05ab6d31c54bcad3"
+        }
+      },
+      {
+        "job": "sheet1",
+        "archive_sha256": "28f2f2ea98698f1edcfca4ebbe0cd66c2ab8080f3777c510e1394351006473bd",
+        "archive_bytes": 179386,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/DONE.json",
+          "bytes": 24175,
+          "sha256": "3683f4c54037367260819f099ab10a7375130d23372c6a362a654a1dc74dafd8"
+        }
+      },
+      {
+        "job": "sheet2",
+        "archive_sha256": "f7114412b0c47fa696ebddc5af6e988ece996be39e77cdcd94366ca043926287",
+        "archive_bytes": 179380,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/DONE.json",
+          "bytes": 24518,
+          "sha256": "8c9fff5c508ecf7d59ca029aad34926adb3217cc917ce57c28e598a8485ec9de"
+        }
+      },
+      {
+        "job": "sheet3",
+        "archive_sha256": "292bbd8dd767359e6554cda1609c6cbed3a0589ab4fe96e1a24eb3a968b65713",
+        "archive_bytes": 179382,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/DONE.json",
+          "bytes": 23921,
+          "sha256": "3f17e2c51f016bf3e54591025701e28f897d73c0ed4a00efff9779d512c1d9ca"
+        }
+      },
+      {
+        "job": "sheet4",
+        "archive_sha256": "d310f738e7559ad856d6ca60d47b529bff0a53c0d10e372857a833e380c56162",
+        "archive_bytes": 179384,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/DONE.json",
+          "bytes": 23959,
+          "sha256": "ecf5e10b4aaf09121329a4489c4870fb11897ac3623583fb5a0774d782c907e2"
+        }
+      },
+      {
+        "job": "sheet5",
+        "archive_sha256": "daa6626d176866eb4282fc5c2aec7114c49b7529ccd4967237cb3a69945b1073",
+        "archive_bytes": 179381,
+        "done": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/DONE.json",
+          "bytes": 24972,
+          "sha256": "885a076a0d9f75fd0c1412080a50be0c9a517650057057f77a24193647b8cf05"
+        }
+      },
+      {
+        "job": "pair583",
+        "archive_sha256": "ed95e9d666e35e25c02d44ce864eb2338886f40a5dd8145b118a19c14243c668",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2073,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair583/DONE.json",
+          "sha256": "95af2aa93bbed87d423ed525a1198fb34ee837aacd295b45867e63170480d835"
+        }
+      },
+      {
+        "job": "pair053",
+        "archive_sha256": "28db518f6aba3a73164d463a0ec51ec7afa947a7ed238d6c689e2aef55f3f467",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2414,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair053/DONE.json",
+          "sha256": "08c4e672f94edb31288162284c62da8b1c9701419c0acfdf00824c46f4e209e8"
+        }
+      },
+      {
+        "job": "pair406",
+        "archive_sha256": "c8ec1bc24a14c2eeeae10070acf73c7cb9a9a4ebf3a01dae881f99eb661887f4",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2072,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair406/DONE.json",
+          "sha256": "d401d1cce1edb77e6473ef14d6f2a4eaa06d27e5e23384323d43465f8bdb345b"
+        }
+      },
+      {
+        "job": "pair342",
+        "archive_sha256": "97efed0b6b640bb30dcffd61749cc3e908878fde685e1b23b89973ac91386230",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2415,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair342/DONE.json",
+          "sha256": "4513078d66b52ebfe54bbc75fa5d7005e0996c576145cab0f1e0dfb5488c8e90"
+        }
+      },
+      {
+        "job": "pair127",
+        "archive_sha256": "74d3a8c06b6f18958f0bc4854ecc311c22044dd418e53003a7e37867efac249b",
+        "archive_bytes": 179332,
+        "done": {
+          "bytes": 2412,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair127/DONE.json",
+          "sha256": "86b3240ce4fec1f9845e6fcb9f2859a5f4f9e4a9f6a0e100ae7b9a1a7584e070"
+        }
+      },
+      {
+        "job": "pair319",
+        "archive_sha256": "b81343a4f8c0cb121b163e4663046489bc44b94a6b8def6696bea8f2d5760970",
+        "archive_bytes": 179332,
+        "done": {
+          "bytes": 2099,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair319/DONE.json",
+          "sha256": "d9084d76694a1c455486dcc22ebf11ac077d63009ef342ce7f9ecef57be4df4d"
+        }
+      },
+      {
+        "job": "pair137",
+        "archive_sha256": "b439fc8cd55af2ae9a52e972e17ab6825734d6adf4523170f69246bdf5ceec77",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2072,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair137/DONE.json",
+          "sha256": "28a5a9bfa1a8b6dd00751e7ac399f64bc4775cf91330d8b594214fdf76fb3f97"
+        }
+      },
+      {
+        "job": "pair376",
+        "archive_sha256": "15009d1956e2ac9e07141ff82e3c5498bbda3044f13e465d2022eb3a7f45e27f",
+        "archive_bytes": 179332,
+        "done": {
+          "bytes": 2071,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair376/DONE.json",
+          "sha256": "3de6880cb47f2c7554cff2c78b4fda3a9c2362e07b53fb69eaa67d943871ee51"
+        }
+      },
+      {
+        "job": "pair032",
+        "archive_sha256": "bfc3e9973e557f705b7a1caeb91b02fe3008c642950f34dc5686b428cf697936",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2070,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair032/DONE.json",
+          "sha256": "9ac0b7c7861bb574701b15749f8fa38c6e5e69a2685f6c2fff3a1d4f0b8c9a57"
+        }
+      },
+      {
+        "job": "pair183",
+        "archive_sha256": "a069345f8858259817ca9d1f52ced1f7310f41a2aa20b431b25c166658a3452c",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2435,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair183/DONE.json",
+          "sha256": "a79f4c44efde0a495a446675172fa1b44f2d62884eff6113d2d1b5cae0df1eb7"
+        }
+      },
+      {
+        "job": "pair033",
+        "archive_sha256": "39446b8d8daba65754d5d5d2e941479fd94c50212d7f7aa7919d09f8d2fd3a6e",
+        "archive_bytes": 179334,
+        "done": {
+          "bytes": 2073,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair033/DONE.json",
+          "sha256": "4447ae7702a2bdcee8de35b03e7b6610bfd09e6ed5b1a7169af83495df3084a6"
+        }
+      },
+      {
+        "job": "pair134",
+        "archive_sha256": "fbb5dc4107ca32a6fb10cf19f757a8cc1ed6cf16594ce93c534c9c04e2166423",
+        "archive_bytes": 179332,
+        "done": {
+          "bytes": 2095,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair134/DONE.json",
+          "sha256": "5f9ed7c47b86b2ebf63f5110352368b5bd44cc26cf8f8a6f34c97d4c3920716a"
+        }
+      },
+      {
+        "job": "pair536",
+        "archive_sha256": "efec49abf688b1b8360a80862eaf2d2248fb4ef2cc2435898f5f65234b3ecefd",
+        "archive_bytes": 179336,
+        "done": {
+          "bytes": 2415,
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair536/DONE.json",
+          "sha256": "1c63485e80d93909e208d568bad29ecfae8368b8fd261568697cbd6738b906a1"
+        }
+      }
+    ],
+    "exchange_rows": {
+      "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+      "score_claim": false,
+      "verdict": "STOP_COLLATERAL_SEG",
+      "sample_n": 24,
+      "field": {
+        "kind": "resolved-credit diagnostic with held shipped carrier",
+        "credit_S_per_byte": {
+          "iqr": [
+            1.3693505251401696e-08,
+            2.840039142075699e-07
+          ],
+          "k": 18,
+          "max": 4.879948815326544e-07,
+          "median": 1.3782798299610095e-07,
+          "min": -3.7878554396237644e-07,
+          "n": 24
+        },
+        "bits_per_changed_token": {
+          "iqr": [
+            8.0,
+            16.0
+          ],
+          "k": 22,
+          "max": 24.0,
+          "median": 16.0,
+          "min": 0.0,
+          "n": 24
+        },
+        "archive_delta_bytes": {
+          "iqr": [
+            1.25,
+            2.0
+          ],
+          "k": 22,
+          "max": 4.0,
+          "median": 2.0,
+          "min": 0.0,
+          "n": 24
+        },
+        "zero_cost_pairs": [
+          127,
+          319,
+          376,
+          134
+        ],
+        "null_pairs": [
+          547,
+          502
+        ],
+        "positive_diagnostic_only_pairs": [
+          127,
+          376
+        ],
+        "source": {
+          "path": "/Volumes/APDataStore/pact/ddm_jrx2/DISCOVERY_RESULTS.json",
+          "bytes": 33073,
+          "sha256": "53b50573c1f9c792ed45ad3c1b4c6b4e9d03fdd9eb7d9a4bb132914953c0731c"
+        }
+      },
+      "renderer": {
+        "resolved_total_exchange": null,
+        "resolved_total_exchange_k": 0,
+        "archive_delta_bytes": {
+          "k": 24,
+          "n": 24,
+          "median": 28.0,
+          "iqr": [
+            2.0,
+            40.0
+          ]
+        },
+        "bits_per_step": {
+          "k": 24,
+          "n": 24,
+          "median": 224.0,
+          "iqr": [
+            16.0,
+            320.0
+          ]
+        },
+        "seg_censuses_k": 3,
+        "pairs_per_census": 600,
+        "source": {
+          "path": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+          "bytes": 3485,
+          "sha256": "7dfa174abb6ef708f83834c6cc6c5188fc828b35b266686992ecef8393d0abec"
+        }
+      },
+      "joint": {
+        "exchange": null,
+        "bits": null,
+        "joint_vs_better_single_ratio": null,
+        "all_three_finite_k": 0,
+        "n": 24,
+        "reason": "Chartered Seg collateral stop before joint implementation or scoring"
+      },
+      "population_negative_banked": false
+    },
+    "independent_process_dispersion_measured": false,
+    "pair_bootstrap_measured": false,
+    "score_claim": false
+  },
+  "residual": 0.0,
+  "source_artifact": ".omx/research/ddm_jrx2_20260916/EXCHANGE_ROWS.json",
+  "measurement_method": "fraction_of_completed_in_process_encoder_twin_archive_pairs_with_unequal_sha256",
+  "provenance": {
+    "artifact_kind": "research_sidecar",
+    "source_path": ".omx/research/ddm_jrx2_20260916/EXCHANGE_ROWS.json",
+    "source_sha256": "8d1d3bd5453b285393920b5fa4babf762f1dd22945f45b49cd1c0a9ddfad120b",
+    "measurement_axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+    "hardware_substrate": "macOS26.4 arm64,18 logical CPUs; CPU native coder, frozen CPU scorers",
+    "evidence_grade": "research_only",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "captured_at_utc": "2026-09-16T07:35:43.509407Z",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+    "contest_archive_zip_path": "",
+    "contest_archive_member_name": "",
+    "composed_from": [],
+    "rejection_reason": "Research-only diagnostics; a new admissible candidate requires embodied carrier, public decode, resolved all-affected-pair scores, and exact authority evaluation. No joint or population ratio is measured here."
+  },
+  "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+  "noise_floor": null,
+  "noise_floor_provenance": null
+}

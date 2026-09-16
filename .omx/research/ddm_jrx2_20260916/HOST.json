@@ -1,0 +1,23 @@
+{
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "python": "3.13.12",
+  "logical_cpu_count": 18,
+  "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+  "niceness": 0,
+  "sysctl_hardware_query": "sandbox denied; no unverified chip model claim",
+  "package_versions": {
+    "numpy": "1.26.4",
+    "torch": "2.12.1",
+    "scipy": "1.17.1",
+    "Brotli": "1.2.0",
+    "safetensors": "0.8.0",
+    "Pillow": "12.2.0",
+    "constriction": "0.4.2"
+  },
+  "seed_roles": {
+    "sample_solver_gradient": 20260916,
+    "inherited_encoder_inputs": 20260912,
+    "harvest": "no RNG"
+  }
+}

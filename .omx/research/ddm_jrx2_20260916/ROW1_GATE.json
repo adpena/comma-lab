@@ -1,0 +1,135 @@
+{
+  "path": "/Volumes/APDataStore/pact/ddm_jrx2/ROW1_GATE.json",
+  "bytes": 3657,
+  "sha256": "005282a19f12842d9cf4f7daa3f499d624e623e05a1673c7609c9a5b238015c0",
+  "data": {
+    "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+    "failures": [],
+    "k": 12,
+    "n": 12,
+    "passed": true,
+    "rows": [
+      {
+        "bits": 19.38802522799506,
+        "credit": 1.9923507893671305e-07,
+        "credit_relative_error": 0.0,
+        "pair": 53,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 19.38802522799506,
+        "reference_credit": 1.9923507893671305e-07
+      },
+      {
+        "bits": 11.524284180383574,
+        "credit": 2.8060657408521974e-08,
+        "credit_relative_error": 0.0,
+        "pair": 80,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 11.524284180383574,
+        "reference_credit": 2.8060657408521974e-08
+      },
+      {
+        "bits": 11.802267027299877,
+        "credit": 6.278080040548518e-07,
+        "credit_relative_error": 0.0,
+        "pair": 208,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 11.802267027299877,
+        "reference_credit": 6.278080040548518e-07
+      },
+      {
+        "bits": 18.698331008833293,
+        "credit": 7.36622159031963e-07,
+        "credit_relative_error": 0.0,
+        "pair": 214,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 18.698331008833293,
+        "reference_credit": 7.36622159031963e-07
+      },
+      {
+        "bits": 15.325125570184127,
+        "credit": 5.936499581019724e-07,
+        "credit_relative_error": 0.0,
+        "pair": 236,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 15.325125570184127,
+        "reference_credit": 5.936499581019724e-07
+      },
+      {
+        "bits": 16.329841959444366,
+        "credit": 1.739078339065993e-07,
+        "credit_relative_error": 0.0,
+        "pair": 250,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 16.329841959444366,
+        "reference_credit": 1.739078339065993e-07
+      },
+      {
+        "bits": 12.63239904307602,
+        "credit": 6.034227005539437e-07,
+        "credit_relative_error": 0.0,
+        "pair": 296,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 12.63239904307602,
+        "reference_credit": 6.034227005539437e-07
+      },
+      {
+        "bits": 14.80110345974299,
+        "credit": 3.1112560784493623e-07,
+        "credit_relative_error": 0.0,
+        "pair": 382,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 14.80110345974299,
+        "reference_credit": 3.1112560784493623e-07
+      },
+      {
+        "bits": 12.660944682235595,
+        "credit": 1.320373628542364e-07,
+        "credit_relative_error": 0.0,
+        "pair": 385,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 12.660944682235595,
+        "reference_credit": 1.320373628542364e-07
+      },
+      {
+        "bits": 11.691861772574839,
+        "credit": 4.879948815326544e-07,
+        "credit_relative_error": 0.0,
+        "pair": 398,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 11.691861772574839,
+        "reference_credit": 4.879948815326544e-07
+      },
+      {
+        "bits": 5.649953712846127,
+        "credit": 2.475604528335346e-08,
+        "credit_relative_error": 0.0,
+        "pair": 406,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 5.649953712846127,
+        "reference_credit": 2.475604528335346e-08
+      },
+      {
+        "bits": 16.27066360808658,
+        "credit": 9.254048363749315e-07,
+        "credit_relative_error": 0.0,
+        "pair": 583,
+        "passed": true,
+        "price_relative_error": 0.0,
+        "reference_bits": 16.27066360808658,
+        "reference_credit": 9.254048363749315e-07
+      }
+    ],
+    "score_claim": false
+  }
+}

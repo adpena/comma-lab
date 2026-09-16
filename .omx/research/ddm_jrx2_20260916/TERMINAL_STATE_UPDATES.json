@@ -1,0 +1,86 @@
+[
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/canonical_task_status.py",
+      "update",
+      "--task-id",
+      "ddm_jrd1_joint_exchange_scorer_phase_20260916",
+      "--status",
+      "cancelled",
+      "--actor",
+      "ddm_jrx2",
+      "--session-id",
+      "ddm_jrx2_20260916",
+      "--test-status",
+      "green",
+      "--notes",
+      "Chartered continuation cancelled by STOP_COLLATERAL_SEG: repaired control12/12 exact; three named int4 actions each n600 fire other599 Seg collateral predicate. All22 individual field prices harvested, all41 detached children rc0. Joint and resolved renderer-only total exchanges unmeasured, not a completed joint ratio or K24 population negative. Consumer .omx/research/ddm_jrx2_20260916/RECEIPT.md; no burn authorized."
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"actual_delta_s\": null,\n  \"blockers\": [],\n  \"commit_shas\": [],\n  \"completed_at_utc\": null,\n  \"event_actor\": \"ddm_jrx2\",\n  \"event_notes\": \"Chartered continuation cancelled by STOP_COLLATERAL_SEG: repaired control12/12 exact; three named int4 actions each n600 fire other599 Seg collateral predicate. All22 individual field prices harvested, all41 detached children rc0. Joint and resolved renderer-only total exchanges unmeasured, not a completed joint ratio or K24 population negative. Consumer .omx/research/ddm_jrx2_20260916/RECEIPT.md; no burn authorized.\",\n  \"event_timestamp_utc\": \"2026-09-16T07:38:20.559941Z\",\n  \"event_type\": \"cancelled\",\n  \"owner\": \"MAIN\",\n  \"predicted_cost_usd\": 0.0,\n  \"predicted_delta_s_band\": null,\n  \"schema_version\": \"canonical_task_status_v1_20260518\",\n  \"session_id\": \"ddm_jrx2_20260916\",\n  \"source_design_memo\": \".omx/research/ddm_jrd1_20260916/FIRE_ORDER.md\",\n  \"started_at_utc\": \"2026-09-16T04:41:06.684010Z\",\n  \"status\": \"cancelled\",\n  \"task_id\": \"ddm_jrd1_joint_exchange_scorer_phase_20260916\",\n  \"test_status\": \"green\",\n  \"title\": \"Measure jrd1 joint exchange after explicit scorer-slot assignment\",\n  \"written_at_utc\": \"2026-09-16T07:38:20.559941Z\",\n  \"written_host\": \"mac.lan\",\n  \"written_pid\": 22662\n}\n",
+    "stderr": "<string>:25: UserWarning: canonical_task_status: task z8_canonical_l28_plus_l32_pr_family_quick_wins_bolt_on_cascade_20260530 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- a bare reference NUMBER is not a baseline -- nobody can date, locate or re-derive it, which is exactly how a reference that had been superseded five times kept being divided by; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task closed_spec_boundary_solver_v1_20260610 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task cross_pair_waterfilled_corrector_20260610 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task fp_shrink_qat_rate_lever_smoke_20260617 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task boundary_flip_sidecar_native_grid_in_cell_repair_20260617 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task taskspace_codec::g55_g57_direct_layered_public_closure asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task g51_full_n600_quotient_harvest_20260727 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n/Users/adpena/Projects/pact/src/tac/canonical_task_status/contract.py:333: UserWarning: canonical_task_status: event_notes was list, not str -- joined for readability; the SOURCE ROW is malformed and must be corrected by appending a fixed row (the ledger is append-only)\n  event_notes=_coerce_event_notes(obj.get(\"event_notes\")),\n<string>:25: UserWarning: canonical_task_status: task 817 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 826 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- a bare reference NUMBER is not a baseline -- nobody can date, locate or re-derive it, which is exactly how a reference that had been superseded five times kept being divided by; UNDECLARED_PARTIAL_COMPOSITE: this row reads as a delta over a SUBSET of {seg, pose, rate}, which is not a \u0394S. Declare it as [partial:seg+rate] so a downstream reader cannot drop the qualifier -- one such row advertised -0.0866 while its composed row measured +19.22; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 827 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; UNDECLARED_PARTIAL_COMPOSITE: this row reads as a delta over a SUBSET of {seg, pose, rate}, which is not a \u0394S. Declare it as [partial:seg+rate] so a downstream reader cannot drop the qualifier -- one such row advertised -0.0866 while its composed row measured +19.22; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 871 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 850 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 873 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 882 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 1079_pv1_pose_floor_and_admission_bar_audit_20260816 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 1082_ddm_dc1_decode_budget_conditional_coding_20260816 asserts a \u0394S without full custody: MISSING_BASELINE: a \u0394S asserts a difference, so it is undefined without the row it was measured against. Add [baseline:<artifact-locator>=<S recomputed from components>] -- our own frontier moved six times in one day; MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n<string>:25: UserWarning: canonical_task_status: task 1082_ddm_hm1_hpac_model_byte_derivative_20260816 asserts a \u0394S without full custody: MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally correlated video list is a different population, not a smaller sample of the same one\n/Users/adpena/Projects/pact/src/tac/canonical_task_status/loader.py:244: UserWarning: canonical_task_status: 2 task(s) UNREADABLE and EXCLUDED from the served rows -- their history is broken and cannot be served, but the remaining 1048 rows load and writes proceed. Repair by appending a corrected lifecycle (the ledger is append-only). 1079_pv1_pose_floor_and_admission_bar_audit_20260816: non-registration event for unknown task_id; 1082_ddm_hm1_hpac_model_byte_derivative_20260816: non-registration event for unknown task_id\n  for row in load_canonical_task_status_strict(repo_root):\n"
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/claim_lane_dispatch.py",
+      "claim",
+      "--lane-id",
+      "ddm_jrx2_joint_exchange_probe_repaired_row1_20260916",
+      "--platform",
+      "local_macos_cpu",
+      "--instance-job-id",
+      "ddm_jrx2_probe_20260916",
+      "--agent",
+      "ddm_jrx2",
+      "--status",
+      "stopped_collateral_seg_harvest_complete",
+      "--notes",
+      "All41 detached children terminal rc0, all22 individual prices harvested and all30 price jobs verified. Three named n600 renderer actions fire Seg collateral stop; no further scorer or joint work. Sole scorer slot and local encoder work released. Source/evidence handoff only; frontier unchanged."
+    ],
+    "rc": 0,
+    "stdout": "CLAIM_RECORDED lane_id=ddm_jrx2_joint_exchange_probe_repaired_row1_20260916 platform=local_macos_cpu job=ddm_jrx2_probe_20260916 status=stopped_collateral_seg_harvest_complete\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/lane_maturity.py",
+      "set-field",
+      "ddm_jrx2_joint_exchange_probe_repaired_row1_20260916",
+      "--field",
+      "notes",
+      "--value",
+      "research_only; terminal STOP_COLLATERAL_SEG. Row1 passes12/12, real field prices22/24, Seg collateral3/24 actions each n600. No resolved renderer total or joint row, no score. L0 deliberately retained; RECEIPT.md and EXCHANGE_ROWS.json bind scope."
+    ],
+    "rc": 0,
+    "stdout": "OK \u2014 ddm_jrx2_joint_exchange_probe_repaired_row1_20260916.notes = 'research_only; terminal STOP_COLLATERAL_SEG. Row1 passes12/12, real field prices22/24, Seg collateral3/24 actions each n600. No resolved renderer total or joint row, no score. L0 deliberately retained; RECEIPT.md and EXCHANGE_ROWS.json bind scope.'\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      ".venv/bin/python",
+      "tools/subagent_checkpoint.py",
+      "--subagent-id",
+      "ddm_jrx2",
+      "--step",
+      "10",
+      "--status",
+      "in_progress",
+      "--lane-id",
+      "ddm_jrx2_joint_exchange_probe_repaired_row1_20260916",
+      "--files-touched",
+      "experiments/ddm_jrx2_control.py,experiments/ddm_jrx2_renderer.py,experiments/ddm_jrx2_harvest.py",
+      "--next-action",
+      "Finalize owned-row export and provenance, run serializer LAST, verify any rc17 bundle and queue MAIN landing.",
+      "--finding",
+      "All41 detached steps rc0; all30 twin price jobs verified. Field median16 bits/token22/24 and positive-cost median1.37828e-7 S/B18/24; joint ratio null after named Seg collateral stop.",
+      "--notes",
+      "All scientific work terminal; 1,384,195,772 retained bytes under3GiB plus seven-byte pending regression fixture. Shared index unchanged at preharvest. No new scientific follow-on queued; spatial-selective question folded into rw1 OWED1f."
+    ],
+    "rc": 0,
+    "stdout": "{\"expected_outputs\": null, \"files_touched\": [\"experiments/ddm_jrx2_control.py\", \"experiments/ddm_jrx2_renderer.py\", \"experiments/ddm_jrx2_harvest.py\"], \"findings\": [\"All41 detached steps rc0; all30 twin price jobs verified. Field median16 bits/token22/24 and positive-cost median1.37828e-7 S/B18/24; joint ratio null after named Seg collateral stop.\"], \"host\": \"mac.lan\", \"lane_id\": \"ddm_jrx2_joint_exchange_probe_repaired_row1_20260916\", \"next_action\": \"Finalize owned-row export and provenance, run serializer LAST, verify any rc17 bundle and queue MAIN landing.\", \"notes\": \"All scientific work terminal; 1,384,195,772 retained bytes under3GiB plus seven-byte pending regression fixture. Shared index unchanged at preharvest. No new scientific follow-on queued; spatial-selective question folded into rw1 OWED1f.\", \"parent_id_or_session\": \"01a0a8a1-2b53-7ad0-bebe-6f91a9221f67\", \"pid\": 22673, \"respawn_context\": null, \"status\": \"in_progress\", \"step\": 10, \"subagent_id\": \"ddm_jrx2\", \"written_at_utc\": \"2026-09-16T07:38:20.655062+00:00\"}\n",
+    "stderr": ""
+  }
+]

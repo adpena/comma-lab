@@ -1,0 +1,20 @@
+[
+  {
+    "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/RECALL_memos.txt",
+    "destination": "/Volumes/APDataStore/pact/ddm_jrx2/recall/RECALL_memos.txt",
+    "bytes": 46994895,
+    "sha256": "34c59078053478dd337a2bad1ffcdd3cdda417c8500761879437c1dc5a682a23",
+    "command": "full-corpus rg / canonical registry CLI; see RECALL_SEARCHES.json",
+    "reason": "lossless externalization of recall output",
+    "score_claim": false
+  },
+  {
+    "original_path": "/Users/adpena/Projects/pact/.omx/research/ddm_jrx2_20260916/RECALL_EQUATIONS.json",
+    "destination": "/Volumes/APDataStore/pact/ddm_jrx2/recall/RECALL_EQUATIONS.json",
+    "bytes": 3787485,
+    "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68",
+    "command": "full-corpus rg / canonical registry CLI; see RECALL_SEARCHES.json",
+    "reason": "lossless externalization of recall output",
+    "score_claim": false
+  }
+]
