@@ -1,0 +1,58 @@
+{
+ "schema": "ffi6_gate0_receipt.v1",
+ "phase": "AFTER",
+ "axis": "[source + exact digest arithmetic]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "measured_at_utc": "2026-09-16T19:50:00Z",
+ "head_commit": "5a603bf07ca7e44280696613f219ecd01ee4add6",
+ "frozen_amendment_rows": 12,
+ "appended_row": {
+  "fix_batch_id": "ffi6_poller_auth_eval_runtime_tree_pin_20260916",
+  "implementation_commit": "afc2b294b8709a7031eddb8cc49a90457ce996b6",
+  "previous_row_sha256": "d9553f662a04428f630a090c06e24267c08aeefc85afceb4d3b4d11f1ea47e7f",
+  "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+  "definition_change": false,
+  "row_sha256": "f1c76c8b11dd61a03410db298adf03cfc31ba0f8a714b229617be8cf540f9795"
+ },
+ "freeze_history": "VALID",
+ "definition_parent_sha256": "05aa14352f01ac356387c40577cd6a2d94eff37b7d010ec1df3c9d3b60556da8",
+ "consumer_pins_checked": 15,
+ "consumer_pins_clean": 15,
+ "synthetic_live_contract_probe": {
+  "drift_checks": "PASSED",
+  "stopped_at": "KeyError 'evidence' (stub intent carries no evidence block; every contract drift check ran first)"
+ },
+ "real_producer_run": {
+  "tool": "tools/make_candidate_seal.py --first-fire-intent",
+  "candidate_id": "ddm_mrs5_minimal_packet_geometry_native",
+  "runtime_dir": "/Users/adpena/Projects/pact/submissions/mrs5",
+  "rc": 3,
+  "stderr_verbatim": "PREFIRE_IDENTITY_DRIFT_REFUSED: receiver/archive pins disagree",
+  "refusal_receipt": ".omx/research/ddm_ffi6_20260916/prefire_probe/PREFIRE_REFUSAL_0b5b7b2ce059402db56e7558a377ed18.json",
+  "gate0_fired": false,
+  "intent_created": false,
+  "note": "PREFIRE_CONTRACT_DRIFT_REFUSED no longer fires; the producer advances to the candidate-specific identity gate."
+ },
+ "gate1_reproduced": {
+  "call": "tac.candidate_seal.measure_prefire_risk_receiver_digest(submissions/mrs5)",
+  "result": {
+   "REFUSED": "PREFIRE_RISK_EVIDENCE_REFUSED",
+   "detail": "both archive pins required"
+  }
+ },
+ "gate1_sister_normalizer": {
+  "call": "tac.decode_wall_clock.measure_receiver_digest(submissions/mrs5)",
+  "result": "6ee7beeeee7ee4ec893d71a3126e84b47be2a5cda9233b718a58ae8b2266dccc"
+ },
+ "gate2_pin_consistency": {
+  "call": "tac.candidate_seal.check_pin_consistency(submissions/mrs5)",
+  "verdict": "PIN_ABSENT",
+  "ok": false
+ },
+ "regression_suites": {
+  "cmd": "pytest test_candidate_prefire_intent test_candidate_seal test_decode_wall_clock_t4_direct test_decode_wall_clock test_pointer_move_packet",
+  "passed": 297,
+  "failed": 0
+ }
+}

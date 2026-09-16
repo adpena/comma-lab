@@ -1,0 +1,8 @@
+{
+  "schema": "candidate_first_measurement_refusal.v1",
+  "code": "PREFIRE_IDENTITY_DRIFT_REFUSED",
+  "detail": "receiver/archive pins disagree",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "created_at_utc": "2026-09-16T19:45:24.855488+00:00"
+}
