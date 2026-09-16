@@ -1,0 +1,2013 @@
+{
+ "schema": "arm_fallback_coldstore.v1",
+ "utc": "2026-09-16T00:27:55Z",
+ "reason": "serializer fallback bundles/patches/recall snapshots from codex arms during the 2026-09-10/11 sandbox Git-object denial; content landed on main by MAIN (memory codex_arms_cannot_write_git_objects_\u2026); duplicates of HEAD blobs; rebuildable from git history + the landed memos",
+ "head": "b032aecff0f07176927fad0ff50d30a5dfb0d856",
+ "archives": [
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_cpx2_20260910.tar",
+   "tar_bytes": 1464320,
+   "tar_sha256": "9e38ac4e1c93fa63f66ec8d7d8d016b7edd752cd48a9a161f0efbd2047e91bd7",
+   "files": [
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/objects/pack/pack-2a8be5ee64d4d3b38dff961700e902b3ba783bc6.idx",
+     "bytes": 2416,
+     "sha256": "b05f9696145749ab29676d4fde2e292d2af5f2a1d265638cd3950b9858c9f499"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/objects/pack/pack-2a8be5ee64d4d3b38dff961700e902b3ba783bc6.rev",
+     "bytes": 244,
+     "sha256": "83c4e0ce7f4c0b5579ef58470490a7e6b4ce2e1bcd1fd359ad4a999cebd733ba"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/objects/pack/pack-2a8be5ee64d4d3b38dff961700e902b3ba783bc6.pack",
+     "bytes": 1387478,
+     "sha256": "8d8f6e5dbb6e5b0f7595498d43d2d87abae20ff9b831c60db2a23f0b8c8b5178"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_cpx2_20260910/bundle_verify.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_cpx3_20260910.tar",
+   "tar_bytes": 14499840,
+   "tar_sha256": "63b6c5996716b8a1b5a38b3e817a2dcdd7de08b5e28744fd96cc42a7c511896e",
+   "files": [
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/objects/pack/pack-cda454af75ad0d7f281abc122091df77ba9214c6.idx",
+     "bytes": 2612,
+     "sha256": "2c45a72e020f5ac84ada79a9aa574f98e85cb02749f20faf794fbcd03ba5db01"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/objects/pack/pack-cda454af75ad0d7f281abc122091df77ba9214c6.pack",
+     "bytes": 1411513,
+     "sha256": "8deeed680a438d3633d9d3e7be27e05f27fd08bf60928a24a67258d6ba7375df"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/objects/pack/pack-cda454af75ad0d7f281abc122091df77ba9214c6.rev",
+     "bytes": 272,
+     "sha256": "40d83f82fdf77fca994027dd582804e49119fd0f2b7944d97e43cf9dd02381ea"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/refs/heads/verified",
+     "bytes": 41,
+     "sha256": "2124bde6ca0639a6c5d0744e935c2e858e68849807c8f834b90cfac611718a7e"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/bundle_verify.git/FETCH_HEAD",
+     "bytes": 198,
+     "sha256": "bf28bc11ba3f7bf7bd34b9b27105f36b7e283529ecae998a58d2bfb147b22e5f"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/landing.patch",
+     "bytes": 4331849,
+     "sha256": "f34c2c5edc6434d621860934d8b4b1c3c983379b09a9bff6e5657a59f3e083d0"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/serializer/20260910T231014.052116Z-92852/intended-commit.format-patch",
+     "bytes": 4337650,
+     "sha256": "44cb0db0e54af6f0886213dba75be093a51a85fc360abde8043b2ab5691aeb46"
+    },
+    {
+     "path": ".omx/research/ddm_cpx3_20260910/serializer/20260910T231014.052116Z-92852/intended-tree.patch",
+     "bytes": 4331849,
+     "sha256": "f34c2c5edc6434d621860934d8b4b1c3c983379b09a9bff6e5657a59f3e083d0"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_ffi4_20260910.tar",
+   "tar_bytes": 184320,
+   "tar_sha256": "60d793312e119d2226653f1935ad50d4d28896b66fec4ce720520a9d59e2b79b",
+   "files": [
+    {
+     "path": ".omx/research/ddm_ffi4_20260910/serializer/20260910T185739.021679Z-79664/intended-commit.format-patch",
+     "bytes": 90848,
+     "sha256": "8dfc17d5fdfb2fd407b315621bb342338500ec6f35d717b2f546fb869f1c3510"
+    },
+    {
+     "path": ".omx/research/ddm_ffi4_20260910/serializer/20260910T185739.021679Z-79664/intended-tree.patch",
+     "bytes": 88274,
+     "sha256": "54e2c6b8e87a6e3970345ae8b0971a412ae06a16f7c5c6f93b8ce7df41954e14"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_hb1_20260910.tar",
+   "tar_bytes": 1556480,
+   "tar_sha256": "8f579c256159eb2fb6d7d9627e17a90158985ee212c3ab683edfce09e5db673f",
+   "files": [
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/objects/pack/pack-12ce922a09ef62837e9eb552d3cfc9228bd58178.rev",
+     "bytes": 176,
+     "sha256": "9380333b594b199ec0ee865c0d648a05d824178a54a9aeadb6eb8cf577c03ca1"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/objects/pack/pack-12ce922a09ef62837e9eb552d3cfc9228bd58178.pack",
+     "bytes": 738185,
+     "sha256": "3559d837d170be4319a9c530a0e1ec86d3f0b860ca77636abca5d09c1e705113"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/objects/pack/pack-12ce922a09ef62837e9eb552d3cfc9228bd58178.idx",
+     "bytes": 1940,
+     "sha256": "c785f25af32e5eb9d1ad082e2a1ff7064fcffc5b8f2e054f30af152c8c60e413"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/bundle_verify.git/refs/heads/verified",
+     "bytes": 41,
+     "sha256": "93d0c1f7d263e77ba99b874e86ca2bafd63d775bb64e6b7ac93b8b050c9c6ab7"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/index_after_serializer.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/index_before_serializer.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/serializer/20260910T125557.742416Z-96738/intended-commit.bundle",
+     "bytes": 71080,
+     "sha256": "60a1bced8e0111ea4115a9ab19cd109be54a23029315cd0f149d7a9e428798cc"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/serializer/20260910T125557.742416Z-96738/intended-tree.patch",
+     "bytes": 331096,
+     "sha256": "96807c7f6a68dec0c5489644ec3f4bc4240fd6e505eb41e8dfb95ed7a1757f8c"
+    },
+    {
+     "path": ".omx/research/ddm_hb1_20260910/serializer/20260910T125557.742416Z-96738/intended-commit.format-patch",
+     "bytes": 333109,
+     "sha256": "d0e9d20ec18cfad6fb1c5dc4d335fecc6925c376be71b6aa24808aeb67403582"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_mv1_20260910.tar",
+   "tar_bytes": 12840960,
+   "tar_sha256": "dc84af11222e3a57ba79b59c4335582bd21caa19b40aee0868fc6b2f156aacfe",
+   "files": [
+    {
+     "path": ".omx/research/ddm_mv1_20260910/landing.patch",
+     "bytes": 100771,
+     "sha256": "ea104296ba676338472bb884b0356bb88c44e1da122d2eb68e4d6e645d2e6c92"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/serializer_fallback/20260910T035833.788764Z-73150/intended-commit.bundle",
+     "bytes": 24801,
+     "sha256": "71cb167ba2df1b2b8b07ea781f2ee34bb38f72d9b87ae3ba677da2aa24e0f952"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/serializer_fallback/20260910T035833.788764Z-73150/intended-tree.patch",
+     "bytes": 100771,
+     "sha256": "ea104296ba676338472bb884b0356bb88c44e1da122d2eb68e4d6e645d2e6c92"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/serializer_fallback/20260910T035833.788764Z-73150/intended-commit.format-patch",
+     "bytes": 105146,
+     "sha256": "ff60ba6256ccc2114320b852c76d4435ea9828088047f478174682ddf2d2ed03"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/tools/review_tracker.py",
+     "bytes": 85004,
+     "sha256": "070e17e9df4493220aeb61b703d2970e06f8a62b0936388c57672d79b9ccf2d0"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/experiments/ddm_jg2_tail_reencode.py",
+     "bytes": 59527,
+     "sha256": "628b2a2b459dfc9650d0238ce6867559ccd40d5bd158fba1dc7e6a73afba1cf5"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/experiments/ddm_vr3_certified_raw_reclaim.py",
+     "bytes": 50291,
+     "sha256": "74dee98f3e4dce63f21dc6f7b0510dfb099b965f455acd5cd3480b36b44890f3"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/experiments/ddm_rp1_rate_rank.py",
+     "bytes": 40341,
+     "sha256": "816527a75b1463ca03a97b3895d2e08e26b31837731baa54f230e235bbdd6422"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/experiments/__pycache__/ddm_vr3_certified_raw_reclaim.cpython-313.pyc",
+     "bytes": 70963,
+     "sha256": "d79edbc476cbb51c842210ea6005d9f407b81a6662c7dd5e0761056c4e0d2346"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/experiments/__pycache__/ddm_jg2_tail_reencode.cpython-313.pyc",
+     "bytes": 66999,
+     "sha256": "3f6f9ff38cc9887347264ed2df16ce6b67ba24a7457437a53ba107086a755777"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/experiments/ddm_sj1_pass5_price.py",
+     "bytes": 28009,
+     "sha256": "e45de886b0aab20d90b928d3bd7759a888336bded94792fa4c90aeaa2c6082e7"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/docs/meta_bug_class_catalog.md",
+     "bytes": 836982,
+     "sha256": "044a78afdcf774745ff27fad05b3e16ec4bbfc557463074650586857169b0a97"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/pytest.log",
+     "bytes": 271,
+     "sha256": "ae609ba9177e9d2077fbc554c74e71e6d93572671eb190adb36ea95cdb1dd67d"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/review_tracker_pass2.log",
+     "bytes": 1455,
+     "sha256": "4a1c970b73e6ca11355581d6b4cd72723d8afd04ccf80d26e8e37f4b3f2f4d10"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/ruff.json",
+     "bytes": 1286,
+     "sha256": "d2d3d8bf8d244ace808b0e0f65ee9478e45b559242437e83ea50fab8fc8ce9d3"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/review_tracker_pass1.log",
+     "bytes": 1446,
+     "sha256": "ffd415eed1e75c0c8580e618545d92edddb2302b87a428856fdc8d7c48e403b3"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/review_pass1.json",
+     "bytes": 1893,
+     "sha256": "693054de35a7eb054fb03cb84e65df3b0067c517644396cf9a4a29625e6b6add"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/final_real_resolution.json",
+     "bytes": 1952,
+     "sha256": "b5789bbf42711413e17fd48a209f1620f891d25285c24cc9f88bb55fe8a9ad37"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/census.json",
+     "bytes": 32036,
+     "sha256": "6f923b1cbde2d3e2e761b9f61545db8f0edd5407412846044ffe8188071f0d02"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/review_pass2.json",
+     "bytes": 2039,
+     "sha256": "9f99a9ca3cb483a1ce14cc846672c5d365a9a0508ecae23d38a9e3712e66a36d"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_20260910/equations_recall.json",
+     "bytes": 11331,
+     "sha256": "bb00056c8616352daff16d6fd8303d9d694dc7d1b7846b1c24b0fe91eecf659b"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/research/ddm_mv1_moved_manifest_resolution_20260910.md",
+     "bytes": 11733,
+     "sha256": "29b152110e749a87aa67b8ccb4a2bcd897a54f7bd547df0b7f8ef7ec3a00b73c"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/state/review_tracker.json",
+     "bytes": 883436,
+     "sha256": "1c80007b58fc95cba64bfe0d17a1b305ce700000f3d070bbfb68ab27e71857a9"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/state/next_catalog_number.txt",
+     "bytes": 4,
+     "sha256": "d657346f4b1b586fc2219de041804d0a28946ab90d1f9175ee0769e2a19abf10"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/state/review_policy.json",
+     "bytes": 6983,
+     "sha256": "fa1d47263e3383ecb0fd343725390fd79029c0772971f5dfd9bd37c7280bc236"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/.omx/state/review_tracker.duckdb",
+     "bytes": 2371584,
+     "sha256": "6a0c6c7b990f3df5218500447a0ffc3c760725dd98ab43cf00adfed8c6b08d7c"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/candidate_seal.py",
+     "bytes": 67937,
+     "sha256": "ab766e31aa6ffcd1cb0b9361417434bf56c2e7ea34eec85c80203a338dc686df"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/tests/test_artifact_moved.py",
+     "bytes": 12064,
+     "sha256": "076492ef8b9fe9195efe5004d5edef2bbb1f231e1d5ca70d5056c70dc1b8dbba"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/tests/__pycache__/test_artifact_moved.cpython-313-pytest-9.1.1.pyc",
+     "bytes": 55079,
+     "sha256": "ca4658ee882707ba6cd46ca9f564014dcc7bd60f677ca6a320c182cc6de7b901"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/__pycache__/artifact_moved_gate.cpython-313.pyc",
+     "bytes": 10100,
+     "sha256": "105fdbf8ac9feb3178d6a5a2a73e20aca87c147ea14ce81a15e4e87adb36166d"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/__pycache__/preflight.cpython-313.pyc",
+     "bytes": 3426462,
+     "sha256": "2e4c87a40bb7f5ef619a68d0ce1b13e8da986b9033272aee131e04720723e88a"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/__pycache__/candidate_seal.cpython-313.pyc",
+     "bytes": 70930,
+     "sha256": "b04053b4d8cfce3f029657cf8fd39ef341b8465a072b737f8e6c39f01d706d66"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/__pycache__/artifact_moved.cpython-313.pyc",
+     "bytes": 7818,
+     "sha256": "7ceb9e315d20818a4e0c39e5ad36a85291f840c482267d32d90071a8ac6ceaf4"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/artifact_moved.py",
+     "bytes": 3850,
+     "sha256": "51483b1cd7a1dc160455c3adfeb357ccae5090f67c4fe1422b56b13dce26b17c"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/artifact_moved_gate.py",
+     "bytes": 3587,
+     "sha256": "bb7a24994d66f7f98868f7e9f2fe83a2de31ead2bcef1bb010e593d8926eb2cf"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/staged/src/tac/preflight.py",
+     "bytes": 4214450,
+     "sha256": "45459397fc0afc245355d3aed58c51c767e009aaa0c70bbb3ef3ea7a79b9a7a2"
+    },
+    {
+     "path": ".omx/research/ddm_mv1_20260910/wire.py",
+     "bytes": 5258,
+     "sha256": "2740d5dbdd8bfc6c3949d411a5c341dbb70b10c0b2ce3d8385208e39f8c189f4"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_mv3_20260910.tar",
+   "tar_bytes": 3706880,
+   "tar_sha256": "cb13c1022390ce7478498f861f721c1818eaf113bd02b370972025282cbd7bac",
+   "files": [
+    {
+     "path": ".omx/research/ddm_mv3_20260910/equations_recall.json",
+     "bytes": 3703678,
+     "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_ntb2_20260911.tar",
+   "tar_bytes": 12165120,
+   "tar_sha256": "a2dc82a140e001a02024c6cfc64228e6d80f4c8504186e258d7b88db8df66fa5",
+   "files": [
+    {
+     "path": ".omx/research/ddm_ntb2_20260911/equations_recall.json",
+     "bytes": 3703678,
+     "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+    },
+    {
+     "path": ".omx/research/ddm_ntb2_20260911/equations_stderr.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_ntb2_20260911/recall_0.txt",
+     "bytes": 8452012,
+     "sha256": "674961d6c1ea1b0c7723d15df9aad6a865cdd94294ad32beb61fd3ae633747a2"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_pk1_20260910.tar",
+   "tar_bytes": 1556480,
+   "tar_sha256": "fa60c2838fdffdfae6094e06b014b515e91457cb132ec72930b0eecf15eaba54",
+   "files": [
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/objects/pack/pack-66935a4c131376407953ab40787e51fe0c1af1e4.pack",
+     "bytes": 509075,
+     "sha256": "bf8714855997e6d2e4ea258220ea6b44c95dde291741f46ff35c274793a5e125"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/objects/pack/pack-66935a4c131376407953ab40787e51fe0c1af1e4.idx",
+     "bytes": 1884,
+     "sha256": "daa9cbfc9b8ee80ec211e6e2afe217f352662e3d64058ba4ce90d7a8b37a1bd7"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/objects/pack/pack-66935a4c131376407953ab40787e51fe0c1af1e4.rev",
+     "bytes": 168,
+     "sha256": "0601f6b71f82aafef9d11dbcfc2fe415c4cce5b68072b76356d19926714222d0"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/bundle_verify.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/serializer_fallback/20260910T121047.969204Z-67329/intended-commit.bundle",
+     "bytes": 64417,
+     "sha256": "b6715dc3b281ff88fbb674a9697cabae31d3c151e631c377290b8272400c99aa"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/serializer_fallback/20260910T121047.969204Z-67329/intended-tree.patch",
+     "bytes": 448645,
+     "sha256": "e3215760faa0ee88f9dc4294d616becec1f2e7ea1a8cbe2d33c3b233897e6b53"
+    },
+    {
+     "path": ".omx/research/ddm_pk1_20260910/serializer_fallback/20260910T121047.969204Z-67329/intended-commit.format-patch",
+     "bytes": 453161,
+     "sha256": "4924045676ac76f92b87f081ce3286b33377b316651919bcfd8b4a1de3bb8c9f"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_pr8_20260910.tar",
+   "tar_bytes": 215040,
+   "tar_sha256": "3fed39c84373ad1bc1e2a346b90b81b63840acd025c335d367e45fe00c87ded8",
+   "files": [
+    {
+     "path": ".omx/research/ddm_pr8_20260910/final_serializer/20260910T073547.155021Z-95456/intended-commit.bundle",
+     "bytes": 14616,
+     "sha256": "c6bb67aff6d8917c0046ccfc705b2b57ae81076eb7d4460c07703fcf458533bc"
+    },
+    {
+     "path": ".omx/research/ddm_pr8_20260910/final_serializer/20260910T073547.155021Z-95456/intended-tree.patch",
+     "bytes": 57154,
+     "sha256": "3ef6865714a10af8d639f7429ab1135b6d0f059f3afb5b82ec524f195557eaa4"
+    },
+    {
+     "path": ".omx/research/ddm_pr8_20260910/final_serializer/20260910T073547.155021Z-95456/intended-commit.format-patch",
+     "bytes": 58080,
+     "sha256": "e9cc4bddcb48068aecb4d929f06cecaf2808c481b722b2f1147e5b893968d8f6"
+    },
+    {
+     "path": ".omx/research/ddm_pr8_20260910/serializer_fallback/20260910T073423.713136Z-94546/intended-commit.bundle",
+     "bytes": 12328,
+     "sha256": "8f085a56d5f37c061f1767feb7c9f8425abc46c4f74ec0c7b5c712b6eaa29521"
+    },
+    {
+     "path": ".omx/research/ddm_pr8_20260910/serializer_fallback/20260910T073423.713136Z-94546/intended-tree.patch",
+     "bytes": 28260,
+     "sha256": "b474283f54260bd72992ad32a675d2b00119deb802c1ce9d09a6efcd107036b1"
+    },
+    {
+     "path": ".omx/research/ddm_pr8_20260910/serializer_fallback/20260910T073423.713136Z-94546/intended-commit.format-patch",
+     "bytes": 29057,
+     "sha256": "0201581245e78ef4291ea9aa8b3750c159cf60b79fc6827b4a596c5e2e074f2e"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_rbf1_20260911.tar",
+   "tar_bytes": 3706880,
+   "tar_sha256": "d2b84f5f28cf8039915334754806294140611ad6eedba613b03ab5e1653ef6e9",
+   "files": [
+    {
+     "path": ".omx/research/ddm_rbf1_20260911/equations_recall.json",
+     "bytes": 3703678,
+     "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_rlc1_20260910.tar",
+   "tar_bytes": 9420800,
+   "tar_sha256": "ff6899b15bca314b28175d7ffb5b2bc556d491197883a2766d594667ed3ef20a",
+   "files": [
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/equations_recall.json",
+     "bytes": 3703678,
+     "sha256": "73a851b1f377820f6fa8ee873426bcba0fca1dbb5f6f0b73957698fab1757ba3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/objects/pack/pack-cd17a923094a66435c458f6aaa20c4b12c20a9fc.idx",
+     "bytes": 2304,
+     "sha256": "75c53b80ac3a14a079615e2ee7d1f3ffc97f160b01e57952d1611d7b6fdc58d3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/objects/pack/pack-cd17a923094a66435c458f6aaa20c4b12c20a9fc.rev",
+     "bytes": 228,
+     "sha256": "5583f9345c836cb88d177e69805582803f52ea5e61b53a31a53af7f4eca83224"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/objects/pack/pack-cd17a923094a66435c458f6aaa20c4b12c20a9fc.pack",
+     "bytes": 595473,
+     "sha256": "91d108718133154ee57b185d2e0aa84cab0fdfe1d2eb14bd7fdec238db6d4e21"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/objects/info/alternates",
+     "bytes": 41,
+     "sha256": "8051ccb10902f8085600cf47b87e035e10177b668421766c38a95f0d99070eb5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/refs/heads/verified",
+     "bytes": 41,
+     "sha256": "cb12b6345f59d226f75dc634d55c1b012e79311cfaebf5494739e76d30ebaada"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_bundle_verify.git/FETCH_HEAD",
+     "bytes": 207,
+     "sha256": "0eb22112a24bdad76fef64390abb4d88e221aac35588d641a9d2da5effc7a277"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_serializer/20260910T082923.658062Z-33379/intended-commit.bundle",
+     "bytes": 95734,
+     "sha256": "5664c2eb10a05186aca60739fa43eb794654c5a96cf7cd17d4ed80b2492b5299"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_serializer/20260910T082923.658062Z-33379/intended-tree.patch",
+     "bytes": 638250,
+     "sha256": "568388c47b6519fe909e733e50d3537e049600f3a28131516af797aa097a9a5a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_serializer/20260910T082923.658062Z-33379/intended-commit.format-patch",
+     "bytes": 643298,
+     "sha256": "8e5639ee9615c3c6ccfd192a6dd855e3dd9ca14724b6d202d88c81b09fc6b09b"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_serializer_r2/20260910T083010.941828Z-33845/intended-commit.bundle",
+     "bytes": 95957,
+     "sha256": "c776067c78e84461916e47faf02191aee2d51032e0a5925c05cd5470882730f1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_serializer_r2/20260910T083010.941828Z-33845/intended-tree.patch",
+     "bytes": 639494,
+     "sha256": "0a8495fdedd693b533be3c15cc15366ac16e022f2bd8bf8dd9b983024c1c0ac1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/final_serializer_r2/20260910T083010.941828Z-33845/intended-commit.format-patch",
+     "bytes": 644542,
+     "sha256": "6375eaad084ef4136783509e994d767dba33c76511fc5354e48effd8288665e9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/landing.bundle",
+     "bytes": 95957,
+     "sha256": "c776067c78e84461916e47faf02191aee2d51032e0a5925c05cd5470882730f1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/landing.patch",
+     "bytes": 644542,
+     "sha256": "6375eaad084ef4136783509e994d767dba33c76511fc5354e48effd8288665e9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/objects/pack/pack-044771197be96e1404b3078a9b2417d05f7a01f2.pack",
+     "bytes": 550209,
+     "sha256": "177b453d7468fe785c70d1199f4324798c3e351ee100c095e965de1f225b7ace"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/objects/pack/pack-044771197be96e1404b3078a9b2417d05f7a01f2.idx",
+     "bytes": 1828,
+     "sha256": "9e96ce03735b1793d34535873986550cbc88167a2b05226cedf5b8b5c7c75997"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/objects/pack/pack-044771197be96e1404b3078a9b2417d05f7a01f2.rev",
+     "bytes": 160,
+     "sha256": "c0fd2cd60d6df4b4d6d6d5d5df45376692014fccd8887ade11b34e8bd8dcc9a0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/objects/info/alternates",
+     "bytes": 41,
+     "sha256": "8051ccb10902f8085600cf47b87e035e10177b668421766c38a95f0d99070eb5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/refs/heads/verified",
+     "bytes": 41,
+     "sha256": "c2eb3c40e9396e26448d7eab31f0c4bcaa68ebedae27b7e4378a8cfac6a3632e"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_bundle_verify.git/FETCH_HEAD",
+     "bytes": 205,
+     "sha256": "aa2dfe4e7db8bf4384bd61467b9bdb63ae27c81a0a8852096de3f21fad0053cc"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_landing.patch",
+     "bytes": 283153,
+     "sha256": "8c42b7c0c0d1cfbec79b7dcc6f800923b7eaf148276592504c38e3efdc3d81df"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_serializer/20260910T080439.416605Z-17543/intended-commit.bundle",
+     "bytes": 51385,
+     "sha256": "06481356e88fa3c1c51f670bcf864cfdc7e37cf7b579544a6f64a138e81d7624"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_serializer/20260910T080439.416605Z-17543/intended-tree.patch",
+     "bytes": 280550,
+     "sha256": "cdcfc1b2686f153295c6c65a6da2afea56e4598391fd675835f7f9976c893c9a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc1_20260910/source_serializer/20260910T080439.416605Z-17543/intended-commit.format-patch",
+     "bytes": 283153,
+     "sha256": "8c42b7c0c0d1cfbec79b7dcc6f800923b7eaf148276592504c38e3efdc3d81df"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_rlc2_20260910.tar",
+   "tar_bytes": 7905280,
+   "tar_sha256": "d7396419d803751af034163ca2e9fd98257b63d5d46dfe5a34b7ac432b5dd6f2",
+   "files": [
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/INDEX_BEFORE.txt",
+     "bytes": 6560200,
+     "sha256": "0813785f20ec53d088ebe752f9d62b66a3b8a6568e87eb0c524c9ffa021a669c"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/objects/pack/pack-b0b2ab846867a4040ee3e03432d1872044b736a4.pack",
+     "bytes": 516903,
+     "sha256": "587412eb1500acb1353544085d9f3a962c1f2fe4a66d8f5182c25f386102f90f"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/objects/pack/pack-b0b2ab846867a4040ee3e03432d1872044b736a4.rev",
+     "bytes": 148,
+     "sha256": "5732b4cf4f0dd3941a3267c22c0aa904fc856d52f4faf90e5ae16010b6efa158"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/objects/pack/pack-b0b2ab846867a4040ee3e03432d1872044b736a4.idx",
+     "bytes": 1744,
+     "sha256": "9758e35e53699f8b6a389fcafd17ffe8602fa754c2b55cd119d33e136b82b4b2"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/refs/heads/verified",
+     "bytes": 41,
+     "sha256": "92f346dddab333c079871fb31b86f5d1dd2da1933e2117540fc7d0d8b74494ef"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/bundle_verification.git/FETCH_HEAD",
+     "bytes": 198,
+     "sha256": "a3f80573e251ec03a33b758a0e68a01afd67d7d6e88a8fa3a58edb08bd4622ae"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/equations_recall.stderr.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/recall_5.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/serializer/20260910T144310.302853Z-62393/intended-commit.bundle",
+     "bytes": 71894,
+     "sha256": "65c6028347fe87412ea1d9bba80720359545b46bb2ec796c97151f3ed8007c42"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/serializer/20260910T144310.302853Z-62393/intended-tree.patch",
+     "bytes": 332725,
+     "sha256": "b4a162908cfc11738431845de428f1fab6adbbec263a131ab65d9e305bff0849"
+    },
+    {
+     "path": ".omx/research/ddm_rlc2_20260910/serializer/20260910T144310.302853Z-62393/intended-commit.format-patch",
+     "bytes": 335421,
+     "sha256": "58dd7ebf00c4f60c18647f2ad0bcfaf3c85c0f0d68ccda83d350c11d9b141058"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_rlc3_20260910.tar",
+   "tar_bytes": 1812480,
+   "tar_sha256": "18a0df8e2ae3566155dec2c2203136b524f4acf9a427565da8701eae50202123",
+   "files": [
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/handoff_serializer/20260910T170358.290971Z-66333/intended-commit.bundle",
+     "bytes": 67635,
+     "sha256": "76cc19394fc3817e3a1cb93eb4d88cf2b7c1ce4e757ac267506028108e4af23f"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/handoff_serializer/20260910T170358.290971Z-66333/intended-tree.patch",
+     "bytes": 289700,
+     "sha256": "03ba45a09460f5a476de3d31b47d85983281b5f61a844e1bbf6a7eb6fa56ea5d"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/handoff_serializer/20260910T170358.290971Z-66333/intended-commit.format-patch",
+     "bytes": 293506,
+     "sha256": "b2605dd5af257779a5e7e2f639eb62001179621719f81eb950fc844fe101d9ff"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/config",
+     "bytes": 111,
+     "sha256": "3c5cc3e72b5473d08433171d50fc687ac3aa2a6a3f4c20b97f5b66f581b0fec9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/pack/pack-88a6b91a085f8a8028d851c3997683f40e004f7f.rev",
+     "bytes": 164,
+     "sha256": "2c5060ecbef5a2585fcf9a201bdf8c4c55ed123abd7fe0789d8fd906a637e5f3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/pack/pack-88a6b91a085f8a8028d851c3997683f40e004f7f.pack",
+     "bytes": 513207,
+     "sha256": "ff153fa60f484e942de18232ad0159ace6ad3f46eda25997ba68d6fa75843eea"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/pack/pack-f9c7b6871f378c49a31b05993d51bac9fea95455.rev",
+     "bytes": 100,
+     "sha256": "de3c0ccb0aa98d190ae64f636e61a4e029514e57e756141e56022f9f88112843"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/pack/pack-88a6b91a085f8a8028d851c3997683f40e004f7f.idx",
+     "bytes": 1856,
+     "sha256": "21a7d5ee3fec5381c311859770969228f2d341cf21e84d8c58bac9b2af00f13c"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/pack/pack-f9c7b6871f378c49a31b05993d51bac9fea95455.idx",
+     "bytes": 1408,
+     "sha256": "395c89f0fa2cc99ca0be56a52ec7c005239fd125165762ee2525c2453d090385"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/pack/pack-f9c7b6871f378c49a31b05993d51bac9fea95455.pack",
+     "bytes": 509927,
+     "sha256": "db1fde97bc816e759f03455ae9122360388cde31859e00cdb9e76fe445bded9e"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/objects/info/alternates",
+     "bytes": 41,
+     "sha256": "8051ccb10902f8085600cf47b87e035e10177b668421766c38a95f0d99070eb5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/HEAD",
+     "bytes": 21,
+     "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/info/exclude",
+     "bytes": 240,
+     "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/description",
+     "bytes": 73,
+     "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/commit-msg.sample",
+     "bytes": 896,
+     "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/pre-rebase.sample",
+     "bytes": 4898,
+     "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/sendemail-validate.sample",
+     "bytes": 2308,
+     "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/pre-commit.sample",
+     "bytes": 1649,
+     "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/applypatch-msg.sample",
+     "bytes": 478,
+     "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/fsmonitor-watchman.sample",
+     "bytes": 4726,
+     "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/pre-receive.sample",
+     "bytes": 544,
+     "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/prepare-commit-msg.sample",
+     "bytes": 1492,
+     "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/post-update.sample",
+     "bytes": 189,
+     "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/pre-merge-commit.sample",
+     "bytes": 416,
+     "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/pre-applypatch.sample",
+     "bytes": 424,
+     "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/pre-push.sample",
+     "bytes": 1374,
+     "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/update.sample",
+     "bytes": 3650,
+     "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_bundle_verification.git/hooks/push-to-checkout.sample",
+     "bytes": 2783,
+     "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.bundle",
+     "bytes": 8291,
+     "sha256": "495606d53a1334e2636dffe6e7079ceca236c6bacc70be9439e629e09c42b0eb"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-tree.patch",
+     "bytes": 21072,
+     "sha256": "a997d42350b3f7016e4666df9d481fe0157ae3089d4a63bc8438b8e4da61e58a"
+    },
+    {
+     "path": ".omx/research/ddm_rlc3_20260910/source_serializer/20260910T165928.816039Z-60110/intended-commit.format-patch",
+     "bytes": 22005,
+     "sha256": "018afe4b73e00c0e57369bcdd419210a2c988cd25a05556ffb6c3234eeb2db2c"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_rlc4_20260910.tar",
+   "tar_bytes": 13905920,
+   "tar_sha256": "83e9c2c5dfc5180b83a186a2d4597b45ad2a240844ab81fd51f01a96fd22bb60",
+   "files": [
+    {
+     "path": ".omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.bundle",
+     "bytes": 1020673,
+     "sha256": "a525109e9eed2b6699f8626aff7b7e413f575fd137a1c8bfdb3c8dda6ad501c9"
+    },
+    {
+     "path": ".omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-tree.patch",
+     "bytes": 6432734,
+     "sha256": "de9d59a57db14f61111928e73018292415f112f6b5dd27696b6af6e9cdeebcad"
+    },
+    {
+     "path": ".omx/research/ddm_rlc4_20260910/serializer/20260910T181011.641307Z-46619/intended-commit.format-patch",
+     "bytes": 6442325,
+     "sha256": "cbfc1dbc1ca9044813545f018dacd58c726dc679e3e3f546f5f6497a27ff0da9"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_rlc5_20260910.tar",
+   "tar_bytes": 46223360,
+   "tar_sha256": "b925d26af8f64dd9b63d776ebe79021f7e184bd950c0bda2add5e2c03bff5e29",
+   "files": [
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/FINAL_SERIALIZER_STDOUT.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/INDEX_AFTER_FALLBACK.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/INDEX_AFTER_SERIALIZER.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/custody/CALL_LEDGER_BEFORE.jsonl",
+     "bytes": 1751589,
+     "sha256": "79264360c79ed1aba050b93a875ddc3655690a26eb6f89dcd1bbbfbbfbbdd4b0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/custody/CLAIMS_AFTER.txt",
+     "bytes": 1582067,
+     "sha256": "2de91d36514b03f464d702de1509e06458fe28fad150fb7cb69dea287a9a2502"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/custody/CLAIMS_BEFORE.txt",
+     "bytes": 1581045,
+     "sha256": "fbf0d6db8f22da6d353427af5465abf22cc420d71f3a64e30095291935921fca"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/custody/INTENDED_LANDING.patch",
+     "bytes": 8834847,
+     "sha256": "e0d15c429689bc8ca48d61eaca9bdff1111f65b8374c2ff035b7b795527e2308"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/custody/serializer_fallbacks/20260910T223613.881384Z-68477/intended-commit.format-patch",
+     "bytes": 8839159,
+     "sha256": "909fe1ace2af9437114e1ab63ad56c6bad32f19a82611fe860131ed6d9b83708"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/custody/serializer_fallbacks/20260910T223613.881384Z-68477/intended-tree.patch",
+     "bytes": 8834847,
+     "sha256": "e0d15c429689bc8ca48d61eaca9bdff1111f65b8374c2ff035b7b795527e2308"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/serializer_source_evidence/20260910T200200.440511Z-31088/intended-commit.bundle",
+     "bytes": 1044916,
+     "sha256": "f64e43d6061aa9169300292a14f331a0849150aad88b14d3452dd40758df10c0"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/serializer_source_evidence/20260910T200200.440511Z-31088/intended-tree.patch",
+     "bytes": 6858997,
+     "sha256": "c3e2f12e6088f241a265b1c29d4112b18db2b2b6cfdf578803729f8a81121944"
+    },
+    {
+     "path": ".omx/research/ddm_rlc5_20260910/serializer_source_evidence/20260910T200200.440511Z-31088/intended-commit.format-patch",
+     "bytes": 6871339,
+     "sha256": "8c189cd0ce8fa3ffe18cc4982abd1afccc9db1d96fe512c89a94f07747563c0a"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_so1_20260912.tar",
+   "tar_bytes": 11735040,
+   "tar_sha256": "6c0992b43acaaabbb023f2a0285be5a09b126b7113523e6d197c6598bd1e87d0",
+   "files": [
+    {
+     "path": ".omx/research/ddm_so1_20260912/INDEX_BEFORE.txt",
+     "bytes": 6732817,
+     "sha256": "186e7d9fa3819451abd1e145f510ab217d32e33623b251d09c02671341f7f22a"
+    },
+    {
+     "path": ".omx/research/ddm_so1_20260912/equations_recall.json",
+     "bytes": 3787485,
+     "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    },
+    {
+     "path": ".omx/research/ddm_so1_20260912/index_dag_tasks_recall.txt",
+     "bytes": 1207113,
+     "sha256": "e03967a7ff48b850651b7167a48496695da53f1ab7dfd3ff5572814a343f408d"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_so2_20260913.tar",
+   "tar_bytes": 3799040,
+   "tar_sha256": "e294149fb5f7b13375de7ec9a866dfa84408518cba0ac420ac4ded5f56fdc17a",
+   "files": [
+    {
+     "path": ".omx/research/ddm_so2_20260913/equations_recall.json",
+     "bytes": 3787485,
+     "sha256": "e94c1fb17fd8a73f5d4e915d3137b85746b24f3662a8050f1e1d3e04d9516b68"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_sw1_20260910.tar",
+   "tar_bytes": 8253440,
+   "tar_sha256": "02f1d209e7008978f741cb441b8e4ab0018a406c065e36fac7a8a2de3b1db90c",
+   "files": [
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000726.493076Z-1600/intended-commit.bundle",
+     "bytes": 96114,
+     "sha256": "78ad2e98b4df2f08e9d9b3741250336ccf80417bd80c083ecd03dcdc4ac8d8d0"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000726.493076Z-1600/intended-tree.patch",
+     "bytes": 318731,
+     "sha256": "2fafb0b33bb9c19547bc9c3534ee66810687bc2560b748775720c5d91a6547b3"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000726.493076Z-1600/intended-commit.format-patch",
+     "bytes": 323665,
+     "sha256": "d579f98b3e33cdda9b4cce4159391fd7d16bdf0d3a0388e9e1e2844f33507b6b"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000700.381637Z-99367/intended-commit.bundle",
+     "bytes": 237448,
+     "sha256": "4dcc3df8aada6ac7c14d28bbfd7713d5b2564399709e3708223d55629095f849"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000700.381637Z-99367/intended-tree.patch",
+     "bytes": 552100,
+     "sha256": "3917a37c76b55499bac9f4be6e4776a08244d760108559a04f270d256b5e5613"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000700.381637Z-99367/intended-commit.format-patch",
+     "bytes": 556978,
+     "sha256": "e23d86f55ddd7b773f767d8e4b39b48f158b4b1bb18369c5390bac9b8697c224"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000713.409126Z-481/intended-commit.bundle",
+     "bytes": 104766,
+     "sha256": "d8ab55eb87233d1331d145ef16099ec7571df8db5fd34f28651d9f1c509487b0"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000713.409126Z-481/intended-tree.patch",
+     "bytes": 364433,
+     "sha256": "8ec21a33d328702964e2e3d30d11b3758ce6fcae7c2431c3fedff9265b3c968f"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000713.409126Z-481/intended-commit.format-patch",
+     "bytes": 369362,
+     "sha256": "35c17afb48ab5f10587da1c8c187ddc4cfb1c46bae938f2acc277cf5407c15ee"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000704.789435Z-99692/intended-commit.bundle",
+     "bytes": 95682,
+     "sha256": "f4b5e3daf254d5c7ece1502612178998a3fc5cf05e0eb7fbf1e6011c0695a24d"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000704.789435Z-99692/intended-tree.patch",
+     "bytes": 350190,
+     "sha256": "eb433dd395fcd693fc3e006d582a11df9a3c2e4bbc9dcda52ecfb7f1307c6bf0"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000704.789435Z-99692/intended-commit.format-patch",
+     "bytes": 355111,
+     "sha256": "da7d8239c9b031a0e3d2447e90e583e6067bcd9d929a06de9c1ea759c0b9c87e"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000717.811492Z-894/intended-commit.bundle",
+     "bytes": 69724,
+     "sha256": "8925eb40f8e660e34d084e1379b3b389697b80a9dd1943744c0ef1717962192a"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000717.811492Z-894/intended-tree.patch",
+     "bytes": 227548,
+     "sha256": "803560478a6dc965d3eb3cabb116f2e69abdf5c71533cac07953d7a163840d2f"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000717.811492Z-894/intended-commit.format-patch",
+     "bytes": 232449,
+     "sha256": "7967cea9a04506798740313c9325e2242f13f25ff285ce0f4b63edb6f029ee4e"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000722.141867Z-1247/intended-commit.bundle",
+     "bytes": 83818,
+     "sha256": "b5c85344ea201bc004a910ff379816efaed1cf604ccaeb96af71b0fb7d757dfe"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000722.141867Z-1247/intended-tree.patch",
+     "bytes": 347246,
+     "sha256": "d14f6675e0f513fcf7670305f4f4f89db42a01907b36e80d3449ef39dfaa414c"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000722.141867Z-1247/intended-commit.format-patch",
+     "bytes": 352157,
+     "sha256": "f40687cac1a34d2b802c5b6ca5fd26d4771b30eaacdbf141ae72c05fda065035"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000730.726038Z-1925/intended-commit.bundle",
+     "bytes": 322515,
+     "sha256": "e74404d7e1c418f5109d93a15270f7eeab7eabe5a2c98953568fa045c42f6a1d"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000730.726038Z-1925/intended-tree.patch",
+     "bytes": 745648,
+     "sha256": "1194472916c75713eb43685ad18c48fac6285cc627b2855e5c6727206727969c"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000730.726038Z-1925/intended-commit.format-patch",
+     "bytes": 750211,
+     "sha256": "414a4714a309f06f2d403900fae02cedadb09d571c70201856fa5d6748fd61fd"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000656.019589Z-99048/intended-commit.bundle",
+     "bytes": 91105,
+     "sha256": "3ac31795ceb85cc2f7a8bd41074389cd58f05ccc1d4ba7d59b6864e7d2b24022"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000656.019589Z-99048/intended-tree.patch",
+     "bytes": 284219,
+     "sha256": "48c31d27c50448164e1ba5ff7c723133be0ce5635ee22d60130c8eeae43a28f8"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000656.019589Z-99048/intended-commit.format-patch",
+     "bytes": 289140,
+     "sha256": "fa2173f9ed906484d77d4c466bb38b49d1d604017844dcc0bf0b6abab52114fb"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000709.116442Z-111/intended-commit.bundle",
+     "bytes": 84229,
+     "sha256": "9bf3341aa0bd0f7fc0a0e4819aeb4362dbeb18ca2c9f05b4e01ea90c9fc17881"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000709.116442Z-111/intended-tree.patch",
+     "bytes": 271142,
+     "sha256": "815d00a854d8fe23a8318ede3509fcba57af4687f9b9421d81c90d3bdf0478ba"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/blob_retry_fallback/20260910T000709.116442Z-111/intended-commit.format-patch",
+     "bytes": 276064,
+     "sha256": "f6217b006caf2d3cf6fd1f02899073d496bae03d50969354452d92cba7006240"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/retry_fallback/20260909T235950.173845Z-91816/intended-commit.bundle",
+     "bytes": 6710,
+     "sha256": "ceb6725f19fb162f221428ed6fa273ea4b9fbd42516145bf45e8e7337e95f04c"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/retry_fallback/20260909T235950.173845Z-91816/intended-tree.patch",
+     "bytes": 17373,
+     "sha256": "5b28ddcf1fb70ce8c362abad60c7b5565cd661e0e3ca3525d300d393d47daf7a"
+    },
+    {
+     "path": ".omx/research/ddm_sw1_20260910/retry_fallback/20260909T235950.173845Z-91816/intended-commit.format-patch",
+     "bytes": 18073,
+     "sha256": "1c8aade9ce3284eebd96f38dceacd82a80ca6c106058091f7f0656ef6104de6b"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_tc2_20260910.tar",
+   "tar_bytes": 563200,
+   "tar_sha256": "c4b14fcdbd2858d1fee72adf280f356e481dc4010256bcfd9cfd1944a67aced1",
+   "files": [
+    {
+     "path": ".omx/research/ddm_tc2_20260910/attempt1_landing.patch",
+     "bytes": 232670,
+     "sha256": "419d2dd4af75968a69162ad5baf20f71c7fa70cc3284f1cfe86cd7994c73e620"
+    },
+    {
+     "path": ".omx/research/ddm_tc2_20260910/landing.patch",
+     "bytes": 232960,
+     "sha256": "b74f643f7514de5df6809d16ed22d25100b31e49735deb31a0c4beb2a15668e4"
+    },
+    {
+     "path": ".omx/research/ddm_tc2_20260910/source_landing.patch",
+     "bytes": 24637,
+     "sha256": "e1cf086301423f51fbbede686642672166cafff7979fadcbda783cdf1f4e63d8"
+    },
+    {
+     "path": ".omx/research/ddm_tc2_20260910/source_serializer/20260910T015307.724909Z-56996/intended-commit.bundle",
+     "bytes": 9865,
+     "sha256": "3de9b3d4c74abd1a029507b5ddd522cc313a2e514f3ca42eedb37c15132d4c8c"
+    },
+    {
+     "path": ".omx/research/ddm_tc2_20260910/source_serializer/20260910T015307.724909Z-56996/intended-tree.patch",
+     "bytes": 24637,
+     "sha256": "e1cf086301423f51fbbede686642672166cafff7979fadcbda783cdf1f4e63d8"
+    },
+    {
+     "path": ".omx/research/ddm_tc2_20260910/source_serializer/20260910T015307.724909Z-56996/intended-commit.format-patch",
+     "bytes": 25363,
+     "sha256": "0b38b3241cd488472cf9ff584d2dccfec5d3471cb3941ffa189604f376576b66"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_tc3_20260910.tar",
+   "tar_bytes": 2416640,
+   "tar_sha256": "002ddd0b887070e215e434376831605e2851b0c7e74415692007bf11d19f80ce",
+   "files": [
+    {
+     "path": ".omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.bundle",
+     "bytes": 139741,
+     "sha256": "ca7db8174110a1e86516f34914d6a824868a9f6aa36c01c949a1a2a3b1549919"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-tree.patch",
+     "bytes": 730226,
+     "sha256": "164109c63faccd048df44bf28a988357c0627a6488d3d628a9a8b08c3b3a7877"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/final_serializer/20260910T044914.041214Z-29704/intended-commit.format-patch",
+     "bytes": 735852,
+     "sha256": "218d3db6a88dbe7eda3a470c0052d9275923c6d9e349fc38cfe2bed28c41d374"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/landing.patch",
+     "bytes": 730226,
+     "sha256": "164109c63faccd048df44bf28a988357c0627a6488d3d628a9a8b08c3b3a7877"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/trace_landing.patch",
+     "bytes": 16529,
+     "sha256": "6bb2b6dcfb53ec889baaca88357cb2545082f5f856893d154bcf27bd932c64c2"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/trace_serializer/20260910T024539.004295Z-84220/intended-commit.bundle",
+     "bytes": 6871,
+     "sha256": "261e2cc6d2f669b79604d6ec7db35628a32b2e194fd4a862c5a6706154b39496"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/trace_serializer/20260910T024539.004295Z-84220/intended-tree.patch",
+     "bytes": 16529,
+     "sha256": "6bb2b6dcfb53ec889baaca88357cb2545082f5f856893d154bcf27bd932c64c2"
+    },
+    {
+     "path": ".omx/research/ddm_tc3_20260910/trace_serializer/20260910T024539.004295Z-84220/intended-commit.format-patch",
+     "bytes": 17106,
+     "sha256": "ff189b5d065f3d56b5f59868fb8e49e7f5a2b4bd266509703946fb5bd20891f9"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_tc4_20260910.tar",
+   "tar_bytes": 1720320,
+   "tar_sha256": "145f44e91e26d8c103029fe93ed09de6877108971a637288427841e25d380a37",
+   "files": [
+    {
+     "path": ".omx/research/ddm_tc4_20260910/final_serializer/20260910T063427.297162Z-46338/intended-commit.bundle",
+     "bytes": 119120,
+     "sha256": "fc365e7f466c5495cc01d1c13ca61345f3830385bb58a040cdf809a1ad1a5c97"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/final_serializer/20260910T063427.297162Z-46338/intended-tree.patch",
+     "bytes": 443791,
+     "sha256": "011202101d08a21021a53de9546491e98cef481b7c72feca028bb1ce90be7fcf"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/final_serializer/20260910T063427.297162Z-46338/intended-commit.format-patch",
+     "bytes": 450164,
+     "sha256": "efde9fe8817b742ff7a24819e25312fa503b41731ebadf372fc0ffcaa9ef7c84"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/landing.bundle",
+     "bytes": 119094,
+     "sha256": "35671a5b62fe0fa63de71048943df4447907c12bb022bd3348292dd9d74a6946"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/landing.patch",
+     "bytes": 443791,
+     "sha256": "011202101d08a21021a53de9546491e98cef481b7c72feca028bb1ce90be7fcf"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/source_serializer/20260910T054222.023334Z-83633/intended-commit.bundle",
+     "bytes": 19908,
+     "sha256": "c380eb2f4883533d04cf499f6367fdf2c51318dba43e17979640278446a6ce68"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/source_serializer/20260910T054222.023334Z-83633/intended-tree.patch",
+     "bytes": 49845,
+     "sha256": "36c8380bc4a3b49b4dfda5833b0dc25413196007b6b0844a57cbbdab09edd828"
+    },
+    {
+     "path": ".omx/research/ddm_tc4_20260910/source_serializer/20260910T054222.023334Z-83633/intended-commit.format-patch",
+     "bytes": 51315,
+     "sha256": "e48994c63b9ff233be82a807cb7cf76076aa2335c514ef7666e53923e0241864"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_vr5_20260909.tar",
+   "tar_bytes": 624640,
+   "tar_sha256": "c8bd3898d33995c2137434fd3ab5010e9f5bc4bca60ee1e090e0bad0d68c1035",
+   "files": [
+    {
+     "path": ".omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-commit.bundle",
+     "bytes": 48749,
+     "sha256": "b5c34b9aaed08179f540fc30dbd6eaaead4b731b798d46f52384e7e235527423"
+    },
+    {
+     "path": ".omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-tree.patch",
+     "bytes": 281920,
+     "sha256": "343ff5c7d86710e1b186703a726a4c953b5e894057d1b8584b08cc54ce904059"
+    },
+    {
+     "path": ".omx/research/ddm_vr5_20260909/serializer/20260909T231659.675679Z-86018/intended-commit.format-patch",
+     "bytes": 284429,
+     "sha256": "01c6fa216221de2091dc355a85006d3bbaca5ba00cd1068f9d4271f108bb6286"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_vr6_20260910.tar",
+   "tar_bytes": 13885440,
+   "tar_sha256": "5bae25da9d585ba26c2f53eb763c6cbb728bc0a73fb032e12a0c550f0961dad5",
+   "files": [
+    {
+     "path": ".omx/research/ddm_vr6_20260910/index_after.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/index_before.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/landing.patch",
+     "bytes": 4368779,
+     "sha256": "99d0281800bb1f32b437215e54aa648f5ae517dcdd36b0b1fa0eec486fc0f3df"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/serializer/20260910T034306.677443Z-56139/intended-commit.bundle",
+     "bytes": 747929,
+     "sha256": "553c30fc2efd9204d9c1a2f5d4061cee0790d4553abea8b84b3f55ca1e0d2c07"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/serializer/20260910T034306.677443Z-56139/intended-tree.patch",
+     "bytes": 4368779,
+     "sha256": "99d0281800bb1f32b437215e54aa648f5ae517dcdd36b0b1fa0eec486fc0f3df"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/serializer/20260910T034306.677443Z-56139/intended-commit.format-patch",
+     "bytes": 4376960,
+     "sha256": "b941eb11c23aef1ac17fa60abe65ed9837e7785887aec7dbdae9a0d0243df6f3"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/serializer_preflight_stdout.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr6_20260910/vertigo_du.stderr",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_vr7_20260910.tar",
+   "tar_bytes": 50995200,
+   "tar_sha256": "46e2020fade1f6fea94b0cb0414524989a44e418ac66331592782f408558fee1",
+   "files": [
+    {
+     "path": ".omx/research/ddm_vr7_20260910/index_after.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr7_20260910/index_before.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr7_20260910/landing.patch",
+     "bytes": 16521329,
+     "sha256": "a7eadd5a9303d93be5e79d024bbf2a5f88148860ed4f9e7df2499d7e4ab256b1"
+    },
+    {
+     "path": ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.bundle",
+     "bytes": 1432975,
+     "sha256": "07c628bb500c7f14d3bf98b4967347b11c16acfdde5e000a0b49094490b73a26"
+    },
+    {
+     "path": ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-tree.patch",
+     "bytes": 16507572,
+     "sha256": "5898b41fdc61a0bc3ce53cd2b6258d486a9bd08ba96edf493042f8c67aacaee8"
+    },
+    {
+     "path": ".omx/research/ddm_vr7_20260910/serializer/20260910T062010.887953Z-29647/intended-commit.format-patch",
+     "bytes": 16521329,
+     "sha256": "a7eadd5a9303d93be5e79d024bbf2a5f88148860ed4f9e7df2499d7e4ab256b1"
+    }
+   ]
+  },
+  {
+   "tar": "/Volumes/APDataStore/pact/arm_fallback_coldstore_20260915/.omx__research__ddm_vr8_20260910.tar",
+   "tar_bytes": 17367040,
+   "tar_sha256": "237be2a422ba4e511925c86f52fa30fcbe85df03d3f038bb1b243ec16f380f1c",
+   "files": [
+    {
+     "path": ".omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-commit.bundle",
+     "bytes": 1010897,
+     "sha256": "5b75c7066c836cd4564899a31e99dc8a299cc01af08e365f82a850d1cdf87088"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-tree.patch",
+     "bytes": 6908359,
+     "sha256": "e8cd1fc9f9546064f7e05ecb5dbbe12a26d0fc0e687155ae44ccd8f23d5adfd9"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/enforcement_serializer/20260910T152718.737541Z-53289/intended-commit.format-patch",
+     "bytes": 6919087,
+     "sha256": "a983c844004373c1826d3f9467cffa942a1866c775c7c5a869b1a7ef3eda0b71"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/index_after_enforcement.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/index_before_enforcement.txt",
+     "bytes": 0,
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/reclaim_row_census.jsonl",
+     "bytes": 2485914,
+     "sha256": "11a52182039606acf2fb4ba99ffe3d41d603d0b7d5928da0edb41b856cf1c6fa"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.bundle",
+     "bytes": 3358,
+     "sha256": "c4200331fe20c184119ac8c6494fd27ee5f4922b36179ef58823ddb808f85e2d"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-tree.patch",
+     "bytes": 8985,
+     "sha256": "5c36b8de3792c87f70b7779f504e6f443cc9fbbd875af4fdd05471a937720941"
+    },
+    {
+     "path": ".omx/research/ddm_vr8_20260910/source_serializer/20260910T144212.242993Z-61532/intended-commit.format-patch",
+     "bytes": 9730,
+     "sha256": "5b1d86b28515488219099faa1e624e35dc554d452f0806dcc36226d792cf6df1"
+    }
+   ]
+  }
+ ]
+}
