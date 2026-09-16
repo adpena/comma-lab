@@ -1,0 +1,474 @@
+{
+  "schema": "ddm_psa1_price_gate.v1",
+  "axis": "[macOS-CPU advisory / scorer-free exact bytes; inherited DALI seg labels]",
+  "score_claim": false,
+  "research_only": true,
+  "archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+  "archive_bytes": 179332,
+  "pairs": [
+    250,
+    398,
+    296,
+    236,
+    80,
+    385,
+    214,
+    382,
+    208,
+    583,
+    53,
+    406,
+    547,
+    342,
+    127,
+    319,
+    502,
+    137,
+    376,
+    32,
+    183,
+    33,
+    134,
+    536,
+    518,
+    543,
+    168,
+    569,
+    105,
+    550,
+    465,
+    514,
+    566,
+    112,
+    452,
+    492
+  ],
+  "selection": "jrd1 K24 plus 12 heaviest pool pairs excluding K24; literal roster retained",
+  "population_residual_cells": 12147,
+  "population_median_debt_bytes": 22.915947875976556,
+  "S_per_byte": 6.658589531221714e-07,
+  "S_per_cell_advisory": 8.477105034722222e-07,
+  "forms": [
+    {
+      "form": "A",
+      "eligible": true,
+      "passes_complete_singleton_price_gate": false,
+      "legs": {
+        "standalone_q11_bytes": {
+          "median": 58.0,
+          "q1": 56.75,
+          "q3": 63.0,
+          "min": 54,
+          "max": 72,
+          "k": 1,
+          "n": 36,
+          "payable_pairs": [
+            518
+          ],
+          "calibrated_T4_carry_k": 1,
+          "fixed_empty_bytes": 24,
+          "joint36_bytes": 343
+        },
+        "sm1_append_bytes": {
+          "median": 44.0,
+          "q1": 44.0,
+          "q3": 44.0,
+          "min": 44,
+          "max": 44,
+          "k": 11,
+          "n": 36,
+          "payable_pairs": [
+            547,
+            502,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514,
+            566
+          ],
+          "calibrated_T4_carry_k": 11,
+          "fixed_empty_bytes": 12,
+          "joint36_bytes": 1064
+        },
+        "sm1_archive_delta_bytes": {
+          "median": 75.0,
+          "q1": 58.0,
+          "q3": 104.25,
+          "min": 52,
+          "max": 108,
+          "k": 0,
+          "n": 36,
+          "payable_pairs": [],
+          "calibrated_T4_carry_k": 0,
+          "fixed_empty_bytes": 47,
+          "joint36_bytes": 339
+        }
+      },
+      "header_bytes": 12,
+      "index_bytes_per_pair": 2,
+      "standalone_footer_bytes": 8,
+      "joint36_raw_header_index_footer_bytes": 92,
+      "research_only": true
+    },
+    {
+      "form": "B3",
+      "eligible": true,
+      "passes_complete_singleton_price_gate": true,
+      "legs": {
+        "standalone_q11_bytes": {
+          "median": 42.0,
+          "q1": 42.0,
+          "q3": 42.0,
+          "min": 42,
+          "max": 42,
+          "k": 12,
+          "n": 36,
+          "payable_pairs": [
+            547,
+            502,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514,
+            566,
+            112
+          ],
+          "calibrated_T4_carry_k": 12,
+          "fixed_empty_bytes": 24,
+          "joint36_bytes": 152
+        },
+        "sm1_append_bytes": {
+          "median": 29.0,
+          "q1": 29.0,
+          "q3": 29.0,
+          "min": 29,
+          "max": 29,
+          "k": 17,
+          "n": 36,
+          "payable_pairs": [
+            80,
+            406,
+            547,
+            502,
+            134,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514,
+            566,
+            112,
+            452,
+            492
+          ],
+          "calibrated_T4_carry_k": 17,
+          "fixed_empty_bytes": 12,
+          "joint36_bytes": 620
+        },
+        "sm1_archive_delta_bytes": {
+          "median": 54.0,
+          "q1": 50.0,
+          "q3": 54.0,
+          "min": 46,
+          "max": 83,
+          "k": 5,
+          "n": 36,
+          "payable_pairs": [
+            518,
+            543,
+            168,
+            569,
+            550
+          ],
+          "calibrated_T4_carry_k": 5,
+          "fixed_empty_bytes": 46,
+          "joint36_bytes": 189
+        }
+      },
+      "header_bytes": 12,
+      "index_bytes_per_pair": 2,
+      "standalone_footer_bytes": 8,
+      "joint36_raw_header_index_footer_bytes": 92,
+      "research_only": true
+    },
+    {
+      "form": "C",
+      "eligible": true,
+      "passes_complete_singleton_price_gate": false,
+      "legs": {
+        "standalone_q11_bytes": {
+          "median": 59.0,
+          "q1": 57.0,
+          "q3": 60.0,
+          "min": 54,
+          "max": 62,
+          "k": 2,
+          "n": 36,
+          "payable_pairs": [
+            518,
+            543
+          ],
+          "calibrated_T4_carry_k": 2,
+          "fixed_empty_bytes": 24,
+          "joint36_bytes": 255
+        },
+        "sm1_append_bytes": {
+          "median": 38.0,
+          "q1": 38.0,
+          "q3": 38.0,
+          "min": 37,
+          "max": 38,
+          "k": 14,
+          "n": 36,
+          "payable_pairs": [
+            547,
+            502,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514,
+            566,
+            112,
+            452,
+            492
+          ],
+          "calibrated_T4_carry_k": 14,
+          "fixed_empty_bytes": 12,
+          "joint36_bytes": 847
+        },
+        "sm1_archive_delta_bytes": {
+          "median": 73.0,
+          "q1": 63.0,
+          "q3": 104.5,
+          "min": 62,
+          "max": 118,
+          "k": 0,
+          "n": 36,
+          "payable_pairs": [],
+          "calibrated_T4_carry_k": 0,
+          "fixed_empty_bytes": 47,
+          "joint36_bytes": 312
+        }
+      },
+      "header_bytes": 12,
+      "index_bytes_per_pair": 2,
+      "standalone_footer_bytes": 8,
+      "joint36_raw_header_index_footer_bytes": 92,
+      "research_only": true
+    },
+    {
+      "form": "D",
+      "eligible": true,
+      "passes_complete_singleton_price_gate": false,
+      "legs": {
+        "standalone_q11_bytes": {
+          "median": 60.0,
+          "q1": 60.0,
+          "q3": 60.0,
+          "min": 58,
+          "max": 60,
+          "k": 1,
+          "n": 36,
+          "payable_pairs": [
+            518
+          ],
+          "calibrated_T4_carry_k": 1,
+          "fixed_empty_bytes": 24,
+          "joint36_bytes": 383
+        },
+        "sm1_append_bytes": {
+          "median": 47.0,
+          "q1": 47.0,
+          "q3": 47.0,
+          "min": 47,
+          "max": 47,
+          "k": 10,
+          "n": 36,
+          "payable_pairs": [
+            547,
+            502,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514
+          ],
+          "calibrated_T4_carry_k": 10,
+          "fixed_empty_bytes": 12,
+          "joint36_bytes": 1268
+        },
+        "sm1_archive_delta_bytes": {
+          "median": 81.5,
+          "q1": 64.0,
+          "q3": 106.75,
+          "min": 54,
+          "max": 109,
+          "k": 1,
+          "n": 36,
+          "payable_pairs": [
+            168
+          ],
+          "calibrated_T4_carry_k": 1,
+          "fixed_empty_bytes": 46,
+          "joint36_bytes": 385
+        }
+      },
+      "header_bytes": 12,
+      "index_bytes_per_pair": 2,
+      "standalone_footer_bytes": 8,
+      "joint36_raw_header_index_footer_bytes": 92,
+      "research_only": true
+    },
+    {
+      "form": "B5_control",
+      "eligible": false,
+      "passes_complete_singleton_price_gate": false,
+      "legs": {
+        "standalone_q11_bytes": {
+          "median": 47.0,
+          "q1": 47.0,
+          "q3": 47.0,
+          "min": 47,
+          "max": 47,
+          "k": 10,
+          "n": 36,
+          "payable_pairs": [
+            547,
+            502,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514
+          ],
+          "calibrated_T4_carry_k": 10,
+          "fixed_empty_bytes": 24,
+          "joint36_bytes": 164
+        },
+        "sm1_append_bytes": {
+          "median": 34.0,
+          "q1": 34.0,
+          "q3": 34.0,
+          "min": 34,
+          "max": 34,
+          "k": 14,
+          "n": 36,
+          "payable_pairs": [
+            547,
+            502,
+            518,
+            543,
+            168,
+            569,
+            105,
+            550,
+            465,
+            514,
+            566,
+            112,
+            452,
+            492
+          ],
+          "calibrated_T4_carry_k": 14,
+          "fixed_empty_bytes": 12,
+          "joint36_bytes": 774
+        },
+        "sm1_archive_delta_bytes": {
+          "median": 80.5,
+          "q1": 68.5,
+          "q3": 136.0,
+          "min": 66,
+          "max": 154,
+          "k": 0,
+          "n": 36,
+          "payable_pairs": [],
+          "calibrated_T4_carry_k": 0,
+          "fixed_empty_bytes": 50,
+          "joint36_bytes": 157
+        }
+      },
+      "header_bytes": 12,
+      "index_bytes_per_pair": 2,
+      "standalone_footer_bytes": 8,
+      "joint36_raw_header_index_footer_bytes": 92,
+      "research_only": true
+    }
+  ],
+  "gate_passed": true,
+  "verdict_scope": "STEP0 FORMULATION price screen, four forms with 36 minimum-nonzero commands per form on move52; no efficacy or family closure",
+  "archive_objects": 760,
+  "artifact_checks": 3800,
+  "distinct_artifact_paths_verified": 3800,
+  "retention": {
+    "bytes": 321200286,
+    "files": 4146,
+    "limit_bytes": 1073741824
+  },
+  "tail_context": "NOT_APPLICABLE: shipped K=5 HPAC geometry does not accept int4 vectors",
+  "boundaries": [
+    "no scorer",
+    "no renderer forward",
+    "no pose solve",
+    "no training",
+    "no Modal",
+    "no fire",
+    "no packet",
+    "no authorize_*",
+    "no receiver edit",
+    "no upstream edit",
+    "no PR/sealed tree edit",
+    "no predecessor store writes",
+    "no payload deletion",
+    "no staged-index edits",
+    "no score or frontier movement"
+  ],
+  "unmeasured": [
+    "effective repair values",
+    "seg benefit",
+    "pose effects",
+    "all600 collateral",
+    "public receiver implementation",
+    "contest score"
+  ],
+  "producer": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa1_byte_price.py",
+    "bytes": 28779,
+    "sha256": "df30b52dcc2dc7392f89749261728f8a537765be01baccb1388c34a0f4fcb5d7"
+  },
+  "inputs": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa1/INPUTS.json",
+    "bytes": 26667,
+    "sha256": "2d3e8ecbbb2c34cc322d17231b9e650797bfe132c2e3ab825a5c024b3eb8af65"
+  },
+  "sample": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa1/SAMPLE.json",
+    "bytes": 20385,
+    "sha256": "75c5abf4a63ee22689cece6fd033ad4efa1048caeaa9f173ec0b89b35b5bb665"
+  },
+  "retention_manifest": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RETENTION_MANIFEST.json",
+    "bytes": 878102,
+    "sha256": "3a11d2755cc29a44a251bfacef8ae0144554989690623d353c9b766b8b18842e"
+  }
+}

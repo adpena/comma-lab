@@ -1,0 +1,2730 @@
+[
+  {
+    "canonical_consumers": [
+      "margin-residual lever (#226) / MC finisher (#396) closed-form targets",
+      "whitebox full campaign (#514) frozen-structure inventory"
+    ],
+    "canonical_producers": [
+      "experiments/results/segnet_fractal_20260715/stage_a_weights.py",
+      "experiments/results/segnet_fractal_20260715/stage_b1_gates_head.py"
+    ],
+    "domain_of_validity": {
+      "axis": "[macOS-CPU advisory] frozen CPU-torch fp32; real frozen weights",
+      "network": "frozen contest SegNet (smp.Unet tu-efficientnet_b2, classes=5, activation=None)",
+      "promotion_eligible": false,
+      "research_only": true,
+      "score_claim": false,
+      "space": "penultimate 16-ch feature map, 3x3 patch (144-dim); EXACT there; pixel-space pullback is first-order only",
+      "verdict_scope": "frozen-weight structural law + n96-subset boundary measurement",
+      "weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "segnet_head_rank4_recon_fp32_20260715",
+        "empirical_output": {
+          "centered_head_rank": 4,
+          "rank4_recon_maxabs_err": 5.960464477539063e-08,
+          "singvals": [
+            3.128,
+            2.154,
+            2.025,
+            1.796,
+            0.0
+          ]
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "head": "segmentation_head.0.weight (5,16,3,3) + bias (5,)",
+          "weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+        },
+        "measurement_method": "SVD of centered flattened head (5x144) from the real frozen safetensors; rank-4 reconstruction max-abs error; verified through the real forward with bit-exact argmax parity vs cached gt_n96 lstars (0 mismatches / 96 frames)",
+        "measurement_utc": "2026-07-16T03:05:00Z",
+        "predicted_output": {
+          "centered_head_rank": 4,
+          "reason": "argmax depends on differences of 5 functionals"
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-07-16T03:20:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "experiments/results/segnet_fractal_20260715/stage_b1.json",
+          "source_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+        },
+        "residual": 5.960464477539063e-08,
+        "source_artifact": "experiments/results/segnet_fractal_20260715/stage_a.json"
+      },
+      {
+        "anchor_id": "segnet_head_pair_flipdist_boundary_medians_20260715",
+        "empirical_output": {
+          "median_flipdist_feat": {
+            "Road-Lane": 0.131,
+            "Road-Movable": 0.106,
+            "Road-MyCar": 0.171,
+            "Road-Undrivable": 0.177,
+            "Undrivable-Movable": 0.081
+          },
+          "penultimate_typical_activation": 0.473
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "boundary_def": "4-neighbor argmax label disagreement",
+          "frames": "8 of n96 real GT frame_1 (stride 12)"
+        },
+        "measurement_method": "exact pairwise logit margins at boundary pixels through the real frozen forward, divided by the exact frozen pair norms (closed form; no surrogate)",
+        "measurement_utc": "2026-07-16T03:05:00Z",
+        "predicted_output": {
+          "law": "flip_dist_feat = |margin| / ||w_c - w_c'||"
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-07-16T03:20:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "experiments/results/segnet_fractal_20260715/stage_b1.json",
+          "source_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+        },
+        "residual": 0.0,
+        "source_artifact": "experiments/results/segnet_fractal_20260715/stage_b1.json"
+      }
+    ],
+    "equation_id": "segnet_head_rank4_linear_flipdist_v1",
+    "last_calibration_utc": "2026-07-16T03:20:00Z",
+    "latex_form": "m_{cc'}(f)=\\langle w_c-w_{c'},f\\rangle+(b_c-b_{c'}),\\quad d^{\\mathrm{flip}}_{cc'}(f)=\\frac{|m_{cc'}(f)|}{\\|w_c-w_{c'}\\|_2},\\quad \\operatorname{rank}\\big(W-\\bar W\\big)=4",
+    "name": "Frozen SegNet head is exact rank-4 linear; closed-form pairwise flip distance",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "Argmax partition = hyperplane arrangement in a 4-dim projection of the penultimate 3x3-patch space; min flipping perturbation = |margin|/||w_c-w_c'|| (exact closed form).",
+    "predicted_vs_empirical_residual": {
+      "centered_head_rank": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "captured_at_utc": "2026-07-16T03:20:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "macos_cpu_advisory",
+      "hardware_substrate": "macos_arm64",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "experiments/results/segnet_fractal_20260715/stage_b1.json",
+      "source_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "python_callable_module_path": "tac.canonical_equations.segnet_head_rank4_flipdist_20260715:head_flip_distance_feature_space",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "margin": "logit",
+      "pair_norm": "logit_per_unit_feature_L2"
+    },
+    "units_out": {
+      "flip_distance": "penultimate_feature_L2"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "tac.witness_control.shadow_controller._factorized_overlay",
+      "tools/costate_digest.py section_shadow",
+      "tools/witness_run_introspect.py read_controller"
+    ],
+    "canonical_producers": [
+      "src/tac/witness_control/factorized_adjoint.py",
+      "tools/costate_organ_elevation_backtest.py"
+    ],
+    "domain_of_validity": {
+      "advisory_only": true,
+      "axis": "[macOS advisory] NON-PROMOTABLE",
+      "c2": "pending sufficient verdict rows; no inference from #205",
+      "mod32cap": "trajectory schema lacks interval-aligned d_seg_by_class; unavailable",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "scorer": "frozen contest SegNet constants from the three cited LawRefs",
+      "trajectory_admission": "#205 baseline, n=9 intervals only",
+      "validation_scope": "development-set pass; residual ridge=10 selected during #205 build; independent compatible trajectory owed",
+      "verdict_scope": "scalar d_seg forecast and binding tri-gate pass on #205; per-class walk-forward loses to persistence; all unvaried levers remain duty-to-measure"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "factorized_structure_from_three_canonical_laws_20260716",
+        "empirical_output": {
+          "certified_zero_weight_camera_fraction": 0.226969,
+          "gauge_null_linf": 2.23e-16,
+          "head_rank": 4,
+          "operator_rank": 4,
+          "road_lane_inverse_gain_ratio_vs_other_major_pair_median": 2.0896226415
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "gain": "lane_gain_chain_composed_v1",
+          "head": "segnet_head_rank4_linear_flipdist_v1",
+          "resize": "realization_necessity_preimage_per_stratum_v1"
+        },
+        "measurement_method": "compose the registered head/gain/preimage constants; deterministic float64 incidence-Laplacian rank and nullspace check",
+        "measurement_utc": "2026-07-16T20:20:00Z",
+        "predicted_output": {
+          "law": "K = p_visible B^T diag(||dw||/G) B is rank 4 and gauge-null"
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-07-16T20:30:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "src/tac/witness_control/factorized_adjoint.py",
+          "source_sha256": "4de3b6cd5579b584c162b741b1bf484402d55e23d432928e90f616f359f0c040"
+        },
+        "residual": 2.23e-16,
+        "source_artifact": "src/tac/witness_control/factorized_adjoint.py"
+      },
+      {
+        "anchor_id": "factorized_adjoint_n205_walkforward_20260716",
+        "empirical_output": {
+          "admission": "BACKTESTED-PASS",
+          "binding_auroc": 0.82,
+          "hyperparameter_selection": "POST_HOC_DEVELOPMENT_ON_205",
+          "loo_mae_model": 0.003245520213149131,
+          "loo_mae_persistence": 0.003697775590645048,
+          "walkforward_mae_model": 0.00185206618604584,
+          "walkforward_mae_persistence": 0.002791931483929152,
+          "walkforward_perclass_mae_model": 0.026641247544718305,
+          "walkforward_perclass_mae_persistence": 0.010822510285714293
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "intervals": 9,
+          "protocol": "LOO plus past-only walk-forward plus binding AUROC",
+          "trajectory": "levelset_v752_baseline_20260710T185913Z"
+        },
+        "measurement_method": "deterministic numpy closed-form fits; outer walk-forward is past-only; per-class walk-forward LOSES and is retained as an explicit caveat",
+        "measurement_utc": "2026-07-16T20:30:00Z",
+        "predicted_output": {
+          "admission": "must beat persistence and AUROC >= 0.8"
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-07-16T20:30:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/costate_organ_elevation_backtest_20260716.json",
+          "source_sha256": "267fd618e2377a7b6c6b32a0be42ca3b28a3072ea972b2fb012fa274e63eda3b"
+        },
+        "residual": 0.000939865297883312,
+        "source_artifact": ".omx/research/costate_organ_elevation_backtest_20260716.json"
+      }
+    ],
+    "equation_id": "hybrid_exact_factorized_costate_adjoint_v1",
+    "last_calibration_utc": "2026-07-16T20:30:00Z",
+    "latex_form": "\\Lambda_\\mathrm{hyb}(x,\\phi,t)=\\alpha_\\psi(x,\\phi,t)\\,p_\\mathrm{vis}B^\\top\\operatorname{diag}(\\|\\Delta w_{cc'}\\|/G_{cc'})B\\phi,\\quad \\alpha_\\psi\\ge0",
+    "name": "Hybrid exact-factorized costate adjoint with gated temporal/event residual",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "Exact rank-4 head x ker(A)-projected support x inverse-gain pair prior; only a closed-form temporal posterior and five-scalar amplitude residual learn.",
+    "predicted_vs_empirical_residual": {
+      "operator_gauge_null_linf": 2.23e-16,
+      "perclass_walkforward_regression": 0.01581873725838801,
+      "walkforward_mae_improvement": 0.000939865297883312
+    },
+    "provenance": {
+      "artifact_kind": "advisory_non_promotable",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+      "captured_at_utc": "2026-07-16T20:30:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "macos_cpu_advisory",
+      "hardware_substrate": "macos_arm64",
+      "measurement_axis": "[macOS-CPU advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "src/tac/witness_control/factorized_adjoint.py",
+      "source_sha256": "4de3b6cd5579b584c162b741b1bf484402d55e23d432928e90f616f359f0c040"
+    },
+    "python_callable_module_path": "tac.witness_control.factorized_adjoint:exact_response_direction",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "phi": "dimensionless lever-feature vector"
+    },
+    "units_out": {
+      "lambda_response": "campaign-state rate per control-share epoch"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "tools.measure_ddm_rd1_lambda_continuation_frontier",
+      "DDM train-decision SOLVE column (blocked until typed custody closes)"
+    ],
+    "canonical_producers": [
+      "tools/measure_ddm_rd1_lambda_continuation_frontier.py",
+      ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json"
+    ],
+    "domain_of_validity": {
+      "aggregate_lambda_policy": "diagnostic scalarization control only; not a train-decision price",
+      "continuous_metric_geometry_actionable": false,
+      "continuous_metric_geometry_required": [
+        "margin-Fisher plus rank-4 SegNet head",
+        "exact low-rank PoseNet output quadratic",
+        "Bregman divergence binding",
+        "Euclidean-control versus Fisher dual-metric readback"
+      ],
+      "discrete_neighbor_geometry": "ordered graph; no state-space norm",
+      "donor_conditioned": false,
+      "dual_axes": {
+        "g4_temporal_class": [
+          "STATIC_IN_IMAGE",
+          "STATIC_IN_XI_PROXY",
+          "TRANSIENT"
+        ],
+        "scorer_visibility": [
+          "ker(A)-invisible",
+          "seg-visible",
+          "pose-visible"
+        ],
+        "stratum": [
+          "Road",
+          "Lane",
+          "Undrivable",
+          "Movable",
+          "MyCar",
+          "POSE6_GLOBAL"
+        ]
+      },
+      "excluded": [
+        "global uint8-lattice optimality",
+        "contest score or frontier mutation",
+        "Menu1 contest archive closure",
+        "cross-axis equality inference",
+        "additive combination with solver_member_selection",
+        "pooled lambda as a per-dimension exchange rate",
+        "uniform serialized-coordinate tolerance",
+        "identity-L2 continuous continuation verdict",
+        "first-order-naive solve where quadratic structure is measured",
+        "parameter-coordinate proposal ranking",
+        "simple-first geometry ladder"
+      ],
+      "full_rank_finite_domain_check": true,
+      "geometry_ladder_policy": "best measured geometry first; simpler forms labeled controls",
+      "identity_L2_policy": "labeled control only",
+      "neighbor_only_corrector": true,
+      "optimization_domain": "SHA-custodied measured n600 descriptions only",
+      "own_stored_problem_only": true,
+      "quadratic_region_policy": "second-order from step one",
+      "receiver_closures": [
+        "archive_receiver_closed",
+        "measurement_harness_receiver_closed"
+      ],
+      "score_claim": false,
+      "scorer_coordinate_policy": "rank-4 class-pair hyperplanes and feature channels",
+      "two_type_rate": "skeleton tokens x fiber coefficients",
+      "typed_train_decision_prices_actionable": false,
+      "uniform_tolerance_allowed": false,
+      "verdict_scope": "FORMULATION: SHA-custodied V19C/Menu1/C1 measured n600 description domain on macOS CPU frozen scorers; families and paradigm remain open; pooled lambda remains a scalarization control only, not a per-dimension exchange rate; no identity-L2 continuation verdict or continuous geometry is claimed; no first-order-naive, parameter-coordinate, or simple-first geometry ladder is admitted"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "ddm_rd1_n600_restricted_lambda_sweep_20260724",
+        "empirical_output": {
+          "R6_CANDIDATE": false,
+          "aggregate_scalarization_controls": [
+            {
+              "constraint_group": "BN_SE_AMPLITUDE_STATISTICS",
+              "delta_D_realized": -0.625852844589005,
+              "delta_counted_bytes": 16,
+              "delta_d_pose": -3.664081697458357,
+              "delta_d_seg": -0.0016958194312491313,
+              "dual_index": 1,
+              "epistemic_status": "DERIVED_FROM_TWO_MEASURED_N600_ENDPOINTS",
+              "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+              "lambda_bytes_per_D": 25.565115087888007,
+              "left_candidate_id": "v19c_admit_0005",
+              "marginal_D_reduction_per_byte": 0.039115802786812814,
+              "per_class_d_seg": [],
+              "right_candidate_id": "scalar_gain_bias_12b_frame1",
+              "score_claim": false,
+              "score_dimension": "joint_realized_distortion"
+            },
+            {
+              "constraint_group": "COMPOSED_PAINT_GEOMETRY",
+              "delta_D_realized": -16.18102261607115,
+              "delta_counted_bytes": 962,
+              "delta_d_pose": -122.77714822014825,
+              "delta_d_seg": 0.0460744391547309,
+              "dual_index": 2,
+              "epistemic_status": "DERIVED_FROM_TWO_MEASURED_N600_ENDPOINTS",
+              "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+              "lambda_bytes_per_D": 59.452361128556376,
+              "left_candidate_id": "scalar_gain_bias_12b_frame1",
+              "marginal_D_reduction_per_byte": 0.01682018982959579,
+              "per_class_d_seg": [
+                {
+                  "binding_direction": "worsens",
+                  "class_name": "Lane",
+                  "delta_d_seg": 0.09863908641128,
+                  "delta_d_seg_per_byte": 0.00010253543285995841,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "worsens",
+                  "class_name": "Movable",
+                  "delta_d_seg": 0.4310355571533734,
+                  "delta_d_seg_per_byte": 0.00044806190972284136,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "worsens",
+                  "class_name": "MyCar",
+                  "delta_d_seg": 0.13459352155161303,
+                  "delta_d_seg_per_byte": 0.00013991010556300732,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "worsens",
+                  "class_name": "Road",
+                  "delta_d_seg": 0.02728747198804278,
+                  "delta_d_seg_per_byte": 2.8365355496925968e-05,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "improves",
+                  "class_name": "Undrivable",
+                  "delta_d_seg": -0.0008082922101225573,
+                  "delta_d_seg_per_byte": -8.402205926429909e-07,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                }
+              ],
+              "right_candidate_id": "statistics_hard_analytic_composed_frame1",
+              "score_claim": false,
+              "score_dimension": "joint_realized_distortion"
+            },
+            {
+              "constraint_group": "EXACT_FULL_RANK_UINT8_LATTICE",
+              "delta_D_realized": -26.140691888244728,
+              "delta_counted_bytes": 409388124,
+              "delta_d_pose": -36.61808293493661,
+              "delta_d_seg": -0.0703672620985243,
+              "dual_index": 3,
+              "epistemic_status": "DERIVED_FROM_TWO_MEASURED_N600_ENDPOINTS",
+              "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+              "lambda_bytes_per_D": 15660952.118260449,
+              "left_candidate_id": "statistics_hard_analytic_composed_frame1",
+              "marginal_D_reduction_per_byte": 6.38530781812438e-08,
+              "per_class_d_seg": [
+                {
+                  "binding_direction": "improves",
+                  "class_name": "Lane",
+                  "delta_d_seg": -0.530736028518517,
+                  "delta_d_seg_per_byte": -1.2964128595936432e-09,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "improves",
+                  "class_name": "Movable",
+                  "delta_d_seg": -0.6567592830363104,
+                  "delta_d_seg_per_byte": -1.6042460553553097e-09,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "improves",
+                  "class_name": "MyCar",
+                  "delta_d_seg": -0.135693326179341,
+                  "delta_d_seg_per_byte": -3.314539876084461e-10,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "improves",
+                  "class_name": "Road",
+                  "delta_d_seg": -0.09782966029976378,
+                  "delta_d_seg_per_byte": -2.389655550920763e-10,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                },
+                {
+                  "binding_direction": "improves",
+                  "class_name": "Undrivable",
+                  "delta_d_seg": -0.0038362851078336106,
+                  "delta_d_seg_per_byte": -9.370777711748206e-12,
+                  "score_dimension": "d_seg",
+                  "stratum": "semantic_frame1"
+                }
+              ],
+              "right_candidate_id": "c1_exact_solved_n600",
+              "score_claim": false,
+              "score_dimension": "joint_realized_distortion"
+            }
+          ],
+          "dimension_dual_actionable_bucket_count": 0,
+          "dimension_dual_axes": {
+            "g4_temporal_class": [
+              "STATIC_IN_IMAGE",
+              "STATIC_IN_XI_PROXY",
+              "TRANSIENT"
+            ],
+            "scorer_visibility": [
+              "ker(A)-invisible",
+              "seg-visible",
+              "pose-visible"
+            ],
+            "stratum": [
+              "Road",
+              "Lane",
+              "Undrivable",
+              "Movable",
+              "MyCar",
+              "POSE6_GLOBAL"
+            ]
+          },
+          "dimension_dual_bucket_count": 162,
+          "dimension_dual_edge_summaries": [
+            {
+              "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+              "additivity_residual_D": -2.55351295663786e-15,
+              "aggregate_delta_D": -0.625852844589005,
+              "aggregate_lambda_actionable_for_train_decision": false,
+              "aggregate_lambda_control": 25.565115087888007,
+              "component_delta_D_sum": -0.6258528445890076,
+              "dual_index": 1,
+              "left_candidate_id": "v19c_admit_0005",
+              "right_candidate_id": "scalar_gain_bias_12b_frame1",
+              "typed_actionable_bucket_count": 0,
+              "typed_bucket_count": 54
+            },
+            {
+              "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+              "additivity_residual_D": 3.552713678800501e-15,
+              "aggregate_delta_D": -16.18102261607115,
+              "aggregate_lambda_actionable_for_train_decision": false,
+              "aggregate_lambda_control": 59.452361128556376,
+              "component_delta_D_sum": -16.181022616071147,
+              "dual_index": 2,
+              "left_candidate_id": "scalar_gain_bias_12b_frame1",
+              "right_candidate_id": "statistics_hard_analytic_composed_frame1",
+              "typed_actionable_bucket_count": 0,
+              "typed_bucket_count": 54
+            },
+            {
+              "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+              "additivity_residual_D": -3.552713678800501e-15,
+              "aggregate_delta_D": -26.140691888244728,
+              "aggregate_lambda_actionable_for_train_decision": false,
+              "aggregate_lambda_control": 15660952.118260449,
+              "component_delta_D_sum": -26.14069188824473,
+              "dual_index": 3,
+              "left_candidate_id": "statistics_hard_analytic_composed_frame1",
+              "right_candidate_id": "c1_exact_solved_n600",
+              "typed_actionable_bucket_count": 0,
+              "typed_bucket_count": 54
+            }
+          ],
+          "effective_quantum_priced_bucket_count": 0,
+          "knee_candidate_id": "statistics_hard_analytic_composed_frame1",
+          "metric_active_continuation_geometry": {
+            "aggregate_dual_units_unchanged": true,
+            "completed_discrete_solve": {
+              "full_rank_finite_domain_verification": true,
+              "identity_L2_used": false,
+              "selection_geometry": "ORDERED_FINITE_NEIGHBOR_GRAPH",
+              "selection_units": "counted_bytes_plus_lambda_times_realized_contest_D",
+              "state_space_distance_used": false,
+              "status": "VALID_NO_CONTINUOUS_GEOMETRY_INVOKED",
+              "step_direction_used": false,
+              "trust_region_used": false,
+              "warm_start_token": "previous_candidate_identifier_only"
+            },
+            "continuous_proposal_geometry_contract": {
+              "actionable": false,
+              "applies_to": [
+                "predictor_corrector_step_direction",
+                "trust_radius",
+                "warm_start_distance",
+                "per_bucket_move_proposal_ranking"
+              ],
+              "blocker": "RD1 endpoint receipts lack per-candidate margin-Fisher pullbacks, Pose quadratic tensors, Bregman binding receipts, and dual-metric readbacks for proposed continuous moves",
+              "composite_readback": {
+                "law": "dual-metric Euclidean-versus-Fisher readback",
+                "required_fields": [
+                  "euclidean_control",
+                  "fisher_or_pose_quadratic",
+                  "cross_metric_cosine",
+                  "relative_norm"
+                ],
+                "single_metric_verdict_allowed": false
+              },
+              "distribution": {
+                "binding": "policy_bindings.optimal_metric",
+                "identity_L2_allowed": "LABELED_CONTROL_ONLY",
+                "metric": "Bregman divergence"
+              },
+              "pose": {
+                "metric": "exact low-rank <=6-dimensional PoseNet output quadratic",
+                "parameter_L2_allowed": false
+              },
+              "seg": {
+                "identity_L2_allowed": "LABELED_CONTROL_ONLY",
+                "law_ids": [
+                  "frozen_scorer_fisher_curvature_margin_colocation_v1",
+                  "segnet_head_rank4_linear_flipdist_v1"
+                ],
+                "metric": "margin-Fisher surrogate plus rank-4 head hyperplane geometry"
+              }
+            },
+            "lambda_points_reused_without_restart": true,
+            "schema": "ddm_rd1_metric_active_continuation_geometry.v1",
+            "score_claim": false
+          },
+          "second_order_metric_geometry_addendum": {
+            "aggregate_dual_units_unchanged": true,
+            "completed_discrete_solve": {
+              "continuous_approximation_order_used": null,
+              "gradient_first_order_naive_used": false,
+              "hessian_used": false,
+              "reason": "exact finite graph enumeration and full-domain rank require neither a gradient nor a local quadratic approximation",
+              "status": "VALID_NO_LOCAL_CONTINUOUS_MODEL_INVOKED"
+            },
+            "future_continuous_move_contract": {
+              "actionable": false,
+              "blocker": "RD1 endpoints do not retain an exact composite-R adjoint, per-bucket Hessian/SPD normal chart, scorer-channel proposal coordinates, or an optimal-first measured geometry ladder",
+              "coordinate_system": {
+                "flip_distance": "abs(margin)/norm(delta_w_class_pair)",
+                "parameter_coordinates_allowed": false,
+                "pose": "exact <=6-dimensional PoseNet output chart",
+                "seg": "rank-4 scorer-head class-pair hyperplanes and feature channels"
+              },
+              "ladder_order": [
+                "most-optimal measured second-order scorer geometry",
+                "measured metric-active simpler geometry",
+                "identity-L2 or first-order naive labeled controls"
+              ],
+              "second_order_from_step_one_when_quadratic_measured": true,
+              "second_order_inventory": [
+                {
+                  "catalog": 391,
+                  "surface": "exact composite-R adjoint"
+                },
+                {
+                  "catalog": 423,
+                  "surface": "Hessian-preconditioned TerminalSolve"
+                },
+                {
+                  "catalog": 552,
+                  "surface": "SPD normal-coordinate momentum"
+                }
+              ],
+              "simpler_geometry_is_control_only": true
+            },
+            "lambda_points_reused_without_restart": true,
+            "schema": "ddm_rd1_second_order_metric_geometry_addendum.v1",
+            "score_claim": false
+          },
+          "selected_candidate_ids": [
+            "v19c_admit_0005",
+            "v19c_admit_0005",
+            "scalar_gain_bias_12b_frame1",
+            "scalar_gain_bias_12b_frame1",
+            "scalar_gain_bias_12b_frame1",
+            "statistics_hard_analytic_composed_frame1",
+            "statistics_hard_analytic_composed_frame1",
+            "statistics_hard_analytic_composed_frame1",
+            "c1_exact_solved_n600",
+            "c1_exact_solved_n600"
+          ],
+          "supported_hull_candidate_ids": [
+            "v19c_admit_0005",
+            "scalar_gain_bias_12b_frame1",
+            "statistics_hard_analytic_composed_frame1",
+            "c1_exact_solved_n600"
+          ],
+          "train_decision_SOLVE_table": [
+            {
+              "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+              "aggregate_lambda_control": 25.565115087888007,
+              "bucket": "edge_1:v19c_admit_0005->scalar_gain_bias_12b_frame1",
+              "lambda_bytes_per_D_dimension": null,
+              "scope": "train-decision price blocked; aggregate secant is diagnostic only"
+            },
+            {
+              "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+              "aggregate_lambda_control": 59.452361128556376,
+              "bucket": "edge_2:scalar_gain_bias_12b_frame1->statistics_hard_analytic_composed_frame1",
+              "lambda_bytes_per_D_dimension": null,
+              "scope": "train-decision price blocked; aggregate secant is diagnostic only"
+            },
+            {
+              "SOLVE": "BLOCKED_TYPED_G4_AND_DIMENSION_RATE_HOME_CUSTODY",
+              "aggregate_lambda_control": 15660952.118260449,
+              "bucket": "edge_3:statistics_hard_analytic_composed_frame1->c1_exact_solved_n600",
+              "lambda_bytes_per_D_dimension": null,
+              "scope": "train-decision price blocked; aggregate secant is diagnostic only"
+            },
+            {
+              "SOLVE": "BLOCKED_UINT8_ABS_STEP_HISTOGRAM_AND_G4_JOINT_ASSIGNMENT",
+              "aggregate_lambda_control": null,
+              "bucket": "PER_DIMENSION_EFFECTIVE_QUANTUM",
+              "lambda_bytes_per_D_dimension": null,
+              "scope": "DR2b retained changed-value counts but not the per-dimension receiver uint8 absolute-step histogram; G4 joint assignment is also absent"
+            }
+          ],
+          "verdict": "MEASURED_RESTRICTED_N600_LAMBDA_FRONTIER; V19C_CURRENT_UNSUPPORTED; KNEE_OUTSIDE_R6_BOX; GLOBAL_LATTICE_AND_MENU_ARCHIVE_CLOSURE_OPEN; DIMENSION_TYPED_POSTSOLVE; TRAIN_DECISION_PRICES_BLOCKED_WITHOUT_JOINT_CUSTODY; DISCRETE_GRAPH_GEOMETRY_VALID; CONTINUOUS_METRIC_ACTIVE_PROPOSALS_BLOCKED_PENDING_TENSOR_CUSTODY; SECOND_ORDER_SCORER_COORDINATE_OPTIMAL_FIRST_LADDER_REQUIRED",
+          "verdict_scope": "FORMULATION: SHA-custodied V19C/Menu1/C1 measured n600 description domain on macOS CPU frozen scorers; families and paradigm remain open; pooled lambda remains a scalarization control only, not a per-dimension exchange rate; no identity-L2 continuation verdict or continuous geometry is claimed; no first-order-naive, parameter-coordinate, or simple-first geometry ladder is admitted"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "candidate_count": 110,
+          "donor_conditioned": false,
+          "lambda_count": 10,
+          "lambda_ladder": [
+            0.0,
+            23.008603579099205,
+            28.12162659667681,
+            38.98597766503006,
+            53.50712501570074,
+            65.39759724141202,
+            30513.61304322794,
+            14094856.906434404,
+            17227047.330086496,
+            62643808.473041795
+          ],
+          "lambda_points_reused_without_restart": true,
+          "pair_count": 600,
+          "supported_hull_count": 4,
+          "threads": 4,
+          "typed_config_sha256": "8c74e3297f44ffda927c6a2e33bf7ad8b666c047b742ad037b606be97d28b359",
+          "typed_dimension_config_sha256": "d37ab1738fa5e09c8614dbdfbb4f20e3643d097b77e0b2293ac7f8ce519da2ca"
+        },
+        "measurement_method": "fresh four-thread frozen CPU scorer replay of the exact C1 receiver output; immutable reaggregation of Menu1 n600 batches; SHA/ZIP-byte-home verification of 104 V19C accepted archives; adjacent finite-hull continuation; postsolve dimension typing reused every completed lambda point and failed closed on missing G4/rate-home and uint8-quantum custody",
+        "measurement_utc": "2026-07-24T02:36:00Z",
+        "predicted_output": {
+          "corrector": "neighbor-only with full-rank finite-domain check",
+          "domain": "SHA-custodied measured n600 descriptions only",
+          "law": "x*(lambda)=argmin_x R_counted(x)+lambda*(100*d_seg(x)+sqrt(10*d_pose(x)))"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-07-24T02:36:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "darwin_arm64_cpu_torch_threads4",
+          "measurement_axis": "[macOS-CPU frozen-scorer advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "Recompute after any new archive-receiver-closed n600 point, donor-free MS1 landing, scorer-axis replay, or Menu1 deployment closure. Never extrapolate finite-domain support to the global uint8 lattice.",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json",
+          "source_sha256": "7449b4fedcbae41baf535018602435f9e36e6f09dd0dcd4d5f8ad4d022cbbce2"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json"
+      }
+    ],
+    "equation_id": "ddm_restricted_realized_lambda_continuation_v1",
+    "last_calibration_utc": "2026-07-24T02:36:00Z",
+    "latex_form": "x_{\\mathcal C}^{*}(\\lambda)=\\arg\\min_{x\\in\\mathcal C}\\left[R_{\\rm counted}(x)+\\lambda\\left(100d_{\\rm seg}(x)+\\sqrt{10d_{\\rm pose}(x)}\\right)\\right]",
+    "name": "DDM restricted realized lambda continuation",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "On a SHA-custodied n600 description set, choose the real counted-byte plus lambda-weighted realized-distortion minimizer.",
+    "predicted_vs_empirical_residual": {
+      "finite_domain_full_rank_mismatch_count": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-07-24T02:36:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "darwin_arm64_cpu_torch_threads4",
+      "measurement_axis": "[macOS-CPU frozen-scorer advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "Recompute after any new archive-receiver-closed n600 point, donor-free MS1 landing, scorer-axis replay, or Menu1 deployment closure. Never extrapolate finite-domain support to the global uint8 lattice.",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_rd1_lambda_continuation_frontier_20260724T011239Z/ddm_rd1_lambda_continuation_frontier_receipt_v5.json",
+      "source_sha256": "7449b4fedcbae41baf535018602435f9e36e6f09dd0dcd4d5f8ad4d022cbbce2"
+    },
+    "python_callable_module_path": "tac.canonical_equations.ddm_lambda_continuation_frontier_20260724:restricted_realized_lambda_argmin",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "counted_bytes": "bytes",
+      "d_pose": "dimensionless",
+      "d_seg": "dimensionless",
+      "lambda": "counted_bytes_per_distortion_unit"
+    },
+    "units_out": {
+      "candidate_id": "typed_description_identifier"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "einstein_kolmogorov_ultra.U1",
+      "tac.witness_autoconfig"
+    ],
+    "canonical_producers": [
+      "segnet_head_rank4_linear_flipdist_v1",
+      "fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
+      ".omx/research/closed_scorer_variational_de_20260721T173654Z.json"
+    ],
+    "domain_of_validity": {
+      "coupling": "(q,xi)=task_map(realize_uint8_R(inflate(C)))",
+      "excludes": [
+        "symbolic full-CNN Euler-Lagrange expansion",
+        "proxy entropy as exact bytes",
+        "smooth ODE across argmax jumps"
+      ],
+      "pointer_moved": false,
+      "pose_domain": "first-six frozen PoseNet output xi; exact output-space Hessian I/3",
+      "rate_domain": "exact legal archive bytes/MDL only",
+      "research_only": true,
+      "seg_domain": "frozen SegNet final affine head rank-4 quotient after exact realization",
+      "seg_geometry": "Laguerre power cells; equivalent negative-entropy Bregman vertex cells"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "closed_scorer_rank4_bregman_real_tiles_seed1234_20260721",
+        "empirical_output": {
+          "axis": "[macOS-CPU advisory real frozen-SegNet tiles; NON-PROMOTABLE]",
+          "bregman_voronoi_vs_live_argmax_disagreement_rate": 0.0,
+          "cached_target_vs_live_argmax_disagreement_rate": 0.0,
+          "native_f32_power_vs_live_argmax_disagreement_rate": 0.0
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "heldout_pixels": 20480,
+          "heldout_tiles": 20,
+          "seed": 1234,
+          "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+          "task_coordinate": "rank4_final_head_quotient"
+        },
+        "measurement_method": "20 deterministic held-out 32x32 tiles from four real gt_n600 frames; frozen SegNet CPU forward, captured final-head features, independent rank-four quotient convolution, native-f32 Laguerre assignment, and negative-entropy Bregman assignment",
+        "measurement_utc": "2026-07-21T17:48:45Z",
+        "predicted_output": {
+          "bregman_voronoi_vs_live_argmax_disagreement_rate": 0.0,
+          "native_f32_power_vs_live_argmax_disagreement_rate": 0.0
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-07-21T17:36:54Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macos_arm64_cpu_or_derived_math",
+          "measurement_axis": "[macOS-CPU advisory real frozen-SegNet tiles]",
+          "promotion_eligible": false,
+          "rejection_reason": "promotion requires exact archive bytes, receiver parse-back, runtime custody, and contest-CPU/CUDA frozen-evaluator replay",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/closed_scorer_variational_de_20260721T173654Z.json",
+          "source_sha256": "a6e5d286f6f8a74c660eba73611381cc1e227aa4d2c46a6e3f2aeda7d6f94ed1"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/closed_scorer_variational_de_20260721T173654Z.json"
+      }
+    ],
+    "equation_id": "closed_scorer_taskspace_variational_functional_v1",
+    "last_calibration_utc": "2026-07-21T17:36:54Z",
+    "latex_form": "\\mathcal S[C]=100|\\Omega|^{-1}\\sum_p\\mathbf 1[\\mathcal L(q_p(C))\\ne c_p^*]+\\sqrt{10\\,\\|\\xi(C)-\\xi^*\\|_2^2/(6N)}+25L_{MDL}(C)/37545489,\\ (q,\\xi)=(\\Pi_4 h_{Seg},h_{Pose})\\circ R_8\\circ G(C)",
+    "name": "Closed frozen-scorer task-space variational functional",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "Rank-4 Laguerre/Bregman Seg cells + PoseNet xi quadratic + exact archive MDL, coupled only by realized decoder feasibility.",
+    "predicted_vs_empirical_residual": {
+      "real_frozen_segnet_20_tile_max": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-07-21T17:36:54Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "macos_arm64_cpu_or_derived_math",
+      "measurement_axis": "[macOS-CPU advisory real frozen-SegNet tiles]",
+      "promotion_eligible": false,
+      "rejection_reason": "promotion requires exact archive bytes, receiver parse-back, runtime custody, and contest-CPU/CUDA frozen-evaluator replay",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/closed_scorer_variational_de_20260721T173654Z.json",
+      "source_sha256": "a6e5d286f6f8a74c660eba73611381cc1e227aa4d2c46a6e3f2aeda7d6f94ed1"
+    },
+    "python_callable_module_path": "tac.canonical_equations.closed_scorer_variational_de_20260721:closed_scorer_action",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "archive_bytes": "bytes",
+      "d_pose": "mean_squared_PoseNet_output",
+      "d_seg": "fraction"
+    },
+    "units_out": {
+      "score": "contest_score_units"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "tac.optimization.hope_bn_capacity",
+      "tools.run_ddm_hb1_hope_bn_capacity"
+    ],
+    "canonical_producers": [
+      "tools.run_ddm_hb1_hope_bn_capacity"
+    ],
+    "domain_of_validity": {
+      "consumer_graph": "capacities emitted only where w_out is structurally unambiguous; encoder block outputs carry UNRESOLVED_CONSUMER_GRAPH_V1 and sqrt(K) only",
+      "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+      "excluded": [
+        "contest score or frontier movement",
+        "HOPE paper effect sizes (never quotable as ours)",
+        "Gaussian-surrogate kernels as authority",
+        "parameter-count rate denominators",
+        "witness-side adoption without a basis-specific kernel derivation"
+      ],
+      "head_composition": "exact rank-4 head (segnet_head_rank4_linear_flipdist_v1); rank check = 4",
+      "measure": "exact n600 last-frame inputs; argmax agreement 1.0 vs cached GT",
+      "rate_policy": "no rate columns; denominators must be measured coder bytes (OWED)",
+      "relu_family_check": "encoder SiLU + sigmoid SE gates => HOPE closed-form kernels apply to the 10 decoder BN+ReLU units only, and only as a surrogate comparison column",
+      "research_only": true,
+      "score_claim": false,
+      "scorer": "frozen SegNet smp.Unet tu-efficientnet_b2 classes=5 (SHA-pinned)",
+      "strata": "37 occupied pf2 buckets (class pair x cell/boundary x temporal)",
+      "verdict_scope": "INSTANCE_GENERATOR_FOR_FISHER_MARGIN_SITE_LOCAL_PER_STRATUM_CODEBOOK"
+    },
+    "empirical_anchors": [],
+    "equation_id": "hope_bn_capacity_per_stratum_codebook_v1",
+    "last_calibration_utc": "2026-07-27T00:01:00Z",
+    "latex_form": "\\|f_i\\|_H=\\|w_{\\mathrm{out},i}\\|_2\\sqrt{K(i,i)},\\quad K_b(i)=\\mathbb{E}_{P_{600}}[\\psi_i^2\\mid b],\\quad \\mathrm{cap}_b^{ab}(i)=\\|\\Delta w^{ab}_{\\mathrm{head}}[i]\\|_F\\sqrt{K_b(i)},\\quad W(x)=\\textstyle\\sum_i\\hat c_i\\,\\psi_i(x)^2",
+    "name": "HOPE BN-capacity per stratum codebook weighting (exact n600 measure)",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "Per-channel HOPE capacity ||Dw_head[i]||*sqrt(K_b(i)) with exact stratum-restricted empirical kernels generates the Fisher-margin site-local per-stratum codebook weighting.",
+    "predicted_vs_empirical_residual": {},
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-07-27T00:01:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "darwin_arm64_cpu_torch_fp32_batch4",
+      "measurement_axis": "[macOS-CPU frozen-scorer advisory]",
+      "promotion_eligible": false,
+      "rejection_reason": "Rebuild after any SegNet checkpoint, pf2 bucket index, gt_n600 cache, head factorization, or margin-field SHA changes, or if a measured coder-byte denominator is admitted for any capacity row.",
+      "score_claim_valid": false,
+      "source_path": "/Users/adpena/Projects/pact/.claude/worktrees/agent-a897a47c0c3ed74dc/.omx/research/ddm_hb1_hope_bn_capacity_20260727T0001Z/hope_rg3_agreement_receipt.json",
+      "source_sha256": "423ee775aa7140d93c796906d94da55d721501b7ddc372d4fd873066218133f6"
+    },
+    "python_callable_module_path": "tac.canonical_equations.hope_bn_capacity_per_stratum_20260727:hope_stratum_capacity",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "delta_w_head_norm": "Frobenius norm of head class-pair weight difference per pre-head channel",
+      "k_diag_bucket": "exact second moment of pre-head activation restricted to the bucket"
+    },
+    "units_out": {
+      "capacity_per_channel": "HS-norm capacity units (scorer-internal, dimensionless)",
+      "capacity_share": "fraction of stratum capacity per channel",
+      "total_capacity": "HS-norm capacity units"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+      ".omx/research/ddm_rn1_n600_reopen_sweep_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_xr1_exchange_ratio_noise_floor.py"
+    ],
+    "domain_of_validity": {
+      "constants_mirror": "experiments/ddm_xr1_exchange_ratio_noise_floor.py (drift-guarded by the test)",
+      "forbidden_resampling": [
+        "site-level resampling (ddm_fs3 measured AVERAGE != MARGINAL by 2.24x)",
+        "any contiguous prefix subset (pose prefixes measure 2.54-4.21x harder)"
+      ],
+      "known_boundary": "the 25 B fixed pose-carrier term is held constant across resamples because no per-pair breakdown of it was retained; its own dispersion is not modelled",
+      "measurement_axis": [
+        "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]"
+      ],
+      "population": [
+        "full n600 pair population; seeded random resampling only"
+      ],
+      "result_type": "APPARATUS / measurement-discipline law; NOT a d_seg / d_pose / rate lever; moves no pointer",
+      "transfer_rule": "an interval is valid ONLY for its own physical object and pair population; a row without matched same-object n600 per-pair byte AND distortion receipts is UNGRADABLE"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "physical_null_reencode_x3_sigma_b_20260903",
+        "empirical_output": {
+          "all_archives_byte_identical": true,
+          "all_streams_byte_identical": true,
+          "consequence": "the exchange-ratio noise floor is ENTIRELY statistical (which 600 pairs), not physical; a re-encode adds no dispersion to a byte claim",
+          "sigma_b_bytes": 0.0
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "edit_tokens_changed": 0,
+          "object": "afr1 shipped field, shipped model, shipped causal schedule; null overlay",
+          "physical_repeats": 3,
+          "repeat_unit": "one complete physical n600 RC64 re-encode via the RXC1 exact coder",
+          "scorer_runs": 0
+        },
+        "measurement_method": "three_complete_physical_rc64_null_reencodes_byte_compared",
+        "measurement_utc": "2026-09-03T00:00:00Z",
+        "predicted_output": {
+          "all_repeats_byte_identical": true,
+          "prior_law": "the RC64 coder is deterministic, so physical byte noise is exactly zero",
+          "sigma_b_bytes": 0.0
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-03T21:05:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure sigma_B whenever the coder, the RC64 build, the shipped model, or the causal schedule changes; a nonzero sigma_B refutes the determinism premise every byte claim in the campaign rests on",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          "source_sha256": "799945b19f8ae7fa80773e23219a92914cc4a75722c08bce4c2da251b864a3d2"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md"
+      },
+      {
+        "anchor_id": "jbp1_row_a_pair_bootstrap_delta_bytes_20260903",
+        "empirical_output": {
+          "half_width_bytes": 200.47762043826356,
+          "interval_95_bytes": [
+            -3159.273548761239,
+            -2758.318307884712
+          ],
+          "interval_excludes_zero": true,
+          "monte_carlo_residual_bytes": 1.65706,
+          "prediction_held": true,
+          "resample_sd_bytes": 105.225891
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "calibration_constant_bytes": 0.4534463945501557,
+          "exact_delta_bytes": -2950,
+          "object": "JBP1 row A -- 5,506 XOV1 B/H/W edits across 567 of 600 pairs",
+          "per_pair_ledger": "retained/exact/{null,xov1_bhw5506}/bits_per_frame_exact.npy",
+          "resamples": 200,
+          "seed": 20260903
+        },
+        "measurement_method": "seeded_pair_level_bootstrap_of_retained_per_frame_byte_ledger",
+        "measurement_utc": "2026-09-03T00:00:00Z",
+        "predicted_output": {
+          "charter_prior_law": "narrower than +/-600 B, so the rate credit is real",
+          "interval_half_width_bytes_below": 600.0
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-03T21:05:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+          "promotion_eligible": false,
+          "rejection_reason": "recompute when JBP1's retained per-frame ledger or its exact -2,950 B receipt changes; raise the resample count if the Monte-Carlo residual matters at the precision a decision needs",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          "source_sha256": "799945b19f8ae7fa80773e23219a92914cc4a75722c08bce4c2da251b864a3d2"
+        },
+        "residual": 1.65706,
+        "source_artifact": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md"
+      },
+      {
+        "anchor_id": "fcd3_pair_bootstrap_delta_s_and_exchange_ratio_20260903",
+        "empirical_output": {
+          "admissible": false,
+          "delta_s_half_width": 0.00024150572709057724,
+          "delta_s_interval_95": [
+            0.0017151288265233415,
+            0.002198140280704496
+          ],
+          "delta_s_resample_sd": 0.000125289,
+          "exchange_ratio_denominator_sign_stable": true,
+          "exchange_ratio_interval_95": [
+            -0.5310976728579913,
+            -0.4732671579713654
+          ],
+          "exchange_ratio_point": -0.5018330063791281,
+          "falsifier_fired": false,
+          "interval_excludes_zero": true,
+          "monte_carlo_residual_delta_s": 6.621e-06,
+          "reading": "r = -0.50 +/- 0.029: the rate credit pays back only about half the distortion it buys, and the interval never reaches the break-even r = -1"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base_d_pose": 0.0001470109127694741,
+          "base_d_seg": 0.0003474002587608993,
+          "body_exact_delta_bytes": -2965,
+          "candidate_d_pose": 0.00014620431466028094,
+          "candidate_d_seg": 0.0003874630492646247,
+          "exact_delta_bytes": -2940,
+          "fixed_pose_carrier_bytes": 25,
+          "object": "FCD3 published tau_1e-6 -- 4,194-edit field plus 448-pair pose carrier",
+          "resamples": 200,
+          "scorer_runs": 0,
+          "seed": 20260903
+        },
+        "measurement_method": "seeded_pair_level_bootstrap_coupling_the_same_resample_across_bytes_and_both_retained_n600_distortion_axes",
+        "measurement_utc": "2026-09-03T00:00:00Z",
+        "predicted_output": {
+          "charter_prior_law": "the interval EXCLUDES zero, so the win-win cone stays refused",
+          "delta_s_point": 0.0019433243907622244,
+          "falsifier": "an interval that includes zero reopens the cone at n600"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-03T21:05:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+          "promotion_eligible": false,
+          "rejection_reason": "recompute against a fresh n600 scorer order if FCD3's retained per-pair receipts are superseded; the interval is object-specific and must never be transferred to another edit set",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md",
+          "source_sha256": "799945b19f8ae7fa80773e23219a92914cc4a75722c08bce4c2da251b864a3d2"
+        },
+        "residual": 6.621e-06,
+        "source_artifact": ".omx/research/ddm_xr1_exchange_ratio_noise_floor_20260903.md"
+      },
+      {
+        "anchor_id": "fs1_frame0_selector_pure_pose_near_win_pair_bootstrap_20260904",
+        "empirical_output": {
+          "admissible": true,
+          "consequence": "ADMISSIBLE: the 95% upper edge is -5.663e-05, well clear of zero. But the half-width is 6.613e-05 -- 0.599x the point estimate -- so even a pure-pose edit with ZERO byte dispersion and ZERO seg leg carries a pair-sampling interval of the same ORDER as its own effect. The pose mean is owned by a handful of pairs (ddm_pr1 sec 5: ten pairs own 69% of it), and resampling 600 pairs with replacement moves that tail. A pose near win therefore needs the bootstrap even when nothing about its bytes is uncertain.",
+          "half_width": 6.61253615486505e-05,
+          "half_width_over_point": 0.5991732826702064,
+          "interval_95_high": -5.663172266623939e-05,
+          "interval_95_low": -0.0001888824457635404,
+          "point_net_delta_S": -0.00011036099816394324
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "batch_size": 8,
+          "delta_bytes_exact": 20,
+          "delta_bytes_is_per_pair": false,
+          "delta_d_seg": 0.0,
+          "edit_kind": "frame-0 selector blob re-selection (no carrier, renderer or token change)",
+          "n_pairs": 600,
+          "object": "afr1 frontier archive cbb8d928... (180,002 B) vs the ddm_fs1 frame-0 selector re-selection 50fcaf1a... (180,022 B); 21 changed pairs, k=24 active, byte-optimal set under ddm_pr1's >1% robustness gate",
+          "resamples": 200,
+          "scorer_runs": 2,
+          "seed": 20260903
+        },
+        "measurement_method": "seeded n600 pair bootstrap (200 resamples, seed 20260903) over the retained per-pair d_pose vectors of two batch-8 n600 measures taken on ONE instrument (frozen CPU-torch PoseNet, DALI-lineage GT), with the SAME draw matrix driving both vectors; dB held constant per the law's fixed calibration term",
+        "measurement_utc": "2026-09-04T00:00:00Z",
+        "predicted_output": {
+          "predicted_admissible": true,
+          "prior_law": "the law's two prior anchors both carry a PER-PAIR byte stream, so dB resamples and widens the interval. This edit's dB is a whole-archive constant and d_seg is zero by construction, so the interval should be driven by the pose leg ALONE and should be the narrowest case the law has yet seen relative to its point estimate."
+        },
+        "provenance": {
+          "artifact_kind": "predicted_from_model",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+          "captured_at_utc": "2026-09-04T16:17:38Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "predicted",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "<predictor:exchange_ratio_noise_floor.v1>",
+          "source_sha256": "dc4d397f7eedb6836dbe189655b75a05dd873eba7be3cf9e1f0d5f4faa103d71"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_fs1_frame0_selector_reselection_20260904.md"
+      },
+      {
+        "anchor_id": "jrx2_move52_same_input_archive_twins_and_diagnostic_exchange_20260916",
+        "empirical_output": {
+          "exchange_rows": {
+            "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+            "field": {
+              "archive_delta_bytes": {
+                "iqr": [
+                  1.25,
+                  2.0
+                ],
+                "k": 22,
+                "max": 4.0,
+                "median": 2.0,
+                "min": 0.0,
+                "n": 24
+              },
+              "bits_per_changed_token": {
+                "iqr": [
+                  8.0,
+                  16.0
+                ],
+                "k": 22,
+                "max": 24.0,
+                "median": 16.0,
+                "min": 0.0,
+                "n": 24
+              },
+              "credit_S_per_byte": {
+                "iqr": [
+                  1.3693505251401696e-08,
+                  2.840039142075699e-07
+                ],
+                "k": 18,
+                "max": 4.879948815326544e-07,
+                "median": 1.3782798299610095e-07,
+                "min": -3.7878554396237644e-07,
+                "n": 24
+              },
+              "kind": "resolved-credit diagnostic with held shipped carrier",
+              "null_pairs": [
+                547,
+                502
+              ],
+              "positive_diagnostic_only_pairs": [
+                127,
+                376
+              ],
+              "source": {
+                "bytes": 33073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/DISCOVERY_RESULTS.json",
+                "sha256": "53b50573c1f9c792ed45ad3c1b4c6b4e9d03fdd9eb7d9a4bb132914953c0731c"
+              },
+              "zero_cost_pairs": [
+                127,
+                319,
+                376,
+                134
+              ]
+            },
+            "joint": {
+              "all_three_finite_k": 0,
+              "bits": null,
+              "exchange": null,
+              "joint_vs_better_single_ratio": null,
+              "n": 24,
+              "reason": "Chartered Seg collateral stop before joint implementation or scoring"
+            },
+            "population_negative_banked": false,
+            "renderer": {
+              "archive_delta_bytes": {
+                "iqr": [
+                  2.0,
+                  40.0
+                ],
+                "k": 24,
+                "median": 28.0,
+                "n": 24
+              },
+              "bits_per_step": {
+                "iqr": [
+                  16.0,
+                  320.0
+                ],
+                "k": 24,
+                "median": 224.0,
+                "n": 24
+              },
+              "pairs_per_census": 600,
+              "resolved_total_exchange": null,
+              "resolved_total_exchange_k": 0,
+              "seg_censuses_k": 3,
+              "source": {
+                "bytes": 3485,
+                "path": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+                "sha256": "7dfa174abb6ef708f83834c6cc6c5188fc828b35b266686992ecef8393d0abec"
+              }
+            },
+            "sample_n": 24,
+            "score_claim": false,
+            "verdict": "STOP_COLLATERAL_SEG"
+          },
+          "independent_process_dispersion_measured": false,
+          "maximum_byte_difference": 0,
+          "pair_bootstrap_measured": false,
+          "same_input_archive_twins_identical": true,
+          "score_claim": false,
+          "twin_pairs": [
+            {
+              "archive_bytes": 179683,
+              "archive_sha256": "3136fff14806e745014de23aa660f8636766603d3e64e9aca2cd34a82e0f98e3",
+              "done": {
+                "bytes": 136629,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration0/DONE.json",
+                "sha256": "561688f7894cbc27c4a541f8d3f53b5dc4ab9b728f3ad42e3b59a46f96431d49"
+              },
+              "job": "calibration0"
+            },
+            {
+              "archive_bytes": 179676,
+              "archive_sha256": "a453b1ab2767d13dbfccd87c283bc6ec206612818ca645adcafd0c1e5196c99e",
+              "done": {
+                "bytes": 137028,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/calibration1/DONE.json",
+                "sha256": "cf513a825586816dc09b811e76494cd635a3b2b37b6df5dc4269ed5a1add7157"
+              },
+              "job": "calibration1"
+            },
+            {
+              "archive_bytes": 179336,
+              "archive_sha256": "735ad5f676d28dcab0049a62c40005ed8aaa8415c53f6ea9a91a7b241bd5f9b2",
+              "done": {
+                "bytes": 2409,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair080/DONE.json",
+                "sha256": "c745af7e26d4a8cdf36b4ba79a69e5ac7cacfb12f43b676b525bd33cd68184d5"
+              },
+              "job": "pair080"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "dbf6cfb973133123c678e5ce0089ed1344ede44998cad17f099bd96e0e54b598",
+              "done": {
+                "bytes": 2073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair208/DONE.json",
+                "sha256": "41bde196e05800c2c151ccb26c4130c7c774a8b618ba5b4ccc5f370f511707ce"
+              },
+              "job": "pair208"
+            },
+            {
+              "archive_bytes": 179335,
+              "archive_sha256": "f8e93a669b5d2fb6fc445662344af2e81a0393908fdc606659839cdb9b9733df",
+              "done": {
+                "bytes": 2069,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair214/DONE.json",
+                "sha256": "8117d32e184682fca0bf2acb61503ac392251eb9574dd04e8e35d0cb6f69dd84"
+              },
+              "job": "pair214"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "02db2b4d5a2f7b3ebaccf754c67f10622af02053a7e6aa97259d1b48debfd99d",
+              "done": {
+                "bytes": 2073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair236/DONE.json",
+                "sha256": "7154b2f3eb3bb32c67fd4cfcfa39a42421962c1129356d0819870bb9272676a5"
+              },
+              "job": "pair236"
+            },
+            {
+              "archive_bytes": 179333,
+              "archive_sha256": "7523b13cdf983ac6ba6245058b8e73dc68bace532451ed1c0c479f3f0f29efa1",
+              "done": {
+                "bytes": 2073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair250/DONE.json",
+                "sha256": "3a9899c157e9e761597e5d292e9e4b2c24fe3436bf29538633ea721201460b33"
+              },
+              "job": "pair250"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "26c3c15f80854ed2d2bc92c42b3050cda2da4d6d7957bf5181c626579dadc440",
+              "done": {
+                "bytes": 2073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair296/DONE.json",
+                "sha256": "4c56ecb6032682eac65df1ae2476fd2fa0fb353d79d5691a9279d11856edd60e"
+              },
+              "job": "pair296"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "a28b027a44cab4e7f6203e20da6669fa204d30ed866ad925a2f93b0176bab6d5",
+              "done": {
+                "bytes": 2096,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair382/DONE.json",
+                "sha256": "77b194b5a9b71b15be6ec004bae55221a388bbd712a799d3aa22368a4d0f65a8"
+              },
+              "job": "pair382"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "3b2b47914c8df002fcbd92e1c372d57efb640554fc6b49b5435a35837f23b8a2",
+              "done": {
+                "bytes": 2410,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair385/DONE.json",
+                "sha256": "8a5ff7ce90df934ae96689c965d6d5a6e8dc1dc075382ee64a74f4f04f3177fc"
+              },
+              "job": "pair385"
+            },
+            {
+              "archive_bytes": 179333,
+              "archive_sha256": "54964338c95bbcc21479830171600d252ff8eafb1a5b974fb9d3998660bdd33f",
+              "done": {
+                "bytes": 2070,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair398/DONE.json",
+                "sha256": "ee29146854c8c81714956e6e90f7a2595cc61c8f7fcedbe686d826aba1a6a075"
+              },
+              "job": "pair398"
+            },
+            {
+              "archive_bytes": 179384,
+              "archive_sha256": "d8a0ee053414081a9db30eab8b4f90dc4c2073786507a36f7f157ab063d58b9e",
+              "done": {
+                "bytes": 23446,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet0/DONE.json",
+                "sha256": "c019f8ef7b85e1bca6554a1c4865b1cffcfc7ad51dde272a05ab6d31c54bcad3"
+              },
+              "job": "sheet0"
+            },
+            {
+              "archive_bytes": 179386,
+              "archive_sha256": "28f2f2ea98698f1edcfca4ebbe0cd66c2ab8080f3777c510e1394351006473bd",
+              "done": {
+                "bytes": 24175,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet1/DONE.json",
+                "sha256": "3683f4c54037367260819f099ab10a7375130d23372c6a362a654a1dc74dafd8"
+              },
+              "job": "sheet1"
+            },
+            {
+              "archive_bytes": 179380,
+              "archive_sha256": "f7114412b0c47fa696ebddc5af6e988ece996be39e77cdcd94366ca043926287",
+              "done": {
+                "bytes": 24518,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet2/DONE.json",
+                "sha256": "8c9fff5c508ecf7d59ca029aad34926adb3217cc917ce57c28e598a8485ec9de"
+              },
+              "job": "sheet2"
+            },
+            {
+              "archive_bytes": 179382,
+              "archive_sha256": "292bbd8dd767359e6554cda1609c6cbed3a0589ab4fe96e1a24eb3a968b65713",
+              "done": {
+                "bytes": 23921,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet3/DONE.json",
+                "sha256": "3f17e2c51f016bf3e54591025701e28f897d73c0ed4a00efff9779d512c1d9ca"
+              },
+              "job": "sheet3"
+            },
+            {
+              "archive_bytes": 179384,
+              "archive_sha256": "d310f738e7559ad856d6ca60d47b529bff0a53c0d10e372857a833e380c56162",
+              "done": {
+                "bytes": 23959,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet4/DONE.json",
+                "sha256": "ecf5e10b4aaf09121329a4489c4870fb11897ac3623583fb5a0774d782c907e2"
+              },
+              "job": "sheet4"
+            },
+            {
+              "archive_bytes": 179381,
+              "archive_sha256": "daa6626d176866eb4282fc5c2aec7114c49b7529ccd4967237cb3a69945b1073",
+              "done": {
+                "bytes": 24972,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/sheet5/DONE.json",
+                "sha256": "885a076a0d9f75fd0c1412080a50be0c9a517650057057f77a24193647b8cf05"
+              },
+              "job": "sheet5"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "ed95e9d666e35e25c02d44ce864eb2338886f40a5dd8145b118a19c14243c668",
+              "done": {
+                "bytes": 2073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair583/DONE.json",
+                "sha256": "95af2aa93bbed87d423ed525a1198fb34ee837aacd295b45867e63170480d835"
+              },
+              "job": "pair583"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "28db518f6aba3a73164d463a0ec51ec7afa947a7ed238d6c689e2aef55f3f467",
+              "done": {
+                "bytes": 2414,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair053/DONE.json",
+                "sha256": "08c4e672f94edb31288162284c62da8b1c9701419c0acfdf00824c46f4e209e8"
+              },
+              "job": "pair053"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "c8ec1bc24a14c2eeeae10070acf73c7cb9a9a4ebf3a01dae881f99eb661887f4",
+              "done": {
+                "bytes": 2072,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair406/DONE.json",
+                "sha256": "d401d1cce1edb77e6473ef14d6f2a4eaa06d27e5e23384323d43465f8bdb345b"
+              },
+              "job": "pair406"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "97efed0b6b640bb30dcffd61749cc3e908878fde685e1b23b89973ac91386230",
+              "done": {
+                "bytes": 2415,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair342/DONE.json",
+                "sha256": "4513078d66b52ebfe54bbc75fa5d7005e0996c576145cab0f1e0dfb5488c8e90"
+              },
+              "job": "pair342"
+            },
+            {
+              "archive_bytes": 179332,
+              "archive_sha256": "74d3a8c06b6f18958f0bc4854ecc311c22044dd418e53003a7e37867efac249b",
+              "done": {
+                "bytes": 2412,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair127/DONE.json",
+                "sha256": "86b3240ce4fec1f9845e6fcb9f2859a5f4f9e4a9f6a0e100ae7b9a1a7584e070"
+              },
+              "job": "pair127"
+            },
+            {
+              "archive_bytes": 179332,
+              "archive_sha256": "b81343a4f8c0cb121b163e4663046489bc44b94a6b8def6696bea8f2d5760970",
+              "done": {
+                "bytes": 2099,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair319/DONE.json",
+                "sha256": "d9084d76694a1c455486dcc22ebf11ac077d63009ef342ce7f9ecef57be4df4d"
+              },
+              "job": "pair319"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "b439fc8cd55af2ae9a52e972e17ab6825734d6adf4523170f69246bdf5ceec77",
+              "done": {
+                "bytes": 2072,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair137/DONE.json",
+                "sha256": "28a5a9bfa1a8b6dd00751e7ac399f64bc4775cf91330d8b594214fdf76fb3f97"
+              },
+              "job": "pair137"
+            },
+            {
+              "archive_bytes": 179332,
+              "archive_sha256": "15009d1956e2ac9e07141ff82e3c5498bbda3044f13e465d2022eb3a7f45e27f",
+              "done": {
+                "bytes": 2071,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair376/DONE.json",
+                "sha256": "3de6880cb47f2c7554cff2c78b4fda3a9c2362e07b53fb69eaa67d943871ee51"
+              },
+              "job": "pair376"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "bfc3e9973e557f705b7a1caeb91b02fe3008c642950f34dc5686b428cf697936",
+              "done": {
+                "bytes": 2070,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair032/DONE.json",
+                "sha256": "9ac0b7c7861bb574701b15749f8fa38c6e5e69a2685f6c2fff3a1d4f0b8c9a57"
+              },
+              "job": "pair032"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "a069345f8858259817ca9d1f52ced1f7310f41a2aa20b431b25c166658a3452c",
+              "done": {
+                "bytes": 2435,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair183/DONE.json",
+                "sha256": "a79f4c44efde0a495a446675172fa1b44f2d62884eff6113d2d1b5cae0df1eb7"
+              },
+              "job": "pair183"
+            },
+            {
+              "archive_bytes": 179334,
+              "archive_sha256": "39446b8d8daba65754d5d5d2e941479fd94c50212d7f7aa7919d09f8d2fd3a6e",
+              "done": {
+                "bytes": 2073,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair033/DONE.json",
+                "sha256": "4447ae7702a2bdcee8de35b03e7b6610bfd09e6ed5b1a7169af83495df3084a6"
+              },
+              "job": "pair033"
+            },
+            {
+              "archive_bytes": 179332,
+              "archive_sha256": "fbb5dc4107ca32a6fb10cf19f757a8cc1ed6cf16594ce93c534c9c04e2166423",
+              "done": {
+                "bytes": 2095,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair134/DONE.json",
+                "sha256": "5f9ed7c47b86b2ebf63f5110352368b5bd44cc26cf8f8a6f34c97d4c3920716a"
+              },
+              "job": "pair134"
+            },
+            {
+              "archive_bytes": 179336,
+              "archive_sha256": "efec49abf688b1b8360a80862eaf2d2248fb4ef2cc2435898f5f65234b3ecefd",
+              "done": {
+                "bytes": 2415,
+                "path": "/Volumes/APDataStore/pact/ddm_jrx2/prices/pair536/DONE.json",
+                "sha256": "1c63485e80d93909e208d568bad29ecfae8368b8fd261568697cbd6738b906a1"
+              },
+              "job": "pair536"
+            }
+          ]
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base_archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+          "calibration_sheets": 2,
+          "discovery_sheets": 6,
+          "forecast_origin": "XR1 deterministic same-input byte premise recalled before execution; no borrowed bootstrap interval",
+          "individual_fields": 22,
+          "price_jobs": 30,
+          "repeat_unit": "two independent in-process range-encoder states per full600 field, same probabilities and symbols",
+          "verification": {
+            "bytes": 6791,
+            "path": ".omx/research/ddm_jrx2_20260916/VERIFICATION_COVERAGE.json",
+            "sha256": "03247f4aa5502ff6224cd7184049bd1d32dab6b21ae25ebd95f920d648457ab3"
+          }
+        },
+        "measurement_method": "fraction_of_completed_in_process_encoder_twin_archive_pairs_with_unequal_sha256",
+        "measurement_utc": "2026-09-16T07:35:43.509407Z",
+        "predicted_output": {
+          "byte_difference_per_twin_pair": 0,
+          "same_input_archive_twins_identical": true
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-16T07:35:43.509407Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS26.4 arm64,18 logical CPUs; CPU native coder, frozen CPU scorers",
+          "measurement_axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+          "promotion_eligible": false,
+          "rejection_reason": "Research-only diagnostics; a new admissible candidate requires embodied carrier, public decode, resolved all-affected-pair scores, and exact authority evaluation. No joint or population ratio is measured here.",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_jrx2_20260916/EXCHANGE_ROWS.json",
+          "source_sha256": "8d1d3bd5453b285393920b5fa4babf762f1dd22945f45b49cd1c0a9ddfad120b"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_jrx2_20260916/EXCHANGE_ROWS.json"
+      }
+    ],
+    "equation_id": "exchange_ratio_noise_floor_v1",
+    "last_calibration_utc": "2026-09-16T07:35:43Z",
+    "latex_form": "\\Delta B_b=\\sum_{i\\in b}\\delta_i+c,\\ c=\\Delta B_{\\mathrm{exact}}-\\sum_i \\delta_i;\\ \\Delta S_b=100\\Delta d_{\\mathrm{seg},b}+\\sqrt{10 d^{\\mathrm{cand}}_{\\mathrm{pose},b}}-\\sqrt{10 d^{\\mathrm{base}}_{\\mathrm{pose},b}}+\\frac{25\\Delta B_b}{37545489};\\ \\mathrm{ADMIT}\\iff Q_{0.975}(\\Delta S_b)<0",
+    "name": "Exchange-ratio noise floor -- the pair-bootstrap interval a byte<->distortion near-win margin must clear before it is admissible",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "sigma_B = 0 (deterministic coder), so the floor is the PAIR bootstrap: +/-200 B on a ~3,000 B rate credit, +/-0.00024 S on a realized dS; admit iff the 95% upper dS < 0",
+    "predicted_vs_empirical_residual": {
+      "fcd3_pair_bootstrap_delta_s_and_exchange_ratio_20260903": 6.621e-06,
+      "fraction_of_completed_in_process_encoder_twin_archive_pairs_with_unequal_sha256": 0.0,
+      "jbp1_row_a_pair_bootstrap_delta_bytes_20260903": 1.65706,
+      "physical_null_reencode_x3_sigma_b_20260903": 0.0,
+      "seeded n600 pair bootstrap (200 resamples, seed 20260903) over the retained per-pair d_pose vectors of two batch-8 n600 measures taken on ONE instrument (frozen CPU-torch PoseNet, DALI-lineage GT), with the SAME draw matrix driving both vectors; dB held constant per the law's fixed calibration term": 0.0
+    },
+    "provenance": {
+      "artifact_kind": "predicted_from_model",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+      "captured_at_utc": "2026-09-03T21:05:38Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "predicted",
+      "hardware_substrate": "m5_max_128gib_cpu",
+      "measurement_axis": "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]",
+      "promotion_eligible": false,
+      "rejection_reason": "",
+      "score_claim_valid": false,
+      "source_path": "<predictor:exchange_ratio_noise_floor.v1>",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "python_callable_module_path": "tac.canonical_equations.exchange_ratio_noise_floor_20260903:near_win_is_admissible",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "base_d_pose": "mean_squared_error",
+      "base_d_seg": "argmax_disagreement_fraction",
+      "exact_delta_bytes": "bytes",
+      "pair_delta_bytes": "bytes_per_pair"
+    },
+    "units_out": {
+      "delta_bytes_interval": "bytes",
+      "delta_s_interval": "score_units",
+      "near_win_is_admissible": "bool"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_rc1_model_section_adaptive_recode.py",
+      "experiments/ddm_rc1_adaptive_section_codec.py"
+    ],
+    "domain_of_validity": {
+      "applies_to": "packed fixed-point integer code streams with a stationary per-group distribution, reaching the archive through a generic byte coder",
+      "coder": "adaptive binary tree over the code alphabet, one context bank per tensor (semantic) or per bit depth (hpac); integer 12-bit bins; DX2's carryless range coder; no transmitted model",
+      "does_not_apply_to": "already-entropy-coded streams (the RC64 token tail); the carrier (dx1 measured its own recode ceiling at -18 B); any claim that the ORDER-1 structure is convertible -- clause 3 closes five conditioned designs, not the family",
+      "object": "the two RX1 MODEL section bodies of the cl2 frontier archive, sha256 08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e @ 179982 B",
+      "transfer_rule": "the WIDTH-STABILITY reading transfers (constant-width packings leave Brotli little to give up, changing-width packings leave a lot); the absolute bytes never do, and the adaptation shift must be swept before any context is designed"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "model_section_adaptive_coder_reaches_order0_20260905",
+        "empirical_output": {
+          "consequence": "the coder is at its bound and the sections are not; the charter's 3.72 bits/param divided the WHOLE body's container bytes by the code count, so it charged the codes for the fp16 scales, fp16 tensors and prune masks too",
+          "hpac_coder_gap_fraction": 0.0033,
+          "semantic_coder_gap_fraction": 0.00814,
+          "semantic_h0_bits_per_param": 3.281,
+          "semantic_packed_bits_per_param": 3.893
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "coder": "adaptive binary tree over the code alphabet, integer 12-bit bins, DX2's carryless range coder, no transmitted table",
+          "hpac_body": "IHS1, 17,770 raw B, 20,416 codes at 0..8 bits over 517 channels",
+          "object": "the cl2 frontier archive's two RX1 MODEL section bodies, archive sha256 08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e",
+          "scorer_runs": 0,
+          "semantic_body": "SM3R v1 mode 6, 36,130 raw B, 59,376 codes at 3/4 bits",
+          "training_runs": 0
+        },
+        "measurement_method": "exact_adaptive_model_code_length_plus_plugin_entropy_over_the_full_bodies",
+        "measurement_utc": "2026-09-05T00:00:00Z",
+        "predicted_output": {
+          "prior_law": "the charter's prediction: quantized trained weights concentrate near zero, so the semantic codes carry 2.4-2.9 bits/param against Brotli's realized 3.72",
+          "semantic_bits_per_param": "2.4 .. 2.9"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-05T18:27:52Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "unknown",
+          "measurement_axis": "[research-signal]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure when either MODEL section's packing changes (a new SM3R mode, a different per-tensor depth allocation, a re-fitted IHS1 depth ladder), when the container's Brotli shape changes, or when any arm MEASURES an order-1 model that converts part of the ~1,139 B of first-order structure clause 3 records as real but unaffordable",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md",
+          "source_sha256": "f7a0381b6b0412cbcd53dca0ddd87bca5d321ffa7659062db3105806c710e399"
+        },
+        "residual": 0.2381,
+        "source_artifact": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md"
+      },
+      {
+        "anchor_id": "model_section_container_credit_and_width_stability_20260905",
+        "empirical_output": {
+          "candidate_archive_bytes": 178249,
+          "candidate_archive_sha256": "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122",
+          "falsifier_fired": false,
+          "generic_baselines_container_bytes": {
+            "hpac": {
+              "brotli_shipped": 13466,
+              "xz9e": 13536,
+              "xz9e_ck2": 13720,
+              "zstd22": 13992,
+              "zstd22_ck2": 14143
+            },
+            "semantic": {
+              "brotli_ck2_shipped": 30856,
+              "xz9e": 32608,
+              "xz9e_ck2": 31988,
+              "zstd22": 33224,
+              "zstd22_ck2": 32624
+            }
+          },
+          "hpac_delta_bytes": -1123,
+          "projected_s": 0.14666350774473783,
+          "rate_delta_s": -0.001153933565760723,
+          "semantic_delta_bytes": -610,
+          "total_delta_bytes": -1733,
+          "verdict": "ADMIT at 5.78x the -300 B bar; neither generic coder beats the shipped Brotli on either body; the credit tracks the packing's WIDTH STABILITY, not the raw coder win"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "decode_control": "every coded body decoded by a FRESH decoder and asserted byte-identical to the raw body before its bytes were recorded",
+          "generic_baselines": "xz -9e and zstd --ultra -22, with and without the ck2 plane",
+          "identity_control": "both shipped container streams re-pack byte-identically from the restored raw bodies (semantic ck2+Brotli q11 lgwin24 -> 30,856 B; hpac Brotli -> 13,466 B)",
+          "object": "the cl2 frontier archive, 179982 B",
+          "scorer_runs": 0,
+          "training_runs": 0
+        },
+        "measurement_method": "exact_container_byte_counts_through_the_shipped_packers_with_fresh_decoder_identity",
+        "measurement_utc": "2026-09-05T00:00:00Z",
+        "predicted_output": {
+          "charter_falsifier": "best adaptive total within -300 B of shipped => Brotli already sits at these bodies' empirical entropy => CLOSE at family scope",
+          "charter_hpac_delta_bytes": "-600 .. -1,300",
+          "charter_semantic_delta_bytes": "-2,050 .. -4,350",
+          "charter_total_delta_bytes": "-2,650 .. -5,650"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-05T18:27:52Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "unknown",
+          "measurement_axis": "[research-signal]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure when either MODEL section's packing changes (a new SM3R mode, a different per-tensor depth allocation, a re-fitted IHS1 depth ladder), when the container's Brotli shape changes, or when any arm MEASURES an order-1 model that converts part of the ~1,139 B of first-order structure clause 3 records as real but unaffordable",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md",
+          "source_sha256": "f7a0381b6b0412cbcd53dca0ddd87bca5d321ffa7659062db3105806c710e399"
+        },
+        "residual": 0.5824,
+        "source_artifact": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md"
+      },
+      {
+        "anchor_id": "order1_context_dilution_closes_five_designs_20260905",
+        "empirical_output": {
+          "converted_bytes": 10.3,
+          "design_costs_raw_bytes": {
+            "adaptive_unary_magnitude": [
+              10163.4,
+              10797.1
+            ],
+            "expgolomb_bitlength_prefix": [
+              10289.4,
+              10382.7
+            ],
+            "prev_bitlength_bucket_high_depths": [
+              9629.2,
+              9681.9
+            ],
+            "prev_magnitude_bucket": [
+              9640.1,
+              9667.2
+            ],
+            "row_delta": [
+              9835.1,
+              9932.4
+            ],
+            "unconditioned_tree_winner": 9639.5
+          },
+          "h0_bytes": 9607.8,
+          "h1_miller_madow_bytes": 8469.0,
+          "mechanism": "depth-7 rows: 3,614 symbols over an alphabet of 120 need 1,508 conditional cells; Miller-Madow attributes 0.277 of the 1.363-bit apparent gain to overfit. The learning cost IS the bias, so the structure is real AND unaffordable",
+          "real_structure_bytes": 1138.8,
+          "verdict_scope": "FORMULATION -- the five conditioned designs listed, not the family"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "bias_estimator": "Miller-Madow correction on the plug-in conditional entropy",
+          "designs": [
+            "adaptive_unary_magnitude",
+            "expgolomb_bitlength_prefix",
+            "prev_bitlength_bucket_high_depths",
+            "prev_magnitude_bucket",
+            "row_delta"
+          ],
+          "object": "the IHS1 rows, 20,416 codes over 517 channels at 0..8 bits",
+          "scorer_runs": 0,
+          "training_runs": 0
+        },
+        "measurement_method": "exact_adaptive_model_code_length_per_design_plus_miller_madow_bias",
+        "measurement_utc": "2026-09-05T00:00:00Z",
+        "predicted_output": {
+          "expected_conversion_bytes": "several hundred of the ~1,139 B measured",
+          "note": "the best conditioned variant converted 10.3 B, 0.9% of what is available",
+          "prior_law": "first-order structure visible in the plug-in H1 is convertible by conditioning the adaptive contexts on the previous symbol"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-05T18:27:52Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "unknown",
+          "measurement_axis": "[research-signal]",
+          "promotion_eligible": false,
+          "rejection_reason": "re-measure when either MODEL section's packing changes (a new SM3R mode, a different per-tensor depth allocation, a re-fitted IHS1 depth ladder), when the container's Brotli shape changes, or when any arm MEASURES an order-1 model that converts part of the ~1,139 B of first-order structure clause 3 records as real but unaffordable",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md",
+          "source_sha256": "f7a0381b6b0412cbcd53dca0ddd87bca5d321ffa7659062db3105806c710e399"
+        },
+        "residual": 0.9794,
+        "source_artifact": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md"
+      },
+      {
+        "anchor_id": "rc2_semistatic_and_shared_logistic_model_prior_20260909",
+        "empirical_output": {
+          "actual_rc1_range_payload_bytes": 9643,
+          "archive_winner": {
+            "coded_bytes": 9419,
+            "container_delta_bytes": -231,
+            "hpac_container_bytes": 12112,
+            "net_J_bytes": 9427,
+            "weight_bytes": 8
+          },
+          "best_logistic_raw_J": {
+            "coded_bytes": 9406,
+            "conversion_bytes": 221,
+            "net_J_bytes": 9422,
+            "weight_bytes": 16
+          },
+          "best_semistatic": {
+            "coded_bytes": 9553,
+            "context": "previous_is_zero",
+            "conversion_bytes": -1210,
+            "net_J_bytes": 10853,
+            "serializer": "uint8_probability",
+            "table_bytes": 1300
+          },
+          "candidate_archive_bytes": 181414,
+          "candidate_archive_sha256": "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e",
+          "container_retuning_delta_bytes": 0,
+          "gap_to_h1_mm_bytes": 1173.6565614434676,
+          "h0_plugin_bytes": 9607.78164419364,
+          "h1_miller_madow_plus_first_bytes": 8469.343438556532,
+          "verdict": "semi-static table formulation refuted; shared logistic mixer admitted to sealed contest-CUDA replay",
+          "zero_distortion_by_exact_section_identity": true
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "container_cells": 36,
+          "current_rc1_range_payload_bytes": 9643,
+          "designs": {
+            "logistic_int8": 4,
+            "semistatic": 12
+          },
+          "ihs1_bytes": 17770,
+          "object_archive_bytes": 181645,
+          "object_archive_sha256": "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3",
+          "row_count": 517,
+          "value_count": 20416
+        },
+        "measurement_method": "exact_current_object_IHS1_bound_16_design_race_36_cell_container_sweep_and_receiver_identity",
+        "measurement_utc": "2026-09-09T13:49:33.388037+00:00",
+        "noise_floor": 0.0,
+        "noise_floor_provenance": "two full experiment passes reproduced all immutable fitted payloads; candidate archive and repeat archive are byte-identical",
+        "predicted_output": {
+          "container_argmin_move_bytes_at_most": 60,
+          "logistic_net_conversion_bytes": [
+            100,
+            300
+          ],
+          "semistatic_net_conversion_bytes": [
+            300,
+            600
+          ]
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T13:49:33.388037+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_cpu",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+          "promotion_eligible": false,
+          "rejection_reason": "promote the projected rate delta only after the validated sealed archive is replayed by upstream/evaluate.py on contest-CUDA T4 n600",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rc2_hpac_semistatic_depth_mixing_prior_and_container_sweep_20260908.md",
+          "source_sha256": "ce8fb8103d65ec8e20b0ef59c12e207968a48df8125499d9c5375613af42d522"
+        },
+        "residual": 3.688888888888889,
+        "source_artifact": ".omx/research/ddm_rc2_hpac_semistatic_depth_mixing_prior_and_container_sweep_20260908.md"
+      },
+      {
+        "anchor_id": "rc3_closed_form_shared_mixer_and_container_objective_20260909",
+        "empirical_output": {
+          "archive_bytes": 181213,
+          "archive_sha256": "bea79912d3b2230ebfb2434190f9fdbef18d16d8fa46f5e647c82a21ee11a6b9",
+          "charter_953_uses_unshipped_16_weight_J": true,
+          "container_cells": 198,
+          "families": 2,
+          "hpac_bytes": 11911,
+          "live_J_gap_to_H1_MM_bytes": 957.6565614434694,
+          "net_saving_bytes": 201,
+          "order2_600_headroom_established": false,
+          "order2_supported_denominator": [
+            1426,
+            17061
+          ],
+          "order2_supported_extra_MM_bytes": 4.162520629520249,
+          "public_smoke_problems": 0,
+          "raw_J_winner": "order2_lr18",
+          "real_twin_decoded_trials": 10,
+          "score_claim": false,
+          "seal_valid": true,
+          "verdict_scope": "INSTANCE for candidate bytes; FORMULATION for unsupported MM-bound inference",
+          "winner": "position_sibling_lr0_ck2_q10_w22"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "coded_symbols": 17061,
+          "gate_receipt": "/Volumes/VertigoDataTier/pact/ddm_rc3_shared_mixer_successor/CLOSED_FORM_GATE.json",
+          "payload_retained": true,
+          "rows": 517,
+          "scorer_runs": 0,
+          "source_archive_bytes": 181414,
+          "source_archive_sha256": "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e",
+          "values": 20416
+        },
+        "measurement_method": "closed_form_local_quadratic_forecast_then_real_retained_twin_codec_receiver_identity_and_full_container_grid",
+        "measurement_utc": "2026-09-09T15:00:50Z",
+        "noise_floor": 0.0,
+        "noise_floor_provenance": "exact twin archive bytes and decoded IHS1 body are identical; this is a deterministic byte comparison, not a scorer noise estimate",
+        "predicted_output": {
+          "net_saving_bytes": 165.5665005062623,
+          "order2_supported_headroom_claim_bytes": 600,
+          "prior_band_bytes": [
+            200,
+            400
+          ]
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T15:00:50Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS_arm64_CPU",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+          "promotion_eligible": false,
+          "rejection_reason": "MAIN validates the pinned seal then measures one exact contest-CUDA T4 n600 row; rebase after any pointer movement",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md",
+          "source_sha256": "e032ee29d45e4d7ad8505cd542b2b1301c7e6bf3942b3cf83da2623e780b9893"
+        },
+        "residual": 35.43349949373771,
+        "source_artifact": ".omx/research/ddm_rc3_shared_mixer_successor_closed_form_gated_20260909.md"
+      },
+      {
+        "anchor_id": "sm1_supported_scale_shared_mixer_container_20260909",
+        "empirical_output": {
+          "all_five_restored_bodies_identical": true,
+          "all_five_twins_identical": true,
+          "frame_parity": "construction_only_no_render",
+          "pre_rc1_semantic_container_bytes": 30856,
+          "raw_body_bytes": 36130,
+          "rc1_semantic_container_bytes": 30246,
+          "scope": "one counted shared mixer on six causal context projections; MM is not a universal bound",
+          "score_claim": false,
+          "semantic_container_bytes": 29983,
+          "semantic_container_saving_bytes": 263
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "coded_symbols": 59376,
+          "contexts": [
+            "row_position",
+            "scale_bucket",
+            "previous_row",
+            "left_sign",
+            "dw_pw",
+            "block_depth"
+          ],
+          "counted_weights_bytes": 24,
+          "families_built": 1,
+          "fit": {
+            "bytes": 1839,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+            "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+          },
+          "race": {
+            "bytes": 34433,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+            "sha256": "ec52abc659773d260715c8a847975ad32092268bac7cac2f7ebe0ba65f1c6d40"
+          },
+          "sampled_variants": 5,
+          "score_claim": false,
+          "source_archive": {
+            "bytes": 181521,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass4/candidate_runtime/archive.zip",
+            "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+          }
+        },
+        "measurement_method": "Complete shipped-decoder probability observation; supported MM diagnostics; retained exact twin range encodes and Brotli containers",
+        "measurement_utc": "2026-09-09T19:08:46.321300+00:00",
+        "predicted_output": {
+          "fixed_model_net_ideal_bytes": 342.7892405609746,
+          "is_container_prediction": false,
+          "supported_scale_oracle_net_bytes": 362.67454141347275
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-09T19:08:46Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+          "source_sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+        },
+        "residual": 0.23276471697419523,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json"
+      },
+      {
+        "anchor_id": "sm1_supported_scale_shared_mixer_container_20260909_provenance_corrected",
+        "empirical_output": {
+          "all_five_restored_bodies_identical": true,
+          "all_five_twins_identical": true,
+          "frame_parity": "construction_only_no_render",
+          "pre_rc1_semantic_container_bytes": 30856,
+          "raw_body_bytes": 36130,
+          "rc1_semantic_container_bytes": 30246,
+          "scope": "one counted shared mixer on six causal context projections; MM is not a universal bound",
+          "score_claim": false,
+          "semantic_container_bytes": 29983,
+          "semantic_container_saving_bytes": 263
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "bound": {
+            "bytes": 72876,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/BOUND_SUPPORTED.json",
+            "sha256": "56485b7b6273a58f634690d4040f78aa77b35d20ccd16449cb05501143b20aee"
+          },
+          "coded_symbols": 59376,
+          "contexts": [
+            "row_position",
+            "scale_bucket",
+            "previous_row",
+            "left_sign",
+            "dw_pw",
+            "block_depth"
+          ],
+          "correction_only_not_new_measurement": true,
+          "correction_reason": "Prior provenance named RACE.json but hashed the source archive; replace that path/hash binding. Measurement values are unchanged; count once.",
+          "counted_weights_bytes": 24,
+          "families_built": 1,
+          "fit": {
+            "bytes": 1839,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/FIT.json",
+            "sha256": "730c877ca1005c5a36da640fb9d4ceadb3c666cdc9a8a5e1b01f23370977964b"
+          },
+          "race": {
+            "bytes": 34433,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+            "sha256": "ec52abc659773d260715c8a847975ad32092268bac7cac2f7ebe0ba65f1c6d40"
+          },
+          "sampled_variants": 5,
+          "score_claim": false,
+          "source_archive": {
+            "bytes": 181521,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/candidate_pass4/candidate_runtime/archive.zip",
+            "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+          },
+          "supersedes_anchor_id": "sm1_supported_scale_shared_mixer_container_20260909"
+        },
+        "measurement_method": "Complete shipped-decoder probability observation; supported MM diagnostics; retained exact twin range encodes and Brotli containers",
+        "measurement_utc": "2026-09-09T19:08:46.321300+00:00",
+        "predicted_output": {
+          "fixed_model_net_ideal_bytes": 342.7892405609746,
+          "is_container_prediction": false,
+          "supported_scale_oracle_net_bytes": 362.67454141347275
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T19:22:39Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+          "promotion_eligible": false,
+          "rejection_reason": "MAIN verifies live seal then exact contest-CUDA T4 n600 replay; byte-only evidence never becomes a score",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json",
+          "source_sha256": "ec52abc659773d260715c8a847975ad32092268bac7cac2f7ebe0ba65f1c6d40"
+        },
+        "residual": 0.23276471697419523,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_sm1_semantic_shared_mixer/RACE.json"
+      },
+      {
+        "anchor_id": "ddm_cmp1_rc3_tc1_live_sj1_composition_20260909",
+        "empirical_output": {
+          "archive": {
+            "bytes": 180772,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+            "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+          },
+          "independent_twin_encode_identity": true,
+          "interaction_vs_prior_savings": -1,
+          "model_saving": 201,
+          "saving": 749,
+          "tail_saving": 548
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base": {
+            "bytes": 181521,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/source_runtime/archive.zip",
+            "sha256": "b0ca809ce2c657dfce97e73148a83b9b20c128461ced4c1f6ce1b386ddfd1d20"
+          },
+          "fixed_tc1_weights": {
+            "bytes": 35,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/retained/weights_i8.bin",
+            "sha256": "35d56667911d1b593434e30c5334915ca516cbf8f547d54b32c091246ca75f3b"
+          },
+          "pairs": 600,
+          "symbols": 117964800
+        },
+        "measurement_method": "Full independent twin sparse encodes, original-stream control, public full-field decode, exact model restoration, container and source census; residual is absolute prediction error divided by predicted saving; no scorer.",
+        "measurement_utc": "2026-09-09T19:24:54.312852+00:00",
+        "predicted_output": {
+          "composed_bytes": 180771,
+          "saving_bytes": 750
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-09T19:24:54.312852+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+          "source_sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+        },
+        "residual": 0.0013333333333333333,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/RESULT.json"
+      },
+      {
+        "anchor_id": "ddm_cmp2_lossless_A_20260909",
+        "empirical_output": {
+          "saving_A": 384,
+          "scope": "actual source shape prediction exact; further 121 B from sampled weights and container search",
+          "selected_A": {
+            "bytes": 180388,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/candidate_runtime/archive.zip",
+            "sha256": "670d38d05eb142fec9579337e21d7c6522592769ec00c0271aa971ee018ce6bc"
+          },
+          "source_shape_bytes": 180509
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base": {
+            "bytes": 180772,
+            "path": "/Volumes/VertigoDataTier/pact/ddm_cmp1_compose/candidate_runtime/archive.zip",
+            "sha256": "66b8d5bb8996f893f867a51e21d35ae8c8a705783fe1089dab1dffae0831b3c0"
+          },
+          "moved_dim": 6,
+          "moved_pair": 331,
+          "seed": 20260909
+        },
+        "measurement_method": "retained real twin encodes plus actual integer encoder frequencies, 300 full archives, public 38-tensor identity/difference; no scorers; interval residual is zero inside preregistered interval",
+        "measurement_utc": "2026-09-09T20:06:35.234485+00:00",
+        "predicted_output": {
+          "source_shape_bytes": 180509
+        },
+        "provenance": {
+          "artifact_kind": "advisory_non_promotable",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_macos_cpu_advisory",
+          "captured_at_utc": "2026-09-09T20:06:35.234485+00:00",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "macos_cpu_advisory",
+          "hardware_substrate": "macos_arm64",
+          "measurement_axis": "[macOS-CPU advisory]",
+          "promotion_eligible": false,
+          "rejection_reason": "",
+          "score_claim_valid": false,
+          "source_path": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json",
+          "source_sha256": "d38b34848ad19ffa316295e88421e1bbab9165525841ab8fc18c3f27dc9f6b8f"
+        },
+        "residual": 0.0,
+        "source_artifact": "/Volumes/VertigoDataTier/pact/ddm_cmp2_compose/RESULT.json"
+      }
+    ],
+    "equation_id": "model_section_adaptive_recode_ceiling_v1",
+    "last_calibration_utc": "2026-09-09T20:06:35Z",
+    "latex_form": "\\Delta B_{\\text{container}} = \\sum_{s} \\left(B^{\\text{RC1}}_s - B^{\\text{brotli}}_s\\right) = -1{,}733\\ \\text{B},\\quad \\frac{C_s}{H_0(s)} - 1 \\in [0.0033, 0.0081],\\quad \\Delta S = \\Delta B \\cdot \\frac{25}{37{,}545{,}489}",
+    "name": "Adaptive-recode ceiling on packed integer MODEL sections, and its width-stability rule",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "An adaptive per-group tree coder over the MODEL sections' packed codes lands within 1% of their order-0 entropy for -1,733 container B; the credit tracks the packing's WIDTH STABILITY, not the raw win",
+    "predicted_vs_empirical_residual": {
+      "Complete shipped-decoder probability observation; supported MM diagnostics; retained exact twin range encodes and Brotli containers": 0.23276471697419523,
+      "Full independent twin sparse encodes, original-stream control, public full-field decode, exact model restoration, container and source census; residual is absolute prediction error divided by predicted saving; no scorer.": 0.0013333333333333333,
+      "closed_form_local_quadratic_forecast_then_real_retained_twin_codec_receiver_identity_and_full_container_grid": 35.43349949373771,
+      "exact_current_object_IHS1_bound_16_design_race_36_cell_container_sweep_and_receiver_identity": 3.688888888888889,
+      "order1_conversion_bytes": 0.9794,
+      "retained real twin encodes plus actual integer encoder frequencies, 300 full archives, public 38-tensor identity/difference; no scorers; interval residual is zero inside preregistered interval": 0.0,
+      "semantic_bits_per_param": 0.2381,
+      "total_container_delta_bytes": 0.5824
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-05T18:27:52Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "unknown",
+      "measurement_axis": "[research-signal]",
+      "promotion_eligible": false,
+      "rejection_reason": "re-measure when either MODEL section's packing changes (a new SM3R mode, a different per-tensor depth allocation, a re-fitted IHS1 depth ladder), when the container's Brotli shape changes, or when any arm MEASURES an order-1 model that converts part of the ~1,139 B of first-order structure clause 3 records as real but unaffordable",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md",
+      "source_sha256": "f7a0381b6b0412cbcd53dca0ddd87bca5d321ffa7659062db3105806c710e399"
+    },
+    "python_callable_module_path": "tac.canonical_equations.model_section_adaptive_recode_ceiling_20260905:container_delta_bytes",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "delta_bytes": "container bytes, signed (negative is a credit)",
+      "section": "one of 'semantic' (SM3R body) or 'hpac' (IHS1 body)"
+    },
+    "units_out": {
+      "coder_gap_fraction": "dimensionless excess over the stream's own order-0 entropy",
+      "container_delta_bytes": "bytes of the 179,982 B archive",
+      "rate_delta_s": "contest score units, at 25/37,545,489 S per byte"
+    }
+  },
+  {
+    "canonical_consumers": [
+      "experiments/ddm_rw1_renderer_edge_foldback.py",
+      ".omx/research/ddm_gs3_gestalt_after_submission_20260903.md"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_rw1_renderer_edge_foldback.py"
+    ],
+    "domain_of_validity": {
+      "excluded": [
+        "FINER grids: depth 5-8 on these tensors is a packer change the receiver already supports and is NOT measured here",
+        "the per-row fp16 SCALES, which move a whole row by a FRACTION of a code step and are untried",
+        "the row-pruned blocks.{1,2,3}.film runs (2 of 192 rows kept), which this arm refuses to edit",
+        "any claim about the PARADIGM: a per-pair-admitted renderer change is untouched -- the rate leg is nearly free and the pose re-solve has full rank on all 600 pairs"
+      ],
+      "included": [
+        "the shipped SemanticTokenRenderer(96) SM3R section, depth-4 un-pruned runs of head.weight / blocks.3.dw.weight / blocks.3.pw.weight, fp16 scales frozen",
+        "the pc2 34th-move body (e138ee09..., 181,373 B) whose semantic section is byte-identical back through rc2 and sj1 pass-3",
+        "the expected-flip surrogate sigmoid(-margin/tau), tau in [0.05, 0.15], through the exact R, DALI GT"
+      ],
+      "known_boundary": "one body, one surrogate; a different objective could reorder the codes but cannot make the grid finer",
+      "last_domain_refinement_rationale": "Preserve original actuator domain while preventing historical untried labels and older numeric floors from being treated as current successor authority.",
+      "last_domain_refinement_utc": "2026-09-16T06:43:13Z",
+      "measurement_axis": [
+        "[macOS-MPS research-signal]",
+        "[macOS-CPU advisory, cpu_torch n600, DALI]"
+      ],
+      "recalibration_meaning": "the domain admits a DIFFERENT grid depth on these tensors or a sub-code actuator (the fp16 scales); three such anchors re-open the law",
+      "result_type": "DISTORTION-reach law; it bounds an actuator, it does not authorise one",
+      "sister_laws": [
+        "model_section_edit_container_break_fee_v1 -- the RATE half: 0.0139 B per changed code",
+        "renderer_seg_pose_coupling_shipped_object_v1 -- the pre-re-solve coupling this arm pose geometry re-scoped",
+        "token_predistortion_multipass_yield_v1 -- sj1 1.081 cells per changed TOKEN"
+      ],
+      "successor_status_correction_20260916": {
+        "historical_exclusions_are_not_current_open_tasks": true,
+        "jrx2_numeric_transfer": "three move52 instances do not transport or refit the old 240-455 minimum-action estimate; no K24 or family negative",
+        "precision_routes": "rw1 sections8h/9 report no n600-confirmed repairs in tested fp16/sub-fp16 routes; original untried labels are historical",
+        "rw1_source": {
+          "bytes": 65008,
+          "path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+          "sha256": "233ed1b53a35585b3c83116fad93de8c19c835238aec13e38976834ec7dd6e13"
+        },
+        "spatial_selectivity": "rw1 OWED1f remains outside this fixed-grid probe; no new measurement or dispatch authorization"
+      },
+      "verdict_scope": "formulation (this actuator at this grid resolution), NOT the family"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "rw1_int4_code_minimum_action_costs_240_to_455_cells_20260909",
+        "empirical_output": {
+          "cells_broken_per_code_by_rule": {
+            "abs_asc": [
+              8.06,
+              75.2
+            ],
+            "abs_desc": [
+              1914,
+              55746
+            ],
+            "adamw_accumulated": [
+              27,
+              123
+            ],
+            "random": [
+              84,
+              366
+            ]
+          },
+          "discrete_search": {
+            "accepts": 0,
+            "cells_repaired_n600": 0,
+            "codes_changed": 0,
+            "dS": 0.0,
+            "evaluations": 150
+          },
+          "law": "one int4 code step already costs 240-455 flipped cells, so no search finds a move below the grid resolution; the gradient 238x ordering ranks DAMAGE, not benefit",
+          "minimum_quantum_of_action_cells": [
+            240,
+            455
+          ],
+          "reach_at_66_codes": -0.1137,
+          "stake_at_operating_point": {
+            "full_rewrite_rate_S": 0.00011766,
+            "full_rewrite_share_of_gap": 0.00625,
+            "residual_S": 0.01090664333767361,
+            "share_of_gap_to_0_12": 0.5794235869308744
+          }
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "actuator": "shipped signed-int4 codes of head.weight + blocks.3.dw.weight + blocks.3.pw.weight (12,672 codes, fp16 scales FROZEN)",
+          "body": "pc2 34th move, e138ee09..., 181,373 B, S 0.13882326433317044",
+          "producers": "experiments/ddm_rw1_renderer_edge_foldback.py {train, perturb-control, gradient-topk, code-search}",
+          "residual": "12,866 cells (d_seg 0.00010906643337673611, DALI, cpu_torch n600)",
+          "selection_rules_tried": [
+            "abs_desc",
+            "random",
+            "AdamW-accumulated 3000 steps",
+            "abs_asc",
+            "discrete realized search 150 evals bisecting to size 1"
+          ]
+        },
+        "measurement_method": "realized argmax over all 600 pairs through the receiver own forward (identity-controlled byte-exact at batch 1) against the DALI GT; the n600 seg instrument reproduces sj1 leg EXACTLY on the base decode (12,866 cells, 600/600 pairs unchanged); the MPS monitor device gap to the cpu_torch instrument is a measured +5 cells over four identical evaluations",
+        "measurement_utc": "2026-09-09T16:05:00Z",
+        "predicted_output": {
+          "charter": "8-20% residual cut (1,000-2,600 cells)",
+          "prereg_discrete_search": "120 / 340 / 1,500 cells at 66 / 200 / 1,000 accepted codes"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-09T16:05:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "m5_max_128gib_mps",
+          "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+          "promotion_eligible": false,
+          "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+          "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+        },
+        "residual": 1.0,
+        "source_artifact": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md"
+      },
+      {
+        "anchor_id": "jrx2_move52_per_pair_selected_int4_n600_collateral_instances_20260916",
+        "empirical_output": {
+          "banked_population_negative": false,
+          "joint_ratio": null,
+          "resolved_total_score_exchange": null,
+          "rows": [
+            {
+              "all600_delta_cells": 2438,
+              "archive_sha256": "cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+              "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+              "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+              "checkpoint_chunk": 25,
+              "collateral_exceeds_target_seg_credit": true,
+              "delta_archive_bytes": 10,
+              "other599_net_collateral_cells": 2438,
+              "pair": 250,
+              "pairs_scored": 600,
+              "resolved_pose": null,
+              "score_claim": false,
+              "scorer_batch": 1,
+              "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/cd8c78295f9b90edad04eecb1d716dbc8d6b0cfa1f57ce24505397aa4689db33",
+              "target_credit_cells": 0
+            },
+            {
+              "all600_delta_cells": 2259,
+              "archive_sha256": "c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10",
+              "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+              "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+              "checkpoint_chunk": 25,
+              "collateral_exceeds_target_seg_credit": true,
+              "delta_archive_bytes": -14,
+              "other599_net_collateral_cells": 2256,
+              "pair": 296,
+              "pairs_scored": 600,
+              "resolved_pose": null,
+              "score_claim": false,
+              "scorer_batch": 1,
+              "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c3621f17bb9724f5c59e03feaf7fd05be86ae11dab419b5ee46ff53273d3fa10",
+              "target_credit_cells": -3
+            },
+            {
+              "all600_delta_cells": 1740,
+              "archive_sha256": "c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc",
+              "axis": "[macOS-CPU advisory, frozen CPU-torch SegNet/PoseNet, DALI GT lineage]",
+              "boundary": "SegNet collateral falsifier only; not a resolved total-score exchange row",
+              "checkpoint_chunk": 25,
+              "collateral_exceeds_target_seg_credit": true,
+              "delta_archive_bytes": 5,
+              "other599_net_collateral_cells": 1740,
+              "pair": 398,
+              "pairs_scored": 600,
+              "resolved_pose": null,
+              "score_claim": false,
+              "scorer_batch": 1,
+              "shared_collateral": "/Volumes/APDataStore/pact/ddm_jrx2/renderer/collateral_by_archive/c69e3753b02dd729110a5bdc6888a09c7cce9f4b6c0f37073f4d7a92cf4e8efc",
+              "target_credit_cells": 0
+            }
+          ],
+          "score_claim": false,
+          "verdict_scope": "INSTANCE"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "base_archive_sha256": "ae59c5109597968409c4b581337b8e23b5b3c4262fd3710c315cc83913b3b20e",
+          "k_actions": 3,
+          "n_sample": 24,
+          "pairs_per_action": 600,
+          "prediction_origin": "postmeasurement consistency audit against rw1 qualitative collateral direction; not a preregistered numerical forecast and not transport of 240-455 cells",
+          "sample_seed": 20260916,
+          "selected_pairs": [
+            250,
+            398,
+            296
+          ],
+          "selection": "first three fixed-sample entries, all residual-heavy stratum; nearest int4 step minimizing per-pair correct-token residual surrogate",
+          "source": {
+            "bytes": 17901,
+            "path": "experiments/ddm_jrx2_renderer.py",
+            "sha256": "abc9dec844b1c63c33526b1f79c86a149f98f5277030203c976a4a8a7ed60e7e"
+          }
+        },
+        "measurement_method": "jrx2_collateral_direction_mismatch_fraction_three_named_actions_n600_cpu",
+        "measurement_utc": "2026-09-16T06:21:40Z",
+        "predicted_output": {
+          "collateral_exceeds_target_credit": [
+            true,
+            true,
+            true
+          ],
+          "quantity": "qualitative direction only"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-16T06:21:40Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS26.4 arm64, 18 logical CPUs, torch CPU scorer batch1, four threads",
+          "measurement_axis": "[macOS-CPU advisory, frozen CPU-torch SegNet, DALI GT lineage]",
+          "promotion_eligible": false,
+          "rejection_reason": "No promotion: three named global-weight actions only. A different spatially selective actuator needs a separate charter, real bytes, all affected pairs, and resolved pose.",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json",
+          "source_sha256": "7dfa174abb6ef708f83834c6cc6c5188fc828b35b266686992ecef8393d0abec"
+        },
+        "residual": 0.0,
+        "source_artifact": ".omx/research/ddm_jrx2_20260916/COLLATERAL_RESULTS.json"
+      }
+    ],
+    "equation_id": "renderer_edge_layer_foldback_reach_v1",
+    "last_calibration_utc": "2026-09-16T06:43:13Z",
+    "latex_form": "\\min_{one code} \\Delta flips \\approx 240-455 \\gg 0",
+    "name": "Renderer edge-layer int4 code fold-back: minimum quantum of action",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "One int4 code step in head/blocks.3 already moves 240-455 argmax cells, so a renderer-weight fold-back is limited by the grid resolution, not by the search",
+    "predicted_vs_empirical_residual": {
+      "cells_repaired": 1.0,
+      "jrx2_collateral_direction_mismatch_fraction_three_named_actions_n600_cpu": 0.0,
+      "reach_fraction": 1.8121
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-09T16:05:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "m5_max_128gib_mps",
+      "measurement_axis": "[macOS-MPS research-signal for the sweep; cpu_torch n600 DALI for the null]",
+      "promotion_eligible": false,
+      "rejection_reason": "a FINER grid on these tensors (the receiver supports per-tensor depths 2-8, so depth 4->5/6 is a packer change) or any actuator whose minimum move is smaller than one int4 code -- e.g. the per-row fp16 SCALES, already shipped",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_rw1_boundary_local_renderer_weight_foldback_20260909.md",
+      "source_sha256": "f1cbcf50c34dbf495f417a0e9ac77008d369d63b2c15066dfbbc7f4cd760a0e4"
+    },
+    "python_callable_module_path": "experiments.ddm_rw1_renderer_edge_foldback",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "changed_int4_codes": "count",
+      "selection_rule": "categorical"
+    },
+    "units_out": {
+      "flipped_segnet_argmax_cells_n600": "count"
+    }
+  },
+  {
+    "canonical_consumers": [
+      ".omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md",
+      ".omx/research/ddm_rbf1_20260911/POSE_TAX_v1.json"
+    ],
+    "canonical_producers": [
+      "experiments/ddm_rbf1_amplitude.py",
+      "experiments/ddm_rbf1_boundary_treatments.py"
+    ],
+    "domain_of_validity": {
+      "applies_to": "deterministic post-render operators on the token-edge band of the rendered frames -- free receiver code, no counted side information -- on the move-44 vehicle",
+      "excluded": "the COMPANION support-scaling clause Delta S_pose ~= 0.0024*f^1.16*tau^2, whose support arm is only 4 seeded-random pairs -- deliberately NOT registered until widened to n>=120 (ddm_rbf1's own precondition); and any COUNTED edit, which pays bytes this law does not price",
+      "operating_point_dependence": "the 6.6e-03 coefficient is 5/sqrt(10*d_pose) = 738 times k at d_pose 4.59e-06; re-derive the coefficient at any other operating point",
+      "support": "n = 24 seeded-random pairs (seed 1), ~22,000 pixels, tau in {1,2,4,8} plus a -8 sign control. NOT n600. The arm's n600 rows are the mode-composition closure, a different population"
+    },
+    "empirical_anchors": [
+      {
+        "anchor_id": "rbf1_pose_tax_amplitude_sweep_n24_20260911",
+        "empirical_output": {
+          "delta_s_per_tau_squared": 0.0066,
+          "direction_blind": "tau = -8 gives Delta S_seg +0.005447 against the forward +0.005404 -- indistinguishable; the operator is barely better than its own reverse",
+          "excess_d_pose_over_tau_squared": {
+            "1": 8.763e-06,
+            "2": 9.062e-06,
+            "4": 9.249e-06,
+            "8": 8.829e-06
+          },
+          "harm_benefit_by_tau": {
+            "-8": 14.53,
+            "1": 11.67,
+            "4": 9.86,
+            "8": 10.81
+          },
+          "k_d_pose_per_tau_squared": 9e-06,
+          "n600_closure_delta_s": {
+            "composition": 0.397397,
+            "guided": 0.315443,
+            "sdf": 0.088367,
+            "ssaa": 0.093865
+          },
+          "payable_amplitude_exists": false,
+          "seg_benefit_at_tau_1": "3 pixels",
+          "selectivity_improves_at_small_amplitude": false,
+          "spread_over_8x_amplitude_range": 0.055,
+          "tax_at_tau_1_delta_s": 0.0065,
+          "tax_at_tau_1_in_bars": 323,
+          "verdict": "the free post-render boundary treatment family is CLOSED at FORMULATION scope on the move-44 vehicle, on two independent n600 channels (seg harm/benefit 12.0-16.9 where break-even needs 186x better-than-random selectivity; pose the quadratic tax)"
+        },
+        "empirical_verification_status": "VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        "inputs": {
+          "amplitudes": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "object": "move-44 rendered frame_1, token-edge band, ~22,000-pixel support",
+          "operating_point_d_pose": 4.59e-06,
+          "population": "n = 24 seeded-random pairs (seed 1, guided source, 355 s) -- a RANDOM sample, not a prefix; NOT n600",
+          "producer_reproduction_check": "tau = 255 reproduces the producer exactly",
+          "sign_control": -8
+        },
+        "measurement_method": "amplitude_sweep_tau_1_2_4_8_plus_sign_control_n24_seeded_random_pairs",
+        "measurement_utc": "2026-09-11T00:00:00Z",
+        "predicted_output": {
+          "charter_hope": "a gentler edit is a more SELECTIVE edit, so some small amplitude pays: the seg credit survives while the pose tax shrinks away",
+          "expected_payable_amplitude": "some tau >= 1"
+        },
+        "provenance": {
+          "artifact_kind": "research_sidecar",
+          "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+          "captured_at_utc": "2026-09-11T00:00:00Z",
+          "composed_from": [],
+          "contest_archive_member_name": "",
+          "contest_archive_zip_path": "",
+          "evidence_grade": "research_only",
+          "hardware_substrate": "macOS CPU (frozen torch PoseNet)",
+          "measurement_axis": "[n=24 seeded-random pairs; frozen CPU PoseNet]",
+          "promotion_eligible": false,
+          "rejection_reason": "the family reopens on an operator that measures harm/benefit below 1 on a seeded RANDOM n>=120 sample AND leaves d_pose within 3e-08 of the shipped render, or on a vehicle whose d_pose operating point is more than 10x higher (the 6.6e-03 coefficient is operating-point dependent through 5/sqrt(10 d_pose)). The COMPANION support clause (f**1.16) is NOT registered and must not be until its 4-pair arm is widened to n>=120 -- ddm_rbf1's own standing objection, carried here deliberately",
+          "score_claim_valid": false,
+          "source_path": ".omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md",
+          "source_sha256": "0004115672ca65573c845577a41f45c388a41438a470e0cec384510c55dd1be1"
+        },
+        "residual": 1.0,
+        "source_artifact": ".omx/research/ddm_rbf1_20260911/POSE_TAX_v1.json"
+      }
+    ],
+    "equation_id": "rbf1_post_render_pose_amplitude_tax_v1",
+    "last_calibration_utc": "2026-09-11T00:00:00Z",
+    "latex_form": "d_{\\mathrm{pose}}(\\tau) - d_{\\mathrm{pose}}(0) = k\\tau^{2},\\ k=9.0\\times10^{-6}\\ \\Rightarrow\\ \\Delta S_{\\mathrm{pose}} \\approx 6.6\\times10^{-3}\\,\\tau^{2},\\quad \\inf_{\\tau\\ge 0}\\Delta S = 0 \\text{ at } \\tau=0",
+    "name": "Quadratic out-of-distribution Pose tax on a free post-render edit",
+    "next_recalibration_trigger": "when_3+_new_empirical_anchors_in_domain",
+    "one_line_summary": "A free post-render edit of amplitude tau costs Delta S_pose ~= 6.6e-3*tau^2 (k=9.0e-6 d_pose, 5% constant over tau=1..8, n=24): no payable amplitude exists",
+    "predicted_vs_empirical_residual": {
+      "payable_amplitude_exists": 1.0
+    },
+    "provenance": {
+      "artifact_kind": "research_sidecar",
+      "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_research_sidecar",
+      "captured_at_utc": "2026-09-11T00:00:00Z",
+      "composed_from": [],
+      "contest_archive_member_name": "",
+      "contest_archive_zip_path": "",
+      "evidence_grade": "research_only",
+      "hardware_substrate": "macOS CPU (frozen torch PoseNet)",
+      "measurement_axis": "[n=24 seeded-random pairs; frozen CPU PoseNet]",
+      "promotion_eligible": false,
+      "rejection_reason": "the family reopens on an operator that measures harm/benefit below 1 on a seeded RANDOM n>=120 sample AND leaves d_pose within 3e-08 of the shipped render, or on a vehicle whose d_pose operating point is more than 10x higher (the 6.6e-03 coefficient is operating-point dependent through 5/sqrt(10 d_pose)). The COMPANION support clause (f**1.16) is NOT registered and must not be until its 4-pair arm is widened to n>=120 -- ddm_rbf1's own standing objection, carried here deliberately",
+      "score_claim_valid": false,
+      "source_path": ".omx/research/ddm_rbf1_free_post_render_boundary_treatment_20260911.md",
+      "source_sha256": "0004115672ca65573c845577a41f45c388a41438a470e0cec384510c55dd1be1"
+    },
+    "python_callable_module_path": "tac.canonical_equations.rbf1_pose_amplitude_tax_20260911:pose_tax_delta_s",
+    "schema_version": "canonical_equation_v1_20260519",
+    "units_in": {
+      "pose_weight": "dS per unit d_pose at the operating point",
+      "tau": "uint8 quantisation levels of per-channel amplitude bound"
+    },
+    "units_out": {
+      "pose_tax_d_pose": "PoseNet MSE on the first 6 pose dimensions",
+      "pose_tax_delta_s": "contest score units (S)"
+    }
+  }
+]

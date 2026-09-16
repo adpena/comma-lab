@@ -1,0 +1,19 @@
+{
+  "head": "3432141b439a714dafae4f312144e56b40115498",
+  "index": {
+    "path": "/Users/adpena/Projects/pact/.git/index",
+    "bytes": 7725901,
+    "sha256": "6787cd9f96566ba05f454c099c385c9644ced4d39e79f2f437684d331f27756e"
+  },
+  "staged_names": [],
+  "storage": {
+    "retained_bytes": 321213721,
+    "free_bytes": 13560446976,
+    "limit_bytes": 1073741824,
+    "reserve_bytes": 8589934592
+  },
+  "owned_paths": [
+    "experiments/ddm_psa1_byte_price.py",
+    ".omx/research/ddm_psa1_20260916"
+  ]
+}

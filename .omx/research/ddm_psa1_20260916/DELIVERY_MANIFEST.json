@@ -1,0 +1,37 @@
+{
+  "producer": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa1_byte_price.py",
+    "bytes": 28779,
+    "sha256": "df30b52dcc2dc7392f89749261728f8a537765be01baccb1388c34a0f4fcb5d7"
+  },
+  "result": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RESULT.json",
+    "bytes": 11015,
+    "sha256": "1bca441fb1a222ea8cb4878d0945a992eaac6a42d14770ec4a9c2f374cd370d3"
+  },
+  "payload_manifest": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RETENTION_MANIFEST.json",
+    "bytes": 878102,
+    "sha256": "3a11d2755cc29a44a251bfacef8ae0144554989690623d353c9b766b8b18842e"
+  },
+  "method": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/METHOD.md",
+    "bytes": 6664,
+    "sha256": "416a8df6c10e71257cfbea0f400025a6e95c358fe82f5e7bfe9d2618930adae2"
+  },
+  "receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RECEIPT.md",
+    "bytes": 5907,
+    "sha256": "941fdd1bbe4476d4d24046c216bf1ce6a2526f1b37bee5c49654097f8898cc46"
+  },
+  "fire_order": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/FIRE_ORDER.json",
+    "bytes": 1386,
+    "sha256": "ca01f3508ec653ef9dbb3c497789bc36fdd33949ba264beb0df6e92e87d83b95"
+  },
+  "reviews": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/REVIEWS.md",
+    "bytes": 2242,
+    "sha256": "cde4a6edd2e275e4d75ca72f3b74ff5e7d7f82d0efa3d85747029d0b9928e312"
+  }
+}

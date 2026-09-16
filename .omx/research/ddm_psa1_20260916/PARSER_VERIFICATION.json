@@ -1,0 +1,91 @@
+{
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_psa1_byte_price.py",
+    "bytes": 28779,
+    "sha256": "df30b52dcc2dc7392f89749261728f8a537765be01baccb1388c34a0f4fcb5d7"
+  },
+  "checks": [
+    {
+      "test": "A_real_section_roundtrip",
+      "passed": true
+    },
+    {
+      "test": "A_truncated",
+      "passed": true
+    },
+    {
+      "test": "A_trailing",
+      "passed": true
+    },
+    {
+      "test": "A_wrong_form",
+      "passed": true
+    },
+    {
+      "test": "B3_real_section_roundtrip",
+      "passed": true
+    },
+    {
+      "test": "B3_truncated",
+      "passed": true
+    },
+    {
+      "test": "B3_trailing",
+      "passed": true
+    },
+    {
+      "test": "B3_wrong_form",
+      "passed": true
+    },
+    {
+      "test": "C_real_section_roundtrip",
+      "passed": true
+    },
+    {
+      "test": "C_truncated",
+      "passed": true
+    },
+    {
+      "test": "C_trailing",
+      "passed": true
+    },
+    {
+      "test": "C_wrong_form",
+      "passed": true
+    },
+    {
+      "test": "D_real_section_roundtrip",
+      "passed": true
+    },
+    {
+      "test": "D_truncated",
+      "passed": true
+    },
+    {
+      "test": "D_trailing",
+      "passed": true
+    },
+    {
+      "test": "D_wrong_form",
+      "passed": true
+    },
+    {
+      "test": "B5_control_real_section_roundtrip",
+      "passed": true
+    },
+    {
+      "test": "B5_control_truncated",
+      "passed": true
+    },
+    {
+      "test": "B5_control_trailing",
+      "passed": true
+    },
+    {
+      "test": "B5_control_wrong_form",
+      "passed": true
+    }
+  ],
+  "count": 20,
+  "scope": "Real retained sections plus corruption negatives; no scorer/render; no general adversarial D geometry claim"
+}

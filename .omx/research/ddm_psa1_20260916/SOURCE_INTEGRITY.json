@@ -1,0 +1,11 @@
+{
+  "runtime_files_verified": 51,
+  "copied_and_original_identical": true,
+  "argmax_and_gt_hashes_reverified": true,
+  "source_receipts_reverified": true,
+  "input_receipt": {
+    "path": "/Volumes/APDataStore/pact/ddm_psa1/INPUTS.json",
+    "bytes": 26667,
+    "sha256": "2d3e8ecbbb2c34cc322d17231b9e650797bfe132c2e3ab825a5c024b3eb8af65"
+  }
+}

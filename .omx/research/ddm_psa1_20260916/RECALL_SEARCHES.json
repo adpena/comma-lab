@@ -1,0 +1,71 @@
+[
+  {
+    "surface": "memos",
+    "query": "pair.selective|per.pair.frame.embedding|FiLM.flicker|spatial.*FiLM|boundary.jitter",
+    "paths": [
+      ".omx/research"
+    ],
+    "matches": 148,
+    "retained_lines": 140,
+    "exit_code": 0,
+    "evidence": ".omx/research/ddm_psa1_20260916/memos_recall.txt"
+  },
+  {
+    "surface": "design",
+    "query": "pair.selective|SM1S|head.*bias|spatial.*FiLM",
+    "paths": [
+      "docs"
+    ],
+    "matches": 2,
+    "retained_lines": 2,
+    "exit_code": 0,
+    "evidence": ".omx/research/ddm_psa1_20260916/design_recall.txt"
+  },
+  {
+    "surface": "ledger",
+    "query": "ddm_fe1|pair.selective|FiLM.flicker|renderer.*rank.?1",
+    "paths": [
+      ".omx/state/canonical_task_status.jsonl",
+      ".omx/state/operator_p0_ledger.jsonl"
+    ],
+    "matches": 4,
+    "retained_lines": 4,
+    "exit_code": 0,
+    "evidence": ".omx/research/ddm_psa1_20260916/ledger_recall.txt"
+  },
+  {
+    "surface": "index_and_DAG",
+    "query": "FiLM|renderer.*bias|pair.selective|SM1S",
+    "paths": [
+      ".omx/research/CANONICAL_RESEARCH_INDEX_20260629.md",
+      ".omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md",
+      ".omx/research/sub015_DAG_sps_gradient_separation_20260713.md",
+      ".omx/research/sub015_DAG_infdesc_foundations_20260713.md",
+      ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      ".omx/research/sub015_DAG_governor_measured_growth_fix_20260714.md",
+      ".omx/research/sub015_DAG_steps_dimension_95kill_20260713.md",
+      ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      ".omx/research/sub015_DAG_int8_training_rungs_20260713.md",
+      ".omx/research/sub015_DAG_jrd_reusable_priors_20260713.md",
+      ".omx/research/sub015_DAG_witness_sensitivity_bitalloc_336_20260713.md",
+      ".omx/research/sub015_DAG_v9_ideal_config_ab_20260713.md"
+    ],
+    "exit_code": 0
+  },
+  {
+    "surface": "canonical_equations",
+    "command": [
+      ".venv/bin/python",
+      "tools/list_canonical_equations.py",
+      "--json"
+    ],
+    "filter": [
+      "renderer_edge_layer_foldback",
+      "segnet_head_rank4",
+      "model_section_adaptive_recode",
+      "exchange_ratio_noise_floor",
+      "rbf1_post_render"
+    ],
+    "matched": 9
+  }
+]

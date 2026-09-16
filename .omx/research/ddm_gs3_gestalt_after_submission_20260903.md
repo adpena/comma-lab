@@ -2027,3 +2027,25 @@ pose-directed, set-priced), renderer (basis, in-place refit, global int4 grid, a
 lattice, tail coder, temporal context. Two things remain unmeasured: the price-first generator (pd6, spawning now)
 and a pair-selective renderer actuator (a successor-object part). Sub-0.12 needs −0.0162 S; this object has not
 yielded more than 1.65e-4 in any single move since move 44.
+
+## Addendum 68 (2026-09-16, host ~08:45Z) — psa1: a pair-selective renderer actuator PRICES below the pair's seg debt for one form (RGB head bias); the successor object part survives step 0; efficacy owed (psa2)
+
+**psa1 (codex astra, scorer-free; receipt `.omx/research/ddm_psa1_20260916/RECEIPT.md`) — MEASURED bytes by the real coder.**
+Four per-pair actuator forms priced on 36 pairs (jrd1's K24 + pd4's 12 heaviest-residual), per pair, median [Q1, Q3]:
+A rank-1 layer delta 58 B brotli-q11 / 44 B SM1 stream increment / 75 B final archive; B3 three-channel RGB head bias
+42 / 29 / 54 B; C last-block FiLM 59 / 38 / 73 B; D spatial head bias 60 / 47 / 81.5 B. Fixed overhead 24 B (q11) or
+46–47 B (SM1); header 12 B, pair index 2 B. The charter's "five-channel head bias" does not exist (the head emits RGB;
+the five classes live in the scorer) — the arm substituted the real three-channel attachment point and said so. The
+shipped tail context model cannot carry these records (alphabet/geometry). Re-derived population median seg-debt
+budget 22.916 B per pair (the charter's 15 B was approximate). Break-even k/36 (price below the pair's WHOLE debt):
+A 1/0, B3 **12/5** (q11/SM1), C 2/0, D 1/1. Gate (≥ 10 % of pairs, overhead < 200 B) PASSES for B3. 760 research
+ZIPs verified, twins, resume; 322 MB retained.
+verdict_scope: instance for the dead ends; the price screen is a PASS, not a closure. Efficacy — whether a 3-channel
+per-pair bias repairs enough boundary-jitter cells to pay its 29–54 B — is UNMEASURED and is psa2's question, run
+with the scorer slot after pd6. A public-receiver change is required to apply the bias (generic code, free under rule
+118, but a receiver change ⇒ a measured decode wall-clock leg per the contract law).
+
+**Gestalt after 68.** The successor-object direction now has one priced part: a per-pair RGB bias at ~2× the median
+pair's seg debt on the SM1 archive, ~1.2× under q11 framing. It pays only on the heavy-residual tail of pairs and only
+if the credit per pair is real; pd5's law (credit does not compound) is the risk. Two live arms: pd6 (price-first
+generator, scorer) and, next, psa2.

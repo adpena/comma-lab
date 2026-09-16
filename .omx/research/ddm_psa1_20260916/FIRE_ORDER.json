@@ -1,0 +1,32 @@
+{
+  "schema": "ddm_psa1_fire_order.v1",
+  "gate_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_psa1_20260916/RESULT.json",
+    "bytes": 11015,
+    "sha256": "1bca441fb1a222ea8cb4878d0945a992eaac6a42d14770ec4a9c2f374cd370d3"
+  },
+  "scorer_jobs_launched": 0,
+  "receiver_implemented": false,
+  "orders": [
+    {
+      "task_id": "ddm_psa2_pair_selective_rgb_bias_realization_20260916",
+      "owner": "MAIN",
+      "executing_owner": "ddm_psa2",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "/Volumes/APDataStore/pact/ddm_psa2/",
+      "fire_trigger": "MAIN lands psa1 and issues scorer charter with --owns-scorer after pd6 release; verify move52 custody or reprice a moved pointer",
+      "title": "Realize counted pair-selective RGB head bias after psa1 price gate"
+    },
+    {
+      "task_id": "ddm_psa1_serializer_bundle_landing_20260916",
+      "owner": "MAIN",
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "consumer_store": "committed repo and .omx/state/canonical_task_status.jsonl",
+      "fire_trigger": "Serializer rc17 and verified fallback bundle; MAIN applies intended commit without sibling/index changes",
+      "title": "Land psa1 verified serializer fallback if sandbox blocks Git objects"
+    }
+  ],
+  "folded": [
+    "Shared-section A/C/D economics into MAIN psa2 design review; no separate launch"
+  ]
+}

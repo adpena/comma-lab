@@ -1,0 +1,53 @@
+{
+  "lane": {
+    "id": "ddm_psa1_pair_selective_renderer_actuator_byte_price_20260916",
+    "name": "Pair selective renderer actuator byte price step 0",
+    "phase": 2.0,
+    "level": 1,
+    "gates": {
+      "impl_complete": {
+        "status": false,
+        "evidence": ""
+      },
+      "real_archive_empirical": {
+        "status": true,
+        "evidence": ".omx/research/ddm_psa1_20260916/RESULT.json"
+      },
+      "contest_cuda": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cpu": {
+        "status": false,
+        "evidence": ""
+      },
+      "strict_preflight": {
+        "status": false,
+        "evidence": ""
+      },
+      "three_clean_review": {
+        "status": false,
+        "evidence": ""
+      },
+      "memory_entry": {
+        "status": false,
+        "evidence": ""
+      },
+      "deploy_runbook": {
+        "status": false,
+        "evidence": ""
+      }
+    },
+    "notes": "research_only=true; scorer-free four-form byte gate; pd6 owns scorer; charter .omx/research/ddm_psa1_pair_selective_renderer_actuator_byte_price_step0_charter_20260916.md"
+  },
+  "claims": [
+    "| 2026-09-16T08:11:55Z | ddm_psa1 | ddm_psa1_pair_selective_renderer_actuator_byte_price_20260916 | local_macos_cpu | ddm_psa1_bytes_20260916 |  | completed_price_gate_pass | All scorer-free byte stages terminal rc0; B3 singleton gate 12of36 q11,5of36 appended final archives. Payloads retained and verified. No scorer slot claimed. MAIN psa2 fire order queued; serializer final landing pending. |",
+    "| 2026-09-16T07:50:04Z | ddm_psa1 | ddm_psa1_pair_selective_renderer_actuator_byte_price_20260916 | local_macos_cpu | ddm_psa1_bytes_20260916 |  | active_byte_only | Scorer-free price charter. No render pose training Modal fire packet. APDataStore ddm_psa1 retention <=1GiB; sibling stores read only. |"
+  ],
+  "task_registration_files": [
+    ".omx/research/ddm_psa1_20260916/ddm_psa1_serializer_bundle_landing_20260916.json",
+    ".omx/research/ddm_psa1_20260916/ddm_psa2_pair_selective_rgb_bias_realization_20260916.json"
+  ],
+  "preserve_sibling_dirty_work": true,
+  "shared_files_not_whole_file_staged": true
+}
