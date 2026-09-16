@@ -351,7 +351,41 @@ On its own decoded bytes the 110-pair archive scores
 alone is **+7.739e−03 S**. The 110-pair candidate **does NOT clear the bar**; it is far worse than
 move 52. The −1.066e−04 net of §10 was real arithmetic on an unreal pose leg.
 
-<!-- THE 101-PAIR SUCCESSOR, ITS OWN DECODE, AND THE SEAL FOLLOW -->
+## 12. THE SUCCESSOR — drop the nine, and the decode reproduces the admission EXACTLY
+
+The fix the refutation implies is not subtle: drop the nine pairs whose render the decode does not
+reproduce, keep the 101 it does, and measure again on the new bytes' own decode.
+
+| | 110-pair candidate | **101-pair candidate** |
+|---|---|---|
+| pairs / tokens | 110 / 129 | **101 / 118** |
+| exact closed archive | 179,287 B `18b7e729…` (−45 B) | **179,286 B `aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957` (−46 B)** |
+| encoder twins (2 processes) | `b884a8bf…` both | **`b3d5c52988f2a182…` both** |
+| cold parse-back | 1,471.1 s | **936.7 s**, raw sha `8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b` |
+| decoded plane == admitted field | yes (129 tokens / 110 pairs) | **yes (118 tokens / 101 pairs)**, plane sha `4cb0b147bdae8ce0618938453bb6ccc5b7b5a4927d6ad4e1b0bd9dd9ff46119c` |
+| d_seg on the decode | 12,129 flips (18 repaired) | **12,128 flips (19 repaired)** |
+| **d_pose on the decode** | **2.0241e−05 — 4.90× the admission** | **4.13644120761059e−06 — IDENTICAL TO ALL DIGITS to the admission; max per-pair |Δ| 0.0** |
+
+**That last cell is the pass's proof.** Removing exactly the nine pairs the render control named
+takes the decode/admission pose difference from 1.611e−05 to **0.0 — not "close", not "within
+noise", identical in every digit over all 600 pairs.** The law in §11 is not a hedge; it is a
+diagnosis that predicted its own cure, and the cure is measured.
+
+### The three legs of the candidate, EVERY ONE on the shipped bytes' own decode
+
+| leg | value | how |
+|---|---:|---|
+| rate | **−3.062951e−05** | **−46 B EXACT** — the closed archive, re-solved carrier included |
+| seg | **−1.611723e−05** | **19 cells REPAIRED**, MEASURED by `step0 --raw` on the candidate's own `0.raw` through the same jg1 instrument move 52's leg was measured with; carried to T4 by the same-instrument ratio 1.0006662543837985 |
+| pose | **−5.693419e−05** | **4.1364412076105896e−06** MEASURED by `up2.measure_pose` batch 8 on the candidate's own `0.raw` with the candidate's own carrier |
+| **S projected** | **0.13609858812864767** | 100·0.00010287882769408085 + √(10·4.1364412076105896e−06) + 25·179,286/37,545,489 |
+| **net vs move 52** | **−1.036809e−04** | **5.184 bars** · **4.47× the 34.8 B container-break sd** |
+
+**All three legs are negative and all three are measured on the decode.** The candidate is 46 bytes
+SMALLER than move 52, repairs 19 SegNet cells, and lowers pose by 1.7 %. It is not a projection off
+an overlay: it is what the bytes do.
+
+
 
 <!-- # FORMALIZATION_PENDING: a measurement pass; the score arithmetic used throughout is the
 registered S = 100*d_seg + sqrt(10*d_pose) + 25*B/37,545,489. -->
