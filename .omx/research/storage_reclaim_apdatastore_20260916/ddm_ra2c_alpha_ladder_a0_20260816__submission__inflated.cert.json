@@ -1,0 +1,25 @@
+{
+ "schema": "rebuildable_scratch_certificate.v1",
+ "utc": "2026-09-16T11:44:18Z",
+ "path": "/Volumes/APDataStore/pact/ddm_ra2c_alpha_ladder_a0_20260816/submission/inflated",
+ "bytes": 3662409600,
+ "file_count": 1,
+ "files": [
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_ra2c_alpha_ladder_a0_20260816/submission/inflated/0.raw",
+   "bytes": 3662409600,
+   "sha256": "dbd30b21ed44ef1ac79d8540cf8b02717f26642c222a88f1200b48d9bdeeaff5"
+  }
+ ],
+ "source_archives": [
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_ra2c_alpha_ladder_a0_20260816/submission/archive.zip",
+   "bytes": 182759,
+   "sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
+  }
+ ],
+ "rebuild": "deterministic decode: run the sibling runtime tree's inflate.sh on the listed archive.zip (same runtime tree, same host class); verify each raw sha256 above",
+ "reason": "inflated raw frames are the deterministic output of archive+runtime; deleted to lift /Volumes/APDataStore above the pricer's 8 GiB reserve during pd6 byte-close (free was 5 GiB)",
+ "false_authority": "no score is derived from these raws; any score cites its own exact-eval receipt",
+ "head": "277e7b483d55f1b3a51eb73315f88d0e9bc3fa79"
+}
