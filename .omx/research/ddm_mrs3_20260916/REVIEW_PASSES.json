@@ -1,0 +1,45 @@
+{
+  "source": {
+    "path": "/Users/adpena/Projects/pact/experiments/ddm_mrs3_stage_profile.py",
+    "bytes": 8106,
+    "sha256": "3318cbc56b1cee263a5476985d72d0aba8b2c80c96e819e31bcbca3432507992"
+  },
+  "self_review_passes": [
+    {
+      "pass_number": 1,
+      "scope": "Source binding, retained pre-pair-state loading, exact token and raw oracle hashes, real inputs, payload persistence before completion receipt",
+      "findings": []
+    },
+    {
+      "pass_number": 2,
+      "scope": "Nested timers excluded from summed categories, lock/resume/checkpoint path, no mutated predecessor, deterministic CPU flags and absence of scorer use",
+      "findings": []
+    }
+  ],
+  "independent_review": {
+    "reviewer": "mrs3_recall_review",
+    "blocking_findings": [],
+    "limitations": [
+      "Nested timers overlap; do not sum them",
+      "Deterministic algorithms differs from mrs2: this is within-run attribution, not matched before/after speedup",
+      "Resume receipt could be copied under a different pair filename; independent post-run verification must validate frame/state/oracle SHA and 48 unique expected indices"
+    ]
+  },
+  "review_tracker_passes": 2,
+  "override_used": false,
+  "unchanged_public_copy": {
+    "source": {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs3/inflate.py",
+      "bytes": 138152,
+      "sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425"
+    },
+    "predecessor": {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/inflate.py",
+      "bytes": 138152,
+      "sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425"
+    },
+    "byte_identity_verified": true,
+    "two_actual_review_tracker_passes": true,
+    "scope": "Pass 1: byte comparison and native selection/caller path. Pass 2: unchanged archive/prior/renderer/public shell interfaces; no cure claim."
+  }
+}

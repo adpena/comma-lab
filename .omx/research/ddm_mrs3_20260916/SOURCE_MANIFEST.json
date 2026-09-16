@@ -1,0 +1,39 @@
+{
+  "schema": "mrs3_source_manifest.v1",
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs3/README.md",
+      "bytes": 1559,
+      "sha256": "d5058a3a3274647166a1aa35dff222b3dc8f943fd653ecd033cfbc07377e7878",
+      "loc": 24
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs3/archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+      "loc": null
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs3/inflate.py",
+      "bytes": 138152,
+      "sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425",
+      "loc": 2715
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs3/inflate.sh",
+      "bytes": 197,
+      "sha256": "02f3a545b4f99d04e3b823675a6442c29d947bf21a0f0ebae8bfbaaeecae4089",
+      "loc": 6
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs3/range_decoder.c",
+      "bytes": 4018,
+      "sha256": "d70a494987ff9ea720b9150a5baf3343299139c6ce8c090c388974d03c14baec",
+      "loc": 100
+    }
+  ],
+  "copied_from": "submissions/mrs2",
+  "byte_identical_copy": true,
+  "cure_implemented": false,
+  "second_native_file_present": false
+}

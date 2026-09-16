@@ -1,0 +1,16 @@
+{
+  "status": "PARTIAL_BLOCKED_ON_CHARTER_SOURCE_SCOPE",
+  "cure_implemented": false,
+  "route_shipped": null,
+  "source_scope_correction_received": false,
+  "diagnostic_complete": true,
+  "matched_pairs": 48,
+  "cold_n600_run": false,
+  "compiler_present_bare_smoke": false,
+  "compiler_absent_bare_smoke": false,
+  "second_native_loc": 0,
+  "score_claim": false,
+  "promotable": false,
+  "next_action": "MAIN resolves explicit source/arithmetic scope via MAIN_FIRE_ORDER.json",
+  "utc": "2026-09-16T17:08:29.648519+00:00"
+}

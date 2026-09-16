@@ -1,0 +1,76 @@
+{
+  "schema": "mrs3_source_stage_mapping.v1",
+  "sources": [
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs2/inflate.py",
+      "bytes": 138152,
+      "sha256": "0689a77e061fe8a7d39953adb099c0503b8b9f2d983aacb7a98fc03d304e1425"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_mrs2_profile.py",
+      "bytes": 12062,
+      "sha256": "82a311b8cfb7fb05e2a87c5b73e794f0e16423168d3a1e3ed11e248e1b853a5e"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/runtime/f26_hpac_native.c",
+      "bytes": 40911,
+      "sha256": "1326fd9dd2c85c9e78da64b1a4986536f21eb9a416ad6fbfaf1bb88698d70c00"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/runtime/f26_corrector_native.c",
+      "bytes": 50299,
+      "sha256": "3e2705f5505036121d85329958a4f23b5ea95e6d20d45ecf92901f2b65cca92a"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/runtime/rlc1_geometry.c",
+      "bytes": 4238,
+      "sha256": "414cc13dfdf597cadbe1a906a790958649446ce406461883978f0604327b46e5"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/runtime/native_free_corrector.py",
+      "bytes": 15952,
+      "sha256": "e10036adf617998cca20484a000062099ef6468c16042f26063dea480ab0df13"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/runtime/residual_archive.py",
+      "bytes": 34460,
+      "sha256": "15333b33264093641d096af25efe38ab6e62549bc6eb57e515e5d2a78b3fbae4"
+    }
+  ],
+  "claimed_source_stage": "f26_hpac_native.c / prior context statistics",
+  "actual_mappings": [
+    {
+      "profile_class": "miss_FreeCorrector",
+      "category": "prior_context_statistics",
+      "source": "f26_corrector_native.c",
+      "semantics": "float64 probability law plus int64 state updates"
+    },
+    {
+      "profile_class": "geometry_mixer_LaneMixer",
+      "category": "prior_context_statistics",
+      "source": "rlc1_geometry.c plus tc1_shared_mixer.py and rlc1_mixer.py",
+      "semantics": "wide integer geometry and float64 probability mixing"
+    },
+    {
+      "profile_class": "prior_IntegerPrior.prepare_frame_context",
+      "category": "prior_network",
+      "source": "f26_hpac_native.c:f26_prepare_frame_context",
+      "semantics": "prior torch tensor computation"
+    }
+  ],
+  "source_scope_correction_requested": true,
+  "source_scope_correction_received": false,
+  "implementation_changed": false,
+  "score_claim": false,
+  "promotable": false,
+  "native_hpac_explicitly_refused": {
+    "source": {
+      "path": "/Volumes/APDataStore/pact/ddm_pd6/candidate2/candidate_runtime/runtime/f26_inflate.py",
+      "bytes": 29176,
+      "sha256": "a3616bbc968cd890a466b301e78b8f3370846cdd6c36c57948976a103d8d5b99"
+    },
+    "line_start": 455,
+    "line_end": 463,
+    "meaning": "Non-python token decoder is refused because native HPAC is unpatched and would decode a different field"
+  }
+}
