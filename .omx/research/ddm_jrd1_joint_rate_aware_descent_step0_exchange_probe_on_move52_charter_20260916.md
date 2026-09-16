@@ -1,4 +1,4 @@
-# ddm_jd1 — JOINT rate-aware descent of renderer + field + prior: STEP 0, the joint exchange probe on move 52 (charter, MAIN 2026-09-16; operator standing GO "be creative and weird, think divergently"; codex astra xhigh)
+# ddm_jrd1 — JOINT rate-aware descent of renderer + field + prior: STEP 0, the joint exchange probe on move 52 (charter, MAIN 2026-09-16; operator standing GO "be creative and weird, think divergently"; codex astra xhigh)
 
 ## Why this object and not another arm on the field
 Every single axis of the shipped object is at its knee (gs3 `.omx/research/ddm_gs3_gestalt_after_submission_20260903.md`
@@ -38,7 +38,7 @@ the untouched remainder. For each pair, measure three exchange rows, all in S pe
    rows 1 and 2 (UNION ≠ SUM, m164) and vs the pointer exchange 6.658589531221714e-7 S/B.
 Pre-registered gate (the only question): does the joint row's realized exchange exceed the better single-axis row by
 ≥ 2× on the median pair, with global collateral (all 600 pairs) priced in? If YES: the joint formulation has a lever above
-the knees and MAIN charters the burn (jd2). If NO: the joint direction is closed at this operating point and the object
+the knees and MAIN charters the burn (jrd2). If NO: the joint direction is closed at this operating point and the object
 is finished; say so plainly. Falsifiers: joint realized exchange < 1.5× the best single row; renderer-row collateral on
 untouched pairs exceeds its per-pair credit; row 1 fails to reproduce pd4's knee within tolerance (then the instrument,
 not the object, is under test — STOP and report).
@@ -46,20 +46,20 @@ not the object, is under test — STOP and report).
 ## Apparatus, boundaries, retention
 No burn, no training, no Modal, no fire, no packet; never edit `upstream/`, the PR tree, sealed trees, contract code, the
 receiver, the shipped renderer weights, basis or prior IN THE TREE (all changes on copies under
-`/Volumes/APDataStore/pact/ddm_jd1/`; report free space before every heavy step; retain ≤ 3 GiB with sha256; Vertigo
+`/Volumes/APDataStore/pact/ddm_jrd1/`; report free space before every heavy step; retain ≤ 3 GiB with sha256; Vertigo
 untouched under its reserve). pd5 (Opus) shares the host and owns `/Volumes/APDataStore/pact/ddm_pd5/` and pd4's pool
 files — read them, never write them. Heavy steps via `tools/launch_detached_process.py --output-dir … --nice 0
 --done-receipt …`; background receipt-only waits. Label MEASURED / DERIVED / INFERRED / ASSUMED. Serializer commits with
 post-edit shas; two visible review passes per .py; `[no-triality] [p0-ledger-ok]`; NEVER a co-author trailer or AI
 attribution. If the serializer refuses with a Git-object write denial (rc 17), that is NOT a stop condition: continue to
 the end, keep every file in the working tree, leave the verified bundle + format-patch under
-`.omx/research/ddm_jd1_20260916/`; MAIN lands. Commit LAST. Checkpoint as `ddm_jd1`; lane
-`ddm_jd1_joint_rate_aware_descent_step0_exchange_probe_20260916` (claim it).
+`.omx/research/ddm_jrd1_20260916/`; MAIN lands. Commit LAST. Checkpoint as `ddm_jrd1`; lane
+`ddm_jrd1_joint_rate_aware_descent_step0_exchange_probe_20260916` (claim it).
 
 ## OPTIMAL FORM
 Reference forms: pd4's per-pair pricer + resolved-pose admission (row 1); rw1's int4-grid action + ren2's refit machinery
 (row 2); the real coder for every byte. Declared deltas: K = 24 pairs (SCOPE); first-order Lagrange direction realized by
-one discrete step (SCOPE — the burn is jd2's). No MECHANISM reduction: no ledger sums, no first-order token prices as
+one discrete step (SCOPE — the burn is jrd2's). No MECHANISM reduction: no ledger sums, no first-order token prices as
 charges (m: first-order token price is a ranking, never a charge), no proxy scorer, no unresolved pose. Provenance pins:
 HEAD (record), pd4 memo sha (record), rw1/ren2/cb1 memo shas (record), move 52 seal + leg.
 
