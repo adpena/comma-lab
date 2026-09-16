@@ -1,0 +1,287 @@
+{
+  "schema": "mrs1_handoff.v1",
+  "recorded_utc": "2026-09-16T15:38:46.128216+00:00",
+  "status": "LOCAL_PROOFS_COMPLETE_T4_QUEUED",
+  "owner": "ddm_mrs1",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotable": false,
+  "public_files": [
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/README.md",
+      "bytes": 1445,
+      "sha256": "469a1ff3b063dfe5badfab832e1c215c119937b2ce5c69b22f749e938ae66afe",
+      "physical_lines": 22
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+      "physical_lines": null
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.py",
+      "bytes": 136869,
+      "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+      "physical_lines": 2693
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.sh",
+      "bytes": 65,
+      "sha256": "c6fa7306f177cd9fa955f1d744f24380b9c0e49fddeef0062961575bcd0d39e9",
+      "physical_lines": 3
+    }
+  ],
+  "file_budget_pass": true,
+  "python_1500_line_aim_met": false,
+  "minimal_optimum_proven": false,
+  "coverage": {
+    "baseline_live_python_lines": 4860,
+    "baseline_covered_file_physical_lines": 11785,
+    "baseline_covered_file_count": 38,
+    "sealed_whole_python_physical_lines": 15767,
+    "sealed_whole_python_file_count": 43,
+    "charter_static_closure_not_rederived": {
+      "files": 35,
+      "physical_lines": 11148
+    },
+    "seed": 20260916,
+    "seeded_pair_count": 32,
+    "baseline_completed_pairs": 600,
+    "reduced_precursor_live_python_lines": 2317,
+    "reduced_precursor_physical_lines": 2693,
+    "coverage_limit": "Python source hits, not C internals or executable-statement percentage; reduced precursor coverage is not final-main line coverage."
+  },
+  "verification": {
+    "schema": "mrs1_final_public_verification.v1",
+    "axis": "[macOS-CPU advisory]",
+    "identity": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/IDENTITY.json",
+      "bytes": 64821,
+      "sha256": "5fa221bb1b84416500895e1a89e4b4c41f0b3ac7ab661191a5310d9d8d75df9f"
+    },
+    "done": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mrs1_public_smoke.done",
+      "bytes": 400,
+      "sha256": "8f841e85107e8883a1e44a84555d129b68b84ecf9158ff7f53a3a830400e13b6"
+    },
+    "matched_pairs": 600,
+    "raw_bytes": 3662409600,
+    "raw_sha256": "8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b",
+    "raw_removed": true,
+    "public_receiver_sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+    "public_process_seconds": 1390.7783818340395,
+    "projected_T4_seconds": 1760.8582470466217,
+    "projection_plan": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/TIMING_PROJECTION_PLAN.json",
+      "bytes": 1055,
+      "sha256": "26634b267da0f17035447b570b348e5d5984988c6fbbadd4a153d041870af165"
+    },
+    "bare_venv": true,
+    "help_rc": 0,
+    "exact_three_arg_default_cuda_guard_rc": 1,
+    "full_public_cpu_rc": 0,
+    "environment": {
+      "base": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none",
+      "cuda": false,
+      "executable": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/bin/python3",
+      "packages": {
+        "brotli": {
+          "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages/brotli.py",
+          "version": "1.2.0"
+        },
+        "numpy": {
+          "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages/numpy/__init__.py",
+          "version": "1.26.4"
+        },
+        "torch": {
+          "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages/torch/__init__.py",
+          "version": "2.12.1"
+        }
+      },
+      "path": [
+        "",
+        "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python313.zip",
+        "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13",
+        "/Users/adpena/.local/share/uv/python/cpython-3.13-macos-aarch64-none/lib/python3.13/lib-dynload",
+        "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages"
+      ],
+      "prefix": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv",
+      "user_site": false
+    },
+    "public_decode_command": [
+      "/bin/sh",
+      "/Users/adpena/Projects/pact/submissions/mrs1/inflate.sh",
+      "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/extracted",
+      "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/output",
+      "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/file-list.txt",
+      "--device",
+      "cpu"
+    ],
+    "score_claim": false,
+    "promotable": false,
+    "own_T4_measurement": false,
+    "own_contest_eval": false
+  },
+  "fresh_reader": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FRESH_READER_RECEIPT.json",
+    "bytes": 1668,
+    "sha256": "4acbb8610be09c340bc0cecc82000b6d64227e3a1979f9a629ee412652235574"
+  },
+  "fresh_reader_prompt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FRESH_READER_PROMPT.md",
+    "bytes": 742,
+    "sha256": "017338be66be96eba24a38df09d3206d2790b1cff45ad8663f630e215821b625"
+  },
+  "fresh_reader_verbatim": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FRESH_READER_REPLY.md",
+    "bytes": 1605,
+    "sha256": "38f973394a7afbad53f99426aef33810401d28fd78d60549ee6e4e4b0075d3ca"
+  },
+  "pr_draft": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/PR_BODY_DRAFT.md",
+    "bytes": 967,
+    "sha256": "aa67db248e515d0b306368cde8356b0d3bdd204f4a0d5c76a7f3a5c9951d4aad"
+  },
+  "pr_body_lines": 20,
+  "report_verbatim": true,
+  "review_passes": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/REVIEW_PASSES.json",
+  "recall_evidence": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/RECALL_EVIDENCE.md",
+  "engineering_proofs": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/ENGINEERING_PROOFS.json",
+    "bytes": 3488,
+    "sha256": "dadc658f2f15e1afa3dd3f70cdecb42244a3e6f9ccd7e219fbf0ec3dbc625302"
+  },
+  "hygiene": {
+    "bootstrap_cleanup": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/VENV_CLEANUP.json",
+      "bytes": 4679882,
+      "sha256": "99ea6a01942872fb08c541ef9b63ab6078920d34746087eb2e06408dd1dd007e"
+    },
+    "public_smoke_cleanup_review": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke_hygiene/REVIEW.json",
+      "bytes": 1613,
+      "sha256": "d2d8f6937b564dc0b59c0d42cbd59a0efcd57ae9c0dc9b3d3250dadee0ad7066"
+    },
+    "validator_cleanup_review": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/VALIDATOR_CLEANUP_REVIEW.json",
+      "bytes": 2476,
+      "sha256": "0d8fa7c625f85d640ecc70d5a6f55787aabbbfced54470ce47dcce900665b5e5"
+    },
+    "executed_source_preserved": true,
+    "new_cleanup_helpers_full_decoder_rerun": false
+  },
+  "retention_manifest": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/RETENTION_MANIFEST.json",
+  "boundaries": {
+    "schema": "mrs1_boundary_verification.v1",
+    "sealed_source_manifest": "/Volumes/APDataStore/pact/ddm_mrs1/trace/INPUTS.json",
+    "sealed_source_manifest_sha256": "3a049c814d0a19bf5271f0c446cb89a528934550d82a47eb0f2f077d66971e1d",
+    "sealed_source_files_checked": 48,
+    "mismatches": [],
+    "closed_PR_tree_current": "262393627aea777e75bedaf30f46391aafadd191",
+    "closed_PR_tree_initial": "262393627aea777e75bedaf30f46391aafadd191",
+    "no_manual_index_or_stash": true,
+    "no_upstream_or_contract_edits_by_this_arm": true,
+    "no_remote_or_publication_actions": true,
+    "no_scorer_execution": true
+  },
+  "landing": {
+    "mechanism": "serializer only; post-edit per-file hashes; no attribution trailer",
+    "outcome_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/SERIALIZER_RESULT.json",
+    "if_rc_17": "Continue with verified bundle and source manifest; MAIN lands. No main commit claim.",
+    "archive_ignored_by_git": true,
+    "archive_retained_in_public_directory_and_source_bundle": true,
+    "shared_ledgers_not_whole_file_staged": true
+  },
+  "future": {
+    "schema": "mrs1_main_fire_order.v1",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+    "charter": ".omx/research/ddm_mrs1_minimal_reviewable_submission_from_move53_charter_20260916.md",
+    "archive": {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+    },
+    "expected_receiver": {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/final_receiver/inflate.py",
+      "bytes": 136869,
+      "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee"
+    },
+    "task_id": "ddm_mrs1_new_receiver_t4_row_and_timing_20260916",
+    "fire_trigger": "Harvest completed HANDOFF.json, final public raw identity, bare-venv smoke, fresh-reader reply and serializer/fallback custody; then claim an available T4 exact-eval lane without overlapping scorer ownership.",
+    "action": "Verify final public source/archive hashes; run a new T4 direct decode timing leg and upstream n600 exact evaluation on those receiver bytes, retaining command, hardware, runtime custody, component distances and full logs.",
+    "conditions": [
+      "No inherited report or host raw identity certifies the changed CUDA receiver.",
+      "If the measured C-free T4 decode exceeds 1500 seconds, that receipt can qualify at most one C source; rebuilding it requires renewed raw identity, public smoke, fresh-reader review, T4 timing and exact row.",
+      "This arm has not authorized or launched Modal, a fire, a packet, a PR, a push, or authorize_* tooling."
+    ],
+    "publication": {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN and operator",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "New receiver passes T4 timing and exact evaluation, operator sees final public files and explicitly gives the required one-line publication confirmation.",
+      "action": "Publish only the operator-approved final files and update the draft report to the new receiver result; otherwise retain the packet privately."
+    },
+    "score_claim": false,
+    "promotable": false,
+    "public_receiver_path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.py",
+    "source_landing": {
+      "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+      "owner": "MAIN",
+      "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+      "fire_trigger": "Harvest completed local handoff and SERIALIZER_RESULT.json; if not landed, verify bundle, intended-file hashes and shared-tree custody before landing.",
+      "action": "Land only the intended receiver, arm source and evidence files; keep the ignored archive under retained source-bundle custody; reconcile the exported arm task row without absorbing unrelated ledger edits."
+    }
+  },
+  "live_hypotheses": [
+    {
+      "lead": "The final receiver may reproduce move-53 T4 output.",
+      "why": "All 600 host raw pairs match and integer token semantics and original CUDA precision settings were retained. Host proof does not test CUDA."
+    },
+    {
+      "lead": "One native entropy decoder could recover timing if current C-free T4 decode exceeds 1500 seconds.",
+      "why": "The receiver now performs range decoding in Python; only MAIN actual current T4 measurement can activate the charter exception."
+    }
+  ],
+  "dead_ends": [
+    {
+      "scope": "INSTANCE",
+      "path": "Delete apparent alternative correctors by filename alone",
+      "reason": "Inherited methods and nested mixers execute on this archive; dynamic coverage and raw identity decide deletion."
+    },
+    {
+      "scope": "INSTANCE",
+      "path": "Reuse the ancestor report or host identity as a new T4 admission",
+      "reason": "Receiver changes need a fresh same-source T4 timing leg and exact row."
+    },
+    {
+      "scope": "INSTANCE",
+      "path": "Checkpoint only instance __dict__",
+      "reason": "Base-class __slots__ state was lost; full MRO slot capture repaired actual resumed tokens."
+    },
+    {
+      "scope": "INSTANCE",
+      "path": "Parse every SSD *.json as a receipt",
+      "reason": "Actual AppleDouble sidecars are not JSON; the cleanup helper now skips ._ names."
+    }
+  ],
+  "unchanged_composition": "composition S 0.1361014714463198 @ 179,286 B [contest-CUDA T4 n600] (move 53)",
+  "retention_pre_serializer": {
+    "schema": "mrs1_retention.v1",
+    "recorded_utc": "2026-09-16T15:37:10.557566+00:00",
+    "root": "/Volumes/APDataStore/pact/ddm_mrs1",
+    "phase": "pre-serializer; final closure supplement inventories later custody files",
+    "excluded_path_components": [
+      "._*",
+      "*.pending*"
+    ],
+    "regular_file_count": 767,
+    "retained_bytes": 1199406080,
+    "budget_bytes": 2147483648,
+    "free_bytes": 27362066432,
+    "score_claim": false,
+    "promotable": false
+  }
+}

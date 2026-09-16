@@ -1,0 +1,18 @@
+{
+  "schema": "mrs1_delivery_bundle.v1",
+  "bundle": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs1/mrs1_source_delivery.tar",
+    "bytes": 727040,
+    "sha256": "d135236474dd9c6bb81561e53662bc84ef82ad588f492e4654bb0f6b2591212a"
+  },
+  "manifest": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/SOURCE_MANIFEST.json",
+    "sha256": "22ed767519c70f86a557e7c943ee68243a82a74455dd8ccfbd23238d1a539251"
+  },
+  "verified_member_hashes": 37,
+  "contains_unchanged_archive": true,
+  "purpose": "Portable intended source plus evidence and ignored archive; not a contest packet/fire or publication.",
+  "restore_instruction": "Verify bundle and manifest hashes, inspect intended files against the current tree, then MAIN lands through the serializer; do not unpack over unrelated dirty work.",
+  "score_claim": false,
+  "promotable": false
+}

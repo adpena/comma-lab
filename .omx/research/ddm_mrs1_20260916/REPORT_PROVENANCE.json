@@ -1,0 +1,20 @@
+{
+  "source_path": "/Volumes/APDataStore/pact/ddm_pd6_fire/run2/MODAL_REMOTE_RESULT.json",
+  "source_sha256": "fbea310f35317683800cf57b6dd17ef28b5dc16f819f7d7df51b4625642f24ba",
+  "field": "artifacts.report.txt",
+  "verbatim_report_sha256": "19c55fa2b63a25f43b0e927a9db9525b5c40612d05ada288de9ea255e18522ae",
+  "report_lines": 17,
+  "draft_lines": 20,
+  "published": false,
+  "finalized_utc": "2026-09-16T15:31:32.365206+00:00",
+  "fresh_reader_receipt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FRESH_READER_RECEIPT.json",
+    "bytes": 1668,
+    "sha256": "4acbb8610be09c340bc0cecc82000b6d64227e3a1979f9a629ee412652235574"
+  },
+  "draft": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/PR_BODY_DRAFT.md",
+    "bytes": 967,
+    "sha256": "aa67db248e515d0b306368cde8356b0d3bdd204f4a0d5c76a7f3a5c9951d4aad"
+  }
+}

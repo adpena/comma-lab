@@ -1,0 +1,18 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "hardware_command": [
+    "sysctl",
+    "machdep.cpu.brand_string",
+    "hw.memsize",
+    "hw.ncpu",
+    "hw.physicalcpu",
+    "hw.logicalcpu"
+  ],
+  "hardware_rc": 1,
+  "hardware_stdout": "",
+  "hardware_stderr": "sysctl: sysctl fmt -1 1024 1: Operation not permitted\n",
+  "threads": 4,
+  "interop_threads": 1,
+  "authority": false
+}

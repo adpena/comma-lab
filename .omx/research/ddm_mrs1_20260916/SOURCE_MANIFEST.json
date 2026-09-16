@@ -1,0 +1,270 @@
+{
+  "schema": "mrs1_source_delivery.v1",
+  "recorded_utc": "2026-09-16T15:39:54.986819+00:00",
+  "initial_head": "ee9f67215ad38e8a76df9a086af1087ab96a1176",
+  "receiver_sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+  "files": [
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/BASELINE_COVERAGE_RECEIPT.json",
+      "bytes": 10751,
+      "sha256": "5e0bc03ae04838675906d75ef91a9b13004f156c91ab64ea9f0debf23be3e12a",
+      "physical_lines": 345,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/BASELINE_COVERAGE_RECEIPT.md",
+      "bytes": 6387,
+      "sha256": "72cc2f10cbd0e3639331e4fe98ba60f247d26016fbd53712ca78979e52a118bc",
+      "physical_lines": 67,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/BOUNDARY_VERIFICATION.json",
+      "bytes": 600,
+      "sha256": "1de1c1ff385f517fef8ac67a2e4b11746c93d251d3e039aaad2078af832e82e5",
+      "physical_lines": 13,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/CANONICAL_TASK_ROWS.json",
+      "bytes": 1145,
+      "sha256": "dd00e985fe2875ac879102d4ccfb49e4e21d4a97613f02d41994a6d5ac78653b",
+      "physical_lines": 26,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/ENGINEERING_PROOFS.json",
+      "bytes": 3488,
+      "sha256": "dadc658f2f15e1afa3dd3f70cdecb42244a3e6f9ccd7e219fbf0ec3dbc625302",
+      "physical_lines": 99,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/FRESH_READER_PROMPT.md",
+      "bytes": 742,
+      "sha256": "017338be66be96eba24a38df09d3206d2790b1cff45ad8663f630e215821b625",
+      "physical_lines": 7,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/FRESH_READER_RECEIPT.json",
+      "bytes": 1668,
+      "sha256": "4acbb8610be09c340bc0cecc82000b6d64227e3a1979f9a629ee412652235574",
+      "physical_lines": 39,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/FRESH_READER_REPLY.md",
+      "bytes": 1605,
+      "sha256": "38f973394a7afbad53f99426aef33810401d28fd78d60549ee6e4e4b0075d3ca",
+      "physical_lines": 5,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/HANDOFF.json",
+      "bytes": 13421,
+      "sha256": "dc16c5f50a6afb9df9f4e487ad1c24c98d232092b76c2a84fd942f5ab1120364",
+      "physical_lines": 287,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/HANDOFF.md",
+      "bytes": 9805,
+      "sha256": "ed41fd92b7232ec6ba759160db1691b031e980b2c8dfffc6c205058c963b3a2e",
+      "physical_lines": 65,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/HOST_ENVIRONMENT.json",
+      "bytes": 425,
+      "sha256": "bdf11f3bd3d9b531cb50a9c268a7e4de05b18a10a264c16bcba898030a246586",
+      "physical_lines": 18,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+      "bytes": 2950,
+      "sha256": "bd7634d326fdc4d52e317924b5a86aa4ef1ea2f73c383019639c13d335af17e6",
+      "physical_lines": 42,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/PR_BODY_DRAFT.md",
+      "bytes": 967,
+      "sha256": "aa67db248e515d0b306368cde8356b0d3bdd204f4a0d5c76a7f3a5c9951d4aad",
+      "physical_lines": 20,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/PUBLIC_PACKET_AUDIT.json",
+      "bytes": 1239,
+      "sha256": "9e77443d990d15a4799368c1a2e23704c25a5a6c16b7a36361e3d77ab2f2f038",
+      "physical_lines": 49,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/PUBLIC_VERIFICATION.json",
+      "bytes": 2868,
+      "sha256": "643f1c6ef5970a80833d9dbb045d459d91d019744e3188d9867a16e8b0214cb5",
+      "physical_lines": 71,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/RECALL_EVIDENCE.md",
+      "bytes": 4112,
+      "sha256": "0ea3838fb95ac5422263eec9748dfcc91fe349d6932916b178fcb0c7d01e4113",
+      "physical_lines": 33,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/REPORT_PROVENANCE.json",
+      "bytes": 873,
+      "sha256": "838aee42fa2fcd2d5bbcf554a463ddd60a01cf538515c1f47d38df7fdd205c3b",
+      "physical_lines": 20,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/RETENTION_MANIFEST.json",
+      "bytes": 160866,
+      "sha256": "c606c0a34ad9a7f996d530b867faf97487fd1ffb00038a9219dfa22075d8be1f",
+      "physical_lines": 3854,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/REVIEW_PASSES.json",
+      "bytes": 4291,
+      "sha256": "c5634aa13c2910c373969d8726c023e3596a528f8fa92d2adf4ffc2893401ae1",
+      "physical_lines": 135,
+      "git_ignored_archive": false
+    },
+    {
+      "path": ".omx/research/ddm_mrs1_20260916/TIMING_PROJECTION_PLAN.json",
+      "bytes": 1055,
+      "sha256": "26634b267da0f17035447b570b348e5d5984988c6fbbadd4a153d041870af165",
+      "physical_lines": 23,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_bootstrap.py",
+      "bytes": 11659,
+      "sha256": "101fe5247eb5c082ba3a263d8520e561c496aa4036c059877cf4472d103734da",
+      "physical_lines": 223,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_direct_carrier.inc",
+      "bytes": 4474,
+      "sha256": "d122db88fecb07c754055f8f462cfd75ff913a686053c23225487461ddcbb435",
+      "physical_lines": 77,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_direct_prior.inc",
+      "bytes": 1068,
+      "sha256": "2e34251d2c474bc895c2c25ac4597dd7ba17296fef30bb9d3ebd3c9d72effa86",
+      "physical_lines": 16,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_flatten.py",
+      "bytes": 14331,
+      "sha256": "a20eec9d37ea4b8fa7b3a6c4dc9400e04b3c6dd786eb3382e7e1c297f3c85fd2",
+      "physical_lines": 273,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_minimize.py",
+      "bytes": 15518,
+      "sha256": "4289a985ed506b93cbeca7d1819431e0b0e5ab267c7eb74b49983c9ef2459398",
+      "physical_lines": 278,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_primitives_check.py",
+      "bytes": 13782,
+      "sha256": "c63c06a05255a529ffb48292487c68f334cd88b7254b46879b4eaac843d67961",
+      "physical_lines": 264,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_public_main.inc",
+      "bytes": 2428,
+      "sha256": "6716f99d899a595a7c0b4f508a4e50cf36e85001881843cc781d38178b299a63",
+      "physical_lines": 52,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_public_smoke.py",
+      "bytes": 16845,
+      "sha256": "ff7c83b3b8a987c951672f221bb03191306a4e5fc85ad4f2b7c57717bedcd886",
+      "physical_lines": 316,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_python_primitives.py",
+      "bytes": 10937,
+      "sha256": "3dfe04f7492bfd3d62eb320250d50310685d56f81c35f9885474d95c98c86b06",
+      "physical_lines": 216,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_receiver_main.inc",
+      "bytes": 6914,
+      "sha256": "5d711bd5cb40755b7548c954132a21cf7cb62bd89cecffd88fa1ba0e2c8dfbe9",
+      "physical_lines": 132,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_start_trace.py",
+      "bytes": 3377,
+      "sha256": "044efb43e5e061c3ecadc7c062cace5476cba482c0b50c9b308313d8ac4cda3a",
+      "physical_lines": 81,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_trace.py",
+      "bytes": 13918,
+      "sha256": "b7722e204dfdb3f16eed1b933ef94a39734c7a0139017bc9c34f79f491379753",
+      "physical_lines": 273,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "experiments/ddm_mrs1_validate.py",
+      "bytes": 15223,
+      "sha256": "5ef65033bfffb2315aa7dd768fdb928d2c05f86e4244456e1fb317e281f4b1b5",
+      "physical_lines": 287,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "submissions/mrs1/README.md",
+      "bytes": 1445,
+      "sha256": "469a1ff3b063dfe5badfab832e1c215c119937b2ce5c69b22f749e938ae66afe",
+      "physical_lines": 22,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "submissions/mrs1/archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+      "physical_lines": null,
+      "git_ignored_archive": true
+    },
+    {
+      "path": "submissions/mrs1/inflate.py",
+      "bytes": 136869,
+      "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+      "physical_lines": 2693,
+      "git_ignored_archive": false
+    },
+    {
+      "path": "submissions/mrs1/inflate.sh",
+      "bytes": 65,
+      "sha256": "c6fa7306f177cd9fa955f1d744f24380b9c0e49fddeef0062961575bcd0d39e9",
+      "physical_lines": 3,
+      "git_ignored_archive": false
+    }
+  ],
+  "exclusions": "Self manifest and later DELIVERY_BUNDLE/SERIALIZER_RESULT/final closure receipts are bound by their consumer receipts; no shared ledger or unrelated file is included.",
+  "score_claim": false,
+  "promotable": false
+}

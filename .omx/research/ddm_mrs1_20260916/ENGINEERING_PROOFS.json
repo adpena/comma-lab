@@ -1,0 +1,99 @@
+{
+  "schema": "mrs1_local_engineering_proofs.v1",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotable": false,
+  "completed_stages": [
+    {
+      "stage": "trace",
+      "identity": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/trace/IDENTITY.json",
+        "bytes": 57149,
+        "sha256": "58ed41fd555f944d02110e69b9f7ef0b646da3725322e4e7119cc03b85aa4bf3"
+      },
+      "coverage": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/trace/COVERAGE.json",
+        "bytes": 66006,
+        "sha256": "da05453389b7706c089fb4a6c7d1882c9fa40f6eb9a3e1b72c7e939ab61d169d"
+      },
+      "matched_pairs": 600,
+      "seconds": null,
+      "resumed_from": null,
+      "live_lines": null
+    },
+    {
+      "stage": "python_proof4",
+      "identity": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/python_proof4/IDENTITY.json",
+        "bytes": 45172,
+        "sha256": "af858e56d3bc879846ada502708e3607bd34d2b4373289bd7b3a1b4c70823cfa"
+      },
+      "coverage": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/python_proof4/COVERAGE.json",
+        "bytes": 28541,
+        "sha256": "7de79e67b18118f17a7ba9621d67e3501cc8b894b8f5c8a68a998f863fb2d586"
+      },
+      "matched_pairs": 600,
+      "seconds": 1654.1389782509068,
+      "resumed_from": 2,
+      "live_lines": 2861
+    },
+    {
+      "stage": "final_cold",
+      "identity": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/final_cold/IDENTITY.json",
+        "bytes": 45534,
+        "sha256": "eb4e8401dcdff9f7d1d941ecc8237cc2d9d95d547b91597ca251c7608e9cf6df"
+      },
+      "coverage": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/final_cold/COVERAGE.json",
+        "bytes": 23092,
+        "sha256": "0f013d298030321514ab2a791bbc4c7df4f72650fe715325742199f9366b517d"
+      },
+      "matched_pairs": 600,
+      "seconds": 1454.600854084012,
+      "resumed_from": 0,
+      "live_lines": 2317
+    }
+  ],
+  "component_controls": [
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/primitives/check_v2/complete.json",
+      "bytes": 73708,
+      "sha256": "38d4488734c4c466bb0d4884b9ec8ba10db2a75e03bc45cc8043945aa3ba95aa"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/direct_carrier/proof/COMPLETE.json",
+      "bytes": 33410,
+      "sha256": "d86491aa1e312244a30fc2466f9e21554a54a7c95aa540a99702420972d5692c"
+    },
+    {
+      "path": "/Volumes/APDataStore/pact/ddm_mrs1/final_receiver/DIFF_REVIEW.json",
+      "bytes": 571,
+      "sha256": "a726f5f953b9367b5456b466443012b49e857922ae167a8067deb4f861c10aaf"
+    }
+  ],
+  "final_receiver": {
+    "path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.py",
+    "bytes": 136869,
+    "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee"
+  },
+  "final_public_execution_gate": {
+    "status": "PASS",
+    "receipt": {
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/PUBLIC_VERIFICATION.json",
+      "bytes": 2868,
+      "sha256": "643f1c6ef5970a80833d9dbb045d459d91d019744e3188d9867a16e8b0214cb5"
+    }
+  },
+  "predecessor_source_relocation": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs1/final_cold_sources/MANIFEST.json",
+    "bytes": 752,
+    "sha256": "c529ec6ca7047a75704b94393b3cf52cf66c57e1e2baef189b5a3330da09bf1f"
+  },
+  "validator_cleanup_revision": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs1/VALIDATOR_CLEANUP_REVIEW.json",
+    "bytes": 2476,
+    "sha256": "0d8fa7c625f85d640ecc70d5a6f55787aabbbfced54470ce47dcce900665b5e5"
+  }
+}

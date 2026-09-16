@@ -1,0 +1,71 @@
+{
+  "schema": "mrs1_final_public_verification.v1",
+  "axis": "[macOS-CPU advisory]",
+  "identity": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/IDENTITY.json",
+    "bytes": 64821,
+    "sha256": "5fa221bb1b84416500895e1a89e4b4c41f0b3ac7ab661191a5310d9d8d75df9f"
+  },
+  "done": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_mrs1_public_smoke.done",
+    "bytes": 400,
+    "sha256": "8f841e85107e8883a1e44a84555d129b68b84ecf9158ff7f53a3a830400e13b6"
+  },
+  "matched_pairs": 600,
+  "raw_bytes": 3662409600,
+  "raw_sha256": "8a14f55a6a8b141501836f511f4222dde75dca21714d923ad865b5f4757ef66b",
+  "raw_removed": true,
+  "public_receiver_sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+  "public_process_seconds": 1390.7783818340395,
+  "projected_T4_seconds": 1760.8582470466217,
+  "projection_plan": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/TIMING_PROJECTION_PLAN.json",
+    "bytes": 1055,
+    "sha256": "26634b267da0f17035447b570b348e5d5984988c6fbbadd4a153d041870af165"
+  },
+  "bare_venv": true,
+  "help_rc": 0,
+  "exact_three_arg_default_cuda_guard_rc": 1,
+  "full_public_cpu_rc": 0,
+  "environment": {
+    "base": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none",
+    "cuda": false,
+    "executable": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/bin/python3",
+    "packages": {
+      "brotli": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages/brotli.py",
+        "version": "1.2.0"
+      },
+      "numpy": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages/numpy/__init__.py",
+        "version": "1.26.4"
+      },
+      "torch": {
+        "path": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages/torch/__init__.py",
+        "version": "2.12.1"
+      }
+    },
+    "path": [
+      "",
+      "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python313.zip",
+      "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/lib/python3.13",
+      "/Users/adpena/.local/share/uv/python/cpython-3.13-macos-aarch64-none/lib/python3.13/lib-dynload",
+      "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv/lib/python3.13/site-packages"
+    ],
+    "prefix": "/Volumes/APDataStore/pact/ddm_mrs1/bootstrap/venv",
+    "user_site": false
+  },
+  "public_decode_command": [
+    "/bin/sh",
+    "/Users/adpena/Projects/pact/submissions/mrs1/inflate.sh",
+    "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/extracted",
+    "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/output",
+    "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke/file-list.txt",
+    "--device",
+    "cpu"
+  ],
+  "score_claim": false,
+  "promotable": false,
+  "own_T4_measurement": false,
+  "own_contest_eval": false
+}

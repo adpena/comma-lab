@@ -1,0 +1,49 @@
+{
+  "schema": "mrs1_public_packet_audit.v1",
+  "files": [
+    {
+      "name": "README.md",
+      "bytes": 1445,
+      "sha256": "469a1ff3b063dfe5badfab832e1c215c119937b2ce5c69b22f749e938ae66afe",
+      "physical_lines": 22
+    },
+    {
+      "name": "archive.zip",
+      "bytes": 179286,
+      "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957",
+      "physical_lines": null
+    },
+    {
+      "name": "inflate.py",
+      "bytes": 136869,
+      "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+      "physical_lines": 2693
+    },
+    {
+      "name": "inflate.sh",
+      "bytes": 65,
+      "sha256": "c6fa7306f177cd9fa955f1d744f24380b9c0e49fddeef0062961575bcd0d39e9",
+      "physical_lines": 3
+    }
+  ],
+  "external_python_imports": [
+    "brotli",
+    "numpy",
+    "torch"
+  ],
+  "python_interpreter": "3.11 or newer",
+  "shell_dependencies": [
+    "POSIX sh",
+    "dirname"
+  ],
+  "cuda_required_by_default": true,
+  "explicit_cpu_path": true,
+  "vendored_c_files": 0,
+  "network_code_present": false,
+  "compiler_code_present": false,
+  "file_budget_pass": true,
+  "inflate_py_1500_line_aim_met": false,
+  "archive_unchanged": true,
+  "score_claim": false,
+  "promotable": false
+}

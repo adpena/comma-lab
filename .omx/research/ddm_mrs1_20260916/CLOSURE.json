@@ -1,0 +1,50 @@
+{
+  "schema": "mrs1_closure.v1",
+  "recorded_utc": "2026-09-16T15:42:48.121326+00:00",
+  "local_charter_status": "COMPLETE_WITH_UNLANDED_SOURCE_AND_T4_QUEUED",
+  "serializer_rc": 19,
+  "main_commit_created": false,
+  "git_bundle_created": false,
+  "initial_and_final_head": "ee9f67215ad38e8a76df9a086af1087ab96a1176",
+  "own_staged_paths_after_attempt": [],
+  "portable_source_bundle": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs1/mrs1_source_delivery.tar",
+    "bytes": 727040,
+    "sha256": "d135236474dd9c6bb81561e53662bc84ef82ad588f492e4654bb0f6b2591212a"
+  },
+  "serializer_result": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/SERIALIZER_RESULT.json",
+    "bytes": 6415,
+    "sha256": "03f58e05d363ca1edd255d2cf4b4eeb79fb5ac9be4b0a8ef0c4d519a3d741cc6"
+  },
+  "final_retention": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FINAL_RETENTION_MANIFEST.json",
+    "bytes": 161812,
+    "sha256": "ff653883ac370ef5debe12b89e8101c519ad6b3c6180250099ad1ef23d54811a"
+  },
+  "retained_bytes": 1200159183,
+  "retained_gib": 1.1177353402599692,
+  "free_bytes": 27347779584,
+  "final_public_verification": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/PUBLIC_VERIFICATION.json",
+    "bytes": 2868,
+    "sha256": "643f1c6ef5970a80833d9dbb045d459d91d019744e3188d9867a16e8b0214cb5"
+  },
+  "handoff": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/HANDOFF.json",
+    "bytes": 13421,
+    "sha256": "dc16c5f50a6afb9df9f4e487ad1c24c98d232092b76c2a84fd942f5ab1120364"
+  },
+  "fire_order": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+    "bytes": 2950,
+    "sha256": "bd7634d326fdc4d52e317924b5a86aa4ef1ea2f73c383019639c13d335af17e6"
+  },
+  "lane": "ddm_mrs1_minimal_reviewable_submission_20260916",
+  "lane_status": "completed_local_proofs_unlanded",
+  "post_attempt_receipts": "SERIALIZER_RESULT.json, FINAL_RETENTION_MANIFEST.json and CLOSURE.json are post-attempt completion records, outside the frozen 38-file intended landing. MAIN reconciles them alongside that landing.",
+  "score_claim": false,
+  "promotable": false,
+  "new_T4_or_scorer_run": false,
+  "frontier_moved": false
+}

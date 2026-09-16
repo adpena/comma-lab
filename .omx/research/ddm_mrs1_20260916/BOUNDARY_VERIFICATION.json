@@ -1,0 +1,13 @@
+{
+  "schema": "mrs1_boundary_verification.v1",
+  "sealed_source_manifest": "/Volumes/APDataStore/pact/ddm_mrs1/trace/INPUTS.json",
+  "sealed_source_manifest_sha256": "3a049c814d0a19bf5271f0c446cb89a528934550d82a47eb0f2f077d66971e1d",
+  "sealed_source_files_checked": 48,
+  "mismatches": [],
+  "closed_PR_tree_current": "262393627aea777e75bedaf30f46391aafadd191",
+  "closed_PR_tree_initial": "262393627aea777e75bedaf30f46391aafadd191",
+  "no_manual_index_or_stash": true,
+  "no_upstream_or_contract_edits_by_this_arm": true,
+  "no_remote_or_publication_actions": true,
+  "no_scorer_execution": true
+}

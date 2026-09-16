@@ -1,0 +1,135 @@
+{
+  "recorded_utc": "2026-09-16T15:36:15.510218+00:00",
+  "scope": "Read-only tracker export plus current source hashes; earlier pass names can refer to earlier bytes, final named passes are described in receipts",
+  "files": [
+    {
+      "path": "experiments/ddm_mrs1_bootstrap.py",
+      "sha256": "101fe5247eb5c082ba3a263d8520e561c496aa4036c059877cf4472d103734da",
+      "physical_lines": 223,
+      "status": "reviewed",
+      "entities": 7,
+      "named_pass_count": 2,
+      "pass_names": [
+        "mrs1-bootstrap-final-pass1",
+        "mrs1-bootstrap-final-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_flatten.py",
+      "sha256": "a20eec9d37ea4b8fa7b3a6c4dc9400e04b3c6dd786eb3382e7e1c297f3c85fd2",
+      "physical_lines": 273,
+      "status": "reviewed",
+      "entities": 1,
+      "named_pass_count": 2,
+      "pass_names": [
+        "mrs1-flatten-custody-pass2",
+        "mrs1-flatten-functional-pass1"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_minimize.py",
+      "sha256": "4289a985ed506b93cbeca7d1819431e0b0e5ab267c7eb74b49983c9ef2459398",
+      "physical_lines": 278,
+      "status": "reviewed",
+      "entities": 1,
+      "named_pass_count": 4,
+      "pass_names": [
+        "mrs1-minimize-final-functional-pass1",
+        "mrs1-minimize-final-provenance-pass2",
+        "mrs1-minimize-functional-pass1",
+        "mrs1-minimize-provenance-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_primitives_check.py",
+      "sha256": "c63c06a05255a529ffb48292487c68f334cd88b7254b46879b4eaac843d67961",
+      "physical_lines": 264,
+      "status": "reviewed",
+      "entities": 12,
+      "named_pass_count": 3,
+      "pass_names": [
+        "mrs1-primitive-harness-final-pass1",
+        "mrs1-primitive-harness-final-pass2",
+        "mrs1-primitive-harness-pass1"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_public_smoke.py",
+      "sha256": "ff7c83b3b8a987c951672f221bb03191306a4e5fc85ad4f2b7c57717bedcd886",
+      "physical_lines": 316,
+      "status": "reviewed",
+      "entities": 8,
+      "named_pass_count": 4,
+      "pass_names": [
+        "mrs1-public-smoke-custody-pass2",
+        "mrs1-public-smoke-hygiene-pass1",
+        "mrs1-public-smoke-hygiene-pass2",
+        "mrs1-public-smoke-pass1"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_python_primitives.py",
+      "sha256": "3dfe04f7492bfd3d62eb320250d50310685d56f81c35f9885474d95c98c86b06",
+      "physical_lines": 216,
+      "status": "reviewed",
+      "entities": 11,
+      "named_pass_count": 2,
+      "pass_names": [
+        "mrs1-primitive-source-pass1",
+        "mrs1-primitive-source-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_start_trace.py",
+      "sha256": "044efb43e5e061c3ecadc7c062cace5476cba482c0b50c9b308313d8ac4cda3a",
+      "physical_lines": 81,
+      "status": "reviewed",
+      "entities": 1,
+      "named_pass_count": 3,
+      "pass_names": [
+        "mrs1-start-binding-pass1",
+        "mrs1-start-custody-pass2",
+        "mrs1-start-functional-pass1"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_trace.py",
+      "sha256": "b7722e204dfdb3f16eed1b933ef94a39734c7a0139017bc9c34f79f491379753",
+      "physical_lines": 273,
+      "status": "reviewed",
+      "entities": 7,
+      "named_pass_count": 2,
+      "pass_names": [
+        "mrs1-trace-v2-pass1",
+        "mrs1-trace-v2-pass2"
+      ]
+    },
+    {
+      "path": "experiments/ddm_mrs1_validate.py",
+      "sha256": "5ef65033bfffb2315aa7dd768fdb928d2c05f86e4244456e1fb317e281f4b1b5",
+      "physical_lines": 287,
+      "status": "reviewed",
+      "entities": 6,
+      "named_pass_count": 4,
+      "pass_names": [
+        "mrs1-validator-cleanup-pass1",
+        "mrs1-validator-cleanup-pass2",
+        "mrs1-validator-custody-pass2",
+        "mrs1-validator-final-pass1"
+      ]
+    },
+    {
+      "path": "submissions/mrs1/inflate.py",
+      "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee",
+      "physical_lines": 2693,
+      "status": "reviewed",
+      "entities": 235,
+      "named_pass_count": 2,
+      "pass_names": [
+        "mrs1-public-final-pass1",
+        "mrs1-public-final-pass2"
+      ]
+    }
+  ],
+  "smoke_hygiene_receipt": "/Volumes/APDataStore/pact/ddm_mrs1/public_smoke_hygiene/REVIEW.json"
+}

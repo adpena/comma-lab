@@ -1,0 +1,26 @@
+[
+  {
+    "actual_delta_s": null,
+    "blockers": [],
+    "commit_shas": [],
+    "completed_at_utc": null,
+    "event_actor": "codex",
+    "event_notes": "QUEUED-WITH-A-FIRE-ORDER. Consumer store .omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json. Trigger: harvest completed local proof and source custody, then claim a free lane. No remote dispatch by this arm; publication needs operator one-line confirmation.",
+    "event_timestamp_utc": "2026-09-16T14:55:30.374633Z",
+    "event_type": "registered",
+    "owner": "MAIN",
+    "predicted_cost_usd": null,
+    "predicted_delta_s_band": null,
+    "schema_version": "canonical_task_status_v1_20260518",
+    "session_id": "ddm_mrs1_20260916",
+    "source_design_memo": ".omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+    "started_at_utc": null,
+    "status": "pending",
+    "task_id": "ddm_mrs1_new_receiver_t4_row_and_timing_20260916",
+    "test_status": "pending",
+    "title": "Validate the new compact move-53 receiver on T4 with its own exact row and decode timing",
+    "written_at_utc": "2026-09-16T14:55:30.374633Z",
+    "written_host": "mac.lan",
+    "written_pid": 4386
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "schema": "mrs1_timing_projection_plan.v1",
+  "recorded_before_final_public_decode": true,
+  "recorded_utc": "2026-09-16T14:58:00.210503+00:00",
+  "historical_host_seconds": 936.6589231670368,
+  "historical_T4_seconds": 1185.899645171,
+  "scale": 1.2660954973462792,
+  "formula": "final_public_shell_host_wall_seconds * historical_T4_seconds / historical_host_seconds",
+  "host_source": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd6/parseback2/PARSEBACK_RESULT.json",
+    "sha256": "fa119d37c663cb87947f265bab0a424e50a6e4acb5d35c378271049049998417",
+    "bytes": 4631
+  },
+  "t4_source": {
+    "path": "/Volumes/APDataStore/pact/ddm_pd6_fire/run2/MODAL_REMOTE_RESULT.json",
+    "sha256": "fbea310f35317683800cf57b6dd17ef28b5dc16f819f7d7df51b4625642f24ba",
+    "bytes": 162834
+  },
+  "projection_only": true,
+  "qualifies_C_exception": false,
+  "admission": false,
+  "limitation": "Changed CPU work share, CUDA rendering, host scheduling and dependency versions can change the ratio. This extrapolation is not a T4 measurement or budget verdict."
+}

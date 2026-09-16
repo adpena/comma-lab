@@ -1,0 +1,39 @@
+{
+  "schema": "mrs1_fresh_reader.v1",
+  "task_name": "/root/fresh_reader",
+  "nickname": "Bohr",
+  "fork_turns": "none",
+  "prompt": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FRESH_READER_PROMPT.md",
+    "bytes": 742,
+    "sha256": "017338be66be96eba24a38df09d3206d2790b1cff45ad8663f630e215821b625"
+  },
+  "verbatim_reply": {
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/FRESH_READER_REPLY.md",
+    "bytes": 1605,
+    "sha256": "38f973394a7afbad53f99426aef33810401d28fd78d60549ee6e4e4b0075d3ca"
+  },
+  "reviewed_files": [
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.py",
+      "bytes": 136869,
+      "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.sh",
+      "bytes": 65,
+      "sha256": "c6fa7306f177cd9fa955f1d744f24380b9c0e49fddeef0062961575bcd0d39e9"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/submissions/mrs1/README.md",
+      "bytes": 1445,
+      "sha256": "469a1ff3b063dfe5badfab832e1c215c119937b2ce5c69b22f749e938ae66afe"
+    }
+  ],
+  "sentence_count": 10,
+  "explains_actual_decode": true,
+  "direct_dependencies_complete": true,
+  "reader_judgment": "Readable but densely organized; reading alone cannot certify correctness or runtime; CUDA timing and evaluation pending.",
+  "cuda_flag_note": "Fresh reader correctly observed disabled deterministic-algorithm flags. Engineering review confirms these preserve the archived renderer kernel selection. They are not changed on this host; new T4 measurement remains owed.",
+  "published": false
+}

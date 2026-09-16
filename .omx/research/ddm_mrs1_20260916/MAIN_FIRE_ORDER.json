@@ -1,0 +1,42 @@
+{
+  "schema": "mrs1_main_fire_order.v1",
+  "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+  "owner": "MAIN",
+  "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+  "charter": ".omx/research/ddm_mrs1_minimal_reviewable_submission_from_move53_charter_20260916.md",
+  "archive": {
+    "path": "/Users/adpena/Projects/pact/submissions/mrs1/archive.zip",
+    "bytes": 179286,
+    "sha256": "aab908d3b32c65582b7de1a3855b67a4f6fdb9373b0dc81e3049ee8164ec3957"
+  },
+  "expected_receiver": {
+    "path": "/Volumes/APDataStore/pact/ddm_mrs1/final_receiver/inflate.py",
+    "bytes": 136869,
+    "sha256": "150f11328b7dfd2fb1d17dbe2fe375079066eec24bad8e1996b692791819c6ee"
+  },
+  "task_id": "ddm_mrs1_new_receiver_t4_row_and_timing_20260916",
+  "fire_trigger": "Harvest completed HANDOFF.json, final public raw identity, bare-venv smoke, fresh-reader reply and serializer/fallback custody; then claim an available T4 exact-eval lane without overlapping scorer ownership.",
+  "action": "Verify final public source/archive hashes; run a new T4 direct decode timing leg and upstream n600 exact evaluation on those receiver bytes, retaining command, hardware, runtime custody, component distances and full logs.",
+  "conditions": [
+    "No inherited report or host raw identity certifies the changed CUDA receiver.",
+    "If the measured C-free T4 decode exceeds 1500 seconds, that receipt can qualify at most one C source; rebuilding it requires renewed raw identity, public smoke, fresh-reader review, T4 timing and exact row.",
+    "This arm has not authorized or launched Modal, a fire, a packet, a PR, a push, or authorize_* tooling."
+  ],
+  "publication": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN and operator",
+    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+    "fire_trigger": "New receiver passes T4 timing and exact evaluation, operator sees final public files and explicitly gives the required one-line publication confirmation.",
+    "action": "Publish only the operator-approved final files and update the draft report to the new receiver result; otherwise retain the packet privately."
+  },
+  "score_claim": false,
+  "promotable": false,
+  "public_receiver_path": "/Users/adpena/Projects/pact/submissions/mrs1/inflate.py",
+  "source_landing": {
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "owner": "MAIN",
+    "consumer_store": "/Users/adpena/Projects/pact/.omx/research/ddm_mrs1_20260916/MAIN_FIRE_ORDER.json",
+    "fire_trigger": "Harvest completed local handoff and SERIALIZER_RESULT.json; if not landed, verify bundle, intended-file hashes and shared-tree custody before landing.",
+    "action": "Land only the intended receiver, arm source and evidence files; keep the ignored archive under retained source-bundle custody; reconcile the exported arm task row without absorbing unrelated ledger edits."
+  }
+}
