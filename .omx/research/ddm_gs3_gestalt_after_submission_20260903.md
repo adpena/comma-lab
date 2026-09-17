@@ -2152,3 +2152,55 @@ rung (ls1/ls2), temporal context, the dead-byte lever (A71). Every remaining fie
 Sub-0.12 needs −0.0160 S = −24,080 B at held distortion: 20 % of the token field's 119 kB. No admission rule buys that; a
 PRIOR with more modelling power does or nothing does — the last un-measured object part is the prior's capacity/rate
 trade (pc1 chartered: a prior capacity ladder trained against the shipped field, byte-closed at each rung).
+
+## Addendum 73 (2026-09-17, host ~05:10Z) — pc1: the prior's capacity ladder cannot be built on this receiver, and the coordinate that can be was already closed; the refit is refused on 179 drifted sites
+
+**pc1 (Opus; memo `.omx/research/ddm_pc1_prior_capacity_ladder_20260917.md`, commits 82b83a649 / 725650332) — no training, no rung, pointer UNMOVED.**
+A72 named the prior's capacity/rate trade "the last un-measured object part". It is measured now, by recall plus two
+cheap diffs, and it is three things rather than one.
+
+**(1) STOP at the charter's own condition — MEASURED.** Every width/depth rung is a RECEIVER CODE CHANGE. The archive
+carries prior WEIGHTS only: `cpr1/inflate.py` hardcodes `HPAC_CHANNELS`/`HPAC_PATCH`, `cpr1/integer_model_io.py` takes
+every coded row width from the model the RECEIVER constructs, and `runtime/f26_inflate.py` hashes those constants into
+the token-decoder fingerprint. So no wider prior byte-closes on move 55's tree. This reproduces hpr1's shape finding
+("not one shape bit ships") from primary sources and extends it to width, which is strictly worse — a shape rung moves
+taps at a held value count, a width rung changes the value count too.
+
+**(2) The one capacity coordinate the receiver DOES parse is already closed in BOTH directions.** That is the
+per-output-channel bit depth, moved by `--rate-lambda`: cl2 λ1.0→0.5 **+506 B** (secant +0.446), cl3 λ1.0→2.0 **+224 B**
+(its pre-registered whole-axis falsifier fired), dpi1 on the knee **+37 B** (secant −1.0925, flat across a 1.84 bit/row
+swing). pc1's charter falsifier ("no rung nets ≤ −25 B") is FIRED by measurement that already existed; a fourth losing
+rung would have bought nothing. verdict_scope: formulation — this receiver, this λ, move 55's field.
+
+**(3) The last receiver-safe rung, the 1.0× refit, is refused on measured drift.** The shipped prior is byte-identically
+move 48's (prior section sha `925adb48…`, 11,629 B, unchanged for seven moves), so its fit field is hpr1's `a92e7d90…`.
+That field and move 55's differ at **179 token sites of 117,964,800**. The drift hpr1 converted into −887 B was
+**11,128 — 62× more**. At the measured slope the rung is worth −14.3 B optimistically (0.41 σ of the 34.8 B container
+lottery), +22.7 B with the one zero-drift row as intercept. An independent bound agrees: the tail runs at 0.00808
+bits/symbol and ≤ 200 predictions are perturbed per changed token, so the whole re-pricable mass is < 725 B against a
+model leg that moved ±351–400 B in both measured instances. The refit law now stands n=4: one positive (hpr1 −887 B at
+11,128 sites), three negatives (tmx1 +20 B, dpi1 +37 B at 0 sites, this derived refusal at 179 sites).
+
+**The confound this arm caught, and the guard it landed.** pc1 first measured the drift at 27,189 sites — 2.44× hpr1's,
+i.e. "launch the refit" — from `ddm_pd8/base/argmax_move54.npy`: right name, right dtype, right `(600,384,512)` shape,
+and the **SegNet argmax**, not the coded token field. A scorer OUTPUT read for a coder INPUT; error 150×, in the
+direction that spends five hours of Metal. The two planes disagree at ~27k sites *by construction* (A50: the token field
+is the optimized pre-image of renderer∘scorer), which is why the wrong number looks plausible. Caught because pd8's own
+pricing control `control.u8` disagreed with it — two artifacts claiming one identity. Cure landed, not remembered:
+`experiments/ddm_pc1_prior_refit_headroom.py` (14 tests) names the shipped prior by BYTE IDENTITY of its archive section
+and refuses any plane whose declared sha does not match its bytes; it returns OWED / NOT_OWED in seconds. Run it before
+chartering any prior refit. Memory `[[a_scorer_output_plane_substitutes_for_a_coder_input_plane_20260917]]`.
+
+**Decode time.** A refit changes it by nothing (same shapes, same op counts). A WIDTH rung would change it roughly
+linearly in channels — a second reason it needs the first-measurement chain with its own measured leg, and the budget
+has no room: move 55's first T4 run inflated in 1,602.7 s against the 1,260 s ceiling (A71).
+
+**Gestalt after 73.** The prior is not a corner-sized lever and now nobody needs to re-ask: it is 11,629 B, **6.49 %** of
+the archive, so deleting it outright and coding the tail free would not reach the −24,080 B the rate corner demands
+(cap 155,174.8 B at held distortion 0.016675). Sub-0.12 on the shipped object has no remaining part — field (A72),
+renderer, carrier, tail coder at the receiver rung (ls1/ls2, 8,365 B short), and now the prior at the object rung. Every
+live direction left is a SUCCESSOR OBJECT with a receiver change and its own decode leg: psa2's per-pair RGB bias (A68,
+priced, efficacy owed) and a wider/re-shaped prior (unbuildable here, cost now known up front — three constants in
+`cpr1/inflate.py`, the matching stencil in `runtime/f26_hpac_native.c` or it decodes two different fields in the two
+modes, a changed behaviour digest, a fresh leg).
+verdict_scope: formulation — the shipped architecture's capacity knob on this receiver (§1–§3 of the memo).
