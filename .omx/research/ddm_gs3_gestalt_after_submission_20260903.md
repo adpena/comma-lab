@@ -2130,3 +2130,25 @@ bar); the family stays open through pd9's admission change.
 **Gestalt after 71.** Three exact rows in 24 h from one generator (−1.68e-4), each smaller than the last; the object's
 remaining headroom on this line is the admission rule, not the generator. Sub-0.12 needs −0.0160 S: cap 155,175 B at held
 distortion (demand −24,080 B). The reviewable packet is measured on move 53's bytes and awaits the operator.
+
+## Addendum 72 (2026-09-17, host ~07:20Z) — pd9: the joint seg+pose admission adds nothing the screen missed; the field side of this object is at its knee on every measured axis
+
+**pd9 (Opus; memo `.omx/research/ddm_pd9_joint_seg_pose_lagrange_admission_20260917.md`, commits 53e2a1fba/dfa562f68/ffc5c8fae) — MEASURED.**
+On the identical 4,291-proposal pool at identical real sheet charges, the JOINT admission (no screen; seg is a term) admits
+52 pairs / 61 tokens / −3.147e-5 S vs the SCREEN's 44 / 51 / −2.875e-5 (pd8's own byte-closed set, reproduced to all
+digits): gain −2.72e-6 S = 0.136 bars = 0.117× the container sd. F3 fired. verdict_scope: formulation — joint seg+pose
+Lagrange admission on the price-first pool of this object. Mechanism: the eight added pairs cost one cell each and pay
+with NEGATIVE bits; the screen is a two-term test (pose vs seg) inside a three-term score — a three-term budget
+(bits + seg + pose) is strictly dominant (798 refines instead of 1,115, complete coverage) but the yield it adds is 0.14
+bars. Seg cost and pose credit are NOT coupled (improve fraction 41 / 39 / 42 % at 1 / 2 / 3 cells; the median proposal
+worsens pose at every cost). 18 of 53 rank-0 proposals on the re-rendered pairs are REVERSIONS to the previous move's
+token and price negative — the passes oscillate on some pairs; corrected, edited-pair rows still price 4.5 vs 5.9
+bits/token. Wave B realized 436 screened rows over 100 pairs; F7 clear.
+
+**Gestalt after 72 — the object's field side is finished at the exchange.** Measured and closed or at the knee: saliency-first
+passes (A65/A66), multi-token (A66), price-first passes 1–3 (A69–A71; pass 4 below the bar), joint admission (A72), the
+renderer (basis, in-place refit, global int4, joint with the field), the carrier lattice, the tail coder at the receiver
+rung (ls1/ls2), temporal context, the dead-byte lever (A71). Every remaining field lever on this object is ≤ 1 bar.
+Sub-0.12 needs −0.0160 S = −24,080 B at held distortion: 20 % of the token field's 119 kB. No admission rule buys that; a
+PRIOR with more modelling power does or nothing does — the last un-measured object part is the prior's capacity/rate
+trade (pc1 chartered: a prior capacity ladder trained against the shipped field, byte-closed at each rung).
