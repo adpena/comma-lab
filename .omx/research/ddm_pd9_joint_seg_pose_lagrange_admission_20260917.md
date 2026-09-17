@@ -248,7 +248,73 @@ spent.
 
 ## 9. WAVE B — the ceiling test and the seg-cost / pose-credit coupling
 
-PENDING — filled when the seven wave-B shards land.
+Wave B realized a declared random PAIR-sample of the refused pool — **436 rows
+over 100 of the 462 pairs** that carry a ≤ 3-cell
+refused proposal (seed 20260917, uniform over pairs, never a prefix). Every sampled row was
+realized exactly as an admitted one: re-rendered from the shipped field, frozen-argmax seg census,
+per-pair carrier re-solve. The full pool is **1684 realized rows over
+440 pairs**.
+
+**F7 — the pre-wave ceiling holds.** Of the realized rows, **569
+carry a pre-wave ceiling**, and **0 of them net**. Not one row the
+ceiling called arithmetically dead came back alive. **F7 does not fire**, which is what licenses
+§4's claim that wave A carried every row that could change the set.
+
+**The coupling, MEASURED, with the selection controlled.** Does a proposal that costs more SegNet
+cells buy more pose? The pooled answer is biased: the REACHABLE rows (wave A) were selected for a
+negative charge, and a proposal with a strongly negative charge is a different animal. So the two
+populations are reported apart. **The UNREACHABLE sample is the one that answers the question** —
+wave B's rows were sampled at random over pairs and selected on nothing:
+
+| refused seg cost (cells) | rows | improves its pair | median credit (d_pose) | best credit |
+|---|--:|--:|--:|--:|
+| **1** | 140 | **41.4 %** | +2.1701e-08 | -3.2270e-07 |
+| **2** | 161 | **39.1 %** | +3.7162e-08 | -6.9717e-07 |
+| **3** | 135 | **41.5 %** | +2.4958e-08 | -8.0068e-07 |
+
+and the REACHABLE rows, selected on bits, for contrast:
+
+| refused seg cost (cells) | rows | improves its pair | median credit (d_pose) | best credit |
+|---|--:|--:|--:|--:|
+| **1** | 21 | **28.6 %** | +1.6245e-07 | -2.7129e-07 |
+| **2** | 1 | **100.0 %** | -3.8787e-08 | -3.8787e-08 |
+| **3** | 111 | **52.3 %** | -4.5230e-08 | -2.1035e-06 |
+
+**There is NO coupling in the unselected population.** The improve-fraction is FLAT —
+41.4 %, 39.1 %,
+41.5 % at one, two and three cells — and **the median proposal at
+every cost makes pose WORSE** (+2.1701e-08,
++3.7162e-08, +2.4958e-08 d_pose). Moving more
+argmax cells does not buy more pose. About two in five proposals help their pair whatever they cost,
+which is the same rate the screen-admitted rows show at ZERO cells
+(38.9 %).
+
+**The pooled table LOOKS monotone and that is the selection talking.** The REACHABLE stratum reaches
+52.3 % improving at three cells with a median of
+-4.5230e-08 — the only negative median anywhere in this measurement —
+and it is the one stratum that was CHOSEN for a strongly negative charge. Mixing it into the pool
+manufactures a trend that the controlled sample does not have. An interim read of this arm's own
+partial wave, before the sample was complete, showed 40.4 → 41.9 → 44.2 % and looked monotone; the
+completed sample says flat. **Two points of a noisy fraction are not a trend.**
+
+**This kills the last defence of the screen's premise.** The proposals the seg screen refused are
+pose-INDISTINGUISHABLE from the ones it admitted. They differ in their BYTE price, which is exactly
+what §5 measured from the other side: the eight pairs the joint rule adds are paid for by bits.
+
+For completeness, the pooled table over all 1684 realized rows (both populations,
+plus the screen-admitted rows that carry no ceiling):
+
+| seg cost (cells) | rows | improves its pair | median credit (d_pose) | best credit |
+|---|--:|--:|--:|--:|
+| **-2** | 1 | **0.0 %** | +2.6812e-06 | +2.6812e-06 |
+| **-1** | 28 | **25.0 %** | +1.6578e-07 | -5.3906e-07 |
+| **0** | 627 | **38.9 %** | +3.9586e-08 | -1.9057e-06 |
+| **1** | 414 | **45.9 %** | +2.5614e-08 | -2.9878e-06 |
+| **2** | 368 | **44.0 %** | +3.5326e-08 | -1.7259e-06 |
+| **3** | 246 | **46.3 %** | +1.4323e-08 | -2.1035e-06 |
+
+Receipts: `CEILING_TEST.json`, `CREDIT_FULL.json`, `WAVE_B_SAMPLE.json`,
+`search/wave/realized_*.jsonl` and `screen_*.jsonl` (every realized row and every screened proposal).
 
 ## 9b. What is left on this object after move 55 — 0.30 bars
 
@@ -264,6 +330,26 @@ Unspent pairs: 6, 9, 19, 20, 22, 45, 197, 234, 242, 247, 248, 268, 288, 305, 311
 55 changed 26 pairs' tokens and re-solved the carrier over all 600, so every charge and every credit
 above expires with it (`UNSPENT_AFTER_MOVE55.json`).
 
+### The B/H decomposition of move 55, which m132 owes and nobody had taken
+
+m132 ([[seg_mechanisms_die_on_collateral_not_targeting_20260821]]) requires a seg mechanism's
+admission to report BENEFICIAL against HARMFUL, never the net alone. pd6's realize records only the
+net `d_cells` per proposal, and the net is what the score charges — so the admission is priced
+correctly — but the diagnostic was owed. Taken here on move 55's own cold-decode argmax against move
+54's, on the DALI GT lineage:
+
+| | cells |
+|---|--:|
+| argmax cells that MOVED | **19** |
+| **BENEFICIAL** (move 54 wrong → move 55 right) | **8** |
+| **HARMFUL** (move 54 right → move 55 wrong) | **10** |
+| wrong → wrong, relabelled | 1 |
+| **net (H − B)** | **+2**, and 12,127 → 12,129 flips |
+
+Collateral ratio H/B = **1.25**. The identity net = H − B holds. The check reproduces pd8's own
+published counts (12,127 / 12,129 / 19 moved) before adding the split, which is why the split is
+trusted. Receipt: `BH_CENSUS_pd8_control.json`, tool `bh_census.py`.
+
 pd8 predicted from the halving paying population (128 → 72 → 44) that "pass 4 is the one that has to
 change something, not just run again." **That is now measured rather than projected, and the
 admission rule was the last cheap thing left to change.** A fourth pass of this generator — with or
@@ -275,11 +361,11 @@ without the seg screen — has about a third of a bar in it.
 |---|---|
 | **F1** the pricer does not re-pack move 54's own archive | **does not fire** — 179,266 B sha `5c6bf403…`, twins identical |
 | **F2** the inherited pd8 rows are not reproduced on this instrument | **does not fire** — 21/21 rows, d_cells identical, resolved d_pose relative difference **0.0** |
-| **F3** the JOINT set's net is not better than the SCREEN set's by ≥ 1e-05 S | **FIRES — gain −2.719198e-06 S, 3.7× short of the bar.** `verdict_scope: formulation` (§13) |
+| **F3** the JOINT set's net is not better than the SCREEN set's by ≥ 1e-05 S | **FIRES — gain −2.719198e-06 S, 3.7× short of the bar.** `verdict_scope: formulation` (§14) |
 | **F4** the admitted set nets worse than −2e-05 S on the shipped bytes' decode | **not evaluated** — F3 fired first and the pointer moved; no candidate was built, no decode was owed, none is claimed |
 | **F5** the SET re-price differs from the ledger by more than 10 % after absorbed iteration | **not evaluated** — the pricer correctly refused to register a field against a superseded pointer (§6) |
 | **F6** the projection's pose leg and the decode's differ by more than 1.5× | **not evaluated** — no candidate decode |
-| **F7** a row the pre-wave ceiling called unreachable actually nets | PENDING (§9) |
+| **F7** a row the pre-wave ceiling called unreachable actually nets | **does not fire** — **0 violations over 569 realized rows that carry a pre-wave ceiling** (§9) |
 
 Per the charter, **a fired first falsifier CLOSES the joint-admission formulation on this object.**
 
@@ -302,17 +388,90 @@ Per the charter, **a fired first falsifier CLOSES the joint-admission formulatio
    the generality is INFERRED until a second field reproduces it.
 8. **Wave B is a declared random pair-sample** (100 of 462 pairs, 436 of 1,989 rows), not the
    population.
+9. **The B/H split is NOT available per proposal.** pd6's realize records the net `d_cells`
+   per row, and the net is what the score charges, so the admission is priced correctly; but
+   the m132 collateral diagnostic needs both argmax planes and realize keeps neither. The
+   decomposition in §9b is therefore taken on the shipped object (move 55's own decode), not
+   on the 1,684 proposals this arm realized.
 
 ## 12. Custody
 
 Store **`/Volumes/APDataStore/pact/ddm_pd9/`**. **Vertigo was never opened for writing.** Nothing
 under `ddm_pd1`–`ddm_pd8`, `ddm_sj1`, `ddm_jr*`, `ddm_psa*` or `ddm_mrs*` was written; those stores
-were read only. APDataStore free space MEASURED at every heavy step: **22 GiB at start**, 18 GiB
-through the base decode and the control encode, 18 GiB through both waves.
+were read only, and pd7's and pd8's files were copied out, never modified in place.
 
-RETENTION — PENDING (filled at the end with the manifest and the certified prune).
+Retained **0.15 GiB** against the charter's 2 GiB cap —
+**313 files**, 159,342,219 B hashed in `RETENTION_MANIFEST.json`
+(plus 153 KiB of launcher logs and
+116 MiB of rebuildable pricer u8 bulk, each recorded
+but not hashed twice). **Every realized search row and every screened proposal is kept, not only
+the rows that would have shipped.**
 
-## 13. verdict_scope
+APDataStore free space MEASURED at every heavy step: **22 GiB at start**, 18 GiB through the base
+decode and the control encode, 18 GiB through both waves, **22Gi after the certified prune**.
+
+Every bulk payload removed was hashed first, with the exact command that rebuilds it, in
+`BULK_CERTIFICATE.json` — the record lands on disk BEFORE the bytes leave it:
+
+| payload | bytes | sha256 |
+|---|--:|---|
+| `parseback_base/0.raw` | 3,662,409,600 | `ff43a9c97c72d0917ac4c2b856315648eddf3c0d3f69717eca132bfecf37a324` |
+| `parseback_base/.f26_decode_checkpoints` | 117,968,488 | `(directory, per-file)` |
+
+| path | what |
+|---|---|
+| `PREREGISTRATION.json` · `PREDICTION_REFINED.json` · `REFUSED_CENSUS.json` | the falsifiers, the refined pre-wave prediction with its three named optimisms, and the DERIVED ceiling — all written before any credit was read |
+| `BIND54.json` · `BASEBAND.json` · `CONTROL_IDENTITY.json` · `VERIFY_HOLDOUT.json` | the binding and the four reproduction controls |
+| `SEED_WAVE.json` · `WAVE_B_SAMPLE.json` · `plan/WAVE_A.jsonl` · `plan/WAVE_B*.jsonl` · `plan/refused_within_cap.jsonl` | what was inherited, what was held out, what was sampled and with which seed |
+| `search/wave/realized_*.jsonl` · `screen_*.jsonl` · `HOLDOUT.jsonl` | every realized row and every screened proposal, winners and losers |
+| `sheets/priced_realized*.jsonl` · `SPLIT_POOL.json` · `CREDIT.json` · `CREDIT_FULL.json` | the enriched pool, the joint/screen split and both credit censuses |
+| `setprice/STATE.json` · `setprice/set_00.npz` · `JOINT_VS_SCREEN.json` · `UNSPENT_AFTER_MOVE55.json` | the joint admission's iteration-0 set, the control table and the successor's pool size |
+| `SCREEN_CURE.json` · `CEILING_TEST.json` · `EDITED_PAIR_PRICE_SPLIT.json` · `REVERSION_SPLIT.json` · `BH_CENSUS_pd8_control.json` | the cure, the F7 test, the edited-pair price split with its reversion correction, and move 55's B/H decomposition |
+| `rlc1_price/encode/control/primary/` | this arm's own control encode of move 54's field — the F1 re-pack and the inheritance control |
+| `BULK_CERTIFICATE.json` · `RETENTION_MANIFEST.json` | the custody record |
+
+Producer: `experiments/ddm_pd9_joint_admission.py` — a thin process-local rebinding of pd8's
+move-54 constants onto pd9's own copies, plus `refused-census`, `seed-wave`, `verify-holdout`,
+`split-pool` and a `price-merge` that REFUSES. Every stage that measures anything is pd6's
+(through pd7 and pd8), imported and called unchanged; downstream, pd4's merge/carry, pd5's
+setprice and `ddm_sj1_rlc1_price` are unchanged. Store-side helpers are pd8's, copied with their
+paths and one import line changed.
+
+## 13. What this hands the next arm
+
+1. **Adopt the rate-aware ceiling. It is free and strictly dominant.** One expression replaces
+   pd6's pose-only budget; on the same pool it costs 28 % fewer refines and stops missing rows that
+   can net. There is no trade-off to weigh. (§7, `SCREEN_CURE.json`.)
+2. **Stop expecting the seg screen to be hiding pose.** It was hiding BYTES. Seven of the eight
+   pairs it cost us are one-cell edits that SAVE 10–16 bits; three of them make pose slightly worse
+   and are admitted anyway, correctly, on the rate leg. Any future "the screen is the binding gate"
+   argument has to be an argument about the rate term.
+3. **On a re-rendered pair, a third of the time the coder's cheapest next change is an UNDO.**
+   18 of 53 rank-0 proposals on pd7's edited pairs revert a move-54 token to its move-53 value, and
+   16 of those price negative. A generator that ranks by first-order price on a freshly edited field
+   will spend its cheapest slot on its predecessor's own reversal unless it filters for it. The
+   filter is one comparison against the previous field. (§8.)
+4. **The dearness lives in the UNEDITED population.** The rank-0 sheet costs −2.847 bits/token on
+   the pairs the previous pass re-rendered and +3.908 on the ones it did not. The pass-over-pass
+   rank-0 series (2.163 → 3.075 → 3.279) is therefore not exhaustion of the pairs we spent.
+5. **Seg cost and pose credit are NOT coupled — control for the selection and the trend vanishes.**
+   (§9.) In the unselected sample the improve-fraction is flat at 41.4 / 39.1 / 41.5 % over one,
+   two and three cells, and the median proposal at every cost makes pose WORSE. Moving more argmax
+   cells does not buy more pose. The pooled table looks monotone only because the rows selected for
+   a strongly negative charge sit inside it. **Stop treating the seg screen as a pose gate.** An
+   interim read of this arm's own half-finished wave showed 40.4 → 41.9 → 44.2 % and looked like a
+   trend; the completed sample says flat. Two points of a noisy fraction are not a trend.
+6. **This generator has about 0.30 bars left on this object.** 26 of the joint set's 52 pairs are
+   unspent after move 55, worth −6.027519e-06 S on move 54's expired prices (§9b). pd8 predicted
+   pass 4 would have to change something; the admission rule was the last cheap thing to change, and
+   it is worth 0.14 bars. **The next unit should change the GENERATOR or the OBJECT, not the
+   admission.**
+7. **What is still unmeasured:** whether the eight added pairs survive a real set re-encode (the
+   pointer moved before the ladder could run); whether the reversion enrichment reproduces on a
+   second field; and whether the seg/pose coupling in §9 is strong enough anywhere in the plane —
+   this arm measured it only on the cheap half of the price list.
+
+## 14. verdict_scope
 
 **verdict_scope: FORMULATION — the joint seg+pose Lagrange admission, on this object, at this
 operating point.** What is MEASURED is that replacing pd6's per-pair seg screen with the score's own
