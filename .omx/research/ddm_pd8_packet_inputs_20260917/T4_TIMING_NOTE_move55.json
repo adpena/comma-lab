@@ -1,0 +1,9 @@
+{
+ "schema": "t4_decode_timing_note.v1",
+ "move": 55,
+ "first_fire_call": "fc-01M2PP3T886HAK0SCG63B8JMA9",
+ "inflate_elapsed_seconds": 1602.652569104,
+ "leg_builder_refusal": "measured T4 decode 1602.65s exceeds 1260.0s",
+ "cure": "re-measure the exact pointer bytes on T4 via the runtime-dir CUDA path with --single-axis-waiver-reason (the --seal path refuses SEAL_BAR_DRIFT once the row is the pointer); precedent move 50 (1,375.8 s first fire, 1,123.3 s re-measure, identical score); the receiver is byte-identical to moves 53/54 which decoded at 1,185.9 / 1,112.2 s",
+ "recorded_at_utc": "2026-09-17T03:51:05Z"
+}

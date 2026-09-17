@@ -2103,3 +2103,30 @@ bits after one pass; positive-paying pairs 128 → 72. Pass 3 (pd8) should be ch
 the 16 unread carrier bytes ride along in its byte close. Sub-0.12 still needs −0.0161 S: cap 155,153 B at held
 distortion (demand −24,113 B). Nothing on this object moves more than ~1e-4 per exact row.
 verdict_scope: n/a (a positive exact row).
+
+## Addendum 71 (2026-09-17, host ~05:10Z) — MOVE 55: price-first pass 3 lands at 1.32 bars; the family is at its knee; the seg screen is the gate; the "dead bytes" were a sentinel; a T4 host outlier
+
+**MEASURED [contest-CUDA T4 n600], call fc-01M2PP3T886HAK0SCG63B8JMA9.** S 0.13603403441098336 = 100·0.00010288 + sqrt(10·4.08e-6) +
+25·179,255/37,545,489 (recomputed = score field). Δ −2.196e-5 vs move 54; projected 0.13603091365293757 (drift +3.1e-6).
+Archive sha ddadf998ddacab9b…; receiver behaviour 9f6e7168… unchanged. The first T4 run inflated in 1,602.7 s — a host
+outlier for a byte-identical receiver (moves 53/54: 1,185.9 / 1,112.2 s); the decode-leg builder refused it above the
+1,260 s ceiling, so the exact bytes are being re-measured (call fc-01M2PQWRN2T18G36TN69M5NXZY) to mint the leg, as at
+move 50. Moves 53–55: −1.68e-4 in one day.
+
+**What pd8 measured (memo `.omx/research/ddm_pd8_price_first_pass3_on_move54_20260916.md`, commits cf3cdc50c…cedc1f651).**
+(1) Price-first decay: rank-0 sheet 2.163 → 3.075 → 3.279 bits/token; the dearness moves DOWN the list (rank 1 +6 % too);
+paying pairs 128 → 72 → 44; realized nets −1.04e-4 → −4.59e-5 → −2.20e-5; pass 4 projects near −1.2e-5, below the
+2e-5 admit bar. (2) The ledger's over-credit flipped sign (−23 % → −60 % → −149 %); the absorb iteration to a true fixed
+point (`measured_pairs_used` > 0) carried the set from +5 B to −11 B — without it the pass closes at 0.91 bars.
+(3) The "16 dead carrier bytes" lever is CLOSED at instance scope: the receiver reads offsets 123–138 as packed Huffman
+code lengths; all-zero is a sentinel that regenerates them from the histogram (the rider already took the saving); the
+span is positionally load-bearing; header bit 0x20 is read. LAW: the rate term charges the COMPRESSED extent of a span
+(8 B here), never its raw extent (16 B). (4) The binding gate is the seg SCREEN: ~3,150 of 4,291 proposals are refused
+before any credit is read; 411 of 588 pairs can pay for no cell under it. pd9 (live) replaces the screen with a joint
+seg+pose Lagrange admission in the score's one currency.
+verdict_scope: formulation — price-first generation under the seg screen is at its knee on this object (pass 4 below the
+bar); the family stays open through pd9's admission change.
+
+**Gestalt after 71.** Three exact rows in 24 h from one generator (−1.68e-4), each smaller than the last; the object's
+remaining headroom on this line is the admission rule, not the generator. Sub-0.12 needs −0.0160 S: cap 155,175 B at held
+distortion (demand −24,080 B). The reviewable packet is measured on move 53's bytes and awaits the operator.
