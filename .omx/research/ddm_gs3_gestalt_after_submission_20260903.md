@@ -2204,3 +2204,27 @@ priced, efficacy owed) and a wider/re-shaped prior (unbuildable here, cost now k
 `cpr1/inflate.py`, the matching stencil in `runtime/f26_hpac_native.c` or it decodes two different fields in the two
 modes, a changed behaviour digest, a fresh leg).
 verdict_scope: formulation — the shipped architecture's capacity knob on this receiver (§1–§3 of the memo).
+
+## Addendum 74 (2026-09-17, host ~08:30Z) — where the campaign stands at the exchange: every measured object and formulation is closed for sub-0.12; the shipped object still yields ≤ 1-bar exact rows
+
+**MEASURED state (the pointer): move 55, S 0.13603403441098336 @ 179,255 B [contest-CUDA T4 n600]; demand at held
+distortion −24,080 B (cap 155,175 B); at held bytes the distortion would have to vanish (accuracy half closed above
+140,477 B, A50/A59).** The last four days: moves 45–55 took −1.68e-3 S; the last three rows −1.04e-4, −4.6e-5, −2.2e-5.
+
+**The shipped object, part by part (all MEASURED, all at the knee or closed at the exchange):** field — saliency-first
+(A65), multi-token (A66), price-first 1–3 (A69–A71; pass 4 below the bar), joint admission (A72); renderer — basis
+(cb1), refit in place (ren2), global int4 (rw1, jrx2), pair-selective bias (psa1 priced; psa2 first pair +2.9e-5);
+carrier lattice (pc2/pc3, mc1); tail coder at the receiver rung (ls1/ls2, 8,365 B short) and at the prior rung (cl2/cl3/
+dpi1/hpr1, pc1: width/depth is a receiver change; the prior is 6.49 % of the archive); dead bytes (A71). No part can
+yield −24 kB; the sum of every open ≤ 1-bar row is < 1e-4 S.
+
+**The successor object (born-small generator + edge-local lattice, obx1/obx2):** closed at formulation scope — a
+render-manufactured argmax floor of d_seg 0.0023 (5.77–7.22× the seg gate) survives a PERFECT partition; the lattice
+captured 53 % of it. The cross (2026-08-29) stands: born-small holds the rate half, the shipped object the accuracy half,
+and measurement says neither acquires the other's.
+
+**What is NOT measured (the only honest list):** (1) a third object class with a low render floor at born-small rate — no
+design exists that any measurement supports; (2) the shipped object's ≤ 1-bar rows (price-first pass 4 under a three-term
+budget ~0.6 bar; psa2's remaining 59 pairs; reversion-aware generation) — real exact rows, each ~1e-5, each ~$0.30 and
+hours; (3) a submission of the reviewable packet (submissions/mrs7) — measured, awaiting the operator.
+verdict_scope: campaign — sub-0.12 on every object and formulation measured to date; NOT a claim about unmeasured classes.
