@@ -531,7 +531,19 @@ Nothing under `ddm_pd1`-`ddm_pd7`, `ddm_sj1`, `ddm_jr*`, `ddm_psa*`, `ddm_mrs*` 
    no SegNet cell at all (pd7: 407), and the wave refused most of its proposals on that budget.
    An actuator that paid the seg debt elsewhere (psa1/psa2's pair-selective renderer bias is the
    live candidate) is still the lever that would widen this pool without touching the price.
-6. **What is still unmeasured:** whether a fifth set-price iteration would move the ladder (the
+6. **An identical-outcome comparison is only evidence when both sides REACHED the gate the claim
+   names.** This arm's first public-entrypoint smoke reported candidate and frontier behaving
+   IDENTICALLY -- and both had exited in a third of a second on `usage: inflate.sh <archive-dir>
+   <output-dir> <file-list>`, because the probe called the entrypoint with no arguments. A second
+   version reached a different wrong place: both raised in five seconds on a missing
+   `CPR1_RC64_LIBRARY`, because the direct `f26_inflate` probe did not build the two native
+   libraries `inflate.sh` builds. Both versions would have been reported as "identical behaviour."
+   The cure is in `public_smoke.py`: it STAGES ITS OWN INPUTS (a deleted scratch directory must
+   not be able to turn the smoke into a usage message) and it REFUSES to write a receipt whose
+   outcomes are not `REACHED_CUDA_GATE` and `REACHED_TOKEN_DECODE`. The seal caught a third
+   version on its own -- a probe timed out AT the declared bound measures bound + spawn overhead
+   and refuses; the probe timeout must sit strictly under the declared bound.
+7. **What is still unmeasured:** whether a fifth set-price iteration would move the ladder (the
    residual is +0.15 %, so the estimates have converged, and iteration 3 is a true fixed point --
    this is the first pass where the ladder stopped moving); and whether the 2 SegNet cells this
    candidate costs could be repaid by a different rung at the same byte count.
