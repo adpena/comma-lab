@@ -2228,3 +2228,12 @@ design exists that any measurement supports; (2) the shipped object's ≤ 1-bar 
 budget ~0.6 bar; psa2's remaining 59 pairs; reversion-aware generation) — real exact rows, each ~1e-5, each ~$0.30 and
 hours; (3) a submission of the reviewable packet (submissions/mrs7) — measured, awaiting the operator.
 verdict_scope: campaign — sub-0.12 on every object and formulation measured to date; NOT a claim about unmeasured classes.
+
+## Addendum 75 (2026-09-18) — psa2 CLOSED: the per-pair RGB head bias nets +2.6e-5 to +3.1e-5 S on every one of 60 pairs (k = 0/60)
+
+Exhaustive 4,096-vector grid per pair, pose re-solved, real encodes: only 7 pairs keep any seg credit (1–2
+cells), 53 collapse to the zero-bias control, and every pair pays 42 B of section framing — 33× the best
+credit. Falsifier k < 6 fired at k = 0. The set admission is folded: singletons all positive and seg
+sub-additive ⇒ no set nets. Memo `ddm_psa2_singleton_verdict_20260918.md`. This closes the last open
+"≤ 1-bar row" of A74's list that had a running instrument; the remaining ≤ 1-bar rows (pass 4, reversion-
+aware generation) have no instrument running. verdict_scope: formulation (per-pair int4 head bias, move 52).
