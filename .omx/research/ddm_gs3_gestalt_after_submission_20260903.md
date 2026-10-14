@@ -2237,3 +2237,30 @@ credit. Falsifier k < 6 fired at k = 0. The set admission is folded: singletons 
 sub-additive ⇒ no set nets. Memo `ddm_psa2_singleton_verdict_20260918.md`. This closes the last open
 "≤ 1-bar row" of A74's list that had a running instrument; the remaining ≤ 1-bar rows (pass 4, reversion-
 aware generation) have no instrument running. verdict_scope: formulation (per-pair int4 head bias, move 52).
+
+## Addendum 76 (2026-10-14) — A74's open list, corrected by recall: the "reversion-aware" row was already bounded; the only reopened variable is 364 s of decode slack
+
+**Correction (recall before charter, per the pc1 law).** A74 listed "reversion-aware generation" as an
+unmeasured ≤ 1-bar row. It is not unmeasured: pd9 §8/§13.3 measured the undo slice (18 of 53 rank-0
+proposals on edited pairs are reversions; the filter is one comparison against the previous field) AND
+§13.4/§13.6 bounded the whole price-first generator at **~0.30 bars left on this object**, with the
+dearness living in the 535 UNEDITED pairs that no undo filter touches. A pass-4 charter with the filter
+would re-measure a bounded axis. Struck from the open list. psa2 (A75) closed the other instrumented row.
+
+**One variable did move, and it is recorded here so nobody re-derives it:** the reviewable packet's
+receiver inflates in **896.0 s on T4** (`ddm_mrs7_20260916/t4_measure/…decode_wall_clock.json`) against
+the lab receiver's 1,072–1,186 s, so decode slack under the 1,260 s policy is **364 s, not 27.6 s**. That
+is 13× the slack gpp1 was closed against on timing. It does NOT reopen gpp1: that family also closed on
+REALIZATION (3 B of an 8,171 B bound, 0.037 %, inside container noise sd 34.8 B) and on rule 118 (4.0 MB of
+public weights = 2.67 S if counted). gpp2 ("compact public prior") was named QUEUED-WITH-A-FIRE-ORDER in
+gpp1 and never queued; a gpp2 charter would need a prior that realizes, not merely one that fits in time.
+
+**Provenance footnote (from the shipped-tail audit arm, stale but true for the move-44 lineage):** the
+field the move-44 tail codes is `subset6.u8` (sha a92e7d90…), byte-identical to the encoder-bound
+`field.u8`; `pass6.u8` (sha 78e57545…) differs in 154 cells over 90 frames, and gdc1–gdc4 pin the wrong
+one. Current moves (53–55) carry their own field pins in their packet-inputs dirs; this does not touch them.
+
+**State of the list after A75–A76:** (1) third object class — no supported design (unchanged); (2) ≤ 1-bar
+rows on the shipped object — none above ~0.30 bars on the measured generator, none instrumented;
+(3) `submissions/mrs7` — measured, awaiting the operator. The campaign has no self-authorized unit left
+that measurement supports; the next action is the operator's. verdict_scope: campaign (recall audit).
